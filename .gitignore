@@ -1,1 +1,4 @@
 .claude/
+.agent-os/
+*.zip
+dt_key
