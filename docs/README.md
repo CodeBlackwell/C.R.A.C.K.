@@ -12,7 +12,7 @@ Exam strategy, kill chains, and systematic approaches
 
 ### 🎯 [02 - Vulnerabilities](02-vulnerabilities/)
 - **[Web Vulnerabilities](02-vulnerabilities/web/)**
-  - [Injections](02-vulnerabilities/web/injections/): LFI, RFI, SQLi, Command injection
+  - [Injections](02-vulnerabilities/web/injections/): LFI, RFI, SQLi, SQLi-to-RCE, Command injection, Python-specific
   - [Access Control](02-vulnerabilities/web/access-control/): Directory/Path traversal
   - [Client-Side](02-vulnerabilities/web/client-side/): XSS, CSRF
   - [File Operations](02-vulnerabilities/web/file-operations/): Upload/Download vulnerabilities
@@ -20,7 +20,12 @@ Exam strategy, kill chains, and systematic approaches
 - **[Network Vulnerabilities](02-vulnerabilities/network/)**
 
 ### 💥 [03 - Exploitation](03-exploitation/)
-Web shells, reverse shells, exploitation frameworks
+Web shells, reverse shells, exploitation frameworks, phishing
+- [Phishing and Social Engineering](03-exploitation/phishing-social-engineering.md)
+
+### 🔧 [Exploits](exploits/)
+Detailed breakdowns of specific exploit techniques and payloads
+- [PowerShell Reverse Shell Breakdown](exploits/powershell-reverse-shell-breakdown.md)
 
 ### 🔝 [04 - Post-Exploitation](04-post-exploitation/)
 - [Linux Privilege Escalation](04-post-exploitation/linux-privesc/)
@@ -40,6 +45,9 @@ Commands cheatsheet, payloads, one-liners
 - [FileManager](07-specific-exploits/filemanager/)
 
 ### 📝 [08 - Lab Notes](08-lab-notes/)
+- [OSCP Exercises](08-lab-notes/oscp-exercises/)
+  - [Module 9: Web Application Attacks](08-lab-notes/oscp-exercises/module-09-web-attacks.md)
+  - [Module 10: SQL Theory and Databases](08-lab-notes/oscp-exercises/module-10-sql-databases.md)
 - [Proving Grounds](08-lab-notes/proving-grounds/)
 - [HackTheBox](08-lab-notes/hackthebox/)
 - [VulnHub](08-lab-notes/vulnhub/)
@@ -61,12 +69,19 @@ Templates and screenshot evidence
 | web-api-exploitation-guide.md | [02-vulnerabilities/web/](02-vulnerabilities/web/web-api-exploitation-guide.md) |
 | lfi-log-poisoning-guide.md | [02-vulnerabilities/web/injections/](02-vulnerabilities/web/injections/lfi-log-poisoning-guide.md) |
 | rfi-quick-reference.md | [02-vulnerabilities/web/injections/](02-vulnerabilities/web/injections/rfi-quick-reference.md) |
+| sql-injection-manual-exploitation.md | [02-vulnerabilities/web/injections/](02-vulnerabilities/web/injections/sql-injection-manual-exploitation.md) |
+| sql-injection-code-execution.md | [02-vulnerabilities/web/injections/](02-vulnerabilities/web/injections/sql-injection-code-execution.md) |
 | directory_traversal_guide.md | [02-vulnerabilities/web/access-control/](02-vulnerabilities/web/access-control/directory_traversal_guide.md) |
 | xss-privilege-escalation-guide.md | [02-vulnerabilities/web/client-side/](02-vulnerabilities/web/client-side/xss-privilege-escalation-guide.md) |
 | file-upload-filemanager-exploitation.md | [02-vulnerabilities/web/file-operations/](02-vulnerabilities/web/file-operations/file-upload-filemanager-exploitation.md) |
 | php-wrappers-quick-reference.md | [05-techniques/](05-techniques/php-wrappers-quick-reference.md) |
 | wp-xss-attack-chain.md | [07-specific-exploits/wordpress/](07-specific-exploits/wordpress/wp-xss-attack-chain.md) |
 | grafana_apache_traversal_reference.md | [07-specific-exploits/grafana/](07-specific-exploits/grafana/grafana_apache_traversal_reference.md) |
+| module-09-web-attacks.md | [08-lab-notes/oscp-exercises/](08-lab-notes/oscp-exercises/module-09-web-attacks.md) |
+| python-command-injection-guide.md | [02-vulnerabilities/web/injections/](02-vulnerabilities/web/injections/python-command-injection-guide.md) |
+| command-injection-quick-reference.md | [02-vulnerabilities/web/injections/](02-vulnerabilities/web/injections/command-injection-quick-reference.md) |
+| non-executable-file-upload-quick-reference.md | [02-vulnerabilities/web/file-operations/](02-vulnerabilities/web/file-operations/non-executable-file-upload-quick-reference.md) |
+| powershell-reverse-shell-breakdown.md | [exploits/](exploits/powershell-reverse-shell-breakdown.md) |
 
 ---
 
