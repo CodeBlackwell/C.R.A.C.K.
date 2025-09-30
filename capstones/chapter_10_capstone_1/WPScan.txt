@@ -1,0 +1,809 @@
+_______________________________________________________________
+         __          _______   _____
+         \ \        / /  __ \ / ____|
+          \ \  /\  / /| |__) | (___   ___  __ _ _ __ ®
+           \ \/  \/ / |  ___/ \___ \ / __|/ _` | '_ \
+            \  /\  /  | |     ____) | (__| (_| | | | |
+             \/  \/   |_|    |_____/ \___|\__,_|_| |_|
+
+         WordPress Security Scanner by the WPScan Team
+                         Version 3.8.28
+       Sponsored by Automattic - https://automattic.com/
+       @_WPScan_, @ethicalhack3r, @erwan_lr, @firefart
+_______________________________________________________________
+
+[32m[+][0m URL: http://alvida-eatery.org/ [192.168.229.47]
+[32m[+][0m Started: Mon Sep 29 20:23:08 2025
+
+Interesting Finding(s):
+
+[32m[+][0m Headers
+ | Interesting Entries:
+ |  - Server: Apache/2.4.52 (Ubuntu)
+ |  - X-UA-Compatible: IE=edge
+ | Found By: Headers (Passive Detection)
+ | Confidence: 100%
+
+[32m[+][0m XML-RPC seems to be enabled: http://alvida-eatery.org/xmlrpc.php
+ | Found By: Direct Access (Aggressive Detection)
+ | Confidence: 100%
+ | References:
+ |  - http://codex.wordpress.org/XML-RPC_Pingback_API
+ |  - https://www.rapid7.com/db/modules/auxiliary/scanner/http/wordpress_ghost_scanner/
+ |  - https://www.rapid7.com/db/modules/auxiliary/dos/http/wordpress_xmlrpc_dos/
+ |  - https://www.rapid7.com/db/modules/auxiliary/scanner/http/wordpress_xmlrpc_login/
+ |  - https://www.rapid7.com/db/modules/auxiliary/scanner/http/wordpress_pingback_access/
+
+[32m[+][0m WordPress readme found: http://alvida-eatery.org/readme.html
+ | Found By: Direct Access (Aggressive Detection)
+ | Confidence: 100%
+
+[32m[+][0m Upload directory has listing enabled: http://alvida-eatery.org/wp-content/uploads/
+ | Found By: Direct Access (Aggressive Detection)
+ | Confidence: 100%
+
+[32m[+][0m The external WP-Cron seems to be enabled: http://alvida-eatery.org/wp-cron.php
+ | Found By: Direct Access (Aggressive Detection)
+ | Confidence: 60%
+ | References:
+ |  - https://www.iplocation.net/defend-wordpress-from-ddos
+ |  - https://github.com/wpscanteam/wpscan/issues/1299
+
+[32m[+][0m WordPress version 6.0 identified (Insecure, released on 2022-05-24).
+ | Found By: Rss Generator (Passive Detection)
+ |  - http://alvida-eatery.org/?feed=rss2, <generator>https://wordpress.org/?v=6.0</generator>
+ |  - http://alvida-eatery.org/?feed=comments-rss2, <generator>https://wordpress.org/?v=6.0</generator>
+ |
+ | [31m[!][0m 33 vulnerabilities identified:
+ |
+ | [31m[!][0m Title: WP < 6.0.2 - Reflected Cross-Site Scripting
+ |     Fixed in: 6.0.2
+ |     References:
+ |      - https://wpscan.com/vulnerability/622893b0-c2c4-4ee7-9fa1-4cecef6e36be
+ |      - https://wordpress.org/news/2022/08/wordpress-6-0-2-security-and-maintenance-release/
+ |
+ | [31m[!][0m Title: WP < 6.0.2 - Authenticated Stored Cross-Site Scripting
+ |     Fixed in: 6.0.2
+ |     References:
+ |      - https://wpscan.com/vulnerability/3b1573d4-06b4-442b-bad5-872753118ee0
+ |      - https://wordpress.org/news/2022/08/wordpress-6-0-2-security-and-maintenance-release/
+ |
+ | [31m[!][0m Title: WP < 6.0.2 - SQLi via Link API
+ |     Fixed in: 6.0.2
+ |     References:
+ |      - https://wpscan.com/vulnerability/601b0bf9-fed2-4675-aec7-fed3156a022f
+ |      - https://wordpress.org/news/2022/08/wordpress-6-0-2-security-and-maintenance-release/
+ |
+ | [31m[!][0m Title: WP < 6.0.3 - Stored XSS via wp-mail.php
+ |     Fixed in: 6.0.3
+ |     References:
+ |      - https://wpscan.com/vulnerability/713bdc8b-ab7c-46d7-9847-305344a579c4
+ |      - https://wordpress.org/news/2022/10/wordpress-6-0-3-security-release/
+ |      - https://github.com/WordPress/wordpress-develop/commit/abf236fdaf94455e7bc6e30980cf70401003e283
+ |
+ | [31m[!][0m Title: WP < 6.0.3 - Open Redirect via wp_nonce_ays
+ |     Fixed in: 6.0.3
+ |     References:
+ |      - https://wpscan.com/vulnerability/926cd097-b36f-4d26-9c51-0dfab11c301b
+ |      - https://wordpress.org/news/2022/10/wordpress-6-0-3-security-release/
+ |      - https://github.com/WordPress/wordpress-develop/commit/506eee125953deb658307bb3005417cb83f32095
+ |
+ | [31m[!][0m Title: WP < 6.0.3 - Email Address Disclosure via wp-mail.php
+ |     Fixed in: 6.0.3
+ |     References:
+ |      - https://wpscan.com/vulnerability/c5675b59-4b1d-4f64-9876-068e05145431
+ |      - https://wordpress.org/news/2022/10/wordpress-6-0-3-security-release/
+ |      - https://github.com/WordPress/wordpress-develop/commit/5fcdee1b4d72f1150b7b762ef5fb39ab288c8d44
+ |
+ | [31m[!][0m Title: WP < 6.0.3 - Reflected XSS via SQLi in Media Library
+ |     Fixed in: 6.0.3
+ |     References:
+ |      - https://wpscan.com/vulnerability/cfd8b50d-16aa-4319-9c2d-b227365c2156
+ |      - https://wordpress.org/news/2022/10/wordpress-6-0-3-security-release/
+ |      - https://github.com/WordPress/wordpress-develop/commit/8836d4682264e8030067e07f2f953a0f66cb76cc
+ |
+ | [31m[!][0m Title: WP < 6.0.3 - CSRF in wp-trackback.php
+ |     Fixed in: 6.0.3
+ |     References:
+ |      - https://wpscan.com/vulnerability/b60a6557-ae78-465c-95bc-a78cf74a6dd0
+ |      - https://wordpress.org/news/2022/10/wordpress-6-0-3-security-release/
+ |      - https://github.com/WordPress/wordpress-develop/commit/a4f9ca17fae0b7d97ff807a3c234cf219810fae0
+ |
+ | [31m[!][0m Title: WP < 6.0.3 - Stored XSS via the Customizer
+ |     Fixed in: 6.0.3
+ |     References:
+ |      - https://wpscan.com/vulnerability/2787684c-aaef-4171-95b4-ee5048c74218
+ |      - https://wordpress.org/news/2022/10/wordpress-6-0-3-security-release/
+ |      - https://github.com/WordPress/wordpress-develop/commit/2ca28e49fc489a9bb3c9c9c0d8907a033fe056ef
+ |
+ | [31m[!][0m Title: WP < 6.0.3 - Stored XSS via Comment Editing
+ |     Fixed in: 6.0.3
+ |     References:
+ |      - https://wpscan.com/vulnerability/02d76d8e-9558-41a5-bdb6-3957dc31563b
+ |      - https://wordpress.org/news/2022/10/wordpress-6-0-3-security-release/
+ |      - https://github.com/WordPress/wordpress-develop/commit/89c8f7919460c31c0f259453b4ffb63fde9fa955
+ |
+ | [31m[!][0m Title: WP < 6.0.3 - Content from Multipart Emails Leaked
+ |     Fixed in: 6.0.3
+ |     References:
+ |      - https://wpscan.com/vulnerability/3f707e05-25f0-4566-88ed-d8d0aff3a872
+ |      - https://wordpress.org/news/2022/10/wordpress-6-0-3-security-release/
+ |      - https://github.com/WordPress/wordpress-develop/commit/3765886b4903b319764490d4ad5905bc5c310ef8
+ |
+ | [31m[!][0m Title: WP < 6.0.3 - SQLi in WP_Date_Query
+ |     Fixed in: 6.0.3
+ |     References:
+ |      - https://wpscan.com/vulnerability/1da03338-557f-4cb6-9a65-3379df4cce47
+ |      - https://wordpress.org/news/2022/10/wordpress-6-0-3-security-release/
+ |      - https://github.com/WordPress/wordpress-develop/commit/d815d2e8b2a7c2be6694b49276ba3eee5166c21f
+ |
+ | [31m[!][0m Title: WP < 6.0.3 - Stored XSS via RSS Widget
+ |     Fixed in: 6.0.3
+ |     References:
+ |      - https://wpscan.com/vulnerability/58d131f5-f376-4679-b604-2b888de71c5b
+ |      - https://wordpress.org/news/2022/10/wordpress-6-0-3-security-release/
+ |      - https://github.com/WordPress/wordpress-develop/commit/929cf3cb9580636f1ae3fe944b8faf8cca420492
+ |
+ | [31m[!][0m Title: WP < 6.0.3 - Data Exposure via REST Terms/Tags Endpoint
+ |     Fixed in: 6.0.3
+ |     References:
+ |      - https://wpscan.com/vulnerability/b27a8711-a0c0-4996-bd6a-01734702913e
+ |      - https://wordpress.org/news/2022/10/wordpress-6-0-3-security-release/
+ |      - https://github.com/WordPress/wordpress-develop/commit/ebaac57a9ac0174485c65de3d32ea56de2330d8e
+ |
+ | [31m[!][0m Title: WP < 6.0.3 - Multiple Stored XSS via Gutenberg
+ |     Fixed in: 6.0.3
+ |     References:
+ |      - https://wpscan.com/vulnerability/f513c8f6-2e1c-45ae-8a58-36b6518e2aa9
+ |      - https://wordpress.org/news/2022/10/wordpress-6-0-3-security-release/
+ |      - https://github.com/WordPress/gutenberg/pull/45045/files
+ |
+ | [31m[!][0m Title: WP <= 6.2 - Unauthenticated Blind SSRF via DNS Rebinding
+ |     References:
+ |      - https://wpscan.com/vulnerability/c8814e6e-78b3-4f63-a1d3-6906a84c1f11
+ |      - https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2022-3590
+ |      - https://blog.sonarsource.com/wordpress-core-unauthenticated-blind-ssrf/
+ |
+ | [31m[!][0m Title: WP < 6.2.1 - Directory Traversal via Translation Files
+ |     Fixed in: 6.0.4
+ |     References:
+ |      - https://wpscan.com/vulnerability/2999613a-b8c8-4ec0-9164-5dfe63adf6e6
+ |      - https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2023-2745
+ |      - https://wordpress.org/news/2023/05/wordpress-6-2-1-maintenance-security-release/
+ |
+ | [31m[!][0m Title: WP < 6.2.1 - Thumbnail Image Update via CSRF
+ |     Fixed in: 6.0.4
+ |     References:
+ |      - https://wpscan.com/vulnerability/a03d744a-9839-4167-a356-3e7da0f1d532
+ |      - https://wordpress.org/news/2023/05/wordpress-6-2-1-maintenance-security-release/
+ |
+ | [31m[!][0m Title: WP < 6.2.1 - Contributor+ Stored XSS via Open Embed Auto Discovery
+ |     Fixed in: 6.0.4
+ |     References:
+ |      - https://wpscan.com/vulnerability/3b574451-2852-4789-bc19-d5cc39948db5
+ |      - https://wordpress.org/news/2023/05/wordpress-6-2-1-maintenance-security-release/
+ |
+ | [31m[!][0m Title: WP < 6.2.2 - Shortcode Execution in User Generated Data
+ |     Fixed in: 6.0.5
+ |     References:
+ |      - https://wpscan.com/vulnerability/ef289d46-ea83-4fa5-b003-0352c690fd89
+ |      - https://wordpress.org/news/2023/05/wordpress-6-2-1-maintenance-security-release/
+ |      - https://wordpress.org/news/2023/05/wordpress-6-2-2-security-release/
+ |
+ | [31m[!][0m Title: WP < 6.2.1 - Contributor+ Content Injection
+ |     Fixed in: 6.0.4
+ |     References:
+ |      - https://wpscan.com/vulnerability/1527ebdb-18bc-4f9d-9c20-8d729a628670
+ |      - https://wordpress.org/news/2023/05/wordpress-6-2-1-maintenance-security-release/
+ |
+ | [31m[!][0m Title: WP 5.6-6.3.1 - Contributor+ Stored XSS via Navigation Block
+ |     Fixed in: 6.0.6
+ |     References:
+ |      - https://wpscan.com/vulnerability/cd130bb3-8d04-4375-a89a-883af131ed3a
+ |      - https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2023-38000
+ |      - https://wordpress.org/news/2023/10/wordpress-6-3-2-maintenance-and-security-release/
+ |
+ | [31m[!][0m Title: WP 5.6-6.3.1 - Reflected XSS via Application Password Requests
+ |     Fixed in: 6.0.6
+ |     References:
+ |      - https://wpscan.com/vulnerability/da1419cc-d821-42d6-b648-bdb3c70d91f2
+ |      - https://wordpress.org/news/2023/10/wordpress-6-3-2-maintenance-and-security-release/
+ |
+ | [31m[!][0m Title: WP < 6.3.2 - Denial of Service via Cache Poisoning
+ |     Fixed in: 6.0.6
+ |     References:
+ |      - https://wpscan.com/vulnerability/6d80e09d-34d5-4fda-81cb-e703d0e56e4f
+ |      - https://wordpress.org/news/2023/10/wordpress-6-3-2-maintenance-and-security-release/
+ |
+ | [31m[!][0m Title: WP < 6.3.2 - Subscriber+ Arbitrary Shortcode Execution
+ |     Fixed in: 6.0.6
+ |     References:
+ |      - https://wpscan.com/vulnerability/3615aea0-90aa-4f9a-9792-078a90af7f59
+ |      - https://wordpress.org/news/2023/10/wordpress-6-3-2-maintenance-and-security-release/
+ |
+ | [31m[!][0m Title: WP < 6.3.2 - Contributor+ Comment Disclosure
+ |     Fixed in: 6.0.6
+ |     References:
+ |      - https://wpscan.com/vulnerability/d35b2a3d-9b41-4b4f-8e87-1b8ccb370b9f
+ |      - https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2023-39999
+ |      - https://wordpress.org/news/2023/10/wordpress-6-3-2-maintenance-and-security-release/
+ |
+ | [31m[!][0m Title: WP < 6.3.2 - Unauthenticated Post Author Email Disclosure
+ |     Fixed in: 6.0.6
+ |     References:
+ |      - https://wpscan.com/vulnerability/19380917-4c27-4095-abf1-eba6f913b441
+ |      - https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2023-5561
+ |      - https://wpscan.com/blog/email-leak-oracle-vulnerability-addressed-in-wordpress-6-3-2/
+ |      - https://wordpress.org/news/2023/10/wordpress-6-3-2-maintenance-and-security-release/
+ |
+ | [31m[!][0m Title: WordPress < 6.4.3 - Deserialization of Untrusted Data
+ |     Fixed in: 6.0.7
+ |     References:
+ |      - https://wpscan.com/vulnerability/5e9804e5-bbd4-4836-a5f0-b4388cc39225
+ |      - https://wordpress.org/news/2024/01/wordpress-6-4-3-maintenance-and-security-release/
+ |
+ | [31m[!][0m Title: WordPress < 6.4.3 - Admin+ PHP File Upload
+ |     Fixed in: 6.0.7
+ |     References:
+ |      - https://wpscan.com/vulnerability/a8e12fbe-c70b-4078-9015-cf57a05bdd4a
+ |      - https://wordpress.org/news/2024/01/wordpress-6-4-3-maintenance-and-security-release/
+ |
+ | [31m[!][0m Title: WP < 6.5.2 - Unauthenticated Stored XSS
+ |     Fixed in: 6.0.8
+ |     References:
+ |      - https://wpscan.com/vulnerability/1a5c5df1-57ee-4190-a336-b0266962078f
+ |      - https://wordpress.org/news/2024/04/wordpress-6-5-2-maintenance-and-security-release/
+ |
+ | [31m[!][0m Title: WordPress < 6.5.5 - Contributor+ Stored XSS in HTML API
+ |     Fixed in: 6.0.9
+ |     References:
+ |      - https://wpscan.com/vulnerability/2c63f136-4c1f-4093-9a8c-5e51f19eae28
+ |      - https://wordpress.org/news/2024/06/wordpress-6-5-5/
+ |
+ | [31m[!][0m Title: WordPress < 6.5.5 - Contributor+ Stored XSS in Template-Part Block
+ |     Fixed in: 6.0.9
+ |     References:
+ |      - https://wpscan.com/vulnerability/7c448f6d-4531-4757-bff0-be9e3220bbbb
+ |      - https://wordpress.org/news/2024/06/wordpress-6-5-5/
+ |
+ | [31m[!][0m Title: WordPress < 6.5.5 - Contributor+ Path Traversal in Template-Part Block
+ |     Fixed in: 6.0.9
+ |     References:
+ |      - https://wpscan.com/vulnerability/36232787-754a-4234-83d6-6ded5e80251c
+ |      - https://wordpress.org/news/2024/06/wordpress-6-5-5/
+
+[32m[+][0m WordPress theme in use: oceanwp
+ | Location: http://alvida-eatery.org/wp-content/themes/oceanwp/
+ | Last Updated: 2025-09-15T00:00:00.000Z
+ | Readme: http://alvida-eatery.org/wp-content/themes/oceanwp/readme.txt
+ | [33m[!][0m The version is out of date, the latest version is 4.1.3
+ | Style URL: http://alvida-eatery.org/wp-content/themes/oceanwp/style.css
+ | Style Name: OceanWP
+ | Style URI: https://oceanwp.org/
+ | Description: OceanWP is the perfect theme for your project. Lightweight and highly extendable, it will enable you to create almost any type of website such a blog, portfolio, business website and WooCommerce storefront with a beautiful & professional design. Very fast, responsive, RTL & translation ready, best SEO practices, unique WooCommerce features to increase conversion and much more. You can even edit the settings on tablet & mobile so your site looks good on every device. Work with the most popular page builders as Elementor, Beaver Builder, Brizy, Visual Composer, Divi, SiteOrigin, etc... Developers will love his extensible codebase making it a joy to customize and extend. Best friend of Elementor & WooCommerce. Looking for a Multi-Purpose theme? Look no further! Check the demos to realize that it's the only theme you will ever need: https://oceanwp.org/demos/
+ | Author: OceanWP
+ | Author URI: https://oceanwp.org/about-oceanwp/
+ | License: GNU General Public License v2.0 or later
+ | License URI: https://www.gnu.org/licenses/gpl-2.0.html
+ | Tags: two-columns, right-sidebar, footer-widgets, blog, news, custom-background, custom-menu, post-formats, rtl-language-support, sticky-post, editor-style, threaded-comments, translation-ready, buddypress, custom-colors, featured-images, full-width-template, theme-options, e-commerce, block-styles, wide-blocks, accessibility-ready
+ | Text Domain: oceanwp
+ |
+ | Found By: Urls In Homepage (Passive Detection)
+ |
+ | [31m[!][0m 4 vulnerabilities identified:
+ |
+ | [31m[!][0m Title: OceanWP < 3.5.5 - Subscriber+ Sensitive Information Exposure
+ |     Fixed in: 3.5.5
+ |     References:
+ |      - https://wpscan.com/vulnerability/629dcd1d-d2b1-4ea7-bc7d-a7d2c07b7a25
+ |      - https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2024-2476
+ |      - https://www.wordfence.com/threat-intel/vulnerabilities/id/5ec2743d-0d96-4056-8fdf-dc81d4e9b76f
+ |
+ | [31m[!][0m Title: OceanWP < 4.1.0 - Contributor+ Stored XSS via Select HTML Tag
+ |     Fixed in: 4.1.0
+ |     References:
+ |      - https://wpscan.com/vulnerability/81ea1b70-8582-4aa0-a60f-27f38078b8da
+ |      - https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2025-5524
+ |      - https://www.wordfence.com/threat-intel/vulnerabilities/id/37b085f9-3b15-44aa-9ba0-de5321dfbce4
+ |
+ | [31m[!][0m Title: Magnific Popups JavaScript Library < 1.2.0 - Contributor+ Stored XSS
+ |     Fixed in: 3.6.1
+ |     References:
+ |      - https://wpscan.com/vulnerability/c2998af6-d000-4da5-a60d-dbc6e52474bf
+ |      - https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2024-5647
+ |      - https://www.wordfence.com/threat-intel/vulnerabilities/id/dae80fc2-3076-4a32-876d-5df1c62de9bd
+ |
+ | [31m[!][0m Title: OceanWP < 4.1.2 - Subscriber+ Limited Option Update
+ |     Fixed in: 4.1.2
+ |     References:
+ |      - https://wpscan.com/vulnerability/cf77b7f2-525b-4fe8-b612-185a1c18c197
+ |      - https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2025-8944
+ |
+ | Version: 3.3.2 (80% confidence)
+ | Found By: Style (Passive Detection)
+ |  - http://alvida-eatery.org/wp-content/themes/oceanwp/style.css, Match: 'Version:            3.3.2'
+
+[32m[+][0m Enumerating Vulnerable Plugins (via Aggressive Methods)
+
+ Checking Known Locations -: |===============================================================================================================================================================================================================|
+[32m[+][0m Checking Plugin Versions (via Passive and Aggressive Methods)
+
+[34m[i][0m Plugin(s) Identified:
+
+[32m[+][0m akismet
+ | Location: http://alvida-eatery.org/wp-content/plugins/akismet/
+ | Latest Version: 5.5
+ | Last Updated: 2025-07-15T18:17:00.000Z
+ |
+ | Found By: Known Locations (Aggressive Detection)
+ |  - http://alvida-eatery.org/wp-content/plugins/akismet/, status: 403
+ |
+ | [31m[!][0m 1 vulnerability identified:
+ |
+ | [31m[!][0m Title: Akismet 2.5.0-3.1.4 - Unauthenticated Stored Cross-Site Scripting (XSS)
+ |     Fixed in: 3.1.5
+ |     References:
+ |      - https://wpscan.com/vulnerability/1a2f3094-5970-4251-9ed0-ec595a0cd26c
+ |      - https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2015-9357
+ |      - http://blog.akismet.com/2015/10/13/akismet-3-1-5-wordpress/
+ |      - https://blog.sucuri.net/2015/10/security-advisory-stored-xss-in-akismet-wordpress-plugin.html
+ |
+ | The version could not be determined.
+
+[32m[+][0m elementor
+ | Location: http://alvida-eatery.org/wp-content/plugins/elementor/
+ | Last Updated: 2025-09-29T12:36:00.000Z
+ | Readme: http://alvida-eatery.org/wp-content/plugins/elementor/readme.txt
+ | [33m[!][0m The version is out of date, the latest version is 3.32.3
+ | [31m[!][0m Directory listing is enabled
+ |
+ | Found By: Known Locations (Aggressive Detection)
+ |  - http://alvida-eatery.org/wp-content/plugins/elementor/, status: 200
+ |
+ | [31m[!][0m 20 vulnerabilities identified:
+ |
+ | [31m[!][0m Title: Elementor Website Builder < 3.12.2 - Admin+ SQLi
+ |     Fixed in: 3.12.2
+ |     References:
+ |      - https://wpscan.com/vulnerability/a875836d-77f4-4306-b275-2b60efff1493
+ |      - https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2023-0329
+ |
+ | [31m[!][0m Title: Elementor Website Builder < 3.13.2 - Missing Authorization
+ |     Fixed in: 3.13.2
+ |     Reference: https://wpscan.com/vulnerability/0b68091c-6a05-4f81-a718-6ec139df2e96
+ |
+ | [31m[!][0m Title: Elementor Website Builder < 3.16.5 - Authenticated (Contributor+) Stored Cross-Site Scripting via get_inline_svg()
+ |     Fixed in: 3.16.5
+ |     References:
+ |      - https://wpscan.com/vulnerability/62b53acf-6551-4ea7-8727-039a3c9ba7ce
+ |      - https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2023-47505
+ |      - https://www.wordfence.com/threat-intel/vulnerabilities/id/b44ef21f-464e-487a-ba5a-fe889e4c488c
+ |
+ | [31m[!][0m Title: Elementor Website Builder < 3.16.5 - Missing Authorization to Arbitrary Attachment Read
+ |     Fixed in: 3.16.5
+ |     References:
+ |      - https://wpscan.com/vulnerability/e60f0f7e-4c3b-4107-803a-8e03526859ed
+ |      - https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2023-47504
+ |      - https://www.wordfence.com/threat-intel/vulnerabilities/id/c873c76a-144e-4945-8fa2-c9ffe0e3c061
+ |
+ | [31m[!][0m Title: Elementor < 3.18.2 - Contributor+ Arbitrary File Upload to RCE via Template Import
+ |     Fixed in: 3.18.2
+ |     References:
+ |      - https://wpscan.com/vulnerability/a6b3b14c-f06b-4506-9b88-854f155ebca9
+ |      - https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2023-48777
+ |      - https://www.wordfence.com/threat-intel/vulnerabilities/id/5b6d0a38-ac28-41c9-9da1-b30b3657b463
+ |
+ | [31m[!][0m Title: Elementor < 3.19.1 - Authenticated(Contributor+) Arbitrary File Deletion and PHAR Deserialization
+ |     Fixed in: 3.19.1
+ |     References:
+ |      - https://wpscan.com/vulnerability/4d7dfcc6-8c32-4e0d-b3bb-7e2685916e2b
+ |      - https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2024-24934
+ |      - https://www.wordfence.com/threat-intel/vulnerabilities/id/4915b769-9499-40ac-835e-279e3a910558
+ |
+ | [31m[!][0m Title: Elementor Website Builder – More than Just a Page Builder < 3.19.0 - Authenticated (Contributor+) Stored Cross-Site Scripting via get_image_alt
+ |     Fixed in: 3.19.0
+ |     References:
+ |      - https://wpscan.com/vulnerability/57af46d9-9a26-4085-9829-e0add7893332
+ |      - https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2024-0506
+ |      - https://www.wordfence.com/threat-intel/vulnerabilities/id/4473d3f6-e324-40f5-b92b-167f76b17332
+ |
+ | [31m[!][0m Title: Elementor Website Builder < 3.20.3 - Contributor+ DOM Stored XSS
+ |     Fixed in: 3.20.3
+ |     References:
+ |      - https://wpscan.com/vulnerability/22e8d017-79f5-40c8-8a2c-e0ee42ba80c8
+ |      - https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2024-2117
+ |      - https://www.wordfence.com/threat-intel/vulnerabilities/id/c8d7448a-b8a6-4b0b-92df-a15272fc56bf
+ |
+ | [31m[!][0m Title: Elementor Website Builder < 3.21.6 - Contributor+ DOM Stored XSS
+ |     Fixed in: 3.21.6
+ |     References:
+ |      - https://wpscan.com/vulnerability/8b8f30d6-bd11-4155-bfd2-3ac15248382b
+ |      - https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2024-4619
+ |      - https://www.wordfence.com/threat-intel/vulnerabilities/id/c7e1028e-e04b-46c4-b574-889d9fc1069d
+ |
+ | [31m[!][0m Title: Elementor Website Builder < 3.22.2 - Contributor+ Arbitrary SVG Download
+ |     Fixed in: 3.22.2
+ |     References:
+ |      - https://wpscan.com/vulnerability/e6d56be1-9a2a-426f-88ca-1ffa773622c1
+ |      - https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2024-37437
+ |      - https://www.wordfence.com/threat-intel/vulnerabilities/id/f11bc707-2465-4b64-945a-c0db6e9043dd
+ |
+ | [31m[!][0m Title: Elementor Website Builder – More than Just a Page Builder < 3.24.0 - Authenticated (Contributor+) Stored Cross-Site Scripting in the URL Parameter in Multiple Widgets
+ |     Fixed in: 3.24.0
+ |     References:
+ |      - https://wpscan.com/vulnerability/5200943b-5e07-4342-a090-f78435e30d30
+ |      - https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2024-5416
+ |      - https://www.wordfence.com/threat-intel/vulnerabilities/id/a99a64f7-1ea8-4de6-b24f-1f69bf25c1f5
+ |
+ | [31m[!][0m Title: Elementor < 3.24.6 - Contributor+ Information Exposure via get_image_alt
+ |     Fixed in: 3.24.6
+ |     References:
+ |      - https://wpscan.com/vulnerability/dce5ad0c-3ce9-498f-b0f7-8dfd6ee82e40
+ |      - https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2024-6757
+ |      - https://www.wordfence.com/threat-intel/vulnerabilities/id/96fa9ed7-6c13-4356-8a25-8a309be2b0e9
+ |
+ | [31m[!][0m Title: Elementor Website Builder < 3.25.8 - Contributor+ Stored XSS
+ |     Fixed in: 3.25.8
+ |     References:
+ |      - https://wpscan.com/vulnerability/78f0847b-3f59-43cf-87db-2cadda862aa3
+ |      - https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2024-8236
+ |      - https://www.wordfence.com/threat-intel/vulnerabilities/id/b1305be5-8267-475f-b962-62e3930116e1
+ |
+ | [31m[!][0m Title: Elementor Website Builder < 3.25.10 - Contributor+ Stored XSS via Typography Settings
+ |     Fixed in: 3.25.10
+ |     References:
+ |      - https://wpscan.com/vulnerability/2e05843d-1797-4da9-99ec-06376484fb32
+ |      - https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2024-10453
+ |      - https://www.wordfence.com/threat-intel/vulnerabilities/id/f23604b7-5a7f-4be7-bc73-cb4facdd1e73
+ |
+ | [31m[!][0m Title: Elementor Website Builder < 3.27.5 - Contributor+ Stored XSS
+ |     Fixed in: 3.27.5
+ |     References:
+ |      - https://wpscan.com/vulnerability/25374232-2f9c-453d-bc47-124f80e67a92
+ |      - https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2024-13445
+ |      - https://www.wordfence.com/threat-intel/vulnerabilities/id/8a11e702-34d2-49ee-8762-cc3614a7950a
+ |
+ | [31m[!][0m Title: Elementor Website Builder < 3.25.11 - Contributor+ Stored XSS
+ |     Fixed in: 3.25.11
+ |     References:
+ |      - https://wpscan.com/vulnerability/61e1476a-cb14-46f9-b68c-4fd5b5c39597
+ |      - https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2024-54444
+ |      - https://patchstack.com/database/wordpress/plugin/elementor/vulnerability/wordpress-elementor-plugin-3-25-10-cross-site-scripting-xss-vulnerability
+ |
+ | [31m[!][0m Title: Elementor Website Builder < 3.29.1 - Contributor+ Stored XSS
+ |     Fixed in: 3.29.1
+ |     References:
+ |      - https://wpscan.com/vulnerability/fc8e4264-fa78-44d2-8b6d-6c4305cd2280
+ |      - https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2024-50555
+ |      - https://www.wordfence.com/threat-intel/vulnerabilities/id/473bef81-b2c9-429c-aa23-c2dba0908cc3
+ |
+ | [31m[!][0m Title: Elementor < 3.29.1 - Contributor+ Stored XSS
+ |     Fixed in: 3.29.1
+ |     References:
+ |      - https://wpscan.com/vulnerability/34330a7b-d178-4998-9067-17ae2564cb9a
+ |      - https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2025-3075
+ |      - https://www.wordfence.com/threat-intel/vulnerabilities/id/639693b6-369e-457e-a37e-30bdb8ea7275
+ |
+ | [31m[!][0m Title: Elementor < 3.30.3 - Contributor+ Stored XSS via Text Path Widget
+ |     Fixed in: 3.30.3
+ |     References:
+ |      - https://wpscan.com/vulnerability/785a15fe-18ef-4ae2-9143-c625a7a16063
+ |      - https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2025-4566
+ |      - https://www.wordfence.com/threat-intel/vulnerabilities/id/af29ec92-5b07-4f57-a25f-19f3a894a193
+ |
+ | [31m[!][0m Title: Elementor < 3.30.3 - Admin+ Arbitrary File Read via Image Import
+ |     Fixed in: 3.30.3
+ |     References:
+ |      - https://wpscan.com/vulnerability/87fd0b78-c0e8-43a8-8b52-bd7a294a96e0
+ |      - https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2025-8081
+ |      - https://www.wordfence.com/threat-intel/vulnerabilities/id/13929b51-b32e-401c-a642-49f7cd2d07bf
+ |
+ | Version: 3.6.5 (100% confidence)
+ | Found By: Query Parameter (Passive Detection)
+ |  - http://alvida-eatery.org/wp-content/plugins/elementor/assets/js/frontend.min.js?ver=3.6.5
+ | Confirmed By:
+ |  Readme - Stable Tag (Aggressive Detection)
+ |   - http://alvida-eatery.org/wp-content/plugins/elementor/readme.txt
+ |  Readme - ChangeLog Section (Aggressive Detection)
+ |   - http://alvida-eatery.org/wp-content/plugins/elementor/readme.txt
+
+[32m[+][0m ocean-extra
+ | Location: http://alvida-eatery.org/wp-content/plugins/ocean-extra/
+ | Last Updated: 2025-09-16T08:41:00.000Z
+ | Readme: http://alvida-eatery.org/wp-content/plugins/ocean-extra/readme.txt
+ | [33m[!][0m The version is out of date, the latest version is 2.5.1
+ |
+ | Found By: Known Locations (Aggressive Detection)
+ |  - http://alvida-eatery.org/wp-content/plugins/ocean-extra/, status: 200
+ |
+ | [31m[!][0m 15 vulnerabilities identified:
+ |
+ | [31m[!][0m Title: Ocean Extra < 2.0.5 - Admin+ PHP Objection Injection
+ |     Fixed in: 2.0.5
+ |     References:
+ |      - https://wpscan.com/vulnerability/22fd3f28-9036-4bd5-ad98-ff78bd1b51bc
+ |      - https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2022-3374
+ |
+ | [31m[!][0m Title: Ocean Extra < 2.1.2 - Contributor+ Stored XSS
+ |     Fixed in: 2.1.2
+ |     References:
+ |      - https://wpscan.com/vulnerability/9e9b1d9e-1271-4c00-a621-ef2212136b26
+ |      - https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2023-23891
+ |
+ | [31m[!][0m Title: Ocean Extra < 2.1.3 - Contributor+ Stored XSS
+ |     Fixed in: 2.1.3
+ |     Reference: https://wpscan.com/vulnerability/1ef04155-13ac-4059-b94b-7407f40ad2f0
+ |
+ | [31m[!][0m Title: Ocean Extra < 2.1.3 - Subscriber+ Arbitrary Post Content Disclosure
+ |     Fixed in: 2.1.3
+ |     References:
+ |      - https://wpscan.com/vulnerability/9caa8d2e-383b-47d7-8d21-d2ed6b1664cb
+ |      - https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2023-0749
+ |
+ | [31m[!][0m Title: Freemius SDK < 2.5.10 - Reflected Cross-Site Scripting
+ |     Fixed in: 2.1.8
+ |     References:
+ |      - https://wpscan.com/vulnerability/39d1f22f-ea34-4d94-9dc2-12661cf69d36
+ |      - https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2023-33999
+ |
+ | [31m[!][0m Title: Ocean Extra < 2.2.3 - Cross-Site Request Forgery to Arbitrary Plugin Activation
+ |     Fixed in: 2.2.3
+ |     References:
+ |      - https://wpscan.com/vulnerability/c9981d62-068a-403b-a008-f90248e16917
+ |      - https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2023-49164
+ |      - https://www.wordfence.com/threat-intel/vulnerabilities/id/ac111175-2059-41dc-afa2-a659da3adaca
+ |
+ | [31m[!][0m Title: Ocean Extra < 2.2.5 - Contributor+ Stored XSS
+ |     Fixed in: 2.2.5
+ |     References:
+ |      - https://wpscan.com/vulnerability/dff92176-71e4-4cb2-ade8-aa2f5ac211ff
+ |      - https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2024-1277
+ |      - https://www.wordfence.com/threat-intel/vulnerabilities/id/5458e3bf-fd91-4201-8157-572eb1126aaf
+ |
+ | [31m[!][0m Title: Ocean Extra < 2.2.7 - Contributor+ Stored Cross-Site Scripting
+ |     Fixed in: 2.2.7
+ |     References:
+ |      - https://wpscan.com/vulnerability/700d526e-f555-499f-9a70-91d624921c62
+ |      - https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2024-3167
+ |      - https://www.wordfence.com/threat-intel/vulnerabilities/id/a292579c-9755-4bd4-996c-23d19ca1c197
+ |
+ | [31m[!][0m Title: Ocean Extra < 2.2.9 - Authenticated (Contributor+) Stored Cross-Site Scripting via Flickr Widget
+ |     Fixed in: 2.2.9
+ |     References:
+ |      - https://wpscan.com/vulnerability/f3936754-0580-4020-9bba-dbdf166a7ada
+ |      - https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2024-5531
+ |      - https://www.wordfence.com/threat-intel/vulnerabilities/id/b39e17c5-711f-4229-90f4-213ea65a190d
+ |
+ | [31m[!][0m Title: Ocean Extra < 2.3.0 - Authenticated (Contributor+) Stored Cross-Site Scripting
+ |     Fixed in: 2.3.0
+ |     References:
+ |      - https://wpscan.com/vulnerability/f1dd1076-8a0c-457c-ba7f-0c96161ebdc4
+ |      - https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2024-37489
+ |      - https://www.wordfence.com/threat-intel/vulnerabilities/id/0a6627e5-8831-4724-a427-aaf5ebb67f57
+ |
+ | [31m[!][0m Title: Ocean Extra < 2.4.7 - Contributor+ Stored XSS via Shortcode
+ |     Fixed in: 2.4.7
+ |     References:
+ |      - https://wpscan.com/vulnerability/4ec2bd5e-c65b-4198-ae1a-070118503d15
+ |      - https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2025-3457
+ |      - https://www.wordfence.com/threat-intel/vulnerabilities/id/362a01c0-8b97-40dc-8af5-0d904da96576
+ |
+ | [31m[!][0m Title: Ocean Extra < 2.4.7 - Contributor+ Stored XSS via 'ocean_gallery_id'
+ |     Fixed in: 2.4.7
+ |     References:
+ |      - https://wpscan.com/vulnerability/cb31c59f-395c-4361-89a8-0b914c620fd4
+ |      - https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2025-3458
+ |      - https://www.wordfence.com/threat-intel/vulnerabilities/id/7595a1f6-6923-4102-8efe-a414adebce65
+ |
+ | [31m[!][0m Title: Ocean Extra < 2.4.7 - Unauthenticated Arbitrary Shortcode Execution
+ |     Fixed in: 2.4.7
+ |     References:
+ |      - https://wpscan.com/vulnerability/f75fc05d-d6d5-479b-b5b7-63e511e2a9a5
+ |      - https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2025-3472
+ |      - https://www.wordfence.com/threat-intel/vulnerabilities/id/74428e76-1946-408f-8adc-24ab4b7e46c5
+ |
+ | [31m[!][0m Title: Ocean Extra < 2.4.9 - Authenticated (Contributor+) Stored Cross-Site Scripting
+ |     Fixed in: 2.4.9
+ |     References:
+ |      - https://wpscan.com/vulnerability/109674e7-93d4-419e-a844-a338fc8185eb
+ |      - https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2025-49068
+ |      - https://patchstack.com/database/wordpress/plugin/ocean-extra/vulnerability/wordpress-ocean-extra-plugin-2-4-8-cross-site-scripting-xss-vulnerability
+ |
+ | [31m[!][0m Title: Ocean Extra < 2.5.0 - Contributor+ Stored XSS
+ |     Fixed in: 2.5.0
+ |     References:
+ |      - https://wpscan.com/vulnerability/51ab82dc-e3ef-4c31-b229-dcfca4861302
+ |      - https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2025-9499
+ |      - https://www.wordfence.com/threat-intel/vulnerabilities/id/290e9d95-0dac-4cc8-8cef-9e7974405f36
+ |
+ | Version: 2.0.1 (80% confidence)
+ | Found By: Readme - Stable Tag (Aggressive Detection)
+ |  - http://alvida-eatery.org/wp-content/plugins/ocean-extra/readme.txt
+
+[32m[+][0m perfect-survey
+ | Location: http://alvida-eatery.org/wp-content/plugins/perfect-survey/
+ | Latest Version: 1.5.1 (up to date)
+ | Last Updated: 2021-06-11T12:09:00.000Z
+ | Readme: http://alvida-eatery.org/wp-content/plugins/perfect-survey/readme.txt
+ |
+ | Found By: Known Locations (Aggressive Detection)
+ |  - http://alvida-eatery.org/wp-content/plugins/perfect-survey/, status: 200
+ |
+ | [31m[!][0m 4 vulnerabilities identified:
+ |
+ | [31m[!][0m Title: Perfect Survey < 1.5.2 - Unauthorised AJAX Call to Stored XSS / Survey Settings Update
+ |     Fixed in: 1.5.2
+ |     References:
+ |      - https://wpscan.com/vulnerability/c73c7694-1cee-4f26-a425-9c336adce52b
+ |      - https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2021-24763
+ |
+ | [31m[!][0m Title: Perfect Survey < 1.5.2 - Unauthenticated SQL Injection
+ |     Fixed in: 1.5.2
+ |     References:
+ |      - https://wpscan.com/vulnerability/c1620905-7c31-4e62-80f5-1d9635be11ad
+ |      - https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2021-24762
+ |
+ | [31m[!][0m Title: Perfect Survey < 1.5.2 - Reflected Cross-Site Scripting
+ |     Fixed in: 1.5.2
+ |     References:
+ |      - https://wpscan.com/vulnerability/c2f8e9b9-c044-4c45-8d17-e628e9cb5d59
+ |      - https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2021-24764
+ |
+ | [31m[!][0m Title: Perfect Survey < 1.5.2 - Unauthenticated Stored Cross-Site Scripting
+ |     References:
+ |      - https://wpscan.com/vulnerability/4440e7ca-1a55-444d-8f6c-04153302d750
+ |      - https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2021-24765
+ |
+ | Version: 1.5.1 (100% confidence)
+ | Found By: Readme - Stable Tag (Aggressive Detection)
+ |  - http://alvida-eatery.org/wp-content/plugins/perfect-survey/readme.txt
+ | Confirmed By: Readme - ChangeLog Section (Aggressive Detection)
+ |  - http://alvida-eatery.org/wp-content/plugins/perfect-survey/readme.txt
+
+[32m[+][0m wpforms-lite
+ | Location: http://alvida-eatery.org/wp-content/plugins/wpforms-lite/
+ | Last Updated: 2025-09-25T11:01:00.000Z
+ | Readme: http://alvida-eatery.org/wp-content/plugins/wpforms-lite/readme.txt
+ | [33m[!][0m The version is out of date, the latest version is 1.9.8.1
+ | [31m[!][0m Directory listing is enabled
+ |
+ | Found By: Known Locations (Aggressive Detection)
+ |  - http://alvida-eatery.org/wp-content/plugins/wpforms-lite/, status: 200
+ |
+ | [31m[!][0m 9 vulnerabilities identified:
+ |
+ | [31m[!][0m Title: Contact Form by WPForms < 1.7.5.5 - Admin+ Arbitrary File Access
+ |     Fixed in: 1.7.5.5
+ |     Reference: https://wpscan.com/vulnerability/faa56a23-66bc-4dd7-a5b0-81ea6365d75a
+ |
+ | [31m[!][0m Title: Contact Form by WPForms < 1.8.1.3 - Reflected XSS
+ |     Fixed in: 1.8.1.3
+ |     References:
+ |      - https://wpscan.com/vulnerability/9a7e7557-0fdb-46d7-97c1-ace6f3e18b9e
+ |      - https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2023-30500
+ |
+ | [31m[!][0m Title: Contact Form by WPForms – Drag & Drop Form Builder for WordPress < 1.8.8.2 - Unauthenticated Price Manipulation
+ |     Fixed in: 1.8.8.2
+ |     References:
+ |      - https://wpscan.com/vulnerability/f8d86b51-e8d2-4419-9a97-202535e20a54
+ |      - https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2024-3649
+ |      - https://www.wordfence.com/threat-intel/vulnerabilities/id/68a509ae-9943-4b9a-8ede-2b5732e96e6d
+ |
+ | [31m[!][0m Title: WPForms < 1.9.1.6 - Admin+ Stored XSS
+ |     Fixed in: 1.9.1.6
+ |     References:
+ |      - https://wpscan.com/vulnerability/467af13e-25bd-425c-929d-5dd06e28d595
+ |      - https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2024-7056
+ |      - https://research.cleantalk.org/cve-2024-7056/
+ |
+ | [31m[!][0m Title: WPForms – Easy Form Builder for WordPress < 1.9.2.1 - Cross-Site Request Forgery (CSRF) to Plugin's Log Deletion
+ |     Fixed in: 1.9.2.1
+ |     References:
+ |      - https://wpscan.com/vulnerability/d0877cf0-a940-4d1b-ae44-7601ac3132a0
+ |      - https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2024-10593
+ |      - https://www.wordfence.com/threat-intel/vulnerabilities/id/6d1ea80a-a1ce-4964-8dde-f3ed2df5537c
+ |
+ | [31m[!][0m Title: WPForms < 1.9.2.3 - Admin+ Stored XSS
+ |     Fixed in: 1.9.2.3
+ |     References:
+ |      - https://wpscan.com/vulnerability/82989909-9745-4c9a-abc7-c1adf8c2b047
+ |      - https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2024-11223
+ |      - https://research.cleantalk.org/cve-2024-11223
+ |
+ | [31m[!][0m Title: Contact Form by WPForms < 1.9.2.3 - Contributor+ Custom Form Theme Creation
+ |     Fixed in: 1.9.2.3
+ |     References:
+ |      - https://wpscan.com/vulnerability/ed5fd5ae-1c77-43e4-ab2c-99689f586938
+ |      - https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2024-56276
+ |      - https://www.wordfence.com/threat-intel/vulnerabilities/id/95de9099-6071-46d8-a7c9-bb2c1caa6b38
+ |
+ | [31m[!][0m Title: WPForms Lite < 1.9.3.2 - Authenticated (Contributor+) Stored Cross-Site Scripting via fieldHTML Parameter
+ |     Fixed in: 1.9.3.2
+ |     References:
+ |      - https://wpscan.com/vulnerability/9a3659ed-f3e1-4360-b91f-08b34397e9cc
+ |      - https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2024-13403
+ |      - https://www.wordfence.com/threat-intel/vulnerabilities/id/92ea6a89-b14f-4252-b886-e219c1bb658d
+ |
+ | [31m[!][0m Title: WPForms Lite < 1.9.5.1 - Contributor+ Stored XSS via 'start_timestamp' Parameter
+ |     Fixed in: 1.9.5.1
+ |     References:
+ |      - https://wpscan.com/vulnerability/a51ad92a-e9b9-4c83-aaf3-95b5a425c155
+ |      - https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2025-3794
+ |      - https://www.wordfence.com/threat-intel/vulnerabilities/id/179eb680-e8d8-4918-96e3-e67217771c29
+ |
+ | Version: 1.7.4.2 (100% confidence)
+ | Found By: Readme - Stable Tag (Aggressive Detection)
+ |  - http://alvida-eatery.org/wp-content/plugins/wpforms-lite/readme.txt
+ | Confirmed By: Readme - ChangeLog Section (Aggressive Detection)
+ |  - http://alvida-eatery.org/wp-content/plugins/wpforms-lite/readme.txt
+
+[32m[+][0m Enumerating Vulnerable Themes (via Passive and Aggressive Methods)
+
+ Checking Known Locations -: |===============================================================================================================================================================================================================|
+[32m[+][0m Checking Theme Versions (via Passive and Aggressive Methods)
+
+[34m[i][0m Theme(s) Identified:
+
+[32m[+][0m oceanwp
+ | Location: http://alvida-eatery.org/wp-content/themes/oceanwp/
+ | Last Updated: 2025-09-15T00:00:00.000Z
+ | Readme: http://alvida-eatery.org/wp-content/themes/oceanwp/readme.txt
+ | [33m[!][0m The version is out of date, the latest version is 4.1.3
+ | Style URL: http://alvida-eatery.org/wp-content/themes/oceanwp/style.css
+ | Style Name: OceanWP
+ | Style URI: https://oceanwp.org/
+ | Description: OceanWP is the perfect theme for your project. Lightweight and highly extendable, it will enable you to create almost any type of website such a blog, portfolio, business website and WooCommerce storefront with a beautiful & professional design. Very fast, responsive, RTL & translation ready, best SEO practices, unique WooCommerce features to increase conversion and much more. You can even edit the settings on tablet & mobile so your site looks good on every device. Work with the most popular page builders as Elementor, Beaver Builder, Brizy, Visual Composer, Divi, SiteOrigin, etc... Developers will love his extensible codebase making it a joy to customize and extend. Best friend of Elementor & WooCommerce. Looking for a Multi-Purpose theme? Look no further! Check the demos to realize that it's the only theme you will ever need: https://oceanwp.org/demos/
+ | Author: OceanWP
+ | Author URI: https://oceanwp.org/about-oceanwp/
+ | License: GNU General Public License v2.0 or later
+ | License URI: https://www.gnu.org/licenses/gpl-2.0.html
+ | Tags: two-columns, right-sidebar, footer-widgets, blog, news, custom-background, custom-menu, post-formats, rtl-language-support, sticky-post, editor-style, threaded-comments, translation-ready, buddypress, custom-colors, featured-images, full-width-template, theme-options, e-commerce, block-styles, wide-blocks, accessibility-ready
+ | Text Domain: oceanwp
+ |
+ | Found By: Urls In Homepage (Passive Detection)
+ |
+ | [31m[!][0m 4 vulnerabilities identified:
+ |
+ | [31m[!][0m Title: OceanWP < 3.5.5 - Subscriber+ Sensitive Information Exposure
+ |     Fixed in: 3.5.5
+ |     References:
+ |      - https://wpscan.com/vulnerability/629dcd1d-d2b1-4ea7-bc7d-a7d2c07b7a25
+ |      - https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2024-2476
+ |      - https://www.wordfence.com/threat-intel/vulnerabilities/id/5ec2743d-0d96-4056-8fdf-dc81d4e9b76f
+ |
+ | [31m[!][0m Title: OceanWP < 4.1.0 - Contributor+ Stored XSS via Select HTML Tag
+ |     Fixed in: 4.1.0
+ |     References:
+ |      - https://wpscan.com/vulnerability/81ea1b70-8582-4aa0-a60f-27f38078b8da
+ |      - https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2025-5524
+ |      - https://www.wordfence.com/threat-intel/vulnerabilities/id/37b085f9-3b15-44aa-9ba0-de5321dfbce4
+ |
+ | [31m[!][0m Title: Magnific Popups JavaScript Library < 1.2.0 - Contributor+ Stored XSS
+ |     Fixed in: 3.6.1
+ |     References:
+ |      - https://wpscan.com/vulnerability/c2998af6-d000-4da5-a60d-dbc6e52474bf
+ |      - https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2024-5647
+ |      - https://www.wordfence.com/threat-intel/vulnerabilities/id/dae80fc2-3076-4a32-876d-5df1c62de9bd
+ |
+ | [31m[!][0m Title: OceanWP < 4.1.2 - Subscriber+ Limited Option Update
+ |     Fixed in: 4.1.2
+ |     References:
+ |      - https://wpscan.com/vulnerability/cf77b7f2-525b-4fe8-b612-185a1c18c197
+ |      - https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2025-8944
+ |
+ | Version: 3.3.2 (80% confidence)
+ | Found By: Style (Passive Detection)
+ |  - http://alvida-eatery.org/wp-content/themes/oceanwp/style.css, Match: 'Version:            3.3.2'
+
+[32m[+][0m WPScan DB API OK
+ | Plan: free
+ | Requests Done (during the scan): 7
+ | Requests Remaining: 11
+
+[32m[+][0m Finished: Mon Sep 29 20:25:31 2025
+[32m[+][0m Requests Done: 8054
+[32m[+][0m Cached Requests: 21
+[32m[+][0m Data Sent: 2.54 MB
+[32m[+][0m Data Received: 1.736 MB
+[32m[+][0m Memory used: 257.43 MB
+[32m[+][0m Elapsed time: 00:02:22
