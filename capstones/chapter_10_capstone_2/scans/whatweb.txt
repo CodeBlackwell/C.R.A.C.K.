@@ -1,0 +1,76 @@
+[+] Simple hostname detected: 192.168.200.48. Testing both HTTP and HTTPS.
+WhatWeb report for [1m[34mhttp://192.168.200.48[0m
+Status    : 200 OK
+Title     : [1m[33mAnimal World[0m
+IP        : 192.168.200.48
+Country   : [1m[31mRESERVED, ZZ[0m
+
+Summary   : [1mBootstrap[0m, [1mEmail[0m[[0m[22mlab@forestsave.lab[0m], [1mHTML5[0m, [1mHTTPServer[0m[[1m[36mnginx/1.14.2[0m], [1mJQuery[0m[[1m[32m3.4.1[0m], [1mnginx[0m[[1m[32m1.14.2[0m], [1mScript[0m[[0m[22mtext/javascript[0m], [1mX-UA-Compatible[0m[[0m[22mIE=edge[0m]
+
+Detected Plugins:
+[ [1mBootstrap[0m ]
+	Bootstrap is an open source toolkit for developing with 
+	HTML, CSS, and JS. 
+
+	Website     : https://getbootstrap.com/
+
+[ [1mEmail[0m ]
+	Extract email addresses. Find valid email address and 
+	syntactically invalid email addresses from mailto: link 
+	tags. We match syntactically invalid links containing 
+	mailto: to catch anti-spam email addresses, eg. bob at 
+	gmail.com. This uses the simplified email regular 
+	expression from 
+	http://www.regular-expressions.info/email.html for valid 
+	email address matching. 
+
+	String       : [1m[36mlab@forestsave.lab[0m
+
+[ [1mHTML5[0m ]
+	HTML version 5, detected by the doctype declaration 
+
+
+[ [1mHTTPServer[0m ]
+	HTTP server header string. This plugin also attempts to 
+	identify the operating system from the server header. 
+
+	String       : [1m[36mnginx/1.14.2[0m (from server string)
+
+[ [1mJQuery[0m ]
+	A fast, concise, JavaScript that simplifies how to traverse 
+	HTML documents, handle events, perform animations, and add 
+	AJAX. 
+
+	Version      : [1m[32m3.4.1[0m
+	Website     : http://jquery.com/
+
+[ [1mScript[0m ]
+	This plugin detects instances of script HTML elements and 
+	returns the script language/type. 
+
+	String       : [1m[36mtext/javascript[0m
+
+[ [1mX-UA-Compatible[0m ]
+	This plugin retrieves the X-UA-Compatible value from the 
+	HTTP header and meta http-equiv tag. - More Info: 
+	http://msdn.microsoft.com/en-us/library/cc817574.aspx 
+
+	String       : [1m[36mIE=edge[0m
+
+[ [1mnginx[0m ]
+	Nginx (Engine-X) is a free, open-source, high-performance 
+	HTTP server and reverse proxy, as well as an IMAP/POP3 
+	proxy server. 
+
+	Version      : [1m[32m1.14.2[0m
+	Website     : http://nginx.net/
+
+HTTP Headers:
+	HTTP/1.1 200 OK
+	Server: nginx/1.14.2
+	Date: Tue, 30 Sep 2025 10:41:54 GMT
+	Content-Type: text/html; charset=UTF-8
+	Transfer-Encoding: chunked
+	Connection: close
+	Content-Encoding: gzip
+	

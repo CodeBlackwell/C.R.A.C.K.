@@ -1,0 +1,53 @@
+# Nmap 7.95 scan initiated Tue Sep 30 19:19:29 2025 as: /usr/lib/nmap/nmap -p22,80,3306,33060 -sV -A -T2 -vv -o capstones/chapter_10_capstone_2/narrowed_port_service_scan.scan 192.168.145.48
+Nmap scan report for 192.168.145.48
+Host is up, received echo-reply ttl 61 (0.18s latency).
+Scanned at 2025-09-30 19:19:30 UTC for 32s
+
+PORT      STATE SERVICE REASON         VERSION
+22/tcp    open  ssh     syn-ack ttl 61 OpenSSH 7.9p1 Debian 10+deb10u2 (protocol 2.0)
+| ssh-hostkey: 
+|   2048 36:ad:d8:70:a3:ad:d2:49:18:c5:4a:de:13:77:8e:01 (RSA)
+| ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCkb70GB/JGhmNB6P5sj0betQKM1B7b6gjH8e3Q+AMIdaA7DADiVr98Dqoz3+N4ONzsGuqsuqNedadeYnDNSJpsH5QJ+mnlo6g0aUU7EgFPEigvx9ZJ01+996j4PpM7mwId+ZdUDQoA1e/BgfhO4NLYXsWaV/uf/LkIYVgeWaCj1g9LlWTzKVeoVRKhbnzRVzBFJNC50xXNEeKaWzk9DYlm0geyhfVQMjWqwzm3Pq+/lVMuISO5pQFb6p8h/Rq3nyzVCk1fa4RY6ldnD1lha1IzJ9gN7fkfD0z0h+q5Uc4vvM7RRNyttt2OCERJ4Jb/rLbO21QMFmOpSDKrH8zQubin
+|   256 37:6f:86:69:ab:d3:93:f2:36:a6:97:64:34:9e:b9:0b (ECDSA)
+| ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBEH4DS2NvZPcGD/ZQbVtblE1DwBwygSL/XAO38hke09FkfmVAmF1SA9Z1KPn5988MlBVFzsNXSYZCiv6pFfUkgg=
+|   256 56:75:42:17:25:f0:f5:8a:29:36:20:0a:30:bd:99:0b (ED25519)
+|_ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIArqznopPbXlYiPjxsXSOFuoAp9+Agh469pa/H387BEW
+80/tcp    open  http    syn-ack ttl 61 nginx 1.14.2
+| http-methods: 
+|_  Supported Methods: GET HEAD POST
+|_http-server-header: nginx/1.14.2
+|_http-title: Animal World
+3306/tcp  open  mysql   syn-ack ttl 61 MySQL (unauthorized)
+33060/tcp open  mysqlx  syn-ack ttl 61 MySQL X protocol listener
+Warning: OSScan results may be unreliable because we could not find at least 1 open and 1 closed port
+Device type: general purpose
+Running: Linux 4.X|5.X
+OS CPE: cpe:/o:linux:linux_kernel:4 cpe:/o:linux:linux_kernel:5
+OS details: Linux 4.15 - 5.19
+TCP/IP fingerprint:
+OS:SCAN(V=7.95%E=4%D=9/30%OT=22%CT=%CU=44111%PV=Y%DS=4%DC=T%G=N%TM=68DC2D62
+OS:%P=x86_64-pc-linux-gnu)SEQ(SP=F3%GCD=1%ISR=F8%TI=Z%CI=Z%TS=A)OPS(O1=M578
+OS:ST11NW7%O2=M578ST11NW7%O3=M578NNT11NW7%O4=M578ST11NW7%O5=M578ST11NW7%O6=
+OS:M578ST11)WIN(W1=FE88%W2=FE88%W3=FE88%W4=FE88%W5=FE88%W6=FE88)ECN(R=Y%DF=
+OS:Y%T=40%W=FAF0%O=M578NNSNW7%CC=Y%Q=)T1(R=Y%DF=Y%T=40%S=O%A=S+%F=AS%RD=0%Q
+OS:=)T2(R=N)T3(R=N)T4(R=Y%DF=Y%T=40%W=0%S=A%A=Z%F=R%O=%RD=0%Q=)T5(R=Y%DF=Y%
+OS:T=40%W=0%S=Z%A=S+%F=AR%O=%RD=0%Q=)T6(R=Y%DF=Y%T=40%W=0%S=A%A=Z%F=R%O=%RD
+OS:=0%Q=)U1(R=Y%DF=N%T=40%IPL=164%UN=0%RIPL=G%RID=G%RIPCK=G%RUCK=G%RUD=G)IE
+OS:(R=Y%DFI=N%T=40%CD=S)
+
+Uptime guess: 23.772 days (since Sun Sep  7 00:48:50 2025)
+Network Distance: 4 hops
+TCP Sequence Prediction: Difficulty=243 (Good luck!)
+IP ID Sequence Generation: All zeros
+Service Info: OS: Linux; CPE: cpe:/o:linux:linux_kernel
+
+TRACEROUTE (using port 80/tcp)
+HOP RTT       ADDRESS
+1   116.10 ms 192.168.45.1
+2   102.50 ms 192.168.45.254
+3   95.50 ms  192.168.251.1
+4   188.19 ms 192.168.145.48
+
+Read data files from: /usr/share/nmap
+OS and Service detection performed. Please report any incorrect results at https://nmap.org/submit/ .
+# Nmap done at Tue Sep 30 19:20:02 2025 -- 1 IP address (1 host up) scanned in 33.31 seconds

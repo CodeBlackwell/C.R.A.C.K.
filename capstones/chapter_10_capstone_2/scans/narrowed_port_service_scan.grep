@@ -1,0 +1,5 @@
+# Nmap 7.95 scan initiated Tue Sep 30 10:38:05 2025 as: /usr/lib/nmap/nmap -p22,80,3306,33060 -sV -A -T2 -vv -oG capstones/chapter_10_capstone_2/narrowed_port_service_scan.grep 192.168.200.48
+# Ports scanned: TCP(4;22,80,3306,33060) UDP(0;) SCTP(0;) PROTOCOLS(0;)
+Host: 192.168.200.48 ()	Status: Up
+Host: 192.168.200.48 ()	Ports: 22/open/tcp//ssh//OpenSSH 7.9p1 Debian 10+deb10u2 (protocol 2.0)/, 80/open/tcp//http//nginx 1.14.2/, 3306/open/tcp//mysql//MySQL (unauthorized)/, 33060/open/tcp//mysqlx//MySQL X protocol listener/	OS: Linux 4.15 - 5.19|Linux 5.0 - 5.14	Seq Index: 247	IP ID Seq: All zeros
+# Nmap done at Tue Sep 30 10:38:32 2025 -- 1 IP address (1 host up) scanned in 27.38 seconds
