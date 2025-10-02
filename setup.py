@@ -46,18 +46,6 @@ setup(
         "console_scripts": [
             # Main command with subcommands
             "crack=crack.cli:main",
-
-            # Direct shortcuts for each tool
-            "crack-html=crack.cli:html_enum_entry",
-            "crack-param=crack.cli:param_discover_entry",
-            "crack-sqli=crack.cli:sqli_scan_entry",
-            "crack-sqli-fu=crack.cli:sqli_fu_entry",
-
-            # Legacy standalone commands (for backwards compatibility)
-            "html-enum=crack.enumeration.html_enum:main",
-            "param-discover=crack.enumeration.param_discover:main",
-            "sqli-scan=crack.enumeration.sqli_scanner:main",
-            "sqli-fu=crack.enumeration.sqli_fu:main",
         ],
     },
     include_package_data=True,

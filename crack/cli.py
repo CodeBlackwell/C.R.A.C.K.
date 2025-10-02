@@ -75,14 +75,9 @@ Examples:
   crack html-enum http://target.com
   crack param-discover http://target.com/page.php
   crack sqli-scan http://target.com/page.php?id=1
-  crack sqli-fu -d mysql -c privileges
-
-Quick Access:
-  You can also use direct shortcuts:
-    crack-html http://target.com
-    crack-param http://target.com/page.php
-    crack-sqli http://target.com/page.php?id=1
-    crack-sqli-fu -d postgresql
+  crack sqli-fu mysql
+  crack sqli-fu mysql -c privileges
+  crack sqli-fu postgresql -t http://target.com/vuln.php -p id
         """
     )
 
@@ -131,30 +126,6 @@ Quick Access:
         if not args.no_banner:
             print_banner()
         parser.print_help()
-
-def html_enum_entry():
-    """Direct entry point for crack-html command"""
-    print_banner()
-    from crack.enumeration import html_enum
-    html_enum.main()
-
-def param_discover_entry():
-    """Direct entry point for crack-param command"""
-    print_banner()
-    from crack.enumeration import param_discover
-    param_discover.main()
-
-def sqli_scan_entry():
-    """Direct entry point for crack-sqli command"""
-    print_banner()
-    from crack.enumeration import sqli_scanner
-    sqli_scanner.main()
-
-def sqli_fu_entry():
-    """Direct entry point for crack-sqli-fu command"""
-    print_banner()
-    from crack.enumeration import sqli_fu
-    sqli_fu.main()
 
 if __name__ == '__main__':
     main()
