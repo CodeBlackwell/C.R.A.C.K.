@@ -1,0 +1,42 @@
+```bash
+nmap -T4 --min-rate 1000 -sV -sC --version-all -A --osscan-guess -oN "/home/kali/OSCP/capstones/chapter_10_capstone_3/results/192.168.145.49/scans/_quick_tcp_nmap.txt" -oX "/home/kali/OSCP/capstones/chapter_10_capstone_3/results/192.168.145.49/scans/xml/_quick_tcp_nmap.xml" 192.168.145.49
+```
+
+[/home/kali/OSCP/capstones/chapter_10_capstone_3/results/192.168.145.49/scans/_quick_tcp_nmap.txt](file:///home/kali/OSCP/capstones/chapter_10_capstone_3/results/192.168.145.49/scans/_quick_tcp_nmap.txt):
+
+```
+# Nmap 7.95 scan initiated Wed Oct  1 17:50:21 2025 as: /usr/lib/nmap/nmap -T4 --min-rate 1000 -sV -sC --version-all -A --osscan-guess -oN /home/kali/OSCP/capstones/chapter_10_capstone_3/results/192.168.145.49/scans/_quick_tcp_nmap.txt -oX /home/kali/OSCP/capstones/chapter_10_capstone_3/results/192.168.145.49/scans/xml/_quick_tcp_nmap.xml 192.168.145.49
+Nmap scan report for offsecatk.com (192.168.145.49)
+Host is up (0.060s latency).
+Not shown: 997 closed tcp ports (reset)
+PORT     STATE SERVICE    VERSION
+22/tcp   open  ssh        OpenSSH 8.4p1 Debian 5+deb11u1 (protocol 2.0)
+| ssh-hostkey: 
+|   3072 ba:e4:27:d5:f4:ac:2c:97:91:7a:21:39:bc:2b:3e:48 (RSA)
+|   256 5b:df:7f:2e:d5:c8:f6:9f:05:98:b9:44:bb:79:d5:c6 (ECDSA)
+|_  256 29:7c:e6:4a:ee:04:ae:d0:dc:e5:07:3c:0f:64:f1:4e (ED25519)
+80/tcp   open  http       Apache httpd 2.4.54 ((Debian))
+|_http-title: Golden Glove Gym
+|_http-server-header: Apache/2.4.54 (Debian)
+5432/tcp open  postgresql PostgreSQL DB 13.5 - 13.9
+| ssl-cert: Subject: commonName=debian11temp
+| Subject Alternative Name: DNS:debian11temp
+| Not valid before: 2022-07-18T15:19:49
+|_Not valid after:  2032-07-15T15:19:49
+|_ssl-date: TLS randomness does not represent time
+OS fingerprint not ideal because: Didn't receive UDP response. Please try again with -sSU
+No OS matches for host
+Network Distance: 4 hops
+Service Info: OS: Linux; CPE: cpe:/o:linux:linux_kernel
+
+TRACEROUTE (using port 443/tcp)
+HOP RTT      ADDRESS
+1   55.89 ms 192.168.45.1
+2   55.89 ms 192.168.45.254
+3   55.93 ms 192.168.251.1
+4   55.98 ms offsecatk.com (192.168.145.49)
+
+OS and Service detection performed. Please report any incorrect results at https://nmap.org/submit/ .
+# Nmap done at Wed Oct  1 17:50:41 2025 -- 1 IP address (1 host up) scanned in 19.14 seconds
+
+```

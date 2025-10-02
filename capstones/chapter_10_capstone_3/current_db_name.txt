@@ -1,0 +1,4 @@
+<b>Warning</b>:  pg_query(): Query failed: ERROR:  invalid input syntax for type integer: &quot;glovedb&quot; in <b>/var/www/html/class.php</b> on line <b>423</b><br />
+
+    <!-- Footer Start -->
+gloved

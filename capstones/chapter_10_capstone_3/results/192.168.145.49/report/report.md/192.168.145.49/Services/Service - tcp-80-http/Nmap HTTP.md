@@ -1,0 +1,345 @@
+```bash
+nmap -T4 --min-rate 1000 -sV -p 80 --script="banner,(http* or ssl*) and not (brute or broadcast or dos or external or http-slowloris* or fuzzer)" -oN "/home/kali/OSCP/capstones/chapter_10_capstone_3/results/192.168.145.49/scans/tcp80/tcp_80_http_nmap.txt" -oX "/home/kali/OSCP/capstones/chapter_10_capstone_3/results/192.168.145.49/scans/tcp80/xml/tcp_80_http_nmap.xml" 192.168.145.49
+```
+
+[/home/kali/OSCP/capstones/chapter_10_capstone_3/results/192.168.145.49/scans/tcp80/tcp_80_http_nmap.txt](file:///home/kali/OSCP/capstones/chapter_10_capstone_3/results/192.168.145.49/scans/tcp80/tcp_80_http_nmap.txt):
+
+```
+# Nmap 7.95 scan initiated Wed Oct  1 17:50:41 2025 as: /usr/lib/nmap/nmap -T4 --min-rate 1000 -sV -p 80 "--script=banner,(http* or ssl*) and not (brute or broadcast or dos or external or http-slowloris* or fuzzer)" -oN /home/kali/OSCP/capstones/chapter_10_capstone_3/results/192.168.145.49/scans/tcp80/tcp_80_http_nmap.txt -oX /home/kali/OSCP/capstones/chapter_10_capstone_3/results/192.168.145.49/scans/tcp80/xml/tcp_80_http_nmap.xml 192.168.145.49
+Nmap scan report for offsecatk.com (192.168.145.49)
+Host is up (0.056s latency).
+
+Bug in http-security-headers: no string output.
+PORT   STATE SERVICE VERSION
+80/tcp open  http    Apache httpd 2.4.54 ((Debian))
+| http-methods: 
+|_  Supported Methods: GET HEAD POST OPTIONS
+| http-sitemap-generator: 
+|   Directory structure:
+|     /
+|       Other: 1; php: 4
+|     /img/
+|       jpg: 9
+|     /js/
+|       js: 1
+|     /lib/easing/
+|       js: 1
+|     /lib/waypoints/
+|       js: 1
+|     /mail/
+|       js: 2
+|   Longest directory structure:
+|     Depth: 2
+|     Dir: /lib/easing/
+|   Total files found (by extension):
+|_    Other: 1; jpg: 9; js: 5; php: 4
+|_http-vuln-cve2017-1001000: ERROR: Script execution failed (use -d to debug)
+| http-traceroute: 
+|_  Possible reverse proxy detected.
+|_http-fetch: Please enter the complete path of the directory to save data in.
+|_http-server-header: Apache/2.4.54 (Debian)
+|_http-malware-host: Host appears to be clean
+|_http-mobileversion-checker: No mobile version detected.
+|_http-exif-spider: ERROR: Script execution failed (use -d to debug)
+|_http-title: Golden Glove Gym
+| http-grep: 
+|   (1) http://offsecatk.com:80/: 
+|     (1) email: 
+|_      + info@goldenclove.com
+|_http-date: Wed, 01 Oct 2025 17:50:53 GMT; 0s from local time.
+| http-enum: 
+|   /mail/: Mail folder
+|   /css/: Potentially interesting directory w/ listing on 'apache/2.4.54 (debian)'
+|   /img/: Potentially interesting directory w/ listing on 'apache/2.4.54 (debian)'
+|   /js/: Potentially interesting directory w/ listing on 'apache/2.4.54 (debian)'
+|_  /lib/: Potentially interesting directory w/ listing on 'apache/2.4.54 (debian)'
+| http-headers: 
+|   Date: Wed, 01 Oct 2025 17:50:52 GMT
+|   Server: Apache/2.4.54 (Debian)
+|   Connection: close
+|   Content-Type: text/html; charset=UTF-8
+|   
+|_  (Request type: HEAD)
+|_http-feed: Couldn't find any feeds.
+|_http-dombased-xss: Couldn't find any DOM based XSS.
+| http-useragent-tester: 
+|   Status for browser useragent: 200
+|   Allowed User Agents: 
+|     Mozilla/5.0 (compatible; Nmap Scripting Engine; https://nmap.org/book/nse.html)
+|     libwww
+|     lwp-trivial
+|     libcurl-agent/1.0
+|     PHP/
+|     Python-urllib/2.5
+|     GT::WWW
+|     Snoopy
+|     MFC_Tear_Sample
+|     HTTP::Lite
+|     PHPCrawl
+|     URI::Fetch
+|     Zend_Http_Client
+|     http client
+|     PECL::HTTP
+|     Wget/1.13.4 (linux-gnu)
+|_    WWW-Mechanize/1.34
+|_http-csrf: Couldn't find any CSRF vulnerabilities.
+| http-comments-displayer: 
+| Spidering limited to: maxdepth=3; maxpagecount=20; withinhost=offsecatk.com
+|     
+|     Path: http://offsecatk.com:80/
+|     Line number: 249
+|     Comment: 
+|         <!-- Subscribe End -->
+|     
+|     Path: http://offsecatk.com:80/
+|     Line number: 236
+|     Comment: 
+|         <!-- Subscribe Start -->
+|     
+|     Path: http://offsecatk.com:80/
+|     Line number: 48
+|     Comment: 
+|         <!-- Carousel Start -->
+|     
+|     Path: http://offsecatk.com:80/about.php
+|     Line number: 268
+|     Comment: 
+|         <!-- Template Javascript -->
+|     
+|     Path: http://offsecatk.com:80/about.php
+|     Line number: 14
+|     Comment: 
+|         <!-- Font Awesome -->
+|     
+|     Path: http://offsecatk.com:80/about.php
+|     Line number: 46
+|     Comment: 
+|         <!-- Navbar End -->
+|     
+|     Path: http://offsecatk.com:80/about.php
+|     Line number: 129
+|     Comment: 
+|         <!-- Team Start -->
+|     
+|     Path: http://offsecatk.com:80/about.php
+|     Line number: 251
+|     Comment: 
+|         <!-- Footer End -->
+|     
+|     Path: http://offsecatk.com:80/class.php
+|     Line number: 414
+|     Comment: 
+|         <!-- BMI Calculation End -->
+|     
+|     Path: http://offsecatk.com:80/class.php
+|     Line number: 94
+|     Comment: 
+|         <!-- Class Timetable Start -->
+|     
+|     Path: http://offsecatk.com:80/class.php
+|     Line number: 91
+|     Comment: 
+|         <!-- Gym Class End -->
+|     
+|     Path: http://offsecatk.com:80/about.php
+|     Line number: 17
+|     Comment: 
+|         <!-- Flaticon Font -->
+|     
+|     Path: http://offsecatk.com:80/about.php
+|     Line number: 63
+|     Comment: 
+|         <!-- About Start -->
+|     
+|     Path: http://offsecatk.com:80/about.php
+|     Line number: 49
+|     Comment: 
+|         <!-- Page Header Start -->
+|     
+|     Path: http://offsecatk.com:80/class.php
+|     Line number: 64
+|     Comment: 
+|         <!-- Gym Class Start -->
+|     
+|     Path: http://offsecatk.com:80/about.php
+|     Line number: 11
+|     Comment: 
+|         <!-- Favicon -->
+|     
+|     Path: http://offsecatk.com:80/about.php
+|     Line number: 264
+|     Comment: 
+|         <!-- Contact Javascript File -->
+|     
+|     Path: http://offsecatk.com:80/js/main.js
+|     Line number: 22
+|     Comment: 
+|         
+|     
+|     Path: http://offsecatk.com:80/feature.php
+|     Line number: 63
+|     Comment: 
+|         <!-- GYM Feature Start -->
+|     
+|     Path: http://offsecatk.com:80/
+|     Line number: 77
+|     Comment: 
+|         <!-- Carousel End -->
+|     
+|     Path: http://offsecatk.com:80/about.php
+|     Line number: 25
+|     Comment: 
+|         <!-- Navbar Start -->
+|     
+|     Path: http://offsecatk.com:80/feature.php
+|     Line number: 120
+|     Comment: 
+|         <!-- GYM Feature End -->
+|     
+|     Path: http://offsecatk.com:80/class.php
+|     Line number: 363
+|     Comment: 
+|         <!-- BMI Calculation Start -->
+|     
+|     Path: http://offsecatk.com:80/lib/flaticon/font/flaticon.css
+|     Line number: 1
+|     Comment: 
+|         /*
+|           	Flaticon icon font: Flaticon
+|           	Creation date: 26/10/2020 11:08
+|           	*/
+|     
+|     Path: http://offsecatk.com:80/lib/waypoints/waypoints.min.js
+|     Line number: 1
+|     Comment: 
+|         /*!
+|         Waypoints - 4.0.1
+|         Copyright \xC2\xA9 2011-2016 Caleb Troughton
+|         Licensed under the MIT license.
+|         https://github.com/imakewebthings/waypoints/blob/master/licenses.txt
+|         */
+|     
+|     Path: http://offsecatk.com:80/css/style.min.css
+|     Line number: 1
+|     Comment: 
+|         /*!
+|          * Bootstrap v4.5.3 (https://getbootstrap.com/)
+|          * Copyright 2011-2020 The Bootstrap Authors
+|          * Copyright 2011-2020 Twitter, Inc.
+|          * Licensed under MIT (https://github.com/twbs/bootstrap/blob/main/LICENSE)
+|          */
+|     
+|     Path: http://offsecatk.com:80/about.php
+|     Line number: 126
+|     Comment: 
+|         <!-- Features End -->
+|     
+|     Path: http://offsecatk.com:80/blog.php
+|     Line number: 171
+|     Comment: 
+|         <!-- Blog End -->
+|     
+|     Path: http://offsecatk.com:80/js/main.js
+|     Line number: 4
+|     Comment: 
+|         
+|     
+|     Path: http://offsecatk.com:80/contact.php
+|     Line number: 118
+|     Comment: 
+|         <!-- Contact End -->
+|     
+|     Path: http://offsecatk.com:80/about.php
+|     Line number: 201
+|     Comment: 
+|         <!-- Footer Start -->
+|     
+|     Path: http://offsecatk.com:80/contact.php
+|     Line number: 63
+|     Comment: 
+|         <!-- Contact Start -->
+|     
+|     Path: http://offsecatk.com:80/about.php
+|     Line number: 88
+|     Comment: 
+|         <!-- About End -->
+|     
+|     Path: http://offsecatk.com:80/about.php
+|     Line number: 60
+|     Comment: 
+|         <!-- Page Header End -->
+|     
+|     Path: http://offsecatk.com:80/about.php
+|     Line number: 91
+|     Comment: 
+|         <!-- Features Start -->
+|     
+|     Path: http://offsecatk.com:80/class.php
+|     Line number: 359
+|     Comment: 
+|         <!-- Class Timetable End -->
+|     
+|     Path: http://offsecatk.com:80/about.php
+|     Line number: 198
+|     Comment: 
+|         <!-- Team End -->
+|     
+|     Path: http://offsecatk.com:80/feature.php
+|     Line number: 123
+|     Comment: 
+|         <!-- Testimonial Start -->
+|     
+|     Path: http://offsecatk.com:80/blog.php
+|     Line number: 63
+|     Comment: 
+|         <!-- Blog Start -->
+|     
+|     Path: http://offsecatk.com:80/about.php
+|     Line number: 20
+|     Comment: 
+|         <!-- Customized Bootstrap Stylesheet -->
+|     
+|     Path: http://offsecatk.com:80/feature.php
+|     Line number: 194
+|     Comment: 
+|         <!-- Testimonial End -->
+|     
+|     Path: http://offsecatk.com:80/about.php
+|     Line number: 254
+|     Comment: 
+|         <!-- Back to Top -->
+|     
+|     Path: http://offsecatk.com:80/about.php
+|     Line number: 258
+|     Comment: 
+|_        <!-- JavaScript Libraries -->
+| http-referer-checker: 
+| Spidering limited to: maxpagecount=30
+|   https://code.jquery.com:443/jquery-3.4.1.min.js
+|_  https://stackpath.bootstrapcdn.com:443/bootstrap/4.4.1/js/bootstrap.bundle.min.js
+| http-fileupload-exploiter: 
+|   
+|     Couldn't find a file-type field.
+|   
+|     Couldn't find a file-type field.
+|   
+|_    Couldn't find a file-type field.
+|_http-stored-xss: Couldn't find any stored XSS vulnerabilities.
+|_http-chrono: Request times for /; avg: 445.53ms; min: 374.48ms; max: 496.61ms
+| http-vhosts: 
+|_128 names had status 200
+|_http-devframework: Couldn't determine the underlying framework or CMS. Try increasing 'httpspider.maxpagecount' value to spider more pages.
+| http-errors: 
+| Spidering limited to: maxpagecount=40; withinhost=offsecatk.com
+|   Found the following error pages: 
+|   
+|   Error Code: 404
+|   	http://offsecatk.com:80/img/favicon.ico
+|   
+|   Error Code: 404
+|_  	http://offsecatk.com:80/features.php
+
+Service detection performed. Please report any incorrect results at https://nmap.org/submit/ .
+# Nmap done at Wed Oct  1 17:51:20 2025 -- 1 IP address (1 host up) scanned in 39.45 seconds
+
+```

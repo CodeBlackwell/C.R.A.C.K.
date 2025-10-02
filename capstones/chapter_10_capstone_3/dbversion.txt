@@ -1,0 +1,4 @@
+<b>Warning</b>:  pg_query(): Query failed: ERROR:  invalid input syntax for type integer: &quot;PostgreSQL 13.7 (Debian 13.7-0+deb11u1) on x86_64-pc-linux-gnu, compiled by gcc (Debian 10.2.1-6) 10.2.1 20210110, 64-bit&quot; in <b>/var/www/html/class.php</b> on line <b>423</b><br />
+
+    <!-- Footer Start -->
+PostgreSQL 13.7 (Debian 13.7-0+deb11u1) on x86_64-pc-linux-gnu, compiled by gcc (Debian 10.2.1-6) 10.2.1 20210110

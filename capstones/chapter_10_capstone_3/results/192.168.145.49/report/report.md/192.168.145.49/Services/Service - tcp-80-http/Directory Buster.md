@@ -1,0 +1,313 @@
+```bash
+feroxbuster -u http://192.168.145.49:80/ -t 10 -w /root/.local/share/AutoRecon/wordlists/dirbuster.txt -x "txt,html,php,asp,aspx,jsp" -v -k -n -q -e -r -o "/home/kali/OSCP/capstones/chapter_10_capstone_3/results/192.168.145.49/scans/tcp80/tcp_80_http_feroxbuster_dirbuster.txt"
+```
+
+[/home/kali/OSCP/capstones/chapter_10_capstone_3/results/192.168.145.49/scans/tcp80/tcp_80_http_feroxbuster_dirbuster.txt](file:///home/kali/OSCP/capstones/chapter_10_capstone_3/results/192.168.145.49/scans/tcp80/tcp_80_http_feroxbuster_dirbuster.txt):
+
+```
+Configuration {
+    kind: "configuration",
+    wordlist: "/root/.local/share/AutoRecon/wordlists/dirbuster.txt",
+    config: "/etc/feroxbuster/ferox-config.toml",
+    proxy: "",
+    replay_proxy: "",
+    server_certs: [],
+    client_cert: "",
+    client_key: "",
+    target_url: "http://192.168.145.49:80/",
+    status_codes: [
+        100,
+        101,
+        102,
+        200,
+        201,
+        202,
+        203,
+        204,
+        205,
+        206,
+        207,
+        208,
+        226,
+        300,
+        301,
+        302,
+        303,
+        304,
+        305,
+        307,
+        308,
+        400,
+        401,
+        402,
+        403,
+        404,
+        405,
+        406,
+        407,
+        408,
+        409,
+        410,
+        411,
+        412,
+        413,
+        414,
+        415,
+        416,
+        417,
+        418,
+        421,
+        422,
+        423,
+        424,
+        426,
+        428,
+        429,
+        431,
+        451,
+        500,
+        501,
+        502,
+        503,
+        504,
+        505,
+        506,
+        507,
+        508,
+        510,
+        511,
+        103,
+        425,
+    ],
+    replay_codes: [
+        100,
+        101,
+        102,
+        200,
+        201,
+        202,
+        203,
+        204,
+        205,
+        206,
+        207,
+        208,
+        226,
+        300,
+        301,
+        302,
+        303,
+        304,
+        305,
+        307,
+        308,
+        400,
+        401,
+        402,
+        403,
+        404,
+        405,
+        406,
+        407,
+        408,
+        409,
+        410,
+        411,
+        412,
+        413,
+        414,
+        415,
+        416,
+        417,
+        418,
+        421,
+        422,
+        423,
+        424,
+        426,
+        428,
+        429,
+        431,
+        451,
+        500,
+        501,
+        502,
+        503,
+        504,
+        505,
+        506,
+        507,
+        508,
+        510,
+        511,
+        103,
+        425,
+    ],
+    filter_status: [],
+    client: Client {
+        accepts: Accepts,
+        proxies: [
+            Proxy(
+                System(
+                    {},
+                ),
+                None,
+            ),
+        ],
+        referer: true,
+        default_headers: {
+            "accept": "*/*",
+            "user-agent": "feroxbuster/2.11.0",
+        },
+        timeout: 7s,
+    },
+    replay_client: None,
+    threads: 10,
+    timeout: 7,
+    verbosity: 1,
+    silent: false,
+    quiet: true,
+    output_level: Quiet,
+    auto_bail: false,
+    auto_tune: false,
+    requester_policy: Default,
+    json: false,
+    output: "/home/kali/OSCP/capstones/chapter_10_capstone_3/results/192.168.145.49/scans/tcp80/tcp_80_http_feroxbuster_dirbuster.txt",
+    debug_log: "",
+    user_agent: "feroxbuster/2.11.0",
+    random_agent: false,
+    redirects: true,
+    insecure: true,
+    extensions: [
+        "txt",
+        "html",
+        "php",
+        "asp",
+        "aspx",
+        "jsp",
+    ],
+    methods: [
+        "GET",
+    ],
+    data: [],
+    headers: {},
+    queries: [],
+    no_recursion: true,
+    extract_links: true,
+    add_slash: false,
+    stdin: false,
+    depth: 4,
+    scan_limit: 0,
+    parallel: 0,
+    rate_limit: 0,
+    filter_size: [],
+    filter_line_count: [],
+    filter_word_count: [],
+    filter_regex: [],
+    dont_filter: false,
+    resumed: false,
+    resume_from: "",
+    save_state: true,
+    time_limit: "",
+    filter_similar: [],
+    url_denylist: [],
+    regex_denylist: [],
+    collect_extensions: false,
+    dont_collect: [
+        "tif",
+        "tiff",
+        "ico",
+        "cur",
+        "bmp",
+        "webp",
+        "svg",
+        "png",
+        "jpg",
+        "jpeg",
+        "jfif",
+        "gif",
+        "avif",
+        "apng",
+        "pjpeg",
+        "pjp",
+        "mov",
+        "wav",
+        "mpg",
+        "mpeg",
+        "mp3",
+        "mp4",
+        "m4a",
+        "m4p",
+        "m4v",
+        "ogg",
+        "webm",
+        "ogv",
+        "oga",
+        "flac",
+        "aac",
+        "3gp",
+        "css",
+        "zip",
+        "xls",
+        "xml",
+        "gz",
+        "tgz",
+    ],
+    collect_backups: false,
+    backup_extensions: [
+        "~",
+        ".bak",
+        ".bak2",
+        ".old",
+        ".1",
+    ],
+    collect_words: false,
+    force_recursion: false,
+    update_app: false,
+    scan_dir_listings: false,
+    request_file: "",
+    protocol: "https",
+    limit_bars: 0,
+}
+200      GET      488l     1382w    27598c http://192.168.145.49/class.php
+200      GET       42l      112w     1335c http://192.168.145.49/lib/flaticon/font/flaticon.css
+200      GET      164l      869w    66243c http://192.168.145.49/img/team-3.jpg
+200      GET        7l      158w     9028c http://192.168.145.49/lib/waypoints/waypoints.min.js
+200      GET      783l     2739w    46446c http://192.168.145.49/index.php
+200      GET       65l      166w     2598c http://192.168.145.49/mail/contact.js
+200      GET      196l     1159w    92988c http://192.168.145.49/img/blog-1.jpg
+200      GET      186l     1300w   103968c http://192.168.145.49/img/team-1.jpg
+200      GET      268l     1017w    15171c http://192.168.145.49/feature.php
+200      GET        6l     1769w   141639c http://192.168.145.49/css/style.min.css
+200      GET        1l       38w     2303c http://192.168.145.49/lib/easing/easing.min.js
+200      GET      435l     2738w   222672c http://192.168.145.49/img/carousel-1.jpg
+200      GET       35l       77w     1099c http://192.168.145.49/js/main.js
+200      GET      329l     1857w   139858c http://192.168.145.49/img/about.jpg
+200      GET      245l     1051w    14484c http://192.168.145.49/blog.php
+200      GET      214l     1219w    96082c http://192.168.145.49/img/feature-3.jpg
+200      GET      192l      682w    10573c http://192.168.145.49/contact.php
+200      GET       20l      106w     7346c http://192.168.145.49/img/testimonial-3.jpg
+200      GET        1l      245w    14877c http://192.168.145.49/mail/jqBootstrapValidation.min.js
+200      GET      199l     1081w    81986c http://192.168.145.49/img/team-4.jpg
+200      GET      216l     1140w    95580c http://192.168.145.49/img/feature-4.jpg
+200      GET      272l     1105w    15794c http://192.168.145.49/about.php
+200      GET      179l     1007w    80602c http://192.168.145.49/img/feature-2.jpg
+200      GET      171l      876w    68196c http://192.168.145.49/img/blog-2.jpg
+200      GET      233l     1294w   108672c http://192.168.145.49/img/team-2.jpg
+200      GET      115l      728w    57147c http://192.168.145.49/img/feature-1.jpg
+200      GET       16l       66w     5067c http://192.168.145.49/img/testimonial-2.jpg
+200      GET        6l       47w     4281c http://192.168.145.49/img/testimonial-1.jpg
+200      GET      538l     3414w   273565c http://192.168.145.49/img/carousel-2.jpg
+200      GET      783l     2739w    46446c http://192.168.145.49/
+200      GET       35l      211w     1460c http://192.168.145.49/LICENSE.txt
+200      GET       16l       58w      941c http://192.168.145.49/css/
+200      GET       14l       74w     6065c http://192.168.145.49/img/user.jpg
+200      GET      416l     2309w   195102c http://192.168.145.49/img/bg.jpg
+200      GET       33l      222w     4405c http://192.168.145.49/img/
+200      GET       16l       59w      930c http://192.168.145.49/js/
+200      GET       18l       82w     1329c http://192.168.145.49/lib/
+500      GET        0l        0w        0c http://192.168.145.49/mail/contact.php
+200      GET       18l       81w     1380c http://192.168.145.49/mail/
+200      GET        0l        0w        0c http://192.168.145.49/dbcon.php
+
+```

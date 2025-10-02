@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE nmaprun>
+<?xml-stylesheet href="file:///usr/share/nmap/nmap.xsl" type="text/xsl"?>
+<!-- Nmap 7.95 scan initiated Wed Oct  1 17:50:21 2025 as: /usr/lib/nmap/nmap -T4 -&#45;min-rate 1000 -sV -sC -&#45;version-all -A -&#45;osscan-guess -p- -oN /home/kali/OSCP/capstones/chapter_10_capstone_3/results/192.168.145.49/scans/_full_tcp_nmap.txt -oX /home/kali/OSCP/capstones/chapter_10_capstone_3/results/192.168.145.49/scans/xml/_full_tcp_nmap.xml 192.168.145.49 -->
+<nmaprun scanner="nmap" args="/usr/lib/nmap/nmap -T4 -&#45;min-rate 1000 -sV -sC -&#45;version-all -A -&#45;osscan-guess -p- -oN /home/kali/OSCP/capstones/chapter_10_capstone_3/results/192.168.145.49/scans/_full_tcp_nmap.txt -oX /home/kali/OSCP/capstones/chapter_10_capstone_3/results/192.168.145.49/scans/xml/_full_tcp_nmap.xml 192.168.145.49" start="1759341021" startstr="Wed Oct  1 17:50:21 2025" version="7.95" xmloutputversion="1.05">
+<scaninfo type="syn" protocol="tcp" numservices="65535" services="1-65535"/>
+<verbose level="0"/>
+<debugging level="0"/>
+<hosthint><status state="up" reason="unknown-response" reason_ttl="0"/>
+<address addr="192.168.145.49" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+</hosthint>
+<host starttime="1759341022" endtime="1759341057"><status state="up" reason="echo-reply" reason_ttl="61"/>
+<address addr="192.168.145.49" addrtype="ipv4"/>
+<hostnames>
+<hostname name="offsecatk.com" type="PTR"/>
+</hostnames>
+<ports><extraports state="closed" count="65532">
+<extrareasons reason="reset" count="65532" proto="tcp" ports="1-21,23-79,81-5431,5433-65535"/>
+</extraports>
+<port protocol="tcp" portid="22"><state state="open" reason="syn-ack" reason_ttl="61"/><service name="ssh" product="OpenSSH" version="8.4p1 Debian 5+deb11u1" extrainfo="protocol 2.0" ostype="Linux" method="probed" conf="10"><cpe>cpe:/a:openbsd:openssh:8.4p1</cpe><cpe>cpe:/o:linux:linux_kernel</cpe></service><script id="ssh-hostkey" output="&#xa;  3072 ba:e4:27:d5:f4:ac:2c:97:91:7a:21:39:bc:2b:3e:48 (RSA)&#xa;  256 5b:df:7f:2e:d5:c8:f6:9f:05:98:b9:44:bb:79:d5:c6 (ECDSA)&#xa;  256 29:7c:e6:4a:ee:04:ae:d0:dc:e5:07:3c:0f:64:f1:4e (ED25519)"><table>
+<elem key="bits">3072</elem>
+<elem key="fingerprint">bae427d5f4ac2c97917a2139bc2b3e48</elem>
+<elem key="key">AAAAB3NzaC1yc2EAAAADAQABAAABgQDUV2vkBnN9WlX0S3fYwTLePAaWdq56WyWE5OtMYaysuJpeRjYqoQtfCcIZzL7Bd32FzAZcGl1Gk77TzfhZ7SoPgaeqKWFUR60SAzPRbSDNNwGWLIy9Nu66ds5sduJ/eejwqDd6AytaEtFumORNYQtuoXpgtQQUBmbFqtatC+rO1WX2CgX9u3BbfR241SxqoF7DoHFsr8UUz7Oq35NSrJhcv2Rh+dQCoZE0AxQ6UC3xjVkX+timO5iGzH6IuIaa3+15eojDWeUGKGJaNaFpkERFuVJfOUKhoZ6vqk5BfMIMzJT/N57rYIX3BDv3k65PskaqFbQx5Yn2NWMpOK92zc1w13q1TJHw6Akq+Iktg9m4l7+GCdLMd6HTl4HGZ56VxWus5oUSPHMbon50oywdcLpRSheUHGBu4kLYYLEkE1wKyaaUxIcqpOjajNzhsM6epoKVNNLvJmWeVQuNUqwyk4mSH0K63QWsdbEp+tQO79ykxeUfyrLlYrkh0yR3+QLbHP0=</elem>
+<elem key="type">ssh-rsa</elem>
+</table>
+<table>
+<elem key="bits">256</elem>
+<elem key="fingerprint">5bdf7f2ed5c8f69f0598b944bb79d5c6</elem>
+<elem key="key">AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBOXOn7vPH/D0cNn7xLKBRjdJDvI5eleMORfFZ2bPNSHSLSId/uOS70s0TWYa1XewF5mOE6jSGtC905SewNYGH5c=</elem>
+<elem key="type">ecdsa-sha2-nistp256</elem>
+</table>
+<table>
+<elem key="bits">256</elem>
+<elem key="fingerprint">297ce64aee04aed0dce5073c0f64f14e</elem>
+<elem key="key">AAAAC3NzaC1lZDI1NTE5AAAAIGEsDvI6bA4/Zva1/MrIMLcexweIlQnTWK0hsdUuR0or</elem>
+<elem key="type">ssh-ed25519</elem>
+</table>
+</script></port>
+<port protocol="tcp" portid="80"><state state="open" reason="syn-ack" reason_ttl="61"/><service name="http" product="Apache httpd" version="2.4.54" extrainfo="(Debian)" method="probed" conf="10"><cpe>cpe:/a:apache:http_server:2.4.54</cpe></service><script id="http-server-header" output="Apache/2.4.54 (Debian)"><elem>Apache/2.4.54 (Debian)</elem>
+</script><script id="http-title" output="Golden Glove Gym"><elem key="title">Golden Glove Gym</elem>
+</script></port>
+<port protocol="tcp" portid="5432"><state state="open" reason="syn-ack" reason_ttl="61"/><service name="postgresql" product="PostgreSQL DB" version="13.5 - 13.9" method="probed" conf="10"><cpe>cpe:/a:postgresql:postgresql:13</cpe></service><script id="ssl-date" output="TLS randomness does not represent time"></script><script id="ssl-cert" output="Subject: commonName=debian11temp&#xa;Subject Alternative Name: DNS:debian11temp&#xa;Not valid before: 2022-07-18T15:19:49&#xa;Not valid after:  2032-07-15T15:19:49"><table key="subject">
+<elem key="commonName">debian11temp</elem>
+</table>
+<table key="issuer">
+<elem key="commonName">debian11temp</elem>
+</table>
+<table key="pubkey">
+<elem key="type">rsa</elem>
+<elem key="bits">2048</elem>
+<elem key="modulus">BA14DDF7D0A7A981222F87BFC0B3BF96C2CE49C713BB156896B71BA4E6156D7DFFCE9A150AC46ED80C1B2D7883D94D133D86F5E09055A992A2B796EBBD4B730A79E10CA8FEACF82FA99C7425C10B926529AADA7469672A7450AE715220ACCAA0D7281E8BD3DD5F1679E7E65EF190820058A749825C95CE1FE697DC1D78AAD29B77A24CCF3C71C066F91F3BDB10323217FF1BF0A55313C0C34D46E0A6BEC9D1B0A54754644297D181D6C174C9B3452F16B0B002E294C1CF0A2541E53D717FA7F3CDB4AD84B02C2508E9B227F4B42BDD5D86A66C39BA37B3D3017406F6E83483C64292998D6F8C852DB47EC47D29C068BEB3DF163C27167014E832BC0ADF49CA69</elem>
+<elem key="exponent">65537</elem>
+</table>
+<table key="extensions">
+<table>
+<elem key="name">X509v3 Basic Constraints</elem>
+<elem key="value">CA:FALSE</elem>
+</table>
+<table>
+<elem key="name">X509v3 Subject Alternative Name</elem>
+<elem key="value">DNS:debian11temp</elem>
+</table>
+</table>
+<elem key="sig_algo">sha256WithRSAEncryption</elem>
+<table key="validity">
+<elem key="notBefore">2022-07-18T15:19:49</elem>
+<elem key="notAfter">2032-07-15T15:19:49</elem>
+</table>
+<elem key="md5">b6ce7f8bbb70893570ff5f6cbd0ed275</elem>
+<elem key="sha1">ba456378602935018ad3f5644debd69aedbbdd24</elem>
+<elem key="pem">-&#45;&#45;&#45;&#45;BEGIN CERTIFICATE-&#45;&#45;&#45;&#45;&#xa;MIIC4jCCAcqgAwIBAgIUAvvWrXfIPndR/a2otpNT190/IjYwDQYJKoZIhvcNAQEL&#xa;BQAwFzEVMBMGA1UEAwwMZGViaWFuMTF0ZW1wMB4XDTIyMDcxODE1MTk0OVoXDTMy&#xa;MDcxNTE1MTk0OVowFzEVMBMGA1UEAwwMZGViaWFuMTF0ZW1wMIIBIjANBgkqhkiG&#xa;9w0BAQEFAAOCAQ8AMIIBCgKCAQEAuhTd99CnqYEiL4e/wLO/lsLOSccTuxVolrcb&#xa;pOYVbX3/zpoVCsRu2AwbLXiD2U0TPYb14JBVqZKit5brvUtzCnnhDKj+rPgvqZx0&#xa;JcELkmUpqtp0aWcqdFCucVIgrMqg1ygei9PdXxZ55+Ze8ZCCAFinSYJclc4f5pfc&#xa;HXiq0pt3okzPPHHAZvkfO9sQMjIX/xvwpVMTwMNNRuCmvsnRsKVHVGRCl9GB1sF0&#xa;ybNFLxawsALilMHPCiVB5T1xf6fzzbSthLAsJQjpsif0tCvdXYambDm6N7PTAXQG&#xa;9ug0g8ZCkpmNb4yFLbR+xH0pwGi+s98WPCcWcBToMrwK30nKaQIDAQABoyYwJDAJ&#xa;BgNVHRMEAjAAMBcGA1UdEQQQMA6CDGRlYmlhbjExdGVtcDANBgkqhkiG9w0BAQsF&#xa;AAOCAQEAp+xh4iHlfegh5JI0srUtPFRMwfWfkXJ3bGeSqPSfc0eRsT63qYiUnBSS&#xa;Zp7GULNfDQpLlHbYyNJFZ9qPu/rWsNUFcCbDMxwtFsferXps5Ho93sYHBrnbhObk&#xa;/zI2eU74r0sYQDYEFYGx9qRQ+m+wO8GKs+c5PTa55X6cQw/kTeyZCMJ1XXABeyV0&#xa;BAkCKEAyGYLvBw3k1UTL8ewIRClOCCIx18gqN1zVPsiSv0vLv82ehNlKpHrZ4I83&#xa;QGDE6xpfhzUxPpTk/dOfV41STJ8MdHhR9HJKsOucYCFTOewWeUBIGNFjBWFc3Aow&#xa;b/K7/VfOh8bJtFxiRi1FQ/F207yznA==&#xa;-&#45;&#45;&#45;&#45;END CERTIFICATE-&#45;&#45;&#45;&#45;&#xa;</elem>
+</script></port>
+</ports>
+<os><portused state="open" proto="tcp" portid="22"/>
+<portused state="closed" proto="tcp" portid="1"/>
+<portused state="closed" proto="udp" portid="35400"/>
+<osmatch name="Linux 5.0 - 5.14" accuracy="100" line="71713">
+<osclass type="general purpose" vendor="Linux" osfamily="Linux" osgen="5.X" accuracy="100"><cpe>cpe:/o:linux:linux_kernel:5</cpe></osclass>
+</osmatch>
+<osmatch name="MikroTik RouterOS 7.2 - 7.5 (Linux 5.6.3)" accuracy="100" line="91792">
+<osclass type="router" vendor="MikroTik" osfamily="RouterOS" osgen="7.X" accuracy="100"><cpe>cpe:/o:mikrotik:routeros:7</cpe></osclass>
+<osclass type="router" vendor="Linux" osfamily="Linux" osgen="5.X" accuracy="100"><cpe>cpe:/o:linux:linux_kernel:5.6.3</cpe></osclass>
+</osmatch>
+</os>
+<uptime seconds="967891" lastboot="Sat Sep 20 12:59:26 2025"/>
+<distance value="4"/>
+<tcpsequence index="261" difficulty="Good luck!" values="79CE92B,B4B54B45,3E98E533,F716A01F,646D90AF,7664F2DA"/>
+<ipidsequence class="All zeros" values="0,0,0,0,0,0"/>
+<tcptssequence class="1000HZ" values="39B0BBFB,39B0BC62,39B0BCCA,39B0BD2A,39B0BD8E,39B0BDF2"/>
+<trace port="111" proto="tcp">
+<hop ttl="1" ipaddr="192.168.45.1" rtt="62.55"/>
+<hop ttl="2" ipaddr="192.168.45.254" rtt="62.53"/>
+<hop ttl="3" ipaddr="192.168.251.1" rtt="62.57"/>
+<hop ttl="4" ipaddr="192.168.145.49" rtt="62.61" host="offsecatk.com"/>
+</trace>
+<times srtt="57956" rttvar="2683" to="100000"/>
+</host>
+<runstats><finished time="1759341057" timestr="Wed Oct  1 17:50:57 2025" summary="Nmap done at Wed Oct  1 17:50:57 2025; 1 IP address (1 host up) scanned in 35.18 seconds" elapsed="35.18" exit="success"/><hosts up="1" down="0" total="1"/>
+</runstats>
+</nmaprun>
