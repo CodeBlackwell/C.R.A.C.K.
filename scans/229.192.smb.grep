@@ -1,5 +1,0 @@
-# Nmap 7.95 scan initiated Mon Sep 29 13:04:00 2025 as: /usr/lib/nmap/nmap -p139,445 --script smb-enum*,smb-vuln* -oG scans/229.192.smb.grep -vv 192.168.229.192
-# Ports scanned: TCP(2;139,445) UDP(0;) SCTP(0;) PROTOCOLS(0;)
-Host: 192.168.229.192 ()	Status: Up
-Host: 192.168.229.192 ()	Ports: 139/open/tcp//netbios-ssn///, 445/open/tcp//microsoft-ds///
-# Nmap done at Mon Sep 29 13:04:26 2025 -- 1 IP address (1 host up) scanned in 25.77 seconds

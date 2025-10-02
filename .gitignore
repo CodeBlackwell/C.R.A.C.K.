@@ -3,3 +3,5 @@
 *.zip
 dt_key
 *chapters
+*.pdf
+__pycache__/
