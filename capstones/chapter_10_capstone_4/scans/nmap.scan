@@ -1,0 +1,65 @@
+# Nmap 7.95 scan initiated Thu Oct  2 17:30:23 2025 as: /usr/lib/nmap/nmap -sS -A -vv -T4 --open -o scans/nmap.scan 192.168.145.50
+Warning: Hit PCRE_ERROR_MATCHLIMIT when probing for service http with the regex '^HTTP/1\.1 \d\d\d (?:[^\r\n]*\r\n(?!\r\n))*?.*\r\nServer: Virata-EmWeb/R([\d_]+)\r\nContent-Type: text/html; ?charset=UTF-8\r\nExpires: .*<title>HP (Color |)LaserJet ([\w._ -]+)&nbsp;&nbsp;&nbsp;'
+Nmap scan report for offsecatk.com (192.168.145.50)
+Host is up, received echo-reply ttl 125 (0.070s latency).
+Scanned at 2025-10-02 17:30:23 UTC for 36s
+Not shown: 995 closed tcp ports (reset)
+PORT     STATE SERVICE       REASON          VERSION
+80/tcp   open  http          syn-ack ttl 125 Microsoft IIS httpd 10.0
+|_http-server-header: Microsoft-IIS/10.0
+|_http-title: Convid
+| http-methods: 
+|   Supported Methods: OPTIONS TRACE GET HEAD POST
+|_  Potentially risky methods: TRACE
+135/tcp  open  msrpc         syn-ack ttl 125 Microsoft Windows RPC
+139/tcp  open  netbios-ssn   syn-ack ttl 125 Microsoft Windows netbios-ssn
+445/tcp  open  microsoft-ds? syn-ack ttl 125
+5985/tcp open  http          syn-ack ttl 125 Microsoft HTTPAPI httpd 2.0 (SSDP/UPnP)
+|_http-server-header: Microsoft-HTTPAPI/2.0
+|_http-title: Not Found
+No exact OS matches for host (If you know what OS is running on it, see https://nmap.org/submit/ ).
+TCP/IP fingerprint:
+OS:SCAN(V=7.95%E=4%D=10/2%OT=80%CT=1%CU=31220%PV=Y%DS=4%DC=T%G=Y%TM=68DEB6D
+OS:3%P=x86_64-pc-linux-gnu)SEQ(SP=100%GCD=1%ISR=10E%TI=I%CI=I%TS=A)SEQ(SP=1
+OS:01%GCD=1%ISR=109%TI=I%CI=I%TS=A)SEQ(SP=104%GCD=1%ISR=10C%TI=I%CI=I%TS=A)
+OS:SEQ(SP=106%GCD=1%ISR=10C%TI=I%CI=I%TS=A)SEQ(SP=107%GCD=1%ISR=109%TI=I%CI
+OS:=I%TS=A)OPS(O1=M578NW8ST11%O2=M578NW8ST11%O3=M578NW8NNT11%O4=M578NW8ST11
+OS:%O5=M578NW8ST11%O6=M578ST11)WIN(W1=FFFF%W2=FFFF%W3=FFFF%W4=FFFF%W5=FFFF%
+OS:W6=FFDC)ECN(R=Y%DF=Y%T=80%W=FFFF%O=M578NW8NNS%CC=Y%Q=)T1(R=Y%DF=Y%T=80%S
+OS:=O%A=S+%F=AS%RD=0%Q=)T2(R=N)T3(R=N)T4(R=Y%DF=Y%T=80%W=0%S=A%A=O%F=R%O=%R
+OS:D=0%Q=)T5(R=Y%DF=Y%T=80%W=0%S=Z%A=S+%F=AR%O=%RD=0%Q=)T6(R=Y%DF=Y%T=80%W=
+OS:0%S=A%A=O%F=R%O=%RD=0%Q=)T7(R=N)U1(R=Y%DF=N%T=80%IPL=164%UN=0%RIPL=G%RID
+OS:=G%RIPCK=G%RUCK=G%RUD=G)IE(R=N)
+
+Uptime guess: 0.009 days (since Thu Oct  2 17:17:25 2025)
+Network Distance: 4 hops
+TCP Sequence Prediction: Difficulty=257 (Good luck!)
+IP ID Sequence Generation: Incremental
+Service Info: OS: Windows; CPE: cpe:/o:microsoft:windows
+
+Host script results:
+| smb2-security-mode: 
+|   3:1:1: 
+|_    Message signing enabled but not required
+| smb2-time: 
+|   date: 2025-10-02T17:30:53
+|_  start_date: N/A
+| p2p-conficker: 
+|   Checking for Conficker.C or higher...
+|   Check 1 (port 24770/tcp): CLEAN (Couldn't connect)
+|   Check 2 (port 45668/tcp): CLEAN (Couldn't connect)
+|   Check 3 (port 31279/udp): CLEAN (Timeout)
+|   Check 4 (port 55991/udp): CLEAN (Failed to receive data)
+|_  0/4 checks are positive: Host is CLEAN or ports are blocked
+|_clock-skew: 1s
+
+TRACEROUTE (using port 445/tcp)
+HOP RTT       ADDRESS
+1   103.11 ms 192.168.45.1
+2   103.10 ms 192.168.45.254
+3   102.98 ms 192.168.251.1
+4   103.13 ms offsecatk.com (192.168.145.50)
+
+Read data files from: /usr/share/nmap
+OS and Service detection performed. Please report any incorrect results at https://nmap.org/submit/ .
+# Nmap done at Thu Oct  2 17:30:59 2025 -- 1 IP address (1 host up) scanned in 36.20 seconds

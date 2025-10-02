@@ -15,6 +15,7 @@ import json
 
 try:
     from ..utils.colors import Colors
+    from ..utils.curl_parser import CurlParser
 except ImportError:
     # Fallback for standalone execution
     class Colors:
@@ -26,6 +27,17 @@ except ImportError:
         BOLD = '\033[1m'
         CYAN = '\033[96m'
         END = '\033[0m'
+
+    # Try standalone import for curl_parser
+    try:
+        from crack.utils.curl_parser import CurlParser
+    except ImportError:
+        # Last resort - assume it's in same directory structure
+        import sys
+        from pathlib import Path
+        utils_path = Path(__file__).parent.parent / 'utils'
+        sys.path.insert(0, str(utils_path))
+        from curl_parser import CurlParser
 
 class SQLiScanner:
     def __init__(self, target, method='AUTO', data=None, params=None, technique='all',
@@ -132,8 +144,18 @@ class SQLiScanner:
         if self.quick:
             payloads = payloads[:3]  # Only test first 3 in quick mode
 
-        # Database error patterns
+        # Database error patterns - specific DBs checked BEFORE generic patterns
+        # This ensures proper database identification and avoids false positives
         error_patterns = {
+            'mssql': [
+                r'SqlException',
+                r'System\.Data\.SqlClient',
+                r'Unclosed quotation mark',
+                r'Incorrect syntax near',
+                r'Driver.*SQL[\s\-\_]*Server',
+                r'OLE DB.*SQL Server',
+                r'SQLServer JDBC Driver'
+            ],
             'mysql': [
                 r'SQL syntax.*MySQL',
                 r'Warning.*mysql_',
@@ -151,14 +173,6 @@ class SQLiScanner:
                 r'unterminated quoted string',
                 r'syntax error at or near'
             ],
-            'mssql': [
-                r'Driver.*SQL[\s\-\_]*Server',
-                r'OLE DB.*SQL Server',
-                r'SQLServer JDBC Driver',
-                r'SqlException',
-                r'Unclosed quotation mark',
-                r'Incorrect syntax near'
-            ],
             'oracle': [
                 r'Oracle.*Driver',
                 r'Warning.*oci_',
@@ -168,10 +182,8 @@ class SQLiScanner:
                 r'quoted string not properly terminated'
             ],
             'generic': [
-                r'SQL',
                 r'syntax error',
                 r'database',
-                r'query',
                 r'unexpected end of SQL command',
                 r'unterminated string literal'
             ]
@@ -223,14 +235,50 @@ class SQLiScanner:
                             break
 
                 if found_errors:
-                    confidence = min(95, 60 + len(found_errors) * 15)
-
-                    # Extract error message snippet
+                    # Extract error message snippet with better heuristics
                     error_snippet = None
+                    best_score = 0
+                    has_stack_trace = False
+
                     for line in resp.text.split('\n'):
-                        if any(re.search(p, line, re.I) for p in found_errors):
-                            error_snippet = line[:200].strip()
-                            break
+                        line_stripped = line.strip()
+
+                        # Skip HTML tags, scripts, and empty lines
+                        if not line_stripped or line_stripped.startswith('<') or 'src=' in line_stripped:
+                            continue
+
+                        # Count pattern matches in this line
+                        match_count = sum(1 for p in found_errors if re.search(p, line, re.I))
+                        if match_count == 0:
+                            continue
+
+                        # Score this line based on content quality
+                        score = match_count * 10
+
+                        # Boost for specific error indicators
+                        if re.search(r'Exception|Error Number|syntax|quotation', line, re.I):
+                            score += 20
+                        if re.search(r'System\.|line \d+|at \w+\.\w+', line, re.I):
+                            score += 15
+                            has_stack_trace = True
+
+                        # Take the best scoring line
+                        if score > best_score:
+                            best_score = score
+                            error_snippet = line_stripped[:200]
+
+                    # Calculate confidence based on error quality
+                    base_confidence = 60 + len(found_errors) * 10
+
+                    # Boost confidence for high-quality error messages
+                    if has_stack_trace:
+                        base_confidence += 20
+                    if db_type and db_type != 'generic':
+                        base_confidence += 10
+                    if re.search(r'SqlException|MySQLSyntaxError|PSQLException|ORA-\d+', resp.text):
+                        base_confidence += 15
+
+                    confidence = min(95, base_confidence)
 
                     findings.append({
                         'type': 'error',
@@ -1379,6 +1427,208 @@ def parse_stdin():
 
     return targets
 
+def handle_curl_command(args):
+    """
+    Handle curl command parsing and parameter selection
+    """
+    curl_command = args.from_curl
+
+    # Read from stdin if "-" or not provided
+    if curl_command == '-' or curl_command is None:
+        print(f"{Colors.CYAN}[*] Reading curl command from stdin...{Colors.END}")
+        print(f"{Colors.YELLOW}    Paste your curl command and press Enter (Ctrl+D when done):{Colors.END}")
+        try:
+            curl_command = sys.stdin.read().strip()
+        except KeyboardInterrupt:
+            print(f"\n{Colors.YELLOW}[!] Cancelled{Colors.END}")
+            sys.exit(0)
+
+    if not curl_command:
+        print(f"{Colors.RED}[!] Error: No curl command provided{Colors.END}")
+        sys.exit(1)
+
+    # Parse curl command
+    print(f"\n{Colors.BOLD}[CURL COMMAND PARSER]{Colors.END}")
+    print("=" * 60)
+
+    try:
+        parser = CurlParser(curl_command)
+        parsed = parser.parse()
+    except Exception as e:
+        print(f"{Colors.RED}[!] Error parsing curl command: {e}{Colors.END}")
+        sys.exit(1)
+
+    # Display parsed information
+    print(f"{Colors.GREEN}✓ Successfully parsed curl command{Colors.END}\n")
+    print(f"{Colors.BOLD}Request Details:{Colors.END}")
+    print(f"  URL: {parsed['url']}")
+    print(f"  Method: {parsed['method']}")
+
+    if parsed['headers']:
+        print(f"  Headers: {len(parsed['headers'])} found")
+        important_headers = ['Cookie', 'Authorization', 'Content-Type']
+        for hdr in important_headers:
+            if hdr in parsed['headers']:
+                value = parsed['headers'][hdr]
+                if len(value) > 60:
+                    value = value[:60] + '...'
+                print(f"    - {hdr}: {value}")
+
+    if parsed['data']:
+        print(f"  POST Data: {len(parsed['data'])} bytes")
+
+    # Get testable parameters
+    testable = parser.get_testable_params()
+
+    if not testable:
+        print(f"\n{Colors.YELLOW}[!] No testable parameters found{Colors.END}")
+        print(f"{Colors.YELLOW}    The request may not contain injectable parameters{Colors.END}")
+        sys.exit(0)
+
+    print(f"\n{Colors.BOLD}Testable Parameters: {len(testable)} found{Colors.END}")
+    print("-" * 60)
+
+    # Display parameters with priority
+    priority_colors = {
+        'high': Colors.GREEN,
+        'medium': Colors.YELLOW,
+        'low': Colors.BLUE
+    }
+
+    for idx, (param, priority) in enumerate(testable, 1):
+        color = priority_colors.get(priority, Colors.END)
+        priority_label = f"[{priority.upper()}]"
+        print(f"  {idx}. {color}{param}{Colors.END} {priority_label}")
+
+    # Interactive parameter selection
+    # Check if we can read from terminal (not piped)
+    import os
+    is_terminal = os.isatty(0)  # 0 is stdin
+
+    choice = ''
+    if not is_terminal or (curl_command == '-' or curl_command is None):
+        # Piped input or reading from stdin - default to first parameter
+        print(f"\n{Colors.CYAN}[*] Auto-selecting parameter #1 (highest priority){Colors.END}")
+        print(f"{Colors.YELLOW}    (Use 'crack sqli-scan --from-curl \"<curl>\"' with quoted argument for interactive selection){Colors.END}")
+        choice = '1'
+    else:
+        # Interactive mode
+        print(f"\n{Colors.CYAN}Select parameter to test:{Colors.END}")
+        print(f"  {Colors.YELLOW}• Enter number (1-{len(testable)}){Colors.END}")
+        print(f"  {Colors.YELLOW}• Enter 'all' to test all parameters{Colors.END}")
+        print(f"  {Colors.YELLOW}• Press Enter to test #1 (highest priority){Colors.END}")
+        print(f"  {Colors.YELLOW}• Enter 'cmd' to show sqli-scan command only{Colors.END}")
+
+        try:
+            choice = input(f"\n{Colors.BOLD}Your choice: {Colors.END}").strip().lower()
+        except (KeyboardInterrupt, EOFError):
+            print(f"\n{Colors.YELLOW}[!] Cancelled{Colors.END}")
+            sys.exit(0)
+
+    # Determine which parameters to test
+    params_to_test = []
+    show_command_only = False
+
+    if choice == 'cmd':
+        show_command_only = True
+        choice = '1'  # Default to first param for command generation
+
+    if choice == '' or choice == '1':
+        params_to_test = [testable[0][0]]
+    elif choice == 'all':
+        params_to_test = [p[0] for p in testable]
+    elif choice.isdigit():
+        idx = int(choice) - 1
+        if 0 <= idx < len(testable):
+            params_to_test = [testable[idx][0]]
+        else:
+            print(f"{Colors.RED}[!] Invalid choice{Colors.END}")
+            sys.exit(1)
+    else:
+        print(f"{Colors.RED}[!] Invalid choice{Colors.END}")
+        sys.exit(1)
+
+    # Generate sqli-scan command
+    params_str = ','.join(params_to_test)
+
+    # Build the command
+    cmd_parts = ['crack sqli-scan', parsed['url']]
+    cmd_parts.append(f"-m {parsed['method']}")
+
+    if parsed['data']:
+        cmd_parts.append(f"-d '{parsed['data']}'")
+
+    cmd_parts.append(f"-p '{params_str}'")
+
+    # Add common flags
+    if args.verbose:
+        cmd_parts.append('-v')
+    if args.quick:
+        cmd_parts.append('-q')
+    if args.technique and args.technique != 'all':
+        cmd_parts.append(f"-t {args.technique}")
+
+    command = ' '.join(cmd_parts)
+
+    print(f"\n{Colors.BOLD}[GENERATED COMMAND]{Colors.END}")
+    print("=" * 60)
+    print(f"{Colors.CYAN}{command}{Colors.END}")
+    print("=" * 60)
+
+    if show_command_only:
+        print(f"\n{Colors.GREEN}✓ Command generated. Copy and run manually.{Colors.END}")
+        sys.exit(0)
+
+    # Ask to run scan (or auto-run for piped input)
+    if not is_terminal or (curl_command == '-' or curl_command is None):
+        # Piped input - auto-run
+        print(f"\n{Colors.GREEN}[*] Starting scan automatically...{Colors.END}")
+        run_scan = 'y'
+    else:
+        # Interactive - ask user
+        try:
+            run_scan = input(f"\n{Colors.BOLD}Run scan now? [Y/n]: {Colors.END}").strip().lower()
+        except (KeyboardInterrupt, EOFError):
+            print(f"\n{Colors.YELLOW}[!] Cancelled{Colors.END}")
+            sys.exit(0)
+
+    if run_scan in ['', 'y', 'yes']:
+        print(f"\n{Colors.GREEN}[*] Starting scan...{Colors.END}\n")
+
+        # Create scanner instance
+        try:
+            scanner = SQLiScanner(
+                parsed['url'],
+                method=parsed['method'],
+                data=parsed['data'],
+                params=params_str,
+                technique=args.technique,
+                verbose=args.verbose,
+                quick=args.quick,
+                delay=args.delay,
+                timeout=args.timeout,
+                min_findings=args.min_findings
+            )
+
+            scanner.scan()
+            scanner.generate_report()
+
+            # Save output if requested
+            if args.output:
+                with open(args.output, 'w') as f:
+                    f.write(f"Scan results for: {parsed['url']}\n")
+                    f.write(f"Parameter(s): {params_str}\n")
+                    f.write(f"Vulnerabilities found: {len(scanner.vulnerabilities)}\n")
+                print(f"\n{Colors.GREEN}[*] Results saved to: {args.output}{Colors.END}")
+
+        except KeyboardInterrupt:
+            print(f"\n{Colors.YELLOW}[!] Scan interrupted by user{Colors.END}")
+        except Exception as e:
+            print(f"{Colors.RED}[!] Error during scan: {e}{Colors.END}")
+            sys.exit(1)
+    else:
+        print(f"{Colors.YELLOW}[!] Scan cancelled. Use the command above to run manually.{Colors.END}")
+
 def main():
     parser = argparse.ArgumentParser(
         description='SQL Injection Scanner - Educational SQLi vulnerability detection',
@@ -1429,8 +1679,15 @@ Educational Notes:
     parser.add_argument('-n', '--min-findings', type=int, default=0,
                        help='Stop after finding N high-confidence (≥80%%) vulnerabilities (default: 0 = disabled, test all parameters)')
     parser.add_argument('-o', '--output', help='Save detailed results to file')
+    parser.add_argument('--from-curl', nargs='?', const='-', metavar='CURL_CMD',
+                       help='Parse curl command from Burp Suite (use "-" or omit value to read from stdin)')
 
     args = parser.parse_args()
+
+    # Handle curl command parsing
+    if args.from_curl is not None:
+        handle_curl_command(args)
+        return
 
     # Handle piped input from param_discover.py
     piped_targets = parse_stdin()

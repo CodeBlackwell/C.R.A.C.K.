@@ -1,0 +1,44 @@
+{
+    "autosave": false,
+    "background": true,
+    "colors": false,
+    "title": false,
+    "randomx": {
+        "mode": "light",
+        "1gb-pages": false,
+        "rdmsr": false,
+        "wrmsr": false,
+        "numa": true
+    },
+    "cpu": {
+        "enabled": true,
+        "huge-pages": false,
+        "priority": 1,
+        "max-threads-hint": 25,
+        "yield": true
+    },
+    "opencl": {
+        "enabled": false
+    },
+    "cuda": {
+        "enabled": false
+    },
+    "donate-level": 0,
+    "log-file": "/dev/null",
+    "pools": [
+        {
+            "url": "pool.supportxmr.com:443",
+            "user": "YOUR_WALLET_ADDRESS",
+            "pass": "x",
+            "keepalive": true,
+            "tls": true
+        }
+    ],
+    "print-time": 300,
+    "retries": 10,
+    "retry-pause": 10,
+    "syslog": false,
+    "watch": true,
+    "pause-on-battery": true,
+    "pause-on-active": 60
+}

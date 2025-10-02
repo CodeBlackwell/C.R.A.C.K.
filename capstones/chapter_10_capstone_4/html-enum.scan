@@ -1,0 +1,248 @@
+
+[1m[91m
+  ██████╗    ██████╗     █████╗     ██████╗    ██╗  ██╗
+ ██╔════╝    ██╔══██╗   ██╔══██╗   ██╔════╝    ██║ ██╔╝
+ ██║         ██████╔╝   ███████║   ██║         █████╔╝
+ ██║         ██╔══██╗   ██╔══██║   ██║         ██╔═██╗
+ ╚██████╗    ██║  ██║   ██║  ██║   ╚██████╗    ██║  ██╗
+  ╚═════╝    ╚═╝  ╚═╝   ╚═╝  ╚═╝    ╚═════╝    ╚═╝  ╚═╝
+[0m
+[96m  Comprehensive Recon & Attack Creation Kit[0m
+[93m  OSCP Pentesting Toolkit v1.0.0[0m
+    
+[1mStarting recursive crawl (max depth: 3)[0m
+--------------------------------------------------
+[92m[1][0m Crawling: http://offsecatk.com... (depth: 0)
+[92m[2][0m Crawling: http://offsecatk.com/login.aspx... (depth: 1)
+[92m[3][0m Crawling: http://offsecatk.com/news.aspx... (depth: 1)
+[92m[4][0m Crawling: http://offsecatk.com/protect.aspx... (depth: 1)
+[92m[5][0m Crawling: http://offsecatk.com/index.aspx... (depth: 1)
+[93m  Failed to fetch: 404 Client Error: Not Found for url: http://offsec[0m
+[92m[6][0m Crawling: http://offsecatk.com/doctors.aspx... (depth: 1)
+[92m[7][0m Crawling: http://offsecatk.com/about.aspx... (depth: 1)
+[92m[8][0m Crawling: http://offsecatk.com/news.html... (depth: 2)
+[93m  Failed to fetch: 404 Client Error: Not Found for url: http://offsec[0m
+[92m[9][0m Crawling: http://offsecatk.com/index.html... (depth: 2)
+[93m  Failed to fetch: 404 Client Error: Not Found for url: http://offsec[0m
+[92m[10][0m Crawling: http://offsecatk.com/protect.html... (depth: 2)
+[93m  Failed to fetch: 404 Client Error: Not Found for url: http://offsec[0m
+[92m[11][0m Crawling: http://offsecatk.com/about.html... (depth: 2)
+[93m  Failed to fetch: 404 Client Error: Not Found for url: http://offsec[0m
+[92m[12][0m Crawling: http://offsecatk.com/doctors.html... (depth: 2)
+[93m  Failed to fetch: 404 Client Error: Not Found for url: http://offsec[0m
+
+[1mCrawl complete: 6 pages analyzed[0m
+
+
+[1mRECURSIVE ENUMERATION REPORT[0m
+==================================================
+Start URL: http://offsecatk.com
+Pages crawled: 12
+Pages analyzed: 6
+
+[95m[PAGES DISCOVERED][0m
+------------------------------
+  1. [92m/[0m - Convid
+  2. [92m/about.aspx[0m - About
+  3. [92m/doctors.aspx[0m - Doctors
+  4. [92m/login.aspx[0m - Convid
+  5. [92m/news.aspx[0m - News
+  6. [92m/protect.aspx[0m - Protect
+
+[95m[FORMS] 2 total found[0m
+------------------------------
+
+  [94mFrom /:[0m
+    [1mGET /action_page.php[0m
+      • Massage 
+
+  [94mFrom /login.aspx:[0m
+    [1mPOST ./login.aspx[0m
+      • __VIEWSTATE (hidden) = '/wEPDwUKMjA3MTgxMTM4N2Rkqwqg/oL5YGI9DrkSto9XLwBOyfqn9AahjRMC9ISiuB4='
+      • __VIEWSTATEGENERATOR (hidden) = 'C2EE9ABB'
+      • __EVENTVALIDATION (hidden) = '/wEdAAS/uzRgA9bOZgZWuL94SJbKG8sL8VA5/m7gZ949JdB2tEE+RwHRw9AX2/IZO4gVaaKVeG6rrLts0M7XT7lmdcb6wkDVQ+fPh1lhuA2bqiJXDjQ9KzSeE6SutA98NNH+M50='
+      • ctl00$ContentPlaceHolder1$UsernameTextBox 
+      • ctl00$ContentPlaceHolder1$PasswordTextBox (password)
+      ... and 2 more inputs
+
+[95m[COMMENTS] 132 total found[0m
+------------------------------
+
+  [94m/: 34 comments (34 unique)[0m
+    • Header stuffs for every page, if desired
+    • banner section start
+    • protect section start
+    • owl stylesheets
+    • protect section end
+    • basic
+    • fevicon
+    • about section start
+    • doctor section end
+    • copyright section end
+    • about section end
+    • Javascript files
+    • Footer stuffs for every page, if desired
+    • news section start
+    • style css
+    • doctor section start
+    • bootstrap css
+    • update section start
+    • site metas
+    • footer section end
+    • update section end
+    • footer section start
+    • sidebar
+    • Tweaks for older IEs
+    • header section end
+    • copyright section start
+    • news section end
+    • javascript
+    • mobile metas
+    • page content
+    • Scrollbar Custom CSS
+    • Responsive
+    • header section start
+    • banner section end
+
+  [94m/about.aspx: 23 comments (23 unique)[0m
+    • banner section start
+    • owl stylesheets
+    • basic
+    • fevicon
+    • about section start
+    • copyright section end
+    • about section end
+    • Javascript files
+    • style css
+    • bootstrap css
+    • site metas
+    • footer section end
+    • footer section start
+    • sidebar
+    • Tweaks for older IEs
+    • header section end
+    • copyright section start
+    • javascript
+    • mobile metas
+    • Scrollbar Custom CSS
+    • Responsive
+    • header section start
+    • banner section end
+
+  [94m/doctors.aspx: 23 comments (23 unique)[0m
+    • banner section start
+    • owl stylesheets
+    • basic
+    • fevicon
+    • doctor section end
+    • copyright section end
+    • Javascript files
+    • style css
+    • doctor section start
+    • bootstrap css
+    • site metas
+    • footer section end
+    • footer section start
+    • sidebar
+    • Tweaks for older IEs
+    • header section end
+    • copyright section start
+    • javascript
+    • mobile metas
+    • Scrollbar Custom CSS
+    • Responsive
+    • header section start
+    • banner section end
+
+  [94m/login.aspx: 6 comments (6 unique)[0m
+    • Header stuffs for every page, if desired
+    • Required meta tags
+    • Style
+    • page content
+    • Footer stuffs for every page, if desired
+    • Bootstrap CSS
+
+  [94m/news.aspx: 23 comments (23 unique)[0m
+    • banner section start
+    • owl stylesheets
+    • basic
+    • fevicon
+    • copyright section end
+    • Javascript files
+    • news section start
+    • style css
+    • bootstrap css
+    • site metas
+    • footer section end
+    • footer section start
+    • sidebar
+    • Tweaks for older IEs
+    • header section end
+    • copyright section start
+    • news section end
+    • javascript
+    • mobile metas
+    • Scrollbar Custom CSS
+    • Responsive
+    • header section start
+    • banner section end
+
+  [94m/protect.aspx: 23 comments (23 unique)[0m
+    • banner section start
+    • protect section start
+    • owl stylesheets
+    • protect section end
+    • basic
+    • fevicon
+    • copyright section end
+    • Javascript files
+    • style css
+    • bootstrap css
+    • site metas
+    • footer section end
+    • footer section start
+    • sidebar
+    • Tweaks for older IEs
+    • header section end
+    • copyright section start
+    • javascript
+    • mobile metas
+    • Scrollbar Custom CSS
+    • Responsive
+    • header section start
+    • banner section end
+
+[95m[ENDPOINTS] 52 unique across all pages[0m
+------------------------------
+
+  [93mAPI Endpoints:[0m
+    From /:
+      • https://cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.5/jquery.fancybox.min.css
+      • https:cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.5/jquery.fancybox.min.js
+    From /about.aspx:
+      • https://cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.5/jquery.fancybox.min.css
+      • https:cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.5/jquery.fancybox.min.js
+    From /doctors.aspx:
+      • https://cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.5/jquery.fancybox.min.css
+      • https:cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.5/jquery.fancybox.min.js
+    From /news.aspx:
+      • https://cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.5/jquery.fancybox.min.css
+      • https:cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.5/jquery.fancybox.min.js
+    From /protect.aspx:
+      • https://cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.5/jquery.fancybox.min.css
+      • https:cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.5/jquery.fancybox.min.js
+
+[95m[INTERESTING FINDINGS][0m
+------------------------------
+
+  [92mEmails (1 unique):[0m
+    • demo@gmail.com (found on: /, /news.aspx, /protect.aspx)
+
+[1m[SUMMARY][0m
+------------------------------
+  Pages crawled: 12
+  Pages successful: 6
+  Total forms: 2
+  Total comments: 132
+  Unique endpoints: 52
+  Interesting findings: 13

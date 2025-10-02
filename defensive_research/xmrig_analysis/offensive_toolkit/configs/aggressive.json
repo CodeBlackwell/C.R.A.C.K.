@@ -1,0 +1,44 @@
+{
+    "autosave": false,
+    "background": true,
+    "colors": false,
+    "randomx": {
+        "mode": "fast",
+        "1gb-pages": true,
+        "rdmsr": true,
+        "wrmsr": true,
+        "numa": true
+    },
+    "cpu": {
+        "enabled": true,
+        "huge-pages": true,
+        "huge-pages-jit": true,
+        "priority": 3,
+        "max-threads-hint": 100,
+        "yield": false
+    },
+    "opencl": {
+        "enabled": false
+    },
+    "cuda": {
+        "enabled": false
+    },
+    "donate-level": 0,
+    "log-file": "/var/log/syslog",
+    "pools": [
+        {
+            "url": "pool.minexmr.com:4444",
+            "user": "YOUR_WALLET_ADDRESS",
+            "pass": "x",
+            "keepalive": true,
+            "tls": false
+        }
+    ],
+    "print-time": 60,
+    "retries": 5,
+    "retry-pause": 5,
+    "syslog": false,
+    "watch": true,
+    "pause-on-battery": false,
+    "pause-on-active": 0
+}

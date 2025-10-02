@@ -442,11 +442,12 @@ class RecursiveCrawler:
                     print(f"    {Colors.BOLD}{form['method']} {action}{Colors.END}")
 
                     # Show inputs
-                    for inp in form['inputs'][:5]:
+                    inputs_to_show = form['inputs'] if self.full_output else form['inputs'][:5]
+                    for inp in inputs_to_show:
                         value_display = f" = '{inp['value']}'" if inp['value'] and inp['type'] == 'hidden' else ""
                         type_display = f"({inp['type']})" if inp['type'] != 'text' else ""
                         print(f"      • {inp['name']} {type_display}{value_display}")
-                    if len(form['inputs']) > 5:
+                    if not self.full_output and len(form['inputs']) > 5:
                         print(f"      ... and {len(form['inputs']) - 5} more inputs")
 
         # Comments section with counts per page
