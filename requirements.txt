@@ -1,0 +1,16 @@
+# C.R.A.C.K. - Comprehensive Recon & Attack Creation Kit
+# Required Python packages for all tools
+
+# HTTP requests and web interaction
+requests>=2.25.0
+
+# HTML parsing and scraping
+beautifulsoup4>=4.9.0
+
+# URL handling and SSL warnings
+urllib3>=1.26.0
+
+# Optional dependencies for enhanced functionality
+# Uncomment if needed:
+# lxml>=4.6.0  # Faster XML/HTML parser for BeautifulSoup
+# colorama>=0.4.0  # Cross-platform colored terminal output

@@ -1,0 +1,10 @@
+[console_scripts]
+crack = crack.cli:main
+crack-html = crack.cli:html_enum_entry
+crack-param = crack.cli:param_discover_entry
+crack-sqli = crack.cli:sqli_scan_entry
+crack-sqli-fu = crack.cli:sqli_fu_entry
+html-enum = crack.enumeration.html_enum:main
+param-discover = crack.enumeration.param_discover:main
+sqli-fu = crack.enumeration.sqli_fu:main
+sqli-scan = crack.enumeration.sqli_scanner:main
