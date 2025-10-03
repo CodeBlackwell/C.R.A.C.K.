@@ -41,7 +41,7 @@ except ImportError:
 
 class SQLiScanner:
     def __init__(self, target, method='AUTO', data=None, params=None, technique='all',
-                 verbose=False, quick=False, delay=0.5, timeout=10, min_findings=0):
+                 verbose=False, quick=False, delay=0.5, timeout=10, min_findings=0, headers=None):
         self.target = target.strip()
         self.method = method
         self.post_data = data
@@ -53,7 +53,17 @@ class SQLiScanner:
         self.timeout = timeout
         self.min_findings = min_findings
         self.session = requests.Session()
+
+        # Set default User-Agent
         self.session.headers['User-Agent'] = 'Mozilla/5.0 (X11; Linux x86_64) SQLi Scanner Educational Tool'
+
+        # Apply custom headers from curl command (preserves cookies, referer, etc.)
+        if headers:
+            for key, value in headers.items():
+                # Don't override User-Agent unless explicitly provided
+                if key.lower() != 'user-agent' or value:
+                    self.session.headers[key] = value
+
         self.baseline = None
         self.vulnerabilities = []
         self.tested_count = 0
@@ -86,9 +96,15 @@ class SQLiScanner:
                 if self.method == 'GET':
                     resp = self.session.get(self.target, timeout=self.timeout)
                 else:
-                    # Use original POST data if provided
-                    data = self.post_data if self.post_data else {}
-                    resp = self.session.post(self.target, data=data, timeout=self.timeout)
+                    # Use parsed POST parameters (same format as test requests)
+                    # This ensures baseline and test requests use same Content-Type
+                    if self.post_params:
+                        # Flatten list values to single values (parse_qs returns lists)
+                        flat_data = {k: v[0] if isinstance(v, list) else v
+                                    for k, v in self.post_params.items()}
+                        resp = self.session.post(self.target, data=flat_data, timeout=self.timeout)
+                    else:
+                        resp = self.session.post(self.target, data={}, timeout=self.timeout)
 
                 elapsed = time.time() - start
 
@@ -1459,7 +1475,15 @@ def handle_curl_command(args):
         sys.exit(1)
 
     # Display parsed information
-    print(f"{Colors.GREEN}✓ Successfully parsed curl command{Colors.END}\n")
+    print(f"{Colors.GREEN}✓ Successfully parsed curl command{Colors.END}")
+
+    # Show fixes if any were applied
+    if parser.fixes_applied:
+        print(f"{Colors.YELLOW}⚠ Auto-fixed {len(parser.fixes_applied)} issue(s) in curl command:{Colors.END}")
+        for fix in parser.fixes_applied:
+            print(f"{Colors.YELLOW}  • {fix}{Colors.END}")
+
+    print()
     print(f"{Colors.BOLD}Request Details:{Colors.END}")
     print(f"  URL: {parsed['url']}")
     print(f"  Method: {parsed['method']}")
@@ -1607,7 +1631,8 @@ def handle_curl_command(args):
                 quick=args.quick,
                 delay=args.delay,
                 timeout=args.timeout,
-                min_findings=args.min_findings
+                min_findings=args.min_findings,
+                headers=parsed['headers']
             )
 
             scanner.scan()
@@ -1653,10 +1678,21 @@ Examples:
   # Verbose scan of POST form
   python3 sqli_scanner.py http://target.com/form.php -m POST -d "weight=75&height=180" -v
 
+  # From Burp Suite curl command (auto-fixes malformed quotes)
+  cat burp_request.txt | python3 sqli_scanner.py --from-curl
+  echo "curl -X POST..." | python3 sqli_scanner.py --from-curl
+  python3 sqli_scanner.py --from-curl "curl -X POST..."  # Interactive mode
+
 Educational Notes:
   This tool teaches SQL injection detection techniques.
   Always use responsibly and only on authorized targets.
   For OSCP preparation, understand both manual and automated approaches.
+
+  The --from-curl flag automatically fixes common Burp Suite curl export issues:
+  • Misplaced quotes after flags
+  • Malformed header formats
+  • Unquoted data values
+  Just copy from Burp and paste - no manual fixing needed!
         """
     )
 
