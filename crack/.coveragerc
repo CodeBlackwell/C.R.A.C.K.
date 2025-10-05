@@ -1,0 +1,50 @@
+[run]
+# Source directories to measure coverage
+source = crack
+
+# Files and directories to exclude from coverage
+omit =
+    */tests/*
+    */__pycache__/*
+    */test_*.py
+    */setup.py
+    */__main__.py
+    */crack_toolkit.egg-info/*
+
+[report]
+# Precision for coverage percentages
+precision = 2
+
+# Don't skip files with 100% coverage in report
+skip_covered = False
+
+# Show line numbers of missing coverage
+show_missing = True
+
+# Exclude lines from coverage
+exclude_lines =
+    # Standard pragma
+    pragma: no cover
+
+    # Debug-only code
+    def __repr__
+    if self\.debug
+
+    # Defensive programming
+    raise AssertionError
+    raise NotImplementedError
+
+    # Don't complain if tests don't hit these
+    if __name__ == .__main__.:
+    if TYPE_CHECKING:
+
+    # Fallback imports
+    except ImportError
+
+[html]
+# Directory for HTML coverage report
+directory = htmlcov
+
+[xml]
+# Output file for XML coverage report (useful for CI/CD)
+output = coverage.xml

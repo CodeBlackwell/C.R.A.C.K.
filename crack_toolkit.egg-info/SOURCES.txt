@@ -1,13 +1,17 @@
 README.md
 pyproject.toml
 setup.py
+crack/PIPELINE_SQLI_FU.md
 crack/README.md
 crack/TIME_SQLI_METHODOLOGY.md
 crack/__init__.py
 crack/cli.py
+crack/scanner_validation_report.md
+crack/sqli_scanner_postgresql_improvements.md
 crack/enumeration/__init__.py
 crack/enumeration/html_enum.py
 crack/enumeration/param_discover.py
+crack/enumeration/param_extract.py
 crack/enumeration/sqli_followup.py
 crack/enumeration/sqli_fu.py
 crack/enumeration/sqli_scanner.py
@@ -21,6 +25,7 @@ crack/enumeration/sqli/sqli_scanner.py
 crack/enumeration/sqli/techniques.py
 crack/utils/__init__.py
 crack/utils/colors.py
+crack/utils/curl_parser.py
 crack_toolkit.egg-info/PKG-INFO
 crack_toolkit.egg-info/SOURCES.txt
 crack_toolkit.egg-info/dependency_links.txt

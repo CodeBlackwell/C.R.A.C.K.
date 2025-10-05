@@ -8,7 +8,10 @@ __author__ = "OSCP Student"
 __description__ = "Comprehensive Recon & Attack Creation Kit - Professional pentesting tools"
 
 # Import main modules for easier access
-from . import enumeration
+from . import network
+from . import web
+from . import sqli
+from . import exploit
 from . import utils
 
-__all__ = ["enumeration", "utils"]
+__all__ = ["network", "web", "sqli", "exploit", "utils"]

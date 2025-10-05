@@ -14,14 +14,15 @@ if readme_file.exists():
     long_description = (this_directory / "README.md").read_text()
 
 setup(
-    name="crack",
+    name="crack-toolkit",
     version="1.0.0",
     author="OSCP Student",
     description="Comprehensive Recon & Attack Creation Kit - Professional pentesting tools for OSCP",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/yourusername/crack",
-    packages=find_packages(),
+    packages=["crack"],
+    package_dir={"crack": "."},
     classifiers=[
         "Development Status :: 4 - Beta",
         "Intended Audience :: Information Technology",

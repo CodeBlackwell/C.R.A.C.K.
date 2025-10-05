@@ -30,31 +30,45 @@ def print_banner():
 
 def html_enum_command(args):
     """Execute the HTML enumeration tool"""
-    from crack.enumeration import html_enum
+    from crack.web import html_enum
     # Pass arguments to the original main function
     sys.argv = ['html_enum'] + args
     html_enum.main()
 
 def param_discover_command(args):
     """Execute the parameter discovery tool"""
-    from crack.enumeration import param_discover
+    from crack.web import param_discover
     # Pass arguments to the original main function
     sys.argv = ['param_discover'] + args
     param_discover.main()
 
 def sqli_scan_command(args):
     """Execute the SQLi scanner tool"""
-    from crack.enumeration import sqli_scanner
+    from crack.sqli import scanner
     # Pass arguments to the original main function
     sys.argv = ['sqli_scanner'] + args
-    sqli_scanner.main()
+    scanner.main()
 
 def sqli_fu_command(args):
     """Execute the SQLi follow-up enumeration reference tool"""
-    from crack.enumeration import sqli_fu
+    from crack.sqli import reference
     # Pass arguments to the original main function
     sys.argv = ['sqli_fu'] + args
-    sqli_fu.main()
+    reference.main()
+
+def param_extract_command(args):
+    """Execute the parameter extraction tool"""
+    from crack.web import param_extract
+    # Pass arguments to the original main function
+    sys.argv = ['param_extract'] + args
+    param_extract.main()
+
+def enum_scan_command(args):
+    """Execute the enumeration scanner tool"""
+    from crack.network import enum_scan
+    # Pass arguments to the original main function
+    sys.argv = ['enum_scan'] + args
+    enum_scan.main()
 
 def main():
     """Main CLI entry point"""
@@ -66,14 +80,19 @@ Tool Categories:
   enumeration     Web enumeration tools
 
 Available Tools:
+  enum-scan       Enumeration Scanner - Fast two-stage port scan + CVE lookup
   html-enum       HTML Enumeration Tool - Find forms, comments, endpoints
   param-discover  Parameter Discovery Tool - Find hidden GET/POST parameters
+  param-extract   Parameter Extraction Tool - Extract form values as variables
   sqli-scan       SQLi Scanner - Detect SQL injection vulnerabilities
   sqli-fu         SQLi Follow-up - Post-exploitation enumeration reference
 
 Examples:
+  crack enum-scan 192.168.45.100
+  crack enum-scan 192.168.45.100 --full
   crack html-enum http://target.com
   crack param-discover http://target.com/page.php
+  crack param-extract http://target.com/login.aspx
   crack sqli-scan http://target.com/page.php?id=1
   crack sqli-fu mysql
   crack sqli-fu mysql -c privileges
@@ -87,6 +106,12 @@ Examples:
                        help='Suppress the banner')
 
     subparsers = parser.add_subparsers(dest='tool', help='Tool to run')
+
+    # Enumeration Scanner subcommand
+    enum_scan_parser = subparsers.add_parser('enum-scan',
+                                             help='Enumeration Scanner',
+                                             add_help=False)
+    enum_scan_parser.set_defaults(func=enum_scan_command)
 
     # HTML Enumeration subcommand
     html_parser = subparsers.add_parser('html-enum',
@@ -111,6 +136,12 @@ Examples:
                                            help='SQLi Follow-up Enumeration Reference',
                                            add_help=False)
     sqli_fu_parser.set_defaults(func=sqli_fu_command)
+
+    # Parameter Extraction subcommand
+    param_extract_parser = subparsers.add_parser('param-extract',
+                                                 help='Parameter Extraction Tool',
+                                                 add_help=False)
+    param_extract_parser.set_defaults(func=param_extract_command)
 
     # Parse known args to allow passing through tool-specific args
     args, remaining = parser.parse_known_args()
