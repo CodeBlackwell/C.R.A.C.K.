@@ -70,6 +70,13 @@ def enum_scan_command(args):
     sys.argv = ['enum_scan'] + args
     enum_scan.main()
 
+def scan_analyze_command(args):
+    """Execute the scan analyzer tool"""
+    from crack.network import scan_analyzer
+    # Pass arguments to the original main function
+    sys.argv = ['scan_analyzer'] + args
+    scan_analyzer.main()
+
 def main():
     """Main CLI entry point"""
     parser = argparse.ArgumentParser(
@@ -81,6 +88,7 @@ Tool Categories:
 
 Available Tools:
   enum-scan       Enumeration Scanner - Fast two-stage port scan + CVE lookup
+  scan-analyze    Scan Analyzer - Parse nmap output to identify attack vectors
   html-enum       HTML Enumeration Tool - Find forms, comments, endpoints
   param-discover  Parameter Discovery Tool - Find hidden GET/POST parameters
   param-extract   Parameter Extraction Tool - Extract form values as variables
@@ -90,6 +98,8 @@ Available Tools:
 Examples:
   crack enum-scan 192.168.45.100
   crack enum-scan 192.168.45.100 --full
+  crack scan-analyze targeted_scan.nmap
+  crack scan-analyze scan.xml --os windows
   crack html-enum http://target.com
   crack param-discover http://target.com/page.php
   crack param-extract http://target.com/login.aspx
@@ -112,6 +122,12 @@ Examples:
                                              help='Enumeration Scanner',
                                              add_help=False)
     enum_scan_parser.set_defaults(func=enum_scan_command)
+
+    # Scan Analyzer subcommand
+    scan_analyze_parser = subparsers.add_parser('scan-analyze',
+                                                help='Scan Analyzer - Parse nmap output',
+                                                add_help=False)
+    scan_analyze_parser.set_defaults(func=scan_analyze_command)
 
     # HTML Enumeration subcommand
     html_parser = subparsers.add_parser('html-enum',

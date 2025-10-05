@@ -44,7 +44,10 @@ Issues = "https://github.com/yourusername/crack/issues"
 crack = "crack.cli:main"
 
 [tool.setuptools]
-packages = ["crack", "crack.enumeration", "crack.enumeration.sqli", "crack.utils"]
+packages = ["crack", "crack.network", "crack.web", "crack.sqli", "crack.exploit", "crack.utils"]
+
+[tool.setuptools.package-dir]
+crack = "."
 
 [tool.setuptools.package-data]
 crack = ["*.md", "*.txt"]

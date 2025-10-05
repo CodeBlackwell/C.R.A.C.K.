@@ -21,8 +21,8 @@ setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/yourusername/crack",
-    packages=["crack"],
-    package_dir={"crack": "."},
+    packages=find_packages() + ['crack'],
+    package_dir={'crack': '.'},
     classifiers=[
         "Development Status :: 4 - Beta",
         "Intended Audience :: Information Technology",
