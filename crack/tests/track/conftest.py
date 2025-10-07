@@ -236,3 +236,122 @@ Host: 192.168.45.100 ()	Status: Up	Ports: 22/open/tcp//ssh//OpenSSH 8.2p1 Ubuntu
     gnmap_file = tmp_path / "typical.gnmap"
     gnmap_file.write_text(gnmap_content)
     return str(gnmap_file)
+
+
+# ============================================================================
+# Interactive Mode Fixtures
+# ============================================================================
+
+@pytest.fixture
+def sessions_dir(temp_crack_home):
+    """Create sessions directory for checkpoint testing"""
+    sessions = temp_crack_home.parent / 'sessions'
+    sessions.mkdir(exist_ok=True)
+    return sessions
+
+
+@pytest.fixture
+def simulated_input(monkeypatch):
+    """
+    Mock input() to simulate user typing
+
+    Usage:
+        simulated_input(['1', 'y', 'q'])
+        # First input() returns '1'
+        # Second input() returns 'y'
+        # Third input() returns 'q'
+    """
+    input_queue = []
+    input_index = [0]  # Use list to allow modification in closure
+
+    def mock_input(prompt=''):
+        if input_index[0] >= len(input_queue):
+            raise StopIteration("Input queue exhausted")
+        value = input_queue[input_index[0]]
+        input_index[0] += 1
+        return value
+
+    def set_inputs(inputs):
+        input_queue.clear()
+        input_queue.extend(inputs)
+        input_index[0] = 0
+
+    monkeypatch.setattr('builtins.input', mock_input)
+    return set_inputs
+
+
+@pytest.fixture
+def mock_empty_profile(temp_crack_home):
+    """
+    Fresh TargetProfile with no discoveries (discovery phase)
+
+    Phase: discovery
+    Ports: []
+    Findings: []
+    Tasks: Initial discovery tasks
+    """
+    profile = TargetProfile("192.168.45.100")
+    profile.save()
+    return profile
+
+
+@pytest.fixture
+def mock_profile_with_services(temp_crack_home, typical_oscp_nmap_xml):
+    """
+    TargetProfile after nmap import (enumeration phase)
+
+    Phase: service-specific
+    Ports: 22 (SSH), 80 (HTTP), 445 (SMB)
+    Tasks: whatweb-80, gobuster-80, enum4linux-445, etc.
+    """
+    from crack.track.parsers.registry import ParserRegistry
+
+    # Initialize parsers
+    ParserRegistry.initialize_parsers()
+
+    # Create profile and import scan
+    profile = TargetProfile("192.168.45.100")
+
+    # Parse the nmap XML to populate ports and tasks
+    ParserRegistry.parse_file(typical_oscp_nmap_xml, "192.168.45.100", profile)
+
+    profile.save()
+    return profile
+
+
+@pytest.fixture
+def mock_profile_with_findings(mock_profile_with_services):
+    """
+    TargetProfile with discoveries and findings (exploitation phase)
+
+    Phase: exploitation
+    Ports: 22, 80, 445
+    Findings: 2 vulnerabilities, 1 credential
+    """
+    profile = mock_profile_with_services
+
+    # Add findings
+    profile.add_finding(
+        finding_type="vulnerability",
+        description="Directory traversal in /download.php",
+        source="Manual testing: curl http://192.168.45.100/download.php?file=../../../etc/passwd"
+    )
+
+    profile.add_finding(
+        finding_type="vulnerability",
+        description="SQL injection in id parameter",
+        source="sqlmap -u 'http://192.168.45.100/page.php?id=1' --batch"
+    )
+
+    # Add credential
+    profile.add_credential(
+        username="admin",
+        password="password123",
+        service="http",
+        port=80,
+        source="Found in config.php via directory traversal"
+    )
+
+    profile.phase = "exploitation"
+    profile.save()
+    return profile

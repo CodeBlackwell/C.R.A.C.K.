@@ -26,6 +26,11 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
+  # Interactive mode (recommended for beginners)
+  crack track interactive 192.168.45.100
+  crack track -i 192.168.45.100
+  crack track interactive 192.168.45.100 --resume
+
   # Start tracking a new target
   crack track new 192.168.45.100
 
@@ -72,6 +77,12 @@ For full documentation: See track/README.md or https://github.com/CodeBlackwell/
     )
 
     parser.add_argument('target', nargs='?', help='Target IP or hostname')
+
+    # Interactive mode
+    parser.add_argument('--interactive', '-i', action='store_true',
+                        help='Start interactive mode with progressive prompting')
+    parser.add_argument('--resume', action='store_true',
+                        help='Resume existing interactive session')
 
     # Import actions
     parser.add_argument('--import', dest='import_file', metavar='FILE',
@@ -145,6 +156,11 @@ For full documentation: See track/README.md or https://github.com/CodeBlackwell/
         parser.print_help()
         return
 
+    # Handle interactive mode (before loading profile)
+    if args.interactive:
+        handle_interactive(args.target, args.resume)
+        return
+
     # Load or create profile
     profile = load_or_create_profile(args.target)
 
@@ -208,6 +224,21 @@ def load_or_create_profile(target: str) -> TargetProfile:
         profile.save()
 
     return profile
+
+
+def handle_interactive(target: str, resume: bool = False):
+    """Handle interactive mode"""
+    from .interactive import InteractiveSession
+
+    try:
+        session = InteractiveSession(target, resume=resume)
+        session.run()
+    except KeyboardInterrupt:
+        print("\n\nInteractive mode interrupted.")
+    except Exception as e:
+        print(f"Error in interactive mode: {e}")
+        import traceback
+        traceback.print_exc()
 
 
 def handle_import(profile: TargetProfile, filepath: str):
