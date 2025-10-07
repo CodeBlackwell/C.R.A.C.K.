@@ -5,4 +5,4 @@ dt_key
 *chapters
 *.pdf
 __pycache__/
-*/.reference
+*/.references
