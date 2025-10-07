@@ -66,6 +66,13 @@ Examples:
   crack track export 192.168.45.100 > writeup.md
   crack track timeline 192.168.45.100
 
+  # Visualize architecture and flows
+  crack track --visualize architecture
+  crack track --viz plugin-flow --viz-color
+  crack track 192.168.45.100 --viz task-tree
+  crack track 192.168.45.100 --viz progress --viz-color
+  crack track --viz decision-tree --viz-phase discovery
+
   # List all tracked targets
   crack track list
 
@@ -132,6 +139,22 @@ For full documentation: See track/README.md or https://github.com/CodeBlackwell/
     parser.add_argument('--stats', action='store_true',
                         help='Show statistics')
 
+    # Visualization
+    parser.add_argument('--visualize', '--viz', '-v', metavar='VIEW',
+                        choices=['architecture', 'plugin-flow', 'task-tree', 'progress',
+                                'phase-flow', 'decision-tree', 'plugins'],
+                        help='Visualize architecture/flow (architecture, plugin-flow, task-tree, progress, phase-flow, decision-tree, plugins)')
+    parser.add_argument('--viz-style', default='tree',
+                        choices=['tree', 'columnar', 'compact'],
+                        help='Visualization style (default: tree)')
+    parser.add_argument('--viz-color', action='store_true',
+                        help='Enable colored output')
+    parser.add_argument('--viz-theme', default='oscp',
+                        choices=['oscp', 'dark', 'light', 'mono'],
+                        help='Color theme (default: oscp)')
+    parser.add_argument('--viz-phase', default='discovery',
+                        help='Phase for decision-tree view (default: discovery)')
+
     # Advanced
     parser.add_argument('--debug', action='store_true',
                         help='Enable debug output')
@@ -149,6 +172,11 @@ For full documentation: See track/README.md or https://github.com/CodeBlackwell/
     # Handle list command
     if args.list:
         handle_list()
+        return
+
+    # Handle visualization (may not need target)
+    if args.visualize:
+        handle_visualize(args)
         return
 
     # Target is required for all other commands
@@ -396,6 +424,33 @@ def handle_reset(target: str):
         print(f"✓ Deleted profile for {target}")
     else:
         print("Cancelled")
+
+
+def handle_visualize(args):
+    """Handle visualization command"""
+    from .visualizer import visualize
+
+    view = args.visualize
+    target = args.target
+
+    # Check if target is required for this view
+    target_required = view in ['task-tree', 'progress']
+    if target_required and not target:
+        print(f"Error: View '{view}' requires a target")
+        print(f"Usage: crack track {view} <target>")
+        sys.exit(1)
+
+    # Build options
+    opts = {
+        'style': args.viz_style,
+        'color': args.viz_color,
+        'theme': args.viz_theme,
+        'phase': args.viz_phase
+    }
+
+    # Render visualization
+    output = visualize(view, target, **opts)
+    print(output)
 
 
 if __name__ == '__main__':
