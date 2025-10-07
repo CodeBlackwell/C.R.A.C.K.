@@ -61,6 +61,8 @@ crack/
 ├── web/            # HTML enumeration, parameter discovery
 ├── sqli/           # SQL injection detection and exploitation
 ├── exploit/        # CVE research and exploit lookup
+├── track/          # CRACK Track - Enumeration tracking & task management
+├── reference/      # Command reference system with 70+ OSCP commands
 └── utils/          # Shared utilities (colors, parsers)
 ```
 
@@ -171,6 +173,330 @@ sqli/
 ```
 
 **Key insight**: The `sqli_scanner.py` in `sqli/` is the main entry point that imports from sub-modules. When modifying SQLi functionality, update the appropriate sub-module.
+
+## CRACK Track Architecture
+
+**CRACK Track** (`crack/track/`) is the enumeration tracking and task management system for OSCP preparation.
+
+### Overview
+
+CRACK Track automatically generates actionable task lists from scan results, tracks progress, and exports comprehensive OSCP writeups.
+
+**Primary command**: `crack track` (user-facing brand name)
+**Backward compatibility**: `crack checklist` (legacy alias)
+
+### Directory Structure
+
+```
+track/
+├── core/                    # Core functionality
+│   ├── state.py            # TargetProfile - complete enumeration state
+│   ├── storage.py          # JSON persistence (~/.crack/targets/)
+│   ├── task_tree.py        # Hierarchical task management
+│   └── events.py           # EventBus for plugin communication
+├── parsers/                 # Scan result parsers
+│   ├── nmap_xml.py         # Nmap XML parser
+│   ├── nmap_gnmap.py       # Nmap greppable format parser
+│   └── registry.py         # Auto-detect parser by file type
+├── services/                # Service-specific plugins
+│   ├── http.py             # HTTP/HTTPS enumeration
+│   ├── smb.py              # SMB enumeration
+│   ├── ssh.py              # SSH enumeration
+│   ├── ftp.py              # FTP enumeration
+│   ├── sql.py              # SQL database enumeration
+│   ├── post_exploit.py     # Post-exploitation tasks
+│   └── registry.py         # Service plugin auto-discovery
+├── phases/                  # Enumeration phase management
+│   ├── definitions.py      # Phase task definitions
+│   └── registry.py         # Phase progression logic
+├── recommendations/         # Task recommendation engine
+│   └── engine.py           # Context-aware next-step suggestions
+├── formatters/              # Output formatters
+│   ├── console.py          # Terminal-friendly display
+│   └── markdown.py         # OSCP writeup export
+└── cli.py                  # CLI interface
+
+Storage: ~/.crack/targets/<TARGET>.json
+```
+
+### Key Components
+
+**TargetProfile** (`core/state.py`):
+- Complete enumeration state for a single target
+- Ports, services, findings, credentials, notes
+- Hierarchical task tree with progress tracking
+- Timestamped events for timeline reconstruction
+
+**EventBus** (`core/events.py`):
+- Decouples parsers from service plugins
+- Events: `port_discovered`, `service_detected`, `version_detected`
+- Plugins subscribe to events and generate tasks automatically
+
+**Service Plugins** (`services/`):
+- Auto-generate tasks when services are detected
+- HTTP: whatweb, gobuster, nikto, manual checks
+- SMB: enum4linux, smbclient, share enumeration
+- Each plugin includes manual alternatives for OSCP exam
+
+**TaskNode** (`core/task_tree.py`):
+- Hierarchical task organization (parent/child relationships)
+- Status tracking: pending, in-progress, completed, skipped
+- Rich metadata: commands, flag explanations, success indicators
+- Educational focus: next steps, alternatives, failure indicators
+
+**RecommendationEngine** (`recommendations/engine.py`):
+- Context-aware next-step suggestions
+- Prioritizes "quick wins" (fast, high-value tasks)
+- Limits to 5 recommendations to avoid overwhelming users
+- Identifies parallelizable tasks for efficiency
+
+### Usage Examples
+
+```bash
+# Create new target profile
+crack track new 192.168.45.100
+
+# Import nmap scan (auto-generates service tasks)
+crack track import 192.168.45.100 service_scan.xml
+
+# View recommendations
+crack track show 192.168.45.100
+crack track recommend 192.168.45.100
+
+# Mark tasks complete
+crack track done 192.168.45.100 whatweb-80
+
+# Document findings (source required!)
+crack track finding 192.168.45.100 \
+  --type vulnerability \
+  --description "SQL injection in id parameter" \
+  --source "Manual testing with sqlmap"
+
+# Add credentials
+crack track creds 192.168.45.100 \
+  --username admin \
+  --password password123 \
+  --service http \
+  --port 80 \
+  --source "Found in config.php"
+
+# Export OSCP writeup
+crack track export 192.168.45.100 > writeup.md
+crack track timeline 192.168.45.100
+
+# List all tracked targets
+crack track list
+```
+
+### Event-Driven Task Generation
+
+```
+Nmap Parser → parse_file()
+    ↓
+Emits: service_detected(port=80, service='http', version='Apache 2.4.41')
+    ↓
+ServiceRegistry → Matches HTTP plugin
+    ↓
+HTTP Plugin → detect() returns True
+    ↓
+HTTP Plugin → get_task_tree() generates:
+    ├── Technology Fingerprinting (whatweb)
+    ├── Directory Brute-force (gobuster)
+    ├── Vulnerability Scan (nikto)
+    ├── Manual Checks
+    │   ├── robots.txt
+    │   ├── sitemap.xml
+    │   └── Source review
+    └── Exploit Research: Apache 2.4.41
+        ├── searchsploit
+        └── CVE lookup
+    ↓
+Emits: plugin_tasks_generated(task_tree={...})
+    ↓
+TargetProfile → add_task() integrates into tree
+```
+
+### Testing CRACK Track
+
+```bash
+# Run all CRACK Track tests (51 tests, 100% passing)
+pytest tests/track/ -v
+
+# Run specific test categories
+pytest tests/track/test_user_stories.py -v       # Real OSCP workflows
+pytest tests/track/test_guidance_quality.py -v   # Recommendation quality
+pytest tests/track/test_edge_cases.py -v         # Robustness testing
+pytest tests/track/test_documentation.py -v      # OSCP report requirements
+
+# With coverage
+pytest tests/track/ --cov=crack.track --cov-report=term-missing
+
+# Use test runner script
+./tests/track/run_track_tests.sh all
+./tests/track/run_track_tests.sh user-stories
+./tests/track/run_track_tests.sh coverage
+```
+
+**Test Philosophy:**
+- **User-story driven**: Tests validate real OSCP workflows
+- **BDD format**: "As a pentester... I want... So that..."
+- **Realistic scenarios**: Nmap XML from actual OSCP-style boxes
+- **Value validation**: Tests prove the tool helps, not just that it runs
+
+### Adding New Service Plugins
+
+```python
+# 1. Create track/services/new_service.py
+from .base import ServicePlugin
+
+@ServiceRegistry.register
+class NewServicePlugin(ServicePlugin):
+    @property
+    def name(self) -> str:
+        return "new-service"
+
+    def detect(self, port_info: Dict[str, Any]) -> bool:
+        """Return True if this plugin handles this port"""
+        service = port_info.get('service', '').lower()
+        return service in ['new-service', 'new-svc']
+
+    def get_task_tree(self, target: str, port: int, service_info: Dict) -> Dict:
+        """Generate task tree for this service"""
+        return {
+            'id': f'new-service-{port}',
+            'name': f'NewService Enumeration (Port {port})',
+            'type': 'parent',
+            'children': [
+                {
+                    'id': f'enum-{port}',
+                    'name': 'Basic Enumeration',
+                    'type': 'command',
+                    'metadata': {
+                        'command': f'tool -target {target} -port {port}',
+                        'description': 'Enumerate new service',
+                        'tags': ['OSCP:HIGH', 'QUICK_WIN'],
+                        'flag_explanations': {
+                            '-target': 'Target hostname/IP',
+                            '-port': 'Service port'
+                        },
+                        'success_indicators': ['Data enumerated'],
+                        'alternatives': ['Manual: nc {target} {port}']
+                    }
+                }
+            ]
+        }
+
+# 2. Import in track/services/registry.py
+# (Auto-discovered via @ServiceRegistry.register decorator)
+
+# 3. Test
+# No reinstall needed - plugins auto-discovered on import
+```
+
+### Storage Format
+
+Profiles stored as JSON in `~/.crack/targets/`:
+
+```json
+{
+  "target": "192.168.45.100",
+  "created": "2025-10-07T12:00:00",
+  "updated": "2025-10-07T15:30:00",
+  "phase": "service-specific",
+  "status": "in-progress",
+  "ports": {
+    "80": {
+      "state": "open",
+      "service": "http",
+      "version": "Apache httpd 2.4.41",
+      "product": "Apache httpd",
+      "source": "nmap service scan"
+    }
+  },
+  "findings": [
+    {
+      "timestamp": "2025-10-07T13:45:00",
+      "type": "vulnerability",
+      "description": "Directory traversal in /download.php",
+      "source": "Manual testing: /download.php?file=../../../etc/passwd"
+    }
+  ],
+  "credentials": [
+    {
+      "timestamp": "2025-10-07T14:00:00",
+      "username": "admin",
+      "password": "password123",
+      "service": "http",
+      "port": 80,
+      "source": "Found in config.php"
+    }
+  ],
+  "task_tree": {
+    "id": "root",
+    "name": "Enumeration: 192.168.45.100",
+    "type": "parent",
+    "status": "pending",
+    "children": [...]
+  }
+}
+```
+
+### OSCP Exam Features
+
+**1. Source Tracking (Required!):**
+```python
+# All findings MUST have sources
+profile.add_finding(
+    finding_type="vulnerability",
+    description="SQLi in id parameter",
+    source="Manual testing: sqlmap -u 'http://target/page.php?id=1'"
+)
+```
+
+**2. Manual Alternatives:**
+Every automated task includes manual alternatives for when tools fail:
+```python
+'alternatives': [
+    'Manual: curl http://target/admin',
+    'Manual: curl http://target/upload',
+    'Browser: View page source for hidden directories'
+]
+```
+
+**3. Flag Explanations:**
+Educational focus - every flag is explained:
+```python
+'flag_explanations': {
+    'dir': 'Directory/file brute-forcing mode',
+    '-u': 'Target URL',
+    '-w': 'Wordlist path (common.txt for speed)',
+    '-o': 'Output file (required for OSCP documentation)'
+}
+```
+
+**4. Timeline Export:**
+Complete event timeline for report submission:
+```bash
+crack track timeline 192.168.45.100
+
+# Output:
+# 2025-10-07 12:00:00 - Completed: Full port scan
+# 2025-10-07 12:30:00 - Finding: Directory traversal
+# 2025-10-07 13:00:00 - Credential: admin discovered
+```
+
+### Documentation
+
+**Comprehensive README**: `track/README.md`
+- Full usage guide with examples
+- Architecture deep dive
+- OSCP exam preparation features
+- Service plugin development guide
+
+**Test README**: `tests/track/README.md`
+- Test philosophy and structure
+- Running tests
+- User story descriptions
 
 ## Reference System Architecture
 
@@ -634,10 +960,13 @@ crack port-scan 192.168.45.100
 crack scan-analyze scan.nmap
 crack html-enum http://target.com
 crack sqli-scan http://target.com/page.php?id=1
+crack track new 192.168.45.100
+crack reference --fill bash-reverse-shell
 
 # Standalone (no installation required)
 python3 -m crack.network.port_scanner 192.168.45.100
 python3 -m crack.sqli.scanner http://target.com/page.php?id=1
+python3 -m crack.track.cli 192.168.45.100
 ```
 
 ## Environment
