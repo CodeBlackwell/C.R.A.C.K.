@@ -142,7 +142,7 @@ class ServiceRegistry:
 
         # Import all plugin modules to trigger @register decorators
         try:
-            from . import http, smb, ssh, sql, ftp, post_exploit
+            from . import http, smb, ssh, sql, ftp, smtp, mysql, nfs, post_exploit
         except ImportError as e:
             logger.warning(f"Some plugins failed to import: {e}")
 

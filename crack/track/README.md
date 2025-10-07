@@ -220,17 +220,39 @@ CRACK Track uses **service plugins** that automatically generate tasks when serv
 - Banner grabbing
 - User enumeration
 - Key-based auth testing
+- Weak key detection
 - Version exploit research
 
 **FTP Plugin:**
 - Anonymous login testing
-- File enumeration
+- File enumeration and download
 - Writable directory checks
+- Version-specific exploits (vsftpd 2.3.4 backdoor)
 
-**SQL Plugin:**
+**MySQL Plugin:**
+- Root/anonymous access testing
+- FILE privilege exploitation (read /etc/passwd, write web shells)
+- UDF privilege escalation
+- Credential extraction (debian.cnf)
+- Hash dumping and cracking
+
+**NFS Plugin:**
+- RPC enumeration (rpcinfo)
+- Mount discovery (showmount)
+- UID/GID impersonation techniques
+- no_root_squash privilege escalation
+- Subtree escape exploitation
+
+**SQL Plugin (Generic):**
 - Version detection
 - Default credentials
-- SQL injection testing points
+- Database enumeration
+- Multi-DB support (PostgreSQL, MSSQL, Oracle)
+
+**SMTP Plugin:**
+- User enumeration (VRFY, RCPT TO)
+- Mail relay testing
+- Open relay exploitation
 
 **Post-Exploitation Plugin:**
 - Privilege escalation enumeration

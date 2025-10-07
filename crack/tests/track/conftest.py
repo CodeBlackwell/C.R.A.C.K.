@@ -238,6 +238,88 @@ Host: 192.168.45.100 ()	Status: Up	Ports: 22/open/tcp//ssh//OpenSSH 8.2p1 Ubuntu
     return str(gnmap_file)
 
 
+@pytest.fixture
+def mysql_server_nmap_xml(tmp_path):
+    """
+    MySQL server on port 3306
+    Scenarios: MySQL 5.7 (old) and MySQL 8.0 (modern)
+    Tests: Anonymous access, FILE privilege exploitation, UDF privesc
+    """
+    xml_content = '''<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE nmaprun>
+<nmaprun scanner="nmap" args="nmap -sV -p- 192.168.45.104" start="1699564800" version="7.94">
+<host>
+<address addr="192.168.45.104" addrtype="ipv4"/>
+<ports>
+<port protocol="tcp" portid="22">
+<state state="open"/>
+<service name="ssh" product="OpenSSH" version="8.2p1 Ubuntu"/>
+</port>
+<port protocol="tcp" portid="3306">
+<state state="open" reason="syn-ack" reason_ttl="63"/>
+<service name="mysql" product="MySQL" version="5.7.40" method="probed" conf="10">
+<cpe>cpe:/a:mysql:mysql:5.7.40</cpe>
+</service>
+</port>
+<port protocol="tcp" portid="80">
+<state state="open"/>
+<service name="http" product="Apache httpd" version="2.4.41"/>
+</port>
+</ports>
+<os>
+<osmatch name="Linux 5.0 - 5.4" accuracy="95"/>
+</os>
+</host>
+</nmaprun>
+'''
+    xml_file = tmp_path / "mysql_server.xml"
+    xml_file.write_text(xml_content)
+    return str(xml_file)
+
+
+@pytest.fixture
+def nfs_server_nmap_xml(tmp_path):
+    """
+    NFS server on port 2049 with RPC services
+    Scenario: NFSv3 with potential no_root_squash misconfiguration
+    Tests: Mount enumeration, UID/GID impersonation, privilege escalation
+    """
+    xml_content = '''<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE nmaprun>
+<nmaprun scanner="nmap" args="nmap -sV -p- 192.168.45.105" start="1699564800" version="7.94">
+<host>
+<address addr="192.168.45.105" addrtype="ipv4"/>
+<ports>
+<port protocol="tcp" portid="22">
+<state state="open"/>
+<service name="ssh" product="OpenSSH" version="8.2p1 Ubuntu"/>
+</port>
+<port protocol="tcp" portid="111">
+<state state="open" reason="syn-ack" reason_ttl="63"/>
+<service name="rpcbind" version="2-4" method="probed" conf="10"/>
+</port>
+<port protocol="tcp" portid="2049">
+<state state="open" reason="syn-ack" reason_ttl="63"/>
+<service name="nfs" version="3-4" method="probed" conf="10">
+<cpe>cpe:/a:nfs:nfs:3</cpe>
+</service>
+</port>
+<port protocol="tcp" portid="20048">
+<state state="open"/>
+<service name="mountd" version="1-3" method="probed"/>
+</port>
+</ports>
+<os>
+<osmatch name="Linux 5.0 - 5.4" accuracy="95"/>
+</os>
+</host>
+</nmaprun>
+'''
+    xml_file = tmp_path / "nfs_server.xml"
+    xml_file.write_text(xml_content)
+    return str(xml_file)
+
+
 # ============================================================================
 # Interactive Mode Fixtures
 # ============================================================================
