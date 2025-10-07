@@ -498,6 +498,818 @@ crack track timeline 192.168.45.100
 - Running tests
 - User story descriptions
 
+## Interactive Mode Development
+
+**CRACK Track Interactive Mode** (`track/interactive/`) provides a progressive prompting system for OSCP workflows. This section covers how to extend and customize the interactive experience.
+
+### Overview
+
+Interactive mode uses a state machine architecture with the following flow:
+
+```
+Loop: Display Context → Build Menu → Get Input → Process Choice → Execute Action → Save Checkpoint → Repeat
+```
+
+**Key Design Principles:**
+- **Zero dependencies** - Uses only Python stdlib + existing CRACK infrastructure
+- **Session persistence** - Auto-saves after every action to `~/.crack/sessions/`
+- **Context-aware** - Menus adapt based on target state (phase, ports, findings)
+- **Keyboard shortcuts** - Single-key commands for expert efficiency
+- **Educational focus** - OSCP preparation with source tracking and flag explanations
+
+### Architecture Components
+
+```
+track/interactive/
+├── session.py          # Main state machine loop (600 lines)
+├── prompts.py          # Context-aware menu generation (350 lines)
+├── input_handler.py    # Input parsing & validation (300 lines)
+├── display.py          # Terminal formatting & UI (270 lines)
+├── decision_trees.py   # Navigation system (400 lines)
+├── shortcuts.py        # Keyboard shortcut handlers (150 lines)
+└── __init__.py         # Module exports
+```
+
+**Session State:**
+```python
+class InteractiveSession:
+    profile: TargetProfile          # Target state
+    last_action: str                # Last action performed
+    start_time: int                 # Session start timestamp
+    target: str                     # Target IP/hostname
+```
+
+**Checkpoint Format** (`~/.crack/sessions/TARGET.json`):
+```json
+{
+  "target": "192.168.45.100",
+  "phase": "service-specific",
+  "last_action": "Imported nmap scan",
+  "start_time": 1699564800,
+  "timestamp": 1699564900
+}
+```
+
+### Adding New Menu Options
+
+**Step 1: Define Choice in PromptBuilder**
+
+Edit `track/interactive/prompts.py`:
+
+```python
+@classmethod
+def _get_enumeration_choices(cls, profile) -> List[Dict[str, Any]]:
+    """Get enumeration phase specific choices"""
+    choices = []
+
+    # Your new choice
+    choices.append({
+        'id': 'auto-exploit',           # Unique ID
+        'label': 'Auto-exploit found vulnerabilities',
+        'description': 'Run Metasploit against known vulns'
+    })
+
+    # Conditional choice (only show if conditions met)
+    if len(profile.findings) > 0:
+        choices.append({
+            'id': 'exploit-findings',
+            'label': 'Exploit documented findings',
+            'description': f'Attempt exploitation on {len(profile.findings)} finding(s)'
+        })
+
+    return choices
+```
+
+**Step 2: Add Handler in InteractiveSession**
+
+Edit `track/interactive/session.py`:
+
+```python
+def process_input(self, user_input: str, choices: List[Dict], recommendations: Dict) -> bool:
+    """Process user input and execute action"""
+
+    # ... existing code ...
+
+    # Handle your new choice
+    if choice['id'] == 'auto-exploit':
+        self.handle_auto_exploit()
+        self.last_action = "Auto-exploit attempted"
+        return True
+
+    elif choice['id'] == 'exploit-findings':
+        self.handle_exploit_findings()
+        self.last_action = "Findings exploitation attempted"
+        return True
+
+
+def handle_auto_exploit(self):
+    """Handle auto-exploitation action"""
+    print(DisplayManager.format_info("Searching for exploits..."))
+
+    # Your logic here
+    vulnerabilities = [f for f in self.profile.findings if f['type'] == 'vulnerability']
+
+    if not vulnerabilities:
+        print(DisplayManager.format_warning("No vulnerabilities documented yet"))
+        return
+
+    # Show vulnerabilities
+    for i, vuln in enumerate(vulnerabilities, 1):
+        print(f"{i}. {vuln['description']}")
+
+    # Confirmation
+    confirm = input(DisplayManager.format_confirmation("Proceed with exploitation?", default='N'))
+    if not InputProcessor.parse_confirmation(confirm, default='N'):
+        print("Cancelled")
+        return
+
+    # Execute
+    # ... your exploitation logic ...
+
+    # Save result
+    self.profile.add_note(
+        note="Attempted auto-exploitation",
+        source="interactive mode"
+    )
+    self.profile.save()
+```
+
+**Step 3: Test**
+
+```bash
+# No reinstall needed for interactive changes
+pytest tests/track/test_interactive.py::TestPromptBuilder -v
+
+# Manual testing
+crack track -i 192.168.45.100
+```
+
+### Adding Keyboard Shortcuts
+
+**Step 1: Register Shortcut in ShortcutHandler**
+
+Edit `track/interactive/shortcuts.py`:
+
+```python
+def __init__(self, session):
+    self.session = session
+
+    # Add your shortcut
+    self.shortcuts: Dict[str, Tuple[str, str]] = {
+        's': ('Show full status', 'show_status'),
+        't': ('Show task tree', 'show_tree'),
+        'r': ('Show recommendations', 'show_recommendations'),
+        'n': ('Execute next recommended task', 'do_next'),
+        'e': ('Auto-exploit findings', 'auto_exploit'),  # NEW
+        'b': ('Go back', 'go_back'),
+        'h': ('Show help', 'show_help'),
+        'q': ('Quit and save', 'quit')
+    }
+
+
+def auto_exploit(self):
+    """Execute auto-exploitation (shortcut: e)"""
+    from ..formatters.console import ConsoleFormatter
+
+    print(DisplayManager.format_info("Auto-exploit mode"))
+
+    # Call session handler
+    self.session.handle_auto_exploit()
+```
+
+**Step 2: Update Help Text**
+
+Edit `track/interactive/prompts.py`:
+
+```python
+@classmethod
+def build_help_text(cls) -> str:
+    """Build help text for interactive mode"""
+    help_text = f"""
+Interactive Mode Help
+{'=' * 50}
+
+KEYBOARD SHORTCUTS:
+  s - Show full status and task tree
+  t - Show task tree only
+  r - Show recommendations
+  n - Execute next recommended task
+  e - Auto-exploit documented findings  # NEW
+  b - Go back to previous menu
+  h - Show this help
+  q - Quit and save
+
+...
+"""
+    return help_text
+```
+
+**Step 3: Test**
+
+```python
+# tests/track/test_interactive.py
+
+def test_auto_exploit_shortcut(temp_crack_home, mock_profile_with_findings):
+    """PROVES: 'e' shortcut triggers auto-exploit"""
+    session = InteractiveSession(mock_profile_with_findings.target)
+    handler = ShortcutHandler(session)
+
+    # Verify shortcut exists
+    assert 'e' in handler.shortcuts
+
+    # Verify handler callable
+    assert hasattr(handler, 'auto_exploit')
+```
+
+### Extending Decision Trees
+
+**Step 1: Add New Node to Existing Tree**
+
+Edit `track/interactive/decision_trees.py`:
+
+```python
+@staticmethod
+def create_exploitation_tree() -> DecisionTree:
+    """Create exploitation phase decision tree"""
+
+    # Existing root
+    root_choices = [
+        Choice(
+            id='research',
+            label='Research exploits',
+            description='Search exploitdb, GitHub, Metasploit',
+            action='research_exploits'
+        ),
+        # NEW CHOICE
+        Choice(
+            id='auto-exploit',
+            label='Automated exploitation',
+            description='Auto-exploit with Metasploit',
+            next_node='auto-exploit-menu',  # Navigate to new node
+            requires={'has_vulnerabilities': True}  # Conditional
+        )
+    ]
+
+    root = DecisionNode(
+        node_id='exploit-root',
+        question='Vulnerabilities found. Next steps:',
+        choices=root_choices
+    )
+
+    # NEW NODE
+    auto_exploit_choices = [
+        Choice(
+            id='msf-auto',
+            label='Metasploit auto-exploit',
+            action='run_metasploit_auto'
+        ),
+        Choice(
+            id='manual-exploit',
+            label='Manual exploitation',
+            action='manual_exploit_guide'
+        ),
+        Choice(
+            id='back',
+            label='Back to exploitation menu',
+            next_node='exploit-root'
+        )
+    ]
+
+    auto_exploit_node = DecisionNode(
+        node_id='auto-exploit-menu',
+        question='Select exploitation method:',
+        choices=auto_exploit_choices
+    )
+
+    # Build tree
+    tree = DecisionTree('exploitation', root)
+    tree.add_node(auto_exploit_node)  # Register new node
+
+    return tree
+```
+
+**Step 2: Implement Choice Actions**
+
+In `session.py`, add handlers for new actions:
+
+```python
+def run_metasploit_auto(self):
+    """Execute Metasploit auto-exploitation"""
+    print(DisplayManager.format_info("Launching Metasploit..."))
+    # Implementation
+    pass
+
+
+def manual_exploit_guide(self):
+    """Show manual exploitation guide"""
+    print(DisplayManager.format_info("Manual Exploitation Guide"))
+    # Show step-by-step instructions
+    pass
+```
+
+**Step 3: Connect to Session Loop**
+
+```python
+def process_input(self, user_input: str, choices: List[Dict], recommendations: Dict) -> bool:
+    """Process user input and execute action"""
+
+    # ... existing code ...
+
+    # Execute action from choice
+    if choice.get('action'):
+        action_name = choice['action']
+
+        # Map actions to handlers
+        action_map = {
+            'research_exploits': self.research_exploits,
+            'run_metasploit_auto': self.run_metasploit_auto,      # NEW
+            'manual_exploit_guide': self.manual_exploit_guide,    # NEW
+        }
+
+        handler = action_map.get(action_name)
+        if handler:
+            handler()
+            return True
+```
+
+**Step 4: Test Decision Tree Navigation**
+
+```python
+# tests/track/test_interactive.py
+
+def test_auto_exploit_node_navigation():
+    """PROVES: Auto-exploit node navigates correctly"""
+    tree = DecisionTreeFactory.create_exploitation_tree()
+
+    # Verify node exists
+    auto_node = tree.get_node('auto-exploit-menu')
+    assert auto_node is not None
+
+    # Navigate to it
+    context = {'has_vulnerabilities': True}
+    result = tree.navigate_to('auto-exploit-menu', context)
+    assert result is not None
+    assert tree.current_node.id == 'auto-exploit-menu'
+
+    # Navigate back
+    tree.navigate_back()
+    assert tree.current_node.id == 'exploit-root'
+```
+
+### Creating a New Phase Tree
+
+**Step 1: Define Tree Structure**
+
+```python
+@staticmethod
+def create_custom_phase_tree() -> DecisionTree:
+    """Create custom phase decision tree"""
+
+    root_choices = [
+        Choice(
+            id='option-1',
+            label='First option',
+            description='Description',
+            action='handle_option_1'
+        ),
+        Choice(
+            id='option-2',
+            label='Second option',
+            next_node='submenu-1'
+        )
+    ]
+
+    root = DecisionNode(
+        node_id='custom-root',
+        question='What would you like to do?',
+        choices=root_choices
+    )
+
+    # Submenu node
+    submenu_choices = [
+        Choice(id='sub-1', label='Sub option 1', action='handle_sub_1'),
+        Choice(id='back', label='Back', next_node='custom-root')
+    ]
+
+    submenu = DecisionNode(
+        node_id='submenu-1',
+        question='Submenu:',
+        choices=submenu_choices
+    )
+
+    tree = DecisionTree('custom-phase', root)
+    tree.add_node(submenu)
+
+    return tree
+```
+
+**Step 2: Register in Factory**
+
+```python
+@staticmethod
+def create_phase_tree(phase: str) -> Optional[DecisionTree]:
+    """Create decision tree for specific phase"""
+    if phase == 'discovery':
+        return DecisionTreeFactory.create_discovery_tree()
+    elif phase in ['service-detection', 'service-specific']:
+        return DecisionTreeFactory.create_enumeration_tree()
+    elif phase == 'exploitation':
+        return DecisionTreeFactory.create_exploitation_tree()
+    elif phase == 'post-exploit':
+        return DecisionTreeFactory.create_post_exploit_tree()
+    elif phase == 'custom-phase':                                    # NEW
+        return DecisionTreeFactory.create_custom_phase_tree()        # NEW
+
+    return None
+```
+
+### Adding Guided Forms
+
+**Step 1: Define Form Fields in PromptBuilder**
+
+```python
+@classmethod
+def build_exploit_form(cls) -> List[Dict[str, Any]]:
+    """Build guided form for exploit documentation"""
+    return [
+        {
+            'name': 'exploit_name',
+            'type': str,
+            'required': True,
+            'prompt': 'Exploit name/CVE',
+            'example': 'CVE-2021-41773 or EternalBlue'
+        },
+        {
+            'name': 'target_service',
+            'type': str,
+            'required': True,
+            'prompt': 'Target service',
+            'example': 'Apache 2.4.41, SMBv1'
+        },
+        {
+            'name': 'exploit_path',
+            'type': str,
+            'required': False,
+            'prompt': 'Path to exploit script',
+            'example': '/usr/share/exploitdb/exploits/linux/remote/50383.py'
+        },
+        {
+            'name': 'payload',
+            'type': str,
+            'required': False,
+            'prompt': 'Payload used',
+            'example': 'linux/x64/shell_reverse_tcp'
+        },
+        {
+            'name': 'success',
+            'type': bool,
+            'required': True,
+            'prompt': 'Exploitation successful? (y/n)',
+            'example': 'y'
+        }
+    ]
+```
+
+**Step 2: Implement Form Handler**
+
+```python
+def handle_exploit_documentation(self):
+    """Guide user through exploit documentation form"""
+
+    print(DisplayManager.format_info("Exploit Documentation Form"))
+    print("=" * 50)
+
+    # Get form definition
+    form = PromptBuilder.build_exploit_form()
+
+    # Collect values
+    values = {}
+    for field in form:
+        while True:
+            # Show prompt with example
+            prompt = f"\n{field['prompt']}"
+            if field.get('example'):
+                prompt += f" (e.g., {field['example']})"
+            if not field['required']:
+                prompt += " [optional]"
+            prompt += ": "
+
+            # Get input
+            user_input = input(prompt)
+
+            # Validate
+            if field['required'] and not user_input:
+                print(DisplayManager.format_error("This field is required"))
+                continue
+
+            # Parse by type
+            if field['type'] == bool:
+                values[field['name']] = InputProcessor.parse_confirmation(user_input)
+            else:
+                values[field['name']] = user_input
+
+            break
+
+    # Save to profile
+    exploit_note = f"""
+Exploit Documentation:
+- Name: {values['exploit_name']}
+- Service: {values['target_service']}
+- Script: {values.get('exploit_path', 'N/A')}
+- Payload: {values.get('payload', 'N/A')}
+- Success: {values['success']}
+"""
+
+    self.profile.add_finding(
+        finding_type='exploit_attempt',
+        description=values['exploit_name'],
+        source=f"Exploit: {values.get('exploit_path', 'manual')}"
+    )
+
+    self.profile.add_note(exploit_note, source='interactive mode')
+    self.profile.save()
+
+    print(DisplayManager.format_success("Exploit documented!"))
+```
+
+### Session Persistence Patterns
+
+**Checkpoint Best Practices:**
+
+```python
+def save_checkpoint(self):
+    """Save session checkpoint"""
+    checkpoint_file = self.sessions_dir / f"{self.target}.json"
+
+    checkpoint_data = {
+        'target': self.target,
+        'phase': self.profile.phase,
+        'last_action': self.last_action,
+        'start_time': self.start_time,
+        'timestamp': int(datetime.now().timestamp()),
+        # Add custom state
+        'custom_state': {
+            'current_menu': self.current_menu_id,
+            'navigation_history': self.nav_history,
+            'user_preferences': self.preferences
+        }
+    }
+
+    checkpoint_file.write_text(json.dumps(checkpoint_data, indent=2))
+
+
+def load_checkpoint(self) -> Dict[str, Any]:
+    """Load session checkpoint"""
+    checkpoint_file = self.sessions_dir / f"{self.target}.json"
+
+    if not checkpoint_file.exists():
+        return {}
+
+    try:
+        data = json.loads(checkpoint_file.read_text())
+
+        # Restore custom state
+        if 'custom_state' in data:
+            self.current_menu_id = data['custom_state'].get('current_menu')
+            self.nav_history = data['custom_state'].get('navigation_history', [])
+            self.preferences = data['custom_state'].get('user_preferences', {})
+
+        return data
+
+    except json.JSONDecodeError:
+        print(DisplayManager.format_warning("Checkpoint corrupted, starting fresh"))
+        return {}
+```
+
+**Always save after modifications:**
+
+```python
+def execute_task(self, task):
+    """Execute a task and save state"""
+    # Execute
+    result = self._run_task_command(task)
+
+    # Update state
+    self.profile.mark_task_done(task.id)
+    self.last_action = f"Completed: {task.name}"
+
+    # Save both profile and checkpoint
+    self.profile.save()          # ← Profile to ~/.crack/targets/
+    self.save_checkpoint()       # ← Session to ~/.crack/sessions/
+```
+
+### Testing Interactive Features
+
+**Value-Focused Testing Pattern:**
+
+```python
+# tests/track/test_interactive.py
+
+class TestNewFeature:
+    """Prove new feature works for OSCP workflows"""
+
+    def test_complete_workflow(self, temp_crack_home, mock_profile, simulated_input):
+        """
+        PROVES: User can complete [feature] workflow
+
+        Workflow:
+        1. User selects new option
+        2. System displays form/menu
+        3. User enters data
+        4. System saves to profile
+        5. Data persists across sessions
+        """
+        # Setup
+        session = InteractiveSession(mock_profile.target)
+
+        # Simulate user input
+        simulated_input(['new-option', 'data1', 'data2', 'yes'])
+
+        # Execute
+        # ... trigger your feature ...
+
+        # Verify outcome
+        assert len(session.profile.findings) > 0
+
+        # Verify persistence
+        session.profile.save()
+        loaded = TargetProfile.load(mock_profile.target)
+        assert loaded.findings == session.profile.findings
+
+
+    def test_error_handling(self, temp_crack_home):
+        """PROVES: Feature degrades gracefully on error"""
+        # Test invalid input, missing data, etc.
+        pass
+```
+
+**Test Real Objects, Not Mocks:**
+
+```python
+# ✓ Good - Tests real behavior
+def test_menu_generation(mock_profile_with_services):
+    """Test menu adapts to profile state"""
+    prompt, choices = PromptBuilder.build_main_menu(
+        mock_profile_with_services,
+        {}
+    )
+
+    # Verify menu contains expected options
+    choice_ids = [c['id'] for c in choices]
+    assert 'import' in choice_ids
+    assert 'exit' in choice_ids
+
+
+# ✗ Avoid - Tests mock, not real code
+def test_menu_generation_mocked(mocker):
+    """Don't do this"""
+    mock_builder = mocker.patch('PromptBuilder.build_main_menu')
+    mock_builder.return_value = ("prompt", [])
+    # This tests the mock, not the real PromptBuilder
+```
+
+### Common Patterns
+
+**Pattern 1: Conditional Menu Options**
+
+```python
+# Only show option if condition met
+if profile.phase == 'exploitation' and len(profile.findings) > 0:
+    choices.append({
+        'id': 'exploit',
+        'label': 'Exploit vulnerabilities',
+        'description': f'{len(profile.findings)} vuln(s) found'
+    })
+```
+
+**Pattern 2: Multi-Step Workflows**
+
+```python
+def multi_step_workflow(self):
+    """Example multi-step workflow"""
+    # Step 1: Selection
+    print("Step 1: Select target service")
+    services = list(self.profile.ports.keys())
+    for i, port in enumerate(services, 1):
+        print(f"{i}. Port {port}")
+
+    choice = input("Select port: ")
+    selected_port = services[int(choice) - 1]
+
+    # Step 2: Configuration
+    print(f"\nStep 2: Configure scan for port {selected_port}")
+    wordlist = input("Wordlist [/usr/share/wordlists/common.txt]: ") or "/usr/share/wordlists/common.txt"
+
+    # Step 3: Confirmation
+    print(f"\nReady to scan port {selected_port} with {wordlist}")
+    if not InputProcessor.parse_confirmation(input("Proceed? [Y/n]: "), default='Y'):
+        return
+
+    # Step 4: Execute
+    # ... execute scan ...
+
+    # Step 5: Save
+    self.profile.save()
+    self.save_checkpoint()
+```
+
+**Pattern 3: Context-Aware Recommendations**
+
+```python
+def get_context_aware_menu(profile: TargetProfile) -> tuple:
+    """Build menu based on current context"""
+
+    # Check what's been done
+    has_ports = len(profile.ports) > 0
+    has_http = any(p.get('service') == 'http' for p in profile.ports.values())
+    has_findings = len(profile.findings) > 0
+    has_creds = len(profile.credentials) > 0
+
+    # Adapt recommendations
+    if not has_ports:
+        return "No ports found. Scan now?", [
+            {'id': 'quick-scan', 'label': 'Quick scan'},
+            {'id': 'full-scan', 'label': 'Full scan'}
+        ]
+
+    elif has_http and not any('gobuster' in t.id for t in profile.task_tree.get_all_pending()):
+        return "HTTP found. Enumerate web?", [
+            {'id': 'run-gobuster', 'label': 'Directory brute-force'},
+            {'id': 'run-nikto', 'label': 'Vulnerability scan'}
+        ]
+
+    elif has_findings and not has_creds:
+        return "Vulnerabilities found. Need creds?", [
+            {'id': 'brute-force', 'label': 'Credential brute-force'},
+            {'id': 'exploit', 'label': 'Try exploits'}
+        ]
+
+    else:
+        return "What next?", [
+            {'id': 'status', 'label': 'Show status'},
+            {'id': 'export', 'label': 'Export report'}
+        ]
+```
+
+### No Reinstall Needed
+
+Unlike other CRACK modules, **interactive mode changes don't require reinstall**:
+
+```bash
+# Edit interactive code
+vim track/interactive/session.py
+vim track/interactive/prompts.py
+
+# Test immediately - no reinstall needed!
+crack track -i 192.168.45.100
+
+# Run tests
+pytest tests/track/test_interactive.py -v
+```
+
+**Exception**: Changes to `track/cli.py` or CLI routing DO require reinstall:
+
+```bash
+# If you modify CLI integration
+vim track/cli.py
+
+# Then reinstall
+./reinstall.sh
+```
+
+### Best Practices
+
+1. **Always provide context** - Menus should adapt to profile state
+2. **Confirm destructive actions** - Use `InputProcessor.parse_confirmation()`
+3. **Save frequently** - Call `profile.save()` and `save_checkpoint()` after changes
+4. **Handle Ctrl+C gracefully** - Wrap in try/except KeyboardInterrupt
+5. **Provide alternatives** - Multiple paths to accomplish same goal
+6. **Test with real profiles** - Use fixtures like `mock_profile_with_services`
+7. **Keep it educational** - Show commands, explain flags, track sources
+8. **Limit choices** - 3-7 options per menu for cognitive load
+9. **Use shortcuts** - Single-key for common actions
+10. **Support resume** - Session state should survive interruption
+
+### Development Workflow
+
+```bash
+# 1. Modify interactive module
+vim track/interactive/prompts.py
+
+# 2. Add test
+vim tests/track/test_interactive.py
+
+# 3. Run test
+pytest tests/track/test_interactive.py::TestNewFeature -v
+
+# 4. Manual test
+crack track -i 192.168.45.100
+
+# 5. Commit (no reinstall needed!)
+git add track/interactive/ tests/track/
+git commit -m "Add new interactive feature"
+```
+
 ## Reference System Architecture
 
 The reference system (`crack/reference/`) is a hybrid command lookup system combining JSON command definitions with a CLI interface for OSCP exam preparation.
