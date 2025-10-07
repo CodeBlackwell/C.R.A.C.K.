@@ -1,15 +1,16 @@
 # Scan Analyzer - Attack Vector Identification Tool
 
 ## Overview
-The Scan Analyzer is a dynamic nmap output parser that helps identify and prioritize attack vectors without LLM assistance. It analyzes scan results to highlight unusual services, extract unique banners, and generate specific enumeration commands.
+The Scan Analyzer is an enhanced nmap output parser that provides comprehensive service analysis, vulnerability assessment, and educational guidance for OSCP exam preparation. It dynamically analyzes scan results to prioritize attack vectors based on multiple risk factors.
 
-## Purpose
+## Key Features
 During OSCP exam, you need to quickly identify which services to attack first. This tool:
-- Classifies ports as standard vs unusual for the target OS
-- Prioritizes services based on multiple factors
-- Extracts unique terms from banners for searchsploit
-- Generates specific enumeration commands
-- Explains the methodology for learning
+- **Version Cascade Searching** - Generates searches from specific to general (e.g., "apache 2.4.7" → "apache 2.4" → "apache")
+- **Software Age Assessment** - Calculates software age and risk level (e.g., "12+ years old (HIGH RISK)")
+- **NSE Script Recommendations** - Suggests relevant nmap scripts based on service type
+- **Dynamic Banner Analysis** - Extracts unique searchable terms from service banners
+- **Enhanced Command Generation** - Provides searchsploit, NSE, manual, and enumeration commands
+- **Educational Methodology** - Explains WHY certain ports are prioritized
 
 ## Usage
 
@@ -42,46 +43,72 @@ The tool scores each service based on:
 
 Services are ranked by total score, helping you focus on the most likely vulnerable targets.
 
-## Example Output
+## Enhanced Output Example
 
 ```
-🎯 SCAN ANALYSIS - 192.168.165.10
-Windows 10 Pro
-
-📊 PORT CLASSIFICATION:
-✓ Standard windows ports: 135, 139, 445, 49664-49672
-⚠️ UNUSUAL PORTS:
-  • 1978/tcp (unisql?) - Banner: luminateOK
-
-🚨 ATTACK PRIORITY:
-#1 - Port 1978 [CRITICAL - Score: 9/10]
-  Service: unisql?
-  Banner: luminateOK
-  Reasons: non-standard port, unknown service, unique banner
-
-🔍 ENUMERATION COMMANDS:
-searchsploit luminateok
-nc -nv 192.168.165.10 1978
+============================================================
+Priority #1 - Port 80
+├─ Service: http
+├─ Version: Apache httpd 2.4.7 ((Ubuntu))
+├─ Software Age: 12+ years old (HIGH RISK)
+│
+├─ 📚 SearchSploit Commands (Specific → General):
+│  searchsploit "apache httpd 2.4.7"
+│  searchsploit "apache httpd 2.4"
+│  searchsploit "apache httpd 2"
+│  searchsploit apache httpd
+│
+├─ 🔧 NSE Scripts:
+│  nmap -p80 --script http-enum TARGET  # Enumerate directories
+│  nmap -p80 --script http-methods TARGET  # Check HTTP methods
+│  nmap -p80 --script http-shellshock TARGET  # Test Shellshock
+│
+├─ ✋ Manual Testing:
+│  nc -nv TARGET 80
+│  # Try: GET / HTTP/1.0, HEAD, OPTIONS
+│
+└─ 🔍 Enumeration:
+   curl -I http://TARGET  # Check headers
+   nikto -h http://TARGET  # Web scanner
+   dirb http://TARGET  # Directory brute
 ```
 
-## Key Features
+## New Features (v2.0)
 
-### 1. Dynamic Banner Analysis
-- Extracts unique terms from service banners
-- Filters out common/generic words
-- Identifies product names and versions
-- Generates targeted searchsploit queries
+### 1. Version Cascade Searching
+Generates multiple searchsploit queries from most specific to general:
+- Full version: `searchsploit "apache 2.4.7"`
+- Minor version: `searchsploit "apache 2.4"`
+- Major version: `searchsploit "apache 2"`
+- Product only: `searchsploit apache`
 
-### 2. OS-Aware Classification
-- Different standard ports for Windows vs Linux
-- Auto-detects OS from scan results
-- Highlights services unusual for that OS
+### 2. Software Age & Risk Assessment
+Automatically calculates software age and assigns risk levels:
+- **CRITICAL**: EOL software or known vulnerable versions
+- **HIGH**: 10+ years old software
+- **MEDIUM**: 5-10 years old
+- **LOW**: Recent versions (< 5 years)
 
-### 3. Educational Output
-- Explains WHY certain ports are prioritized
-- Provides mental checklist for exam
-- Shows time estimates for planning
-- Teaches attack methodology
+### 3. NSE Script Recommendations
+Suggests relevant nmap scripts based on service type:
+- **SSH**: ssh-auth-methods, ssh2-enum-algos, ssh-brute
+- **HTTP**: http-enum, http-methods, http-shellshock
+- **SMB**: smb-enum-shares, smb-vuln-*, smb-os-discovery
+- **FTP**: ftp-anon, ftp-bounce, ftp-vsftpd-backdoor
+- **MySQL**: mysql-empty-password, mysql-enum
+
+### 4. Enhanced Banner Analysis
+- Preserves full banner information
+- Extracts product names and versions dynamically
+- Removes generic terms intelligently
+- Generates searches from unique terms only
+
+### 5. Service-Specific Enumeration
+Provides tailored commands based on service type:
+- **Web**: curl, nikto, dirb, gobuster
+- **SMB**: enum4linux, smbclient, crackmapexec
+- **SSH**: ssh-audit, hydra
+- **FTP**: Anonymous login attempts
 
 ## Mental Checklist for Exam
 

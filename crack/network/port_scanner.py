@@ -8,6 +8,7 @@ STAGE 2: Targeted service detection (1-2 minutes)
 import subprocess
 import re
 import os
+import sys
 from pathlib import Path
 
 try:
@@ -158,3 +159,54 @@ class PortScanner:
             'scan_file': scan_file,
             'output_dir': str(self.output_dir)
         }
+
+
+def main():
+    """CLI entry point"""
+    import argparse
+
+    parser = argparse.ArgumentParser(
+        description='Two-Stage Port Scanner - Fast discovery + Service detection',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  %(prog)s 192.168.45.100
+  %(prog)s 192.168.45.100 --output ./scans
+  %(prog)s 192.168.45.100 --min-rate 10000
+
+How it works:
+  STAGE 1: Fast port discovery (10-30 sec)
+    - Scans all 65535 ports quickly
+    - No service detection (saves time)
+
+  STAGE 2: Service detection (1-2 min)
+    - Only scans discovered open ports
+    - Runs version detection + NSE scripts
+
+Time Saved: ~3-5 minutes vs full -sV -sC scan
+        """
+    )
+
+    parser.add_argument('target', help='Target IP address')
+    parser.add_argument('-o', '--output', default='.',
+                       help='Output directory (default: current directory)')
+    parser.add_argument('--min-rate', type=int, default=5000,
+                       help='Minimum packets per second (default: 5000)')
+
+    args = parser.parse_args()
+
+    # Run scanner
+    scanner = PortScanner(args.target, output_dir=args.output, min_rate=args.min_rate)
+    results = scanner.run()
+
+    if results:
+        print(f"\n{Colors.BOLD}{Colors.GREEN}SCAN COMPLETE{Colors.END}")
+        print(f"{Colors.CYAN}Ports found:{Colors.END} {len(results['ports'])}")
+        print(f"{Colors.CYAN}Results:{Colors.END} {results['scan_file']}")
+    else:
+        print(f"\n{Colors.RED}Scan failed or no ports found{Colors.END}")
+        sys.exit(1)
+
+
+if __name__ == '__main__':
+    main()

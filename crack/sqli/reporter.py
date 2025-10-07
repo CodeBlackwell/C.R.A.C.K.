@@ -46,7 +46,7 @@ class SQLiReporter:
             if finding['type'] == 'error':
                 print(f"    • Error-based: {finding['db_type']} database detected")
                 if finding.get('snippet'):
-                    print(f"      Error: {finding['snippet'][:100]}...")
+                    print(f"      Error: {finding['snippet']}")
             elif finding['type'] == 'boolean':
                 print(f"    • Boolean-based: {finding['description']}")
                 print(f"      Difference: {finding['size_diff']} bytes")
@@ -126,8 +126,7 @@ class SQLiReporter:
             print(f"Database: {db_type}")
 
             if best_finding.get('snippet'):
-                snippet = best_finding['snippet'][:120]
-                print(f"Detected via: {snippet}...")
+                print(f"Detected via: {best_finding['snippet']}")
         elif best_finding['type'] == 'union':
             print(f"Columns: {best_finding.get('column_count', 'unknown')}")
 

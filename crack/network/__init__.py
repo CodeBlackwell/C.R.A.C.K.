@@ -3,4 +3,6 @@ Network enumeration tools for CRACK
 Port scanning, service detection, and parallel enumeration
 """
 
-__all__ = ['port_scanner', 'parallel_enumerator', 'enum_scan']
+from .port_scanner import PortScanner
+
+__all__ = ['PortScanner', 'port_scanner', 'parallel_enumerator', 'enum_scan']
