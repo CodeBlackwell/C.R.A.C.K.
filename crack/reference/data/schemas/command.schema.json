@@ -1,0 +1,95 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "CRACK Reference Command Schema",
+  "type": "object",
+  "required": ["commands"],
+  "properties": {
+    "commands": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "category", "command", "description"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique identifier for the command"
+          },
+          "name": {
+            "type": "string",
+            "description": "Human readable name for the command"
+          },
+          "category": {
+            "type": "string",
+            "enum": ["recon", "web", "exploitation", "post-exploit", "pivoting", "custom"],
+            "description": "Command category"
+          },
+          "command": {
+            "type": "string",
+            "description": "Actual command with <PLACEHOLDERS>"
+          },
+          "description": {
+            "type": "string",
+            "description": "What this command does"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Command tags for categorization"
+          },
+          "variables": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["name", "description"],
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "Variable placeholder name"
+                },
+                "description": {
+                  "type": "string",
+                  "description": "What this variable represents"
+                },
+                "example": {
+                  "type": "string",
+                  "description": "Example value"
+                },
+                "required": {
+                  "type": "boolean",
+                  "default": true,
+                  "description": "Whether this variable is required"
+                }
+              }
+            }
+          },
+          "success_indicators": {
+            "type": "string",
+            "description": "What output indicates success"
+          },
+          "failure_indicators": {
+            "type": "string",
+            "description": "What output indicates failure"
+          },
+          "alternatives": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Alternative commands"
+          },
+          "notes": {
+            "type": "string",
+            "description": "Additional context or notes"
+          },
+          "oscp_relevance": {
+            "type": "string",
+            "enum": ["high", "medium", "low"],
+            "description": "Relevance for OSCP exam"
+          }
+        }
+      }
+    }
+  }
+}

