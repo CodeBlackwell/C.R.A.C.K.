@@ -231,6 +231,44 @@ class TaskNode:
             current = current.parent
         return depth
 
+    def start_timer(self):
+        """Start timing this task"""
+        if 'start_time' not in self.metadata:
+            self.metadata['start_time'] = datetime.now().isoformat()
+
+    def stop_timer(self):
+        """Stop timing and calculate duration"""
+        if 'start_time' in self.metadata and 'end_time' not in self.metadata:
+            self.metadata['end_time'] = datetime.now().isoformat()
+
+            # Calculate duration in seconds
+            start = datetime.fromisoformat(self.metadata['start_time'])
+            end = datetime.fromisoformat(self.metadata['end_time'])
+            self.metadata['duration_seconds'] = int((end - start).total_seconds())
+
+    def get_duration(self) -> Optional[int]:
+        """Get task duration in seconds"""
+        return self.metadata.get('duration_seconds')
+
+    def get_formatted_duration(self) -> str:
+        """Get human-readable duration"""
+        duration = self.get_duration()
+        if duration is None:
+            # Check if still running
+            if 'start_time' in self.metadata and 'end_time' not in self.metadata:
+                start = datetime.fromisoformat(self.metadata['start_time'])
+                elapsed = int((datetime.now() - start).total_seconds())
+                hours = elapsed // 3600
+                minutes = (elapsed % 3600) // 60
+                seconds = elapsed % 60
+                return f"{hours:02d}:{minutes:02d}:{seconds:02d} (running)"
+            return "Not timed"
+
+        hours = duration // 3600
+        minutes = (duration % 3600) // 60
+        seconds = duration % 60
+        return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+
     def get_progress(self) -> Dict[str, int]:
         """Get progress statistics for this subtree"""
         all_tasks = self._get_all_descendants()

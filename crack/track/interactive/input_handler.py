@@ -27,7 +27,7 @@ class InputProcessor:
     }
 
     # Shortcuts (handled separately in ShortcutHandler, but recognized here)
-    SHORTCUTS = ['s', 't', 'r', 'n', 'c', 'x', 'b', 'h', 'q']
+    SHORTCUTS = ['s', 't', 'r', 'n', 'c', 'x', 'ch', 'pl', 'tf', 'qn', 'tt', 'b', 'h', 'q']
 
     @classmethod
     def parse_choice(cls, user_input: str, choices: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:

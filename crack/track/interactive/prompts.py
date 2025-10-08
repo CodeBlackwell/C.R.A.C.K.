@@ -423,6 +423,11 @@ KEYBOARD SHORTCUTS:
   n - Execute next recommended task
   c - Change confirmation mode
   x - Command templates (quick OSCP commands)
+  ch - Command history (browse and search)
+  pl - Port lookup reference (common OSCP ports)
+  tf - Task filter (filter by status, port, service, tags)
+  qn - Quick note (add note without forms)
+  tt - Time tracker dashboard (time management)
   b - Go back to previous menu
   h - Show this help
   q - Quit and save

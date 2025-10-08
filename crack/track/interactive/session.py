@@ -26,6 +26,7 @@ from .prompts import PromptBuilder
 from .input_handler import InputProcessor
 from .shortcuts import ShortcutHandler
 from .decision_trees import DecisionTreeFactory
+from .history import CommandHistory
 
 
 class InteractiveSession:
@@ -54,6 +55,7 @@ class InteractiveSession:
 
         # Initialize components
         self.shortcut_handler = ShortcutHandler(self)
+        self.command_history = CommandHistory()
         self.last_action = None
 
         # Initialize executor based on mode
@@ -367,6 +369,7 @@ class InteractiveSession:
 
         # Mark task as in-progress
         task.status = 'in-progress'
+        task.start_timer()
         self.profile.save()
 
         # Execute command using executor abstraction
@@ -406,6 +409,7 @@ class InteractiveSession:
                                             source=f"[SCREENED] {command}"
                                         )
 
+                    task.stop_timer()
                     task.mark_complete()
                     self.last_action = f"Completed: {task.name}"
                 else:
@@ -423,6 +427,7 @@ class InteractiveSession:
                     ))
 
                     if InputProcessor.parse_confirmation(mark_done, default='N'):
+                        task.stop_timer()
                         task.mark_complete()
                         self.last_action = f"Completed: {task.name}"
 
@@ -440,8 +445,18 @@ class InteractiveSession:
                     text=True
                 )
 
+                # Track command execution
+                if command:
+                    self.command_history.add(
+                        command=command,
+                        source='task',
+                        task_id=task.id,
+                        success=(result.returncode == 0)
+                    )
+
                 if result.returncode == 0:
                     print(DisplayManager.format_success("Command completed"))
+                    task.stop_timer()
                     task.mark_complete()
                     self.last_action = f"Completed: {task.name}"
                 else:
@@ -454,6 +469,7 @@ class InteractiveSession:
                     ))
 
                     if InputProcessor.parse_confirmation(mark_done, default='N'):
+                        task.stop_timer()
                         task.mark_complete()
                         self.last_action = f"Completed: {task.name}"
 
@@ -947,11 +963,11 @@ class InteractiveSession:
 
     def filter_tasks(self, filter_type: str, filter_value: str = None) -> list:
         """
-        Filter tasks by various criteria
+        Filter tasks by various criteria (ENHANCED)
 
         Args:
-            filter_type: Type of filter ('status', 'tag', 'quick_win', 'port')
-            filter_value: Value to filter by (e.g., 'pending', 'OSCP:HIGH')
+            filter_type: Type of filter ('status', 'tag', 'quick_win', 'port', 'service')
+            filter_value: Value to filter by (e.g., 'pending', 'OSCP:HIGH', 'http')
 
         Returns:
             List of matching TaskNode objects
@@ -972,6 +988,14 @@ class InteractiveSession:
                 # Extract port from task ID or name
                 if f"-{filter_value}" in node.id or f"port {filter_value}" in node.name.lower():
                     matched = True
+            elif filter_type == 'service':
+                # NEW: Service filtering
+                # Check service in task name, command, or metadata
+                service_lower = filter_value.lower()
+                if (service_lower in node.name.lower() or
+                    (node.metadata.get('command') and service_lower in node.metadata['command'].lower()) or
+                    node.metadata.get('service', '').lower() == service_lower):
+                    matched = True
 
             if matched:
                 results.append(node)
@@ -982,6 +1006,124 @@ class InteractiveSession:
 
         filter_node(self.profile.task_tree)
         return results
+
+    def _apply_multiple_filters(self, filters: list) -> list:
+        """Apply multiple filters with AND logic
+
+        Args:
+            filters: List of (filter_type, filter_value) tuples
+
+        Returns:
+            List of TaskNode objects matching ALL filters
+        """
+        # Start with all tasks (gather recursively)
+        def get_all_tasks(node):
+            tasks = [node] if node.id != 'root' else []
+            for child in node.children:
+                tasks.extend(get_all_tasks(child))
+            return tasks
+
+        results = get_all_tasks(self.profile.task_tree)
+
+        # Apply each filter
+        for filter_type, filter_value in filters:
+            filtered = self.filter_tasks(filter_type, filter_value)
+            # Intersection (AND logic)
+            result_ids = {t.id for t in results}
+            filtered_ids = {t.id for t in filtered}
+            intersection_ids = result_ids & filtered_ids
+            results = [t for t in results if t.id in intersection_ids]
+
+        return results
+
+    def handle_filter(self):
+        """Interactive task filtering UI"""
+        print(DisplayManager.format_info("Task Filter"))
+        print("Filter tasks by: status, port, service, or tags\n")
+
+        print("Filter options:")
+        print("  1. Status (pending, in-progress, completed)")
+        print("  2. Port number (e.g., 80, 443)")
+        print("  3. Service (e.g., http, smb, ssh)")
+        print("  4. Tag (e.g., QUICK_WIN, OSCP:HIGH)")
+        print("  5. Multiple filters (combine filters)")
+        print()
+
+        choice = input("Filter by [1-5]: ").strip()
+
+        if choice == '1':
+            status = input("Status (pending/in-progress/completed): ").strip().lower()
+            results = self.filter_tasks('status', status)
+
+        elif choice == '2':
+            port = input("Port: ").strip()
+            results = self.filter_tasks('port', port)
+
+        elif choice == '3':
+            service = input("Service: ").strip().lower()
+            results = self.filter_tasks('service', service)
+
+        elif choice == '4':
+            tag = input("Tag: ").strip().upper()
+            results = self.filter_tasks('tag', tag)
+
+        elif choice == '5':
+            # Multiple filters
+            print("\nEnter filters (one per line, empty line to finish):")
+            filters = []
+            while True:
+                filter_input = input("Filter (type:value): ").strip()
+                if not filter_input:
+                    break
+                if ':' in filter_input:
+                    ftype, fvalue = filter_input.split(':', 1)
+                    filters.append((ftype.strip(), fvalue.strip()))
+
+            # Apply multiple filters
+            results = self._apply_multiple_filters(filters)
+
+        else:
+            print(DisplayManager.format_error("Invalid choice"))
+            return
+
+        # Display results
+        if not results:
+            print(DisplayManager.format_warning("No matching tasks found"))
+            return
+
+        print(DisplayManager.format_success(f"Found {len(results)} matching task(s):"))
+        print()
+
+        for i, task in enumerate(results[:20], 1):
+            status_icon = {
+                'completed': '✅',
+                'pending': '⏳',
+                'in-progress': '🔄'
+            }.get(task.status, '❓')
+
+            print(f"{i:2d}. {status_icon} {task.name}")
+            if task.metadata.get('command'):
+                print(f"    Command: {task.metadata['command'][:60]}...")
+            print()
+
+        if len(results) > 20:
+            print(DisplayManager.format_info(f"... and {len(results) - 20} more"))
+
+        # Options
+        print("\nOptions:")
+        print("  [number] - Execute task")
+        print("  f        - New filter")
+        print("  c        - Cancel")
+
+        action = input("\nChoice: ").strip().lower()
+
+        if action == 'f':
+            self.handle_filter()  # Recursive
+        elif action.isdigit():
+            idx = int(action) - 1
+            if 0 <= idx < len(results):
+                self.execute_task(results[idx])
+
 
     def set_confirmation_mode(self, mode: str):
         """Set confirmation mode for task execution
@@ -1078,11 +1220,96 @@ class InteractiveSession:
             'current_phase': self.profile.phase,
             'nav_stack': self.nav_stack,
             'last_action': self.last_action,
+            'command_history': self.command_history.to_dict(),
             'timestamp': datetime.now().isoformat()
         }
 
         with open(checkpoint_file, 'w') as f:
             json.dump(checkpoint_data, f, indent=2)
+
+    def handle_command_history(self):
+        """Browse and search command history"""
+        print(DisplayManager.format_info("Command History"))
+        print("Search previous commands or browse recent executions\n")
+
+        print("Options:")
+        print("  1. Search commands")
+        print("  2. Show recent (last 20)")
+        print("  3. Filter by source (template/manual/task)")
+        print("  4. Show successful only")
+        print()
+
+        choice = input("Choice [1-4]: ").strip()
+
+        if choice == '1':
+            # Search
+            query = input("\nSearch query: ").strip()
+            if not query:
+                return
+
+            results = self.command_history.search(query, self._fuzzy_match)
+
+            if not results:
+                print(DisplayManager.format_warning(f"No commands matching '{query}'"))
+                return
+
+            print(DisplayManager.format_success(f"Found {len(results)} matching command(s):"))
+            print()
+
+            for i, (cmd, score) in enumerate(results[:20], 1):
+                success_icon = '✓' if cmd['success'] else '✗'
+                score_bar = '█' * (score // 10)
+
+                print(f"{i:2d}. [{success_icon}] [{score_bar} {score}%]")
+                print(f"    Command: {cmd['command']}")
+                print(f"    Source: {cmd['source']} | Time: {cmd['timestamp'][:19]}")
+                print()
+
+        elif choice == '2':
+            # Recent
+            recent = self.command_history.get_recent(20)
+
+            if not recent:
+                print(DisplayManager.format_warning("No command history"))
+                return
+
+            print(DisplayManager.format_success(f"Recent {len(recent)} command(s):"))
+            print()
+
+            for i, cmd in enumerate(recent, 1):
+                success_icon = '✓' if cmd['success'] else '✗'
+                print(f"{i:2d}. [{success_icon}] {cmd['command']}")
+                print(f"    Source: {cmd['source']} | {cmd['timestamp'][:19]}")
+                print()
+
+        elif choice == '3':
+            # Filter by source
+            source = input("\nSource (template/manual/task): ").strip().lower()
+            filtered = [cmd for cmd in self.command_history.commands if cmd['source'] == source]
+
+            if not filtered:
+                print(DisplayManager.format_warning(f"No commands from source '{source}'"))
+                return
+
+            print(DisplayManager.format_success(f"Found {len(filtered)} command(s) from '{source}':"))
+            for i, cmd in enumerate(filtered[-20:], 1):
+                print(f"{i:2d}. {cmd['command']}")
+                print(f"    {cmd['timestamp'][:19]}")
+                print()
+
+        elif choice == '4':
+            # Successful only
+            successful = [cmd for cmd in self.command_history.commands if cmd['success']]
+
+            if not successful:
+                print(DisplayManager.format_warning("No successful commands"))
+                return
+
+            print(DisplayManager.format_success(f"Found {len(successful)} successful command(s):"))
+            for i, cmd in enumerate(successful[-20:], 1):
+                print(f"{i:2d}. {cmd['command']}")
+                print(f"    {cmd['timestamp'][:19]}")
+                print()
 
     def load_checkpoint(self):
         """Load session checkpoint"""
@@ -1098,7 +1325,172 @@ class InteractiveSession:
             self.nav_stack = data.get('nav_stack', ['main'])
             self.last_action = data.get('last_action')
 
+            # Load command history if available
+            if 'command_history' in data:
+                self.command_history = CommandHistory.from_dict(data['command_history'])
+
             print(DisplayManager.format_success("Resumed previous session"))
 
         except Exception as e:
             print(DisplayManager.format_warning(f"Could not load checkpoint: {e}"))
+
+    def handle_time_tracker(self):
+        """Time tracking dashboard - show time statistics"""
+        from .time_tracker import TimeStats
+
+        print(DisplayManager.format_info("Time Tracker Dashboard"))
+        print("Track time spent on target enumeration\n")
+
+        # Calculate stats
+        total_time = TimeStats.get_total_time(self.profile.task_tree)
+        breakdown = TimeStats.get_phase_breakdown(self.profile.task_tree)
+        longest = TimeStats.get_longest_tasks(self.profile.task_tree, 10)
+        running = TimeStats.get_running_tasks(self.profile.task_tree)
+        avg_time = TimeStats.get_average_task_time(self.profile.task_tree)
+        estimated_remaining = TimeStats.estimate_remaining_time(self.profile.task_tree)
+
+        # Total time
+        print(f"{DisplayManager.format_success('Total Time Spent:')}")
+        print(f"  {TimeStats.format_duration(total_time)}\n")
+
+        # Average task time
+        if avg_time:
+            print(f"{DisplayManager.format_info('Average Task Time:')}")
+            print(f"  {TimeStats.format_duration(avg_time)}\n")
+
+        # Estimated remaining
+        if estimated_remaining:
+            print(f"{DisplayManager.format_info('Estimated Time Remaining:')}")
+            print(f"  {TimeStats.format_duration(estimated_remaining)} ({len(self.profile.task_tree.get_all_pending())} pending tasks)\n")
+
+        # Breakdown by phase/category
+        if breakdown:
+            print(f"{DisplayManager.format_info('Time by Category:')}")
+            # Sort by time descending
+            sorted_breakdown = sorted(breakdown.items(), key=lambda x: x[1], reverse=True)
+            for category, seconds in sorted_breakdown:
+                formatted = TimeStats.format_duration(seconds)
+                percentage = (seconds / total_time * 100) if total_time > 0 else 0
+                bar_length = int(percentage / 5)  # 20 chars max
+                bar = '█' * bar_length + '░' * (20 - bar_length)
+                print(f"  {category:15s} {bar} {formatted} ({percentage:.0f}%)")
+            print()
+
+        # Longest tasks
+        if longest:
+            print(f"{DisplayManager.format_info('Longest Running Tasks:')}")
+            for i, (task, duration) in enumerate(longest, 1):
+                formatted = TimeStats.format_duration(duration)
+                status_icon = {
+                    'completed': '✅',
+                    'in-progress': '🔄',
+                    'pending': '⏳'
+                }.get(task.status, '❓')
+                print(f"  {i:2d}. {status_icon} {task.name:45s} {formatted}")
+            print()
+
+        # Running tasks
+        if running:
+            print(f"{DisplayManager.format_warning('Currently Running:')}")
+            for task in running:
+                print(f"  • {task.name} - {task.get_formatted_duration()}")
+            print()
+        elif total_time == 0:
+            print(DisplayManager.format_info("No tasks timed yet. Execute tasks to start tracking time.\n"))
+
+    def handle_port_lookup(self):
+        """Port lookup reference tool"""
+        from .port_reference import PortReference
+
+        print(DisplayManager.format_info("Port Lookup Reference"))
+        print("Quick reference for common OSCP ports\n")
+
+        print("Options:")
+        print("  1. Lookup by port number")
+        print("  2. Search by service name")
+        print("  3. Show all common ports")
+        print()
+
+        choice = input("Choice [1-3]: ").strip()
+
+        if choice == '1':
+            # Lookup by port
+            port_input = input("\nPort number: ").strip()
+            try:
+                port = int(port_input)
+            except ValueError:
+                print(DisplayManager.format_error("Invalid port number"))
+                return
+
+            port_info = PortReference.lookup(port)
+            if not port_info:
+                print(DisplayManager.format_warning(f"No reference data for port {port}"))
+                print(f"\nTry running: nmap -p {port} --script banner {self.target}")
+                return
+
+            # Display port information
+            self._display_port_info(port_info)
+
+        elif choice == '2':
+            # Search by service
+            service = input("\nService name (e.g., http, smb, ssh): ").strip()
+            results = PortReference.search_by_service(service)
+
+            if not results:
+                print(DisplayManager.format_warning(f"No ports found for service '{service}'"))
+                return
+
+            print(DisplayManager.format_success(f"Found {len(results)} port(s) for '{service}':"))
+            print()
+
+            for port_info in results:
+                print(f"Port {port_info.port} - {port_info.service}")
+                print(f"  {port_info.description}")
+                print()
+
+            # Ask if user wants details on specific port
+            if len(results) == 1:
+                detail_input = input("Show detailed enumeration commands? [Y/n]: ").strip()
+                if InputProcessor.parse_confirmation(detail_input, default='Y'):
+                    self._display_port_info(results[0])
+
+        elif choice == '3':
+            # Show all
+            all_ports = PortReference.list_all()
+
+            print(DisplayManager.format_success(f"Common OSCP ports ({len(all_ports)} total):"))
+            print()
+
+            for port_info in all_ports:
+                print(f"{port_info.port:5d} - {port_info.service:15s} {port_info.description}")
+
+            print("\nType 'pl' again and enter a port number for detailed enumeration commands")
+
+    def _display_port_info(self, port_info):
+        """Display detailed port information"""
+        print(f"\n{DisplayManager.format_success(f'Port {port_info.port} - {port_info.service}')}")
+        print(f"{port_info.description}\n")
+
+        # Enumeration commands
+        print(f"{DisplayManager.format_info('Enumeration Commands:')}")
+        for i, cmd in enumerate(port_info.enum_commands, 1):
+            # Replace <TARGET> with actual target if available
+            display_cmd = cmd.replace('<TARGET>', self.target)
+            print(f"  {i}. {display_cmd}")
+        print()
+
+        # Quick wins
+        if port_info.quick_wins:
+            print(f"{DisplayManager.format_info('Quick Wins:')}")
+            for win in port_info.quick_wins:
+                # Replace <TARGET> in quick wins too
+                display_win = win.replace('<TARGET>', self.target)
+                print(f"  ⚡ {display_win}")
+            print()
+
+        # Common vulnerabilities
+        if port_info.common_vulns:
+            print(f"{DisplayManager.format_info('Common Vulnerabilities:')}")
+            for vuln in port_info.common_vulns:
+                print(f"  🔴 {vuln}")
+            print()

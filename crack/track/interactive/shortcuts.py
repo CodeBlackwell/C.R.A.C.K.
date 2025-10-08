@@ -37,6 +37,11 @@ class ShortcutHandler:
             'n': ('Execute next recommended task', 'do_next'),
             'c': ('Change confirmation mode', 'change_confirmation'),
             'x': ('Command templates', 'show_templates'),
+            'ch': ('Command history', 'command_history'),
+            'pl': ('Port lookup reference', 'port_lookup'),
+            'tf': ('Task filter', 'task_filter'),
+            'qn': ('Quick note', 'quick_note'),
+            'tt': ('Time tracker dashboard', 'time_tracker'),
             'b': ('Go back', 'go_back'),
             'h': ('Show help', 'show_help'),
             'q': ('Quit and save', 'quit')
@@ -370,6 +375,51 @@ class ShortcutHandler:
             )
             self.session.profile.save()
 
+    def command_history(self):
+        """Browse command history (shortcut: ch)"""
+        self.session.handle_command_history()
+
+    def quick_note(self):
+        """Add quick note without forms (shortcut: qn)"""
+        from .input_handler import InputProcessor
+
+        print(DisplayManager.format_info("Quick Note"))
+        print("Add a timestamped note without forms\n")
+
+        # Single-line input
+        note_text = input("Note: ").strip()
+
+        if not note_text:
+            print(DisplayManager.format_warning("Note cannot be empty"))
+            return
+
+        # Optionally ask for source (or use default)
+        source = input("Source [optional, press Enter for 'quick-note']: ").strip()
+        if not source:
+            source = 'quick-note'
+
+        # Add to profile
+        self.session.profile.add_note(
+            note=note_text,
+            source=source
+        )
+        self.session.profile.save()
+
+        print(DisplayManager.format_success(f"Note added: {note_text[:50]}..."))
+        self.session.last_action = "Added quick note"
+
+    def task_filter(self):
+        """Filter tasks by criteria (shortcut: tf)"""
+        self.session.handle_filter()
+
     def get_shortcuts_help(self) -> str:
         """Get formatted shortcuts help text"""
         return DisplayManager.format_shortcuts_help(self.shortcuts)
+
+    def port_lookup(self):
+        """Port reference lookup (shortcut: pl)"""
+        self.session.handle_port_lookup()
+
+    def time_tracker(self):
+        """Time tracking dashboard (shortcut: tt)"""
+        self.session.handle_time_tracker()
