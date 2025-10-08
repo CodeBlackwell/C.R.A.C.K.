@@ -71,6 +71,15 @@ class MarkdownFormatter:
         lines.append(f"- **Last Updated**: {profile.updated}")
         lines.append(f"- **Generated**: {datetime.now().isoformat()}")
 
+        # Add OS information if available
+        if hasattr(profile, 'os_info') and profile.os_info:
+            os_info = profile.os_info
+            if isinstance(os_info, dict):
+                os_name = os_info.get('best_match', 'Unknown')
+                os_accuracy = os_info.get('accuracy', 0)
+                if os_accuracy > 0:
+                    lines.append(f"- **OS Detected**: {os_name} ({os_accuracy}% accuracy)")
+
         return "\n".join(lines)
 
     @classmethod
@@ -92,7 +101,10 @@ class MarkdownFormatter:
 
     @classmethod
     def _format_ports_section(cls, profile) -> str:
-        """Format ports section"""
+        """Format ports section with enhanced details
+
+        Chapter 8: Include state reasons, CPE, and NSE output
+        """
         if not profile.ports:
             return "## Discovered Ports\n\nNo ports discovered yet."
 
@@ -101,6 +113,8 @@ class MarkdownFormatter:
         lines.append("")
         lines.append("| Port | State | Service | Version | Source |")
         lines.append("|------|-------|---------|---------|--------|")
+
+        ports_with_details = []
 
         for port, info in sorted(profile.ports.items()):
             service = info.get('service', 'unknown')
@@ -112,6 +126,54 @@ class MarkdownFormatter:
             version = version.replace('|', '\\|') if version else 'N/A'
 
             lines.append(f"| {port} | {state} | {service} | {version} | {source} |")
+
+            # Track ports with extra details for detailed section
+            if info.get('cpe') or info.get('scripts') or info.get('reason'):
+                ports_with_details.append((port, info))
+
+        # Add detailed port information section if available
+        if ports_with_details:
+            lines.append("")
+            lines.append("### Port Details")
+            lines.append("")
+
+            for port, info in ports_with_details:
+                service = info.get('service', 'unknown')
+                lines.append(f"#### Port {port}/{info.get('protocol', 'tcp')} - {service}")
+                lines.append("")
+
+                # State reason (Chapter 8: --reason flag)
+                reason = info.get('reason')
+                if reason:
+                    lines.append(f"**State Reason**: {reason}")
+                    reason_ttl = info.get('reason_ttl')
+                    if reason_ttl:
+                        lines.append(f" (TTL: {reason_ttl})")
+                    lines.append("")
+
+                # CPE identifiers (for CVE matching)
+                cpe_list = info.get('cpe', [])
+                if cpe_list:
+                    lines.append("**CPE Identifiers** (for CVE research):")
+                    for cpe in cpe_list:
+                        lines.append(f"- `{cpe}`")
+                    lines.append("")
+
+                # NSE script output
+                scripts = info.get('scripts', {})
+                if scripts:
+                    lines.append("**NSE Script Output**:")
+                    lines.append("")
+                    for script_id, output in scripts.items():
+                        lines.append(f"**{script_id}**:")
+                        lines.append("```")
+                        # Truncate very long output
+                        if len(output) > 500:
+                            lines.append(output[:497] + "...")
+                        else:
+                            lines.append(output)
+                        lines.append("```")
+                        lines.append("")
 
         return "\n".join(lines)
 
@@ -246,19 +308,64 @@ class MarkdownFormatter:
 
     @classmethod
     def _format_imported_files(cls, profile) -> str:
-        """Format imported files section"""
+        """Format imported files section with nmap commands
+
+        Chapter 8: Command reconstruction for OSCP documentation
+        """
         lines = []
         lines.append("## Imported Files")
         lines.append("")
-        lines.append("| File | Type | Timestamp |")
-        lines.append("|------|------|-----------|")
+
+        # Check if we have nmap command metadata
+        has_commands = any(file_info.get('nmap_command') for file_info in profile.imported_files)
+
+        if has_commands:
+            lines.append("| File | Type | Command | Timestamp |")
+            lines.append("|------|------|---------|-----------|")
+        else:
+            lines.append("| File | Type | Timestamp |")
+            lines.append("|------|------|-----------|")
 
         for file_info in profile.imported_files:
             filename = file_info.get('file', 'N/A')
             file_type = file_info.get('type', 'N/A')
             timestamp = file_info.get('timestamp', 'N/A')
+            nmap_cmd = file_info.get('nmap_command', '')
 
-            lines.append(f"| `{filename}` | {file_type} | {timestamp} |")
+            if has_commands:
+                # Truncate long commands
+                cmd_display = nmap_cmd if nmap_cmd else 'N/A'
+                if len(cmd_display) > 50:
+                    cmd_display = cmd_display[:47] + "..."
+                lines.append(f"| `{filename}` | {file_type} | `{cmd_display}` | {timestamp} |")
+            else:
+                lines.append(f"| `{filename}` | {file_type} | {timestamp} |")
+
+        # Add detailed command section if commands exist
+        if has_commands:
+            lines.append("")
+            lines.append("### Scan Commands Used")
+            lines.append("")
+            lines.append("Complete nmap commands used to generate scan results:")
+            lines.append("")
+
+            for file_info in profile.imported_files:
+                nmap_cmd = file_info.get('nmap_command')
+                if nmap_cmd:
+                    filename = file_info.get('file', 'N/A')
+                    lines.append(f"**{filename}**:")
+                    lines.append("```bash")
+                    lines.append(nmap_cmd)
+                    lines.append("```")
+                    lines.append("")
+
+                    # Add scan statistics if available
+                    scan_stats = file_info.get('scan_stats', {})
+                    if scan_stats and scan_stats.get('elapsed'):
+                        lines.append(f"- **Duration**: {scan_stats['elapsed']}s")
+                        if scan_stats.get('summary'):
+                            lines.append(f"- **Summary**: {scan_stats['summary']}")
+                        lines.append("")
 
         return "\n".join(lines)
 

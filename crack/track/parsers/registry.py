@@ -101,8 +101,14 @@ class ParserRegistry:
             filepath: Source file path
             parser_name: Name of parser used
         """
-        # Track imported file
-        profile.add_imported_file(filepath, parser_name)
+        # Track imported file with enhanced metadata (Chapter 8)
+        file_metadata = {
+            'file': filepath,
+            'type': parser_name,
+            'nmap_command': data.get('nmap_command'),
+            'scan_stats': data.get('scan_stats', {})
+        }
+        profile.add_imported_file(filepath, parser_name, metadata=file_metadata)
 
         # Add discovered ports
         for port_data in data.get('ports', []):
@@ -115,10 +121,29 @@ class ParserRegistry:
                 **port_data.get('extra', {})
             )
 
-        # Add OS information if available
-        if data.get('os_guess'):
+        # Add OS information if available (enhanced with accuracy)
+        os_details = data.get('os_details', {})
+        if os_details.get('best_match'):
+            os_note = f"OS detection: {os_details['best_match']}"
+            accuracy = os_details.get('accuracy', 0)
+            if accuracy > 0:
+                os_note += f" ({accuracy}% accuracy)"
+
             profile.add_note(
-                note=f"OS detection: {data['os_guess']}",
+                note=os_note,
+                source=f"{parser_name}: {filepath}"
+            )
+
+            # Store OS details for use in exports
+            if not hasattr(profile, 'os_info'):
+                profile.os_info = os_details
+
+        # Add traceroute/topology information if available
+        traceroute = data.get('traceroute', [])
+        if traceroute:
+            hops_summary = f"Network path: {len(traceroute)} hops"
+            profile.add_note(
+                note=hops_summary,
                 source=f"{parser_name}: {filepath}"
             )
 
