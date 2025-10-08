@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """
 C.R.A.C.K. - Comprehensive Recon & Attack Creation Kit
+(C)omprehensive (R)econ & (A)ttack (C)reation (K)it
+
 Main CLI interface for all penetration testing tools
 """
 
@@ -16,15 +18,18 @@ def print_banner():
     """Display the C.R.A.C.K. banner"""
     banner = f"""
 {Colors.BOLD}{Colors.RED}
-  ██████╗    ██████╗     █████╗     ██████╗    ██╗  ██╗
- ██╔════╝    ██╔══██╗   ██╔══██╗   ██╔════╝    ██║ ██╔╝
- ██║         ██████╔╝   ███████║   ██║         █████╔╝
- ██║         ██╔══██╗   ██╔══██║   ██║         ██╔═██╗
- ╚██████╗    ██║  ██║   ██║  ██║   ╚██████╗    ██║  ██╗
-  ╚═════╝    ╚═╝  ╚═╝   ╚═╝  ╚═╝    ╚═════╝    ╚═╝  ╚═╝
+ ░▒▓██████▓▒░       ░▒▓███████▓▒░        ░▒▓██████▓▒░        ░▒▓██████▓▒░       ░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░▒▓████████▓▒░ 
+░▒▓█▓▒░░▒▓█▓▒░      ░▒▓█▓▒░░▒▓█▓▒░      ░▒▓█▓▒░░▒▓█▓▒░      ░▒▓█▓▒░░▒▓█▓▒░      ░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░  ░▒▓█▓▒░     
+░▒▓█▓▒░             ░▒▓█▓▒░░▒▓█▓▒░      ░▒▓█▓▒░░▒▓█▓▒░      ░▒▓█▓▒░             ░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░  ░▒▓█▓▒░     
+░▒▓█▓▒░             ░▒▓███████▓▒░       ░▒▓████████▓▒░      ░▒▓█▓▒░             ░▒▓███████▓▒░░▒▓█▓▒░  ░▒▓█▓▒░     
+░▒▓█▓▒░             ░▒▓█▓▒░░▒▓█▓▒░      ░▒▓█▓▒░░▒▓█▓▒░      ░▒▓█▓▒░             ░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░  ░▒▓█▓▒░     
+░▒▓█▓▒░░▒▓█▓▒░▒▓██▓▒░▒▓█▓▒░░▒▓█▓▒░▒▓██▓▒░▒▓█▓▒░░▒▓█▓▒░▒▓██▓▒░▒▓█▓▒░░▒▓█▓▒░▒▓██▓▒░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░  ░▒▓█▓▒░     
+ ░▒▓██████▓▒░░▒▓██▓▒░▒▓█▓▒░░▒▓█▓▒░▒▓██▓▒░▒▓█▓▒░░▒▓█▓▒░▒▓██▓▒░░▒▓██████▓▒░░▒▓██▓▒░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░  ░▒▓█▓▒░     
+                                                                                                                  
+
 {Colors.END}
-{Colors.CYAN}  Comprehensive Recon & Attack Creation Kit{Colors.END}
-{Colors.YELLOW}  OSCP Pentesting Toolkit v1.0.0{Colors.END}
+{Colors.CYAN}  (C)omprehensive (R)econ & (A)ttack (C)reation (K)it{Colors.END}
+{Colors.YELLOW}  Professional OSCP Pentesting Toolkit{Colors.END}
     """
     print(banner)
 
@@ -106,7 +111,7 @@ def port_scan_command(args):
 def main():
     """Main CLI entry point"""
     parser = argparse.ArgumentParser(
-        description='C.R.A.C.K. - Comprehensive Recon & Attack Creation Kit',
+        description='C.R.A.C.K. - (C)omprehensive (R)econ & (A)ttack (C)reation (K)it',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=f"""
 {Colors.CYAN}══════════════════════════ AVAILABLE TOOLS ══════════════════════════{Colors.END}
