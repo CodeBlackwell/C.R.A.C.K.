@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
-Setup configuration for C.R.A.C.K. (Comprehensive Recon & Attack Creation Kit)
+Setup configuration for C.R.A.C.K.
+(C)omprehensive (R)econ & (A)ttack (C)reation (K)it
 """
 
 from setuptools import setup, find_packages
@@ -17,7 +18,7 @@ setup(
     name="crack-toolkit",
     version="1.0.0",
     author="OSCP Student",
-    description="Comprehensive Recon & Attack Creation Kit - Professional pentesting tools for OSCP",
+    description="C.R.A.C.K. - (C)omprehensive (R)econ & (A)ttack (C)reation (K)it - Professional pentesting tools for OSCP",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/yourusername/crack",

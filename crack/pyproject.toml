@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "crack"
 version = "1.0.0"
-description = "Comprehensive Recon & Attack Creation Kit - Professional pentesting tools for OSCP"
+description = "C.R.A.C.K. - (C)omprehensive (R)econ & (A)ttack (C)reation (K)it - Professional pentesting tools for OSCP"
 readme = "README.md"
 requires-python = ">=3.8"
 license = {text = "MIT"}
