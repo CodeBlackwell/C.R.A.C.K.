@@ -173,7 +173,7 @@ Add to LaunchAgent plist:
                     'name': 'Dyld Hijacking via @rpath',
                     'type': 'command',
                     'metadata': {
-                        'command': 'otool -l /Applications/TARGET.app/Contents/MacOS/TARGET | grep -A 2 "LC_RPATH\\|@rpath"',
+                        'command': r'otool -l /Applications/TARGET.app/Contents/MacOS/TARGET | grep -A 2 "LC_RPATH\|@rpath"',
                         'description': 'Enumerate @rpath locations and missing libraries for hijacking',
                         'tags': ['OSCP:HIGH', 'MACOS', 'ENUM', 'MANUAL'],
                         'flag_explanations': {
@@ -700,7 +700,7 @@ USE CASES:
                             'Binary is stripped/obfuscated'
                         ],
                         'next_steps': [
-                            'Find sensitive methods: grep -i "password\\|auth\\|token\\|credential"',
+                            r'Find sensitive methods: grep -i "password\|auth\|token\|credential"',
                             'Identify target class: grep "^@interface ClassName"',
                             'Create swizzle for method: - (void)setPassword:(NSString*)pwd;',
                             'Test method call: log stream --predicate \'subsystem == "com.apple.runtime.objc"\'',
@@ -1459,7 +1459,7 @@ With shared memory + thread exec:
                             'Payload script not executable'
                         ],
                         'next_steps': [
-                            'Find Java apps: find /Applications -name "Info.plist" -exec grep -l "java\\." {} \\;',
+                            r'Find Java apps: find /Applications -name "Info.plist" -exec grep -l "java\." {} \;',
                             'Test injection: open --env "_JAVA_OPTIONS=-XX:OnOutOfMemoryError=/tmp/payload.sh" /Applications/JAVA_APP.app',
                             'Stealthier: Use Java agent instead (no OOM required)',
                             'Persistence: Add to LaunchAgent with env vars'
@@ -1470,7 +1470,7 @@ With shared memory + thread exec:
                             'Modify vmoptions file in app bundle',
                             'JVM_OPTS for specific applications'
                         ],
-                        'notes': '''
+                        'notes': r'''
 JAVA AGENT (STEALTH METHOD):
 
 1. CREATE AGENT:
@@ -2477,7 +2477,7 @@ OPSEC:
                             'Time delays: Slow operations to evade behavior detection',
                             'Legitimate tools: Use built-in macOS tools (not suspicious binaries)'
                         ],
-                        'notes': '''
+                        'notes': r'''
 ENDPOINTSECURITY FRAMEWORK:
 
 MONITORED EVENTS:

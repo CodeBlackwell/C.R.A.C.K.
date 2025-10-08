@@ -249,7 +249,7 @@ High-Risk Plugins:
                     'metadata': {
                         'description': 'Review Cordova JavaScript for vulnerabilities, secrets, and insecure patterns',
                         'tags': ['OSCP:HIGH', 'MANUAL', 'MOBILE'],
-                        'notes': """
+                        'notes': r"""
 JavaScript Source Code Review Checklist:
 
 1. Hardcoded Secrets:
@@ -682,7 +682,7 @@ OSCP Relevance: HIGH
                         'alternatives': [
                             'apktool d app.apk && ls unknown/assemblies/',
                             'jadx-gui app.apk (check for Mono references)',
-                            'strings app.apk | grep "\.dll"'
+                            r'strings app.apk | grep "\.dll"'
                         ],
                         'next_steps': [
                             'Decompress .dll files if compressed',

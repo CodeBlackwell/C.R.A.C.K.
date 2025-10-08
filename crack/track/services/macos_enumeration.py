@@ -1583,7 +1583,7 @@ class MacOSEnumerationPlugin(ServicePlugin):
                 ],
                 'alternatives': [
                     'mdfind "kMDItemCFBundleIdentifier == com.objective-see.*"',
-                    'ps aux | grep -i "blockblock\|knockknock\|oversight"',
+                    r'ps aux | grep -i "blockblock\|knockknock\|oversight"',
                     'ls /Library/LaunchDaemons/ | grep objective-see'
                 ],
                 'notes': 'BlockBlock monitors persistence creation in real-time. KnockKnock is one-shot scan. All by Objective-See (free). Alert user on suspicious activity.',
@@ -1661,7 +1661,7 @@ class MacOSEnumerationPlugin(ServicePlugin):
                 'alternatives': [
                     'ps aux | grep -iE "sentinel|falcon|cb|cylance" (check running processes)',
                     'ls /Library/LaunchDaemons/ | grep -iE "sentinel|crowdstrike"',
-                    'system_profiler SPApplicationsDataType | grep -i "security\|antivirus"'
+                    r'system_profiler SPApplicationsDataType | grep -i "security\|antivirus"'
                 ],
                 'notes': 'XProtect is built-in (basic). Gatekeeper checks signatures. EDR = advanced detection. Consumer AV = signature-based. Enterprise macs often have SentinelOne or CrowdStrike.',
                 'estimated_time': '15 seconds'
