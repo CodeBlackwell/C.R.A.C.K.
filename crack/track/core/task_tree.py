@@ -90,8 +90,11 @@ class TaskNode:
             'note': note
         })
 
-    def get_next_actionable(self) -> Optional['TaskNode']:
-        """Find next pending leaf task (DFS)
+    def get_next_actionable(self, root_node: Optional['TaskNode'] = None) -> Optional['TaskNode']:
+        """Find next pending leaf task (DFS) with dependency checking
+
+        Args:
+            root_node: Root of the task tree (for dependency resolution)
 
         Returns:
             Next actionable task or None
@@ -99,16 +102,52 @@ class TaskNode:
         # If this is a pending leaf task, check dependencies
         if self.status == 'pending' and not self.children:
             # Check if all dependencies are completed
-            # (This would require access to the full task tree to resolve IDs)
-            return self
+            if self._dependencies_satisfied(root_node):
+                return self
 
         # Otherwise, check children
         for child in self.children:
-            next_task = child.get_next_actionable()
+            next_task = child.get_next_actionable(root_node or self._find_root())
             if next_task:
                 return next_task
 
         return None
+
+    def _dependencies_satisfied(self, root_node: Optional['TaskNode'] = None) -> bool:
+        """Check if all task dependencies are satisfied
+
+        Args:
+            root_node: Root node for finding dependencies
+
+        Returns:
+            True if all dependencies are completed or if no dependencies exist
+        """
+        depends_on = self.metadata.get('depends_on', [])
+        if not depends_on:
+            return True
+
+        # Find root if not provided
+        if not root_node:
+            root_node = self._find_root()
+
+        # Check each dependency
+        for dep_id in depends_on:
+            dep_task = root_node.find_task(dep_id) if root_node else None
+            if dep_task and dep_task.status != 'completed':
+                return False
+
+        return True
+
+    def _find_root(self) -> 'TaskNode':
+        """Find the root node of this task tree
+
+        Returns:
+            Root TaskNode
+        """
+        current = self
+        while current.parent:
+            current = current.parent
+        return current
 
     def get_all_pending(self) -> List['TaskNode']:
         """Get all pending tasks in subtree"""

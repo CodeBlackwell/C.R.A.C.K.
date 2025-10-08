@@ -36,6 +36,17 @@ class TargetProfile:
         self.notes: List[Dict[str, Any]] = []
         self.imported_files: List[Dict[str, Any]] = []
 
+        # Scan preferences (NEW - for dynamic scan profiles)
+        self.metadata: Dict[str, Any] = {
+            'environment': 'lab',  # lab, production, ctf
+            'default_timing': 'normal',  # paranoid, sneaky, polite, normal, aggressive, insane
+            'preferred_profile': None,  # Last used profile ID
+            'evasion_enabled': False
+        }
+
+        # Scan history (NEW - track executed scans)
+        self.scan_history: List[Dict[str, Any]] = []
+
         # Task tree (root node)
         self.task_tree = TaskNode(
             task_id='root',
@@ -224,6 +235,49 @@ class TargetProfile:
         })
         self._update_timestamp()
 
+    def record_scan(self, profile_id: str, command: str, result_summary: str = None, **kwargs):
+        """Record executed scan for tracking and resume capability
+
+        Args:
+            profile_id: Scan profile ID used
+            command: Full nmap command executed
+            result_summary: Brief summary of results (optional)
+            **kwargs: Additional metadata
+        """
+        scan_record = {
+            'timestamp': datetime.now().isoformat(),
+            'profile_id': profile_id,
+            'command': command,
+            'result_summary': result_summary or 'Scan completed',
+            **kwargs
+        }
+        self.scan_history.append(scan_record)
+
+        # Update preferred profile
+        self.metadata['preferred_profile'] = profile_id
+
+        self._update_timestamp()
+
+    def get_last_scan_profile(self) -> Optional[str]:
+        """Get last used scan profile ID for quick resume
+
+        Returns:
+            Profile ID or None if no scans recorded
+        """
+        return self.metadata.get('preferred_profile')
+
+    def set_environment(self, environment: str):
+        """Set target environment (lab, production, ctf)
+
+        Args:
+            environment: Environment type
+        """
+        if environment not in ['lab', 'production', 'ctf']:
+            raise ValueError(f"Invalid environment: {environment}")
+
+        self.metadata['environment'] = environment
+        self._update_timestamp()
+
     def set_phase(self, phase: str):
         """Change enumeration phase
 
@@ -304,6 +358,8 @@ class TargetProfile:
             'credentials': self.credentials,
             'notes': self.notes,
             'imported_files': self.imported_files,
+            'metadata': self.metadata,  # NEW: scan preferences
+            'scan_history': self.scan_history,  # NEW: scan execution history
             'task_tree': self.task_tree.to_dict()
         }
 
@@ -328,6 +384,16 @@ class TargetProfile:
         profile.credentials = data.get('credentials', [])
         profile.notes = data.get('notes', [])
         profile.imported_files = data.get('imported_files', [])
+
+        # NEW: Scan preferences and history (backward compatible)
+        default_metadata = {
+            'environment': 'lab',
+            'default_timing': 'normal',
+            'preferred_profile': None,
+            'evasion_enabled': False
+        }
+        profile.metadata = data.get('metadata', default_metadata)
+        profile.scan_history = data.get('scan_history', [])
 
         # Restore task tree or create new one
         if 'task_tree' in data:
