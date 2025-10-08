@@ -57,7 +57,7 @@ class PhaseManager:
         task.metadata.update(task_def.get('metadata', {}))
 
         # Replace placeholders in command
-        if 'command' in task.metadata:
+        if 'command' in task.metadata and task.metadata['command']:
             command = task.metadata['command']
             command = command.replace('{TARGET}', target)
 

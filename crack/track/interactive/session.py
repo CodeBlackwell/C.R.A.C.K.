@@ -217,7 +217,12 @@ class InteractiveSession:
 
         # Handle command execution
         if input_type == 'command':
-            self.execute_command(value)
+            command, args = value
+            # Special case for /search command
+            if command == 'search':
+                self.handle_search()
+            else:
+                self.execute_command(value)
             return None
 
         # Handle choice selection
@@ -329,12 +334,34 @@ class InteractiveSession:
             print(DisplayManager.format_info("[SCREENED] Command will run in persistent terminal"))
             print(DisplayManager.format_info("Output will be automatically parsed for findings\n"))
 
-        # Confirm execution
-        confirm = input(DisplayManager.format_confirmation(
-            "Execute this command?", default='Y'
-        ))
+        # Check confirmation mode
+        mode = self.profile.metadata.get('confirmation_mode', 'smart')
+        proceed = False
 
-        if not InputProcessor.parse_confirmation(confirm, default='Y'):
+        if mode == 'never':
+            # Skip all confirmations
+            proceed = True
+            print(DisplayManager.format_info("[AUTO] Confirmation mode: never - executing automatically"))
+        elif mode == 'smart':
+            # Skip confirmation for read-only tasks
+            tags = task.metadata.get('tags', [])
+            if 'READ_ONLY' in tags:
+                proceed = True
+                print(DisplayManager.format_info("[AUTO] Read-only task - skipping confirmation"))
+            else:
+                # Ask for confirmation
+                confirm = input(DisplayManager.format_confirmation(
+                    "Execute this command?", default='Y'
+                ))
+                proceed = InputProcessor.parse_confirmation(confirm, default='Y')
+        else:
+            # 'always' or 'batch' mode - always ask
+            confirm = input(DisplayManager.format_confirmation(
+                "Execute this command?", default='Y'
+            ))
+            proceed = InputProcessor.parse_confirmation(confirm, default='Y')
+
+        if not proceed:
             print("Cancelled")
             return
 
@@ -809,42 +836,114 @@ class InteractiveSession:
             self.nav_stack.pop()
             print(DisplayManager.format_info("Going back..."))
 
-    def search_tasks(self, query: str) -> list:
+    def _fuzzy_match(self, query: str, text: str) -> tuple:
         """
-        Search for tasks by name, command, or tags
+        Simple fuzzy matching algorithm
+
+        Returns:
+            Tuple of (is_match: bool, score: int)
+            Score: 0-100, higher is better match
+        """
+        query = query.lower()
+        text = text.lower()
+
+        # Exact match = 100
+        if query == text:
+            return (True, 100)
+
+        # Substring match = 80
+        if query in text:
+            return (True, 80)
+
+        # Check for partial matches
+        query_chars = list(query)
+        text_chars = list(text)
+
+        # Count matching characters in order
+        matches = 0
+        text_idx = 0
+
+        for q_char in query_chars:
+            while text_idx < len(text_chars):
+                if text_chars[text_idx] == q_char:
+                    matches += 1
+                    text_idx += 1
+                    break
+                text_idx += 1
+
+        # Calculate score based on match ratio
+        if matches == len(query_chars):
+            # All chars found in order - score 50-70 based on match quality
+            match_ratio = matches / max(len(query), len(text))
+            score = int(50 + (match_ratio * 20))
+            return (True, score)
+
+        # Partial match if >50% chars found
+        if matches > len(query_chars) * 0.5:
+            score = int((matches / len(query_chars)) * 50)
+            return (True, score)
+
+        return (False, 0)
+
+    def search_tasks(self, query: str, min_score: int = 50) -> list:
+        """
+        Fuzzy search for tasks by name, command, or tags
 
         Args:
             query: Search query string
+            min_score: Minimum match score (0-100)
 
         Returns:
-            List of matching TaskNode objects
+            List of (TaskNode, score) tuples, sorted by score descending
         """
         query = query.lower()
         results = []
 
         def search_node(node):
-            """Recursively search task tree"""
+            """Recursively search task tree with fuzzy matching"""
+            best_match = (False, 0)
+
             # Search in task name
-            if query in node.name.lower():
-                results.append(node)
+            match = self._fuzzy_match(query, node.name)
+            if match[1] > best_match[1]:
+                best_match = match
+
             # Search in command
-            elif node.metadata.get('command') and query in node.metadata['command'].lower():
-                results.append(node)
+            if node.metadata.get('command'):
+                match = self._fuzzy_match(query, node.metadata['command'])
+                if match[1] > best_match[1]:
+                    best_match = match
+
             # Search in tags
-            elif any(query in tag.lower() for tag in node.metadata.get('tags', [])):
-                results.append(node)
+            for tag in node.metadata.get('tags', []):
+                match = self._fuzzy_match(query, tag)
+                if match[1] > best_match[1]:
+                    best_match = match
+
             # Search in description
-            elif node.metadata.get('description') and query in node.metadata['description'].lower():
-                results.append(node)
+            if node.metadata.get('description'):
+                match = self._fuzzy_match(query, node.metadata['description'])
+                if match[1] > best_match[1]:
+                    best_match = match
+
+            # Add if score meets threshold
+            if best_match[0] and best_match[1] >= min_score:
+                results.append((node, best_match[1]))
 
             # Recursively search children
             for child in node.children:
                 search_node(child)
 
         search_node(self.profile.task_tree)
+
+        # Sort by score descending
+        results.sort(key=lambda x: x[1], reverse=True)
+
+        # Store for later use
         self.search_query = query
-        self.search_results = results
-        return results
+        self.search_results = [r[0] for r in results]  # Store nodes only
+
+        return results  # Return (node, score) tuples
 
     def filter_tasks(self, filter_type: str, filter_value: str = None) -> list:
         """
@@ -884,9 +983,26 @@ class InteractiveSession:
         filter_node(self.profile.task_tree)
         return results
 
+    def set_confirmation_mode(self, mode: str):
+        """Set confirmation mode for task execution
+
+        Args:
+            mode: Confirmation mode ('always', 'smart', 'never', 'batch')
+
+        Raises:
+            ValueError: If mode is invalid
+        """
+        valid_modes = ['always', 'smart', 'never', 'batch']
+        if mode not in valid_modes:
+            raise ValueError(f"Mode must be one of {valid_modes}")
+
+        self.profile.metadata['confirmation_mode'] = mode
+        self.profile.save()
+        print(DisplayManager.format_success(f"Confirmation mode set to: {mode}"))
+
     def handle_search(self):
-        """Interactive search handler"""
-        print(DisplayManager.format_info("Task Search"))
+        """Interactive search handler with refinement"""
+        print(DisplayManager.format_info("Fuzzy Task Search"))
         print("Search by: task name, command, tags, or description")
         print("Examples: 'gobuster', 'http', 'QUICK_WIN', 'sql'")
         print()
@@ -895,52 +1011,63 @@ class InteractiveSession:
         if query.lower() == 'cancel':
             return
 
-        results = self.search_tasks(query)
+        # Perform fuzzy search
+        results = self.search_tasks(query, min_score=40)  # Lower threshold for fuzzy
 
         if not results:
             print(DisplayManager.format_warning(f"No tasks found matching '{query}'"))
-        else:
-            print(DisplayManager.format_success(f"Found {len(results)} matching task(s):"))
+
+            # Suggest lowering threshold
+            print("\nTry:")
+            print("  1. Broader search term")
+            print("  2. Search by tag (QUICK_WIN, OSCP:HIGH)")
+            print("  3. 's' - New search")
+            return
+
+        # Display results with scores
+        print(DisplayManager.format_success(f"Found {len(results)} matching task(s):"))
+        print()
+
+        for i, (task, score) in enumerate(results[:20], 1):  # Limit to 20
+            status_icon = {
+                'completed': '✅',
+                'pending': '⏳',
+                'in-progress': '🔄'
+            }.get(task.status, '❓')
+
+            # Show score as bar
+            score_bar = '█' * (score // 10) + '░' * (10 - score // 10)
+
+            print(f"{i:2d}. {status_icon} {task.name} [{score_bar} {score}%]")
+            print(f"    ID: {task.id}")
+
+            if task.metadata.get('command'):
+                print(f"    Command: {task.metadata['command']}")
+            if task.metadata.get('tags'):
+                print(f"    Tags: {', '.join(task.metadata['tags'])}")
             print()
 
-            for i, task in enumerate(results[:20], 1):  # Limit to 20 results
-                status_icon = {
-                    'completed': '✅',
-                    'pending': '⏳',
-                    'in-progress': '🔄'
-                }.get(task.status, '❓')
+        if len(results) > 20:
+            print(DisplayManager.format_info(f"... and {len(results) - 20} more results"))
 
-                print(f"{i:2d}. {status_icon} {task.name} [{task.id}]")
+        # Options
+        print("\nOptions:")
+        print("  [number] - Execute task")
+        print("  s        - Refine search")
+        print("  c        - Cancel")
 
-                if task.metadata.get('command'):
-                    print(f"    Command: {task.metadata['command']}")
-                if task.metadata.get('tags'):
-                    print(f"    Tags: {', '.join(task.metadata['tags'])}")
-                print()
+        choice = input("\nChoice: ").strip().lower()
 
-            if len(results) > 20:
-                print(DisplayManager.format_info(f"... and {len(results) - 20} more results"))
-
-            # Ask if user wants to act on a result
-            print("\nOptions:")
-            print("  [number] - Mark task as complete")
-            print("  s        - New search")
-            print("  c        - Cancel")
-
-            choice = input("\nChoice: ").strip().lower()
-
-            if choice == 's':
-                self.handle_search()
-            elif choice.isdigit():
-                idx = int(choice) - 1
-                if 0 <= idx < len(results):
-                    task = results[idx]
-                    confirm = input(f"Mark '{task.name}' as complete? [y/N]: ")
-                    if confirm.lower() == 'y':
-                        task.mark_complete()
-                        self.profile.save()
-                        print(DisplayManager.format_success(f"Task '{task.name}' marked as complete"))
-                        self.last_action = f"Marked task complete: {task.name}"
+        if choice == 's':
+            # Recursive refinement
+            self.handle_search()
+        elif choice == 'c':
+            return
+        elif choice.isdigit():
+            idx = int(choice) - 1
+            if 0 <= idx < len(results):
+                task, _ = results[idx]
+                self.execute_task(task)
 
     def save_checkpoint(self):
         """Save session checkpoint"""

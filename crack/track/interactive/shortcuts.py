@@ -6,6 +6,8 @@ Single-key shortcuts for common actions:
 - t: Show task tree
 - r: Show recommendations
 - n: Execute next recommended task
+- c: Change confirmation mode
+- x: Command templates (quick OSCP commands)
 - b: Go back
 - h: Show help
 - q: Quit
@@ -33,6 +35,8 @@ class ShortcutHandler:
             't': ('Show task tree', 'show_tree'),
             'r': ('Show recommendations', 'show_recommendations'),
             'n': ('Execute next recommended task', 'do_next'),
+            'c': ('Change confirmation mode', 'change_confirmation'),
+            'x': ('Command templates', 'show_templates'),
             'b': ('Go back', 'go_back'),
             'h': ('Show help', 'show_help'),
             'q': ('Quit and save', 'quit')
@@ -137,6 +141,60 @@ class ShortcutHandler:
         else:
             print("Cancelled")
 
+    def change_confirmation(self):
+        """Change confirmation mode for task execution"""
+        from .input_handler import InputProcessor
+
+        # Show current mode
+        current_mode = self.session.profile.metadata.get('confirmation_mode', 'smart')
+        print(DisplayManager.format_info(f"Current confirmation mode: {current_mode}"))
+        print()
+
+        # Show mode options
+        print("Available modes:")
+        print("  1. always - Always confirm before executing (default behavior)")
+        print("  2. smart  - Skip confirmation for read-only tasks (recommended)")
+        print("  3. never  - Never confirm, execute all tasks automatically (fast)")
+        print("  4. batch  - Single confirmation for multiple tasks")
+        print()
+
+        # Get user choice
+        choice = input("Select mode [1-4 or name]: ").strip().lower()
+
+        # Map choice to mode
+        mode_map = {
+            '1': 'always',
+            '2': 'smart',
+            '3': 'never',
+            '4': 'batch',
+            'always': 'always',
+            'smart': 'smart',
+            'never': 'never',
+            'batch': 'batch'
+        }
+
+        mode = mode_map.get(choice)
+        if not mode:
+            print(DisplayManager.format_error("Invalid choice"))
+            return
+
+        # Set mode
+        try:
+            self.session.set_confirmation_mode(mode)
+
+            # Show explanation
+            if mode == 'smart':
+                print(DisplayManager.format_info(
+                    "\nSmart mode enabled: Read-only tasks will execute without confirmation"
+                ))
+            elif mode == 'never':
+                print(DisplayManager.format_warning(
+                    "\nNever mode enabled: All tasks will execute automatically without confirmation"
+                ))
+
+        except ValueError as e:
+            print(DisplayManager.format_error(str(e)))
+
     def go_back(self):
         """Go back in navigation"""
         # This will be handled by the session's navigation stack
@@ -169,6 +227,148 @@ class ShortcutHandler:
         else:
             print("Continuing session...")
             return True  # Continue session
+
+    def show_templates(self):
+        """Show command template menu"""
+        from .templates import TemplateRegistry
+        from .input_handler import InputProcessor
+
+        # Get all templates
+        templates = TemplateRegistry.list_all()
+
+        if not templates:
+            print(DisplayManager.format_warning("No templates available"))
+            return
+
+        # Build menu choices
+        choices = []
+        for template in templates:
+            choices.append({
+                'id': template.id,
+                'label': template.name,
+                'description': f"{template.description} [{template.category}]",
+                'template': template
+            })
+
+        choices.append({'id': 'back', 'label': 'Back', 'description': None})
+
+        # Display menu
+        print(DisplayManager.format_menu(choices, title="\nCommand Templates - Quick OSCP Commands"))
+
+        # Get selection
+        choice_input = InputProcessor.get_input("Template: ")
+        choice = InputProcessor.parse_choice(choice_input, choices)
+
+        if choice and choice['id'] != 'back':
+            template = choice['template']
+            self._fill_template(template)
+
+    def _fill_template(self, template):
+        """Interactive template variable filling"""
+        from .input_handler import InputProcessor
+
+        print(f"\n{DisplayManager.format_info(f'Template: {template.name}')}")
+        print(f"{template.description}\n")
+
+        # Show command with placeholders
+        print(f"{DisplayManager.format_info('Command template:')}")
+        print(f"  {template.command}\n")
+
+        # Show flag explanations if available
+        if template.flag_explanations:
+            print("Flag Explanations:")
+            for flag, explanation in template.flag_explanations.items():
+                print(f"  {flag}: {explanation}")
+            print()
+
+        # Show estimated time
+        if template.estimated_time:
+            print(f"Estimated time: {template.estimated_time}\n")
+
+        # Collect variable values
+        print("Enter values for placeholders:")
+        values = {}
+
+        for var in template.variables:
+            var_name = var['name']
+            var_desc = var.get('description', '')
+            var_example = var.get('example', '')
+            var_required = var.get('required', True)
+
+            # Build prompt
+            prompt = f"  {var_name}"
+            if var_desc:
+                prompt += f" ({var_desc})"
+            if var_example:
+                prompt += f" [e.g., {var_example}]"
+            if not var_required:
+                prompt += " [optional]"
+            prompt += ": "
+
+            value = input(prompt).strip()
+
+            # Validate required fields
+            if not value and var_required:
+                print(DisplayManager.format_error(f"{var_name} is required"))
+                return
+
+            if value:
+                values[var_name] = value
+
+        # Generate final command
+        final_command = template.fill(values)
+        print(f"\n{DisplayManager.format_success('Final command:')}")
+        print(f"  {final_command}")
+
+        # Show alternatives if available
+        if template.alternatives:
+            print(f"\n{DisplayManager.format_info('Manual alternatives:')}")
+            for alt in template.alternatives:
+                alt_filled = alt
+                for key, value in values.items():
+                    alt_filled = alt_filled.replace(f"<{key}>", value)
+                print(f"  • {alt_filled}")
+            print()
+
+        # Show success indicators
+        if template.success_indicators:
+            print(f"{DisplayManager.format_info('Success indicators:')}")
+            for indicator in template.success_indicators:
+                print(f"  ✓ {indicator}")
+            print()
+
+        # Confirm execution
+        confirm = input(DisplayManager.format_confirmation("Execute command?", default='N'))
+        if InputProcessor.parse_confirmation(confirm, default='N'):
+            # Execute command
+            import subprocess
+            try:
+                print(f"\n{DisplayManager.format_info('Executing...')}\n")
+                result = subprocess.run(final_command, shell=True)
+
+                if result.returncode == 0:
+                    print(DisplayManager.format_success("Command completed successfully"))
+                else:
+                    print(DisplayManager.format_warning(f"Command exited with code {result.returncode}"))
+
+                # Log to profile
+                self.session.profile.add_note(
+                    note=f"Executed template: {template.name}\nCommand: {final_command}",
+                    source="command templates"
+                )
+                self.session.profile.save()
+                self.session.last_action = f"Executed: {template.name}"
+
+            except Exception as e:
+                print(DisplayManager.format_error(f"Execution failed: {e}"))
+        else:
+            print("\nCancelled. Command copied to history.")
+            # Log template usage even if not executed
+            self.session.profile.add_note(
+                note=f"Generated command from template: {template.name}\nCommand: {final_command}",
+                source="command templates"
+            )
+            self.session.profile.save()
 
     def get_shortcuts_help(self) -> str:
         """Get formatted shortcuts help text"""

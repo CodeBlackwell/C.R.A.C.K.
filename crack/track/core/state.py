@@ -41,7 +41,8 @@ class TargetProfile:
             'environment': 'lab',  # lab, production, ctf
             'default_timing': 'normal',  # paranoid, sneaky, polite, normal, aggressive, insane
             'preferred_profile': None,  # Last used profile ID
-            'evasion_enabled': False
+            'evasion_enabled': False,
+            'confirmation_mode': 'smart'  # always, smart, never, batch
         }
 
         # Scan history (NEW - track executed scans)
@@ -390,9 +391,14 @@ class TargetProfile:
             'environment': 'lab',
             'default_timing': 'normal',
             'preferred_profile': None,
-            'evasion_enabled': False
+            'evasion_enabled': False,
+            'confirmation_mode': 'smart'
         }
         profile.metadata = data.get('metadata', default_metadata)
+
+        # Ensure confirmation_mode exists even in loaded profiles
+        if 'confirmation_mode' not in profile.metadata:
+            profile.metadata['confirmation_mode'] = 'smart'
         profile.scan_history = data.get('scan_history', [])
 
         # Restore task tree or create new one

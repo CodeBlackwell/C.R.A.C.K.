@@ -421,6 +421,8 @@ KEYBOARD SHORTCUTS:
   t - Show task tree only
   r - Show recommendations
   n - Execute next recommended task
+  c - Change confirmation mode
+  x - Command templates (quick OSCP commands)
   b - Go back to previous menu
   h - Show this help
   q - Quit and save

@@ -5,7 +5,7 @@ Handles all user input including:
 - Numeric choices (1, 2, 3)
 - Keyword matching (scan, enumerate, skip)
 - Command execution (!command)
-- Keyboard shortcuts (s, t, r, n, b, h, q)
+- Keyboard shortcuts (s, t, r, n, c, x, b, h, q)
 - Multi-select parsing (1,3,5 or all/none)
 - Navigation commands (back, menu, exit)
 """
@@ -27,7 +27,7 @@ class InputProcessor:
     }
 
     # Shortcuts (handled separately in ShortcutHandler, but recognized here)
-    SHORTCUTS = ['s', 't', 'r', 'n', 'b', 'h', 'q']
+    SHORTCUTS = ['s', 't', 'r', 'n', 'c', 'x', 'b', 'h', 'q']
 
     @classmethod
     def parse_choice(cls, user_input: str, choices: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
@@ -132,7 +132,7 @@ class InputProcessor:
     @classmethod
     def parse_command(cls, user_input: str) -> Optional[Tuple[str, List[str]]]:
         """
-        Parse command input (prefixed with !)
+        Parse command input (prefixed with ! or /)
 
         Args:
             user_input: Raw input string
@@ -140,10 +140,14 @@ class InputProcessor:
         Returns:
             Tuple of (command, args) or None if not a command
         """
-        if not user_input or not user_input.startswith('!'):
+        if not user_input:
             return None
 
-        # Remove ! prefix and split into command and args
+        # Support both ! and / prefixes
+        if not (user_input.startswith('!') or user_input.startswith('/')):
+            return None
+
+        # Remove prefix and split into command and args
         cmd_line = user_input[1:].strip()
         if not cmd_line:
             return None
