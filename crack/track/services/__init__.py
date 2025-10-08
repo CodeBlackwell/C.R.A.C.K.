@@ -106,7 +106,7 @@ from . import client_side_attacks
 from . import windows_bof
 from . import windows_privesc
 from . import windows_privesc_extended
-from . import windows_privesc_full
+# from . import windows_privesc_full  # Removed: Stub file with only print statements, no actual plugin
 from . import windows_core
 from . import windows_dll_ipc_privesc
 from . import ad_attacks
