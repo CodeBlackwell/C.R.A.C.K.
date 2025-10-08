@@ -539,9 +539,9 @@ class XSSAttacksPlugin(ServicePlugin):
                             ';alert(1);': 'Execute arbitrary JS',
                             '//': 'Comment out rest of original code'
                         },
-                        'success_indicators": [
-                            "\';alert(1);// visible in <script> tag",
-                            "Alert fires when page loads',
+                        'success_indicators': [
+                            "';alert(1);// visible in <script> tag",
+                            "Alert fires when page loads",
                             'No quote escaping (backslash-quote)'
                         ],
                         'failure_indicators': [
