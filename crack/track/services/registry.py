@@ -58,7 +58,7 @@ class ServiceRegistry:
 
     @classmethod
     def _handle_service_detected(cls, plugin: ServicePlugin, data: Dict[str, Any]):
-        """Handle service detection event
+        """Handle service detection event with conflict resolution
 
         Args:
             plugin: Service plugin
@@ -71,12 +71,82 @@ class ServiceRegistry:
             'state': 'open'
         }
 
-        # Check if plugin can handle this service
-        if not plugin.detect(port_info):
+        # Check if plugin can handle this service (now returns confidence score)
+        detection_result = plugin.detect(port_info)
+
+        # Handle both old boolean and new confidence score formats
+        if isinstance(detection_result, bool):
+            confidence = 100 if detection_result else 0
+        elif isinstance(detection_result, (int, float)):
+            confidence = detection_result
+        else:
+            confidence = 0
+
+        if confidence <= 0:
             return
 
-        # Generate task tree
+        # Store plugin confidence for this port
+        port_key = f"{data.get('target')}:{data.get('port')}"
+        if not hasattr(cls, '_plugin_claims'):
+            cls._plugin_claims = {}
+
+        if port_key not in cls._plugin_claims:
+            cls._plugin_claims[port_key] = []
+
+        cls._plugin_claims[port_key].append({
+            'plugin': plugin,
+            'confidence': confidence,
+            'data': data
+        })
+
+        # Don't generate tasks immediately - wait for all plugins to claim
+        # Schedule task generation after a brief delay to collect all claims
+        cls._schedule_task_generation(port_key)
+
+    @classmethod
+    def _schedule_task_generation(cls, port_key: str):
+        """Schedule task generation with conflict resolution
+
+        Args:
+            port_key: Unique port identifier (target:port)
+        """
+        # Simple immediate resolution for now (could be made async with timer)
+        # In a production system, this would use threading.Timer for delay
+        cls._resolve_plugin_conflicts(port_key)
+
+    @classmethod
+    def _resolve_plugin_conflicts(cls, port_key: str):
+        """Resolve plugin conflicts and generate tasks for winning plugin
+
+        Args:
+            port_key: Unique port identifier (target:port)
+        """
+        if port_key not in cls._plugin_claims:
+            return
+
+        claims = cls._plugin_claims[port_key]
+        if not claims:
+            return
+
+        # Sort by confidence (highest first)
+        claims.sort(key=lambda x: x['confidence'], reverse=True)
+
+        # Winner takes all - highest confidence generates tasks
+        winner = claims[0]
+        plugin = winner['plugin']
+        data = winner['data']
+
+        logger.info(f"Plugin '{plugin.name}' won port {port_key} with confidence {winner['confidence']}")
+
+        # Generate task tree for winning plugin only
         try:
+            port_info = {
+                'port': data.get('port'),
+                'service': data.get('service'),
+                'version': data.get('version'),
+                'state': 'open'
+            }
+
             task_tree = plugin.get_task_tree(
                 target=data.get('target'),
                 port=data.get('port'),
@@ -92,6 +162,9 @@ class ServiceRegistry:
 
         except Exception as e:
             logger.error(f"Error generating tasks for {plugin.name}: {e}")
+
+        # Clear claims for this port after resolution
+        del cls._plugin_claims[port_key]
 
     @classmethod
     def get_plugin(cls, port_info: Dict[str, Any]) -> Optional[ServicePlugin]:
@@ -142,7 +215,7 @@ class ServiceRegistry:
 
         # Import all plugin modules to trigger @register decorators
         try:
-            from . import http, smb, ssh, sql, ftp, smtp, mysql, nfs, post_exploit, ad_attacks, lateral_movement, business_logic, macos_red_teaming, hardware_physical_access
+            from . import http, smb, ssh, sql, ftp, smtp, imap, pop3, mysql, postgresql, nfs, post_exploit, ad_attacks, lateral_movement, business_logic, macos_red_teaming, hardware_physical_access, oracle, mongodb, couchdb
         except ImportError as e:
             logger.warning(f"Some plugins failed to import: {e}")
 

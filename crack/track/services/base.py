@@ -39,14 +39,21 @@ class ServicePlugin(ABC):
         return [self.name]
 
     @abstractmethod
-    def detect(self, port_info: Dict[str, Any]) -> bool:
+    def detect(self, port_info: Dict[str, Any]) -> float:
         """Determine if this plugin can handle this port/service
 
         Args:
             port_info: Port information dict with keys: port, state, service, version
 
         Returns:
-            True if this plugin should handle this port
+            Confidence score (0-100) that this plugin should handle this port
+            - 0: Cannot handle this service
+            - 1-30: Low confidence (might handle if no better match)
+            - 31-70: Medium confidence (likely match)
+            - 71-90: High confidence (strong match)
+            - 91-100: Perfect match (exact version/service match)
+
+            For backward compatibility, can still return bool (True=100, False=0)
         """
         pass
 
