@@ -47,41 +47,25 @@ PHASES: Dict[str, Dict[str, Any]] = {
                 }
             },
             {
-                'id': 'quick-port-scan',
-                'name': 'Quick top ports scan',
-                'type': 'command',
-                'metadata': {
-                    'command': 'nmap --top-ports 1000 {TARGET} -oN quick_scan.nmap',
-                    'description': 'Fast scan of most common 1000 ports',
-                    'tags': ['QUICK_WIN', 'OSCP:HIGH'],
-                    'flag_explanations': {
-                        '--top-ports 1000': 'Scan 1000 most common ports (much faster than full scan)',
-                        '-oN': 'Save normal output format'
-                    },
-                    'notes': [
-                        'Completes in 1-2 minutes',
-                        'Finds 90% of open ports quickly',
-                        'Follow up with full scan if needed'
-                    ]
-                }
-            },
-            {
                 'id': 'port-discovery',
-                'name': 'Discover all ports (full scan)',
-                'type': 'command',
+                'name': 'Port Discovery',
+                'type': 'scan',  # Changed from 'command' to 'scan'
+                'scan_profiles': [  # Reference profiles instead of hardcoded command
+                    'lab-quick',      # Quick scan option
+                    'lab-full',       # Full scan option
+                    'stealth-normal', # Stealth option
+                    'aggressive-full' # Aggressive option
+                ],
+                'default_profile': 'lab-quick',  # Default for OSCP
                 'metadata': {
-                    'command': 'nmap -p- --min-rate 1000 {TARGET} -oA port_scan',
-                    'description': 'Comprehensive scan of all 65535 ports',
+                    'description': 'Discover open ports on target',
                     'tags': ['OSCP:HIGH'],
-                    'flag_explanations': {
-                        '-p-': 'Scan all 65535 TCP ports (thorough enumeration)',
-                        '--min-rate 1000': 'Send at least 1000 packets/second (faster for labs)',
-                        '-oA': 'Save output in all formats (XML, gnmap, nmap)'
-                    },
+                    'allow_custom': True,  # Allow user to enter custom nmap command
                     'notes': [
-                        'Takes 5-10 minutes typically',
-                        'Finds unusual high ports',
-                        'Critical for OSCP - never skip'
+                        'Choose scan strategy based on environment',
+                        'Labs: use lab-quick or lab-full',
+                        'Production: use stealth-normal',
+                        'Full scan critical for OSCP - finds unusual high ports'
                     ]
                 }
             }
@@ -97,15 +81,19 @@ PHASES: Dict[str, Dict[str, Any]] = {
             {
                 'id': 'service-scan',
                 'name': 'Service version detection',
-                'type': 'command',
+                'type': 'scan',  # Changed from 'command' to 'scan'
+                'scan_profiles': [
+                    'service-detect-default'  # Default service detection profile
+                ],
+                'default_profile': 'service-detect-default',
                 'metadata': {
-                    'command': 'nmap -sV -sC -p {PORTS} {TARGET} -oA service_scan',
                     'description': 'Detect services and run default NSE scripts',
                     'tags': ['OSCP:HIGH'],
+                    'requires_ports': True,  # Must have discovered ports first
                     'notes': [
-                        '-sV: Service version detection (critical for CVE matching)',
-                        '-sC: Default NSE scripts (finds low-hanging fruit)',
-                        '-p: Target only open ports (faster)',
+                        'Runs after port discovery completes',
+                        'Probes open ports to identify exact service versions',
+                        'Critical for CVE matching and exploit selection',
                         'Import results to auto-populate service-specific tasks'
                     ]
                 }
