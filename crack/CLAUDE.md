@@ -4,7 +4,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**C.R.A.C.K.** (Comprehensive Recon & Attack Creation Kit) is a modular penetration testing toolkit for OSCP preparation. It consists of multiple standalone tools unified under a single CLI interface.
+**C.R.A.C.K.** - **C**omprehensive **R**econ & **A**ttack **C**reation **K**it
+
+A modular penetration testing toolkit for OSCP preparation. It consists of multiple standalone tools unified under a single CLI interface.
+
+### CRACK Track Module
+
+**C.R.A.C.K. T.R.A.C.K.** - The enumeration tracking and task management system:
+- **C**omprehensive **R**econ & **A**ttack **C**reation **K**it
+- **T**argeted **R**econnaissance **A**nd **C**ommand **K**onsole
 
 ## Installation & Development Workflow
 
