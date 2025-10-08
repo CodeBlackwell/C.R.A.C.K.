@@ -49,6 +49,9 @@ class ShortcutHandler:
             'ss': ('Session snapshot', 'session_snapshot'),
             'tr': ('Task retry', 'task_retry'),
             'be': ('Batch execute tasks', 'batch_execute'),
+            'sa': ('Success analyzer', 'success_analyzer'),
+            'wr': ('Workflow recorder', 'workflow_recorder'),
+            'sg': ('Smart suggest', 'smart_suggest'),
             'b': ('Go back', 'go_back'),
             'h': ('Show help', 'show_help'),
             'q': ('Quit and save', 'quit')
@@ -458,3 +461,15 @@ class ShortcutHandler:
     def batch_execute(self):
         """Batch execute tasks with dependency resolution (shortcut: be)"""
         self.session.handle_batch_execute()
+
+    def success_analyzer(self):
+        """Success rate analysis (shortcut: sa)"""
+        self.session.handle_success_analyzer()
+
+    def workflow_recorder(self):
+        """Workflow recorder/player (shortcut: wr)"""
+        self.session.handle_workflow_recorder()
+
+    def smart_suggest(self):
+        """Smart suggestions based on pattern matching (shortcut: sg)"""
+        self.session.handle_smart_suggest()

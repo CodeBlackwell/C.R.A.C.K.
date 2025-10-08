@@ -435,6 +435,9 @@ KEYBOARD SHORTCUTS:
   ss - Session snapshot (save/restore checkpoints)
   tr - Task retry (retry failed tasks with editing)
   be - Batch execute (run multiple tasks with dependencies)
+  sa - Success analyzer (task success rates and optimization)
+  wr - Workflow recorder (record and replay task sequences)
+  sg - Smart suggest (AI-lite pattern-based suggestions)
   b - Go back to previous menu
   h - Show this help
   q - Quit and save

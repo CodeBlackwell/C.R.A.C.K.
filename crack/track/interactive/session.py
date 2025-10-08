@@ -15,6 +15,7 @@ import time
 from pathlib import Path
 from typing import Dict, Any, Optional, List
 from datetime import datetime
+from collections import defaultdict
 
 from ..core.state import TargetProfile
 from ..core.storage import Storage
@@ -107,6 +108,12 @@ class InteractiveSession:
         # Search state
         self.search_query = None
         self.search_results = []
+
+        # Workflow recording state
+        self.recording = False
+        self.recording_name = None
+        self.recording_start = None
+        self.recorded_tasks = []
 
         # Session checkpoint directory
         self.checkpoint_dir = Path.home() / '.crack' / 'sessions'
@@ -460,6 +467,9 @@ class InteractiveSession:
                     task.stop_timer()
                     task.mark_complete()
                     self.last_action = f"Completed: {task.name}"
+
+                    # Record task if workflow recording is active
+                    self._record_task(task)
                 else:
                     print(DisplayManager.format_warning(
                         f"Command exited with code {result.returncode}"))
@@ -473,6 +483,9 @@ class InteractiveSession:
                         task.stop_timer()
                         task.mark_complete()
                         self.last_action = f"Completed: {task.name}"
+
+                        # Record task if workflow recording is active
+                        self._record_task(task)
 
             except Exception as e:
                 print(DisplayManager.format_error(f"Execution failed: {e}"))
@@ -3172,3 +3185,630 @@ Output: {output[:500]}{"..." if len(output) > 500 else ""}
 
         self.profile.save()
         print(f"\n✓ Created {created_count} correlation task(s)")
+
+    def handle_success_analyzer(self):
+        """Analyze task success rates and provide optimization insights"""
+        print(DisplayManager.format_info("Success Analyzer"))
+        print("=" * 50)
+        print()
+
+        # Get all tasks (completed and failed)
+        all_tasks = self.profile.task_tree.get_all_tasks()
+        analyzed_tasks = [t for t in all_tasks if t.status in ['completed', 'failed']]
+
+        if not analyzed_tasks:
+            print(DisplayManager.format_warning("No completed or failed tasks to analyze"))
+            print("\nRun some tasks first to generate statistics")
+            return
+
+        print(f"Task Analysis (based on {len(analyzed_tasks)} tasks)\n")
+
+        # Analysis by tool
+        print("By Tool:")
+        by_tool = self._group_by_tool(analyzed_tasks)
+
+        # Sort by success rate
+        tool_stats = []
+        for tool, tasks in by_tool.items():
+            stats = self._calculate_success_rate(tasks)
+            tool_stats.append((tool, stats))
+
+        tool_stats.sort(key=lambda x: (-x[1]['rate'], -x[1]['total']))
+
+        for tool, stats in tool_stats[:10]:  # Top 10
+            rate_str = f"{stats['rate']:.0f}%"
+            count_str = f"({stats['success']}/{stats['total']})"
+            time_str = self._format_duration(stats['avg_time'])
+
+            print(f"  {tool:15} {rate_str:>4} success {count_str:>8}   Avg time: {time_str}")
+
+        # Analysis by category/phase
+        print("\nBy Category:")
+        categories = {
+            'Discovery': [t for t in analyzed_tasks if 'scan' in t.name.lower() or 'discovery' in t.metadata.get('phase', '')],
+            'Enumeration': [t for t in analyzed_tasks if 'enum' in t.name.lower()],
+            'Exploitation': [t for t in analyzed_tasks if 'exploit' in t.name.lower() or 'brute' in t.name.lower()]
+        }
+
+        for category, tasks in categories.items():
+            if tasks:
+                stats = self._calculate_success_rate(tasks)
+                print(f"  {category:12} {stats['rate']:.0f}% success ({stats['success']}/{stats['total']})")
+
+        # Analysis by service
+        print("\nBy Service:")
+        by_service = defaultdict(list)
+        for task in analyzed_tasks:
+            service = task.metadata.get('service', 'general')
+            port = task.metadata.get('port', '')
+            key = f"{service.upper()} ({port})" if port else service.upper()
+            by_service[key].append(task)
+
+        for service, tasks in sorted(by_service.items())[:5]:  # Top 5
+            stats = self._calculate_success_rate(tasks)
+            if stats['total'] > 0:
+                print(f"  {service:15} {stats['rate']:.0f}% success ({stats['success']}/{stats['total']})")
+
+        # Quick wins analysis
+        print("\nQuick Wins:")
+        quick_wins = [t for t in analyzed_tasks if 'QUICK_WIN' in t.metadata.get('tags', [])]
+        if quick_wins:
+            qw_stats = self._calculate_success_rate(quick_wins)
+            print(f"  ✓ {qw_stats['rate']:.0f}% success rate ({qw_stats['success']}/{qw_stats['total']})")
+            print(f"  ✓ Avg time: {self._format_duration(qw_stats['avg_time'])}")
+
+            if qw_stats['rate'] > 80:
+                print("  → Recommendation: Prioritize quick wins first")
+
+        # Recommendations
+        print("\nRecommendations:")
+
+        # Most reliable tools
+        reliable = [(tool, stats) for tool, stats in tool_stats if stats['rate'] == 100 and stats['total'] >= 3]
+        if reliable:
+            tools_str = ", ".join([t[0] for t in reliable[:3]])
+            print(f"  ⚡ Most reliable: {tools_str} (100% success)")
+
+        # Needs review
+        unreliable = [(tool, stats) for tool, stats in tool_stats if stats['rate'] < 50 and stats['total'] >= 3]
+        if unreliable:
+            for tool, stats in unreliable[:2]:
+                print(f"  ⚠ Needs review: {tool} ({stats['rate']:.0f}% success - check parameters)")
+
+        # Time investment
+        if tool_stats:
+            slowest = max(tool_stats, key=lambda x: x[1]['avg_time'])
+            if slowest[1]['avg_time'] > 60:
+                print(f"  📊 Time investment: {slowest[0]} averages {self._format_duration(slowest[1]['avg_time'])} per task")
+
+        # Best ROI
+        if quick_wins and qw_stats['rate'] > 80:
+            print(f"  🎯 Best ROI: Quick win tasks ({qw_stats['rate']:.0f}% success, {self._format_duration(qw_stats['avg_time'])} avg)")
+
+        self.last_action = "Analyzed task success rates"
+
+    def _group_by_tool(self, tasks: List) -> Dict[str, List]:
+        """Group tasks by tool/command type"""
+        grouped = defaultdict(list)
+
+        for task in tasks:
+            # Extract tool name from command or task name
+            command = task.metadata.get('command', '')
+            tool = self._extract_tool_name(command)
+
+            if not tool:
+                # Try from task name
+                tool = self._extract_tool_from_name(task.name)
+
+            grouped[tool].append(task)
+
+        return dict(grouped)
+
+    def _extract_tool_name(self, command: str) -> str:
+        """Extract tool name from command"""
+        if not command:
+            return 'unknown'
+
+        # Common OSCP tools
+        tools = [
+            'nmap', 'gobuster', 'nikto', 'enum4linux', 'smbclient',
+            'searchsploit', 'sqlmap', 'hydra', 'john', 'hashcat',
+            'feroxbuster', 'ffuf', 'wpscan', 'dirbuster', 'whatweb',
+            'dirb', 'wfuzz', 'crackmapexec', 'metasploit', 'msfconsole',
+            'exploit', 'nc', 'netcat', 'curl', 'wget'
+        ]
+
+        command_lower = command.lower()
+        for tool in tools:
+            if tool in command_lower:
+                return tool
+
+        # Fallback: first word
+        return command.split()[0] if command else 'unknown'
+
+    def _extract_tool_from_name(self, name: str) -> str:
+        """Extract tool name from task name"""
+        if not name:
+            return 'unknown'
+
+        # Look for tool names in task name
+        tools = [
+            'nmap', 'gobuster', 'nikto', 'enum4linux', 'smbclient',
+            'searchsploit', 'sqlmap', 'hydra', 'john', 'hashcat',
+            'feroxbuster', 'ffuf', 'wpscan', 'whatweb', 'dirb'
+        ]
+
+        name_lower = name.lower()
+        for tool in tools:
+            if tool in name_lower:
+                return tool
+
+        return 'general'
+
+    def _calculate_success_rate(self, tasks: List) -> Dict[str, Any]:
+        """Calculate success statistics for task group"""
+        if not tasks:
+            return {
+                'total': 0,
+                'success': 0,
+                'failed': 0,
+                'rate': 0,
+                'avg_time': 0
+            }
+
+        success = [t for t in tasks if t.status == 'completed']
+        failed = [t for t in tasks if t.status == 'failed']
+
+        # Calculate average time
+        times = []
+        for task in tasks:
+            start = task.metadata.get('start_time')
+            end = task.metadata.get('end_time')
+            if start and end:
+                try:
+                    start_dt = datetime.fromisoformat(start)
+                    end_dt = datetime.fromisoformat(end)
+                    duration = (end_dt - start_dt).total_seconds()
+                    times.append(duration)
+                except (ValueError, TypeError):
+                    # Skip invalid timestamps
+                    pass
+
+        avg_time = sum(times) / len(times) if times else 0
+
+        return {
+            'total': len(tasks),
+            'success': len(success),
+            'failed': len(failed),
+            'rate': (len(success) / len(tasks) * 100) if tasks else 0,
+            'avg_time': avg_time
+        }
+
+    def _format_duration(self, seconds: float) -> str:
+        """Format duration in human-readable format"""
+        if seconds < 60:
+            return f"{int(seconds)}s"
+        elif seconds < 3600:
+            minutes = int(seconds / 60)
+            secs = int(seconds % 60)
+            return f"{minutes}m {secs}s" if secs > 0 else f"{minutes}m"
+        else:
+            hours = int(seconds / 3600)
+            minutes = int((seconds % 3600) / 60)
+            return f"{hours}h {minutes}m"
+
+    def handle_workflow_recorder(self, action: str = None, name: str = None):
+        """Workflow recorder/player - record and replay task sequences"""
+        print(DisplayManager.format_info("Workflow Recorder"))
+        print("=" * 50)
+        print()
+
+        if not action:
+            # Show menu
+            print("Actions:")
+            print("  start <name>  - Start recording workflow")
+            print("  stop          - Stop current recording")
+            print("  list          - List saved workflows")
+            print("  play <name>   - Replay workflow on current target")
+            print("  delete <name> - Delete workflow")
+            print("  export <name> - Export workflow to share")
+            print()
+
+            action_input = input("Action: ").strip().split()
+            if not action_input:
+                return
+
+            action = action_input[0]
+            name = action_input[1] if len(action_input) > 1 else None
+
+        if action == 'start':
+            if not name:
+                name = input("Workflow name: ").strip()
+            self._start_recording(name)
+
+        elif action == 'stop':
+            self._stop_recording()
+
+        elif action == 'list':
+            self._list_workflows()
+
+        elif action == 'play':
+            if not name:
+                name = input("Workflow name: ").strip()
+            self._play_workflow(name)
+
+        elif action == 'delete':
+            if not name:
+                name = input("Workflow name: ").strip()
+            self._delete_workflow(name)
+
+        elif action == 'export':
+            if not name:
+                name = input("Workflow name: ").strip()
+            self._export_workflow(name)
+
+        else:
+            print(DisplayManager.format_error(f"Unknown action: {action}"))
+
+    def _start_recording(self, name: str):
+        """Start recording workflow"""
+        if self.recording:
+            print(DisplayManager.format_warning("Already recording. Stop first."))
+            return
+
+        # Sanitize name
+        import re
+        safe_name = re.sub(r'[^a-zA-Z0-9_-]', '-', name.strip())
+
+        self.recording = True
+        self.recording_name = safe_name
+        self.recording_start = datetime.now()
+        self.recorded_tasks = []
+
+        print(DisplayManager.format_success(f"🔴 Recording workflow: {safe_name}"))
+        print("Execute tasks normally. They will be recorded.")
+        print("Type 'wr stop' when done.")
+
+    def _stop_recording(self):
+        """Stop recording and save workflow"""
+        if not self.recording:
+            print(DisplayManager.format_warning("Not currently recording"))
+            return
+
+        if not self.recorded_tasks:
+            print(DisplayManager.format_warning("No tasks recorded"))
+            self.recording = False
+            return
+
+        # Build workflow
+        workflow = {
+            'name': self.recording_name,
+            'description': input("Description: ").strip() or f"Workflow: {self.recording_name}",
+            'created': self.recording_start.isoformat(),
+            'original_target': self.profile.target,
+            'tasks': self.recorded_tasks,
+            'variables': self._extract_variables(self.recorded_tasks),
+            'stats': {
+                'total_tasks': len(self.recorded_tasks),
+                'total_time': sum(t.get('estimated_time', 0) for t in self.recorded_tasks),
+                'success_rate': 100  # Initial
+            }
+        }
+
+        # Save
+        workflow_dir = Path.home() / '.crack' / 'workflows'
+        workflow_dir.mkdir(parents=True, exist_ok=True)
+
+        workflow_path = workflow_dir / f"{self.recording_name}.workflow.json"
+        workflow_path.write_text(json.dumps(workflow, indent=2))
+
+        print(DisplayManager.format_success(f"✓ Workflow saved: {self.recording_name}"))
+        print(f"  Location: {workflow_path}")
+        print(f"  Tasks: {len(self.recorded_tasks)}")
+
+        self.recording = False
+        self.recording_name = None
+        self.recorded_tasks = []
+
+    def _record_task(self, task):
+        """Record task to workflow"""
+        if not self.recording:
+            return
+
+        command = task.metadata.get('command')
+        if not command:
+            return
+
+        # Replace target-specific values with placeholders
+        command_template = self._templatize_command(command, self.profile.target)
+
+        recorded = {
+            'name': task.name,
+            'command': command_template,
+            'order': len(self.recorded_tasks) + 1,
+            'variables': self._find_variables(command_template),
+            'estimated_time': task.metadata.get('estimated_time', 60),
+            'tags': task.metadata.get('tags', [])
+        }
+
+        self.recorded_tasks.append(recorded)
+        print(f"  📝 Recorded: {task.name}")
+
+    def _templatize_command(self, command: str, target: str) -> str:
+        """Replace target-specific values with placeholders"""
+        import re
+
+        # Replace target IP
+        templatized = command.replace(target, '<TARGET>')
+
+        # Replace common paths with placeholders
+        templatized = re.sub(r'/usr/share/wordlists/[^\s]+', '<WORDLIST>', templatized)
+        templatized = re.sub(r'/tmp/[^\s]+', '<OUTPUT>', templatized)
+
+        # Replace ports
+        templatized = re.sub(r'\b(80|443|22|445|21|3306|1433|8080|3389)\b', '<PORT>', templatized)
+
+        # Replace common IPs (attacker IP)
+        templatized = re.sub(r'\b192\.168\.\d{1,3}\.\d{1,3}\b', '<LHOST>', templatized)
+        templatized = re.sub(r'\b10\.\d{1,3}\.\d{1,3}\.\d{1,3}\b', '<LHOST>', templatized)
+
+        return templatized
+
+    def _find_variables(self, command: str) -> List[str]:
+        """Find all variables in command template"""
+        import re
+        return list(set(re.findall(r'<([A-Z_]+)>', command)))
+
+    def _extract_variables(self, tasks: List[Dict]) -> Dict:
+        """Extract all variables used in workflow"""
+        variables = {}
+
+        for task in tasks:
+            for var in task.get('variables', []):
+                if var not in variables:
+                    variables[var] = {
+                        'description': self._get_variable_description(var),
+                        'example': self._get_variable_example(var),
+                        'required': True
+                    }
+
+        return variables
+
+    def _get_variable_description(self, var: str) -> str:
+        """Get description for variable"""
+        descriptions = {
+            'TARGET': 'Target IP or hostname',
+            'LHOST': 'Local/attacker IP address',
+            'LPORT': 'Local port for listener',
+            'PORT': 'Target port number',
+            'WORDLIST': 'Path to wordlist file',
+            'OUTPUT': 'Output file path',
+            'URL': 'Full URL',
+            'USERNAME': 'Username',
+            'PASSWORD': 'Password'
+        }
+        return descriptions.get(var, f'{var} value')
+
+    def _get_variable_example(self, var: str) -> str:
+        """Get example for variable"""
+        examples = {
+            'TARGET': '192.168.45.100',
+            'LHOST': '192.168.45.200',
+            'LPORT': '4444',
+            'PORT': '80',
+            'WORDLIST': '/usr/share/wordlists/dirb/common.txt',
+            'OUTPUT': '/tmp/output.txt',
+            'URL': 'http://192.168.45.100',
+            'USERNAME': 'admin',
+            'PASSWORD': 'password123'
+        }
+        return examples.get(var, 'value')
+
+    def _list_workflows(self):
+        """List all saved workflows"""
+        workflow_dir = Path.home() / '.crack' / 'workflows'
+        if not workflow_dir.exists():
+            print(DisplayManager.format_warning("No workflows found"))
+            return
+
+        workflow_files = list(workflow_dir.glob('*.workflow.json'))
+        if not workflow_files:
+            print(DisplayManager.format_warning("No workflows found"))
+            return
+
+        print(f"Saved Workflows ({len(workflow_files)}):\n")
+
+        for workflow_file in sorted(workflow_files):
+            try:
+                workflow = json.loads(workflow_file.read_text())
+                print(f"• {workflow['name']}")
+                print(f"  Description: {workflow.get('description', 'N/A')}")
+                print(f"  Tasks: {workflow['stats']['total_tasks']}")
+                print(f"  Estimated time: {workflow['stats']['total_time']}s")
+                print(f"  Created: {workflow.get('created', 'N/A')[:10]}")
+                print()
+            except Exception as e:
+                print(f"• {workflow_file.stem} (error loading: {e})")
+                print()
+
+    def _play_workflow(self, name: str):
+        """Replay workflow on current target"""
+        workflow_path = Path.home() / '.crack' / 'workflows' / f"{name}.workflow.json"
+
+        if not workflow_path.exists():
+            print(DisplayManager.format_error(f"Workflow not found: {name}"))
+            return
+
+        # Load workflow
+        try:
+            workflow = json.loads(workflow_path.read_text())
+        except Exception as e:
+            print(DisplayManager.format_error(f"Failed to load workflow: {e}"))
+            return
+
+        print(f"Workflow: {workflow['name']}")
+        print(f"Description: {workflow['description']}")
+        print(f"Tasks: {len(workflow['tasks'])}")
+        print()
+
+        # Collect variable values
+        print("Enter values for variables:")
+        variable_values = {}
+
+        for var_name, var_info in workflow.get('variables', {}).items():
+            prompt = f"  <{var_name}>"
+            if var_info.get('description'):
+                prompt += f" ({var_info['description']})"
+            if var_info.get('example'):
+                prompt += f" [e.g., {var_info['example']}]"
+            if var_info.get('default'):
+                prompt += f" [default: {var_info['default']}]"
+            prompt += ": "
+
+            value = input(prompt).strip()
+
+            if not value:
+                if var_info.get('default'):
+                    value = var_info['default']
+                elif var_info.get('required'):
+                    print(DisplayManager.format_error(f"<{var_name}> is required"))
+                    return
+
+            variable_values[var_name] = value
+
+        # Confirm
+        print(f"\nReady to execute {len(workflow['tasks'])} tasks")
+        confirm = input(DisplayManager.format_confirmation("Execute workflow?", default='Y'))
+
+        if not InputProcessor.parse_confirmation(confirm, default='Y'):
+            print("Cancelled")
+            return
+
+        # Execute tasks
+        print("\nExecuting workflow...\n")
+
+        for task_def in workflow['tasks']:
+            # Substitute variables
+            command = task_def['command']
+            for var, value in variable_values.items():
+                command = command.replace(f'<{var}>', value)
+
+            print(f"[{task_def['order']}/{len(workflow['tasks'])}] {task_def['name']}")
+            print(f"  Command: {command}")
+
+            # Execute
+            import subprocess
+            result = subprocess.run(command, shell=True, capture_output=True, text=True)
+
+            if result.returncode == 0:
+                print(f"  ✓ Success")
+            else:
+                print(f"  ✗ Failed (exit code: {result.returncode})")
+
+            # Show output if available
+            if result.stdout:
+                print(f"  Output: {result.stdout[:200]}")
+
+            print()
+
+        print(DisplayManager.format_success("Workflow complete!"))
+        self.last_action = f"Executed workflow: {name}"
+
+    def _delete_workflow(self, name: str):
+        """Delete a workflow"""
+        workflow_path = Path.home() / '.crack' / 'workflows' / f"{name}.workflow.json"
+
+        if not workflow_path.exists():
+            print(DisplayManager.format_error(f"Workflow not found: {name}"))
+            return
+
+        # Confirm deletion
+        confirm = input(DisplayManager.format_confirmation(f"Delete workflow '{name}'?", default='N'))
+
+        if not InputProcessor.parse_confirmation(confirm, default='N'):
+            print("Cancelled")
+            return
+
+        workflow_path.unlink()
+        print(DisplayManager.format_success(f"Deleted workflow: {name}"))
+
+    def _export_workflow(self, name: str):
+        """Export workflow to share"""
+        workflow_path = Path.home() / '.crack' / 'workflows' / f"{name}.workflow.json"
+
+        if not workflow_path.exists():
+            print(DisplayManager.format_error(f"Workflow not found: {name}"))
+            return
+
+        # Load workflow
+        workflow = json.loads(workflow_path.read_text())
+
+        # Export location
+        export_path = input("Export path [./workflow_export.json]: ").strip() or "./workflow_export.json"
+
+        # Write to export location
+        Path(export_path).write_text(json.dumps(workflow, indent=2))
+
+        print(DisplayManager.format_success(f"Exported to: {export_path}"))
+        print(f"\nShare this file with teammates to replay the workflow on other targets.")
+
+    def handle_smart_suggest(self):
+        """AI-lite suggestions based on current state (pattern matching)"""
+        from .smart_suggest_handler import get_suggestion_rules, create_suggestion_tasks
+
+        print(DisplayManager.format_info("Smart Suggest"))
+        print("=" * 50)
+        print()
+
+        print("Analyzing current state...")
+        print()
+
+        # Load suggestion rules
+        rules = get_suggestion_rules(self.profile.target)
+
+        # Evaluate rules
+        suggestions = []
+        for rule in rules:
+            try:
+                if rule['condition'](self.profile):
+                    suggestions.append(rule)
+            except Exception:
+                # Skip rules that fail evaluation
+                continue
+
+        if not suggestions:
+            print(DisplayManager.format_success("✓ No gaps found - enumeration looks comprehensive"))
+            print("\nTips:")
+            print("  - Review findings for exploitation opportunities")
+            print("  - Check for credential reuse")
+            print("  - Consider privilege escalation paths")
+            return
+
+        # Sort by priority
+        priority_order = {'critical': 0, 'high': 1, 'medium': 2, 'low': 3}
+        suggestions.sort(key=lambda r: priority_order.get(r['priority'], 99))
+
+        # Display suggestions
+        print(f"Found {len(suggestions)} suggestion(s):\n")
+
+        for i, rule in enumerate(suggestions, 1):
+            priority_icon = {
+                'critical': '🔴',
+                'high': '🟠',
+                'medium': '🟡',
+                'low': '🟢'
+            }.get(rule['priority'], '⚪')
+
+            print(f"{i}. {priority_icon} {rule['suggestion']}")
+            print(f"   Command: {rule['command']}")
+            print(f"   Reasoning: {rule['reasoning']}")
+            print()
+
+        # Offer to create tasks
+        create = input(DisplayManager.format_confirmation("Create tasks for suggestions?", default='Y'))
+
+        if InputProcessor.parse_confirmation(create, default='Y'):
+            created = create_suggestion_tasks(self.profile, suggestions)
+            print(f"\n✓ Created {created} tasks from suggestions")
+
+        self.last_action = f"Generated {len(suggestions)} suggestions"
