@@ -99,10 +99,211 @@ class SSHPlugin(ServicePlugin):
             }
         })
 
-        # TASK 2: SSH Configuration Audit
+        # TASK 2: NSE SSH Enumeration Scripts
+        tasks['children'].append({
+            'id': f'ssh-nse-enum-{port}',
+            'name': 'NSE SSH Enumeration',
+            'type': 'parent',
+            'children': [
+                {
+                    'id': f'ssh2-enum-algos-{port}',
+                    'name': 'SSH Algorithm Enumeration',
+                    'type': 'command',
+                    'metadata': {
+                        'command': f'nmap --script ssh2-enum-algos -p{port} {target}',
+                        'description': 'Enumerate supported SSH algorithms (encryption, MAC, compression, key exchange)',
+                        'tags': ['OSCP:HIGH', 'NSE', 'QUICK_WIN'],
+                        'flag_explanations': {
+                            '--script ssh2-enum-algos': 'NSE script to enumerate SSH2 algorithms',
+                            f'-p{port}': f'Target SSH port {port}'
+                        },
+                        'success_indicators': [
+                            'Encryption algorithms listed (aes128-ctr, aes256-ctr, etc.)',
+                            'MAC algorithms shown (hmac-sha1, hmac-sha2-256, etc.)',
+                            'Key exchange methods displayed (diffie-hellman-group14-sha1, etc.)',
+                            'Compression methods listed (none, zlib)'
+                        ],
+                        'failure_indicators': [
+                            'Connection refused',
+                            'SSH version too old (SSHv1 only)',
+                            'Firewall blocking'
+                        ],
+                        'next_steps': [
+                            'Identify weak algorithms (CBC ciphers, MD5/SHA1 MACs)',
+                            'Check for deprecated key exchange (diffie-hellman-group1-sha1)',
+                            'Research CVEs for specific algorithm combinations'
+                        ],
+                        'alternatives': [
+                            f'ssh-audit {target} -p{port}',
+                            f'ssh -vv {target} -p{port} 2>&1 | grep "kex\\|cipher\\|mac"'
+                        ],
+                        'notes': 'Chapter 9: NSE ssh2-enum-algos provides comprehensive algorithm enumeration. Look for weak ciphers (3des-cbc, arcfour) and MACs (hmac-md5, hmac-sha1-96).'
+                    }
+                },
+                {
+                    'id': f'ssh-hostkey-{port}',
+                    'name': 'SSH Host Key Extraction',
+                    'type': 'command',
+                    'metadata': {
+                        'command': f'nmap --script ssh-hostkey --script-args ssh_hostkey=full -p{port} {target}',
+                        'description': 'Extract SSH host keys and fingerprints (all key types)',
+                        'tags': ['OSCP:MEDIUM', 'NSE', 'QUICK_WIN'],
+                        'flag_explanations': {
+                            '--script ssh-hostkey': 'NSE script to extract SSH host public keys',
+                            '--script-args ssh_hostkey=full': 'Extract full key (not just fingerprint)',
+                            f'-p{port}': f'Target SSH port {port}'
+                        },
+                        'success_indicators': [
+                            'RSA host key extracted',
+                            'ECDSA host key extracted',
+                            'ED25519 host key extracted',
+                            'Key fingerprints (SHA256, MD5) displayed'
+                        ],
+                        'failure_indicators': [
+                            'No keys extracted',
+                            'Connection timeout',
+                            'SSH version incompatible'
+                        ],
+                        'next_steps': [
+                            'Check key strength (RSA < 2048 bits = weak)',
+                            'Compare keys against known compromised databases',
+                            'Save keys for MITM scenarios'
+                        ],
+                        'alternatives': [
+                            f'ssh-keyscan -t rsa,ecdsa,ed25519 {target} -p{port}',
+                            f'ssh-keygen -l -f <(ssh-keyscan {target} 2>/dev/null)'
+                        ],
+                        'notes': 'Chapter 9: ssh-hostkey extracts all available host key types. Useful for identifying key algorithm support and detecting weak keys.'
+                    }
+                },
+                {
+                    'id': f'ssh-auth-methods-nse-{port}',
+                    'name': 'SSH Authentication Methods (NSE)',
+                    'type': 'command',
+                    'metadata': {
+                        'command': f'nmap --script ssh-auth-methods --script-args="ssh.user=root" -p{port} {target}',
+                        'description': 'Enumerate SSH authentication methods for specific user',
+                        'tags': ['OSCP:HIGH', 'NSE', 'ENUM'],
+                        'flag_explanations': {
+                            '--script ssh-auth-methods': 'NSE script to enumerate auth methods',
+                            '--script-args ssh.user=root': 'Test with root user (most privileged)',
+                            f'-p{port}': f'Target SSH port {port}'
+                        },
+                        'success_indicators': [
+                            'Supported methods listed (publickey, password, keyboard-interactive)',
+                            'None authentication available (rare)',
+                            'Method preferences identified'
+                        ],
+                        'failure_indicators': [
+                            'Script execution failed',
+                            'Connection refused',
+                            'User-specific auth config blocks enumeration'
+                        ],
+                        'next_steps': [
+                            'If password enabled: prepare for brute-force (last resort)',
+                            'If publickey only: test known SSH keys',
+                            'If keyboard-interactive: potential MFA bypass scenarios'
+                        ],
+                        'alternatives': [
+                            f'ssh -v {target} -p{port} 2>&1 | grep "Authentications that can continue"',
+                            f'ssh -o PreferredAuthentications=password -v {target} -p{port}'
+                        ],
+                        'notes': 'Chapter 9: NSE ssh-auth-methods provides clean enumeration. Test multiple users (admin, test, backup) for different auth configs.'
+                    }
+                },
+                {
+                    'id': f'sshv1-{port}',
+                    'name': 'SSH Version 1 Detection',
+                    'type': 'command',
+                    'metadata': {
+                        'command': f'nmap --script sshv1 -p{port} {target}',
+                        'description': 'Detect if server supports deprecated SSH Protocol 1 (CVE-1999-0662)',
+                        'tags': ['OSCP:MEDIUM', 'NSE', 'VULN_SCAN'],
+                        'flag_explanations': {
+                            '--script sshv1': 'NSE script to test for SSHv1 support',
+                            f'-p{port}': f'Target SSH port {port}'
+                        },
+                        'success_indicators': [
+                            'Server supports SSHv1 (VULNERABLE)',
+                            'SSHv1 explicitly disabled (secure)'
+                        ],
+                        'failure_indicators': [
+                            'Unable to determine',
+                            'Connection error'
+                        ],
+                        'next_steps': [
+                            'If SSHv1 enabled: CRITICAL vulnerability - protocol has known weaknesses',
+                            'Research SSHv1 exploits (session key recovery, insertion attacks)',
+                            'Document for report (HIGH severity finding)'
+                        ],
+                        'alternatives': [
+                            f'ssh -1 {target} -p{port} (manual SSHv1 connection test)',
+                            f'telnet {target} {port} (check banner for SSHv1 support)'
+                        ],
+                        'notes': 'Chapter 9: SSHv1 is deprecated and insecure (CVE-1999-0662). Any SSHv1 support is HIGH severity. Modern OpenSSH removes it entirely.'
+                    }
+                },
+                {
+                    'id': f'ssh-run-{port}',
+                    'name': 'SSH Command Execution Test',
+                    'type': 'manual',
+                    'metadata': {
+                        'description': 'Test SSH command execution with NSE ssh-run script (requires valid credentials)',
+                        'tags': ['MANUAL', 'OSCP:LOW', 'NSE', 'POST_AUTH'],
+                        'notes': f'''SSH Command Execution (NSE ssh-run):
+
+Requires valid credentials discovered earlier.
+
+Basic usage:
+  nmap --script ssh-run --script-args="ssh-run.cmd='id',ssh-run.username='user',ssh-run.password='pass'" -p{port} {target}
+
+Script arguments:
+  ssh-run.cmd         - Command to execute (e.g., 'whoami', 'uname -a')
+  ssh-run.username    - SSH username
+  ssh-run.password    - SSH password
+  ssh-run.keyfile     - Private key file path (alternative to password)
+
+Examples:
+  System info:
+    --script-args="ssh-run.cmd='uname -a',ssh-run.username=admin,ssh-run.password=password"
+
+  Check sudo:
+    --script-args="ssh-run.cmd='sudo -l',ssh-run.username=user,ssh-run.password=pass"
+
+  File enumeration:
+    --script-args="ssh-run.cmd='ls -la /home',ssh-run.username=user,ssh-run.password=pass"
+
+Use cases:
+  - Quick command execution without interactive shell
+  - Automated post-exploitation enumeration
+  - Testing sudo privileges remotely
+  - File system enumeration
+
+OSCP: Use after finding credentials to quickly enumerate target without full shell.
+                        ''',
+                        'success_indicators': [
+                            'Command executes successfully',
+                            'Output returned in script results',
+                            'No authentication errors'
+                        ],
+                        'failure_indicators': [
+                            'Authentication failed',
+                            'Command execution blocked',
+                            'Insufficient privileges'
+                        ],
+                        'alternatives': [
+                            f'ssh user@{target} -p{port} "command"',
+                            'Use full SSH session for interactive enumeration'
+                        ]
+                    }
+                }
+            ]
+        })
+
+        # TASK 3: SSH Configuration Audit (3rd party tool)
         tasks['children'].append({
             'id': f'ssh-audit-{port}',
-            'name': 'SSH Configuration Audit',
+            'name': 'SSH Configuration Audit (ssh-audit)',
             'type': 'command',
             'metadata': {
                 'command': f'ssh-audit {target} -p {port}',
@@ -132,86 +333,11 @@ class SSHPlugin(ServicePlugin):
                     f'nmap --script ssh2-enum-algos -p{port} {target}',
                     f'nmap --script ssh-auth-methods --script-args="ssh.user=root" -p{port} {target}'
                 ],
-                'notes': 'Install: git clone https://github.com/jtesta/ssh-audit.git. Identifies weak ciphers, key exchange algorithms, and MAC algorithms.'
+                'notes': 'Install: git clone https://github.com/jtesta/ssh-audit.git. Identifies weak ciphers, key exchange algorithms, and MAC algorithms. Complements NSE scripts with detailed recommendations.'
             }
         })
 
-        # TASK 3: SSH Public Key Extraction
-        tasks['children'].append({
-            'id': f'ssh-hostkey-{port}',
-            'name': 'Extract SSH Host Key',
-            'type': 'command',
-            'metadata': {
-                'command': f'ssh-keyscan -t rsa {target} -p {port}',
-                'description': 'Extract server public key (useful for MitM attacks, key analysis)',
-                'tags': ['OSCP:MEDIUM', 'QUICK_WIN'],
-                'flag_explanations': {
-                    '-t rsa': 'Request RSA key type (most common)',
-                    '-p': f'Target port {port}',
-                    target: 'Target hostname/IP'
-                },
-                'success_indicators': [
-                    'RSA public key returned',
-                    'Key fingerprint displayed',
-                    'No errors'
-                ],
-                'failure_indicators': [
-                    'Connection refused',
-                    'No keys returned',
-                    'Timeout'
-                ],
-                'next_steps': [
-                    'Analyze key strength (check key size)',
-                    'Compare with known compromised keys',
-                    'Save for MitM attack scenarios'
-                ],
-                'alternatives': [
-                    f'nmap --script ssh-hostkey --script-args ssh_hostkey=full -p{port} {target}',
-                    f'ssh-keygen -l -f <(ssh-keyscan {target} 2>/dev/null)'
-                ],
-                'notes': 'Weak keys or keys matching known compromised sets can indicate vulnerability.'
-            }
-        })
-
-        # TASK 4: Authentication Methods Check
-        tasks['children'].append({
-            'id': f'ssh-auth-methods-{port}',
-            'name': 'Check Authentication Methods',
-            'type': 'command',
-            'metadata': {
-                'command': f'nmap --script ssh-auth-methods --script-args="ssh.user=root" -p{port} {target}',
-                'description': 'Identify enabled authentication methods (password, publickey, keyboard-interactive)',
-                'tags': ['OSCP:HIGH', 'QUICK_WIN'],
-                'flag_explanations': {
-                    '--script ssh-auth-methods': 'NSE script to enumerate auth methods',
-                    '--script-args': 'Pass arguments to script',
-                    'ssh.user=root': 'Test as root user (most privileged)',
-                    f'-p{port}': f'Target SSH port'
-                },
-                'success_indicators': [
-                    'Authentication methods listed',
-                    'password method available',
-                    'publickey method shown'
-                ],
-                'failure_indicators': [
-                    'Script execution failed',
-                    'No methods returned',
-                    'Connection refused'
-                ],
-                'next_steps': [
-                    'If password enabled: prepare for brute-force (last resort)',
-                    'If publickey only: test known SSH keys',
-                    'If keyboard-interactive: may allow multi-factor bypass'
-                ],
-                'alternatives': [
-                    f'ssh -v {target} -p{port} 2>&1 | grep "Authentications that can continue"',
-                    f'ssh -o PreferredAuthentications=password -v {target} -p{port}'
-                ],
-                'notes': 'High-security environments use publickey only. Password method = potential brute-force vector.'
-            }
-        })
-
-        # TASK 5: User Enumeration (CVE-2018-15473)
+        # TASK 4: User Enumeration (CVE-2018-15473)
         if 'openssh' in product or 'openssh' in version.lower():
             # Extract version number if possible
             version_vulnerable = False
