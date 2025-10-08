@@ -269,20 +269,29 @@ class DecisionTreeFactory:
 
     @staticmethod
     def create_discovery_tree() -> DecisionTree:
-        """Create discovery phase decision tree"""
-        # Root node - no ports discovered
-        root_choices = [
+        """Create discovery phase decision tree - DYNAMIC from scan profiles"""
+        from ..core.scan_profiles import get_profiles_for_phase
+
+        # Load available scan profiles dynamically
+        profiles = get_profiles_for_phase('discovery', 'lab')
+
+        # Convert profiles to choices
+        root_choices = []
+        for profile in profiles:
+            root_choices.append(Choice(
+                id=f'scan-{profile["id"]}',
+                label=profile['name'],
+                description=f"{profile['use_case']} ({profile['estimated_time']})",
+                action='execute_scan'  # Generic handler
+            ))
+
+        # Add non-scan options
+        root_choices.extend([
             Choice(
-                id='quick-scan',
-                label='Run quick port scan (top 1000)',
-                description='1-2 minutes, finds 90% of ports',
-                action='execute_quick_scan'
-            ),
-            Choice(
-                id='full-scan',
-                label='Run full port scan (all 65535)',
-                description='5-10 minutes, comprehensive',
-                action='execute_full_scan'
+                id='custom-scan',
+                label='Custom scan command',
+                description='Enter your own nmap command',
+                action='execute_custom_scan'
             ),
             Choice(
                 id='import-scan',
@@ -296,11 +305,11 @@ class DecisionTreeFactory:
                 description='Manually specify ports',
                 action='manual_port_entry'
             )
-        ]
+        ])
 
         root = DecisionNode(
             node_id='discovery-root',
-            question='No ports discovered yet. What would you like to do?',
+            question='No ports discovered yet. Choose scan strategy:',
             choices=root_choices,
             required_context={'has_ports': False}
         )

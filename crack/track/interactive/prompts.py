@@ -92,21 +92,33 @@ class PromptBuilder:
 
     @classmethod
     def _get_discovery_choices(cls, profile) -> List[Dict[str, Any]]:
-        """Get discovery phase specific choices"""
+        """Get discovery phase specific choices - DYNAMIC from scan profiles"""
+        from ..core.scan_profiles import get_profiles_for_phase
+
         choices = []
 
         # Check if ports discovered
         if not profile.ports:
-            choices.append({
-                'id': 'quick-scan',
-                'label': 'Run quick port scan',
-                'description': 'Scan top 1000 ports (1-2 minutes)'
-            })
+            # Load scan profiles dynamically for discovery phase
+            environment = profile.metadata.get('environment', 'lab') if hasattr(profile, 'metadata') else 'lab'
+            available_profiles = get_profiles_for_phase('discovery', environment)
 
+            # Add each profile as a choice
+            for scan_profile in available_profiles:
+                profile_id = scan_profile['id']
+                choices.append({
+                    'id': f'scan-{profile_id}',
+                    'label': scan_profile['name'],
+                    'description': f"{scan_profile['use_case']} ({scan_profile['estimated_time']})",
+                    'scan_profile': scan_profile,  # Attach full profile for handler
+                    'tags': scan_profile.get('tags', [])
+                })
+
+            # Always offer custom scan option
             choices.append({
-                'id': 'full-scan',
-                'label': 'Run full port scan',
-                'description': 'Scan all 65535 ports (5-10 minutes)'
+                'id': 'custom-scan',
+                'label': 'Custom scan command',
+                'description': 'Enter your own nmap command'
             })
         else:
             # Ports found, suggest service scan
