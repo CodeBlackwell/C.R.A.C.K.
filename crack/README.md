@@ -1,4 +1,7 @@
-# C.R.A.C.K. - Comprehensive Recon & Attack Creation Kit
+# 🎯 C.R.A.C.K. - Comprehensive Recon & Attack Creation Kit
+
+**C.R.A.C.K.**
+**C**omprehensive **R**econ & **A**ttack **C**reation **K**it
 
 A professional penetration testing toolkit designed for OSCP preparation and web application security testing.
 
