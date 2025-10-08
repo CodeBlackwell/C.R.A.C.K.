@@ -42,6 +42,13 @@ class ShortcutHandler:
             'tf': ('Task filter', 'task_filter'),
             'qn': ('Quick note', 'quick_note'),
             'tt': ('Time tracker dashboard', 'time_tracker'),
+            'pd': ('Progress dashboard', 'progress_dashboard'),
+            'qx': ('Quick export', 'quick_export'),
+            'fc': ('Finding correlator', 'finding_correlator'),
+            'qe': ('Quick execute', 'quick_execute'),
+            'ss': ('Session snapshot', 'session_snapshot'),
+            'tr': ('Task retry', 'task_retry'),
+            'be': ('Batch execute tasks', 'batch_execute'),
             'b': ('Go back', 'go_back'),
             'h': ('Show help', 'show_help'),
             'q': ('Quit and save', 'quit')
@@ -423,3 +430,31 @@ class ShortcutHandler:
     def time_tracker(self):
         """Time tracking dashboard (shortcut: tt)"""
         self.session.handle_time_tracker()
+
+    def progress_dashboard(self):
+        """Progress overview (shortcut: pd)"""
+        self.session.handle_progress_dashboard()
+
+    def quick_export(self):
+        """Quick export to file/clipboard (shortcut: qx)"""
+        self.session.handle_quick_export()
+
+    def finding_correlator(self):
+        """Finding correlation analysis (shortcut: fc)"""
+        self.session.handle_finding_correlator()
+
+    def quick_execute(self):
+        """Quick execute command without task tracking (shortcut: qe)"""
+        self.session.handle_quick_execute()
+
+    def session_snapshot(self):
+        """Session snapshot manager (shortcut: ss)"""
+        self.session.handle_session_snapshot()
+
+    def task_retry(self):
+        """Retry failed tasks with command editing (shortcut: tr)"""
+        self.session.handle_task_retry()
+
+    def batch_execute(self):
+        """Batch execute tasks with dependency resolution (shortcut: be)"""
+        self.session.handle_batch_execute()

@@ -11,8 +11,9 @@ Core of the interactive CLI system:
 
 import os
 import json
+import time
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from datetime import datetime
 
 from ..core.state import TargetProfile
@@ -1494,3 +1495,1680 @@ class InteractiveSession:
             for vuln in port_info.common_vulns:
                 print(f"  🔴 {vuln}")
             print()
+
+    def handle_quick_execute(self, command: str = None):
+        """
+        Execute shell command without task creation (shortcut: qe)
+
+        Args:
+            command: Optional command to execute directly
+        """
+        print(DisplayManager.format_info("Quick Execute"))
+        print("=" * 50)
+
+        # Get command
+        if not command:
+            command = input("\nEnter command to execute (or 'c' to cancel): ").strip()
+
+        if command.lower() == 'c':
+            print("Cancelled")
+            return
+
+        # Validate
+        if not self._validate_command(command):
+            return
+
+        # Show command
+        print(f"\nCommand: {command}\n")
+
+        # Confirm based on mode
+        mode = self.profile.metadata.get('confirmation_mode', 'smart')
+        if mode != 'never':
+            print(DisplayManager.format_warning("This will execute immediately without task tracking."))
+            confirm = input(DisplayManager.format_confirmation("Execute?", default='Y'))
+            if not InputProcessor.parse_confirmation(confirm, default='Y'):
+                print("Cancelled")
+                return
+
+        # Execute
+        exit_code, stdout, stderr = self._execute_command(command)
+
+        # Show result
+        if exit_code == 0:
+            print(f"\n{DisplayManager.format_success(f'Command completed (exit code: {exit_code})')}")
+        else:
+            print(f"\n{DisplayManager.format_error(f'Command failed (exit code: {exit_code})')}")
+            if stderr:
+                print(f"Error: {stderr}")
+
+        # Optional logging
+        self._log_execution(command, exit_code, stdout, stderr)
+
+        self.last_action = f"Quick execute: {command[:50]}"
+
+    def _execute_command(self, command: str) -> tuple:
+        """
+        Execute command and return (exit_code, output, stderr)
+
+        Args:
+            command: Shell command to execute
+
+        Returns:
+            Tuple of (exit_code, stdout, stderr)
+        """
+        import subprocess
+
+        try:
+            print(DisplayManager.format_info("Executing..."))
+            print("─" * 50)
+
+            # Execute with real-time output
+            process = subprocess.Popen(
+                command,
+                shell=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                bufsize=1  # Line buffered
+            )
+
+            # Capture output
+            stdout_lines = []
+            stderr_lines = []
+
+            # Read stdout in real-time
+            for line in process.stdout:
+                print(line, end='')
+                stdout_lines.append(line)
+
+            # Wait for completion
+            process.wait()
+
+            # Read any stderr
+            stderr = process.stderr.read()
+            if stderr:
+                stderr_lines.append(stderr)
+                print(stderr, end='')
+
+            print("─" * 50)
+
+            exit_code = process.returncode
+            stdout_text = ''.join(stdout_lines)
+            stderr_text = ''.join(stderr_lines)
+
+            return (exit_code, stdout_text, stderr_text)
+
+        except KeyboardInterrupt:
+            print("\n\n⚠ Command interrupted by user")
+            process.terminate()
+            return (-1, "", "Interrupted by user")
+        except Exception as e:
+            print(f"\n✗ Execution error: {e}")
+            return (-1, "", str(e))
+
+    def _log_execution(self, command: str, exit_code: int, output: str, stderr: str):
+        """
+        Optionally log execution to profile notes
+
+        Args:
+            command: Executed command
+            exit_code: Exit code from command
+            output: stdout from command
+            stderr: stderr from command
+        """
+        confirm = input(DisplayManager.format_confirmation("Log to profile notes?", default='N'))
+
+        if not InputProcessor.parse_confirmation(confirm, default='N'):
+            return
+
+        # Create note
+        timestamp = datetime.now().isoformat()
+        note = f"""Quick Execute: {command}
+Exit Code: {exit_code}
+Output: {output[:500]}{"..." if len(output) > 500 else ""}
+{"Error: " + stderr if stderr else ""}
+"""
+
+        self.profile.add_note(
+            note=note,
+            source='quick-execute'
+        )
+        self.profile.save()
+
+        print(DisplayManager.format_success("Command logged to notes"))
+
+    def _validate_command(self, command: str) -> bool:
+        """
+        Basic command validation (optional safety check)
+
+        Args:
+            command: Command to validate
+
+        Returns:
+            True if command is safe to execute
+        """
+        if not command or not command.strip():
+            print(DisplayManager.format_error("Command cannot be empty"))
+            return False
+
+        # Optional: warn about dangerous commands
+        dangerous_patterns = ['rm -rf /', 'dd if=/dev/zero', 'mkfs', ':(){']
+        for pattern in dangerous_patterns:
+            if pattern in command:
+                print(DisplayManager.format_warning(f"⚠ Potentially destructive command detected: {pattern}"))
+                confirm = input("Are you sure? [y/N]: ")
+                if not InputProcessor.parse_confirmation(confirm, default='N'):
+                    return False
+
+        return True
+
+    def handle_quick_export(self):
+        """Export current view/data to file or clipboard (shortcut: qx)"""
+        print(DisplayManager.format_info("Quick Export"))
+        print("=" * 50)
+
+        # Show export menu
+        choices = [
+            {'id': 'status', 'label': 'Full status report (markdown)'},
+            {'id': 'tasks', 'label': 'Task tree (text tree format)'},
+            {'id': 'findings', 'label': 'Findings only (markdown list)'},
+            {'id': 'credentials', 'label': 'Credentials only (markdown table)'},
+            {'id': 'notes', 'label': 'Notes only (markdown list)'},
+            {'id': 'ports', 'label': 'Port scan results (text)'},
+            {'id': 'profile', 'label': 'Full profile (JSON)'}
+        ]
+
+        print("\nSelect what to export:")
+        for i, choice in enumerate(choices, 1):
+            print(f"  {i}. {choice['label']}")
+
+        # Get selection
+        user_input = input("\nChoice [1-7]: ").strip()
+        if not user_input.isdigit() or int(user_input) < 1 or int(user_input) > len(choices):
+            print("Invalid choice")
+            return
+
+        selected = choices[int(user_input) - 1]
+        export_type = selected['id']
+
+        # Get export destination
+        has_clipboard = self._has_clipboard()
+
+        print("\nExport to:")
+        if has_clipboard:
+            print("  [c] Clipboard")
+        print("  [f] File (default)")
+        if has_clipboard:
+            print("  [b] Both")
+        print("  [x] Cancel")
+
+        dest = input("\nDestination [f]: ").strip().lower() or 'f'
+
+        if dest == 'x':
+            print("Cancelled")
+            return
+
+        # Get format
+        if export_type != 'profile':  # Profile is always JSON
+            print("\nExport format:")
+            print("  [t] Plain text")
+            print("  [m] Markdown (default)")
+            print("  [j] JSON")
+
+            format_choice = input("\nFormat [m]: ").strip().lower() or 'm'
+            format_map = {'t': 'text', 'm': 'markdown', 'j': 'json'}
+            format_type = format_map.get(format_choice, 'markdown')
+        else:
+            format_type = 'json'
+
+        # Generate content
+        print(f"\nExporting {export_type} to {format_type}...")
+
+        content = self._generate_export_content(export_type, format_type)
+
+        if not content:
+            print(DisplayManager.format_warning(f"No {export_type} to export"))
+            return
+
+        # Export to clipboard
+        if dest in ['c', 'b'] and has_clipboard:
+            if self._copy_to_clipboard(content):
+                print(DisplayManager.format_success("✓ Copied to clipboard"))
+            else:
+                print(DisplayManager.format_warning("✗ Clipboard copy failed"))
+
+        # Export to file
+        if dest in ['f', 'b']:
+            ext_map = {'text': 'txt', 'markdown': 'md', 'json': 'json'}
+            ext = ext_map.get(format_type, 'txt')
+
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            filename = f"{export_type}_{timestamp}.{ext}"
+
+            export_path = self._get_export_dir() / filename
+            export_path.write_text(content)
+
+            print(DisplayManager.format_success(f"✓ Exported to: {export_path}"))
+            print(f"  Size: {len(content)} bytes")
+
+            # Offer to view
+            view = input("\nView file? [y/N]: ").strip().lower()
+            if view == 'y':
+                print("\n" + "─" * 50)
+                print(content)
+                print("─" * 50)
+
+        self.last_action = f"Exported {export_type}"
+
+    def _get_export_dir(self) -> Path:
+        """Get export directory for current target"""
+        export_base = Path.home() / '.crack' / 'exports'
+        target_dir = export_base / self.target
+        target_dir.mkdir(parents=True, exist_ok=True)
+        return target_dir
+
+    def _has_clipboard(self) -> bool:
+        """Check if clipboard tools available"""
+        import shutil
+        return shutil.which('xclip') is not None or shutil.which('xsel') is not None
+
+    def _copy_to_clipboard(self, content: str) -> bool:
+        """Copy content to clipboard"""
+        import subprocess
+        import shutil
+
+        try:
+            # Try xclip first
+            if shutil.which('xclip'):
+                subprocess.run(
+                    ['xclip', '-selection', 'clipboard'],
+                    input=content,
+                    text=True,
+                    check=True
+                )
+                return True
+            # Fallback to xsel
+            elif shutil.which('xsel'):
+                subprocess.run(
+                    ['xsel', '--clipboard', '--input'],
+                    input=content,
+                    text=True,
+                    check=True
+                )
+                return True
+        except subprocess.CalledProcessError:
+            return False
+
+        return False
+
+    def _generate_export_content(self, export_type: str, format_type: str) -> str:
+        """Generate export content based on type and format"""
+        if export_type == 'status':
+            return self._format_status(format_type)
+        elif export_type == 'tasks':
+            return self._format_task_tree(format_type)
+        elif export_type == 'findings':
+            return self._format_findings(format_type)
+        elif export_type == 'credentials':
+            return self._format_credentials(format_type)
+        elif export_type == 'notes':
+            return self._format_notes(format_type)
+        elif export_type == 'ports':
+            return self._format_ports(format_type)
+        elif export_type == 'profile':
+            return json.dumps(self.profile.to_dict(), indent=2)
+
+        return ""
+
+    def _format_status(self, format_type: str = 'markdown') -> str:
+        """Format full status report"""
+        from ..formatters.console import ConsoleFormatter
+        from ..recommendations.engine import RecommendationEngine
+
+        recommendations = RecommendationEngine.get_recommendations(self.profile)
+
+        if format_type == 'json':
+            return json.dumps({
+                'profile': self.profile.to_dict(),
+                'recommendations': recommendations
+            }, indent=2)
+
+        else:  # text/markdown
+            return ConsoleFormatter.format_profile(self.profile, recommendations)
+
+    def _format_task_tree(self, format_type: str = 'text') -> str:
+        """Format task tree for export"""
+        if format_type == 'json':
+            return json.dumps(self.profile.task_tree.to_dict(), indent=2)
+
+        else:  # text/markdown (same tree format)
+            from ..formatters.console import ConsoleFormatter
+            return ConsoleFormatter.format_task_tree(self.profile.task_tree)
+
+    def _format_findings(self, format_type: str = 'markdown') -> str:
+        """Format findings for export"""
+        if format_type == 'json':
+            return json.dumps(self.profile.findings, indent=2)
+
+        elif format_type == 'markdown':
+            output = f"# Findings - {self.profile.target}\n\n"
+            output += f"Exported: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n"
+
+            if not self.profile.findings:
+                output += "No findings documented yet.\n"
+                return output
+
+            for i, finding in enumerate(self.profile.findings, 1):
+                output += f"## {i}. {finding.get('type', 'Finding').title()}\n\n"
+                output += f"**Description**: {finding['description']}\n\n"
+                output += f"**Source**: {finding['source']}\n\n"
+                output += f"**Timestamp**: {finding['timestamp']}\n\n"
+                if 'port' in finding:
+                    output += f"**Port**: {finding['port']}\n\n"
+                output += "---\n\n"
+
+            return output
+
+        else:  # text
+            output = f"Findings - {self.profile.target}\n"
+            output += "=" * 50 + "\n\n"
+
+            for i, finding in enumerate(self.profile.findings, 1):
+                output += f"{i}. [{finding.get('type', 'Finding')}] {finding['description']}\n"
+                output += f"   Source: {finding['source']}\n"
+                output += f"   Time: {finding['timestamp']}\n\n"
+
+            return output
+
+    def _format_credentials(self, format_type: str = 'markdown') -> str:
+        """Format credentials for export"""
+        if format_type == 'json':
+            return json.dumps(self.profile.credentials, indent=2)
+
+        elif format_type == 'markdown':
+            output = f"# Credentials - {self.profile.target}\n\n"
+            output += f"Exported: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n"
+
+            if not self.profile.credentials:
+                output += "No credentials documented yet.\n"
+                return output
+
+            output += "| Username | Password | Service | Port | Source |\n"
+            output += "|----------|----------|---------|------|--------|\n"
+
+            for cred in self.profile.credentials:
+                username = cred.get('username', 'N/A')
+                password = cred.get('password') or 'N/A'
+                service = cred.get('service', 'N/A')
+                port = cred.get('port', 'N/A')
+                source = cred.get('source', 'N/A')
+                output += f"| {username} | {password} | {service} | {port} | {source} |\n"
+
+            return output
+
+        else:  # text
+            output = f"Credentials - {self.profile.target}\n"
+            output += "=" * 50 + "\n\n"
+
+            for i, cred in enumerate(self.profile.credentials, 1):
+                output += f"{i}. {cred.get('username', 'N/A')} / {cred.get('password', 'N/A')}\n"
+                output += f"   Service: {cred.get('service', 'N/A')}\n"
+                output += f"   Port: {cred.get('port', 'N/A')}\n"
+                output += f"   Source: {cred.get('source', 'N/A')}\n\n"
+
+            return output
+
+    def _format_notes(self, format_type: str = 'markdown') -> str:
+        """Format notes for export"""
+        if format_type == 'json':
+            return json.dumps(self.profile.notes, indent=2)
+
+        elif format_type == 'markdown':
+            output = f"# Notes - {self.profile.target}\n\n"
+            output += f"Exported: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n"
+
+            if not self.profile.notes:
+                output += "No notes yet.\n"
+                return output
+
+            for i, note in enumerate(self.profile.notes, 1):
+                output += f"## {i}. Note\n\n"
+                output += f"{note['note']}\n\n"
+                output += f"**Source**: {note['source']}\n\n"
+                output += f"**Timestamp**: {note['timestamp']}\n\n"
+                output += "---\n\n"
+
+            return output
+
+        else:  # text
+            output = f"Notes - {self.profile.target}\n"
+            output += "=" * 50 + "\n\n"
+
+            for i, note in enumerate(self.profile.notes, 1):
+                output += f"{i}. {note['note']}\n"
+                output += f"   Source: {note['source']}\n"
+                output += f"   Time: {note['timestamp']}\n\n"
+
+            return output
+
+    def _format_ports(self, format_type: str = 'text') -> str:
+        """Format port scan results for export"""
+        if format_type == 'json':
+            return json.dumps(self.profile.ports, indent=2)
+
+        elif format_type == 'markdown':
+            output = f"# Port Scan Results - {self.profile.target}\n\n"
+            output += f"Exported: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n"
+
+            if not self.profile.ports:
+                output += "No ports discovered yet.\n"
+                return output
+
+            output += "| Port | State | Service | Version | Source |\n"
+            output += "|------|-------|---------|---------|--------|\n"
+
+            for port, info in sorted(self.profile.ports.items()):
+                state = info.get('state', 'unknown')
+                service = info.get('service', 'unknown')
+                version = info.get('version', '')
+                source = info.get('source', 'N/A')
+                output += f"| {port} | {state} | {service} | {version} | {source} |\n"
+
+            return output
+
+        else:  # text
+            output = f"Port Scan Results - {self.profile.target}\n"
+            output += "=" * 50 + "\n\n"
+
+            for port, info in sorted(self.profile.ports.items()):
+                output += f"PORT {port}/{info.get('protocol', 'tcp')}\n"
+                output += f"  State: {info.get('state', 'unknown')}\n"
+                output += f"  Service: {info.get('service', 'unknown')}\n"
+                if info.get('version'):
+                    output += f"  Version: {info['version']}\n"
+                output += f"  Source: {info.get('source', 'N/A')}\n\n"
+
+            return output
+
+    def _get_retryable_tasks(self) -> list:
+        """Get tasks that can be retried (failed or completed)"""
+        all_tasks = self.profile.task_tree.get_all_tasks()
+
+        retryable = []
+        for task in all_tasks:
+            # Failed tasks (priority)
+            if task.status == 'failed':
+                retryable.append(task)
+            # Completed tasks (can re-run)
+            elif task.status == 'completed' and task.metadata.get('command'):
+                retryable.append(task)
+
+        # Sort: failed first, then by timestamp
+        retryable.sort(key=lambda t: (
+            0 if t.status == 'failed' else 1,
+            t.metadata.get('last_run', t.metadata.get('completed_at', ''))
+        ), reverse=True)
+
+        return retryable
+
+    def _display_retry_menu(self, tasks: list) -> dict:
+        """Display menu of retryable tasks"""
+        print(DisplayManager.format_info("Task Retry"))
+        print("=" * 50)
+
+        if not tasks:
+            print(DisplayManager.format_warning("No failed or completed tasks to retry"))
+            return None
+
+        # Separate failed and completed
+        failed = [t for t in tasks if t.status == 'failed']
+        completed = [t for t in tasks if t.status == 'completed']
+
+        idx = 1
+        task_map = {}
+
+        if failed:
+            print("\n❌ Failed tasks:")
+            for task in failed:
+                exit_code = task.metadata.get('exit_code', 'unknown')
+                command = task.metadata.get('command', 'N/A')
+                error = task.metadata.get('error', 'No error details')
+                last_run = task.metadata.get('last_run', task.metadata.get('completed_at', 'Unknown'))
+
+                print(f"  {idx}. {task.name} (Exit code: {exit_code})")
+                print(f"     Command: {command[:80]}{'...' if len(command) > 80 else ''}")
+                print(f"     Error: {error[:100]}{'...' if len(error) > 100 else ''}")
+                print(f"     Last attempt: {last_run}\n")
+
+                task_map[idx] = task
+                idx += 1
+
+        if completed:
+            print("\n✓ Completed tasks (can re-run):")
+            for task in completed[:5]:  # Limit to 5 most recent
+                command = task.metadata.get('command', 'N/A')
+                last_run = task.metadata.get('last_run', task.metadata.get('completed_at', 'Unknown'))
+
+                print(f"  {idx}. {task.name} (Exit code: 0)")
+                print(f"     Command: {command[:80]}{'...' if len(command) > 80 else ''}")
+                print(f"     Last run: {last_run}\n")
+
+                task_map[idx] = task
+                idx += 1
+
+        return task_map
+
+    def _edit_command(self, current_command: str) -> Optional[str]:
+        """Allow user to edit command inline"""
+        print("\nCurrent command:")
+        print(current_command)
+        print()
+        print("Common fixes:")
+        print("  - Fix file paths")
+        print("  - Adjust parameters")
+        print("  - Change wordlist")
+        print("  - Modify output location")
+        print()
+
+        new_command = input("Edit command (or press Enter to keep): ").strip()
+
+        if not new_command:
+            return current_command
+
+        # Show changes
+        if new_command != current_command:
+            print("\nNew command:")
+            print(new_command)
+            print()
+
+            # Optional: highlight changes (simple diff)
+            print("Changes detected:")
+            old_parts = current_command.split()
+            new_parts = new_command.split()
+
+            for i, (old, new) in enumerate(zip(old_parts, new_parts)):
+                if old != new:
+                    print(f"  - {old} → {new}")
+
+            print()
+
+        return new_command
+
+    def _retry_task(self, task, command: str = None) -> bool:
+        """Retry task execution with optional new command"""
+        if command is None:
+            command = task.metadata.get('command')
+
+        if not command:
+            print(DisplayManager.format_error("No command found for task"))
+            return False
+
+        # Replace placeholders
+        command = command.replace('{TARGET}', self.profile.target)
+        command = command.replace('<TARGET>', self.profile.target)
+
+        print(f"Executing {task.name}...")
+        print("─" * 50)
+
+        # Execute using subprocess
+        import subprocess
+        try:
+            result = subprocess.run(
+                command,
+                shell=True,
+                capture_output=True,
+                text=True
+            )
+
+            print(result.stdout)
+            if result.stderr:
+                print(result.stderr)
+
+            print("─" * 50)
+
+            # Update task status
+            if result.returncode == 0:
+                task.status = 'completed'
+                print(DisplayManager.format_success(f"Task completed successfully (exit code: {result.returncode})"))
+            else:
+                task.status = 'failed'
+                print(DisplayManager.format_error(f"Task failed (exit code: {result.returncode})"))
+
+            # Update metadata
+            task.metadata['exit_code'] = result.returncode
+            task.metadata['last_run'] = datetime.now().isoformat()
+
+            # Preserve original command if this is a retry with edited command
+            if 'original_command' not in task.metadata:
+                task.metadata['original_command'] = task.metadata.get('command')
+
+            if command != task.metadata.get('original_command'):
+                task.metadata['retry_command'] = command
+
+            if result.stderr:
+                task.metadata['error'] = result.stderr
+
+            # Add retry history
+            if 'retry_history' not in task.metadata:
+                task.metadata['retry_history'] = []
+
+            task.metadata['retry_history'].append({
+                'timestamp': datetime.now().isoformat(),
+                'command': command,
+                'exit_code': result.returncode,
+                'success': result.returncode == 0
+            })
+
+            # Track command in history
+            if command:
+                self.command_history.add(
+                    command=command,
+                    source='retry',
+                    task_id=task.id,
+                    success=(result.returncode == 0)
+                )
+
+            # Save
+            self.profile.save()
+            print(DisplayManager.format_success("Task status updated"))
+
+            return result.returncode == 0
+
+        except Exception as e:
+            print(DisplayManager.format_error(f"Execution failed: {e}"))
+            return False
+
+    def handle_task_retry(self, task_id: str = None):
+        """Retry failed or completed tasks with optional editing"""
+        # Get retryable tasks
+        tasks = self._get_retryable_tasks()
+
+        if not tasks:
+            print(DisplayManager.format_warning("No tasks available to retry"))
+            return
+
+        # Display menu
+        task_map = self._display_retry_menu(tasks)
+
+        if not task_map:
+            return
+
+        # Get selection
+        if task_id:
+            # Find by task ID
+            selected_task = next((t for t in tasks if t.id == task_id), None)
+            if not selected_task:
+                print(DisplayManager.format_error(f"Task not found: {task_id}"))
+                return
+        else:
+            # Get from menu
+            choice = input(f"\nSelect task to retry [1-{len(task_map)}] or task ID: ").strip()
+
+            if choice.isdigit():
+                task_num = int(choice)
+                selected_task = task_map.get(task_num)
+            else:
+                # Try as task ID
+                selected_task = next((t for t in tasks if t.id == choice), None)
+
+            if not selected_task:
+                print("Invalid selection")
+                return
+
+        # Show task details
+        print(f"\nTask: {selected_task.name}")
+        command = selected_task.metadata.get('command', 'N/A')
+        print(f"Command: {command}")
+        print()
+
+        # Retry options
+        print("Options:")
+        print("  [r] Retry with same command")
+        print("  [e] Edit command before retry")
+        print("  [v] View full task metadata")
+        print("  [c] Cancel")
+
+        option = input("\nChoice: ").strip().lower()
+
+        if option == 'c':
+            print("Cancelled")
+            return
+
+        elif option == 'v':
+            # Show full metadata
+            print("\nFull task metadata:")
+            print(json.dumps(selected_task.metadata, indent=2))
+            return
+
+        elif option == 'e':
+            # Edit command
+            new_command = self._edit_command(command)
+            confirm = input(DisplayManager.format_confirmation("Confirm retry with new command?", default='Y'))
+            if not InputProcessor.parse_confirmation(confirm, default='Y'):
+                print("Cancelled")
+                return
+            command = new_command
+
+        elif option == 'r':
+            # Retry as-is
+            confirm = input(DisplayManager.format_confirmation("Retry with same command?", default='Y'))
+            if not InputProcessor.parse_confirmation(confirm, default='Y'):
+                print("Cancelled")
+                return
+
+        else:
+            print("Invalid option")
+            return
+
+        # Execute retry
+        success = self._retry_task(selected_task, command)
+
+        if success:
+            self.last_action = f"Retried: {selected_task.name} (success)"
+        else:
+            self.last_action = f"Retried: {selected_task.name} (failed)"
+
+    def handle_session_snapshot(self):
+        """Session snapshot manager (shortcut: ss)"""
+        import re
+
+        print(DisplayManager.format_info("Session Snapshot Manager"))
+        print("=" * 50)
+        print()
+
+        # Show current state
+        print(f"Current target: {self.target}")
+        print(f"Current phase: {self.profile.phase}")
+        print(f"Last action: {self.last_action}")
+        print()
+
+        # List existing snapshots
+        snapshots = self._list_snapshots()
+
+        if snapshots:
+            print("Existing snapshots:")
+            for i, snapshot in enumerate(snapshots, 1):
+                meta = snapshot['metadata']
+                stats = meta.get('stats', {})
+                print(f"  {i}. {meta['name']} ({meta['created'][:19]})")
+                print(f"     Tasks: {stats.get('total_tasks', 0)}, "
+                      f"Findings: {stats.get('findings', 0)}, "
+                      f"Credentials: {stats.get('credentials', 0)}")
+            print()
+        else:
+            print("No snapshots yet.")
+            print()
+
+        # Show options
+        print("Options:")
+        print("  [s] Save new snapshot")
+        print("  [r] Restore from snapshot")
+        print("  [d] Delete snapshot")
+        print("  [l] List all snapshots")
+        print("  [c] Cancel")
+        print()
+
+        choice = InputProcessor.get_input("Choice: ").strip().lower()
+
+        if choice == 's':
+            # Save snapshot
+            snapshot_name = input("\nSnapshot name: ").strip()
+
+            if not snapshot_name:
+                print(DisplayManager.format_error("Snapshot name cannot be empty"))
+                return
+
+            self._save_snapshot(snapshot_name)
+
+        elif choice == 'r' and snapshots:
+            # Restore snapshot
+            print()
+            snapshot_choice = input(f"Select snapshot [1-{len(snapshots)}]: ").strip()
+
+            if not snapshot_choice.isdigit():
+                print(DisplayManager.format_error("Invalid choice"))
+                return
+
+            idx = int(snapshot_choice) - 1
+            if not (0 <= idx < len(snapshots)):
+                print(DisplayManager.format_error("Invalid choice"))
+                return
+
+            # Confirm restore
+            selected = snapshots[idx]
+            print()
+            print(DisplayManager.format_warning("WARNING: Restoring will overwrite current session!"))
+            print()
+            print("Current state will be lost:")
+            all_tasks = self.profile.task_tree.get_all_tasks()
+            completed = [t for t in all_tasks if t.status == 'completed']
+            print(f"  - {len(all_tasks)} tasks ({len(completed)} completed)")
+            print(f"  - {len(self.profile.findings)} findings")
+            print(f"  - {len(self.profile.credentials)} credentials")
+            print(f"  - Last modified: {self.profile.updated}")
+            print()
+
+            meta = selected['metadata']
+            stats = meta.get('stats', {})
+            print(f"Restore from: {meta['name']} ({meta['created'][:19]})")
+            print(f"  - {stats.get('total_tasks', 0)} tasks ({stats.get('completed_tasks', 0)} completed)")
+            print(f"  - {stats.get('findings', 0)} findings")
+            print(f"  - {stats.get('credentials', 0)} credentials")
+            print()
+
+            confirm = input("Proceed? [y/N]: ").strip()
+            if not InputProcessor.parse_confirmation(confirm, default='N'):
+                print("Cancelled")
+                return
+
+            self._restore_snapshot(selected['path'])
+
+        elif choice == 'd' and snapshots:
+            # Delete snapshot
+            print()
+            snapshot_choice = input(f"Select snapshot to delete [1-{len(snapshots)}]: ").strip()
+
+            if not snapshot_choice.isdigit():
+                print(DisplayManager.format_error("Invalid choice"))
+                return
+
+            idx = int(snapshot_choice) - 1
+            if not (0 <= idx < len(snapshots)):
+                print(DisplayManager.format_error("Invalid choice"))
+                return
+
+            selected = snapshots[idx]
+            confirm = input(f"Delete snapshot '{selected['metadata']['name']}'? [y/N]: ").strip()
+            if InputProcessor.parse_confirmation(confirm, default='N'):
+                selected['path'].unlink()
+                print(DisplayManager.format_success(f"Snapshot deleted: {selected['metadata']['name']}"))
+            else:
+                print("Cancelled")
+
+        elif choice == 'l':
+            # Already shown above
+            pass
+
+        elif choice == 'c':
+            # Cancel
+            pass
+
+        else:
+            if choice == 'r' and not snapshots:
+                print(DisplayManager.format_warning("No snapshots to restore"))
+            elif choice == 'd' and not snapshots:
+                print(DisplayManager.format_warning("No snapshots to delete"))
+
+    def _get_snapshots_dir(self) -> Path:
+        """Get snapshots directory for current target"""
+        snapshots_base = Path.home() / '.crack' / 'snapshots'
+        target_dir = snapshots_base / self.target
+        target_dir.mkdir(parents=True, exist_ok=True)
+        return target_dir
+
+    def _list_snapshots(self) -> list:
+        """List all snapshots for current target"""
+        snapshots_dir = self._get_snapshots_dir()
+        snapshots = []
+
+        for snapshot_file in sorted(snapshots_dir.glob('*.json')):
+            try:
+                data = json.loads(snapshot_file.read_text())
+                snapshots.append({
+                    'filename': snapshot_file.name,
+                    'metadata': data.get('snapshot_metadata', {}),
+                    'path': snapshot_file
+                })
+            except json.JSONDecodeError:
+                continue
+
+        # Sort by creation time (newest first)
+        snapshots.sort(key=lambda x: x['metadata'].get('created', ''), reverse=True)
+
+        return snapshots
+
+    def _save_snapshot(self, snapshot_name: str) -> bool:
+        """Save current profile as named snapshot"""
+        import re
+
+        # Validate name
+        if not snapshot_name or not snapshot_name.strip():
+            print(DisplayManager.format_error("Snapshot name cannot be empty"))
+            return False
+
+        # Sanitize name
+        safe_name = re.sub(r'[^a-zA-Z0-9_-]', '-', snapshot_name.strip())
+
+        # Create snapshot
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        filename = f"{self.target}_{safe_name}_{timestamp}.json"
+
+        snapshot_path = self._get_snapshots_dir() / filename
+
+        # Gather stats
+        all_tasks = self.profile.task_tree.get_all_tasks()
+        completed = [t for t in all_tasks if t.status == 'completed']
+
+        snapshot_data = {
+            'snapshot_metadata': {
+                'name': safe_name,
+                'created': datetime.now().isoformat(),
+                'description': f"Snapshot: {safe_name}",
+                'stats': {
+                    'total_tasks': len(all_tasks),
+                    'completed_tasks': len(completed),
+                    'findings': len(self.profile.findings),
+                    'credentials': len(self.profile.credentials),
+                    'phase': self.profile.phase
+                }
+            },
+            'profile_data': self.profile.to_dict()  # Full profile
+        }
+
+        snapshot_path.write_text(json.dumps(snapshot_data, indent=2))
+
+        print(DisplayManager.format_success(f"Snapshot saved: {safe_name}"))
+        print(f"  Location: {snapshot_path}")
+        print(f"  Tasks: {len(all_tasks)}, Findings: {len(self.profile.findings)}, Credentials: {len(self.profile.credentials)}")
+
+        return True
+
+    def _restore_snapshot(self, snapshot_path: Path) -> bool:
+        """Restore profile from snapshot"""
+        try:
+            data = json.loads(snapshot_path.read_text())
+            profile_data = data['profile_data']
+
+            # Restore profile using from_dict
+            self.profile = TargetProfile.from_dict(profile_data)
+
+            # Save restored profile
+            self.profile.save()
+
+            # Update session state
+            self.last_action = f"Restored snapshot: {data['snapshot_metadata']['name']}"
+            self.save_checkpoint()
+
+            print(DisplayManager.format_success("Snapshot restored successfully"))
+
+            # Show stats
+            all_tasks = self.profile.task_tree.get_all_tasks()
+            completed = [t for t in all_tasks if t.status == 'completed']
+            print(f"  Tasks: {len(all_tasks)} ({len(completed)} completed)")
+            print(f"  Findings: {len(self.profile.findings)}")
+            print(f"  Credentials: {len(self.profile.credentials)}")
+            print(f"  Phase: {self.profile.phase}")
+
+            return True
+        except Exception as e:
+            print(DisplayManager.format_error(f"Restore failed: {e}"))
+            return False
+
+    def handle_batch_execute(self, selection: str = None):
+        """Execute multiple tasks in batch with dependency resolution
+
+        Args:
+            selection: Optional pre-selected tasks (for testing/automation)
+        """
+        print(DisplayManager.format_info("Batch Execute"))
+        print("=" * 50)
+
+        # Get executable tasks (pending with commands)
+        all_tasks = self.profile.task_tree.get_all_tasks()
+        pending = [t for t in all_tasks if t.status == 'pending' and t.metadata.get('command')]
+
+        if not pending:
+            print(DisplayManager.format_warning("No pending tasks to execute"))
+            return
+
+        # Display tasks with dependencies
+        print("\nPending tasks:")
+        for i, task in enumerate(pending, 1):
+            deps = task.metadata.get('depends_on', [])
+            deps_str = f" (depends on: {', '.join(str(d) for d in deps)})" if deps else " (no deps)"
+            tags = task.metadata.get('tags', [])
+            tag_str = f" [{', '.join(tags)}]" if tags else ""
+
+            print(f"  {i}. ⏸ {task.name}{deps_str}{tag_str}")
+
+        print("\nSelection options:")
+        print("  - Numbers: 1,3,5 or 1-5")
+        print("  - Keywords: all, pending, quick, high")
+        print("  - By service: http, smb, ssh")
+
+        # Get selection
+        if not selection:
+            selection = input("\nSelect tasks: ").strip()
+
+        if not selection or selection.lower() == 'cancel':
+            print("Cancelled")
+            return
+
+        # Parse selection
+        selected = self._parse_batch_selection(selection, pending)
+
+        if not selected:
+            print("No tasks selected")
+            return
+
+        # Show selected tasks
+        print(f"\nSelected {len(selected)} tasks:")
+        for task in selected:
+            print(f"  ✓ {task.name}")
+
+        # Resolve dependencies and create execution plan
+        steps = self._resolve_dependencies(selected)
+
+        # Show execution plan
+        print("\nExecution plan:")
+        for i, step in enumerate(steps, 1):
+            if len(step) == 1:
+                print(f"  Step {i}: {step[0].name} (1 task, sequential)")
+            else:
+                print(f"  Step {i}: ({len(step)} tasks, parallel)")
+                for task in step:
+                    print(f"    - {task.name}")
+
+        print(f"\nTotal tasks: {len(selected)}")
+
+        # Confirm execution
+        confirm = input(DisplayManager.format_confirmation("Execute batch?", default='Y'))
+        if not InputProcessor.parse_confirmation(confirm, default='Y'):
+            print("Cancelled")
+            return
+
+        # Execute batch
+        print("\nExecuting batch...\n")
+
+        results = self._execute_batch(steps)
+
+        # Save profile
+        self.profile.save()
+
+        # Summary
+        print("\nBatch execution complete!\n")
+        print("Results:")
+        print(f"  ✓ Succeeded: {len(results['succeeded'])} tasks")
+        print(f"  ✗ Failed: {len(results['failed'])} tasks")
+        print(f"  ⊘ Skipped: {len(results['skipped'])} tasks")
+
+        elapsed = results['total_time']
+        print(f"\nTotal time: {int(elapsed // 60)}m {int(elapsed % 60)}s")
+
+        self.last_action = f"Batch execute: {len(results['succeeded'])}/{len(selected)} succeeded"
+
+    def _parse_batch_selection(self, user_input: str, tasks: List) -> List:
+        """Parse batch selection input
+
+        Args:
+            user_input: User input string
+            tasks: List of available tasks
+
+        Returns:
+            List of selected TaskNode objects
+        """
+        user_input = user_input.strip().lower()
+
+        selected = []
+
+        # Keyword selection
+        if user_input == 'all':
+            selected = tasks
+        elif user_input == 'pending':
+            selected = [t for t in tasks if t.status == 'pending']
+        elif user_input == 'quick':
+            selected = [t for t in tasks if 'QUICK_WIN' in t.metadata.get('tags', [])]
+        elif user_input == 'high':
+            selected = [t for t in tasks if 'OSCP:HIGH' in t.metadata.get('tags', [])]
+
+        # Service-based selection
+        elif user_input in ['http', 'smb', 'ssh', 'ftp', 'sql']:
+            selected = [t for t in tasks if user_input in t.name.lower() or
+                       user_input in t.metadata.get('service', '').lower()]
+
+        # Numeric selection (reuse InputProcessor.parse_multi_select)
+        else:
+            indices = InputProcessor.parse_multi_select(user_input, len(tasks))
+            selected = [tasks[i-1] for i in indices if 0 < i <= len(tasks)]
+
+        return selected
+
+    def _resolve_dependencies(self, tasks: List) -> List[List]:
+        """Resolve task dependencies and create execution steps
+
+        Args:
+            tasks: List of TaskNode objects to execute
+
+        Returns:
+            List of steps, where each step is a list of tasks that can run in parallel
+        """
+        # Build dependency map
+        task_ids = {t.id for t in tasks}
+
+        # Create execution steps
+        steps = []
+        remaining = set(tasks)
+        completed = set()
+
+        while remaining:
+            # Find tasks with no unmet dependencies
+            ready = []
+            for task in remaining:
+                deps = task.metadata.get('depends_on', [])
+
+                # Check if all dependencies are completed or not in our selection
+                deps_met = all(dep_id in completed or dep_id not in task_ids for dep_id in deps)
+
+                if deps_met:
+                    ready.append(task)
+
+            if not ready:
+                # Circular dependency or error
+                print(DisplayManager.format_warning("Warning: Some tasks have unmet dependencies"))
+                # Add remaining tasks anyway (best effort)
+                ready = list(remaining)
+
+            steps.append(ready)
+
+            for task in ready:
+                remaining.remove(task)
+                completed.add(task.id)
+
+        return steps
+
+    def _execute_batch(self, steps: List[List]) -> Dict[str, Any]:
+        """Execute batch of tasks in steps with parallel execution where possible
+
+        Args:
+            steps: List of execution steps (each step is a list of tasks)
+
+        Returns:
+            Dict with results summary
+        """
+        import concurrent.futures
+        import time
+
+        results = {
+            'succeeded': [],
+            'failed': [],
+            'skipped': []
+        }
+
+        total_tasks = sum(len(step) for step in steps)
+        completed_count = 0
+        start_time = time.time()
+
+        for step_num, step_tasks in enumerate(steps, 1):
+            step_size = len(step_tasks)
+
+            print(f"\n[{completed_count+1}-{completed_count+step_size}/{total_tasks}] ", end='')
+
+            if step_size == 1:
+                # Sequential execution
+                task = step_tasks[0]
+                print(f"⏳ {task.name}...")
+
+                success = self._execute_single_task(task)
+
+                if success:
+                    print(f"      ✓ Completed")
+                    results['succeeded'].append(task)
+                else:
+                    print(f"      ✗ Failed")
+                    results['failed'].append(task)
+
+                completed_count += 1
+
+            else:
+                # Parallel execution
+                print(f"⏳ Running {step_size} tasks in parallel...")
+
+                # Use thread pool for parallel execution
+                with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+                    # Submit all tasks
+                    futures = {}
+                    for task in step_tasks:
+                        print(f"        ⏳ {task.name}...")
+                        future = executor.submit(self._execute_single_task, task)
+                        futures[future] = task
+
+                    # Wait for completion
+                    for future in concurrent.futures.as_completed(futures):
+                        task = futures[future]
+                        try:
+                            success = future.result()
+                            if success:
+                                print(f"        ✓ {task.name}")
+                                results['succeeded'].append(task)
+                            else:
+                                print(f"        ✗ {task.name}")
+                                results['failed'].append(task)
+                        except Exception as e:
+                            print(f"        ✗ {task.name} (error: {e})")
+                            results['failed'].append(task)
+
+                        completed_count += 1
+
+        end_time = time.time()
+        elapsed = end_time - start_time
+
+        results['total_time'] = elapsed
+
+        return results
+
+    def _execute_single_task(self, task) -> bool:
+        """Execute a single task and return success status
+
+        Args:
+            task: TaskNode to execute
+
+        Returns:
+            True if successful, False otherwise
+        """
+        import subprocess
+
+        command = task.metadata.get('command')
+        if not command:
+            return False
+
+        # Replace placeholders
+        command = command.replace('{TARGET}', self.profile.target)
+
+        try:
+            task.status = 'in-progress'
+            task.start_timer()
+
+            result = subprocess.run(
+                command,
+                shell=True,
+                capture_output=True,
+                text=True,
+                timeout=300  # 5 minute timeout
+            )
+
+            task.stop_timer()
+
+            if result.returncode == 0:
+                task.status = 'completed'
+                task.mark_complete()
+                return True
+            else:
+                task.status = 'failed'
+                task.metadata['exit_code'] = result.returncode
+                task.metadata['error'] = result.stderr
+                return False
+
+        except subprocess.TimeoutExpired:
+            task.stop_timer()
+            task.status = 'failed'
+            task.metadata['error'] = 'Timeout (5 minutes)'
+            return False
+        except Exception as e:
+            task.stop_timer()
+            task.status = 'failed'
+            task.metadata['error'] = str(e)
+            return False
+
+    def handle_finding_correlator(self):
+        """Analyze and correlate findings to identify attack chains"""
+        print(DisplayManager.format_info("Finding Correlator"))
+        print("=" * 50)
+        print()
+
+        # Count data
+        num_ports = len(self.profile.ports)
+        num_findings = len(self.profile.findings)
+        num_creds = len(self.profile.credentials)
+
+        print(f"Analyzing {num_ports} ports, {num_findings} findings, {num_creds} credentials...")
+        print()
+
+        # Find correlations
+        correlations = self._find_correlations()
+
+        if not correlations:
+            print(DisplayManager.format_warning("No correlations found"))
+            print("\nTips:")
+            print("  - Ensure scan results are imported")
+            print("  - Document findings as you discover them")
+            print("  - Correlator works best with complete enumeration")
+            return
+
+        # Rank by priority
+        correlations = self._rank_correlations(correlations)
+
+        print(f"🔗 Correlations Found:\n")
+
+        # Display correlations
+        for i, corr in enumerate(correlations, 1):
+            priority_icon = {
+                'high': '🔴',
+                'medium': '🟡',
+                'low': '🟢'
+            }.get(corr['priority'], '⚪')
+
+            print(f"{i}. {corr['title']} {priority_icon}")
+
+            for j, elem in enumerate(corr['elements']):
+                if j == 0:
+                    print(f"   ├─ {elem}")
+                elif j == len(corr['elements']) - 1:
+                    print(f"   └─ {elem}")
+                else:
+                    print(f"   ├─ {elem}")
+
+            print(f"   └─ → TRY: {corr['recommendation']}")
+            print()
+
+        # Summary recommendations
+        print("Recommendations:")
+        high_priority = [c for c in correlations if c['priority'] == 'high']
+        medium_priority = [c for c in correlations if c['priority'] == 'medium']
+
+        if high_priority:
+            for corr in high_priority:
+                print(f"  → High Priority: {corr['title']} (Correlation #{correlations.index(corr)+1})")
+
+        if medium_priority:
+            for corr in medium_priority[:3]:  # Limit to top 3
+                print(f"  → Medium Priority: {corr['title']} (Correlation #{correlations.index(corr)+1})")
+
+        print()
+
+        # Offer to create tasks
+        if high_priority:
+            create_tasks = input(DisplayManager.format_confirmation("Create tasks for high-priority correlations?", default='Y'))
+
+            if InputProcessor.parse_confirmation(create_tasks, default='Y'):
+                self._create_correlation_tasks(high_priority)
+
+        self.last_action = f"Analyzed correlations: {len(correlations)} found"
+
+    def _find_correlations(self) -> List[Dict[str, Any]]:
+        """Find correlations between discoveries"""
+        correlations = []
+
+        # Get data
+        ports = self.profile.ports
+        findings = self.profile.findings
+        credentials = self.profile.credentials
+
+        # Pattern 1: Service + Credentials
+        for cred in credentials:
+            username = cred.get('username')
+            password = cred.get('password')
+            cred_service = cred.get('service', '').lower()
+
+            # Check for compatible services
+            for port, info in ports.items():
+                service = info.get('service', '').lower()
+
+                # Don't correlate with the same service the cred came from
+                if service in ['smb', 'ssh', 'mysql', 'ftp', 'rdp', 'vnc', 'mssql', 'postgresql'] and service != cred_service:
+                    correlations.append({
+                        'type': 'service_credential',
+                        'priority': 'high',
+                        'title': f'{service.upper()} + Credentials',
+                        'elements': [
+                            f'Port {port} ({service}) is open',
+                            f'Username \'{username}\' discovered',
+                            f'Password available' if password else 'Hash/token available'
+                        ],
+                        'recommendation': self._get_service_auth_command(service, port, username, password)
+                    })
+
+        # Pattern 2: CVE + Version
+        for port, info in ports.items():
+            version = info.get('version', '')
+            product = info.get('product', '')
+            service = info.get('service', '')
+
+            if version and (product or service):
+                # Check for known CVEs (simple pattern matching)
+                cve_pattern = self._check_known_vulnerabilities(product or service, version)
+                if cve_pattern:
+                    correlations.append({
+                        'type': 'cve_match',
+                        'priority': 'high',
+                        'title': f'Technology Match: {product or service} {version}',
+                        'elements': [
+                            f'Service: {product or service} {version} (Port {port})',
+                            f'{cve_pattern["cve_id"]}: {cve_pattern["description"]}'
+                        ],
+                        'recommendation': f"searchsploit {product or service} {version}"
+                    })
+
+        # Pattern 3: Credential Reuse
+        if credentials:
+            for cred in credentials:
+                username = cred.get('username')
+                password = cred.get('password')
+                source_service = cred.get('service', 'HTTP').lower()
+
+                # Find other services
+                other_services = []
+                for port, info in ports.items():
+                    service = info.get('service', '').lower()
+                    if service in ['ssh', 'mysql', 'smb', 'ftp', 'rdp', 'mssql', 'postgresql'] and service != source_service:
+                        other_services.append(f'{service.upper()} ({port})')
+
+                if other_services and len(other_services) > 0:
+                    correlations.append({
+                        'type': 'credential_reuse',
+                        'priority': 'medium',
+                        'title': 'Credential Reuse Opportunity',
+                        'elements': [
+                            f'Credential: {username}/{password or "hash"} (found on {source_service.upper()})',
+                            f'Open services: {", ".join(other_services[:3])}{"..." if len(other_services) > 3 else ""}'
+                        ],
+                        'recommendation': 'Try credentials on other services'
+                    })
+                    break  # Only create one credential reuse correlation
+
+        # Pattern 4: Directory + Upload
+        upload_findings = [f for f in findings if 'upload' in f.get('description', '').lower() or
+                           'writable' in f.get('description', '').lower()]
+
+        web_ports = [p for p, i in ports.items() if i.get('service', '').lower() in ['http', 'https']]
+
+        if upload_findings and web_ports:
+            correlations.append({
+                'type': 'upload_directory',
+                'priority': 'medium',
+                'title': 'Upload Directory Pattern',
+                'elements': [
+                    'Writable/upload directory found',
+                    f'Web service available on port(s): {", ".join(str(p) for p in web_ports)}'
+                ],
+                'recommendation': 'Upload web shell for RCE (check file type restrictions)'
+            })
+
+        # Pattern 5: Weak Auth
+        basic_auth = [f for f in findings if 'basic auth' in f.get('description', '').lower() or
+                      'authentication' in f.get('description', '').lower()]
+
+        if basic_auth and web_ports:
+            correlations.append({
+                'type': 'weak_auth',
+                'priority': 'medium',
+                'title': 'Weak Authentication Pattern',
+                'elements': [
+                    'HTTP authentication detected',
+                    'No lockout policy observed'
+                ],
+                'recommendation': 'Credential brute-force with hydra or medusa'
+            })
+
+        # Pattern 6: LFI + Writable
+        lfi_findings = [f for f in findings if 'lfi' in f.get('description', '').lower() or
+                        'file inclusion' in f.get('description', '').lower() or
+                        'traversal' in f.get('description', '').lower()]
+        writable_dirs = [f for f in findings if 'writable' in f.get('description', '').lower() or
+                         'upload' in f.get('description', '').lower()]
+
+        if lfi_findings and writable_dirs:
+            correlations.append({
+                'type': 'lfi_upload',
+                'priority': 'high',
+                'title': 'LFI + Shell Upload',
+                'elements': [
+                    'LFI/Path traversal vulnerability detected',
+                    'Writable directory found'
+                ],
+                'recommendation': 'Upload shell and include via LFI: <?php system($_GET["cmd"]); ?>'
+            })
+
+        # Pattern 7: SQLi + Database Port
+        sqli_findings = [f for f in findings if 'sql' in f.get('description', '').lower() and
+                         'injection' in f.get('description', '').lower()]
+        db_ports = {p: i for p, i in ports.items() if i.get('service', '').lower() in ['mysql', 'mssql', 'postgresql']}
+
+        if sqli_findings and db_ports:
+            db_port = list(db_ports.keys())[0]
+            db_service = db_ports[db_port].get('service', 'database')
+            correlations.append({
+                'type': 'sqli_db',
+                'priority': 'high',
+                'title': f'SQL Injection + {db_service.upper()} Service',
+                'elements': [
+                    'SQL injection vulnerability found',
+                    f'Open {db_service} port: {db_port}'
+                ],
+                'recommendation': f'Extract credentials via SQLi, then direct {db_service} connection'
+            })
+
+        # Pattern 8: Username Enum + Weak Passwords
+        user_findings = [f for f in findings if 'username' in f.get('description', '').lower() or
+                         'user' in f.get('type', '').lower() or
+                         f.get('type') == 'user']
+
+        auth_services = [p for p, i in ports.items() if i.get('service', '').lower() in ['ssh', 'smb', 'ftp', 'rdp']]
+
+        if user_findings and auth_services and not credentials:
+            correlations.append({
+                'type': 'user_enum',
+                'priority': 'medium',
+                'title': 'Username Enumeration Detected',
+                'elements': [
+                    f'{len(user_findings)} valid username(s) discovered',
+                    f'Auth services: {", ".join(str(p) for p in auth_services[:3])}',
+                    'No passwords found yet'
+                ],
+                'recommendation': 'Password spraying with common passwords'
+            })
+
+        return correlations
+
+    def _get_service_auth_command(self, service: str, port: int, username: str, password: str) -> str:
+        """Generate authentication command for service"""
+        target = self.profile.target
+
+        commands = {
+            'smb': f'smbclient //{target}/C$ -U {username}{"%" + password if password else ""}',
+            'ssh': f'ssh {username}@{target} {"-p " + str(port) if port != 22 else ""}',
+            'mysql': f'mysql -h {target} -u {username} {"-p" + password if password else "-p"}',
+            'mssql': f'impacket-mssqlclient {username}:{password or "hash"}@{target}',
+            'postgresql': f'psql -h {target} -U {username} {"" if not password else ""}',
+            'ftp': f'ftp {username}@{target}',
+            'rdp': f'rdesktop -u {username} {"-p " + password if password else ""} {target}',
+            'vnc': f'vncviewer {target}:{port}'
+        }
+
+        return commands.get(service, f'Try {username}/{password or "hash"} on {service}')
+
+    def _check_known_vulnerabilities(self, product: str, version: str) -> Optional[Dict]:
+        """Check for known vulnerabilities (simple pattern matching)"""
+        # Known CVE patterns (expand this database)
+        known_cves = {
+            ('Apache httpd', '2.4.41'): {
+                'cve_id': 'CVE-2021-41773',
+                'description': 'Path traversal vulnerability'
+            },
+            ('Apache httpd', '2.4.49'): {
+                'cve_id': 'CVE-2021-41773',
+                'description': 'Path traversal and RCE'
+            },
+            ('OpenSSH', '7.4'): {
+                'cve_id': 'CVE-2018-15473',
+                'description': 'Username enumeration'
+            },
+            ('ProFTPD', '1.3.5'): {
+                'cve_id': 'CVE-2015-3306',
+                'description': 'Remote code execution'
+            },
+            ('vsftpd', '2.3.4'): {
+                'cve_id': 'Backdoor',
+                'description': 'Backdoored version with command execution'
+            },
+            ('Samba smbd', '3.0.20'): {
+                'cve_id': 'CVE-2007-2447',
+                'description': 'Command execution via username'
+            },
+            ('Microsoft Windows RPC', '5.0'): {
+                'cve_id': 'MS08-067',
+                'description': 'Remote code execution (EternalBlue family)'
+            }
+        }
+
+        # Normalize product name
+        product_lower = product.lower()
+
+        # Simple version matching
+        for (known_product, known_version), cve_data in known_cves.items():
+            if known_product.lower() in product_lower and known_version in version:
+                return cve_data
+
+        # Partial version match (for ranges)
+        for (known_product, known_version), cve_data in known_cves.items():
+            if known_product.lower() in product_lower:
+                # Check version prefix match
+                if version.startswith(known_version.split('.')[0]):
+                    return cve_data
+
+        return None
+
+    def _rank_correlations(self, correlations: List[Dict]) -> List[Dict]:
+        """Rank correlations by priority and exploitability"""
+        priority_order = {'high': 0, 'medium': 1, 'low': 2}
+
+        return sorted(correlations, key=lambda c: (
+            priority_order.get(c['priority'], 99),
+            -len(c['elements'])  # More elements = more interesting
+        ))
+
+    def _create_correlation_tasks(self, correlations: List[Dict]):
+        """Create tasks for high-priority correlations"""
+        from ..core.task_tree import TaskNode
+
+        created_count = 0
+
+        for corr in correlations:
+            # Create task based on correlation type
+            task_id = f"correlation-{corr['type']}-{int(time.time())}"
+
+            # Build task metadata
+            metadata = {
+                'command': corr['recommendation'],
+                'description': corr['title'],
+                'tags': ['CORRELATION', 'OSCP:HIGH'] if corr['priority'] == 'high' else ['CORRELATION'],
+                'correlation_type': corr['type']
+            }
+
+            # Create task node
+            task_node = TaskNode(
+                task_id=task_id,
+                name=f"[CORRELATION] {corr['title']}",
+                task_type='command'
+            )
+
+            # Set metadata after creation
+            task_node.metadata.update(metadata)
+
+            # Add to task tree
+            self.profile.task_tree.add_child(task_node)
+
+            print(DisplayManager.format_success(f"✓ Created task: {corr['title']}"))
+            created_count += 1
+
+        self.profile.save()
+        print(f"\n✓ Created {created_count} correlation task(s)")

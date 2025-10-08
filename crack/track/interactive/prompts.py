@@ -428,6 +428,13 @@ KEYBOARD SHORTCUTS:
   tf - Task filter (filter by status, port, service, tags)
   qn - Quick note (add note without forms)
   tt - Time tracker dashboard (time management)
+  pd - Progress dashboard (visual progress overview)
+  qx - Quick export (export view to file/clipboard)
+  fc - Finding correlator (analyze findings)
+  qe - Quick execute (run commands without task creation)
+  ss - Session snapshot (save/restore checkpoints)
+  tr - Task retry (retry failed tasks with editing)
+  be - Batch execute (run multiple tasks with dependencies)
   b - Go back to previous menu
   h - Show this help
   q - Quit and save
