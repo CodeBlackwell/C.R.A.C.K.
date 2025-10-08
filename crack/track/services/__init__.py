@@ -7,7 +7,7 @@ from .registry import ServiceRegistry
 from . import linux_privesc
 from . import linux_privesc_advanced
 from . import linux_kernel_exploit
-# from . import linux_capabilities  # TEMP: has syntax errors
+# from . import linux_capabilities  # NOTE: Automated mining created escaping issues - needs manual review
 from . import linux_shell_escaping
 from . import linux_container_escape
 from . import linux_persistence
@@ -86,7 +86,7 @@ from . import nosql
 
 # Web Attack Vectors
 from . import injection_attacks
-# from . import xss_attacks  # TEMP: syntax errors (line 554) - needs manual fix
+# from . import xss_attacks  # NOTE: Automated mining created complex XSS payload escaping issues - needs manual review
 from . import ssrf_attacks
 from . import ssti_attacks
 from . import deserialization_attacks
