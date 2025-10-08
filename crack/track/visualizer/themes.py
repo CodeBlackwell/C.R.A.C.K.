@@ -77,7 +77,7 @@ THEMES = {
 }
 
 
-def colorize(text: str, theme: str = 'oscp') -> str:
+def colorize(text: str, theme: str = 'oscp', validate: bool = False) -> str:
     """
     Apply colors to text using markup tags
 
@@ -87,11 +87,31 @@ def colorize(text: str, theme: str = 'oscp') -> str:
     Args:
         text: Text with markup tags
         theme: Theme name from THEMES dict
+        validate: If True, warn about malformed/unknown tags
 
     Returns:
         Text with ANSI color codes
     """
     colors = THEMES.get(theme, THEMES['mono'])
+
+    # Validation mode - check for issues
+    if validate:
+        import sys
+        # Check for unknown tags
+        all_tags = re.findall(r'\[(\w+)\]', text)
+        known_tags = set(colors.keys()) | {'reset'}
+        unknown = set(all_tags) - known_tags
+        if unknown:
+            print(f"Warning: Unknown color tags: {unknown}", file=sys.stderr)
+
+        # Check for unclosed tags
+        for key in colors.keys():
+            if key == 'reset':
+                continue
+            open_count = text.count(f'[{key}]')
+            close_count = text.count(f'[/{key}]')
+            if open_count != close_count:
+                print(f"Warning: Mismatched tags for '{key}': {open_count} open, {close_count} close", file=sys.stderr)
 
     # Replace markup tags with color codes
     for key, code in colors.items():

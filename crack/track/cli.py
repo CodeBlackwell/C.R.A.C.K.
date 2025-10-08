@@ -6,7 +6,13 @@ Main command-line interface for CRACK Track - the enumeration tracking and task 
 
 import sys
 import argparse
+import logging
 from pathlib import Path
+
+# Configure logging early to suppress noisy plugin registration
+# This must be done BEFORE importing ServiceRegistry
+logging.basicConfig(level=logging.INFO, format='%(levelname)s:%(name)s:%(message)s')
+logging.getLogger('crack.track.services.registry').setLevel(logging.WARNING)
 
 from .core.state import TargetProfile
 from .core.storage import Storage
@@ -69,6 +75,11 @@ Examples:
   # Visualize architecture and flows
   crack track --visualize architecture
   crack track --viz plugin-flow --viz-color
+  crack track --viz plugin-graph                      # Phased plugin dependencies
+  crack track --viz plugin-graph --viz-style compact  # Show trigger matrix
+  crack track --viz master                            # NEW: Comprehensive master view
+  crack track --viz master --viz-style compact        # Summary only
+  crack track --viz master --viz-focus chains         # Focus on attack chains
   crack track 192.168.45.100 --viz task-tree
   crack track 192.168.45.100 --viz progress --viz-color
   crack track --viz decision-tree --viz-phase discovery
@@ -141,9 +152,9 @@ For full documentation: See track/README.md or https://github.com/CodeBlackwell/
 
     # Visualization
     parser.add_argument('--visualize', '--viz', '-v', metavar='VIEW',
-                        choices=['architecture', 'plugin-flow', 'task-tree', 'progress',
-                                'phase-flow', 'decision-tree', 'plugins'],
-                        help='Visualize architecture/flow (architecture, plugin-flow, task-tree, progress, phase-flow, decision-tree, plugins)')
+                        choices=['architecture', 'plugin-flow', 'plugin-graph', 'master', 'task-tree', 'progress',
+                                'phase-flow', 'decision-tree', 'plugins', 'themes'],
+                        help='Visualize architecture/flow (architecture, plugin-flow, plugin-graph, master, task-tree, progress, phase-flow, decision-tree, plugins, themes)')
     parser.add_argument('--viz-style', default='tree',
                         choices=['tree', 'columnar', 'compact'],
                         help='Visualization style (default: tree)')
@@ -154,6 +165,11 @@ For full documentation: See track/README.md or https://github.com/CodeBlackwell/
                         help='Color theme (default: oscp)')
     parser.add_argument('--viz-phase', default='discovery',
                         help='Phase for decision-tree view (default: discovery)')
+    parser.add_argument('--viz-focus',
+                        choices=['summary', 'phases', 'ports', 'chains', 'tags', 'overlaps', 'tasks', 'graph'],
+                        help='Focus on specific section of master view')
+    parser.add_argument('--viz-output', '-o', metavar='FILE',
+                        help='Export visualization to markdown file (untruncated)')
 
     # Advanced
     parser.add_argument('--debug', action='store_true',
@@ -161,13 +177,14 @@ For full documentation: See track/README.md or https://github.com/CodeBlackwell/
 
     args = parser.parse_args()
 
+    # Enable debug mode if requested (re-enable INFO logs)
+    if args.debug:
+        logging.getLogger('crack.track.services.registry').setLevel(logging.INFO)
+        EventBus.set_debug(True)
+
     # Initialize plugins and parsers
     ServiceRegistry.initialize_plugins()
     ParserRegistry.initialize_parsers()
-
-    # Enable debug if requested
-    if args.debug:
-        EventBus.set_debug(True)
 
     # Handle list command
     if args.list:
@@ -432,6 +449,7 @@ def handle_visualize(args):
 
     view = args.visualize
     target = args.target
+    output_file = args.viz_output
 
     # Check if target is required for this view
     target_required = view in ['task-tree', 'progress']
@@ -445,12 +463,30 @@ def handle_visualize(args):
         'style': args.viz_style,
         'color': args.viz_color,
         'theme': args.viz_theme,
-        'phase': args.viz_phase
+        'phase': args.viz_phase,
+        'focus': args.viz_focus,  # focus option for master view
+        'output_file': output_file  # NEW: output file for markdown export
     }
 
     # Render visualization
     output = visualize(view, target, **opts)
-    print(output)
+
+    # Write to file if output file specified
+    if output_file:
+        try:
+            with open(output_file, 'w') as f:
+                f.write(output)
+            print(f"✓ Exported visualization to {output_file}")
+            # Also show file size
+            import os
+            size = os.path.getsize(output_file)
+            print(f"  File size: {size:,} bytes")
+        except IOError as e:
+            print(f"Error writing to {output_file}: {e}")
+            sys.exit(1)
+    else:
+        # Print to terminal
+        print(output)
 
 
 if __name__ == '__main__':

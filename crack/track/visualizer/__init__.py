@@ -28,57 +28,94 @@ def render(obj, style='tree', depth=0, max_depth=10, show_status=False, **opts):
 
 # ============ VIEW FUNCTIONS ============
 
-def view_architecture():
-    """Introspect modules and show component map"""
+def view_architecture(style='tree'):
+    """Introspect modules and show component map
+
+    Args:
+        style: Visualization style (tree, columnar, compact)
+    """
     from ..core import state, task_tree, events, storage
     from ..services.registry import ServiceRegistry
     from ..phases.definitions import PHASES
 
-    output = []
-    output.append("┌─────────────────────────────────────────────────────────────┐")
-    output.append("│                    CRACK Track Architecture                  │")
-    output.append("└─────────────────────────────────────────────────────────────┘")
-    output.append("")
-    output.append("[Core Layer]")
-    output.append("  ├─► TargetProfile (state.py)")
-    output.append("  │     ├─► Manages: ports, findings, credentials, notes")
-    output.append("  │     ├─► Contains: TaskTree (hierarchical)")
-    output.append("  │     └─► Storage: ~/.crack/targets/{TARGET}.json")
-    output.append("  │")
-    output.append("  ├─► TaskNode (task_tree.py)")
-    output.append("  │     ├─► Status: pending → in-progress → completed/skipped")
-    output.append("  │     ├─► Metadata: command, tags, flags, alternatives")
-    output.append("  │     └─► Hierarchy: parent/child relationships")
-    output.append("  │")
-    output.append("  └─► EventBus (events.py)")
-    output.append("        └─► Events: port_discovered, service_detected, plugin_tasks_generated")
-    output.append("")
-    output.append(f"[Plugin Layer]")
-    output.append(f"  ├─► ServiceRegistry (@register decorator)")
-    output.append(f"  │     ├─► Auto-discovery on import")
-    output.append(f"  │     └─► Event-driven task generation")
-    output.append(f"  │")
-    output.append(f"  └─► Service Plugins ({len(ServiceRegistry._plugins)} registered)")
+    # Tree style (default, detailed)
+    if style == 'tree':
+        output = []
+        output.append("┌─────────────────────────────────────────────────────────────┐")
+        output.append("│                    CRACK Track Architecture                  │")
+        output.append("└─────────────────────────────────────────────────────────────┘")
+        output.append("")
+        output.append("[Core Layer]")
+        output.append("  ├─► TargetProfile (state.py)")
+        output.append("  │     ├─► Manages: ports, findings, credentials, notes")
+        output.append("  │     ├─► Contains: TaskTree (hierarchical)")
+        output.append("  │     └─► Storage: ~/.crack/targets/{TARGET}.json")
+        output.append("  │")
+        output.append("  ├─► TaskNode (task_tree.py)")
+        output.append("  │     ├─► Status: pending → in-progress → completed/skipped")
+        output.append("  │     ├─► Metadata: command, tags, flags, alternatives")
+        output.append("  │     └─► Hierarchy: parent/child relationships")
+        output.append("  │")
+        output.append("  └─► EventBus (events.py)")
+        output.append("        └─► Events: port_discovered, service_detected, plugin_tasks_generated")
+        output.append("")
+        output.append(f"[Plugin Layer]")
+        output.append(f"  ├─► ServiceRegistry (@register decorator)")
+        output.append(f"  │     ├─► Auto-discovery on import")
+        output.append(f"  │     └─► Event-driven task generation")
+        output.append(f"  │")
+        output.append(f"  └─► Service Plugins ({len(ServiceRegistry._plugins)} registered)")
 
-    # Show first 6 plugins
-    plugins = list(ServiceRegistry._plugins.keys())[:6]
-    for i, name in enumerate(plugins):
-        prefix = "        └─► " if i == len(plugins) - 1 else "        ├─► "
-        output.append(f"{prefix}{name.upper()}")
+        # Show first 6 plugins
+        plugins = list(ServiceRegistry._plugins.keys())[:6]
+        for i, name in enumerate(plugins):
+            prefix = "        └─► " if i == len(plugins) - 1 else "        ├─► "
+            output.append(f"{prefix}{name.upper()}")
 
-    if len(ServiceRegistry._plugins) > 6:
-        output.append(f"        └─► [{len(ServiceRegistry._plugins) - 6} more...]")
+        if len(ServiceRegistry._plugins) > 6:
+            output.append(f"        └─► [{len(ServiceRegistry._plugins) - 6} more...]")
 
-    output.append("")
-    output.append("[Phase System]")
-    phases = " → ".join(PHASES.keys())
-    output.append(f"  {phases}")
+        output.append("")
+        output.append("[Phase System]")
+        phases = " → ".join(PHASES.keys())
+        output.append(f"  {phases}")
 
-    return '\n'.join(output)
+        return '\n'.join(output)
+
+    # Columnar style (compact table)
+    elif style == 'columnar':
+        output = []
+        output.append("=" * 80)
+        output.append("CRACK Track Architecture".center(80))
+        output.append("=" * 80)
+        output.append("")
+        output.append(f"{'Component':<30} | {'Details':<47}")
+        output.append("-" * 80)
+        output.append(f"{'TargetProfile':<30} | {'Manages ports, findings, credentials, notes':<47}")
+        output.append(f"{'TaskNode':<30} | {'Hierarchical task tracking with metadata':<47}")
+        output.append(f"{'EventBus':<30} | {'Event-driven plugin communication':<47}")
+        output.append(f"{'ServiceRegistry':<30} | {'Auto-discovers and registers plugins':<47}")
+        output.append(f"{'Service Plugins':<30} | {f'{len(ServiceRegistry._plugins)} plugins registered':<47}")
+        output.append(f"{'Phase System':<30} | {'5-phase OSCP methodology':<47}")
+        output.append("-" * 80)
+        return '\n'.join(output)
+
+    # Compact style (minimal)
+    else:  # compact
+        return f"""CRACK Track Architecture
+Core: TargetProfile, TaskNode, EventBus
+Plugins: {len(ServiceRegistry._plugins)} registered (ServiceRegistry)
+Phases: discovery → service-detection → service-specific → exploitation → post-exploitation"""
 
 
-def view_plugin_flow():
-    """Show event-driven plugin flow using actual registry"""
+def view_plugin_flow(style='tree'):
+    """Show event-driven plugin flow using actual registry
+
+    Args:
+        style: Visualization style (tree, columnar, compact) - only tree supported
+    """
+    # Plugin flow is inherently sequential, so tree is most appropriate
+    # Other styles would lose clarity
     output = []
     output.append("[Nmap Parser] → parse_file()")
     output.append("       │")
@@ -103,8 +140,13 @@ def view_plugin_flow():
     return '\n'.join(output)
 
 
-def view_task_tree(target: str):
-    """Load profile and render task tree"""
+def view_task_tree(target: str, style='tree'):
+    """Load profile and render task tree
+
+    Args:
+        target: Target IP/hostname
+        style: Visualization style (only tree supported for task trees)
+    """
     from ..core.state import TargetProfile
 
     profile = TargetProfile.load(target)
@@ -132,8 +174,13 @@ def view_task_tree(target: str):
     return '\n'.join(output)
 
 
-def view_progress(target: str):
-    """Live progress bars from profile stats"""
+def view_progress(target: str, style='tree'):
+    """Live progress bars from profile stats
+
+    Args:
+        target: Target IP/hostname
+        style: Visualization style (only tree supported for progress)
+    """
     from ..core.state import TargetProfile
 
     profile = TargetProfile.load(target)
@@ -171,8 +218,13 @@ def view_progress(target: str):
     return '\n'.join(output)
 
 
-def view_phase_flow(target: Optional[str] = None):
-    """Phase progression from PHASES dict"""
+def view_phase_flow(target: Optional[str] = None, style='tree'):
+    """Phase progression from PHASES dict
+
+    Args:
+        target: Optional target to highlight current phase
+        style: Visualization style (only tree supported for phase flow)
+    """
     from ..phases.definitions import get_phase_order, PHASES
     from ..core.state import TargetProfile
 
@@ -204,8 +256,13 @@ def view_phase_flow(target: Optional[str] = None):
     return '\n'.join(output)
 
 
-def view_decision_tree(phase: str = 'discovery'):
-    """Decision tree from factory"""
+def view_decision_tree(phase: str = 'discovery', style='tree'):
+    """Decision tree from factory
+
+    Args:
+        phase: Phase name for decision tree
+        style: Visualization style (only tree supported for decision trees)
+    """
     from ..interactive.decision_trees import DecisionTreeFactory
 
     tree = DecisionTreeFactory.create_phase_tree(phase)
@@ -234,10 +291,113 @@ def view_decision_tree(phase: str = 'discovery'):
     return '\n'.join(output)
 
 
-def view_plugins():
-    """Plugin registry dump"""
+def view_plugin_graph(style='tree'):
+    """Visualize plugin phase flow and dependencies
+
+    Args:
+        style: Visualization style (tree for full flow, compact for matrix)
+    """
+    from ..services.registry import ServiceRegistry
+    from .plugin_graph import build_phase_graph, build_trigger_matrix
+
+    if style == 'compact':
+        # Just show trigger matrix
+        return build_trigger_matrix(ServiceRegistry._plugins, style='tree')
+
+    # Full phase flow diagram (default)
+    return build_phase_graph(ServiceRegistry._plugins)
+
+
+def view_master(style='tree', focus=None, output_file=None):
+    """Comprehensive master visualization - ALL plugin ecosystem data
+
+    Shows programmatically generated data:
+    - 127 plugins across 5 OSCP phases
+    - 115 ports coverage
+    - Attack chains and triggers
+    - Task generation details
+    - Tag-based capabilities
+    - Service overlaps
+
+    Args:
+        style: tree (full 8 sections), compact (summary), columnar (tables)
+        focus: Optional section (summary, phases, ports, chains, tags, overlaps, tasks, graph)
+        output_file: If provided, export to markdown file (untruncated). If None, return terminal output.
+
+    Returns:
+        Visualization string (terminal format if output_file is None, markdown if output_file provided)
+    """
+    from ..services.registry import ServiceRegistry
+    from .master import build_master_visualization, export_markdown
+
+    # If output file specified, generate markdown export
+    if output_file:
+        return export_markdown(ServiceRegistry._plugins, style, focus)
+
+    # Otherwise, return terminal output (truncated)
+    return build_master_visualization(ServiceRegistry._plugins, style, focus)
+
+
+def view_themes(style='tree'):
+    """Preview all available color themes
+
+    Args:
+        style: Visualization style (only tree supported for themes)
+    """
+    from .themes import THEMES, colorize
+
+    output = []
+    output.append("=" * 70)
+    output.append("Color Theme Preview".center(70))
+    output.append("=" * 70)
+    output.append("")
+
+    sample_text = """[completed]✓ Completed Task[/completed]
+[in-progress]⧗ In Progress Task[/in-progress]
+[pending]○ Pending Task[/pending]
+[phase]Phase: Service Enumeration[/phase]
+[plugin]Plugin: HTTP Enumeration[/plugin]"""
+
+    for theme_name in ['oscp', 'dark', 'light', 'mono']:
+        output.append(f"── {theme_name.upper()} Theme ──")
+        colored = colorize(sample_text, theme_name)
+        output.append(colored)
+        output.append("")
+
+    output.append("=" * 70)
+    output.append("Usage: crack track --viz architecture --viz-color --viz-theme <name>")
+    output.append("Available themes: oscp, dark, light, mono")
+
+    return '\n'.join(output)
+
+
+def view_plugins(style='tree'):
+    """Plugin registry dump
+
+    Args:
+        style: Visualization style (tree, columnar, compact)
+    """
     from ..services.registry import ServiceRegistry
 
+    if style == 'compact':
+        # Compact: Just counts
+        return f"Service Plugin Registry: {len(ServiceRegistry._plugins)} plugins loaded"
+
+    elif style == 'columnar':
+        # Columnar: Simple table
+        output = []
+        output.append("=" * 70)
+        output.append(f"Service Plugin Registry - {len(ServiceRegistry._plugins)} Plugins".center(70))
+        output.append("=" * 70)
+        output.append(f"{'Plugin Name':<30} | {'Class':<37}")
+        output.append("-" * 70)
+        for name, plugin in list(ServiceRegistry._plugins.items())[:20]:
+            output.append(f"{name:<30} | {plugin.__class__.__name__:<37}")
+        if len(ServiceRegistry._plugins) > 20:
+            output.append(f"... and {len(ServiceRegistry._plugins) - 20} more")
+        return '\n'.join(output)
+
+    # Tree style (default)
     output = []
     output.append(f"Service Plugin Registry [{len(ServiceRegistry._plugins)} plugins loaded]")
     output.append("═" * 60)
@@ -387,7 +547,7 @@ def _columnar_layout(data):
 def _progress_bar(current, total, width=40, char='█'):
     """ASCII progress bar"""
     if total == 0:
-        return f"[{'░' * width}] 0%"
+        return f"[{'░' * width}] 0% (0/0)"
 
     pct = current / total
     filled = int(pct * width)
@@ -400,15 +560,30 @@ def _progress_bar(current, total, width=40, char='█'):
 # ============ CLI ENTRY POINT ============
 
 def visualize(view: str, target: Optional[str] = None, **opts):
-    """Main entry point - route to view function"""
+    """Main entry point - route to view function
+
+    Args:
+        view: View name (architecture, plugin-flow, task-tree, etc.)
+        target: Optional target IP/hostname
+        **opts: Options including:
+            - style: Visualization style (tree, columnar, compact)
+            - color: Enable colored output
+            - theme: Color theme (oscp, dark, light, mono)
+            - phase: Phase for decision-tree view
+    """
+    style = opts.get('style', 'tree')
+
     views = {
-        'architecture': view_architecture,
-        'plugin-flow': view_plugin_flow,
-        'task-tree': lambda: view_task_tree(target) if target else "Error: target required",
-        'progress': lambda: view_progress(target) if target else "Error: target required",
-        'phase-flow': lambda: view_phase_flow(target),
-        'decision-tree': lambda: view_decision_tree(opts.get('phase', 'discovery')),
-        'plugins': view_plugins
+        'architecture': lambda: view_architecture(style=style),
+        'plugin-flow': lambda: view_plugin_flow(style=style),
+        'plugin-graph': lambda: view_plugin_graph(style=style),
+        'master': lambda: view_master(style=style, focus=opts.get('focus'), output_file=opts.get('output_file')),
+        'task-tree': lambda: view_task_tree(target, style=style) if target else "Error: target required",
+        'progress': lambda: view_progress(target, style=style) if target else "Error: target required",
+        'phase-flow': lambda: view_phase_flow(target, style=style),
+        'decision-tree': lambda: view_decision_tree(opts.get('phase', 'discovery'), style=style),
+        'plugins': lambda: view_plugins(style=style),
+        'themes': lambda: view_themes(style=style)
     }
 
     if view not in views:
@@ -428,5 +603,5 @@ def visualize(view: str, target: Optional[str] = None, **opts):
         return f"Error rendering {view}: {e}"
 
 
-__all__ = ['visualize', 'view_architecture', 'view_plugin_flow', 'view_task_tree',
-           'view_progress', 'view_phase_flow', 'view_decision_tree', 'view_plugins']
+__all__ = ['visualize', 'view_architecture', 'view_plugin_flow', 'view_plugin_graph', 'view_master',
+           'view_task_tree', 'view_progress', 'view_phase_flow', 'view_decision_tree', 'view_plugins', 'view_themes']
