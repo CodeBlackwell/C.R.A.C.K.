@@ -31,15 +31,17 @@ from .decision_trees import DecisionTreeFactory
 class InteractiveSession:
     """Interactive session state machine"""
 
-    def __init__(self, target: str, resume: bool = False):
+    def __init__(self, target: str, resume: bool = False, screened: bool = False):
         """
         Initialize interactive session
 
         Args:
             target: Target IP or hostname
             resume: Whether to resume existing session
+            screened: Whether to use screened terminal mode
         """
         self.target = target
+        self.screened_mode = screened
 
         # Load or create profile
         if TargetProfile.exists(target):
@@ -54,8 +56,54 @@ class InteractiveSession:
         self.shortcut_handler = ShortcutHandler(self)
         self.last_action = None
 
+        # Initialize executor based on mode
+        if screened:
+            # Import here to avoid circular dependency
+            from ..core.command_executor import CommandExecutor
+            from ..core.terminal import ScreenedTerminal
+            from ..parsers.output_patterns import OutputPatternMatcher
+
+            # Create screen session for visibility
+            import subprocess
+            self.screen_session_name = f"crack_{target.replace('.', '_')}"
+
+            # Start screen session with terminal
+            print(DisplayManager.format_info("[SCREENED MODE] Initializing persistent terminal..."))
+
+            # Create terminal
+            self.terminal = ScreenedTerminal(target)
+
+            # Create executor with terminal
+            self.executor = CommandExecutor.create('screened', terminal=self.terminal)
+
+            # Add output parser
+            self.executor.set_parser(OutputPatternMatcher())
+
+            # Start terminal
+            if self.terminal.start():
+                print(DisplayManager.format_success("[SCREENED] Terminal started successfully"))
+                print(DisplayManager.format_info(
+                    f"\n📺 To view terminal output in another window:\n"
+                    f"   screen -x crack_{target.replace('.', '_')}\n"
+                    f"   OR\n"
+                    f"   tail -f {self.terminal.session_log}\n"
+                ))
+            else:
+                print(DisplayManager.format_error("[SCREENED] Failed to start terminal, falling back to subprocess mode"))
+                self.screened_mode = False
+                from ..core.command_executor import CommandExecutor
+                self.executor = CommandExecutor.create('subprocess')
+        else:
+            # Use standard subprocess executor
+            from ..core.command_executor import CommandExecutor
+            self.executor = CommandExecutor.create('subprocess')
+
         # Navigation stack (for back button)
         self.nav_stack = ['main']
+
+        # Search state
+        self.search_query = None
+        self.search_results = []
 
         # Session checkpoint directory
         self.checkpoint_dir = Path.home() / '.crack' / 'sessions'
@@ -209,11 +257,21 @@ class InteractiveSession:
         elif choice_id == 'quick-wins':
             self.show_quick_wins(recommendations)
 
+        # Handle profile-based scans (new dynamic system)
+        elif choice_id.startswith('scan-'):
+            profile_id = choice_id[5:]  # Remove 'scan-' prefix
+            scan_profile = choice.get('scan_profile')
+            self.execute_scan(profile_id, scan_profile)
+
+        elif choice_id == 'custom-scan':
+            self.execute_custom_scan()
+
+        # Legacy scan handlers (backward compatibility)
         elif choice_id == 'quick-scan':
-            self.execute_quick_scan()
+            self.execute_scan('lab-quick')
 
         elif choice_id == 'full-scan':
-            self.execute_full_scan()
+            self.execute_scan('lab-full')
 
         elif choice_id == 'service-scan':
             self.execute_service_scan()
@@ -266,6 +324,11 @@ class InteractiveSession:
                 print(f"  {flag}: {explanation}")
             print()
 
+        # Show screened mode status
+        if self.screened_mode:
+            print(DisplayManager.format_info("[SCREENED] Command will run in persistent terminal"))
+            print(DisplayManager.format_info("Output will be automatically parsed for findings\n"))
+
         # Confirm execution
         confirm = input(DisplayManager.format_confirmation(
             "Execute this command?", default='Y'
@@ -279,87 +342,237 @@ class InteractiveSession:
         task.status = 'in-progress'
         self.profile.save()
 
-        # Execute command
+        # Execute command using executor abstraction
         print(f"\n{DisplayManager.format_info('Executing...')}\n")
 
-        import subprocess
-        try:
-            result = subprocess.run(
-                command,
-                shell=True,
-                capture_output=False,
-                text=True
-            )
+        if self.screened_mode:
+            # Use screened executor
+            try:
+                result = self.executor.run(task, self.profile.target)
 
-            if result.returncode == 0:
-                print(DisplayManager.format_success("Command completed"))
-                task.mark_complete()
-                self.last_action = f"Completed: {task.name}"
-            else:
-                print(DisplayManager.format_warning(
-                    f"Command exited with code {result.returncode}"))
+                if result.success:
+                    print(DisplayManager.format_success("Command completed successfully"))
 
-                # Ask user if task should be marked complete anyway
-                mark_done = input(DisplayManager.format_confirmation(
-                    "Mark task as completed?", default='N'
-                ))
+                    # Show extracted findings if any
+                    if result.findings:
+                        print(DisplayManager.format_info("\n[SCREENED] Extracted findings:"))
+                        for finding_type, items in result.findings.items():
+                            if items and finding_type != 'success':
+                                print(f"  • {finding_type}: {len(items)} found")
 
-                if InputProcessor.parse_confirmation(mark_done, default='N'):
+                                # Auto-add certain findings to profile
+                                if finding_type == 'ports':
+                                    for port_info in items:
+                                        self.profile.add_port(
+                                            port_info['port'],
+                                            state='open',
+                                            service=port_info.get('service'),
+                                            version=port_info.get('version'),
+                                            source=f"[SCREENED] {command}"
+                                        )
+
+                                elif finding_type == 'credentials':
+                                    for cred_info in items:
+                                        self.profile.add_credential(
+                                            username=cred_info['username'],
+                                            password=cred_info.get('password'),
+                                            source=f"[SCREENED] {command}"
+                                        )
+
                     task.mark_complete()
                     self.last_action = f"Completed: {task.name}"
+                else:
+                    print(DisplayManager.format_warning("Command failed or returned non-zero exit"))
 
-        except Exception as e:
-            print(DisplayManager.format_error(f"Execution failed: {e}"))
+                    # Show output for debugging
+                    if result.output:
+                        print("\nOutput (last 10 lines):")
+                        for line in result.output[-10:]:
+                            print(f"  {line}")
+
+                    # Ask user if task should be marked complete anyway
+                    mark_done = input(DisplayManager.format_confirmation(
+                        "Mark task as completed anyway?", default='N'
+                    ))
+
+                    if InputProcessor.parse_confirmation(mark_done, default='N'):
+                        task.mark_complete()
+                        self.last_action = f"Completed: {task.name}"
+
+            except Exception as e:
+                print(DisplayManager.format_error(f"Screened execution failed: {e}"))
+
+        else:
+            # Use subprocess executor (current implementation)
+            import subprocess
+            try:
+                result = subprocess.run(
+                    command,
+                    shell=True,
+                    capture_output=False,
+                    text=True
+                )
+
+                if result.returncode == 0:
+                    print(DisplayManager.format_success("Command completed"))
+                    task.mark_complete()
+                    self.last_action = f"Completed: {task.name}"
+                else:
+                    print(DisplayManager.format_warning(
+                        f"Command exited with code {result.returncode}"))
+
+                    # Ask user if task should be marked complete anyway
+                    mark_done = input(DisplayManager.format_confirmation(
+                        "Mark task as completed?", default='N'
+                    ))
+
+                    if InputProcessor.parse_confirmation(mark_done, default='N'):
+                        task.mark_complete()
+                        self.last_action = f"Completed: {task.name}"
+
+            except Exception as e:
+                print(DisplayManager.format_error(f"Execution failed: {e}"))
 
         self.profile.save()
 
-    def execute_quick_scan(self):
-        """Execute quick port scan"""
-        print(DisplayManager.format_info("Starting quick port scan..."))
+    def execute_scan(self, profile_id: str, scan_profile: dict = None):
+        """Execute scan using specified profile - GENERIC HANDLER
 
-        command = f"nmap --top-ports 1000 {self.profile.target} -oN quick_scan.nmap"
+        Args:
+            profile_id: Scan profile ID
+            scan_profile: Optional pre-loaded profile dict
+        """
+        from ..core.scan_profiles import get_profile
+        from ..core.command_builder import ScanCommandBuilder
+        import subprocess
 
-        print(f"\nCommand: {command}")
-        print("\nThis will scan the top 1000 most common ports (1-2 minutes)\n")
+        # Load profile if not provided
+        if scan_profile is None:
+            scan_profile = get_profile(profile_id)
 
+        if not scan_profile:
+            print(DisplayManager.format_error(f"Unknown scan profile: {profile_id}"))
+            return
+
+        print(DisplayManager.format_info(f"Starting {scan_profile['name']}..."))
+        print(f"Strategy: {scan_profile['use_case']}")
+        print(f"Estimated time: {scan_profile['estimated_time']}")
+
+        # Build command
+        builder = ScanCommandBuilder(self.profile.target, scan_profile)
+        command = builder.build()
+
+        print(f"\nCommand: {command}\n")
+
+        # Show flag explanations if available
+        flag_explanations = scan_profile.get('flag_explanations', {})
+        if flag_explanations:
+            print("Flag Explanations:")
+            for flag, explanation in flag_explanations.items():
+                print(f"  {flag}: {explanation}")
+            print()
+
+        # Warn if high detection risk
+        detection_risk = scan_profile.get('detection_risk', 'medium')
+        if detection_risk in ['high', 'very-high']:
+            print(DisplayManager.format_warning(
+                f"⚠️  WARNING: This scan is NOISY (detection risk: {detection_risk})"
+            ))
+            print("This scan may trigger IDS/IPS alerts. Only use in labs or with permission.\n")
+
+        # Confirm execution
         confirm = input(DisplayManager.format_confirmation("Execute?", default='Y'))
         if not InputProcessor.parse_confirmation(confirm, default='Y'):
+            print("Cancelled")
             return
 
         # Execute
-        import subprocess
+        print(DisplayManager.format_info("Executing scan...\n"))
         result = subprocess.run(command, shell=True)
 
         if result.returncode == 0:
             print(DisplayManager.format_success("Scan complete!"))
-            print("\nWould you like to import the results now?")
 
-            import_now = input(DisplayManager.format_confirmation("Import?", default='Y'))
-            if InputProcessor.parse_confirmation(import_now, default='Y'):
-                self.import_scan_file('quick_scan.nmap')
+            # Record scan in history
+            self.profile.record_scan(
+                profile_id=profile_id,
+                command=command,
+                result_summary=f"Completed: {scan_profile['name']}"
+            )
 
-            self.last_action = "Completed quick port scan"
+            # Auto-import if output file created
+            output_files = []
+            if '-oA' in command:
+                # XML format for import
+                output_base = command.split('-oA')[1].split()[0]
+                output_files.append(f"{output_base}.xml")
+            elif '-oN' in command or '-oX' in command:
+                # Extract output filename
+                import re
+                match = re.search(r'-o[NX]\s+(\S+)', command)
+                if match:
+                    output_files.append(match.group(1))
+
+            # Offer to import
+            if output_files:
+                print("\nWould you like to import the results now?")
+                import_confirm = input(DisplayManager.format_confirmation("Import?", default='Y'))
+                if InputProcessor.parse_confirmation(import_confirm, default='Y'):
+                    for output_file in output_files:
+                        if os.path.exists(output_file):
+                            self.import_scan_file(output_file)
+                            break
+
+            self.last_action = f"Completed: {scan_profile['name']}"
+            self.profile.save()  # Save profile with scan history
+        else:
+            print(DisplayManager.format_error("Scan failed or was interrupted"))
+
+    def execute_custom_scan(self):
+        """Execute user-provided custom nmap command"""
+        import subprocess
+
+        print(DisplayManager.format_info("Custom Scan Mode"))
+        print("Enter your custom nmap command (or 'cancel' to abort):\n")
+
+        command = input("nmap ").strip()
+
+        if not command or command.lower() == 'cancel':
+            print("Cancelled")
+            return
+
+        # Build full command
+        full_command = f"nmap {command}"
+
+        print(f"\nFull command: {full_command}")
+        print(DisplayManager.format_warning(
+            "⚠️  Custom commands bypass safety checks. Ensure you know what you're doing.\n"
+        ))
+
+        confirm = input(DisplayManager.format_confirmation("Execute?", default='N'))
+        if not InputProcessor.parse_confirmation(confirm, default='N'):
+            print("Cancelled")
+            return
+
+        # Execute
+        print(DisplayManager.format_info("Executing...\n"))
+        result = subprocess.run(full_command, shell=True)
+
+        if result.returncode == 0:
+            print(DisplayManager.format_success("Custom scan complete!"))
+            self.last_action = "Completed custom scan"
+        else:
+            print(DisplayManager.format_error("Scan failed or was interrupted"))
+
+    def execute_quick_scan(self):
+        """Execute quick port scan (LEGACY - maintained for backward compatibility)"""
+        # Delegate to new generic handler
+        self.execute_scan('lab-quick')
 
     def execute_full_scan(self):
-        """Execute full port scan"""
-        print(DisplayManager.format_info("Starting full port scan..."))
-
-        command = f"nmap -p- --min-rate 1000 {self.profile.target} -oA full_scan"
-
-        print(f"\nCommand: {command}")
-        print("\nThis will scan all 65535 ports (5-10 minutes)\n")
-
-        confirm = input(DisplayManager.format_confirmation("Execute?", default='Y'))
-        if not InputProcessor.parse_confirmation(confirm, default='Y'):
-            return
-
-        # Execute
-        import subprocess
-        result = subprocess.run(command, shell=True)
-
-        if result.returncode == 0:
-            print(DisplayManager.format_success("Scan complete!"))
-            self.last_action = "Completed full port scan"
+        """Execute full port scan (LEGACY - maintained for backward compatibility)"""
+        # Delegate to new generic handler
+        self.execute_scan('lab-full')
 
     def execute_service_scan(self):
         """Execute service version scan on discovered ports"""
@@ -595,6 +808,139 @@ class InteractiveSession:
         if len(self.nav_stack) > 1:
             self.nav_stack.pop()
             print(DisplayManager.format_info("Going back..."))
+
+    def search_tasks(self, query: str) -> list:
+        """
+        Search for tasks by name, command, or tags
+
+        Args:
+            query: Search query string
+
+        Returns:
+            List of matching TaskNode objects
+        """
+        query = query.lower()
+        results = []
+
+        def search_node(node):
+            """Recursively search task tree"""
+            # Search in task name
+            if query in node.name.lower():
+                results.append(node)
+            # Search in command
+            elif node.metadata.get('command') and query in node.metadata['command'].lower():
+                results.append(node)
+            # Search in tags
+            elif any(query in tag.lower() for tag in node.metadata.get('tags', [])):
+                results.append(node)
+            # Search in description
+            elif node.metadata.get('description') and query in node.metadata['description'].lower():
+                results.append(node)
+
+            # Recursively search children
+            for child in node.children:
+                search_node(child)
+
+        search_node(self.profile.task_tree)
+        self.search_query = query
+        self.search_results = results
+        return results
+
+    def filter_tasks(self, filter_type: str, filter_value: str = None) -> list:
+        """
+        Filter tasks by various criteria
+
+        Args:
+            filter_type: Type of filter ('status', 'tag', 'quick_win', 'port')
+            filter_value: Value to filter by (e.g., 'pending', 'OSCP:HIGH')
+
+        Returns:
+            List of matching TaskNode objects
+        """
+        results = []
+
+        def filter_node(node):
+            """Recursively filter task tree"""
+            matched = False
+
+            if filter_type == 'status' and node.status == filter_value:
+                matched = True
+            elif filter_type == 'tag' and filter_value in node.metadata.get('tags', []):
+                matched = True
+            elif filter_type == 'quick_win' and 'QUICK_WIN' in node.metadata.get('tags', []):
+                matched = True
+            elif filter_type == 'port':
+                # Extract port from task ID or name
+                if f"-{filter_value}" in node.id or f"port {filter_value}" in node.name.lower():
+                    matched = True
+
+            if matched:
+                results.append(node)
+
+            # Recursively filter children
+            for child in node.children:
+                filter_node(child)
+
+        filter_node(self.profile.task_tree)
+        return results
+
+    def handle_search(self):
+        """Interactive search handler"""
+        print(DisplayManager.format_info("Task Search"))
+        print("Search by: task name, command, tags, or description")
+        print("Examples: 'gobuster', 'http', 'QUICK_WIN', 'sql'")
+        print()
+
+        query = input("Search query (or 'cancel'): ").strip()
+        if query.lower() == 'cancel':
+            return
+
+        results = self.search_tasks(query)
+
+        if not results:
+            print(DisplayManager.format_warning(f"No tasks found matching '{query}'"))
+        else:
+            print(DisplayManager.format_success(f"Found {len(results)} matching task(s):"))
+            print()
+
+            for i, task in enumerate(results[:20], 1):  # Limit to 20 results
+                status_icon = {
+                    'completed': '✅',
+                    'pending': '⏳',
+                    'in-progress': '🔄'
+                }.get(task.status, '❓')
+
+                print(f"{i:2d}. {status_icon} {task.name} [{task.id}]")
+
+                if task.metadata.get('command'):
+                    print(f"    Command: {task.metadata['command']}")
+                if task.metadata.get('tags'):
+                    print(f"    Tags: {', '.join(task.metadata['tags'])}")
+                print()
+
+            if len(results) > 20:
+                print(DisplayManager.format_info(f"... and {len(results) - 20} more results"))
+
+            # Ask if user wants to act on a result
+            print("\nOptions:")
+            print("  [number] - Mark task as complete")
+            print("  s        - New search")
+            print("  c        - Cancel")
+
+            choice = input("\nChoice: ").strip().lower()
+
+            if choice == 's':
+                self.handle_search()
+            elif choice.isdigit():
+                idx = int(choice) - 1
+                if 0 <= idx < len(results):
+                    task = results[idx]
+                    confirm = input(f"Mark '{task.name}' as complete? [y/N]: ")
+                    if confirm.lower() == 'y':
+                        task.mark_complete()
+                        self.profile.save()
+                        print(DisplayManager.format_success(f"Task '{task.name}' marked as complete"))
+                        self.last_action = f"Marked task complete: {task.name}"
 
     def save_checkpoint(self):
         """Save session checkpoint"""

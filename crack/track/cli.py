@@ -1,7 +1,11 @@
 """
-CRACK Track CLI
+C.R.A.C.K. T.R.A.C.K. CLI
 
-Main command-line interface for CRACK Track - the enumeration tracking and task management system.
+Main command-line interface for CRACK Track:
+- (C)omprehensive (R)econ & (A)ttack (C)reation (K)it
+- (T)argeted (R)econnaissance (A)nd (C)ommand (K)onsole
+
+Enumeration tracking and task management system for OSCP preparation.
 """
 
 import sys
@@ -28,7 +32,7 @@ from .formatters.markdown import MarkdownFormatter
 def main():
     """Main CLI entry point for CRACK Track"""
     parser = argparse.ArgumentParser(
-        description='CRACK Track - Enumeration tracking and task management for OSCP preparation',
+        description='C.R.A.C.K. T.R.A.C.K.\n(C)omprehensive (R)econ & (A)ttack (C)reation (K)it\n(T)argeted (R)econnaissance (A)nd (C)ommand (K)onsole\n\nEnumeration tracking and task management for OSCP preparation',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
@@ -101,6 +105,8 @@ For full documentation: See track/README.md or https://github.com/CodeBlackwell/
                         help='Start interactive mode with progressive prompting')
     parser.add_argument('--resume', action='store_true',
                         help='Resume existing interactive session')
+    parser.add_argument('-X', '--screened', action='store_true',
+                        help='Screened mode: persistent terminal with auto-parsing (use with -i)')
 
     # Import actions
     parser.add_argument('--import', dest='import_file', metavar='FILE',
@@ -203,7 +209,7 @@ For full documentation: See track/README.md or https://github.com/CodeBlackwell/
 
     # Handle interactive mode (before loading profile)
     if args.interactive:
-        handle_interactive(args.target, args.resume)
+        handle_interactive(args.target, args.resume, args.screened)
         return
 
     # Load or create profile
@@ -271,12 +277,12 @@ def load_or_create_profile(target: str) -> TargetProfile:
     return profile
 
 
-def handle_interactive(target: str, resume: bool = False):
+def handle_interactive(target: str, resume: bool = False, screened: bool = False):
     """Handle interactive mode"""
     from .interactive import InteractiveSession
 
     try:
-        session = InteractiveSession(target, resume=resume)
+        session = InteractiveSession(target, resume=resume, screened=screened)
         session.run()
     except KeyboardInterrupt:
         print("\n\nInteractive mode interrupted.")
