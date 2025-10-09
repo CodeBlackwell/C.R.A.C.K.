@@ -108,6 +108,13 @@ def port_scan_command(args):
     sys.argv = ['port_scanner'] + args
     port_scanner.main()
 
+def session_command(args):
+    """Execute session management commands via unified CLI"""
+    from crack.sessions.unified_cli import UnifiedSessionCLI
+
+    cli = UnifiedSessionCLI()
+    cli.run(args)
+
 def main():
     """Main CLI entry point"""
     parser = argparse.ArgumentParser(
@@ -128,6 +135,9 @@ def main():
   ├─ param-extract   Extract form values as variables
   ├─ sqli-scan       Detect SQL injection vulnerabilities
   └─ sqli-fu         SQLi post-exploitation reference
+
+{Colors.YELLOW}▶ Session Management{Colors.END}
+  └─ session         Reverse shell session management (TCP/HTTP/DNS)
 
 {Colors.YELLOW}▶ Reference System{Colors.END}
   └─ reference       Command lookup with 70+ OSCP commands
@@ -185,6 +195,17 @@ def main():
   crack reference --tag QUICK_WIN              # Find quick wins
   crack reference --config auto                # Auto-detect settings
   crack reference --set TARGET 192.168.45.100  # Set config variable
+
+{Colors.GREEN}Session Management:{Colors.END}
+  crack session start tcp --port 4444          # Start TCP listener
+  crack session start http --port 8080         # Start HTTP beacon listener
+  crack session start dns --domain tunnel.com  # Start DNS tunnel (root)
+  crack session start icmp                     # Start ICMP tunnel (root)
+  crack session list --filter active           # List active sessions
+  crack session upgrade abc123 --method auto   # Upgrade shell to TTY
+  crack session beacon-gen bash http://IP:8080 # Generate beacon script
+  crack session tunnel-create abc123 --type ssh-dynamic --socks-port 1080
+  crack session kill abc123                    # Kill session
 
 {Colors.CYAN}══════════════════════════ CONFIGURATION ════════════════════════════{Colors.END}
 
@@ -271,6 +292,12 @@ def main():
                                              help='Alias for "track" (backward compatibility)',
                                              add_help=False)
     checklist_parser.set_defaults(func=checklist_command)
+
+    # Session Management subcommand
+    session_parser = subparsers.add_parser('session',
+                                           help='Session Management - Reverse shell handler',
+                                           add_help=False)
+    session_parser.set_defaults(func=session_command)
 
     # Parse known args to allow passing through tool-specific args
     args, remaining = parser.parse_known_args()
