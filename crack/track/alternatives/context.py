@@ -27,13 +27,13 @@ except ImportError:
 # NOTE: Paths verified for Kali Linux 2024+ system paths
 WORDLIST_CONTEXT = {
     'web-enumeration': {
-        'default': '/usr/share/dirb/wordlists/common.txt',
-        'thorough': '/usr/share/dirbuster/wordlists/directory-list-2.3-medium.txt',
-        'quick': '/usr/share/dirb/wordlists/small.txt'
+        'default': '/usr/share/wordlists/dirb/common.txt',
+        'thorough': '/usr/share/wordlists/dirbuster/directory-list-2.3-medium.txt',
+        'quick': '/usr/share/wordlists/dirb/small.txt'
     },
     'password-cracking': {
         'default': '/usr/share/wordlists/rockyou.txt',
-        'ssh': '/usr/share/seclists/Passwords/Common-Credentials/top-20-common-SSH-passwords.txt',
+        'ssh': '/usr/share/seclists/Passwords/Default-Credentials/ssh-betterdefaultpasslist.txt',
         'ftp': '/usr/share/seclists/Passwords/Default-Credentials/ftp-betterdefaultpasslist.txt',
         'http-auth': '/usr/share/seclists/Passwords/Default-Credentials/http-betterdefaultpasslist.txt'
     },

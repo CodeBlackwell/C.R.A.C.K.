@@ -39,8 +39,8 @@ def mock_profile_with_gobuster(temp_crack_home):
     """Profile with gobuster task needing wordlist"""
     profile = TargetProfile('192.168.45.100')
 
-    # Add HTTP service
-    profile.add_port(80, state='open', service='http', version='Apache 2.4.41', source='test')
+    # Don't add port to avoid auto-generating tasks that conflict
+    # Just manually add the gobuster task we want to test
 
     # Add gobuster task with wordlist placeholder
     task = TaskNode(
@@ -67,8 +67,8 @@ def mock_profile_with_hydra(temp_crack_home):
     """Profile with hydra task needing wordlist"""
     profile = TargetProfile('192.168.45.200')
 
-    # Add SSH service
-    profile.add_port(22, state='open', service='ssh', version='OpenSSH 7.9', source='test')
+    # Don't add port to avoid auto-generating tasks that conflict
+    # Just manually add the hydra task we want to test
 
     # Add hydra task
     task = TaskNode(
@@ -132,8 +132,8 @@ class TestWordlistShortcut:
         # Should not raise error
         handler.select_wordlist()
 
-    @patch('crack.track.interactive.shortcuts.WordlistSelector')
-    @patch('crack.track.interactive.shortcuts.WordlistManager')
+    @patch('crack.track.wordlists.selector.WordlistSelector')
+    @patch('crack.track.wordlists.manager.WordlistManager')
     @patch('builtins.input', return_value='1')  # Select first task
     def test_w_shortcut_launches_selector(self, mock_input, mock_manager, mock_selector,
                                          mock_profile_with_gobuster):
@@ -180,7 +180,9 @@ class TestTaskExecutionFlow:
         PROVES: _task_needs_wordlist detects <WORDLIST> placeholder
         """
         session = InteractiveSession(mock_profile_with_gobuster.target)
-        task = mock_profile_with_gobuster.task_tree.get_all_pending()[0]
+        # Find the gobuster task (not root node)
+        tasks = mock_profile_with_gobuster.task_tree.get_all_pending()
+        task = next(t for t in tasks if t.id == 'gobuster-80')
 
         assert session._task_needs_wordlist(task) is True
 
@@ -248,7 +250,9 @@ class TestTaskExecutionFlow:
         Expected: System prompts for wordlist selection
         """
         session = InteractiveSession(mock_profile_with_gobuster.target)
-        task = mock_profile_with_gobuster.task_tree.get_all_pending()[0]
+        # Find the gobuster task (not root node)
+        tasks = mock_profile_with_gobuster.task_tree.get_all_pending()
+        task = next(t for t in tasks if t.id == 'gobuster-80')
 
         # Mock subprocess to succeed
         mock_run.return_value = MagicMock(returncode=0)
@@ -259,8 +263,8 @@ class TestTaskExecutionFlow:
         # Verify input was called (wordlist prompt + execution confirm)
         assert mock_input.call_count == 2
 
-    @patch('crack.track.interactive.shortcuts.WordlistSelector')
-    @patch('crack.track.interactive.shortcuts.WordlistManager')
+    @patch('crack.track.wordlists.selector.WordlistSelector')
+    @patch('crack.track.wordlists.manager.WordlistManager')
     @patch('builtins.input', side_effect=['y', 'y'])  # Yes to wordlist, yes to execute
     @patch('subprocess.run')
     def test_wordlist_substitution_in_command(self, mock_run, mock_input,
@@ -292,7 +296,9 @@ class TestTaskExecutionFlow:
         mock_run.return_value = MagicMock(returncode=0)
 
         session = InteractiveSession(mock_profile_with_gobuster.target)
-        task = mock_profile_with_gobuster.task_tree.get_all_pending()[0]
+        # Find the gobuster task (not root node)
+        tasks = mock_profile_with_gobuster.task_tree.get_all_pending()
+        task = next(t for t in tasks if t.id == 'gobuster-80')
 
         # Execute task
         session.execute_task(task)
@@ -309,7 +315,9 @@ class TestTaskExecutionFlow:
         """
         from crack.track.wordlists.manager import WordlistEntry
 
-        task = mock_profile_with_gobuster.task_tree.get_all_pending()[0]
+        # Find the gobuster task (not root node)
+        tasks = mock_profile_with_gobuster.task_tree.get_all_pending()
+        task = next(t for t in tasks if t.id == 'gobuster-80')
 
         # Simulate wordlist selection
         task.metadata['wordlist'] = '/usr/share/wordlists/dirb/common.txt'
@@ -320,7 +328,8 @@ class TestTaskExecutionFlow:
 
         # Reload profile
         reloaded = TargetProfile.load(mock_profile_with_gobuster.target)
-        reloaded_task = reloaded.task_tree.get_all_pending()[0]
+        reloaded_tasks = reloaded.task_tree.get_all_pending()
+        reloaded_task = next(t for t in reloaded_tasks if t.id == 'gobuster-80')
 
         assert reloaded_task.metadata['wordlist'] == '/usr/share/wordlists/dirb/common.txt'
         assert reloaded_task.metadata['wordlist_name'] == 'common.txt'
@@ -407,8 +416,8 @@ class TestDisplayIntegration:
 class TestOSCPScenarios:
     """Test complete OSCP workflows"""
 
-    @patch('crack.track.interactive.shortcuts.WordlistSelector')
-    @patch('crack.track.interactive.shortcuts.WordlistManager')
+    @patch('crack.track.wordlists.selector.WordlistSelector')
+    @patch('crack.track.wordlists.manager.WordlistManager')
     @patch('builtins.input', side_effect=['1', 'y'])  # Select task 1, execute
     @patch('subprocess.run')
     def test_web_enum_workflow(self, mock_run, mock_input, mock_manager,
@@ -444,16 +453,17 @@ class TestOSCPScenarios:
 
         session = InteractiveSession(mock_profile_with_gobuster.target)
 
-        # Get gobuster task
-        task = session.profile.task_tree.get_all_pending()[0]
+        # Get gobuster task (find by ID, not index)
+        tasks = session.profile.task_tree.get_all_pending()
+        task = next(t for t in tasks if t.id == 'gobuster-80')
         assert task.id == 'gobuster-80'
         assert session._task_needs_wordlist(task)
 
         # Verify wordlist purpose is set
         assert task.metadata['wordlist_purpose'] == 'web-enumeration'
 
-    @patch('crack.track.interactive.shortcuts.WordlistSelector')
-    @patch('crack.track.interactive.shortcuts.WordlistManager')
+    @patch('crack.track.wordlists.selector.WordlistSelector')
+    @patch('crack.track.wordlists.manager.WordlistManager')
     @patch('builtins.input', side_effect=['y'])  # Execute with default
     @patch('subprocess.run')
     def test_password_cracking_workflow(self, mock_run, mock_input,
@@ -469,7 +479,9 @@ class TestOSCPScenarios:
         4. Wrong wordlist wastes precious exam time
         """
         session = InteractiveSession(mock_profile_with_hydra.target)
-        task = session.profile.task_tree.get_all_pending()[0]
+        # Find the hydra task (not root node)
+        tasks = session.profile.task_tree.get_all_pending()
+        task = next(t for t in tasks if t.id == 'hydra-ssh-22')
 
         # Verify correct purpose
         assert task.metadata['wordlist_purpose'] == 'password-cracking'
@@ -538,7 +550,9 @@ class TestEdgeCases:
         PROVES: {WORDLIST} placeholder (curly braces) also works
         """
         session = InteractiveSession(mock_profile_with_hydra.target)
-        task = session.profile.task_tree.get_all_pending()[0]
+        # Find the hydra task (not root node)
+        tasks = session.profile.task_tree.get_all_pending()
+        task = next(t for t in tasks if t.id == 'hydra-ssh-22')
 
         # Hydra task uses {WORDLIST} format
         assert '{WORDLIST}' in task.metadata['command']

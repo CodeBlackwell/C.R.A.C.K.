@@ -13,6 +13,59 @@ import requests
 
 
 # ============================================================================
+# SERVICE REGISTRY FIXTURES (Test Isolation)
+# ============================================================================
+
+@pytest.fixture(scope="module", autouse=True)
+def clear_event_bus_and_plugin_state():
+    """Clear EventBus and plugin resolution state before each module for test isolation
+
+    This ensures:
+    - EventBus handlers don't accumulate across tests (each TargetProfile registers handlers)
+    - ServiceRegistry plugin conflict resolution resets (_resolved_ports, _plugin_claims)
+    - ServiceRegistry re-registers event handlers (by resetting _initialized flag)
+    - Service plugins themselves remain registered (avoiding Python import cache issues)
+    - Plugins are re-initialized after state clearing (ensures registry is populated)
+    - Plugin registry is saved/restored (allows tests to clear plugins for isolation)
+    """
+    from crack.track.services.registry import ServiceRegistry
+    from crack.track.core.events import EventBus
+
+    # SAVE current plugin state (protects against tests that clear plugins)
+    saved_plugins = ServiceRegistry._plugins.copy()
+
+    # Clear EventBus handlers (prevents duplicate handlers from multiple TargetProfiles)
+    EventBus.clear()
+
+    # Reset ServiceRegistry initialization flag to force handler re-registration
+    ServiceRegistry._initialized = False
+
+    # Clear plugin resolution state (allows ports to be re-resolved in new tests)
+    if hasattr(ServiceRegistry, '_plugin_claims'):
+        ServiceRegistry._plugin_claims.clear()
+    if hasattr(ServiceRegistry, '_resolved_ports'):
+        ServiceRegistry._resolved_ports.clear()
+
+    # Re-initialize plugins to ensure registry is populated
+    # This loads all plugin modules and re-registers event handlers
+    ServiceRegistry.initialize_plugins()
+
+    yield
+
+    # RESTORE plugin registry (ensures next test starts with full registry)
+    # This fixes the issue where test_core_improvements.py clears plugins
+    ServiceRegistry._plugins = saved_plugins
+    ServiceRegistry._initialized = True  # Mark as initialized since we restored plugins
+
+    # Cleanup after test
+    EventBus.clear()
+    if hasattr(ServiceRegistry, '_plugin_claims'):
+        ServiceRegistry._plugin_claims.clear()
+    if hasattr(ServiceRegistry, '_resolved_ports'):
+        ServiceRegistry._resolved_ports.clear()
+
+
+# ============================================================================
 # FILE SYSTEM FIXTURES
 # ============================================================================
 
@@ -236,6 +289,9 @@ def mock_subprocess_run(monkeypatch):
 def mock_requests_session(monkeypatch):
     """Mock requests.Session for HTTP testing"""
     mock_session = MagicMock(spec=requests.Session)
+
+    # IMPORTANT: Set up headers as a real dict, not a Mock
+    mock_session.headers = {}
 
     # Mock response
     mock_response = Mock()

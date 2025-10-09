@@ -19,6 +19,21 @@ from crack.sessions.shell.http_upgrader import HTTPShellUpgrader
 from crack.sessions.models import Session
 
 
+@pytest.fixture(autouse=True)
+def cleanup_event_bus():
+    """Clear EventBus state before and after each test to prevent handler pollution.
+
+    The EventBus is a singleton with class-level state that persists across tests.
+    Without cleanup, event handlers from previous tests remain registered and can
+    cause resource exhaustion (threads, sockets, file descriptors) leading to
+    system crashes.
+    """
+    from crack.sessions.events import EventBus
+    EventBus.reset()
+    yield
+    EventBus.reset()
+
+
 @pytest.fixture
 def mock_session_manager():
     """Mock SessionManager"""
@@ -221,8 +236,14 @@ class TestPayloadInjection:
 class TestTCPListener:
     """Test TCP listener management"""
 
-    def test_start_tcp_listener_timeout(self, http_upgrader):
+    @patch('crack.sessions.shell.http_upgrader.socket.socket')
+    def test_start_tcp_listener_timeout(self, mock_socket_class, http_upgrader):
         """Test TCP listener with timeout (no connection)"""
+        # Mock socket to simulate timeout without actually binding
+        mock_server = Mock()
+        mock_server.accept.side_effect = socket.timeout()
+        mock_socket_class.return_value = mock_server
+
         client_socket, client_address = http_upgrader.start_tcp_listener(
             '127.0.0.1',
             9999,
@@ -231,6 +252,8 @@ class TestTCPListener:
 
         assert client_socket is None
         assert client_address is None
+        # Verify socket was properly closed
+        mock_server.close.assert_called_once()
 
     @patch('socket.socket')
     def test_start_tcp_listener_connection(self, mock_socket_class, http_upgrader):
@@ -277,9 +300,17 @@ class TestUpgradeWorkflow:
         )
         mock_session_manager.create_session.return_value = tcp_session
 
-        # Mock thread (simulate successful connection)
-        mock_thread = Mock()
-        mock_thread_class.return_value = mock_thread
+        # Mock thread to execute the target function when start() is called
+        captured_target = {}
+        def create_mock_thread(*args, **kwargs):
+            captured_target['func'] = kwargs.get('target')
+            mock_thread = Mock()
+            def run_target():
+                if captured_target.get('func'):
+                    captured_target['func']()
+            mock_thread.start.side_effect = run_target
+            return mock_thread
+        mock_thread_class.side_effect = create_mock_thread
 
         # Mock connection result
         with patch.object(http_upgrader, 'start_tcp_listener') as mock_listener:

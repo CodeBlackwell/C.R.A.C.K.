@@ -59,13 +59,13 @@ class TestSearchUserWorkflows:
         # Verify all manually added gobuster tasks found
         # Note: Profile may have auto-generated tasks from service plugins
         manual_task_ids = [f'gobuster-{port}' for port in [80, 443, 8080]]
-        found_ids = [t.id for t in results]
+        found_ids = [task.id for task, score in results]
 
         assert all(task_id in found_ids for task_id in manual_task_ids), \
             f"Expected to find {manual_task_ids}, found {found_ids}"
 
         # Verify manual tasks have correct properties
-        manual_tasks = [t for t in results if t.id in manual_task_ids]
+        manual_tasks = [task for task, score in results if task.id in manual_task_ids]
         assert len(manual_tasks) == 3
         assert all('gobuster' in task.metadata.get('command', '') for task in manual_tasks)
 
@@ -101,13 +101,13 @@ class TestSearchUserWorkflows:
 
         # Verify manually added quick win tasks found
         manual_quick_ids = ['whatweb-80', 'robots-80', 'searchsploit-apache']
-        found_ids = [t.id for t in results]
+        found_ids = [task.id for task, score in results]
 
         assert all(task_id in found_ids for task_id in manual_quick_ids), \
             f"Expected to find {manual_quick_ids}, found {found_ids}"
 
         # Verify all results have QUICK_WIN tag
-        assert all('QUICK_WIN' in task.metadata.get('tags', []) for task in results)
+        assert all('QUICK_WIN' in task.metadata.get('tags', []) for task, score in results)
 
         # Verify slow tasks excluded
         assert 'nikto-80' not in found_ids
@@ -182,8 +182,8 @@ class TestSearchUserWorkflows:
         results = session.search_tasks('gobuster')
         assert len(results) == 1
 
-        # Mark task complete from results
-        found_task = results[0]
+        # Mark task complete from results (unpack tuple)
+        found_task, score = results[0]
         assert found_task.status == 'pending'
 
         found_task.mark_complete()
@@ -240,7 +240,7 @@ class TestSearchAccuracy:
 
         # Verify only nmap tasks found
         assert len(results) == 3
-        assert all('nmap' in (task.id or task.metadata.get('command', '')) for task in results)
+        assert all('nmap' in (task.id or task.metadata.get('command', '')) for task, score in results)
 
     def test_search_case_insensitive(self, temp_crack_home):
         """
@@ -262,7 +262,8 @@ class TestSearchAccuracy:
         for query in test_cases:
             results = session.search_tasks(query)
             assert len(results) == 1
-            assert results[0].id == 'gobuster-80'
+            task, score = results[0]
+            assert task.id == 'gobuster-80'
 
     def test_search_partial_match(self, temp_crack_home):
         """
@@ -286,11 +287,13 @@ class TestSearchAccuracy:
         # Partial searches
         results = session.search_tasks('gob')
         assert len(results) == 1
-        assert results[0].id == 'gobuster-80'
+        task, score = results[0]
+        assert task.id == 'gobuster-80'
 
         results = session.search_tasks('what')
         assert len(results) == 1
-        assert results[0].id == 'whatweb-80'
+        task, score = results[0]
+        assert task.id == 'whatweb-80'
 
 
 class TestFilteringWorkflows:
@@ -468,8 +471,8 @@ class TestSearchEdgeCases:
         # Search should find both gobuster tasks
         results = session.search_tasks('gobuster')
         assert len(results) == 2
-        assert 'gobuster-80' in [t.id for t in results]
-        assert 'gobuster-api' in [t.id for t in results]
+        assert 'gobuster-80' in [task.id for task, score in results]
+        assert 'gobuster-api' in [task.id for task, score in results]
 
 
 class TestSearchPerformance:

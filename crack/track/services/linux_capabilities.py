@@ -17,7 +17,12 @@ from .registry import ServiceRegistry
 
 @ServiceRegistry.register
 class LinuxCapabilitiesPlugin(ServicePlugin):
-    """Linux capabilities and SUID privilege escalation plugin"""
+    """
+    Linux capabilities and SUID privilege escalation plugin
+
+    Based on HackTricks privilege escalation resources for Linux capabilities,
+    SUID/EUID exploitation, and container escape techniques.
+    """
 
     @property
     def name(self) -> str:

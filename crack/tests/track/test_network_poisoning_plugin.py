@@ -8,6 +8,10 @@ complete OSCP educational metadata.
 
 import pytest
 from crack.track.services.network_poisoning import NetworkPoisoningPlugin
+from crack.track.services.registry import ServiceRegistry
+
+# Initialize plugins at module load to ensure registry is populated
+ServiceRegistry.initialize_plugins()
 
 
 class TestNetworkPoisoningPlugin:
@@ -24,7 +28,6 @@ class TestNetworkPoisoningPlugin:
 
     def test_plugin_registration(self, plugin):
         """PROVES: Plugin is registered in ServiceRegistry"""
-        from crack.track.services.registry import ServiceRegistry
         registered_names = [p.name for p in ServiceRegistry.get_all_plugins()]
         assert "network-poisoning" in registered_names
 

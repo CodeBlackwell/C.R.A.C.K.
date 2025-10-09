@@ -49,7 +49,7 @@ class TestMetadataGeneration:
         assert metadata.line_count == 5
         # Avg word length: (5 + 5 + 5 + 10 + 1) / 5 = 5.2
         assert 5.0 <= metadata.avg_word_length <= 5.5
-        assert metadata.last_scanned > 0  # Timestamp set
+        assert len(metadata.last_scanned) > 0  # Timestamp set
 
     def test_generate_metadata_medium_file(self, wordlists_with_various_sizes):
         """

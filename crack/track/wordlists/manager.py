@@ -76,14 +76,13 @@ class WordlistManager:
         Scan wordlists directory recursively
 
         Args:
-            force_rescan: Force rescan even if cache exists
+            force_rescan: Always rescans (parameter kept for API compatibility)
 
         Returns:
             List of WordlistEntry objects
         """
-        # Use cache if available and not forcing rescan
-        if self.cache and not force_rescan:
-            return list(self.cache.values())
+        # Always scan directory to detect new files
+        # Cache is used for initialization only
 
         # Import metadata generator
         from .metadata import generate_metadata
@@ -140,9 +139,18 @@ class WordlistManager:
             with open(self.cache_path, 'r') as f:
                 cache_data = json.load(f)
 
-            # Convert dict to WordlistEntry objects
-            for path, entry_dict in cache_data.items():
-                self.cache[path] = WordlistEntry(**entry_dict)
+            # Support both old format (dict) and new format (list)
+            if isinstance(cache_data, dict):
+                # New format: {'wordlists': [...], 'last_scan': ...}
+                if 'wordlists' in cache_data:
+                    wordlist_entries = cache_data['wordlists']
+                    for entry_dict in wordlist_entries:
+                        entry = WordlistEntry(**entry_dict)
+                        self.cache[entry.path] = entry
+                else:
+                    # Old format: {path: entry_dict, ...}
+                    for path, entry_dict in cache_data.items():
+                        self.cache[path] = WordlistEntry(**entry_dict)
 
             return self.cache
 
@@ -153,10 +161,12 @@ class WordlistManager:
     def _save_cache(self):
         """Save cache to disk"""
         try:
-            # Convert WordlistEntry objects to dicts
+            # Convert WordlistEntry objects to list format with metadata
+            wordlist_entries = [asdict(entry) for entry in self.cache.values()]
+
             cache_data = {
-                path: asdict(entry)
-                for path, entry in self.cache.items()
+                'wordlists': wordlist_entries,
+                'last_scan': datetime.now().isoformat()
             }
 
             with open(self.cache_path, 'w') as f:
@@ -250,6 +260,16 @@ class WordlistManager:
             List of all WordlistEntry objects
         """
         return list(self.cache.values())
+
+    @property
+    def wordlists(self) -> List[WordlistEntry]:
+        """
+        Property to access all wordlists (convenience accessor)
+
+        Returns:
+            List of all WordlistEntry objects
+        """
+        return self.get_all()
 
     def clear_cache(self):
         """Clear cache and remove cache file"""

@@ -24,6 +24,7 @@ class ShellCapabilities:
         has_pty: Whether shell has pseudo-terminal (allows Ctrl+C, arrow keys, etc.)
         has_history: Whether command history is available (up/down arrows work)
         has_tab_completion: Whether tab completion works
+        has_job_control: Whether job control (Ctrl+Z, fg, bg) is available
         shell_type: Type of shell (bash, sh, powershell, cmd, etc.)
         detected_tools: Available tools on target (python, socat, script, stty, etc.)
         os_type: Operating system type (linux, windows, macos)
@@ -44,6 +45,7 @@ class ShellCapabilities:
     has_pty: bool = False
     has_history: bool = False
     has_tab_completion: bool = False
+    has_job_control: bool = False
     shell_type: str = 'unknown'
     detected_tools: List[str] = field(default_factory=list)
     os_type: str = 'unknown'
@@ -191,7 +193,13 @@ class Session:
         if 'capabilities' in data and isinstance(data['capabilities'], dict):
             data['capabilities'] = ShellCapabilities.from_dict(data['capabilities'])
 
-        return cls(**data)
+        # Filter out unknown fields to handle old session data gracefully
+        valid_fields = {'id', 'type', 'protocol', 'target', 'port', 'status',
+                       'pid', 'shell_type', 'capabilities', 'metadata',
+                       'created_at', 'last_seen'}
+        filtered_data = {k: v for k, v in data.items() if k in valid_fields}
+
+        return cls(**filtered_data)
 
     def __repr__(self):
         return f"<Session id={self.id[:8]} type={self.type} target={self.target}:{self.port} status={self.status}>"

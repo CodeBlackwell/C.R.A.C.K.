@@ -30,7 +30,7 @@ class APIAttacksPlugin(ServicePlugin):
 
     @property
     def service_names(self) -> List[str]:
-        return []  # Triggered by HTTP services with API indicators
+        return ['grpc', 'websocket', 'socket.io']  # API/WebSocket services
 
     def detect(self, port_info: Dict[str, Any]) -> bool:
         """

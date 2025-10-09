@@ -346,7 +346,8 @@ class TaskNode:
             'completed': len([t for t in all_tasks if t.status == 'completed']),
             'in_progress': len([t for t in all_tasks if t.status == 'in-progress']),
             'pending': len([t for t in all_tasks if t.status == 'pending']),
-            'skipped': len([t for t in all_tasks if t.status == 'skipped'])
+            'skipped': len([t for t in all_tasks if t.status == 'skipped']),
+            'failed': len([t for t in all_tasks if t.status == 'failed'])
         }
 
     def _get_all_descendants(self) -> List['TaskNode']:

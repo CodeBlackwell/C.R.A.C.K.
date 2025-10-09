@@ -34,7 +34,7 @@ class TestGuidanceQuality_QuickWins:
 
         # Check first 3 quick wins for speed indicators
         for task in quick_wins[:3]:
-            command = task.metadata.get('command', '')
+            command = task.metadata.get('command') or ''
             tags = task.metadata.get('tags', [])
 
             # Should not suggest slow operations
@@ -58,7 +58,7 @@ class TestGuidanceQuality_QuickWins:
         next_task = recommendations.get('next')
 
         if next_task:
-            command = next_task.metadata.get('command', '').lower()
+            command = (next_task.metadata.get('command') or '').lower()
 
             # Shouldn't recommend SMB tools when SMB isn't open
             assert 'enum4linux' not in command, \
@@ -142,7 +142,7 @@ class TestGuidanceQuality_ExploitResearch:
         research_tasks = [t for t in all_tasks
                          if 'searchsploit' in t.name.lower() or
                             'exploit' in t.name.lower() or
-                            'searchsploit' in t.metadata.get('command', '').lower()]
+                            'searchsploit' in (t.metadata.get('command') or '').lower()]
 
         assert len(research_tasks) > 0, \
             "No exploit research tasks for known vulnerable version - user would miss easy win"
@@ -266,7 +266,7 @@ class TestGuidanceQuality_NoInformationOverload:
             # Check that parallel tasks target different services/ports
             # Only check first 5 to avoid false positives from duplicate tasks
             # in the full task tree (known limitation)
-            commands = [t.metadata.get('command', '') for t in parallel[:5]]
+            commands = [t.metadata.get('command') or '' for t in parallel[:5]]
 
             # Count unique commands
             unique_commands = len(set(commands))

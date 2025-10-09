@@ -93,10 +93,16 @@ class CurlParser:
 
         # Pattern 4: Fix URL with leading quote (e.g., "'http://..." at end)
         # Match: URL at the end that might have quotes in wrong places
-        pattern4 = r"'\s*(https?://[^\s'\"]+)'?\s*$"
+        # Issue 2: Make pattern more specific - only match standalone quoted URL, not after valid closing quote
+        # OLD: r"'\s*(https?://[^\s'\"]+)'?\s*$" was too greedy
+        # NEW: Only match if URL has misplaced quotes (not preceded by a complete argument)
+        pattern4 = r"(?<!\w)'\s*(https?://[^\s'\"]+)(?<!')\s*$"
         if re.search(pattern4, curl_cmd):
-            curl_cmd = re.sub(pattern4, r" '\1'", curl_cmd)
-            self.fixes_applied.append("Fixed URL quoting")
+            # Only apply fix if we don't have a properly closed quote before the URL
+            # Check if there's a complete 'arg' pattern before the URL
+            if not re.search(r"'[^']+'\s+https?://", curl_cmd):
+                curl_cmd = re.sub(pattern4, r" '\1'", curl_cmd)
+                self.fixes_applied.append("Fixed URL quoting")
 
         # Pattern 5: Fix standalone quotes between arguments
         # Remove quotes that are not part of any argument
@@ -198,7 +204,18 @@ class CurlParser:
                     f"Tip: Save curl to file and pipe instead of using echo"
                 )
 
-        if not tokens or tokens[0] != 'curl':
+        # Issue 1: Check if tokens is empty BEFORE accessing tokens[0]
+        if not tokens:
+            # Empty command - return default values without raising exception
+            return {
+                'method': self.method,
+                'url': self.url,
+                'headers': self.headers,
+                'data': self.data,
+                'params': self.params
+            }
+
+        if tokens[0] != 'curl':
             raise ValueError("Not a valid curl command (must start with 'curl')")
 
         # Parse tokens
@@ -206,33 +223,55 @@ class CurlParser:
         while i < len(tokens):
             token = tokens[i]
 
+            # Issue 2: Add boundary checks to prevent index errors
             if token in ['-X', '--request']:
-                self.method = tokens[i + 1].upper()
-                i += 2
+                if i + 1 < len(tokens):
+                    self.method = tokens[i + 1].upper()
+                    i += 2
+                else:
+                    i += 1
             elif token in ['-H', '--header']:
-                header = tokens[i + 1]
-                if ':' in header:
-                    key, val = header.split(':', 1)
-                    self.headers[key.strip()] = val.strip()
-                i += 2
+                if i + 1 < len(tokens):
+                    header = tokens[i + 1]
+                    if ':' in header:
+                        key, val = header.split(':', 1)
+                        self.headers[key.strip()] = val.strip()
+                    i += 2
+                else:
+                    i += 1
             elif token in ['-d', '--data', '--data-binary', '--data-urlencode', '--data-raw']:
-                self.data = tokens[i + 1]
-                if self.method == 'GET':
-                    self.method = 'POST'  # Auto-detect POST when data is present
-                i += 2
+                if i + 1 < len(tokens):
+                    self.data = tokens[i + 1]
+                    if self.method == 'GET':
+                        self.method = 'POST'  # Auto-detect POST when data is present
+                    i += 2
+                else:
+                    i += 1
             elif token in ['-u', '--user']:
-                # Basic auth
-                self.headers['Authorization'] = f"Basic {tokens[i + 1]}"
-                i += 2
+                if i + 1 < len(tokens):
+                    # Basic auth
+                    self.headers['Authorization'] = f"Basic {tokens[i + 1]}"
+                    i += 2
+                else:
+                    i += 1
             elif token in ['-A', '--user-agent']:
-                self.headers['User-Agent'] = tokens[i + 1]
-                i += 2
+                if i + 1 < len(tokens):
+                    self.headers['User-Agent'] = tokens[i + 1]
+                    i += 2
+                else:
+                    i += 1
             elif token in ['-e', '--referer']:
-                self.headers['Referer'] = tokens[i + 1]
-                i += 2
+                if i + 1 < len(tokens):
+                    self.headers['Referer'] = tokens[i + 1]
+                    i += 2
+                else:
+                    i += 1
             elif token in ['-b', '--cookie']:
-                self.headers['Cookie'] = tokens[i + 1]
-                i += 2
+                if i + 1 < len(tokens):
+                    self.headers['Cookie'] = tokens[i + 1]
+                    i += 2
+                else:
+                    i += 1
             elif not token.startswith('-'):
                 # This should be the URL
                 self.url = token
@@ -269,10 +308,8 @@ class CurlParser:
         if self.data:
             # Parse POST data
             try:
+                # Issue 3: Keep parse_qs list format (don't convert to strings)
                 self.params = parse_qs(self.data, keep_blank_values=True)
-                # Convert lists to single values for simplicity
-                self.params = {k: v[0] if isinstance(v, list) else v
-                              for k, v in self.params.items()}
             except Exception:
                 # If parsing fails, data might be JSON or other format
                 pass
@@ -280,9 +317,8 @@ class CurlParser:
             # Parse URL query string
             parsed_url = urlparse(self.url)
             if parsed_url.query:
+                # Issue 3: Keep parse_qs list format (don't convert to strings)
                 self.params = parse_qs(parsed_url.query, keep_blank_values=True)
-                self.params = {k: v[0] if isinstance(v, list) else v
-                              for k, v in self.params.items()}
 
     def get_testable_params(self):
         """

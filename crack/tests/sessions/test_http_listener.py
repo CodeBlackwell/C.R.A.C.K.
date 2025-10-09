@@ -15,6 +15,9 @@ import time
 import threading
 from unittest.mock import Mock, patch, MagicMock
 from pathlib import Path
+from flask import Flask
+from werkzeug.test import Client
+from werkzeug.serving import WSGIRequestHandler
 
 from crack.sessions.listeners.http_listener import HTTPListener
 from crack.sessions.models import Session
@@ -110,7 +113,8 @@ class TestListenerLifecycle:
     """Test listener start/stop/restart"""
 
     @patch('crack.sessions.listeners.http_listener.ListenerRegistry')
-    def test_listener_start(self, mock_registry_class, http_listener):
+    @patch.object(Flask, 'run')  # CRITICAL: Mock Flask.run to prevent real server
+    def test_listener_start(self, mock_flask_run, mock_registry_class, http_listener):
         """Test listener starts successfully"""
         # Mock registry
         mock_registry = Mock()
@@ -118,17 +122,26 @@ class TestListenerLifecycle:
         mock_registry_class.return_value = mock_registry
         http_listener.registry = mock_registry
 
-        # Start listener in background
-        thread = threading.Thread(target=http_listener.start)
-        thread.start()
-        time.sleep(1)  # Give Flask time to start
+        # Mock Flask run to prevent actual server startup
+        mock_flask_run.return_value = None
 
+        # Start listener (now safe with mocked Flask)
+        result = http_listener.start()
+
+        assert result is True
         assert http_listener._running is True
         assert http_listener.listener.status == 'running'
 
+        # Verify Flask.run was called with correct params
+        mock_flask_run.assert_called_once()
+        call_kwargs = mock_flask_run.call_args[1]
+        assert call_kwargs['host'] == '127.0.0.1'
+        assert call_kwargs['port'] == 8888
+        assert call_kwargs['threaded'] is True
+        assert call_kwargs['use_reloader'] is False
+
         # Stop
         http_listener.stop()
-        thread.join(timeout=5)
 
     def test_listener_stop(self, http_listener):
         """Test listener stops gracefully"""
@@ -165,16 +178,20 @@ class TestBeaconRegistration:
             'shell_type': 'bash'
         }
 
-        session = http_listener._create_beacon_session(data)
+        # Use Flask test request context to avoid "outside of request context" error
+        with http_listener.app.test_request_context():
+            session = http_listener._create_beacon_session(data)
 
         assert session.type == 'http'
         assert session.target == '192.168.45.150'
         assert session.protocol == 'beacon'
-        assert session.metadata['hostname'] == 'victim-pc'
-        assert session.metadata['username'] == 'www-data'
 
-        # Verify session manager called
+        # Verify session manager called with correct metadata
         mock_session_manager.create_session.assert_called_once()
+        call_kwargs = mock_session_manager.create_session.call_args[1]
+        assert call_kwargs['metadata']['hostname'] == 'victim-pc'
+        assert call_kwargs['metadata']['username'] == 'www-data'
+        assert call_kwargs['metadata']['os'] == 'Linux'
 
     def test_session_metadata_tracking(self, http_listener):
         """Test session metadata updates"""
@@ -355,7 +372,8 @@ class TestSessionInfo:
 class TestEventEmission:
     """Test event emission"""
 
-    def test_listener_started_event(self, http_listener):
+    @patch.object(Flask, 'run')  # CRITICAL: Mock Flask.run to prevent real server
+    def test_listener_started_event(self, mock_flask_run, http_listener):
         """Test LISTENER_STARTED event emission"""
         event_data = {}
 
@@ -364,20 +382,21 @@ class TestEventEmission:
 
         EventBus.subscribe(SessionEvent.LISTENER_STARTED, capture_event)
 
+        # Mock Flask run to prevent actual server startup
+        mock_flask_run.return_value = None
+
         # Mock port availability
         with patch.object(http_listener.registry, 'is_port_available', return_value=True):
             with patch.object(http_listener.registry, 'register_listener'):
-                # Start listener in background
-                thread = threading.Thread(target=http_listener.start)
-                thread.start()
-                time.sleep(1)
+                # Start listener (now safe with mocked Flask)
+                result = http_listener.start()
 
+                assert result is True
                 assert 'listener_id' in event_data
                 assert event_data['port'] == 8888
                 assert event_data['protocol'] == 'http'
 
                 http_listener.stop()
-                thread.join(timeout=5)
 
         EventBus.clear(SessionEvent.LISTENER_STARTED)
 
@@ -395,10 +414,13 @@ class TestEventEmission:
             'hostname': 'test-host',
             'username': 'test-user',
             'os': 'Linux',
-            'shell_type': 'bash'
+            'shell_type': 'bash',
+            'target': '192.168.45.151'  # Add target to avoid needing request context
         }
 
-        session = http_listener._create_beacon_session(data)
+        # Use Flask test request context to avoid "outside of request context" error
+        with http_listener.app.test_request_context():
+            session = http_listener._create_beacon_session(data)
 
         # Trigger callbacks
         for cb in http_listener._connection_callbacks:

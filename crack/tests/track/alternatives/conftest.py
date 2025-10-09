@@ -53,3 +53,32 @@ def mock_config(tmp_path):
     config.save()
 
     return config
+
+
+@pytest.fixture
+def temp_wordlists_dir(tmp_path):
+    """
+    Create temporary wordlists directory with sample files
+
+    Simulates /usr/share/wordlists/ structure for testing
+    """
+    wordlists_dir = tmp_path / "wordlists"
+    wordlists_dir.mkdir()
+
+    # Create sample wordlists
+    (wordlists_dir / "rockyou.txt").write_text("password123\nadmin\ntest\n")
+    (wordlists_dir / "common.txt").write_text("/admin\n/login\n/test\n")
+    (wordlists_dir / "small.txt").write_text("/home\n/index\n")
+    (wordlists_dir / "directory-list-2.3-medium.txt").write_text("/admin\n/login\n/test\n/backup\n/config\n")
+
+    return wordlists_dir
+
+
+@pytest.fixture
+def temp_cache_file(tmp_path):
+    """
+    Create temporary cache file for WordlistManager
+
+    Returns path to cache file (doesn't need to exist initially)
+    """
+    return tmp_path / "wordlist_cache.json"

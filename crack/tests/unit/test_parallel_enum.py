@@ -9,8 +9,15 @@ from unittest.mock import Mock, patch, MagicMock
 from pathlib import Path
 import subprocess
 from concurrent.futures import Future
+import re
 
 from crack.network.parallel_enumerator import ParallelEnumerator
+
+
+def strip_ansi(text):
+    """Remove ANSI color codes from text"""
+    ansi_escape = re.compile(r'\x1b\[[0-9;]*m')
+    return ansi_escape.sub('', text)
 
 
 class TestParallelEnumerator:
@@ -56,8 +63,8 @@ class TestParallelEnumerator:
             assert output == "Scan completed successfully"
 
             captured = capsys.readouterr()
-            assert "[Starting] Test Scan" in captured.out
-            assert "[Complete] Test Scan" in captured.out
+            assert "[Starting] Test Scan" in strip_ansi(captured.out)
+            assert "[Complete] Test Scan" in strip_ansi(captured.out)
 
     @pytest.mark.unit
     @pytest.mark.network
@@ -78,7 +85,7 @@ class TestParallelEnumerator:
             assert output == "Error occurred"
 
             captured = capsys.readouterr()
-            assert "[Warning] Failed Scan exited with code 1" in captured.out
+            assert "[Warning] Failed Scan exited with code 1" in strip_ansi(captured.out)
 
     @pytest.mark.unit
     @pytest.mark.network
@@ -95,7 +102,7 @@ class TestParallelEnumerator:
             assert output == "Timeout"
 
             captured = capsys.readouterr()
-            assert "[Timeout] Timeout Scan" in captured.out
+            assert "[Timeout] Timeout Scan" in strip_ansi(captured.out)
 
     @pytest.mark.unit
     @pytest.mark.network
@@ -112,7 +119,7 @@ class TestParallelEnumerator:
             assert output == "Tool not found"
 
             captured = capsys.readouterr()
-            assert "[Missing] Missing Tool - tool not installed" in captured.out
+            assert "[Missing] Missing Tool - tool not installed" in strip_ansi(captured.out)
 
     @pytest.mark.unit
     @pytest.mark.network
@@ -326,11 +333,12 @@ class TestParallelEnumerator:
         }
 
         summary = enumerator.get_summary()
+        summary_stripped = strip_ansi(summary)
 
-        assert "[PARALLEL SCAN SUMMARY]" in summary
-        assert "✓ WhatWeb" in summary
-        assert "✗ Nikto" in summary
-        assert "✓ UDP" in summary
+        assert "[PARALLEL SCAN SUMMARY]" in summary_stripped
+        assert "✓ WhatWeb" in summary_stripped
+        assert "✗ Nikto" in summary_stripped
+        assert "✓ UDP" in summary_stripped
 
     @pytest.mark.unit
     @pytest.mark.network
@@ -341,8 +349,11 @@ class TestParallelEnumerator:
         # Create long output string
         long_output = "A" * 1000
 
-        with patch.object(enumerator, 'scan_whatweb') as mock_whatweb:
+        # Mock all scan methods to prevent actual execution
+        with patch.object(enumerator, 'scan_whatweb') as mock_whatweb, \
+             patch.object(enumerator, 'scan_web') as mock_nikto:
             mock_whatweb.return_value = (True, long_output)
+            mock_nikto.return_value = (True, "Short output")
 
             results = enumerator.run_all()
 
@@ -360,8 +371,10 @@ class TestParallelEnumerator:
         assert callable(enumerator.run_all)
 
         # The run() method is referenced as run_all in the main code
-        # Verify we can call it
-        with patch.object(enumerator, 'scan_whatweb') as mock_whatweb:
+        # Verify we can call it - mock all scan methods
+        with patch.object(enumerator, 'scan_whatweb') as mock_whatweb, \
+             patch.object(enumerator, 'scan_web') as mock_nikto:
             mock_whatweb.return_value = (True, "Output")
+            mock_nikto.return_value = (True, "Output")
             results = enumerator.run_all()
             assert 'WhatWeb' in results

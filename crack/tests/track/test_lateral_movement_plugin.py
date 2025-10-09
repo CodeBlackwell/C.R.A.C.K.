@@ -14,6 +14,9 @@ import pytest
 from crack.track.services.lateral_movement import LateralMovementPlugin
 from crack.track.services.registry import ServiceRegistry
 
+# Initialize plugins at module load to ensure registry is populated
+ServiceRegistry.initialize_plugins()
+
 
 @pytest.fixture
 def plugin():
@@ -32,7 +35,6 @@ class TestPluginRegistration:
 
     def test_plugin_registered(self):
         """PROVES: Lateral movement plugin is registered in ServiceRegistry"""
-        ServiceRegistry.initialize_plugins()
         assert 'lateral-movement' in [p.name for p in ServiceRegistry.get_all_plugins()]
 
     def test_plugin_name(self, plugin):

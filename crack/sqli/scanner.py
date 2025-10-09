@@ -119,6 +119,8 @@ class SQLiScanner:
             print(f"  Status: {self.baseline['status']} | Size: {self.baseline['length']} bytes")
             print(f"  Response time: {self.baseline['time']:.2f}s | Lines: {self.baseline['lines']}")
 
+            return self.baseline
+
         except Exception as e:
             print(f"{Colors.RED}[!] Failed to establish baseline: {e}{Colors.END}")
             raise

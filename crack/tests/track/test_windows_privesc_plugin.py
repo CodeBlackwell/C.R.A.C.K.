@@ -6,6 +6,10 @@ PROVES: Windows privesc plugin generates comprehensive OSCP-focused tasks
 
 import pytest
 from crack.track.services.windows_privesc import WindowsPrivescPlugin
+from crack.track.services.registry import ServiceRegistry
+
+# Initialize plugins at module load to ensure registry is populated
+ServiceRegistry.initialize_plugins()
 
 
 class TestWindowsPrivescPlugin:

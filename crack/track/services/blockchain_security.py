@@ -32,25 +32,43 @@ class BlockchainSecurityPlugin(ServicePlugin):
     def service_names(self) -> List[str]:
         return ['ethereum', 'web3', 'geth', 'blockchain', 'smart-contract', 'rpc']
 
-    def detect(self, port_info: Dict[str, Any]) -> bool:
-        """Detect blockchain-related services"""
+    def detect(self, port_info: Dict[str, Any]) -> float:
+        """Detect blockchain-related services with confidence scoring
+
+        Returns:
+            Confidence score (0-100):
+            - 100: Explicit blockchain service (ethereum, web3, geth in name)
+            - 90: Blockchain product detected (Geth, Parity)
+            - 40: Blockchain-specific port with unknown service
+            - 0: Common web ports without blockchain indicators (defer to HTTP plugin)
+
+        Note: Port 8080 is commonly used for Apache Tomcat/web apps. Only claim with high confidence.
+        """
         service = port_info.get('service', '').lower()
         product = port_info.get('product', '').lower()
         port = port_info.get('port')
 
-        # Check service name
+        # Perfect match: Explicit blockchain service names
         if any(svc in service for svc in ['ethereum', 'web3', 'geth', 'blockchain']):
-            return True
+            return 100
 
-        # Check product
+        # High confidence: Blockchain product detected
         if any(prod in product for prod in ['ethereum', 'geth', 'parity']):
-            return True
+            return 90
 
-        # Check common ports
-        if port in self.default_ports:
-            return True
+        # Low confidence: Blockchain-specific ports (8545, 8546, 30303, 3000)
+        # but NOT common web ports like 8080
+        if port in [8545, 8546, 30303, 3000]:
+            # Only claim if service is unknown/generic
+            if service in ['', 'unknown', 'tcpwrapped']:
+                return 40
+            return 0  # Explicit service - defer to appropriate plugin
 
-        return False
+        # Port 8080 is too generic (Tomcat, etc) - require explicit blockchain indicators
+        if port == 8080:
+            return 0  # Defer to HTTP plugin unless explicit blockchain service detected above
+
+        return 0
 
     def get_task_tree(self, target: str, port: int, service_info: Dict[str, Any]) -> Dict[str, Any]:
         """Generate blockchain security task tree"""

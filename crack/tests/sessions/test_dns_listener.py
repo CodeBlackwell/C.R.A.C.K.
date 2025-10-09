@@ -157,16 +157,22 @@ class TestDNSListenerLifecycle:
         assert events[0]['protocol'] == 'dns'
         assert events[0]['tool'] == 'iodine'
 
+    @patch('crack.sessions.listeners.dns_listener.Path')
     @patch('crack.sessions.listeners.dns_listener.subprocess.Popen')
     @patch('crack.sessions.listeners.dns_listener.os.geteuid')
     @patch.object(DNSListener, '_check_tool_availability')
-    def test_start_dnscat2(self, mock_check_tool, mock_geteuid, mock_popen, dns_listener_dnscat2):
+    def test_start_dnscat2(self, mock_check_tool, mock_geteuid, mock_popen, mock_path, dns_listener_dnscat2):
         """Test starting dnscat2 listener."""
         # Mock tool availability
         mock_check_tool.return_value = True
 
         # Mock root privileges
         mock_geteuid.return_value = 0
+
+        # Mock Path.exists() for dnscat2.rb
+        mock_path_obj = MagicMock()
+        mock_path_obj.exists.return_value = True
+        mock_path.return_value = mock_path_obj
 
         # Mock process
         mock_process = MagicMock()
@@ -218,6 +224,10 @@ class TestDNSListenerConnectionHandling:
 
     def test_handle_new_connection(self, dns_listener_iodine, session_manager):
         """Test handling new DNS tunnel connection."""
+        # Clear any existing sessions for test isolation
+        # SessionStorage doesn't have 'sessions' - clear from manager's internal list
+        session_manager._sessions.clear()
+
         # Mock listener state
         dns_listener_iodine._running = True
 

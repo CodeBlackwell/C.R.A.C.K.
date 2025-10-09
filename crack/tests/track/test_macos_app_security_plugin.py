@@ -7,6 +7,11 @@ PROVES: Plugin correctly handles macOS binary analysis, code signing,
 
 import pytest
 from crack.track.services.macos_app_security import MacOSAppSecurityPlugin
+from crack.track.services.registry import ServiceRegistry
+
+
+# Initialize plugins at module load to ensure registry is populated
+ServiceRegistry.initialize_plugins()
 
 
 class TestMacOSAppSecurityPlugin:

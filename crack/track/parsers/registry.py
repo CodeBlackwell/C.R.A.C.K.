@@ -194,6 +194,18 @@ class ParserRegistry:
 
     @classmethod
     def clear(cls):
-        """Clear all registered parsers (mainly for testing)"""
-        cls._parsers.clear()
+        """Clear initialization state but preserve registered parsers (for testing isolation)
+
+        NOTE: We do NOT clear cls._parsers because parser registration happens
+        at module import time via @ParserRegistry.register decorators. Once modules
+        are imported, the parsers are registered and should persist across tests.
+        Clearing _parsers would require re-importing modules, which doesn't work
+        since Python caches imports in sys.modules.
+
+        This method only clears:
+        - _initialized: Flag to allow re-initialization
+
+        To fully reset for testing, call this method along with EventBus.clear()
+        and ServiceRegistry.clear() to reset all shared state.
+        """
         cls._initialized = False

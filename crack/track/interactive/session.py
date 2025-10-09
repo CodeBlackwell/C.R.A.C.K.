@@ -161,6 +161,9 @@ class InteractiveSession:
                 # Display menu
                 print(DisplayManager.format_menu(choices, title=prompt_text))
 
+                # Display persistent shortcuts footer
+                print(DisplayManager.format_shortcuts_footer())
+
                 # 4. Get user input
                 user_input = InputProcessor.get_input("\nChoice [or shortcut]: ")
 
@@ -327,6 +330,24 @@ class InteractiveSession:
         """
         print(f"\n{DisplayManager.format_task_summary(task)}")
 
+        # Check if this is a 'scan' type task (needs scan profile selection)
+        task_type = task.metadata.get('type', 'command')
+        if task_type == 'scan':
+            # This is a scan task - redirect to scan profile selection
+            scan_profiles = task.metadata.get('scan_profiles', [])
+            default_profile = task.metadata.get('default_profile', 'lab-quick')
+
+            if scan_profiles:
+                print(DisplayManager.format_info(
+                    f"This task requires selecting a scan profile.\n"
+                    f"Recommended: {default_profile}"
+                ))
+                print("\nAvailable scan options shown in main menu (choose one of the numbered scan options)")
+                return
+            else:
+                print(DisplayManager.format_warning("Scan task has no scan profiles defined"))
+                return
+
         command = task.metadata.get('command')
         if not command:
             print(DisplayManager.format_warning("No command defined for this task"))
@@ -341,7 +362,6 @@ class InteractiveSession:
                 print("Hint: Press 'w' to select wordlist, or Enter to use default")
 
                 # Prompt user
-                from .input_handler import InputProcessor
                 response = input("\nSelect wordlist now? [Y/n]: ").strip()
 
                 if InputProcessor.parse_confirmation(response, default='Y'):
@@ -961,7 +981,7 @@ class InteractiveSession:
             min_score: Minimum match score (0-100)
 
         Returns:
-            List of TaskNode objects, sorted by relevance score descending
+            List of (TaskNode, score) tuples, sorted by relevance score descending
         """
         query = query.lower()
         results = []
@@ -1019,8 +1039,8 @@ class InteractiveSession:
         self.search_query = query
         self.search_results = [r[0] for r in results]  # Store nodes only
 
-        # Return nodes only (not tuples) for consistent API
-        return [r[0] for r in results]
+        # Return tuples (task, score) for fuzzy search scoring
+        return results
 
     def filter_tasks(self, filter_type: str, filter_value: str = None) -> list:
         """
@@ -2569,7 +2589,8 @@ Output: {output[:500]}{"..." if len(output) > 500 else ""}
                 snapshots.append({
                     'filename': snapshot_file.name,
                     'metadata': data.get('snapshot_metadata', {}),
-                    'path': snapshot_file
+                    'path': snapshot_file,
+                    'file': snapshot_file  # Alias for compatibility
                 })
             except json.JSONDecodeError:
                 continue
@@ -4210,7 +4231,7 @@ Output: {output[:500]}{"..." if len(output) > 500 else ""}
             True if task needs wordlist, False otherwise
         """
         # Check metadata for wordlist placeholder
-        command = task.metadata.get('command', '')
+        command = task.metadata.get('command', '') or ''
         if '<WORDLIST>' in command or '{WORDLIST}' in command:
             return True
 

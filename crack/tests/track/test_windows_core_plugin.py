@@ -14,6 +14,9 @@ import pytest
 from crack.track.services.windows_core import WindowsCorePlugin
 from crack.track.services.registry import ServiceRegistry
 
+# Initialize plugins at module load to ensure registry is populated
+ServiceRegistry.initialize_plugins()
+
 
 class TestWindowsCorePluginRegistration:
     """Test plugin registration and basic properties"""
@@ -21,8 +24,8 @@ class TestWindowsCorePluginRegistration:
     def test_plugin_registered(self):
         """PROVES: WindowsCorePlugin is registered in ServiceRegistry"""
         assert 'windows-core' in ServiceRegistry._plugins
-        plugin_class = ServiceRegistry._plugins['windows-core']
-        assert plugin_class == WindowsCorePlugin
+        plugin_instance = ServiceRegistry._plugins['windows-core']
+        assert isinstance(plugin_instance, WindowsCorePlugin)
 
     def test_plugin_name(self):
         """PROVES: Plugin name is 'windows-core'"""

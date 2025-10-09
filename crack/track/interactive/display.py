@@ -27,6 +27,21 @@ except ImportError:
         RED = '\033[91m'
         BOLD = '\033[1m'
         END = '\033[0m'
+        # Bright variants
+        BRIGHT_BLACK = '\033[90m'
+        BRIGHT_RED = '\033[91m'
+        BRIGHT_GREEN = '\033[92m'
+        BRIGHT_YELLOW = '\033[93m'
+        BRIGHT_BLUE = '\033[94m'
+        BRIGHT_MAGENTA = '\033[95m'
+        BRIGHT_CYAN = '\033[96m'
+        BRIGHT_WHITE = '\033[97m'
+        # Combinations
+        BOLD_GREEN = '\033[1m\033[92m'
+        BOLD_YELLOW = '\033[1m\033[93m'
+        BOLD_RED = '\033[1m\033[91m'
+        BOLD_CYAN = '\033[1m\033[96m'
+        BOLD_WHITE = '\033[1m\033[97m'
 
 
 class DisplayManager:
@@ -41,10 +56,10 @@ class DisplayManager:
     }
 
     STATUS_COLORS = {
-        'pending': Colors.YELLOW,
-        'in-progress': Colors.CYAN,
-        'completed': Colors.GREEN,
-        'skipped': Colors.RED
+        'pending': Colors.BRIGHT_YELLOW,
+        'in-progress': Colors.BRIGHT_CYAN,
+        'completed': Colors.BRIGHT_GREEN,
+        'skipped': Colors.BRIGHT_RED
     }
 
     @classmethod
@@ -80,16 +95,16 @@ class DisplayManager:
         time_str = f"{hours:02d}:{minutes:02d}:00"
 
         banner = f"""
-{Colors.BOLD}{'=' * 70}{Colors.END}
-{Colors.CYAN}Target:{Colors.END} {profile.target}
-{Colors.CYAN}Phase:{Colors.END} {phase.replace('-', ' ').title()}
-{Colors.CYAN}Progress:{Colors.END} {completed}/{total} tasks completed ({pct:.0f}%)
+{Colors.BOLD_CYAN}{'=' * 70}{Colors.END}
+{Colors.BOLD_CYAN}Target:{Colors.END} {Colors.BOLD_WHITE}{profile.target}{Colors.END}
+{Colors.BOLD_CYAN}Phase:{Colors.END} {Colors.BRIGHT_WHITE}{phase.replace('-', ' ').title()}{Colors.END}
+{Colors.BOLD_CYAN}Progress:{Colors.END} {Colors.BRIGHT_WHITE}{completed}/{total}{Colors.END} tasks completed {Colors.BRIGHT_GREEN}({pct:.0f}%){Colors.END}
 """
         if last_action:
-            banner += f"{Colors.CYAN}Last Action:{Colors.END} {last_action}\n"
+            banner += f"{Colors.BOLD_CYAN}Last Action:{Colors.END} {Colors.BRIGHT_WHITE}{last_action}{Colors.END}\n"
 
-        banner += f"{Colors.CYAN}Time Elapsed:{Colors.END} {time_str}\n"
-        banner += f"{Colors.BOLD}{'=' * 70}{Colors.END}"
+        banner += f"{Colors.BOLD_CYAN}Time Elapsed:{Colors.END} {Colors.BRIGHT_WHITE}{time_str}{Colors.END}\n"
+        banner += f"{Colors.BOLD_CYAN}{'=' * 70}{Colors.END}"
 
         return banner
 
@@ -312,19 +327,55 @@ class DisplayManager:
     @classmethod
     def format_error(cls, message: str) -> str:
         """Format error message"""
-        return f"\n{Colors.RED}✗ Error:{Colors.END} {message}\n"
+        return f"\n{Colors.BOLD_RED}✗ Error:{Colors.END} {message}\n"
 
     @classmethod
     def format_success(cls, message: str) -> str:
         """Format success message"""
-        return f"\n{Colors.GREEN}✓{Colors.END} {message}\n"
+        return f"\n{Colors.BOLD_GREEN}✓{Colors.END} {message}\n"
 
     @classmethod
     def format_warning(cls, message: str) -> str:
         """Format warning message"""
-        return f"\n{Colors.YELLOW}⚠{Colors.END} {message}\n"
+        return f"\n{Colors.BOLD_YELLOW}⚠{Colors.END} {message}\n"
 
     @classmethod
     def format_info(cls, message: str) -> str:
         """Format info message"""
-        return f"\n{Colors.CYAN}ℹ{Colors.END} {message}\n"
+        return f"\n{Colors.BOLD_CYAN}ℹ{Colors.END} {message}\n"
+
+    @classmethod
+    def format_shortcuts_footer(cls) -> str:
+        """
+        Format persistent shortcut footer bar
+
+        Shows essential keyboard shortcuts in compact format:
+        ([key]) [description] | ([key]) [description] | ...
+
+        Returns:
+            Formatted footer string
+        """
+        # Define essential shortcuts to display
+        shortcuts = [
+            ('s', 'Status'),
+            ('t', 'Tree'),
+            ('r', 'Recs'),
+            ('n', 'Next'),
+            ('w', 'Wordlist'),
+            ('alt', 'Alts'),
+            ('h', 'Help'),
+            ('q', 'Quit')
+        ]
+
+        # Format each shortcut with bold key
+        formatted_shortcuts = []
+        for key, desc in shortcuts:
+            formatted_shortcuts.append(f"{Colors.BOLD_CYAN}({key}){Colors.END} {desc}")
+
+        # Join with separator
+        footer = " | ".join(formatted_shortcuts)
+
+        # Add top border
+        border = Colors.BRIGHT_BLACK + "─" * 80 + Colors.END
+
+        return f"\n{border}\n{footer}\n"

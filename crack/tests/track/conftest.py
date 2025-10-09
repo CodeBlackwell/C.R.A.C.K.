@@ -12,6 +12,51 @@ from crack.track.core.state import TargetProfile
 from crack.track.core.storage import Storage
 
 
+@pytest.fixture(autouse=True)
+def reset_registries():
+    """Reset registries and event bus before each test to ensure isolation
+
+    This fixture runs automatically before every test in the track/ directory.
+    It prevents test pollution by clearing:
+    - EventBus event handlers (cleared completely)
+    - ServiceRegistry resolution state (_plugin_claims, _resolved_ports)
+    - ParserRegistry state (cleared completely)
+
+    NOTE: ServiceRegistry._plugins is NOT cleared because plugin registration
+    happens at module import time via decorators. Once modules are imported,
+    the plugins persist in the registry. We only clear resolution state.
+
+    Without this fixture, tests that run after others may see stale event
+    handlers or resolution state, causing race conditions and failures.
+    """
+    from crack.track.services.registry import ServiceRegistry
+    from crack.track.core.events import EventBus
+    from crack.track.parsers.registry import ParserRegistry
+
+    # Clear EventBus (prevents duplicate event handlers across tests)
+    EventBus.clear()
+
+    # Clear ServiceRegistry resolution state but NOT plugins
+    # Plugins are registered at module import time and should persist
+    if hasattr(ServiceRegistry, '_plugin_claims'):
+        ServiceRegistry._plugin_claims.clear()
+    if hasattr(ServiceRegistry, '_resolved_ports'):
+        ServiceRegistry._resolved_ports.clear()
+    ServiceRegistry._initialized = False  # Allow re-initialization
+
+    # Clear ParserRegistry in same way - parsers registered at import time
+    ParserRegistry._initialized = False  # Allow re-initialization
+
+    yield  # Run test
+
+    # Cleanup after test
+    EventBus.clear()
+    if hasattr(ServiceRegistry, '_plugin_claims'):
+        ServiceRegistry._plugin_claims.clear()
+    if hasattr(ServiceRegistry, '_resolved_ports'):
+        ServiceRegistry._resolved_ports.clear()
+
+
 @pytest.fixture
 def temp_crack_home(monkeypatch):
     """Temporary ~/.crack directory for isolated testing"""

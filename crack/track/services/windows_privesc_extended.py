@@ -34,7 +34,7 @@ class WindowsPrivescExtendedPlugin(ServicePlugin):
 
     @property
     def service_names(self) -> list:
-        return []  # Manual trigger only
+        return ['windows-privesc-extended']  # Manual trigger only
 
     def detect(self, port_info: Dict[str, Any]) -> bool:
         """

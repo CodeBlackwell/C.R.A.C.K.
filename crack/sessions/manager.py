@@ -128,7 +128,7 @@ class SessionManager(ISessionManager):
         except Exception as e:
             print(f"Warning: Failed to load sessions from storage: {e}")
 
-    def create_session(self, type: str, target: str, port: int, **kwargs) -> Session:
+    def create_session(self, type: str, target: str, port: Optional[int] = None, **kwargs) -> Session:
         """Create and register a new session.
 
         Args:
@@ -162,8 +162,13 @@ class SessionManager(ISessionManager):
         # Validate required fields
         if not target:
             raise ValueError("Target is required")
-        if not port or port <= 0:
-            raise ValueError("Valid port is required")
+
+        # Port validation: ICMP and DNS don't use ports (allow None)
+        if type in ['icmp', 'dns']:
+            port = None  # Normalize to None for portless protocols
+        elif not port or port <= 0:
+            raise ValueError(f"Valid port is required for {type} sessions")
+
         if type not in ['tcp', 'http', 'https', 'dns', 'icmp']:
             raise ValueError(f"Invalid session type: {type}")
 

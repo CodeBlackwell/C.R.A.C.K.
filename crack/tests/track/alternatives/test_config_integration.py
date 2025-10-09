@@ -154,7 +154,7 @@ class TestServiceSpecificWordlistResolution:
         wordlist = context.resolve('WORDLIST', context_hints=context_hints)
 
         assert wordlist is not None
-        assert 'ssh-passwords.txt' in wordlist
+        assert 'ssh' in wordlist.lower() and 'password' in wordlist.lower()
 
     def test_ftp_service_gets_ftp_wordlist(self, temp_crack_home):
         """PROVES: FTP password cracking gets FTP-specific wordlist"""

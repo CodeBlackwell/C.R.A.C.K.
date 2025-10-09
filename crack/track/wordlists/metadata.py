@@ -34,14 +34,14 @@ def generate_metadata(file_path: str):
     path = Path(file_path).resolve()
 
     # Basic file info
-    name = path.stem  # Filename without extension
+    name = path.name  # Filename with extension
     size_bytes = path.stat().st_size
 
     # Count lines (fast method)
-    line_count = _count_lines_fast(str(path), size_bytes)
+    line_count = _count_lines_fast(str(path))
 
     # Calculate average word length (sample-based for large files)
-    avg_word_length = _calculate_avg_word_length(str(path), line_count)
+    avg_word_length = _calculate_avg_word_length(str(path))
 
     # Detect category from path/filename
     category = detect_category(str(path), name)
@@ -61,7 +61,7 @@ def generate_metadata(file_path: str):
     )
 
 
-def _count_lines_fast(file_path: str, size_bytes: int) -> int:
+def _count_lines_fast(file_path: str) -> int:
     """
     Fast line counting with estimation for large files
 
@@ -71,11 +71,16 @@ def _count_lines_fast(file_path: str, size_bytes: int) -> int:
 
     Args:
         file_path: Path to file
-        size_bytes: File size in bytes
 
     Returns:
         Line count (exact or estimated)
     """
+    # Get file size
+    try:
+        size_bytes = Path(file_path).stat().st_size
+    except OSError:
+        return 0
+
     # Small files: exact count
     if size_bytes < 1_000_000:  # 1MB threshold
         try:
@@ -103,17 +108,19 @@ def _count_lines_fast(file_path: str, size_bytes: int) -> int:
         return 0
 
 
-def _calculate_avg_word_length(file_path: str, line_count: int) -> float:
+def _calculate_avg_word_length(file_path: str) -> float:
     """
     Calculate average word length (sample-based for large files)
 
     Args:
         file_path: Path to file
-        line_count: Number of lines in file
 
     Returns:
         Average word length in characters
     """
+    # Get line count
+    line_count = _count_lines_fast(file_path)
+
     # Sample size for large files
     SAMPLE_SIZE = 1000
 
@@ -150,12 +157,19 @@ def _calculate_avg_word_length(file_path: str, line_count: int) -> float:
                 except OSError:
                     pass
 
-            # Calculate average
+            # Calculate average (skip empty lines)
             if not lines:
                 return 0.0
 
-            total_length = sum(len(line.strip()) for line in lines)
-            return round(total_length / len(lines), 2)
+            # Strip and filter out empty lines
+            stripped_lines = [line.strip() for line in lines]
+            non_empty_lines = [line for line in stripped_lines if line]
+
+            if not non_empty_lines:
+                return 0.0
+
+            total_length = sum(len(line) for line in non_empty_lines)
+            return round(total_length / len(non_empty_lines), 2)
 
     except (OSError, UnicodeDecodeError):
         return 0.0
@@ -180,22 +194,22 @@ def detect_category(path: str, filename: str) -> str:
     path_lower = path.lower()
     name_lower = filename.lower()
 
+    # Password patterns (check FIRST - higher priority than web)
+    password_patterns = [
+        'password', 'pass', 'rockyou', 'creds', 'credential',
+        'combo', 'leak', 'breach', 'hash'
+    ]
+    if any(pattern in path_lower or pattern in name_lower for pattern in password_patterns):
+        return CATEGORY_PASSWORDS
+
     # Web enumeration patterns
     web_patterns = [
         'dirb', 'dirbuster', 'directory', 'web', 'content',
-        'common', 'apache', 'nginx', 'iis', 'asp', 'php',
+        'apache', 'nginx', 'iis', 'asp', 'php',
         'jsp', 'cgi', 'api', 'endpoint', 'parameter'
     ]
     if any(pattern in path_lower or pattern in name_lower for pattern in web_patterns):
         return CATEGORY_WEB
-
-    # Password patterns
-    password_patterns = [
-        'password', 'pass', 'rockyou', 'creds', 'credential',
-        'combo', 'leak', 'breach', 'hash', 'wordlist'
-    ]
-    if any(pattern in path_lower or pattern in name_lower for pattern in password_patterns):
-        return CATEGORY_PASSWORDS
 
     # Subdomain patterns
     subdomain_patterns = [
@@ -204,11 +218,13 @@ def detect_category(path: str, filename: str) -> str:
     if any(pattern in path_lower or pattern in name_lower for pattern in subdomain_patterns):
         return CATEGORY_SUBDOMAINS
 
-    # Username patterns
-    username_patterns = [
-        'user', 'username', 'login', 'account', 'names'
-    ]
-    if any(pattern in path_lower or pattern in name_lower for pattern in username_patterns):
+    # Username patterns (check filename more strictly to avoid false positives from paths like /home/user/)
+    username_patterns = ['username', 'usernames', 'login', 'account']
+    # Check filename first with specific patterns
+    if any(pattern in name_lower for pattern in username_patterns):
+        return CATEGORY_USERNAMES
+    # Then check path for more specific patterns
+    if any(pattern in path_lower for pattern in ['usernames/', 'users/', 'logins/', 'accounts/']):
         return CATEGORY_USERNAMES
 
     # Default to general

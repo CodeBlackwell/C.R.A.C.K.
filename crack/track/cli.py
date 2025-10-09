@@ -201,6 +201,10 @@ For full documentation: See track/README.md or https://github.com/CodeBlackwell/
     # Interactive mode
     parser.add_argument('--interactive', '-i', action='store_true',
                         help='Start interactive mode with progressive prompting')
+    parser.add_argument('--tui', action='store_true',
+                        help='Use windowed TUI interface (rich panels, no flooding)')
+    parser.add_argument('-D', '--tui-debug', action='store_true', dest='tui_debug',
+                        help='Enable TUI debug mode (shows detailed execution flow in output panel)')
     parser.add_argument('--resume', action='store_true',
                         help='Resume existing interactive session')
     parser.add_argument('-X', '--screened', action='store_true',
@@ -311,7 +315,7 @@ For full documentation: See track/README.md or https://github.com/CodeBlackwell/
 
     # Handle interactive mode (before loading profile)
     if args.interactive:
-        handle_interactive(args.target, args.resume, args.screened, args.wordlist)
+        handle_interactive(args.target, args.resume, args.screened, args.wordlist, args.tui, args.tui_debug)
         return
 
     # Load or create profile
@@ -379,7 +383,7 @@ def load_or_create_profile(target: str) -> TargetProfile:
     return profile
 
 
-def handle_interactive(target: str, resume: bool = False, screened: bool = False, wordlist: str = None):
+def handle_interactive(target: str, resume: bool = False, screened: bool = False, wordlist: str = None, tui: bool = False, tui_debug: bool = False):
     """Handle interactive mode
 
     Args:
@@ -387,11 +391,18 @@ def handle_interactive(target: str, resume: bool = False, screened: bool = False
         resume: Resume existing session
         screened: Screened mode with auto-parsing
         wordlist: Wordlist argument (raw, not resolved yet)
+        tui: Use TUI windowed interface
+        tui_debug: Enable TUI debug mode
     """
-    from .interactive import InteractiveSession
+    # Choose session type based on TUI flag
+    if tui:
+        from .interactive.tui_session import TUISession
+        session = TUISession(target, resume=resume, screened=screened, debug=tui_debug)
+    else:
+        from .interactive import InteractiveSession
+        session = InteractiveSession(target, resume=resume, screened=screened)
 
     try:
-        session = InteractiveSession(target, resume=resume, screened=screened)
 
         # If wordlist provided, store in session context for task creation
         if wordlist:

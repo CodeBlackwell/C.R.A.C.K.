@@ -23,8 +23,12 @@ def temp_crack_home(tmp_path, monkeypatch):
     sessions_dir = crack_home / 'sessions'
     sessions_dir.mkdir()
 
-    # Mock Path.home() to return temp directory
-    monkeypatch.setattr(Path, 'home', lambda: tmp_path)
+    # Override Storage and InteractiveSession directories
+    from crack.track.core.storage import Storage
+    from crack.track.interactive.session import InteractiveSession
+
+    monkeypatch.setattr(Storage, 'DEFAULT_DIR', targets_dir)
+    monkeypatch.setattr(InteractiveSession, 'SNAPSHOTS_BASE_DIR', sessions_dir)
 
     return crack_home
 

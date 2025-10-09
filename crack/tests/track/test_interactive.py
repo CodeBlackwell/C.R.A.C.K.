@@ -679,11 +679,13 @@ class TestPhaseTreeFactory:
         assert tree is not None
         assert tree.root is not None
 
-        # Should have scan choices
+        # Should have scan choices (dynamically generated from scan profiles)
         choices = tree.root.choices
         choice_ids = [c.id for c in choices]
 
-        assert 'quick-scan' in choice_ids or 'full-scan' in choice_ids
+        # Check for scan profile patterns (e.g., 'scan-lab-quick', 'scan-lab-full', etc.)
+        scan_choices = [c for c in choice_ids if c.startswith('scan-')]
+        assert len(scan_choices) > 0, "Should have at least one scan profile choice"
 
 
     def test_enumeration_tree_creation(self):

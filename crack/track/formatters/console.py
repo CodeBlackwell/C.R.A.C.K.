@@ -22,6 +22,21 @@ except ImportError:
         RED = '\033[91m'
         BOLD = '\033[1m'
         END = '\033[0m'
+        # Bright variants
+        BRIGHT_BLACK = '\033[90m'
+        BRIGHT_RED = '\033[91m'
+        BRIGHT_GREEN = '\033[92m'
+        BRIGHT_YELLOW = '\033[93m'
+        BRIGHT_BLUE = '\033[94m'
+        BRIGHT_MAGENTA = '\033[95m'
+        BRIGHT_CYAN = '\033[96m'
+        BRIGHT_WHITE = '\033[97m'
+        # Combinations
+        BOLD_GREEN = '\033[1m\033[92m'
+        BOLD_YELLOW = '\033[1m\033[93m'
+        BOLD_RED = '\033[1m\033[91m'
+        BOLD_CYAN = '\033[1m\033[96m'
+        BOLD_WHITE = '\033[1m\033[97m'
 
 
 class ConsoleFormatter:
@@ -32,15 +47,17 @@ class ConsoleFormatter:
         'pending': '[ ]',
         'in-progress': '[~]',
         'completed': '[✓]',
-        'skipped': '[✗]'
+        'skipped': '[✗]',
+        'failed': '[✗]'
     }
 
-    # Status colors
+    # Status colors - using bright variants for better visibility
     STATUS_COLORS = {
-        'pending': Colors.YELLOW,
-        'in-progress': Colors.CYAN,
-        'completed': Colors.GREEN,
-        'skipped': Colors.RED
+        'pending': Colors.BRIGHT_YELLOW,
+        'in-progress': Colors.BRIGHT_CYAN,
+        'completed': Colors.BRIGHT_GREEN,
+        'skipped': Colors.BRIGHT_RED,
+        'failed': Colors.BRIGHT_RED
     }
 
     @classmethod
@@ -98,6 +115,7 @@ class ConsoleFormatter:
         completed = progress['completed']
         in_progress = progress['in_progress']
         pending = progress['pending']
+        failed = progress.get('failed', 0)
 
         if total == 0:
             return f"{Colors.YELLOW}No tasks yet{Colors.END}"
@@ -112,7 +130,10 @@ class ConsoleFormatter:
         lines = []
         lines.append(f"{Colors.BOLD}PROGRESS:{Colors.END}")
         lines.append(f"  [{Colors.GREEN}{bar}{Colors.END}] {pct:.0f}%")
-        lines.append(f"  {Colors.GREEN}✓ {completed}{Colors.END} completed | {Colors.CYAN}~ {in_progress}{Colors.END} in progress | {Colors.YELLOW}• {pending}{Colors.END} pending")
+        status_line = f"  {Colors.GREEN}✓ {completed}{Colors.END} completed | {Colors.CYAN}~ {in_progress}{Colors.END} in progress | {Colors.YELLOW}• {pending}{Colors.END} pending"
+        if failed > 0:
+            status_line += f" | {Colors.RED}✗ {failed}{Colors.END} failed"
+        lines.append(status_line)
 
         return "\n".join(lines)
 
@@ -189,8 +210,20 @@ class ConsoleFormatter:
         return "\n".join(lines)
 
     @classmethod
+    def format_task_tree(cls, root: TaskNode) -> str:
+        """Public interface for formatting task tree
+
+        Args:
+            root: Root task node
+
+        Returns:
+            Formatted task tree string
+        """
+        return cls._format_task_tree(root, indent=0)
+
+    @classmethod
     def _format_task_tree(cls, root: TaskNode, indent: int = 0) -> str:
-        """Format task tree recursively
+        """Format task tree recursively (internal)
 
         Args:
             root: Root task node

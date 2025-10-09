@@ -30,29 +30,31 @@ from crack.sessions.shell.http_upgrader import HTTPShellUpgrader
 from crack.sessions.unified_cli import UnifiedSessionCLI
 
 
+@pytest.fixture
+def temp_storage_dir(tmp_path):
+    """Create temporary storage directory."""
+    storage_dir = tmp_path / "sessions"
+    storage_dir.mkdir()
+    return storage_dir
+
+
+@pytest.fixture
+def session_manager(temp_storage_dir):
+    """Create session manager with temporary storage."""
+    # Patch storage path to use temp directory
+    storage = SessionStorage()
+    storage.storage_dir = temp_storage_dir / "sessions"
+    storage.storage_dir.mkdir(exist_ok=True)
+
+    config = SessionConfig()
+    manager = SessionManager(storage, config)
+    # Clear any loaded sessions (from default storage)
+    manager._sessions = {}
+    return manager
+
+
 class TestFullWorkflow:
     """Test complete session lifecycle across all components."""
-
-    @pytest.fixture
-    def temp_storage_dir(self, tmp_path):
-        """Create temporary storage directory."""
-        storage_dir = tmp_path / "sessions"
-        storage_dir.mkdir()
-        return storage_dir
-
-    @pytest.fixture
-    def session_manager(self, temp_storage_dir):
-        """Create session manager with temporary storage."""
-        # Patch storage path to use temp directory
-        storage = SessionStorage()
-        storage.storage_dir = temp_storage_dir / "sessions"
-        storage.storage_dir.mkdir(exist_ok=True)
-
-        config = SessionConfig()
-        manager = SessionManager(storage, config)
-        # Clear any loaded sessions (from default storage)
-        manager._sessions = {}
-        return manager
 
     def test_tcp_session_full_lifecycle(self, session_manager):
         """
@@ -65,56 +67,58 @@ class TestFullWorkflow:
         6. Kill session
         7. Cleanup
         """
-        # 1. Create TCP session
-        session = session_manager.create_session(
-            type='tcp',
-            target='192.168.45.150',
-            port=4444,
-            protocol='reverse',
-            shell_type='bash',
-            pid=12345
-        )
+        # Mock PID validation to prevent fake PID from marking session dead
+        with patch.object(session_manager, '_is_pid_alive', return_value=True):
+            # 1. Create TCP session
+            session = session_manager.create_session(
+                type='tcp',
+                target='192.168.45.150',
+                port=4444,
+                protocol='reverse',
+                shell_type='bash',
+                pid=12345
+            )
 
-        assert session.id
-        assert session.type == 'tcp'
-        assert session.status == 'active'
+            assert session.id
+            assert session.type == 'tcp'
+            assert session.status == 'active'
 
-        # 2. Update capabilities (simulated detection)
-        session.capabilities = ShellCapabilities(
-            has_pty=False,
-            shell_type='bash',
-            detected_tools=['python3', 'socat']
-        )
+            # 2. Update capabilities (simulated detection)
+            session.capabilities = ShellCapabilities(
+                has_pty=False,
+                shell_type='bash',
+                detected_tools=['python3', 'socat']
+            )
 
-        session_manager.update_session(session.id, {
-            'capabilities': session.capabilities.to_dict()
-        })
+            session_manager.update_session(session.id, {
+                'capabilities': session.capabilities.to_dict()
+            })
 
-        # 3. Simulate upgrade
-        session.capabilities.has_pty = True
-        session.capabilities.has_history = True
-        session.capabilities.has_tab_completion = True
+            # 3. Simulate upgrade
+            session.capabilities.has_pty = True
+            session.capabilities.has_history = True
+            session.capabilities.has_tab_completion = True
 
-        session_manager.update_session(session.id, {
-            'capabilities': session.capabilities.to_dict()
-        })
+            session_manager.update_session(session.id, {
+                'capabilities': session.capabilities.to_dict()
+            })
 
-        # 4. Verify upgraded state
-        updated = session_manager.get_session(session.id)
-        assert updated.capabilities.has_pty
-        assert updated.capabilities.has_history
+            # 4. Verify upgraded state
+            updated = session_manager.get_session(session.id)
+            assert updated.capabilities.has_pty
+            assert updated.capabilities.has_history
 
-        # 5. List sessions
-        sessions = session_manager.list_sessions({'status': 'active'})
-        assert len(sessions) == 1
-        assert sessions[0].id == session.id
+            # 5. List sessions
+            sessions = session_manager.list_sessions({'status': 'active'})
+            assert len(sessions) == 1
+            assert sessions[0].id == session.id
 
-        # 6. Kill session
-        assert session_manager.kill_session(session.id)
+            # 6. Kill session
+            assert session_manager.kill_session(session.id)
 
-        # 7. Verify dead
-        dead_session = session_manager.get_session(session.id)
-        assert dead_session.status == 'dead'
+            # 7. Verify dead
+            dead_session = session_manager.get_session(session.id)
+            assert dead_session.status == 'dead'
 
     def test_http_to_tcp_upgrade_workflow(self, session_manager):
         """

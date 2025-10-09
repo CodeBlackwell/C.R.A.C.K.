@@ -100,27 +100,33 @@ class HTMLEnumerator:
                 js_comments.extend(re.findall(r'/\*.*?\*/', script.string, re.DOTALL))
                 self.comments.extend(js_comments)
 
-    def extract_endpoints(self):
-        """Extract all URLs and endpoints"""
-        # Links
+    def extract_links(self):
+        """Extract and categorize links from HTML"""
         for link in self.soup.find_all('a', href=True):
             href = link['href']
             if href and not href.startswith('#'):
-                # Normalize URL if base_url exists
+                # Add to endpoints
+                self.endpoints.add(href)
+
+                # Categorize internal vs external if base_url exists
                 if self.base_url:
                     full_url = urljoin(self.base_url, href)
-                    # Track internal links for crawling
+                    # Check if same domain (internal)
                     if urlparse(full_url).netloc == urlparse(self.base_url).netloc:
                         # Skip non-HTML resources
                         if not any(full_url.lower().endswith(ext) for ext in
                                  ['.jpg', '.png', '.gif', '.pdf', '.zip', '.exe', '.css', '.js']):
-                            self.internal_links.add(full_url)
-
-                self.endpoints.add(href)
+                            # Store the original href (not full URL) for internal links
+                            self.internal_links.add(href)
 
                 # Check for interesting paths
                 if re.search(r'(admin|upload|api|login|config|backup|test)', href, re.I):
                     self.interesting['paths'].append(href)
+
+    def extract_endpoints(self):
+        """Extract all URLs and endpoints"""
+        # Extract links first
+        self.extract_links()
 
         # Form actions (already added in extract_forms)
 
@@ -130,10 +136,10 @@ class HTMLEnumerator:
             if script.string:
                 # Find AJAX endpoints
                 ajax_patterns = [
-                    r'["\']/(api|ajax|json|rest)/[^"\']*["\']',
-                    r'\.ajax\s*\(\s*["\']([^"\']+)["\']',
-                    r'fetch\s*\(\s*["\']([^"\']+)["\']',
-                    r'url:\s*["\']([^"\']+)["\']'
+                    r'["\']/((?:api|ajax|json|rest)/[^"\']*)["\']',  # Capture full path after quote
+                    r'\.ajax\s*\(\s*[{]?\s*url:\s*["\']([^"\']+)["\']',  # jQuery .ajax({url: '...'})
+                    r'fetch\s*\(\s*["\']([^"\']+)["\']',  # fetch('...')
+                    r'url:\s*["\']([^"\']+)["\']'  # Generic url: '...'
                 ]
 
                 for pattern in ajax_patterns:
@@ -141,6 +147,9 @@ class HTMLEnumerator:
                     for match in matches:
                         if isinstance(match, tuple):
                             match = match[0]
+                        # Ensure we have the full path for api/ajax patterns
+                        if not match.startswith('/'):
+                            match = '/' + match
                         self.endpoints.add(match)
                         if '/api/' in match or '/ajax/' in match:
                             self.interesting['api_endpoints'].append(match)

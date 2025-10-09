@@ -153,13 +153,9 @@ class ICMPListener(IListener):
             result = subprocess.run(['which', 'ptunnel'], capture_output=True)
             return result.returncode == 0
         elif self.tool == 'icmpsh':
-            # Check for icmpsh_m.py script
-            icmpsh_paths = [
-                Path('/opt/icmpsh/icmpsh_m.py'),
-                Path('/usr/share/icmpsh/icmpsh_m.py'),
-                Path.home() / 'icmpsh' / 'icmpsh_m.py'
-            ]
-            return any(p.exists() for p in icmpsh_paths)
+            # Use helper method to check for icmpsh_m.py script
+            icmpsh_path = self._get_icmpsh_path()
+            return icmpsh_path is not None
         return False
 
     def _get_icmpsh_path(self) -> Optional[Path]:
@@ -513,7 +509,7 @@ class ICMPListener(IListener):
             session = self.session_manager.create_session(
                 type='icmp',
                 target=client_ip,
-                port=0,  # ICMP has no port
+                port=None,  # ICMP has no port concept
                 protocol='tunnel',
                 shell_type='unknown' if self.tool == 'ptunnel' else 'bash',
                 metadata={

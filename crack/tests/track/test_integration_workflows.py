@@ -456,10 +456,10 @@ class TestPasswordWordlistContext:
 
         # Verify correct wordlist
         assert wordlist is not None
-        # Should select either service-specific (ssh-passwords.txt) or generic (rockyou.txt)
-        # Both are valid for password-cracking context
-        assert 'rockyou.txt' in wordlist or 'ssh-passwords.txt' in wordlist, "Should select password wordlist"
-        assert 'dirb' not in wordlist, "Should NOT select web directory wordlist"
+        # Should select either service-specific or generic password wordlist
+        # Valid paths include: rockyou.txt, ssh-passwords.txt, ssh-betterdefaultpasslist.txt, etc.
+        assert '/Passwords/' in wordlist or 'password' in wordlist.lower() or 'rockyou' in wordlist, "Should select password wordlist"
+        assert 'dirb' not in wordlist and 'Discovery' not in wordlist, "Should NOT select web directory wordlist"
 
         print(f"\n✓ PASSWORD WORDLIST SELECTION:")
         print(f"  - Selected: {wordlist}")
@@ -494,8 +494,8 @@ class TestPasswordWordlistContext:
 
         # Should get SSH-specific wordlist if available
         assert wordlist is not None
-        # Either SSH-specific or fallback to rockyou
-        assert 'ssh-passwords.txt' in wordlist or 'rockyou.txt' in wordlist
+        # Either SSH-specific (ssh-passwords.txt, ssh-betterdefaultpasslist.txt) or fallback to rockyou
+        assert 'ssh' in wordlist.lower() or 'rockyou' in wordlist or '/Passwords/' in wordlist
 
         print(f"\n✓ SSH SERVICE-SPECIFIC WORDLIST:")
         print(f"  - Selected: {wordlist}")

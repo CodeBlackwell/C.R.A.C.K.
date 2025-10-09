@@ -186,6 +186,10 @@ class ServiceRegistry:
         Returns:
             ServicePlugin instance or None
         """
+        # Auto-initialize plugins on first access
+        if not cls._initialized:
+            cls.initialize_plugins()
+
         for plugin in cls._plugins.values():
             if plugin.detect(port_info):
                 return plugin
@@ -200,6 +204,9 @@ class ServiceRegistry:
         Returns:
             List of service plugins
         """
+        # Auto-initialize plugins on first access
+        if not cls._initialized:
+            cls.initialize_plugins()
         return list(cls._plugins.values())
 
     @classmethod
@@ -212,6 +219,9 @@ class ServiceRegistry:
         Returns:
             ServicePlugin instance or None
         """
+        # Auto-initialize plugins on first access
+        if not cls._initialized:
+            cls.initialize_plugins()
         return cls._plugins.get(name)
 
     @classmethod
@@ -225,9 +235,14 @@ class ServiceRegistry:
 
         # Import all plugin modules to trigger @register decorators
         try:
-            from . import http, smb, ssh, sql, ftp, smtp, imap, pop3, mysql, postgresql, nfs, post_exploit, ad_attacks, lateral_movement, business_logic, macos_red_teaming, hardware_physical_access, oracle, mongodb, couchdb
+            from . import http, smb, ssh, sql, ftp, smtp, imap, pop3, mysql, postgresql, nfs, post_exploit, ad_attacks, lateral_movement, business_logic, macos_red_teaming, hardware_physical_access, oracle, mongodb, couchdb, legacy_protocols
         except ImportError as e:
             logger.warning(f"Some plugins failed to import: {e}")
+
+        # Re-register event handlers for ALL plugins (in case EventBus was cleared)
+        # This ensures handlers are set up even if plugins were already registered
+        for plugin in cls._plugins.values():
+            cls._setup_event_handlers(plugin)
 
         # Load alternative commands registry
         try:
@@ -242,10 +257,25 @@ class ServiceRegistry:
 
     @classmethod
     def clear(cls):
-        """Clear all registered plugins (mainly for testing)"""
-        cls._plugins.clear()
+        """Clear resolution state but preserve registered plugins (for testing isolation)
+
+        NOTE: We do NOT clear cls._plugins because plugin registration happens
+        at module import time via @ServiceRegistry.register decorators. Once modules
+        are imported, the plugins are registered and should persist across tests.
+        Clearing _plugins would require re-importing modules, which doesn't work
+        since Python caches imports in sys.modules.
+
+        This method only clears:
+        - _plugin_claims: Per-port plugin confidence scores
+        - _resolved_ports: Set of ports that have been resolved
+        - _initialized: Flag to allow re-initialization
+
+        To fully reset for testing, use EventBus.clear() separately to clear event handlers.
+        """
         cls._initialized = False
         if hasattr(cls, '_plugin_claims'):
             cls._plugin_claims.clear()
+            delattr(cls, '_plugin_claims')
         if hasattr(cls, '_resolved_ports'):
             cls._resolved_ports.clear()
+            delattr(cls, '_resolved_ports')

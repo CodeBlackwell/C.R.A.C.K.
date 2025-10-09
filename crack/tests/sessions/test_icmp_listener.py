@@ -147,7 +147,8 @@ class TestICMPListenerLifecycle:
     @patch.object(ICMPListener, '_check_tool_availability')
     @patch.object(ICMPListener, '_check_root_privileges')
     @patch.object(ICMPListener, '_disable_icmp_replies')
-    def test_start_icmpsh(self, mock_disable, mock_root, mock_check_tool,
+    @patch.object(ICMPListener, '_get_icmpsh_path')
+    def test_start_icmpsh(self, mock_get_path, mock_disable, mock_root, mock_check_tool,
                          mock_geteuid, mock_popen, icmp_listener_icmpsh):
         """Test starting icmpsh listener."""
         # Mock prerequisites
@@ -155,6 +156,7 @@ class TestICMPListenerLifecycle:
         mock_check_tool.return_value = True
         mock_geteuid.return_value = 0
         mock_disable.return_value = True
+        mock_get_path.return_value = Mock(spec='pathlib.Path')  # Mock Path object
 
         # Mock process
         mock_process = MagicMock()
@@ -252,7 +254,7 @@ class TestICMPListenerConnectionHandling:
         assert len(sessions) == 1
         assert sessions[0].target == '192.168.45.150'
         assert sessions[0].type == 'icmp'
-        assert sessions[0].port == 0
+        assert sessions[0].port is None  # ICMP has no port
         assert sessions[0].protocol == 'tunnel'
 
     def test_connection_callback(self, icmp_listener_ptunnel):

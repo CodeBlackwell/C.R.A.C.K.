@@ -17,6 +17,10 @@ from crack.track.services.legacy_protocols import (
     EchoPlugin
 )
 
+# Initialize plugins at module level for test isolation
+from crack.track.services.registry import ServiceRegistry
+ServiceRegistry.initialize_plugins()
+
 
 class TestFingerPlugin:
     """Test suite for Finger protocol enumeration plugin"""

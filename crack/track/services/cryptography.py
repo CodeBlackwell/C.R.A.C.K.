@@ -33,20 +33,41 @@ class CryptographyPlugin(ServicePlugin):
     def service_names(self) -> List[str]:
         return ['crypto', 'cipher', 'encryption']
 
-    def detect(self, port_info: Dict[str, Any]) -> bool:
-        """Detect cryptography-related services"""
+    def detect(self, port_info: Dict[str, Any]) -> float:
+        """Detect cryptography-related services with confidence scoring
+
+        Returns:
+            Confidence score (0-100):
+            - 100: Pure cryptography service (crypto, cipher in name)
+            - 50: TLS/SSL related but not HTTPS (ssl, tls in service name)
+            - 0: Regular HTTPS web services (handled by HTTP plugin)
+
+        Note: This plugin should NOT handle standard HTTPS web services.
+        The HTTP plugin has higher priority for ports 443/8443/9443 with HTTP-like services.
+        """
         service = port_info.get('service', '').lower()
-
-        # Check service name
-        if any(svc in service for svc in ['crypto', 'cipher', 'ssl', 'tls', 'https']):
-            return True
-
-        # Check for common crypto ports
         port = port_info.get('port')
-        if port in [443, 8443, 9443]:  # HTTPS/TLS ports
-            return True
 
-        return False
+        # Perfect match: Pure cryptography services
+        if any(svc in service for svc in ['crypto', 'cipher', 'encryption']):
+            return 100
+
+        # Medium confidence: TLS/SSL services but NOT HTTPS web services
+        # Let HTTP plugin handle web services on these ports
+        if 'https' in service or 'http' in service:
+            return 0  # Defer to HTTP plugin
+
+        if any(svc in service for svc in ['ssl', 'tls']):
+            return 50
+
+        # Low confidence: HTTPS ports WITHOUT explicit service name
+        # Only claim if service is unknown/generic
+        if port in [443, 8443, 9443]:
+            if service in ['', 'unknown', 'tcpwrapped']:
+                return 30  # Low confidence - might be HTTPS
+            return 0  # Explicit service name - defer to appropriate plugin
+
+        return 0
 
     def get_task_tree(self, target: str, port: int, service_info: Dict[str, Any]) -> Dict[str, Any]:
         """Generate cryptography analysis task tree"""

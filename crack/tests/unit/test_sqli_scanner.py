@@ -64,6 +64,7 @@ class TestSQLiScanner:
         mock_response = Mock()
         mock_response.status_code = 200
         mock_response.content = b"Normal response"
+        mock_response.text = "Normal response"
         mock_response.headers = {'Content-Type': 'text/html'}
         mock_requests_session.get.return_value = mock_response
 
@@ -89,6 +90,7 @@ class TestSQLiScanner:
         mock_response = Mock()
         mock_response.status_code = 200
         mock_response.content = b"POST response"
+        mock_response.text = "POST response"
         mock_requests_session.post.return_value = mock_response
 
         baseline = scanner.get_baseline()
@@ -111,6 +113,7 @@ class TestSQLiScanner:
             mock_resp = Mock()
             mock_resp.status_code = 200
             mock_resp.content = b"Response content"
+            mock_resp.text = "Response content"
             mock_resp.headers = {}
             responses.append(mock_resp)
 
@@ -206,7 +209,7 @@ class TestSQLiScanner:
         mock_requests_session.get.side_effect = [true_resp, false_resp]
 
         from crack.sqli.techniques import SQLiTechniques
-        with patch.object(SQLiTechniques, 'test_boolean_blind') as mock_test:
+        with patch.object(SQLiTechniques, 'test_boolean_based') as mock_test:
             mock_test.return_value = {
                 'vulnerable': True,
                 'confidence': 'MEDIUM',
@@ -236,13 +239,14 @@ class TestSQLiScanner:
         mock_resp = Mock()
         mock_resp.status_code = 200
         mock_resp.content = b"Response"
+        mock_resp.text = "Response"
 
         def delayed_get(*args, **kwargs):
             time.sleep(3)  # Simulate SQL sleep
             return mock_resp
 
         from crack.sqli.techniques import SQLiTechniques
-        with patch.object(SQLiTechniques, 'test_time_blind') as mock_test:
+        with patch.object(SQLiTechniques, 'test_time_based') as mock_test:
             mock_test.return_value = {
                 'vulnerable': True,
                 'confidence': 'HIGH',
@@ -286,6 +290,7 @@ class TestSQLiScanner:
         mock_resp = Mock()
         mock_resp.status_code = 200
         mock_resp.content = b"Response"
+        mock_resp.text = "Response"
         mock_requests_session.get.return_value = mock_resp
 
         with patch('time.sleep') as mock_sleep:

@@ -7,7 +7,12 @@ with complete OSCP educational metadata for stealthy network positioning.
 """
 
 import pytest
+from crack.track.services.registry import ServiceRegistry
 from crack.track.services.ipv6_attacks import IPv6AttacksPlugin
+
+# Initialize plugins at module level for parametrization
+# This needs to happen BEFORE pytest collects parametrized tests
+ServiceRegistry.initialize_plugins()
 
 
 class TestIPv6AttacksPlugin:

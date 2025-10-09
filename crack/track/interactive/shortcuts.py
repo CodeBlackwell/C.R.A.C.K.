@@ -54,6 +54,7 @@ class ShortcutHandler:
             'sa': ('Success analyzer', 'success_analyzer'),
             'wr': ('Workflow recorder', 'workflow_recorder'),
             'sg': ('Smart suggest', 'smart_suggest'),
+            'R': ('Reset session (WARNING: deletes ALL data)', 'reset_session'),
             'b': ('Go back', 'go_back'),
             'h': ('Show help', 'show_help'),
             'q': ('Quit and save', 'quit')
@@ -616,7 +617,7 @@ class ShortcutHandler:
             True if task needs wordlist, False otherwise
         """
         # Check metadata for wordlist placeholder
-        command = task.metadata.get('command', '')
+        command = task.metadata.get('command', '') or ''
         if '<WORDLIST>' in command or '{WORDLIST}' in command:
             return True
 
@@ -647,3 +648,70 @@ class ShortcutHandler:
             return True
 
         return False
+
+    def reset_session(self):
+        """
+        Reset session to absolute zero (WARNING: deletes ALL data)
+
+        Requires double confirmation:
+        1. Type "RESET" to confirm understanding
+        2. Final Y/N confirmation
+
+        Works in all modes (basic, TUI, screened)
+        """
+        from ..core.storage import Storage
+        from ..core.state import TargetProfile
+
+        # Strong warning message
+        print("\n" + "=" * 60)
+        print(DisplayManager.format_error("⚠️  SESSION RESET WARNING ⚠️"))
+        print("=" * 60)
+        print(DisplayManager.format_warning(
+            "\nThis will DELETE ALL enumeration data for this target:\n"
+            "  • All discovered ports and services\n"
+            "  • All findings and vulnerabilities\n"
+            "  • All credentials and notes\n"
+            "  • Complete task history\n"
+            "  • Command execution logs\n"
+            "\nThis action CANNOT be undone!\n"
+        ))
+
+        # First confirmation: Type "RESET"
+        print(DisplayManager.format_info("Type 'RESET' (all caps) to confirm you understand:"))
+        first_confirm = input("> ").strip()
+
+        if first_confirm != "RESET":
+            print(DisplayManager.format_success("Reset cancelled - session preserved"))
+            return
+
+        # Second confirmation: Y/N
+        print(DisplayManager.format_info("\nAre you absolutely sure? [y/N]: "))
+        second_confirm = input("> ").strip().lower()
+
+        if second_confirm not in ['y', 'yes']:
+            print(DisplayManager.format_success("Reset cancelled - session preserved"))
+            return
+
+        # Perform reset
+        target = self.session.target
+        print(DisplayManager.format_info(f"\nDeleting profile for {target}..."))
+
+        # Delete stored profile
+        Storage.delete(target)
+
+        # Create fresh profile
+        self.session.profile = TargetProfile(target)
+        self.session.profile.save()
+
+        # Reinitialize session components
+        self.session.last_action = None
+        if hasattr(self.session, 'command_history'):
+            self.session.command_history.clear()
+
+        print(DisplayManager.format_success(
+            f"\n✓ Session reset complete\n"
+            f"✓ Clean profile created for {target}\n"
+            f"✓ Ready to start enumeration from zero\n"
+        ))
+
+        self.session.last_action = "Session reset to zero"
