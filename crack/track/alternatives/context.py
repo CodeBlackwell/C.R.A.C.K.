@@ -16,19 +16,26 @@ except ImportError:
     # Fallback if config module not available
     ConfigManager = None
 
+try:
+    from ..wordlists.manager import WordlistManager
+except ImportError:
+    # Fallback if wordlist module not available (Phase 1 not complete)
+    WordlistManager = None
+
 
 # Context-aware wordlist mappings for different attack scenarios
+# NOTE: Paths verified for Kali Linux 2024+ system paths
 WORDLIST_CONTEXT = {
     'web-enumeration': {
-        'default': '/usr/share/wordlists/dirb/common.txt',
-        'thorough': '/usr/share/wordlists/dirbuster/directory-list-2.3-medium.txt',
-        'quick': '/usr/share/wordlists/dirb/small.txt'
+        'default': '/usr/share/dirb/wordlists/common.txt',
+        'thorough': '/usr/share/dirbuster/wordlists/directory-list-2.3-medium.txt',
+        'quick': '/usr/share/dirb/wordlists/small.txt'
     },
     'password-cracking': {
         'default': '/usr/share/wordlists/rockyou.txt',
-        'ssh': '/usr/share/seclists/Passwords/Common-Credentials/ssh-passwords.txt',
-        'ftp': '/usr/share/wordlists/ftp-default-passwords.txt',
-        'http-auth': '/usr/share/wordlists/metasploit/http_default_pass.txt'
+        'ssh': '/usr/share/seclists/Passwords/Common-Credentials/top-20-common-SSH-passwords.txt',
+        'ftp': '/usr/share/seclists/Passwords/Default-Credentials/ftp-betterdefaultpasslist.txt',
+        'http-auth': '/usr/share/seclists/Passwords/Default-Credentials/http-betterdefaultpasslist.txt'
     },
     'parameter-fuzzing': {
         'default': '/usr/share/seclists/Discovery/Web-Content/burp-parameter-names.txt',
@@ -124,10 +131,19 @@ class ContextResolver:
         """
         Resolve WORDLIST with context awareness
 
+        Enhanced with dynamic wordlist discovery via WordlistManager.
+        Falls back to static WORDLIST_CONTEXT if manager unavailable.
+
         Context hints determine which wordlist to use:
         - purpose: 'web-enumeration', 'password-cracking', 'parameter-fuzzing', etc.
         - service: 'ssh', 'ftp', 'http-auth' (for password cracking)
         - variant: 'default', 'thorough', 'quick' (for web enum)
+
+        Resolution priority:
+        1. Task metadata (explicit wordlist)
+        2. Dynamic manager suggestions (if available)
+        3. Static context mapping (fallback)
+        4. Config WORDLIST variable
 
         Args:
             context_hints: Dictionary with 'purpose', 'service', 'variant' keys
@@ -139,13 +155,14 @@ class ContextResolver:
         service = context_hints.get('service')
         variant = context_hints.get('variant', 'default')
 
-        # Check for explicit wordlist in task metadata
+        # Priority 1: Check for explicit wordlist in task metadata
         if self.task and hasattr(self.task, 'metadata'):
             task_wordlist = self.task.metadata.get('wordlist')
             if task_wordlist:
                 return task_wordlist
 
-        # Check context mapping
+        # Priority 2: Static context mapping with service-specific support
+        # Check this BEFORE dynamic resolution to ensure service-specific wordlists are respected
         if purpose and purpose in WORDLIST_CONTEXT:
             context_map = WORDLIST_CONTEXT[purpose]
 
@@ -160,29 +177,167 @@ class ContextResolver:
             if wordlist:
                 return wordlist
 
+        # Priority 3: Try dynamic suggestions from WordlistManager
+        # Only use dynamic resolution if static mapping didn't find anything
+        if WordlistManager is not None:
+            dynamic_wordlist = self._resolve_wordlist_dynamic(purpose, service, variant)
+            if dynamic_wordlist:
+                return dynamic_wordlist
+
         # Infer purpose from task metadata if not provided
         if not purpose and self.task and hasattr(self.task, 'metadata'):
             inferred_purpose = self._infer_purpose_from_task()
-            if inferred_purpose and inferred_purpose in WORDLIST_CONTEXT:
-                context_map = WORDLIST_CONTEXT[inferred_purpose]
+            if inferred_purpose:
+                # Try static mapping first (service-specific support)
+                if inferred_purpose in WORDLIST_CONTEXT:
+                    context_map = WORDLIST_CONTEXT[inferred_purpose]
 
-                # If service in context hints and purpose is password-cracking, use service-specific
-                if inferred_purpose == 'password-cracking' and service:
-                    service_wordlist = context_map.get(service)
-                    if service_wordlist:
-                        return service_wordlist
+                    # If service in context hints and purpose is password-cracking, use service-specific
+                    if inferred_purpose == 'password-cracking' and service:
+                        service_wordlist = context_map.get(service)
+                        if service_wordlist:
+                            return service_wordlist
 
-                wordlist = context_map.get(variant, context_map.get('default'))
-                if wordlist:
-                    return wordlist
+                    wordlist = context_map.get(variant, context_map.get('default'))
+                    if wordlist:
+                        return wordlist
 
-        # Fallback to config WORDLIST variable
+                # Fallback to dynamic resolution with inferred purpose
+                if WordlistManager is not None:
+                    dynamic_wordlist = self._resolve_wordlist_dynamic(inferred_purpose, service, variant)
+                    if dynamic_wordlist:
+                        return dynamic_wordlist
+
+        # Priority 4: Fallback to config WORDLIST variable
         if self.config:
             config_wordlist = self._resolve_from_config('WORDLIST')
             if config_wordlist:
                 return config_wordlist
 
         return None
+
+    def _resolve_wordlist_dynamic(self, purpose: Optional[str], service: Optional[str], variant: str) -> Optional[str]:
+        """
+        Resolve wordlist dynamically using WordlistManager
+
+        Queries discovered wordlists by category and selects best match.
+
+        Args:
+            purpose: Attack purpose ('web-enumeration', 'password-cracking', etc.)
+            service: Service type ('ssh', 'ftp', 'http-auth')
+            variant: Variant ('default', 'thorough', 'quick')
+
+        Returns:
+            Wordlist path or None
+        """
+        if not purpose:
+            return None
+
+        try:
+            # Initialize manager with default paths
+            manager = WordlistManager()
+
+            # Map purpose to category
+            category_map = {
+                'web-enumeration': 'web',
+                'password-cracking': 'passwords',
+                'parameter-fuzzing': 'web',  # Parameter fuzzing uses web wordlists
+                'subdomain-enum': 'subdomains',
+                'vhost-enum': 'subdomains',
+                'username-enum': 'usernames'
+            }
+
+            category = category_map.get(purpose)
+            if not category:
+                return None
+
+            # Get wordlists for category
+            wordlists = manager.get_by_category(category)
+            if not wordlists:
+                return None
+
+            # Select wordlist based on variant and service
+            selected = self._select_best_wordlist(wordlists, purpose, service, variant)
+            return selected.path if selected else None
+
+        except Exception:
+            # Graceful degradation - manager not available or error occurred
+            return None
+
+    def _select_best_wordlist(self, wordlists, purpose: str, service: Optional[str], variant: str):
+        """
+        Select best wordlist from available options
+
+        Selection criteria:
+        - Service-specific first (for password cracking)
+        - Variant preference (quick < default < thorough)
+        - Common patterns (common.txt, rockyou.txt, etc.)
+
+        Args:
+            wordlists: List of WordlistEntry objects
+            purpose: Attack purpose
+            service: Service type (optional)
+            variant: Size variant
+
+        Returns:
+            WordlistEntry or None
+        """
+        if not wordlists:
+            return None
+
+        # For password cracking, check service-specific wordlists
+        if purpose == 'password-cracking' and service:
+            service_patterns = {
+                'ssh': ['ssh', 'unix'],
+                'ftp': ['ftp'],
+                'http-auth': ['http', 'web']
+            }
+            patterns = service_patterns.get(service, [])
+            for pattern in patterns:
+                for wl in wordlists:
+                    if pattern in wl.name.lower() or pattern in wl.path.lower():
+                        return wl
+
+        # Variant-based selection
+        if variant == 'quick':
+            # Prefer small wordlists (small.txt, top1000, etc.)
+            quick_patterns = ['small', 'short', 'quick', 'top1000', 'top100']
+            for pattern in quick_patterns:
+                for wl in wordlists:
+                    if pattern in wl.name.lower():
+                        return wl
+            # Fallback: smallest file
+            return min(wordlists, key=lambda w: w.line_count)
+
+        elif variant == 'thorough':
+            # Prefer large wordlists (big, large, all, etc.)
+            thorough_patterns = ['big', 'large', 'all', 'complete', 'directory-list', 'top1million']
+            for pattern in thorough_patterns:
+                for wl in wordlists:
+                    if pattern in wl.name.lower():
+                        return wl
+            # Fallback: largest file
+            return max(wordlists, key=lambda w: w.line_count)
+
+        else:  # variant == 'default'
+            # Prefer common default wordlists
+            default_patterns = {
+                'web': ['common.txt', 'common', 'medium'],
+                'passwords': ['rockyou', 'common-passwords'],
+                'subdomains': ['subdomains-top', 'namelist'],
+                'usernames': ['common-user', 'names']
+            }
+
+            category = wordlists[0].category if wordlists else 'general'
+            patterns = default_patterns.get(category, ['common'])
+
+            for pattern in patterns:
+                for wl in wordlists:
+                    if pattern in wl.name.lower():
+                        return wl
+
+            # Fallback: first wordlist
+            return wordlists[0]
 
     def _infer_purpose_from_task(self) -> Optional[str]:
         """
