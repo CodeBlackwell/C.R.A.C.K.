@@ -128,6 +128,16 @@ class ServiceRegistry:
         if not claims:
             return
 
+        # Check if already resolved (prevents duplicate resolution)
+        if not hasattr(cls, '_resolved_ports'):
+            cls._resolved_ports = set()
+
+        if port_key in cls._resolved_ports:
+            return  # Already resolved, skip
+
+        # Mark as resolved immediately
+        cls._resolved_ports.add(port_key)
+
         # Sort by confidence (highest first)
         claims.sort(key=lambda x: x['confidence'], reverse=True)
 
@@ -235,3 +245,7 @@ class ServiceRegistry:
         """Clear all registered plugins (mainly for testing)"""
         cls._plugins.clear()
         cls._initialized = False
+        if hasattr(cls, '_plugin_claims'):
+            cls._plugin_claims.clear()
+        if hasattr(cls, '_resolved_ports'):
+            cls._resolved_ports.clear()

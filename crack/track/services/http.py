@@ -162,7 +162,9 @@ class HTTPPlugin(ServicePlugin):
                     'service': 'http',
                     'port': port,
                     'purpose': 'web-enumeration'
-                }
+                },
+                # Phase 4: Wordlist selection metadata
+                'wordlist_purpose': 'web-enumeration'
             }
         })
 

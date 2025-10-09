@@ -466,7 +466,9 @@ Time estimate: 5-10 minutes (depending on file count)
                             'Manual: ftp {target}, try each user/pass combination'
                         ],
                         'notes': 'FTP brute-force is SLOW (plain text, sequential auth). Use small wordlists for OSCP exam (time-limited). Increase threads (-t 16) for faster results (more noisy). Often triggers lockout. Try default creds and known passwords first. Time estimate: 30 minutes to several hours (depends on wordlist size).',
-                        'time_estimate': '30+ minutes (wordlist-dependent)'
+                        'time_estimate': '30+ minutes (wordlist-dependent)',
+                        # Phase 4: Wordlist selection metadata
+                        'wordlist_purpose': 'password-cracking'
                     }
                 }
             ]

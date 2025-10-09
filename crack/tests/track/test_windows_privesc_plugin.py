@@ -35,7 +35,7 @@ class TestWindowsPrivescPlugin:
         assert tree['name'] == 'Windows Privilege Escalation - Complete Methodology'
         assert tree['type'] == 'parent'
         assert 'children' in tree
-        assert len(tree['children']) == 12  # 12 major categories
+        assert len(tree['children']) == 17  # 17 major categories
 
     def test_oscp_metadata_present(self, plugin):
         """PROVES: Tasks include OSCP-required metadata"""

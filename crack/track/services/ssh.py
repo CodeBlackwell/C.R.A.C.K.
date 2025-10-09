@@ -574,7 +574,9 @@ If banner reveals vendor, focus on vendor-specific defaults.
                     f'ncrack -p {port} --user admin -P passwords.txt {target}',
                     'Manual: ssh user@{target} with common passwords'
                 ],
-                'notes': 'SSH brute-force is SLOW (delay between attempts). Rarely successful in CTF/OSCP. Try other methods first. For exam: document exact command used.'
+                'notes': 'SSH brute-force is SLOW (delay between attempts). Rarely successful in CTF/OSCP. Try other methods first. For exam: document exact command used.',
+                # Phase 4: Wordlist selection metadata
+                'wordlist_purpose': 'password-cracking'
             }
         })
 
