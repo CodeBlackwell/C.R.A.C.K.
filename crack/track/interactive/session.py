@@ -300,6 +300,10 @@ class InteractiveSession:
         elif choice_id == 'finding':
             self.add_finding()
 
+        elif choice_id == 'alternatives':
+            # Phase 6.5: Handle alternative commands from main menu
+            self.handle_alternative_commands()
+
         elif choice_id == 'show-status':
             self.shortcut_handler.show_status()
 
@@ -3906,7 +3910,7 @@ Output: {output[:500]}{"..." if len(output) > 500 else ""}
         self.last_action = f"Generated {len(suggestions)} suggestions"
 
     def handle_alternative_commands(self):
-        """Browse and execute alternative commands (shortcut: alt)"""
+        """Browse and execute alternative commands (shortcut: alt) (Phase 6.5 enhanced)"""
         from ..alternatives.registry import AlternativeCommandRegistry
         from ..alternatives.context import ContextResolver
         from ..alternatives.executor import AlternativeExecutor
@@ -3929,10 +3933,27 @@ Output: {output[:500]}{"..." if len(output) > 500 else ""}
 
         print(f"Available: {stats['total_alternatives']} alternatives in {stats['total_categories']} categories\n")
 
-        # Check if current task has alternatives
+        # Check if current task has alternatives (Phase 6.5: Auto-link if needed)
         current_task_alts = []
         if hasattr(self, 'current_task') and self.current_task:
-            current_task_alts = AlternativeCommandRegistry.get_for_task(self.current_task.id)
+            # Get alternative_ids from task metadata
+            alt_ids = self.current_task.metadata.get('alternative_ids', [])
+
+            # Auto-link if not present (Phase 6.5)
+            if not alt_ids:
+                alt_ids = AlternativeCommandRegistry.auto_link_to_task(self.current_task)
+                if alt_ids:
+                    self.current_task.metadata['alternative_ids'] = alt_ids
+                    print(DisplayManager.format_success(
+                        f"Auto-linked {len(alt_ids)} alternatives to current task"
+                    ))
+
+            # Get actual AlternativeCommand objects
+            current_task_alts = [
+                AlternativeCommandRegistry.get(aid)
+                for aid in alt_ids
+                if AlternativeCommandRegistry.get(aid) is not None
+            ]
 
         # Build menu choices
         choices = []
@@ -4041,7 +4062,7 @@ Output: {output[:500]}{"..." if len(output) > 500 else ""}
         self._execute_alternative_menu(results)
 
     def _execute_alternative_menu(self, alternatives: list):
-        """Display alternatives menu and execute selection"""
+        """Display alternatives menu and execute selection (Phase 6.5 enhanced)"""
         from ..alternatives.context import ContextResolver
         from ..alternatives.executor import AlternativeExecutor
         from ..reference.core.config import ConfigManager
@@ -4082,11 +4103,13 @@ Output: {output[:500]}{"..." if len(output) > 500 else ""}
                 print(f"  ✓ {indicator}")
             print()
 
-        # Build context resolver
+        # Build context resolver (Phase 6.5: context hints passed to resolve())
         config = ConfigManager()
+        current_task = getattr(self, 'current_task', None)
+
         context = ContextResolver(
             profile=self.profile,
-            task=getattr(self, 'current_task', None),
+            task=current_task,
             config=config
         )
 

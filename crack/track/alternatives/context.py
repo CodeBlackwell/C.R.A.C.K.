@@ -10,35 +10,94 @@ Resolves variable values from execution context in priority order:
 
 from typing import Optional, Dict, Any
 
+try:
+    from ...reference.core.config import ConfigManager
+except ImportError:
+    # Fallback if config module not available
+    ConfigManager = None
+
+
+# Context-aware wordlist mappings for different attack scenarios
+WORDLIST_CONTEXT = {
+    'web-enumeration': {
+        'default': '/usr/share/wordlists/dirb/common.txt',
+        'thorough': '/usr/share/wordlists/dirbuster/directory-list-2.3-medium.txt',
+        'quick': '/usr/share/wordlists/dirb/small.txt'
+    },
+    'password-cracking': {
+        'default': '/usr/share/wordlists/rockyou.txt',
+        'ssh': '/usr/share/seclists/Passwords/Common-Credentials/ssh-passwords.txt',
+        'ftp': '/usr/share/wordlists/ftp-default-passwords.txt',
+        'http-auth': '/usr/share/wordlists/metasploit/http_default_pass.txt'
+    },
+    'parameter-fuzzing': {
+        'default': '/usr/share/seclists/Discovery/Web-Content/burp-parameter-names.txt',
+        'sqli': '/usr/share/seclists/Fuzzing/SQLi/Generic-SQLi.txt',
+        'xss': '/usr/share/seclists/Fuzzing/XSS-Fuzzing.txt'
+    },
+    'subdomain-enum': {
+        'default': '/usr/share/seclists/Discovery/DNS/subdomains-top1million-5000.txt',
+        'thorough': '/usr/share/seclists/Discovery/DNS/subdomains-top1million-110000.txt'
+    },
+    'vhost-enum': {
+        'default': '/usr/share/seclists/Discovery/DNS/namelist.txt'
+    }
+}
+
 
 class ContextResolver:
     """Resolve variables from execution context"""
 
-    def __init__(self, profile=None, task=None, config=None):
+    def __init__(self, profile=None, task=None, config=None, auto_load_config=True):
         """
         Initialize context resolver
 
         Args:
             profile: TargetProfile instance (optional)
             task: TaskNode instance (optional)
-            config: ConfigManager instance (optional)
+            config: ConfigManager instance, path to config, or None (optional)
+            auto_load_config: Whether to auto-load config if not provided (default True)
         """
         self.profile = profile
         self.task = task
-        self.config = config
 
-    def resolve(self, variable_name: str) -> Optional[str]:
+        # Handle config loading
+        if config is None and auto_load_config and ConfigManager is not None:
+            # Try to load default config
+            try:
+                self.config = ConfigManager()
+            except Exception:
+                # Config doesn't exist or can't be loaded - graceful fallback
+                self.config = None
+        elif isinstance(config, str):
+            # Config path provided
+            try:
+                self.config = ConfigManager(config_path=config)
+            except Exception:
+                self.config = None
+        else:
+            # ConfigManager instance provided or explicit None
+            self.config = config
+
+    def resolve(self, variable_name: str, context_hints: Optional[Dict[str, Any]] = None) -> Optional[str]:
         """
-        Auto-resolve variable from context
+        Auto-resolve variable from context with context awareness
 
         Args:
             variable_name: Variable name (without angle brackets)
+            context_hints: Additional hints like {'purpose': 'web-enumeration', 'service': 'ssh'}
 
         Returns:
             Resolved value or None if not found in context
         """
         # Normalize variable name (remove <> if present)
         var_name = variable_name.strip('<>')
+
+        # Special handling for WORDLIST - context-aware selection
+        if var_name == 'WORDLIST':
+            wordlist = self._resolve_wordlist(context_hints or {})
+            if wordlist:
+                return wordlist
 
         # Priority 1: Task metadata (port, service, etc.)
         if self.task:
@@ -59,6 +118,110 @@ class ContextResolver:
                 return config_value
 
         # Not found - will need to prompt user
+        return None
+
+    def _resolve_wordlist(self, context_hints: Dict[str, Any]) -> Optional[str]:
+        """
+        Resolve WORDLIST with context awareness
+
+        Context hints determine which wordlist to use:
+        - purpose: 'web-enumeration', 'password-cracking', 'parameter-fuzzing', etc.
+        - service: 'ssh', 'ftp', 'http-auth' (for password cracking)
+        - variant: 'default', 'thorough', 'quick' (for web enum)
+
+        Args:
+            context_hints: Dictionary with 'purpose', 'service', 'variant' keys
+
+        Returns:
+            Wordlist path or None
+        """
+        purpose = context_hints.get('purpose')
+        service = context_hints.get('service')
+        variant = context_hints.get('variant', 'default')
+
+        # Check for explicit wordlist in task metadata
+        if self.task and hasattr(self.task, 'metadata'):
+            task_wordlist = self.task.metadata.get('wordlist')
+            if task_wordlist:
+                return task_wordlist
+
+        # Check context mapping
+        if purpose and purpose in WORDLIST_CONTEXT:
+            context_map = WORDLIST_CONTEXT[purpose]
+
+            # For password-cracking, check service-specific wordlist first
+            if purpose == 'password-cracking' and service:
+                service_wordlist = context_map.get(service)
+                if service_wordlist:
+                    return service_wordlist
+
+            # Otherwise use variant (default, thorough, quick)
+            wordlist = context_map.get(variant)
+            if wordlist:
+                return wordlist
+
+        # Infer purpose from task metadata if not provided
+        if not purpose and self.task and hasattr(self.task, 'metadata'):
+            inferred_purpose = self._infer_purpose_from_task()
+            if inferred_purpose and inferred_purpose in WORDLIST_CONTEXT:
+                context_map = WORDLIST_CONTEXT[inferred_purpose]
+
+                # If service in context hints and purpose is password-cracking, use service-specific
+                if inferred_purpose == 'password-cracking' and service:
+                    service_wordlist = context_map.get(service)
+                    if service_wordlist:
+                        return service_wordlist
+
+                wordlist = context_map.get(variant, context_map.get('default'))
+                if wordlist:
+                    return wordlist
+
+        # Fallback to config WORDLIST variable
+        if self.config:
+            config_wordlist = self._resolve_from_config('WORDLIST')
+            if config_wordlist:
+                return config_wordlist
+
+        return None
+
+    def _infer_purpose_from_task(self) -> Optional[str]:
+        """
+        Infer attack purpose from task metadata
+
+        Returns:
+            Purpose string ('web-enumeration', 'password-cracking', etc.) or None
+        """
+        if not self.task or not hasattr(self.task, 'metadata'):
+            return None
+
+        metadata = self.task.metadata
+        task_id = self.task.task_id if hasattr(self.task, 'task_id') else ''
+
+        # Check task ID patterns
+        if any(tool in task_id.lower() for tool in ['gobuster', 'dirb', 'dirbuster', 'ffuf']):
+            return 'web-enumeration'
+
+        if any(tool in task_id.lower() for tool in ['hydra', 'medusa', 'ncrack']):
+            return 'password-cracking'
+
+        # Check service type
+        service = metadata.get('service', '').lower()
+        if service in ['http', 'https']:
+            # Could be web-enumeration or http-auth password cracking
+            # Default to web-enumeration unless explicitly password attack
+            if 'brute' in task_id.lower() or 'password' in task_id.lower():
+                return 'password-cracking'
+            return 'web-enumeration'
+
+        if service in ['ssh', 'ftp', 'smb']:
+            # These are typically password cracking targets
+            return 'password-cracking'
+
+        # Check alternative_context if present
+        alt_context = metadata.get('alternative_context', {})
+        if 'purpose' in alt_context:
+            return alt_context['purpose']
+
         return None
 
     def _resolve_from_task(self, var_name: str) -> Optional[str]:
@@ -111,39 +274,63 @@ class ContextResolver:
         return None
 
     def _resolve_from_config(self, var_name: str) -> Optional[str]:
-        """Resolve from config"""
+        """
+        Resolve from config (~/.crack/config.json)
+
+        Supports ConfigManager interface with get_variable() method
+        and fallback to direct dictionary access
+        """
         if not self.config:
             return None
 
-        # Try to get from config.variables
-        if hasattr(self.config, 'variables') and var_name in self.config.variables:
-            var_config = self.config.variables[var_name]
-            if isinstance(var_config, dict):
-                return var_config.get('value')
-            return str(var_config)
+        # Priority 1: Use ConfigManager.get_variable() if available (cleaner API)
+        if hasattr(self.config, 'get_variable'):
+            try:
+                value = self.config.get_variable(var_name)
+                if value:  # get_variable returns empty string if not found
+                    return value
+            except Exception:
+                pass
 
-        # Try direct config attribute
+        # Priority 2: Try to get from config.config['variables']
         if hasattr(self.config, 'config'):
             config_dict = self.config.config
             if 'variables' in config_dict and var_name in config_dict['variables']:
                 var_config = config_dict['variables'][var_name]
                 if isinstance(var_config, dict):
                     return var_config.get('value')
-                return str(var_config)
+                return str(var_config) if var_config else None
+
+        # Priority 3: Direct attribute access (backward compatibility)
+        if hasattr(self.config, 'variables') and var_name in self.config.variables:
+            var_config = self.config.variables[var_name]
+            if isinstance(var_config, dict):
+                return var_config.get('value')
+            return str(var_config) if var_config else None
 
         return None
 
-    def get_resolution_source(self, variable_name: str) -> Optional[str]:
+    def get_resolution_source(self, variable_name: str, context_hints: Optional[Dict[str, Any]] = None) -> Optional[str]:
         """
         Get the source of resolution for debugging
 
         Args:
             variable_name: Variable name
+            context_hints: Optional context hints for resolution
 
         Returns:
-            Source name ('task', 'profile', 'config') or None
+            Source name ('task', 'profile', 'config', 'context') or None
         """
         var_name = variable_name.strip('<>')
+
+        # Special case for WORDLIST with context
+        if var_name == 'WORDLIST' and context_hints:
+            wordlist = self._resolve_wordlist(context_hints)
+            if wordlist:
+                # Check if it came from context mapping vs config
+                purpose = context_hints.get('purpose')
+                if purpose and purpose in WORDLIST_CONTEXT:
+                    return 'context'
 
         if self.task and self._resolve_from_task(var_name) is not None:
             return 'task'
@@ -156,9 +343,12 @@ class ContextResolver:
 
         return None
 
-    def get_all_resolvable(self) -> Dict[str, str]:
+    def get_all_resolvable(self, context_hints: Optional[Dict[str, Any]] = None) -> Dict[str, str]:
         """
         Get all variables that can be resolved from context
+
+        Args:
+            context_hints: Optional context hints for resolution
 
         Returns:
             Dictionary of {variable_name: value} for all resolvable variables
@@ -175,7 +365,7 @@ class ContextResolver:
         ]
 
         for var in common_vars:
-            value = self.resolve(var)
+            value = self.resolve(var, context_hints=context_hints)
             if value is not None:
                 resolvable[var] = value
 

@@ -43,7 +43,11 @@ class TaskNode:
             'tags': [],
             'created_at': datetime.now().isoformat(),
             'completed_at': None,
-            'notes': []
+            'notes': [],
+            # Alternative commands integration (Phase 6)
+            'alternatives': [],  # Keep for backward compatibility with existing code
+            'alternative_ids': [],  # NEW: Links to AlternativeCommand.id
+            'alternative_context': {}  # NEW: Context hints for variable resolution
         }
 
     def add_child(self, child_task: 'TaskNode') -> 'TaskNode':
@@ -208,7 +212,10 @@ class TaskNode:
             parent=parent
         )
         task.status = data['status']
-        task.metadata = data['metadata']
+
+        # Merge loaded metadata with defaults from __init__
+        # This ensures backward compatibility - missing fields get defaults
+        task.metadata.update(data['metadata'])
 
         # Recursively create children
         for child_data in data.get('children', []):

@@ -222,18 +222,25 @@ class TargetProfile:
         self.notes.append(note_entry)
         self._update_timestamp()
 
-    def add_imported_file(self, filepath: str, file_type: str):
+    def add_imported_file(self, filepath: str, file_type: str, metadata: dict = None):
         """Track imported file
 
         Args:
             filepath: Path to imported file
             file_type: Type of file (nmap, burp, etc.)
+            metadata: Optional metadata about the file (nmap_command, scan_stats, etc.)
         """
-        self.imported_files.append({
+        entry = {
             'file': filepath,
             'type': file_type,
             'timestamp': datetime.now().isoformat()
-        })
+        }
+
+        # Add metadata if provided
+        if metadata:
+            entry.update(metadata)
+
+        self.imported_files.append(entry)
         self._update_timestamp()
 
     def record_scan(self, profile_id: str, command: str, result_summary: str = None, **kwargs):

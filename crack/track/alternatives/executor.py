@@ -137,11 +137,16 @@ class AlternativeExecutor:
         alt_cmd: AlternativeCommand,
         context: ContextResolver
     ) -> Dict[str, str]:
-        """Auto-resolve variables from context"""
+        """Auto-resolve variables from context (Phase 6.5: with context hints)"""
         values = {}
 
+        # Extract context hints from task metadata if available (Phase 6.5)
+        context_hints = None
+        if context.task and context.task.metadata.get('alternative_context'):
+            context_hints = context.task.metadata['alternative_context']
+
         for var in alt_cmd.get_auto_resolve_variables():
-            resolved = context.resolve(var.name)
+            resolved = context.resolve(var.name, context_hints=context_hints)
             if resolved is not None:
                 values[var.name] = resolved
 

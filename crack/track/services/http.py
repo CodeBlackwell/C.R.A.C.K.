@@ -115,7 +115,16 @@ class HTTPPlugin(ServicePlugin):
                 'next_steps': [
                     'Research detected versions for CVEs',
                     'Look for CMS-specific exploits'
-                ]
+                ],
+                # Phase 6: Alternative commands linkage
+                'alternative_ids': [
+                    'alt-http-headers-inspect'
+                ],
+                'alternative_context': {
+                    'service': 'http',
+                    'port': port,
+                    'purpose': 'web-enumeration'
+                }
             }
         })
 
@@ -143,7 +152,17 @@ class HTTPPlugin(ServicePlugin):
                     f'dirbuster # GUI tool',
                     f'Manual: curl {url}/admin, curl {url}/upload, etc.'
                 ],
-                'notes': 'Try multiple wordlists: common.txt, big.txt, raft-medium-*'
+                'notes': 'Try multiple wordlists: common.txt, big.txt, raft-medium-*',
+                # Phase 6: Alternative commands linkage
+                'alternative_ids': [
+                    'alt-manual-dir-check',
+                    'alt-robots-check'
+                ],
+                'alternative_context': {
+                    'service': 'http',
+                    'port': port,
+                    'purpose': 'web-enumeration'
+                }
             }
         })
 
@@ -183,7 +202,17 @@ class HTTPPlugin(ServicePlugin):
                     f'Manual: curl -X TRACE -i {url}',
                     f'Manual: curl -X PUT -i {url}/test.txt -d "test content"'
                 ],
-                'notes': 'TRACE=XST risk, CONNECT=proxy abuse, PUT/DELETE=file manipulation. See OWASP-CM-008.'
+                'notes': 'TRACE=XST risk, CONNECT=proxy abuse, PUT/DELETE=file manipulation. See OWASP-CM-008.',
+                # Phase 6: Alternative commands linkage
+                'alternative_ids': [
+                    'alt-http-methods-manual',
+                    'alt-http-trace-xst'
+                ],
+                'alternative_context': {
+                    'service': 'http',
+                    'port': port,
+                    'purpose': 'web-enumeration'
+                }
             }
         })
 
@@ -337,7 +366,16 @@ class HTTPPlugin(ServicePlugin):
                     f'nmap -p{port} --script http-vuln-* {target}',
                     f'Manual testing based on version info'
                 ],
-                'notes': 'Nikto is NOISY - use carefully. Consider NSE http-vuln-* scripts for quieter scans.'
+                'notes': 'Nikto is NOISY - use carefully. Consider NSE http-vuln-* scripts for quieter scans.',
+                # Phase 6: Alternative commands linkage
+                'alternative_ids': [
+                    'alt-apache-cve-2021-41773'  # If Apache detected, check for common CVEs
+                ],
+                'alternative_context': {
+                    'service': 'http',
+                    'port': port,
+                    'purpose': 'vulnerability-scan'
+                }
             }
         })
 

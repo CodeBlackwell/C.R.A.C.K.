@@ -16,6 +16,8 @@ class AlternativeCommandRegistry:
     _alternatives: Dict[str, AlternativeCommand] = {}
     _by_category: Dict[str, List[str]] = {}
     _by_task_pattern: Dict[str, List[str]] = {}
+    _by_service: Dict[str, List[str]] = {}  # NEW: Index by service type
+    _by_tag: Dict[str, List[str]] = {}      # NEW: Index by tags
     _loaded: bool = False
 
     @classmethod
@@ -80,6 +82,20 @@ class AlternativeCommandRegistry:
             if alt.parent_task_pattern not in cls._by_task_pattern:
                 cls._by_task_pattern[alt.parent_task_pattern] = []
             cls._by_task_pattern[alt.parent_task_pattern].append(alt.id)
+
+        # Index by service (derived from subcategory or parent_task_pattern)
+        # e.g., parent_task_pattern='http-*' or subcategory='http-methods' → service='http'
+        service_type = cls._extract_service_type(alt)
+        if service_type:
+            if service_type not in cls._by_service:
+                cls._by_service[service_type] = []
+            cls._by_service[service_type].append(alt.id)
+
+        # Index by tags
+        for tag in alt.tags:
+            if tag not in cls._by_tag:
+                cls._by_tag[tag] = []
+            cls._by_tag[tag].append(alt.id)
 
     @classmethod
     def get(cls, alt_id: str) -> Optional[AlternativeCommand]:
@@ -256,4 +272,122 @@ class AlternativeCommandRegistry:
         cls._alternatives.clear()
         cls._by_category.clear()
         cls._by_task_pattern.clear()
+        cls._by_service.clear()
+        cls._by_tag.clear()
         cls._loaded = False
+
+    @classmethod
+    def _extract_service_type(cls, alt: AlternativeCommand) -> Optional[str]:
+        """
+        Extract service type from alternative command metadata
+
+        Args:
+            alt: AlternativeCommand to analyze
+
+        Returns:
+            Service type string (e.g., 'http', 'smb', 'ssh') or None
+
+        Examples:
+            - parent_task_pattern='http-*' → 'http'
+            - parent_task_pattern='gobuster-*' → 'http' (gobuster is HTTP tool)
+            - parent_task_pattern='smb-*' → 'smb'
+            - subcategory='http-methods' → 'http'
+        """
+        # Map of common patterns to services
+        pattern_service_map = {
+            'http': 'http',
+            'https': 'http',
+            'apache': 'http',
+            'nginx': 'http',
+            'gobuster': 'http',
+            'nikto': 'http',
+            'whatweb': 'http',
+            'api': 'http',
+            'websocket': 'http',
+            'smb': 'smb',
+            'ssh': 'ssh',
+            'ftp': 'ftp',
+            'mysql': 'mysql',
+            'postgres': 'postgresql',
+            'mssql': 'mssql',
+            'oracle': 'oracle',
+            'ldap': 'ldap',
+            'dns': 'dns',
+            'snmp': 'snmp',
+            'rdp': 'rdp',
+            'vnc': 'vnc',
+            'telnet': 'telnet'
+        }
+
+        # Check parent_task_pattern first
+        if alt.parent_task_pattern:
+            pattern = alt.parent_task_pattern.lower().replace('-*', '').replace('*', '')
+            for key, service in pattern_service_map.items():
+                if key in pattern:
+                    return service
+
+        # Check subcategory
+        if alt.subcategory:
+            subcat = alt.subcategory.lower()
+            for key, service in pattern_service_map.items():
+                if key in subcat:
+                    return service
+
+        # Check category as fallback
+        if alt.category:
+            cat = alt.category.lower()
+            for key, service in pattern_service_map.items():
+                if key in cat:
+                    return service
+
+        return None
+
+    @classmethod
+    def auto_link_to_task(cls, task) -> List[str]:
+        """
+        Auto-discover alternatives for a task using pattern matching
+
+        This method matches task IDs against registered alternative commands using:
+        1. Task ID pattern matching (fnmatch - e.g., 'gobuster-*' matches 'gobuster-80')
+        2. Service type from task metadata (e.g., task with service='http' gets HTTP alternatives)
+        3. Tags from task metadata (e.g., OSCP:HIGH, QUICK_WIN)
+
+        Args:
+            task: TaskNode with id and metadata
+
+        Returns:
+            List of alternative command IDs that match the task (deduplicated)
+
+        Example:
+            task.id = 'gobuster-80'
+            task.metadata = {'service': 'http', 'tags': ['OSCP:HIGH']}
+            → Returns: ['alt-manual-dir-check', 'alt-robots-check', 'alt-http-headers-inspect', ...]
+        """
+        matches = []
+
+        # 1. Match by task ID pattern (glob matching)
+        for pattern, alt_ids in cls._by_task_pattern.items():
+            if fnmatch.fnmatch(task.id, pattern):
+                matches.extend(alt_ids)
+
+        # 2. Match by service type from task metadata
+        service = task.metadata.get('service')
+        if service:
+            service_alts = cls._by_service.get(service, [])
+            matches.extend(service_alts)
+
+        # 3. Match by tags from task metadata
+        task_tags = task.metadata.get('tags', [])
+        for tag in task_tags:
+            tag_alts = cls._by_tag.get(tag, [])
+            matches.extend(tag_alts)
+
+        # Deduplicate while preserving order
+        seen = set()
+        deduped = []
+        for alt_id in matches:
+            if alt_id not in seen:
+                seen.add(alt_id)
+                deduped.append(alt_id)
+
+        return deduped

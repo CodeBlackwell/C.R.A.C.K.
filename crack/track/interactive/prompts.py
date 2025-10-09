@@ -72,6 +72,13 @@ class PromptBuilder:
             'description': 'Add vulnerability, credential, or note'
         })
 
+        # Phase 6.5: Alternative commands option
+        choices.append({
+            'id': 'alternatives',
+            'label': 'Alternative commands',
+            'description': 'Browse and execute alternative commands'
+        })
+
         choices.append({
             'id': 'show-status',
             'label': 'Show full status',

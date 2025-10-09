@@ -108,8 +108,113 @@ Why type when you can press one key?
 | `r` | Recommendations | "What's next, sensei?" |
 | `n` | Execute next task | "Let's DO this" |
 | `f` | Search/filter | "Where's that gobuster task?" |
+| `alt` | Alternative commands | "Show me manual methods" |
 | `h` | Help | "I need an adult" |
 | `q` | Quit and save | "I'm out ✌️" |
+
+### 🎨 Alternative Commands: Manual Methods for OSCP Exam
+
+**NEW!** CRACK Track now includes **45+ executable alternative commands** for when automated tools fail (they will in the exam!).
+
+Press **`alt`** in interactive mode to see context-aware manual alternatives for the current task.
+
+```
+Current Task: Directory Brute-force (Port 80)
+Command: gobuster dir -u http://192.168.45.100:80 -w common.txt
+
+Alternative Commands:
+
+  1. Manual Directory Check
+     Use curl to manually test common directories
+     Variables: TARGET, PORT, DIRECTORY
+
+  2. Check robots.txt
+     Check robots.txt for disallowed paths
+     Variables: TARGET, PORT
+
+  3. HTTP Headers Inspection
+     Manually inspect HTTP headers for clues
+     Variables: TARGET, PORT
+
+Select alternative [1-3]: 1
+
+Preparing: Manual Directory Check
+  <TARGET> → 192.168.45.100 (from profile)
+  <PORT> → 80 (from task metadata)
+  <DIRECTORY> → Enter value: admin
+
+Final command: curl http://192.168.45.100:80/admin
+
+Execute? [Y/n]: y
+```
+
+#### Key Features
+
+- **Config-Aware Auto-Fill**: Variables auto-fill from `~/.crack/config.json`
+  - `<LHOST>` → Your attacking IP (auto-detected)
+  - `<LPORT>` → Your listening port (default: 4444)
+  - `<TARGET>` → Current target IP from profile
+
+- **Context-Aware Wordlist Selection**: Different wordlists for different purposes
+  - **Web enumeration** → `/usr/share/wordlists/dirb/common.txt`
+  - **Password cracking** → `/usr/share/wordlists/rockyou.txt`
+  - **SSH brute-force** → `/usr/share/seclists/.../ssh-passwords.txt`
+  - **Subdomain enum** → `/usr/share/seclists/.../subdomains-top1million.txt`
+
+- **Task-Linked Alternatives**: Each task shows relevant alternatives
+  - **gobuster tasks** → curl manual check, robots.txt, sitemap.xml
+  - **nikto tasks** → manual vulnerability testing
+  - **hydra tasks** → manual authentication testing
+
+- **Pattern-Based Auto-Discovery**: Alternatives auto-link via smart matching
+  - Task ID patterns (`gobuster-*` → http alternatives)
+  - Service types (`http` → web testing alternatives)
+  - OSCP tags (`OSCP:HIGH` → prioritized alternatives)
+
+#### Quick Setup
+
+```bash
+# Auto-detect your attacking IP
+crack reference --config auto
+
+# Or manually set config variables
+crack reference --set LHOST 192.168.45.200
+crack reference --set LPORT 4444
+crack reference --set WORDLIST /usr/share/wordlists/dirb/common.txt
+
+# View current config
+crack reference --config list
+```
+
+#### Usage in Interactive Mode
+
+```bash
+# Launch interactive mode
+crack track -i 192.168.45.100
+
+# Navigate to any task
+# Press 'alt' to see alternatives
+
+# System shows context-aware alternatives for current task
+# Variables auto-fill from task metadata, profile, and config
+# User only enters values that can't be auto-detected
+
+# Command executes and logs to profile
+```
+
+#### Alternative Command Categories
+
+| Category | Count | Example |
+|----------|-------|---------|
+| Web Enumeration | 10+ | Manual dir check, robots.txt, headers |
+| Privilege Escalation | 10+ | SUID binaries, sudo -l, capabilities |
+| File Transfer | 10+ | Python HTTP server, wget, curl, nc |
+| Anti-Forensics | 10+ | Clear history, log deletion, timestomp |
+| Database Enum | 10+ | MySQL version, table enum, user dump |
+| Network Recon | 10+ | Netcat port check, banner grab, ping |
+| **Total** | **45+** | **Growing library** |
+
+**Full guide**: `crack/track/alternatives/README.md`
 
 ### 🔍 The Search System: Finding Needles in 150-Task Haystacks
 

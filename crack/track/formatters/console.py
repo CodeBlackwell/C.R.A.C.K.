@@ -238,6 +238,12 @@ class ConsoleFormatter:
             tag_str = ' '.join(f"[{tag}]" for tag in tags[:2])  # Show first 2 tags
             task_line += f" {Colors.CYAN}{tag_str}{Colors.END}"
 
+        # Add alternative count badge (Phase 6.4)
+        alternative_ids = task.metadata.get('alternative_ids', [])
+        if alternative_ids:
+            alt_count = len(alternative_ids)
+            task_line += f" {Colors.YELLOW}[{alt_count} alt]{Colors.END}"
+
         lines.append(task_line)
 
         # Show command for pending/in-progress tasks
@@ -335,5 +341,76 @@ class ConsoleFormatter:
 
             if len(data['ports']) > 10:
                 lines.append(f"  ... and {len(data['ports']) - 10} more")
+
+        return "\n".join(lines)
+
+    @classmethod
+    def format_task_details(cls, task: TaskNode) -> str:
+        """Format detailed task information including alternatives (Phase 6.4)
+
+        Args:
+            task: Task node to display
+
+        Returns:
+            Formatted task details string
+        """
+        lines = []
+
+        # Header
+        lines.append(f"{Colors.BOLD}{Colors.HEADER}{'='*60}{Colors.END}")
+        lines.append(f"{Colors.BOLD}Task: {task.name}{Colors.END}")
+        lines.append(f"{Colors.BOLD}{Colors.HEADER}{'='*60}{Colors.END}")
+        lines.append("")
+
+        # Status
+        status_color = cls.STATUS_COLORS.get(task.status, '')
+        lines.append(f"Status: {status_color}{task.status.upper()}{Colors.END}")
+
+        # Command
+        if task.metadata.get('command'):
+            lines.append(f"Command: {Colors.CYAN}{task.metadata['command']}{Colors.END}")
+
+        # Description
+        if task.metadata.get('description'):
+            lines.append(f"Description: {task.metadata['description']}")
+
+        # Tags
+        tags = task.metadata.get('tags', [])
+        if tags:
+            tag_str = ' '.join(f"[{tag}]" for tag in tags)
+            lines.append(f"Tags: {Colors.CYAN}{tag_str}{Colors.END}")
+
+        # Show linked alternatives (Phase 6.4)
+        alternative_ids = task.metadata.get('alternative_ids', [])
+        if alternative_ids:
+            lines.append("")
+            lines.append(f"{Colors.BOLD}{Colors.YELLOW}Alternative Commands ({len(alternative_ids)}):{Colors.END}")
+
+            # Import here to avoid circular dependency
+            try:
+                from ..alternatives.registry import AlternativeCommandRegistry
+                AlternativeCommandRegistry.load_all()
+
+                for i, alt_id in enumerate(alternative_ids, 1):
+                    alt = AlternativeCommandRegistry.get(alt_id)
+                    if alt:
+                        lines.append(f"  {i}. {Colors.BOLD}{alt.name}{Colors.END}")
+                        lines.append(f"     {alt.description}")
+                        if alt.tags:
+                            tag_str = ' '.join(f"[{tag}]" for tag in alt.tags[:3])
+                            lines.append(f"     {Colors.CYAN}{tag_str}{Colors.END}")
+                    else:
+                        lines.append(f"  {i}. {Colors.RED}[Unknown: {alt_id}]{Colors.END}")
+
+                lines.append("")
+                lines.append(f"{Colors.YELLOW}Press 'alt' in interactive mode to execute alternatives{Colors.END}")
+
+            except ImportError:
+                lines.append(f"  {Colors.RED}[Alternative commands not available]{Colors.END}")
+
+        # Children count
+        if task.children:
+            lines.append("")
+            lines.append(f"Subtasks: {len(task.children)}")
 
         return "\n".join(lines)

@@ -219,6 +219,14 @@ class ServiceRegistry:
         except ImportError as e:
             logger.warning(f"Some plugins failed to import: {e}")
 
+        # Load alternative commands registry
+        try:
+            from ..alternatives.registry import AlternativeCommandRegistry
+            AlternativeCommandRegistry.load_all()
+            logger.info("Loaded alternative commands registry")
+        except ImportError as e:
+            logger.warning(f"Alternative commands registry not available: {e}")
+
         cls._initialized = True
         logger.info(f"Initialized {len(cls._plugins)} service plugins")
 
