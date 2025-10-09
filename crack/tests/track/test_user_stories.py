@@ -122,7 +122,7 @@ class TestUserStory2_ImportNmapResults:
         # Critical: Service-specific tasks generated
         all_tasks = profile.task_tree._get_all_descendants()
         task_names = [t.name.lower() for t in all_tasks]
-        task_commands = [t.metadata.get('command', '').lower() for t in all_tasks]
+        task_commands = [(t.metadata.get('command') or '').lower() for t in all_tasks]
 
         # HTTP tasks should exist (check names for HTTP and commands for tools)
         has_http_tasks = any('http' in name or 'web' in name or 'directory' in name for name in task_names)
@@ -639,7 +639,7 @@ class TestUserStory9_MySQLEnumeration:
         # Should have MySQL-specific tasks
         all_tasks = profile.task_tree._get_all_descendants()
         task_names = [t.name.lower() for t in all_tasks]
-        task_commands = [t.metadata.get('command', '') for t in all_tasks if hasattr(t, 'metadata')]
+        task_commands = [(t.metadata.get('command') or '') for t in all_tasks if hasattr(t, 'metadata')]
 
         # Critical MySQL checks
         has_mysql_tasks = any('mysql' in name for name in task_names)
