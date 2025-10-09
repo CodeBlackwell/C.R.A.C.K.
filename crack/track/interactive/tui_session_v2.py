@@ -10,7 +10,8 @@ Build incrementally from what worked in config panel.
 """
 
 import time
-from typing import Optional, List, Dict, Any
+import subprocess
+from typing import Optional, List, Dict, Any, Tuple
 from io import StringIO
 from contextlib import redirect_stdout
 
@@ -24,6 +25,7 @@ from rich import box
 from ..core.state import TargetProfile
 from ..core.storage import Storage
 from ..recommendations.engine import RecommendationEngine
+from ..parsers.output_patterns import OutputPatternMatcher
 
 from .session import InteractiveSession
 from .prompts import PromptBuilder
@@ -377,15 +379,48 @@ class TUISessionV2(InteractiveSession):
 
                     # Handle different choice actions
                     if choice_id == 'execute':
-                        self.debug_logger.info("Execute action selected (not yet implemented)")
-                        # TODO: Implement streaming execution in next iteration
+                        self.debug_logger.info("Execute action selected - starting streaming execution")
+                        command = task.metadata.get('command', 'N/A')
+                        self.debug_logger.info(f"Command template: {command}")
 
-                        # Stop live to show message clearly
-                        live.stop()
-                        self.console.print("\n[yellow]⚠ Execution not yet implemented in Stage 2[/]")
-                        self.console.print("[dim]This will be added in Stage 3. Press Enter to continue...[/]")
-                        input()
-                        live.start()
+                        try:
+                            # Execute with streaming
+                            output_lines, elapsed, exit_code, findings = self._execute_task_streaming(
+                                live, layout, task
+                            )
+
+                            # Update state to complete
+                            output_state = 'complete'
+
+                            self.debug_logger.log_state_transition("streaming", "complete", f"exit_code={exit_code}")
+                            self.debug_logger.info(f"Execution complete - exit_code={exit_code}, elapsed={elapsed:.1f}s")
+                            self.debug_logger.info(f"Output lines captured: {len(output_lines)}")
+                            self.debug_logger.info(f"Findings detected: {len(findings)}")
+
+                            # Save profile after execution
+                            self.profile.save()
+                            self.debug_logger.debug("Profile saved after execution")
+
+                        except KeyboardInterrupt:
+                            self.debug_logger.warning("Execution interrupted by user (Ctrl+C)")
+                            task.stop_timer()
+                            task.status = 'skipped'
+
+                            # Stop live to show message clearly
+                            live.stop()
+                            self.console.print("\n[yellow]⚠ Execution interrupted[/]")
+                            self.console.print("[dim]Press Enter to continue...[/]")
+                            input()
+                            live.start()
+
+                            # Reset to empty state
+                            output_state = 'empty'
+                            output_lines = []
+                            elapsed = 0.0
+                            exit_code = None
+                            findings = []
+
+                            self.debug_logger.log_state_transition("streaming", "empty", "interrupted by user")
 
                     elif choice_id == 'back':
                         self.debug_logger.info("Back action selected")
@@ -423,6 +458,137 @@ class TUISessionV2(InteractiveSession):
 
         self.debug_logger.section("TASK WORKSPACE LOOP END")
         self.debug_logger.info("Returning to dashboard")
+
+    def _execute_task_streaming(
+        self,
+        live: Live,
+        layout: Layout,
+        task
+    ) -> Tuple[List[str], float, int, List[Dict]]:
+        """
+        Execute task with real-time streaming output
+
+        Args:
+            live: Rich Live context (for display updates)
+            layout: Layout object (for workspace updates)
+            task: TaskNode instance
+
+        Returns:
+            Tuple of (output_lines, elapsed, exit_code, findings)
+        """
+        self.debug_logger.section("STREAMING EXECUTION START")
+        self.debug_logger.info(f"Task: {task.name}")
+        self.debug_logger.info(f"Task ID: {task.id}")
+
+        # 1. Extract and validate command
+        command = task.metadata.get('command')
+        if not command:
+            self.debug_logger.warning("No command defined for task")
+            return (["Error: No command defined"], 0.0, 1, [])
+
+        # Replace {TARGET} placeholder
+        original_command = command
+        command = command.replace('{TARGET}', self.profile.target)
+        self.debug_logger.info(f"Command template: {original_command}")
+        self.debug_logger.info(f"Command resolved: {command}")
+
+        # 2. Start timer and update task status
+        task.start_timer()
+        task.status = 'in-progress'
+        self.debug_logger.info("Task timer started, status set to 'in-progress'")
+
+        # 3. Initialize state
+        output_lines = []
+        start_time = time.time()
+        line_count = 0
+
+        self.debug_logger.info("Starting subprocess with streaming")
+
+        try:
+            # 4. Create subprocess with streaming
+            process = subprocess.Popen(
+                command,
+                shell=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,  # Combine stderr with stdout
+                text=True,
+                bufsize=1  # Line buffered
+            )
+
+            self.debug_logger.info(f"Subprocess created (PID: {process.pid})")
+
+            # 5. Stream output line-by-line
+            for line in process.stdout:
+                line_count += 1
+                output_lines.append(line.rstrip())
+                elapsed = time.time() - start_time
+
+                # Debug every 10 lines (avoid log spam)
+                if line_count % 10 == 0:
+                    self.debug_logger.debug(f"Lines received: {line_count}, Elapsed: {elapsed:.1f}s")
+
+                # Update workspace display (streaming state)
+                workspace_layout, choices = TaskWorkspacePanel.render(
+                    task=task,
+                    output_state='streaming',
+                    output_lines=output_lines,
+                    elapsed=elapsed,
+                    exit_code=None,
+                    findings=[]
+                )
+
+                layout['header'].update(self._render_header())
+                layout['menu'].update(workspace_layout)
+                layout['footer'].update(self._render_footer())
+                live.refresh()
+
+            # 6. Wait for process completion
+            self.debug_logger.debug("Process stdout closed, waiting for exit")
+            process.wait()
+            exit_code = process.returncode
+            elapsed = time.time() - start_time
+
+            self.debug_logger.info(f"Subprocess exited with code: {exit_code}")
+            self.debug_logger.info(f"Total lines captured: {line_count}")
+            self.debug_logger.info(f"Total elapsed time: {elapsed:.2f}s")
+
+        except Exception as e:
+            self.debug_logger.exception(f"Exception during streaming execution: {e}")
+            elapsed = time.time() - start_time
+            exit_code = 1
+            output_lines.append(f"Error: {str(e)}")
+
+        # 7. Stop timer and update task status
+        task.stop_timer()
+        task.status = 'completed' if exit_code == 0 else 'failed'
+        self.debug_logger.info(f"Task status set to '{task.status}'")
+
+        # 8. Analyze output for findings
+        self.debug_logger.debug("Analyzing output for findings")
+        try:
+            pattern_matcher = OutputPatternMatcher()
+            findings_dict = pattern_matcher.analyze(output_lines, task)
+
+            # Convert findings dict to list format for display
+            findings = []
+            for finding_type, items in findings_dict.items():
+                if finding_type != 'success' and items:
+                    if isinstance(items, list):
+                        for item in items:
+                            findings.append({
+                                'type': finding_type,
+                                'data': item
+                            })
+
+            self.debug_logger.info(f"Findings detected: {len(findings)}")
+        except Exception as e:
+            self.debug_logger.exception(f"Exception during finding analysis: {e}")
+            findings = []
+
+        self.debug_logger.section("STREAMING EXECUTION END")
+
+        # 9. Return results
+        return (output_lines, elapsed, exit_code, findings)
 
     def _refresh_panels(self, layout: Layout):
         """Refresh all panels with current state"""
