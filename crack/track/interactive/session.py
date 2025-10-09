@@ -3904,3 +3904,221 @@ Output: {output[:500]}{"..." if len(output) > 500 else ""}
             print(f"\n✓ Created {created} tasks from suggestions")
 
         self.last_action = f"Generated {len(suggestions)} suggestions"
+
+    def handle_alternative_commands(self):
+        """Browse and execute alternative commands (shortcut: alt)"""
+        from ..alternatives.registry import AlternativeCommandRegistry
+        from ..alternatives.context import ContextResolver
+        from ..alternatives.executor import AlternativeExecutor
+        from ..reference.core.config import ConfigManager
+
+        print(DisplayManager.format_info("Alternative Commands"))
+        print("=" * 60)
+
+        # Load alternatives if not already loaded
+        AlternativeCommandRegistry.load_all()
+
+        # Get stats
+        stats = AlternativeCommandRegistry.get_stats()
+        if stats['total_alternatives'] == 0:
+            print(DisplayManager.format_warning(
+                "No alternative commands available yet.\n"
+                "See: /home/kali/OSCP/crack/track/alternatives/commands/README.md"
+            ))
+            return
+
+        print(f"Available: {stats['total_alternatives']} alternatives in {stats['total_categories']} categories\n")
+
+        # Check if current task has alternatives
+        current_task_alts = []
+        if hasattr(self, 'current_task') and self.current_task:
+            current_task_alts = AlternativeCommandRegistry.get_for_task(self.current_task.id)
+
+        # Build menu choices
+        choices = []
+
+        # Option 1: Alternatives for current task (if any)
+        if current_task_alts:
+            choices.append({
+                'id': 'current-task',
+                'label': f'Alternatives for current task ({len(current_task_alts)} available)',
+                'description': f'Task: {self.current_task.name}'
+            })
+
+        # Option 2: Browse by category
+        choices.append({
+            'id': 'browse-category',
+            'label': 'Browse by category',
+            'description': 'Web enum, privesc, file transfer, etc.'
+        })
+
+        # Option 3: Search alternatives
+        choices.append({
+            'id': 'search',
+            'label': 'Search alternatives',
+            'description': 'Search by name or description'
+        })
+
+        # Option 4: Back
+        choices.append({
+            'id': 'back',
+            'label': 'Back',
+            'description': None
+        })
+
+        # Display menu
+        print(DisplayManager.format_menu(choices, title="What would you like to do?"))
+
+        # Get selection
+        choice_input = InputProcessor.get_input("Select: ")
+        choice = InputProcessor.parse_choice(choice_input, choices)
+
+        if not choice or choice['id'] == 'back':
+            return
+
+        # Handle choice
+        if choice['id'] == 'current-task':
+            self._execute_alternative_menu(current_task_alts)
+
+        elif choice['id'] == 'browse-category':
+            self._browse_alternatives_by_category()
+
+        elif choice['id'] == 'search':
+            self._search_alternatives()
+
+    def _browse_alternatives_by_category(self):
+        """Browse alternatives by category"""
+        from ..alternatives.registry import AlternativeCommandRegistry
+
+        # Get categories
+        categories = AlternativeCommandRegistry.list_categories()
+
+        if not categories:
+            print(DisplayManager.format_warning("No categories available"))
+            return
+
+        # Build menu
+        choices = [
+            {'id': cat, 'label': cat.replace('_', ' ').title(), 'description': None}
+            for cat in categories
+        ]
+        choices.append({'id': 'back', 'label': 'Back', 'description': None})
+
+        print("\n" + DisplayManager.format_menu(choices, title="Select Category"))
+
+        # Get selection
+        choice_input = InputProcessor.get_input("Category: ")
+        choice = InputProcessor.parse_choice(choice_input, choices)
+
+        if not choice or choice['id'] == 'back':
+            return
+
+        # Get alternatives for category
+        alternatives = AlternativeCommandRegistry.get_by_category(choice['id'])
+
+        if not alternatives:
+            print(DisplayManager.format_warning(f"No alternatives in category: {choice['id']}"))
+            return
+
+        self._execute_alternative_menu(alternatives)
+
+    def _search_alternatives(self):
+        """Search alternatives by query"""
+        from ..alternatives.registry import AlternativeCommandRegistry
+
+        query = input("\nSearch query: ").strip()
+
+        if not query:
+            return
+
+        results = AlternativeCommandRegistry.search(query)
+
+        if not results:
+            print(DisplayManager.format_warning(f"No alternatives found for: {query}"))
+            return
+
+        print(f"\nFound {len(results)} alternative(s):\n")
+        self._execute_alternative_menu(results)
+
+    def _execute_alternative_menu(self, alternatives: list):
+        """Display alternatives menu and execute selection"""
+        from ..alternatives.context import ContextResolver
+        from ..alternatives.executor import AlternativeExecutor
+        from ..reference.core.config import ConfigManager
+
+        # Build choices from alternatives
+        choices = []
+        for alt in alternatives:
+            tag_str = ', '.join(alt.tags[:3]) if alt.tags else ''
+            choices.append({
+                'id': alt.id,
+                'label': alt.name,
+                'description': f"{alt.description} [{tag_str}]",
+                'alternative': alt
+            })
+
+        choices.append({'id': 'back', 'label': 'Back', 'description': None})
+
+        # Display menu
+        print("\n" + DisplayManager.format_menu(choices, title="Select Alternative Command"))
+
+        # Get selection
+        choice_input = InputProcessor.get_input("Alternative: ")
+        choice = InputProcessor.parse_choice(choice_input, choices)
+
+        if not choice or choice['id'] == 'back':
+            return
+
+        alt_cmd = choice['alternative']
+
+        # Display command details
+        print(f"\n{DisplayManager.format_info(f'Alternative: {alt_cmd.name}')}")
+        print(f"Description: {alt_cmd.description}")
+        print(f"Command: {alt_cmd.command_template}\n")
+
+        if alt_cmd.success_indicators:
+            print("Success indicators:")
+            for indicator in alt_cmd.success_indicators:
+                print(f"  ✓ {indicator}")
+            print()
+
+        # Build context resolver
+        config = ConfigManager()
+        context = ContextResolver(
+            profile=self.profile,
+            task=getattr(self, 'current_task', None),
+            config=config
+        )
+
+        # Execute with dynamic variable filling
+        try:
+            result = AlternativeExecutor.execute(
+                alt_cmd,
+                context=context,
+                interactive=True
+            )
+
+            if result.cancelled:
+                print("\nExecution cancelled")
+                return
+
+            if result.success:
+                print(f"\n{DisplayManager.format_success('Command executed successfully')}")
+                if result.output:
+                    print(f"\nOutput:\n{result.output}")
+
+                # Log to profile
+                self.profile.add_note(
+                    note=f"Executed alternative: {alt_cmd.name}\nCommand: {result.command}",
+                    source="alternative commands"
+                )
+                self.profile.save()
+                self.last_action = f"Executed alternative: {alt_cmd.name}"
+
+            else:
+                print(f"\n{DisplayManager.format_warning('Command failed')}")
+                if result.error:
+                    print(f"Error: {result.error}")
+
+        except Exception as e:
+            print(DisplayManager.format_error(f"Execution error: {str(e)}"))

@@ -37,6 +37,7 @@ class ShortcutHandler:
             'n': ('Execute next recommended task', 'do_next'),
             'c': ('Change confirmation mode', 'change_confirmation'),
             'x': ('Command templates', 'show_templates'),
+            'alt': ('Alternative commands', 'alternative_commands'),  # NEW
             'ch': ('Command history', 'command_history'),
             'pl': ('Port lookup reference', 'port_lookup'),
             'tf': ('Task filter', 'task_filter'),
@@ -473,3 +474,7 @@ class ShortcutHandler:
     def smart_suggest(self):
         """Smart suggestions based on pattern matching (shortcut: sg)"""
         self.session.handle_smart_suggest()
+
+    def alternative_commands(self):
+        """Browse and execute alternative commands (shortcut: alt)"""
+        self.session.handle_alternative_commands()
