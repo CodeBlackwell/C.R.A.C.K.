@@ -1,8 +1,32 @@
+[← Back to Plugin Docs](./README.md) | [Linux Reports](#linux-reports)
+
+---
+
 # Linux Persistence & Backdoors Mining Report
 
 **Date:** 2025-10-07
 **Miner:** CrackPot v1.0
 **Plugin:** linux_persistence.py
+
+## Table of Contents
+
+- [Executive Summary](#executive-summary)
+- [Source Files Mined](#source-files-mined)
+- [Plugin Architecture](#plugin-architecture)
+- [Extraction Highlights](#extraction-highlights)
+- [OSCP Metadata Quality](#oscp-metadata-quality)
+- [Tag Distribution](#tag-distribution)
+- [Technical Depth](#technical-depth)
+- [Code Quality Metrics](#code-quality-metrics)
+- [Duplication Check](#duplication-check)
+- [Mining Statistics](#mining-statistics)
+- [OSCP Exam Readiness](#oscp-exam-readiness)
+- [Validation Results](#validation-results)
+- [Files Modified/Created](#files-modifiedcreated)
+- [Usage Examples](#usage-examples)
+- [Lessons Learned](#lessons-learned)
+- [Recommendations](#recommendations)
+- [Conclusion](#conclusion)
 
 ---
 

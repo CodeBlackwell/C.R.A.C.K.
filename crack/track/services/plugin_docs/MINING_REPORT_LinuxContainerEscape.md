@@ -1,8 +1,31 @@
+[← Back to Plugin Docs](./README.md) | [Linux Reports](#linux-reports)
+
+---
+
 # Linux Container Escape Plugin Mining Report
 
 **Generated:** 2025-10-07
 **CrackPot Version:** 1.0
 **Mission:** Extract Docker/Container security knowledge from HackTricks
+
+## Table of Contents
+
+- [Executive Summary](#executive-summary)
+- [Source Files Mined](#source-files-mined)
+- [Plugin Architecture](#plugin-architecture)
+- [Extracted Knowledge Categories](#extracted-knowledge-categories)
+- [OSCP Enhancements](#oscp-enhancements)
+- [Code Quality Metrics](#code-quality-metrics)
+- [Task Metadata Coverage](#task-metadata-coverage)
+- [Notable Extraction Decisions](#notable-extraction-decisions)
+- [Integration Points](#integration-points)
+- [Validation Results](#validation-results)
+- [Files Modified/Created](#files-modifiedcreated)
+- [Success Metrics](#success-metrics)
+- [Known Limitations](#known-limitations)
+- [Lessons Learned](#lessons-learned)
+- [Acknowledgments](#acknowledgments)
+- [Conclusion](#conclusion)
 
 ---
 

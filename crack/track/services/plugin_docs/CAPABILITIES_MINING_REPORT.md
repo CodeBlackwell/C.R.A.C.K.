@@ -1,8 +1,26 @@
+[← Back to Plugin Docs](./README.md) | [Linux Reports](#linux-reports)
+
+---
+
 # Linux Capabilities & SUID Mining Report
 
-**Date:** 2025-10-07  
-**Agent:** CrackPot v1.0  
-**Target Files:** HackTricks Linux privilege escalation guides  
+**Date:** 2025-10-07
+**Agent:** CrackPot v1.0
+**Target Files:** HackTricks Linux privilege escalation guides
+
+## Table of Contents
+
+- [Executive Summary](#executive-summary)
+- [Plugin Architecture](#plugin-architecture)
+- [Knowledge Extraction Highlights](#knowledge-extraction-highlights)
+- [Test Coverage](#test-coverage)
+- [Integration](#integration)
+- [Comparison to Existing Coverage](#comparison-to-existing-coverage)
+- [OSCP Exam Readiness](#oscp-exam-readiness)
+- [Educational Value](#educational-value)
+- [Known Issues](#known-issues)
+- [Recommendations](#recommendations)
+- [Conclusion](#conclusion)
 
 ---
 
