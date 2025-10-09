@@ -129,7 +129,8 @@ class TestSnapshotCreation:
 
         filename = snapshot_files[0].name
         # Format: TARGET_NAME_TIMESTAMP.json
-        assert filename.startswith(target.replace('.', '_') + '_' + snapshot_name)
+        # Note: target uses dots (192.168.45.100), not underscores
+        assert filename.startswith(target + '_' + snapshot_name)
         assert filename.endswith('.json')
         assert '_' in filename  # Contains timestamp separator
 
@@ -510,5 +511,6 @@ class TestSnapshotEdgeCases:
 
         # Verify different directories
         assert str(snapshots1[0]['path']) != str(snapshots2[0]['path'])
-        assert target1.replace('.', '_') in str(snapshots1[0]['path'])
-        assert target2.replace('.', '_') in str(snapshots2[0]['path'])
+        # Note: directory paths use dots (192.168.45.100), not underscores
+        assert target1 in str(snapshots1[0]['path'])
+        assert target2 in str(snapshots2[0]['path'])

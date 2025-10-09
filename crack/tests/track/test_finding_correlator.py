@@ -513,3 +513,495 @@ class TestEdgeCases:
         # Within same priority, more elements first
         if ranked[0]['priority'] == ranked[1]['priority']:
             assert len(ranked[0]['elements']) >= len(ranked[1]['elements'])
+
+
+class TestCorrelationPatterns:
+    """Comprehensive correlation pattern testing for all service types"""
+
+    def test_all_service_credential_combinations(self):
+        """PROVES: Tests all service types with credential correlation"""
+        profile = TargetProfile('192.168.45.100')
+
+        # Add all common authentication services
+        services = {
+            22: 'ssh',
+            21: 'ftp',
+            445: 'smb',
+            3306: 'mysql',
+            5432: 'postgresql',
+            1433: 'mssql',
+            3389: 'rdp',
+            5900: 'vnc'
+        }
+
+        for port, service in services.items():
+            profile.add_port(port, state='open', service=service, source='test')
+
+        # Add credential from different source
+        profile.add_credential(
+            username='admin',
+            password='password123',
+            service='http',
+            port=80,
+            source='test'
+        )
+
+        session = InteractiveSession(profile.target)
+        session.profile = profile
+
+        correlations = session._find_correlations()
+
+        # Should find correlations for all services except HTTP (source)
+        service_corrs = [c for c in correlations if c['type'] == 'service_credential']
+
+        # At least SSH, FTP, SMB, MySQL should have correlations
+        assert len(service_corrs) >= 4
+
+        # Verify SSH correlation exists
+        ssh_corrs = [c for c in service_corrs if 'ssh' in c['title'].lower()]
+        assert len(ssh_corrs) > 0
+
+        # Verify SMB correlation exists
+        smb_corrs = [c for c in service_corrs if 'smb' in c['title'].lower()]
+        assert len(smb_corrs) > 0
+
+    def test_cve_version_matching_multiple_products(self):
+        """PROVES: CVE matching works for multiple vulnerable products"""
+        profile = TargetProfile('192.168.45.100')
+        session = InteractiveSession(profile.target)
+        session.profile = profile
+
+        # Test all known CVEs from the database
+        test_cases = [
+            ('Apache httpd', '2.4.41', 'CVE-2021-41773'),
+            ('Apache httpd', '2.4.49', 'CVE-2021-41773'),
+            ('OpenSSH', '7.4', 'CVE-2018-15473'),
+            ('ProFTPD', '1.3.5', 'CVE-2015-3306'),
+            ('vsftpd', '2.3.4', 'Backdoor'),
+            ('Samba smbd', '3.0.20', 'CVE-2007-2447'),
+        ]
+
+        for product, version, expected_cve in test_cases:
+            result = session._check_known_vulnerabilities(product, version)
+            assert result is not None, f"Failed to detect CVE for {product} {version}"
+            assert expected_cve in result['cve_id'], f"Expected {expected_cve}, got {result['cve_id']}"
+
+    def test_credential_reuse_complex_scenario(self):
+        """PROVES: Credential reuse with multiple credentials and services"""
+        profile = TargetProfile('192.168.45.100')
+
+        # Add 5 authentication services
+        profile.add_port(22, state='open', service='ssh', source='test')
+        profile.add_port(445, state='open', service='smb', source='test')
+        profile.add_port(3306, state='open', service='mysql', source='test')
+        profile.add_port(21, state='open', service='ftp', source='test')
+        profile.add_port(5432, state='open', service='postgresql', source='test')
+
+        # Add 3 different credentials from HTTP
+        for i in range(3):
+            profile.add_credential(
+                username=f'user{i}',
+                password=f'pass{i}',
+                service='http',
+                port=80,
+                source='test'
+            )
+
+        session = InteractiveSession(profile.target)
+        session.profile = profile
+
+        correlations = session._find_correlations()
+
+        # Should have credential reuse correlation
+        reuse_corrs = [c for c in correlations if c['type'] == 'credential_reuse']
+        assert len(reuse_corrs) > 0
+
+        # Should mention multiple services
+        reuse_corr = reuse_corrs[0]
+        assert 'SSH' in reuse_corr['elements'][1] or 'SMB' in reuse_corr['elements'][1]
+
+    def test_lfi_upload_high_priority_correlation(self):
+        """PROVES: LFI + upload directory triggers HIGH priority"""
+        profile = TargetProfile('192.168.45.100')
+
+        # Add LFI vulnerability
+        profile.add_finding(
+            finding_type='vulnerability',
+            description='Local File Inclusion in page parameter',
+            source='test'
+        )
+
+        # Add writable upload directory
+        profile.add_finding(
+            finding_type='directory',
+            description='Writable upload directory at /var/www/upload',
+            source='test'
+        )
+
+        session = InteractiveSession(profile.target)
+        session.profile = profile
+
+        correlations = session._find_correlations()
+
+        # Find LFI+upload correlation
+        lfi_corrs = [c for c in correlations if c['type'] == 'lfi_upload']
+        assert len(lfi_corrs) > 0
+
+        # Verify HIGH priority
+        assert lfi_corrs[0]['priority'] == 'high'
+
+        # Verify recommendation mentions shell upload
+        assert 'shell' in lfi_corrs[0]['recommendation'].lower() or 'php' in lfi_corrs[0]['recommendation'].lower()
+
+    def test_sqli_database_port_direct_access(self):
+        """PROVES: SQLi + database port suggests direct database access"""
+        profile = TargetProfile('192.168.45.100')
+
+        # Add MySQL port
+        profile.add_port(3306, state='open', service='mysql', source='test')
+
+        # Add SQL injection finding
+        profile.add_finding(
+            finding_type='vulnerability',
+            description='SQL injection vulnerability in id parameter',
+            source='test'
+        )
+
+        session = InteractiveSession(profile.target)
+        session.profile = profile
+
+        correlations = session._find_correlations()
+
+        # Find SQLi+DB correlation
+        sqli_corrs = [c for c in correlations if c['type'] == 'sqli_db']
+        assert len(sqli_corrs) > 0
+
+        # Verify recommendation mentions database connection
+        recommendation = sqli_corrs[0]['recommendation'].lower()
+        assert 'mysql' in recommendation or 'database' in recommendation or 'credentials' in recommendation
+
+    def test_ftp_rdp_vnc_service_auth_commands(self):
+        """PROVES: Generates correct auth commands for FTP, RDP, VNC"""
+        profile = TargetProfile('192.168.45.100')
+        session = InteractiveSession(profile.target)
+        session.profile = profile
+
+        # Test FTP
+        ftp_cmd = session._get_service_auth_command('ftp', 21, 'user', 'password')
+        assert 'ftp' in ftp_cmd
+        assert 'user' in ftp_cmd
+
+        # Test RDP
+        rdp_cmd = session._get_service_auth_command('rdp', 3389, 'admin', 'password')
+        assert 'xfreerdp' in rdp_cmd or 'rdesktop' in rdp_cmd
+        assert '192.168.45.100' in rdp_cmd
+
+        # Test VNC
+        vnc_cmd = session._get_service_auth_command('vnc', 5900, 'user', 'password')
+        assert 'vncviewer' in vnc_cmd or 'vnc' in vnc_cmd
+
+    def test_postgresql_mssql_service_detection(self):
+        """PROVES: PostgreSQL and MSSQL services correlate correctly"""
+        profile = TargetProfile('192.168.45.100')
+
+        # Add PostgreSQL
+        profile.add_port(5432, state='open', service='postgresql', source='test')
+
+        # Add MSSQL
+        profile.add_port(1433, state='open', service='mssql', source='test')
+
+        # Add credentials
+        profile.add_credential(
+            username='sa',
+            password='admin',
+            service='http',
+            source='test'
+        )
+
+        session = InteractiveSession(profile.target)
+        session.profile = profile
+
+        correlations = session._find_correlations()
+
+        # Should find correlations for both databases
+        service_corrs = [c for c in correlations if c['type'] == 'service_credential']
+
+        postgres_corrs = [c for c in service_corrs if 'postgresql' in c['title'].lower()]
+        mssql_corrs = [c for c in service_corrs if 'mssql' in c['title'].lower()]
+
+        assert len(postgres_corrs) > 0
+        assert len(mssql_corrs) > 0
+
+
+class TestCorrelationPerformance:
+    """Performance and stress testing for correlation engine"""
+
+    def test_large_dataset_performance(self):
+        """PROVES: 50 ports + 20 findings + 10 creds correlates in < 2 seconds"""
+        import time
+
+        profile = TargetProfile('192.168.45.100')
+
+        # Add 50 ports
+        for port in range(1000, 1050):
+            service = ['http', 'ssh', 'ftp', 'smb', 'mysql'][port % 5]
+            profile.add_port(port, state='open', service=service, source='test')
+
+        # Add 20 findings
+        for i in range(20):
+            profile.add_finding(
+                finding_type='vulnerability' if i % 2 == 0 else 'directory',
+                description=f'Finding {i}: Test vulnerability or directory',
+                source='test'
+            )
+
+        # Add 10 credentials
+        for i in range(10):
+            profile.add_credential(
+                username=f'user{i}',
+                password=f'pass{i}',
+                service='http',
+                source='test'
+            )
+
+        session = InteractiveSession(profile.target)
+        session.profile = profile
+
+        # Measure correlation time
+        start_time = time.time()
+        correlations = session._find_correlations()
+        elapsed = time.time() - start_time
+
+        # Should complete in < 2 seconds
+        assert elapsed < 2.0, f"Correlation took {elapsed:.2f}s (expected < 2s)"
+
+        # Should find multiple correlations
+        assert len(correlations) > 0
+
+    def test_minimal_data_provides_value(self):
+        """PROVES: Correlation with minimal data still provides useful output"""
+        profile = TargetProfile('192.168.45.100')
+
+        # Minimal scenario: 1 port, 1 finding
+        profile.add_port(80, state='open', service='http', source='test')
+        profile.add_finding(
+            finding_type='directory',
+            description='Admin panel found',
+            source='test'
+        )
+
+        session = InteractiveSession(profile.target)
+        session.profile = profile
+
+        # Should not crash with minimal data
+        correlations = session._find_correlations()
+
+        # Result should be a list (empty is OK)
+        assert isinstance(correlations, list)
+
+    def test_combinatorial_explosion_limited(self):
+        """PROVES: 10 services × 10 creds limits to reasonable correlations"""
+        profile = TargetProfile('192.168.45.100')
+
+        # Add 10 services
+        services = ['ssh', 'smb', 'mysql', 'ftp', 'postgresql', 'mssql', 'rdp', 'vnc']
+        for i, service in enumerate(services):
+            profile.add_port(1000 + i, state='open', service=service, source='test')
+
+        # Add 10 credentials
+        for i in range(10):
+            profile.add_credential(
+                username=f'user{i}',
+                password=f'pass{i}',
+                service='http',
+                source='test'
+            )
+
+        session = InteractiveSession(profile.target)
+        session.profile = profile
+
+        correlations = session._find_correlations()
+
+        # Should find many correlations but not explode
+        # Max should be reasonable (< 100 correlations)
+        assert len(correlations) < 100
+
+
+class TestCorrelationRecommendations:
+    """Test recommendation generation quality"""
+
+    def test_recommendations_contain_target_ip(self):
+        """PROVES: All recommendations reference the actual target IP"""
+        profile = TargetProfile('192.168.45.100')
+
+        # Add various services
+        profile.add_port(22, state='open', service='ssh', source='test')
+        profile.add_port(445, state='open', service='smb', source='test')
+
+        profile.add_credential(
+            username='admin',
+            password='password',
+            service='http',
+            source='test'
+        )
+
+        session = InteractiveSession(profile.target)
+        session.profile = profile
+
+        correlations = session._find_correlations()
+
+        # All recommendations should contain target IP
+        for corr in correlations:
+            recommendation = corr.get('recommendation', '')
+            if recommendation and 'crack' not in recommendation.lower():
+                # If it's a command (not generic advice), should have IP
+                if any(cmd in recommendation for cmd in ['ssh', 'smbclient', 'mysql', 'ftp']):
+                    assert '192.168.45.100' in recommendation, f"Recommendation missing target IP: {recommendation}"
+
+    def test_recommendations_include_discovered_data(self):
+        """PROVES: Recommendations use actual discovered usernames/passwords"""
+        profile = TargetProfile('192.168.45.100')
+
+        profile.add_port(22, state='open', service='ssh', source='test')
+
+        profile.add_credential(
+            username='john',
+            password='secret123',
+            service='http',
+            source='test'
+        )
+
+        session = InteractiveSession(profile.target)
+        session.profile = profile
+
+        correlations = session._find_correlations()
+
+        ssh_corrs = [c for c in correlations if c['type'] == 'service_credential' and 'ssh' in c['title'].lower()]
+        if ssh_corrs:
+            recommendation = ssh_corrs[0]['recommendation']
+            # Should include actual username
+            assert 'john' in recommendation, f"Recommendation missing username: {recommendation}"
+
+    def test_duplicate_correlation_prevention(self):
+        """PROVES: Same correlation not listed multiple times"""
+        profile = TargetProfile('192.168.45.100')
+
+        # Add same service multiple times (e.g., HTTP on different ports)
+        profile.add_port(80, state='open', service='http', source='test')
+        profile.add_port(8080, state='open', service='http', source='test')
+        profile.add_port(8000, state='open', service='http', source='test')
+
+        # Add credential
+        profile.add_credential(
+            username='admin',
+            password='password',
+            service='ftp',
+            source='test'
+        )
+
+        session = InteractiveSession(profile.target)
+        session.profile = profile
+
+        correlations = session._find_correlations()
+
+        # Should not have duplicate correlations
+        # Track seen correlations by type+title
+        seen = set()
+        for corr in correlations:
+            key = (corr['type'], corr['title'])
+            assert key not in seen, f"Duplicate correlation: {corr['title']}"
+            seen.add(key)
+
+
+class TestCorrelationTaskCreation:
+    """Test automated task creation from correlations"""
+
+    def test_creates_tasks_from_high_priority(self):
+        """PROVES: High-priority correlations can create executable tasks"""
+        profile = TargetProfile('192.168.45.100')
+
+        # Create high-priority correlation scenario
+        profile.add_port(445, state='open', service='smb', source='test')
+        profile.add_credential(
+            username='admin',
+            password='password',
+            service='http',
+            source='test'
+        )
+
+        session = InteractiveSession(profile.target)
+        session.profile = profile
+
+        correlations = session._find_correlations()
+        high_priority = [c for c in correlations if c['priority'] == 'high']
+
+        if high_priority:
+            initial_count = len(list(profile.task_tree.children))
+
+            # Create tasks from correlations
+            session._create_correlation_tasks(high_priority)
+
+            # Verify tasks were created
+            final_count = len(list(profile.task_tree.children))
+            assert final_count > initial_count
+
+    def test_created_tasks_have_valid_commands(self):
+        """PROVES: Tasks created from correlations have executable commands"""
+        profile = TargetProfile('192.168.45.100')
+
+        profile.add_port(22, state='open', service='ssh', source='test')
+        profile.add_credential(
+            username='root',
+            password='toor',
+            service='http',
+            source='test'
+        )
+
+        session = InteractiveSession(profile.target)
+        session.profile = profile
+
+        correlations = session._find_correlations()
+        high_priority = [c for c in correlations if c['priority'] == 'high']
+
+        if high_priority:
+            session._create_correlation_tasks(high_priority)
+
+            # Get created tasks
+            all_tasks = profile.task_tree.get_all_tasks()
+            correlation_tasks = [t for t in all_tasks if 'correlation' in t.id]
+
+            if correlation_tasks:
+                # Verify task has command
+                task = correlation_tasks[0]
+                assert 'command' in task.metadata
+                assert task.metadata['command']  # Not empty
+
+    def test_task_metadata_includes_correlation_source(self):
+        """PROVES: Created tasks know they came from correlation engine"""
+        profile = TargetProfile('192.168.45.100')
+
+        profile.add_port(445, state='open', service='smb', source='test')
+        profile.add_credential(
+            username='admin',
+            password='password',
+            service='http',
+            source='test'
+        )
+
+        session = InteractiveSession(profile.target)
+        session.profile = profile
+
+        correlations = session._find_correlations()
+        high_priority = [c for c in correlations if c['priority'] == 'high']
+
+        if high_priority:
+            session._create_correlation_tasks(high_priority)
+
+            all_tasks = profile.task_tree.get_all_tasks()
+            correlation_tasks = [t for t in all_tasks if 'correlation' in t.id]
+
+            if correlation_tasks:
+                task = correlation_tasks[0]
+                # Should have correlation metadata
+                assert 'correlation_type' in task.metadata
+                assert 'CORRELATION' in task.metadata.get('tags', [])

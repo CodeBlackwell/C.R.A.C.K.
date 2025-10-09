@@ -276,9 +276,10 @@ class TestHandleTaskRetry:
         session = InteractiveSession(profile.target)
         session.handle_task_retry()
 
-        # Verify task was retried
-        assert failed_task.status == 'completed'
-        assert 'retry_history' in failed_task.metadata
+        # Verify task was retried (get fresh reference from session's profile)
+        updated_task = session.profile.task_tree.find_task("test-failed")
+        assert updated_task.status == 'completed'
+        assert 'retry_history' in updated_task.metadata
 
     @patch('builtins.input', side_effect=['1', 'c'])
     def test_handle_task_retry_cancel(self, mock_input, temp_crack_home, capsys):

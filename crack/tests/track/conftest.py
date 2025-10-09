@@ -19,9 +19,16 @@ def temp_crack_home(monkeypatch):
         crack_dir = Path(tmpdir) / '.crack' / 'targets'
         crack_dir.mkdir(parents=True)
 
-        # Directly override Storage.DEFAULT_DIR to ensure it uses temp directory
+        # Create snapshots directory in temp location
+        snapshots_dir = Path(tmpdir) / '.crack' / 'snapshots'
+        snapshots_dir.mkdir(parents=True)
+
+        # Override Storage and Session snapshot directories
         from crack.track.core.storage import Storage
+        from crack.track.interactive.session import InteractiveSession
+
         monkeypatch.setattr(Storage, 'DEFAULT_DIR', crack_dir)
+        monkeypatch.setattr(InteractiveSession, 'SNAPSHOTS_BASE_DIR', snapshots_dir)
 
         yield crack_dir
 
