@@ -173,6 +173,20 @@ class TaskNode:
 
         return completed
 
+    def get_all_tasks(self) -> List['TaskNode']:
+        """Get all tasks in subtree (regardless of status)"""
+        tasks = []
+
+        # Include self unless it's the root
+        if self.id != 'root':
+            tasks.append(self)
+
+        # Add all children recursively
+        for child in self.children:
+            tasks.extend(child.get_all_tasks())
+
+        return tasks
+
     def to_dict(self) -> Dict[str, Any]:
         """Serialize to dictionary"""
         return {

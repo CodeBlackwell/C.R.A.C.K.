@@ -34,6 +34,9 @@ from .history import CommandHistory
 class InteractiveSession:
     """Interactive session state machine"""
 
+    # Class variable for test isolation override
+    SNAPSHOTS_BASE_DIR = None
+
     def __init__(self, target: str, resume: bool = False, screened: bool = False):
         """
         Initialize interactive session
@@ -1232,9 +1235,9 @@ class InteractiveSession:
         checkpoint_data = {
             'target': self.profile.target,
             'current_phase': self.profile.phase,
-            'nav_stack': self.nav_stack,
-            'last_action': self.last_action,
-            'command_history': self.command_history.to_dict(),
+            'nav_stack': getattr(self, 'nav_stack', []),
+            'last_action': getattr(self, 'last_action', None),
+            'command_history': self.command_history.to_dict() if hasattr(self, 'command_history') else {},
             'timestamp': datetime.now().isoformat()
         }
 
@@ -2020,7 +2023,7 @@ Output: {output[:500]}{"..." if len(output) > 500 else ""}
         retryable.sort(key=lambda t: (
             0 if t.status == 'failed' else 1,
             t.metadata.get('last_run', t.metadata.get('completed_at', ''))
-        ), reverse=True)
+        ), reverse=False)
 
         return retryable
 
@@ -2281,6 +2284,85 @@ Output: {output[:500]}{"..." if len(output) > 500 else ""}
         else:
             self.last_action = f"Retried: {selected_task.name} (failed)"
 
+    def handle_progress_dashboard(self):
+        """Progress dashboard handler (shortcut: pd)"""
+        print(DisplayManager.format_info("Progress Dashboard"))
+        print("=" * 50)
+
+        # Calculate overall progress
+        all_tasks = self.profile.task_tree.get_all_tasks()
+        completed = [t for t in all_tasks if t.status == 'completed']
+        in_progress = [t for t in all_tasks if t.status == 'in-progress']
+        pending = [t for t in all_tasks if t.status == 'pending']
+        failed = [t for t in all_tasks if t.status == 'failed']
+        skipped = [t for t in all_tasks if t.status == 'skipped']
+
+        total = len(all_tasks)
+        if total == 0:
+            print(DisplayManager.format_warning("No tasks available"))
+            return
+
+        completion_pct = int((len(completed) / total) * 100)
+
+        # Display current phase
+        print(f"\nCurrent Phase: {self.profile.phase.title()}")
+        print()
+
+        # Display progress bar
+        bar_width = 30
+        filled = int(bar_width * completion_pct / 100)
+        bar = '█' * filled + '░' * (bar_width - filled)
+        print(f"Overall Progress: [{bar}] {completion_pct}%")
+        print(f"Tasks: {len(completed)}/{total}")
+        print()
+
+        # Status breakdown
+        print("Status Breakdown:")
+        print(f"  Completed:    {len(completed)}")
+        print(f"  In-Progress:  {len(in_progress)}")
+        print(f"  Pending:      {len(pending)}")
+        print(f"  Failed:       {len(failed)}")
+        print(f"  Skipped:      {len(skipped)}")
+        print()
+
+        # Group by service
+        service_groups = {}
+        for task in all_tasks:
+            service = task.metadata.get('service', 'other')
+            if service not in service_groups:
+                service_groups[service] = []
+            service_groups[service].append(task)
+
+        if len(service_groups) > 1:
+            print("By Service:")
+            for service, tasks in sorted(service_groups.items()):
+                completed_service = len([t for t in tasks if t.status == 'completed'])
+                total_service = len(tasks)
+                pct = int((completed_service / total_service) * 100) if total_service > 0 else 0
+                port = tasks[0].metadata.get('port', '')
+                port_str = f" (:{port})" if port else ""
+                print(f"  {service.upper()}{port_str}: {completed_service}/{total_service} ({pct}%)")
+            print()
+
+        # Quick wins and high priority
+        quick_wins = [t for t in pending if 'QUICK_WIN' in t.metadata.get('tags', [])]
+        high_priority = [t for t in pending + in_progress if 'OSCP:HIGH' in t.metadata.get('tags', [])]
+
+        if quick_wins:
+            print(f"Quick Wins: {len(quick_wins)} remaining")
+        if high_priority:
+            print(f"High Priority: {len(high_priority)} pending")
+
+        # Next recommended task
+        from ..recommendations.engine import RecommendationEngine
+        recommendations = RecommendationEngine.get_recommendations(self.profile)
+        next_task = recommendations.get('next')
+
+        if next_task:
+            print()
+            print("Next Recommended:")
+            print(f"  → {next_task.name}")
+
     def handle_session_snapshot(self):
         """Session snapshot manager (shortcut: ss)"""
         import re
@@ -2414,7 +2496,12 @@ Output: {output[:500]}{"..." if len(output) > 500 else ""}
 
     def _get_snapshots_dir(self) -> Path:
         """Get snapshots directory for current target"""
-        snapshots_base = Path.home() / '.crack' / 'snapshots'
+        # Use override if set (for testing), otherwise use default
+        if self.SNAPSHOTS_BASE_DIR:
+            snapshots_base = self.SNAPSHOTS_BASE_DIR
+        else:
+            snapshots_base = Path.home() / '.crack' / 'snapshots'
+
         target_dir = snapshots_base / self.target
         target_dir.mkdir(parents=True, exist_ok=True)
         return target_dir
@@ -2500,7 +2587,10 @@ Output: {output[:500]}{"..." if len(output) > 500 else ""}
 
             # Update session state
             self.last_action = f"Restored snapshot: {data['snapshot_metadata']['name']}"
-            self.save_checkpoint()
+
+            # Save checkpoint only if checkpoint_dir exists
+            if hasattr(self, 'checkpoint_dir') and self.checkpoint_dir:
+                self.save_checkpoint()
 
             print(DisplayManager.format_success("Snapshot restored successfully"))
 
@@ -2515,6 +2605,8 @@ Output: {output[:500]}{"..." if len(output) > 500 else ""}
             return True
         except Exception as e:
             print(DisplayManager.format_error(f"Restore failed: {e}"))
+            import traceback
+            traceback.print_exc()
             return False
 
     def handle_batch_execute(self, selection: str = None):
