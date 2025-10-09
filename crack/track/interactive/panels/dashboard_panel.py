@@ -77,7 +77,7 @@ class DashboardPanel:
         # Get task metadata
         tags = task.metadata.get('tags', [])
         time_est = task.metadata.get('time_estimate', 'Unknown')
-        command = task.metadata.get('command', '')
+        command = task.metadata.get('command') or ''  # Handle None case
         description = task.metadata.get('description', task.name)
 
         # Build tag badges

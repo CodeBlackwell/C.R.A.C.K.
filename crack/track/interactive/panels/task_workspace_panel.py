@@ -83,7 +83,7 @@ class TaskWorkspacePanel:
         # Extract task metadata
         task_name = task.name if hasattr(task, 'name') else str(task)
         description = task.metadata.get('description', '') if hasattr(task, 'metadata') else ''
-        command = task.metadata.get('command', 'N/A') if hasattr(task, 'metadata') else 'N/A'
+        command = (task.metadata.get('command') or 'N/A') if hasattr(task, 'metadata') else 'N/A'
         time_est = task.metadata.get('time_estimate', 'Unknown') if hasattr(task, 'metadata') else 'Unknown'
         priority = task.metadata.get('priority', 'MEDIUM') if hasattr(task, 'metadata') else 'MEDIUM'
         tags = task.metadata.get('tags', []) if hasattr(task, 'metadata') else []
