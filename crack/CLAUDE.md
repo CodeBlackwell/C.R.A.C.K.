@@ -275,6 +275,38 @@ Follow "CLI Architecture Pattern" above. Always run `./reinstall.sh`.
 - **No reinstall needed**: Changes to tool logic (if used as library)
 - **Reinstall needed**: Changes to CLI structure or `crack` command integration
 
+### Debugging TUI/Interactive Issues (Log-Driven Workflow)
+**Pattern:** Add logging → User tests → Check logs together → Fix → Retest
+
+1. **Add Debug Logging**
+   - Create timestamped log files in `.debug_logs/`
+   - Enable with `-D` or `--debug` flag
+   - Log all state transitions, I/O operations, execution flow
+   - Use `debug_logger.py` module for consistent logging
+
+2. **User Reproduces Issue**
+   - Run with debug enabled: `crack track --tui -D <target>`
+   - Perform exact steps that cause the problem
+   - Note when freeze/crash/error occurs
+
+3. **Analyze Logs Together**
+   - Check `.debug_logs/tui_debug_*.log`
+   - Find last log entry before freeze (shows exact failure point)
+   - Identify root cause from execution flow
+   - Look for mismatched states, missing actions, exceptions
+
+4. **Fix Issue**
+   - Address root cause identified in logs
+   - Add more logging if needed for future debugging
+   - Commit fix with log evidence in commit message
+
+5. **User Retests**
+   - Verify fix with same steps
+   - Check logs show successful execution flow
+   - Confirm no new issues introduced
+
+**Example:** TUI freeze issue diagnosed via logs showing choice ID mismatch (`'next'` vs `'execute-next'`), fixed by correcting the check.
+
 ### Adding Dependencies
 1. Update `pyproject.toml` dependencies
 2. Run `./reinstall.sh`
