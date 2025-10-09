@@ -2,6 +2,36 @@
 
 **Agent 2C Deliverable**
 
+## Table of Contents
+
+- [Overview](#overview)
+- [Features Implemented](#features-implemented)
+  - [1. Fuzzy Matching Algorithm](#1-fuzzy-matching-algorithm)
+  - [2. Enhanced search_tasks() Method](#2-enhanced-search_tasks-method)
+  - [3. Improved handle_search() UI](#3-improved-handle_search-ui)
+  - [4. /search Command Support](#4-search-command-support)
+- [Tests](#tests)
+- [Performance](#performance)
+- [Usage Examples](#usage-examples)
+  - [Interactive Search](#interactive-search)
+  - [Programmatic Usage](#programmatic-usage)
+- [Architecture Notes](#architecture-notes)
+  - [No External Dependencies](#no-external-dependencies)
+  - [Integration Points](#integration-points)
+  - [Session State](#session-state)
+- [Comparison: Old vs New](#comparison-old-vs-new)
+  - [Old Implementation (Substring Only)](#old-implementation-substring-only)
+  - [New Implementation (Fuzzy with Scoring)](#new-implementation-fuzzy-with-scoring)
+- [Success Criteria ✅](#success-criteria-)
+- [Files Modified](#files-modified)
+- [Lines of Code](#lines-of-code)
+- [Future Enhancements](#future-enhancements)
+- [OSCP Exam Relevance](#oscp-exam-relevance)
+- [Documentation](#documentation)
+- [Verification](#verification)
+
+---
+
 ## Overview
 
 Enhanced fuzzy search functionality for CRACK Track Interactive Mode with scoring, ranking, and search refinement.

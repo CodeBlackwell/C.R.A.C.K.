@@ -1,5 +1,42 @@
 # CRACK Track Screened Mode (-X)
 
+## Table of Contents
+
+- [Overview](#overview)
+- [Features](#features)
+  - [🎯 Core Capabilities](#-core-capabilities)
+  - [🔧 German Engineering Principles](#-german-engineering-principles)
+- [Usage](#usage)
+  - [Starting Screened Mode](#starting-screened-mode)
+  - [Viewing Terminal Output](#viewing-terminal-output)
+- [Architecture](#architecture)
+  - [Component Overview](#component-overview)
+  - [Execution Flow](#execution-flow)
+- [Pattern Matching](#pattern-matching)
+  - [Supported Tools](#supported-tools)
+  - [Base Patterns](#base-patterns)
+- [Example Workflow](#example-workflow)
+  - [1. Start Screened Session](#1-start-screened-session)
+  - [2. Execute Task](#2-execute-task)
+  - [3. View Automatic Extractions](#3-view-automatic-extractions)
+- [Session Logs](#session-logs)
+- [Advanced Usage](#advanced-usage)
+  - [Custom Pattern Addition](#custom-pattern-addition)
+  - [Terminal Environment](#terminal-environment)
+  - [Batch Execution](#batch-execution)
+- [Troubleshooting](#troubleshooting)
+  - [Terminal Won't Start](#terminal-wont-start)
+  - [Output Not Parsing](#output-not-parsing)
+  - [Can't Attach to Session](#cant-attach-to-session)
+- [Benefits for OSCP](#benefits-for-oscp)
+- [Implementation Details](#implementation-details)
+  - [Files Created](#files-created)
+  - [Key Classes](#key-classes)
+- [Future Enhancements](#future-enhancements)
+- [Summary](#summary)
+
+---
+
 ## Overview
 
 **Screened Mode** is a powerful feature that launches a persistent terminal session for automatic command execution with real-time output parsing and finding extraction. This eliminates the need for manual copy-paste and automatically logs everything for OSCP documentation.
