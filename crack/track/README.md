@@ -108,6 +108,7 @@ Why type when you can press one key?
 | `r` | Recommendations | "What's next, sensei?" |
 | `n` | Execute next task | "Let's DO this" |
 | `f` | Search/filter | "Where's that gobuster task?" |
+| `w` | Select wordlist | "Smart wordlist selection" |
 | `alt` | Alternative commands | "Show me manual methods" |
 | `h` | Help | "I need an adult" |
 | `q` | Quit and save | "I'm out ✌️" |
@@ -215,6 +216,67 @@ crack track -i 192.168.45.100
 | **Total** | **45+** | **Growing library** |
 
 **Full guide**: `crack/track/alternatives/README.md`
+
+### 📚 Wordlist Selection: Smart Wordlist Management
+
+**NEW!** CRACK Track now features intelligent wordlist discovery and context-aware selection.
+
+Press **`w`** in interactive mode to select the perfect wordlist for your current task.
+
+```
+Current Task: Directory Brute-force (Port 80)
+
+Wordlist Selection for: Directory Brute-force (Port 80)
+
+Suggested Wordlists (web-enumeration):
+  1. common.txt (4.6K lines, 36KB, avg 7.5 chars) [QUICK WIN]
+  2. directory-list-2.3-medium.txt (220K lines, 2.2MB, avg 9.8 chars)
+  3. big.txt (20.5K lines, 202KB, avg 9.2 chars)
+
+Options: [b]rowse all, [s]earch, [e]nter path, [c]ancel
+
+Choice: 1
+
+✓ Selected: /usr/share/wordlists/dirb/common.txt
+✓ Task metadata updated
+```
+
+#### Key Features
+
+- **Automatic Discovery**: Scans `/usr/share/wordlists/` recursively
+- **Intelligent Categorization**: web, passwords, subdomains, usernames
+- **Context-Aware Suggestions**: Different lists for different tasks
+  - gobuster → dirb/common.txt (web enumeration)
+  - hydra → rockyou.txt (password cracking)
+  - kerbrute → usernames.txt (username enumeration)
+- **Lightning-Fast Cache**: <10ms subsequent loads
+- **CLI Integration**: `crack track --wordlist common 192.168.45.100`
+- **Fuzzy Matching**: Type "rockyou" and find rockyou.txt
+
+#### Quick Start
+
+```bash
+# Interactive mode - Press 'w' to select wordlist
+crack track -i 192.168.45.100
+# Navigate to any gobuster/hydra task
+# Press 'w' → System suggests appropriate wordlists
+
+# CLI mode with fuzzy matching
+crack track --wordlist common 192.168.45.100
+crack track --wordlist rockyou 192.168.45.100
+
+# Browse all wordlists in interactive mode
+# Press 'w' → Choose [b]rowse all
+# Paginated display with search and filter
+```
+
+**Performance**:
+- First scan: <5s (discovers all wordlists)
+- Cached loads: <10ms
+- Metadata generation: <200ms (even for rockyou.txt)
+- Task purpose detection: <1ms
+
+**Full guide**: `crack/track/wordlists/README.md`
 
 ### 🔍 The Search System: Finding Needles in 150-Task Haystacks
 
