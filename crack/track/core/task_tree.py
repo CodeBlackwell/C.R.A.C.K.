@@ -15,18 +15,52 @@ class TaskNode:
 
     def __init__(
         self,
-        task_id: str,
-        name: str,
+        task_id: str = None,
+        name: str = None,
         task_type: str = 'command',
-        parent: 'TaskNode' = None
+        parent: 'TaskNode' = None,
+        **kwargs
     ):
-        """
+        """Initialize a task node with hierarchical structure and rich metadata.
+
         Args:
-            task_id: Unique identifier
-            name: Human-readable name
+            task_id: Unique identifier (e.g., 'gobuster-80', 'ssh-enum-22')
+            name: Human-readable name for display
             task_type: Type of task (command, research, manual, parent)
-            parent: Parent task node
+            parent: Parent task node (for hierarchical organization)
+            **kwargs: Backward compatibility support (id, node_type, metadata)
+
+        Metadata Fields:
+            command: Shell command to execute
+            description: What this task accomplishes
+            spawned_by: Task ID that generated this task
+            depends_on: List of task IDs that must complete first
+            tags: OSCP tags (OSCP:HIGH, QUICK_WIN, etc.)
+            created_at: ISO timestamp of creation
+            completed_at: ISO timestamp when marked complete
+            notes: List of timestamped notes
+
+            Alternative Commands (Phase 6):
+            alternatives: List of manual command alternatives (legacy, text-only)
+            alternative_ids: List of AlternativeCommand.id for dynamic execution
+            alternative_context: Context hints for variable resolution (service, port, purpose)
+
+            Wordlist Selection (Phase 4):
+            wordlist: Selected wordlist path (str or None)
+            wordlist_purpose: Purpose like 'web-enumeration', 'password-cracking' (str or None)
+            wordlist_variant: Variant like 'default', 'thorough', 'quick' (str, default='default')
         """
+        # Backward compatibility: accept 'id' as alias for task_id
+        if 'id' in kwargs:
+            task_id = kwargs.pop('id')
+
+        # Backward compatibility: accept 'node_type' as alias for task_type
+        if 'node_type' in kwargs:
+            task_type = kwargs.pop('node_type')
+
+        # Store kwargs metadata for later processing
+        external_metadata = kwargs.pop('metadata', {})
+
         self.id = task_id
         self.name = name
         self.type = task_type
@@ -47,8 +81,16 @@ class TaskNode:
             # Alternative commands integration (Phase 6)
             'alternatives': [],  # Keep for backward compatibility with existing code
             'alternative_ids': [],  # NEW: Links to AlternativeCommand.id
-            'alternative_context': {}  # NEW: Context hints for variable resolution
+            'alternative_context': {},  # NEW: Context hints for variable resolution
+            # Wordlist selection integration (Phase 4)
+            'wordlist': None,  # Selected wordlist path (str or None)
+            'wordlist_purpose': None,  # Purpose: 'web-enumeration', 'password-cracking', etc.
+            'wordlist_variant': 'default'  # Variant: 'default', 'thorough', 'quick'
         }
+
+        # Merge external metadata if provided (backward compatibility)
+        if external_metadata:
+            self.metadata.update(external_metadata)
 
     def add_child(self, child_task: 'TaskNode') -> 'TaskNode':
         """Add subtask to this task
@@ -164,6 +206,10 @@ class TaskNode:
             pending.extend(child.get_all_pending())
 
         return pending
+
+    def get_pending_tasks(self) -> List['TaskNode']:
+        """Alias for get_all_pending() for backward compatibility"""
+        return self.get_all_pending()
 
     def get_all_completed(self) -> List['TaskNode']:
         """Get all completed tasks in subtree"""

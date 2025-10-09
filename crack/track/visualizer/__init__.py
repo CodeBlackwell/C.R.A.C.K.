@@ -557,6 +557,41 @@ def _progress_bar(current, total, width=40, char='█'):
     return f"[{bar}] {int(pct * 100)}% ({current}/{total})"
 
 
+# ============ VISUALIZER CLASS ============
+
+class Visualizer:
+    """
+    Convenience wrapper for visualize() function
+
+    Provides object-oriented interface to visualization system
+    """
+
+    @staticmethod
+    def render(view: str, target: Optional[str] = None, **opts):
+        """Render a visualization view"""
+        return visualize(view, target, **opts)
+
+    @staticmethod
+    def architecture(**opts):
+        """Render architecture view"""
+        return view_architecture(opts.get('style', 'tree'))
+
+    @staticmethod
+    def plugin_flow(**opts):
+        """Render plugin flow view"""
+        return view_plugin_flow(opts.get('style', 'tree'))
+
+    @staticmethod
+    def task_tree(target: str, **opts):
+        """Render task tree for target"""
+        return view_task_tree(target, opts.get('style', 'tree'))
+
+    @staticmethod
+    def progress(target: str, **opts):
+        """Render progress view for target"""
+        return view_progress(target, opts.get('style', 'tree'))
+
+
 # ============ CLI ENTRY POINT ============
 
 def visualize(view: str, target: Optional[str] = None, **opts):
@@ -603,5 +638,5 @@ def visualize(view: str, target: Optional[str] = None, **opts):
         return f"Error rendering {view}: {e}"
 
 
-__all__ = ['visualize', 'view_architecture', 'view_plugin_flow', 'view_plugin_graph', 'view_master',
+__all__ = ['visualize', 'Visualizer', 'view_architecture', 'view_plugin_flow', 'view_plugin_graph', 'view_master',
            'view_task_tree', 'view_progress', 'view_phase_flow', 'view_decision_tree', 'view_plugins', 'view_themes']

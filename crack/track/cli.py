@@ -29,6 +29,104 @@ from .formatters.console import ConsoleFormatter
 from .formatters.markdown import MarkdownFormatter
 
 
+def _resolve_wordlist_arg(wordlist_arg: str) -> str:
+    """
+    Resolve wordlist argument to absolute path
+
+    Tries multiple resolution strategies:
+    1. Direct path (if exists)
+    2. Fuzzy search using WordlistManager
+    3. User disambiguation if multiple matches
+
+    Args:
+        wordlist_arg: User-provided wordlist path or fuzzy name
+
+    Returns:
+        Absolute path to wordlist
+
+    Raises:
+        ValueError: If wordlist cannot be resolved
+    """
+    # Try as direct path first
+    if Path(wordlist_arg).exists():
+        return str(Path(wordlist_arg).resolve())
+
+    # Try fuzzy matching with WordlistManager
+    try:
+        from .wordlists import WordlistManager
+
+        # Initialize manager (will load cache or scan)
+        manager = WordlistManager()
+
+        # Ensure cache is populated
+        if not manager.cache:
+            print("Scanning wordlists directory (first time may take a few seconds)...")
+            manager.scan_directory()
+
+        # Search for matches
+        matches = manager.search(wordlist_arg)
+
+        if not matches:
+            # No matches found - show suggestions
+            all_wordlists = manager.get_all()
+            if all_wordlists:
+                print(f"\nError: No wordlist found matching '{wordlist_arg}'")
+                print("\nAvailable wordlists (top 10):")
+                for entry in all_wordlists[:10]:
+                    print(f"  - {entry.name} ({entry.path})")
+                print(f"\nTotal: {len(all_wordlists)} wordlists available")
+                raise ValueError(f"No wordlist found: {wordlist_arg}")
+            else:
+                print(f"\nError: No wordlist found matching '{wordlist_arg}'")
+                print("No wordlists discovered. Check wordlists directory.")
+                raise ValueError(f"No wordlist found: {wordlist_arg}")
+
+        elif len(matches) == 1:
+            # Single match - use it
+            return matches[0].path
+
+        else:
+            # Multiple matches - prompt user to disambiguate
+            print(f"\nMultiple wordlists match '{wordlist_arg}':")
+            for i, entry in enumerate(matches, 1):
+                size_kb = entry.size_bytes / 1024
+                print(f"  {i}. {entry.name}")
+                print(f"     Path: {entry.path}")
+                print(f"     Category: {entry.category} | Size: {size_kb:.1f} KB | Lines: {entry.line_count:,}")
+                print()
+
+            # Get user selection
+            while True:
+                try:
+                    choice = input(f"Select wordlist [1-{len(matches)}] or 'q' to quit: ").strip()
+                    if choice.lower() == 'q':
+                        raise ValueError("User cancelled wordlist selection")
+
+                    idx = int(choice) - 1
+                    if 0 <= idx < len(matches):
+                        return matches[idx].path
+                    else:
+                        print(f"Invalid selection. Enter 1-{len(matches)}")
+                except ValueError as e:
+                    if "User cancelled" in str(e):
+                        raise
+                    print(f"Invalid input. Enter a number 1-{len(matches)} or 'q'")
+
+    except ImportError:
+        # WordlistManager not available - fall back to direct path only
+        raise ValueError(f"No wordlist found: {wordlist_arg}")
+    except Exception as e:
+        # Graceful degradation - try direct path before failing
+        if "User cancelled" in str(e):
+            # Re-raise user cancellation immediately
+            raise
+        print(f"Warning: Wordlist resolution failed: {e}")
+        print(f"Trying direct path: {wordlist_arg}")
+        if Path(wordlist_arg).exists():
+            return str(Path(wordlist_arg).resolve())
+        raise ValueError(f"No wordlist found: {wordlist_arg}")
+
+
 def main():
     """Main CLI entry point for CRACK Track"""
     parser = argparse.ArgumentParser(
@@ -177,6 +275,10 @@ For full documentation: See track/README.md or https://github.com/CodeBlackwell/
     parser.add_argument('--viz-output', '-o', metavar='FILE',
                         help='Export visualization to markdown file (untruncated)')
 
+    # Wordlist selection
+    parser.add_argument('--wordlist',
+                        help='Wordlist path or fuzzy name (e.g., common, rockyou)')
+
     # Advanced
     parser.add_argument('--debug', action='store_true',
                         help='Enable debug output')
@@ -209,7 +311,7 @@ For full documentation: See track/README.md or https://github.com/CodeBlackwell/
 
     # Handle interactive mode (before loading profile)
     if args.interactive:
-        handle_interactive(args.target, args.resume, args.screened)
+        handle_interactive(args.target, args.resume, args.screened, args.wordlist)
         return
 
     # Load or create profile
@@ -277,12 +379,36 @@ def load_or_create_profile(target: str) -> TargetProfile:
     return profile
 
 
-def handle_interactive(target: str, resume: bool = False, screened: bool = False):
-    """Handle interactive mode"""
+def handle_interactive(target: str, resume: bool = False, screened: bool = False, wordlist: str = None):
+    """Handle interactive mode
+
+    Args:
+        target: Target IP/hostname
+        resume: Resume existing session
+        screened: Screened mode with auto-parsing
+        wordlist: Wordlist argument (raw, not resolved yet)
+    """
     from .interactive import InteractiveSession
 
     try:
         session = InteractiveSession(target, resume=resume, screened=screened)
+
+        # If wordlist provided, store in session context for task creation
+        if wordlist:
+            # Resolve wordlist path
+            try:
+                resolved_path = _resolve_wordlist_arg(wordlist)
+                print(f"Using wordlist: {resolved_path}")
+                # Store in session for task metadata
+                if hasattr(session, 'default_wordlist'):
+                    session.default_wordlist = resolved_path
+                else:
+                    # Create attribute if doesn't exist
+                    session.default_wordlist = resolved_path
+            except ValueError as e:
+                print(f"Error resolving wordlist: {e}")
+                print("Continuing without pre-selected wordlist")
+
         session.run()
     except KeyboardInterrupt:
         print("\n\nInteractive mode interrupted.")
