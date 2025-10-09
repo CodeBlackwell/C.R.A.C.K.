@@ -30,6 +30,7 @@ from .prompts import PromptBuilder
 from .input_handler import InputProcessor
 from .tui_config import ConfigPanel
 from .panels.dashboard_panel import DashboardPanel
+from .panels.task_workspace_panel import TaskWorkspacePanel
 from .overlays.status_overlay import StatusOverlay
 from .overlays.help_overlay import HelpOverlay
 from .overlays.tree_overlay import TreeOverlay
@@ -227,8 +228,9 @@ class TUISessionV2(InteractiveSession):
         """Main interaction loop"""
         self.debug_logger.section("MAIN LOOP START")
 
-        # Store live context for _execute_choice to access
+        # Store live context AND layout for _execute_choice to access
         self._live = live
+        self._layout = layout
 
         running = True
         iteration = 0
@@ -274,6 +276,153 @@ class TUISessionV2(InteractiveSession):
                     running = False
 
         self.debug_logger.section("MAIN LOOP END")
+
+    def _task_workspace_loop(self, live: Live, layout: Layout, task):
+        """
+        Task workspace interaction loop
+
+        State machine: empty → streaming → complete
+
+        Args:
+            live: Rich Live context
+            layout: Layout object
+            task: TaskNode instance to work on
+        """
+        self.debug_logger.section("TASK WORKSPACE LOOP START")
+        self.debug_logger.info(f"Task: {task.name}")
+        self.debug_logger.info(f"Task ID: {task.id}")
+
+        # Initialize state
+        output_state = 'empty'
+        output_lines = []
+        elapsed = 0.0
+        exit_code = None
+        findings = []
+
+        self.debug_logger.log_state_transition("INIT", "EMPTY", "workspace opened")
+
+        running = True
+        iteration = 0
+
+        while running:
+            iteration += 1
+            self.debug_logger.debug(f"Workspace loop iteration {iteration}")
+            self.debug_logger.debug(f"Current state: {output_state}")
+
+            # Render workspace panel with current state
+            self.debug_logger.debug("Rendering TaskWorkspacePanel")
+            workspace_layout, choices = TaskWorkspacePanel.render(
+                task=task,
+                output_state=output_state,
+                output_lines=output_lines,
+                elapsed=elapsed,
+                exit_code=exit_code,
+                findings=findings
+            )
+            self.debug_logger.debug(f"TaskWorkspacePanel returned {len(choices)} choices")
+
+            # Update all layout sections
+            self.debug_logger.debug("Updating layout sections")
+            layout['header'].update(self._render_header())
+            layout['menu'].update(workspace_layout)
+            layout['footer'].update(self._render_footer())
+
+            # Refresh display
+            self.debug_logger.log_live_action("REFRESH", "workspace display")
+            live.refresh()
+
+            # Stop live to get input
+            self.debug_logger.log_live_action("STOP", "before workspace input")
+            live.stop()
+
+            # Get user input
+            self.console.print("\n[bold bright_yellow]Choice:[/] ", end="")
+            try:
+                self.debug_logger.debug("Waiting for workspace input...")
+                user_input = input().strip()
+                self.debug_logger.log_user_input(user_input, context="task_workspace")
+            except (EOFError, KeyboardInterrupt):
+                self.debug_logger.warning("EOF or interrupt during workspace input")
+                live.start()
+                running = False
+                continue
+
+            # Resume live
+            self.debug_logger.log_live_action("START", "after workspace input")
+            live.start()
+
+            # Process input
+            if not user_input:
+                self.debug_logger.debug("Empty input, continuing loop")
+                continue
+
+            self.debug_logger.debug(f"Processing workspace input: '{user_input}'")
+
+            # Handle 'b' (back to dashboard)
+            if user_input.lower() == 'b':
+                self.debug_logger.info("Back to dashboard requested")
+                self.debug_logger.log_state_transition(output_state, "DASHBOARD", "back button pressed")
+                running = False
+                continue
+
+            # Try to parse as choice number
+            try:
+                choice_num = int(user_input)
+                self.debug_logger.debug(f"Parsed as choice number: {choice_num}")
+
+                if 1 <= choice_num <= len(choices):
+                    choice = choices[choice_num - 1]
+                    choice_id = choice.get('id')
+                    self.debug_logger.info(f"Workspace choice selected: {choice_id} - {choice.get('label')}")
+
+                    # Handle different choice actions
+                    if choice_id == 'execute':
+                        self.debug_logger.info("Execute action selected (not yet implemented)")
+                        # TODO: Implement streaming execution in next iteration
+
+                        # Stop live to show message clearly
+                        live.stop()
+                        self.console.print("\n[yellow]⚠ Execution not yet implemented in Stage 2[/]")
+                        self.console.print("[dim]This will be added in Stage 3. Press Enter to continue...[/]")
+                        input()
+                        live.start()
+
+                    elif choice_id == 'back':
+                        self.debug_logger.info("Back action selected")
+                        self.debug_logger.log_state_transition(output_state, "DASHBOARD", "back action")
+                        running = False
+
+                    else:
+                        self.debug_logger.warning(f"Unhandled choice ID: {choice_id}")
+
+                        # Stop live to show message clearly
+                        live.stop()
+                        self.console.print(f"\n[yellow]⚠ Action '{choice_id}' not yet implemented in Stage 2[/]")
+                        self.console.print("[dim]This will be added in future stages. Press Enter to continue...[/]")
+                        input()
+                        live.start()
+                else:
+                    self.debug_logger.warning(f"Choice {choice_num} out of range (1-{len(choices)})")
+
+                    # Stop live to show error clearly
+                    live.stop()
+                    self.console.print(f"\n[red]Invalid choice: {choice_num}[/]")
+                    self.console.print(f"[dim]Please choose 1-{len(choices)} or 'b' for back. Press Enter...[/]")
+                    input()
+                    live.start()
+
+            except ValueError as e:
+                self.debug_logger.warning(f"Failed to parse workspace input: {e}")
+
+                # Stop live to show error clearly
+                live.stop()
+                self.console.print(f"\n[red]Invalid input: {user_input}[/]")
+                self.console.print(f"[dim]Please enter a number or 'b' for back. Press Enter...[/]")
+                input()
+                live.start()
+
+        self.debug_logger.section("TASK WORKSPACE LOOP END")
+        self.debug_logger.info("Returning to dashboard")
 
     def _refresh_panels(self, layout: Layout):
         """Refresh all panels with current state"""
@@ -380,6 +529,25 @@ class TUISessionV2(InteractiveSession):
         self.debug_logger.info(f"Choice index: {index}")
         self.debug_logger.info(f"Choice ID: {choice.get('id')}")
         self.debug_logger.info(f"Choice label: {choice.get('label')}")
+
+        # Check if this is workspace navigation (Execute next task)
+        if choice.get('id') == 'next':
+            task = choice.get('task')
+            if task:
+                self.debug_logger.info(f"Navigating to task workspace for: {task.name}")
+                self.debug_logger.log_state_transition("DASHBOARD", "TASK_WORKSPACE", f"execute next: {task.name}")
+
+                # Reuse existing layout (bound to Live context)
+                self.debug_logger.debug("Reusing main layout for workspace")
+
+                # Enter workspace loop with SAME Live and Layout
+                self._task_workspace_loop(self._live, self._layout, task)
+
+                self.debug_logger.log_state_transition("TASK_WORKSPACE", "DASHBOARD", "returned from workspace")
+                self.debug_logger.info("Returned from task workspace")
+                return
+            else:
+                self.debug_logger.warning("Choice ID 'next' has no task object")
 
         # Use ExecutionOverlay to handle task execution outside Live context
         # This prevents the freeze issue where Live display conflicts with terminal I/O

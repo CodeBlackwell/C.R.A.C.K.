@@ -396,8 +396,8 @@ def handle_interactive(target: str, resume: bool = False, screened: bool = False
     """
     # Choose session type based on TUI flag
     if tui:
-        from .interactive.tui_session import TUISession
-        session = TUISession(target, resume=resume, screened=screened, debug=tui_debug)
+        from .interactive.tui_session_v2 import TUISessionV2
+        session = TUISessionV2(target, resume=resume, screened=screened, debug=tui_debug)
     else:
         from .interactive import InteractiveSession
         session = InteractiveSession(target, resume=resume, screened=screened)

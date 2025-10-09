@@ -9,5 +9,6 @@ Each panel follows the pattern from PANEL_DEVELOPER_GUIDE.md:
 """
 
 from .dashboard_panel import DashboardPanel
+from .task_workspace_panel import TaskWorkspacePanel
 
-__all__ = ['DashboardPanel']
+__all__ = ['DashboardPanel', 'TaskWorkspacePanel']
