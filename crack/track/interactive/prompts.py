@@ -430,6 +430,8 @@ KEYBOARD SHORTCUTS:
   n - Execute next recommended task
   c - Change confirmation mode
   x - Command templates (quick OSCP commands)
+  w - Select wordlist (for gobuster, hydra, etc.)
+  alt - Alternative commands (browse and execute alternatives)
   ch - Command history (browse and search)
   pl - Port lookup reference (common OSCP ports)
   tf - Task filter (filter by status, port, service, tags)

@@ -37,7 +37,8 @@ class ShortcutHandler:
             'n': ('Execute next recommended task', 'do_next'),
             'c': ('Change confirmation mode', 'change_confirmation'),
             'x': ('Command templates', 'show_templates'),
-            'alt': ('Alternative commands', 'alternative_commands'),  # NEW
+            'w': ('Select wordlist', 'select_wordlist'),  # Phase 5.1
+            'alt': ('Alternative commands', 'alternative_commands'),
             'ch': ('Command history', 'command_history'),
             'pl': ('Port lookup reference', 'port_lookup'),
             'tf': ('Task filter', 'task_filter'),
@@ -478,3 +479,171 @@ class ShortcutHandler:
     def alternative_commands(self):
         """Browse and execute alternative commands (shortcut: alt)"""
         self.session.handle_alternative_commands()
+
+    def select_wordlist(self):
+        """
+        Select wordlist for current/selected task (shortcut: w)
+
+        Phase 5.1: Wordlist selection integration
+        - Get current task or prompt for task selection
+        - Launch WordlistSelector.interactive_select()
+        - Update task metadata with selection
+        - Display confirmation message
+        """
+        import time
+        from .input_handler import InputProcessor
+
+        print(DisplayManager.format_info("Wordlist Selection"))
+
+        # Get pending tasks that need wordlists
+        pending_tasks = self.session.profile.task_tree.get_all_pending()
+        wordlist_tasks = [
+            task for task in pending_tasks
+            if self._task_needs_wordlist(task)
+        ]
+
+        if not wordlist_tasks:
+            print(DisplayManager.format_warning(
+                "No pending tasks require wordlists.\n"
+                "Wordlists are needed for: gobuster, wfuzz, hydra, medusa, etc."
+            ))
+            return
+
+        # Select task
+        if len(wordlist_tasks) == 1:
+            task = wordlist_tasks[0]
+            print(f"Task: {task.name}")
+        else:
+            print("\nTasks that need wordlists:\n")
+            for i, task in enumerate(wordlist_tasks, 1):
+                current_wordlist = task.metadata.get('wordlist', 'not set')
+                print(f"  {i}. {task.name}")
+                print(f"     Current: {current_wordlist}")
+
+            choice_input = input("\nSelect task [1-{}]: ".format(len(wordlist_tasks))).strip()
+            try:
+                choice_idx = int(choice_input) - 1
+                if 0 <= choice_idx < len(wordlist_tasks):
+                    task = wordlist_tasks[choice_idx]
+                else:
+                    print(DisplayManager.format_error("Invalid choice"))
+                    return
+            except ValueError:
+                print(DisplayManager.format_error("Invalid input"))
+                return
+
+        # Try to import WordlistSelector with retry logic
+        print(DisplayManager.format_info("Loading wordlist system..."))
+
+        max_retries = 15  # 30 minutes / 2 minutes per retry
+        retry_interval = 120  # 2 minutes in seconds
+        attempt = 0
+
+        wordlist_manager = None
+        wordlist_selector = None
+
+        while attempt < max_retries:
+            try:
+                from ..wordlists.manager import WordlistManager
+                from ..wordlists.selector import WordlistSelector
+
+                # Initialize manager
+                if wordlist_manager is None:
+                    wordlist_manager = WordlistManager()
+
+                # Initialize selector
+                wordlist_selector = WordlistSelector(wordlist_manager, task=task)
+
+                # If we get here, import succeeded
+                break
+
+            except ImportError as e:
+                attempt += 1
+                if attempt >= max_retries:
+                    print(DisplayManager.format_error(
+                        "WordlistSelector not available after 30 minutes.\n"
+                        "Phase 2 implementation may still be in progress.\n"
+                        "Please set wordlist manually in task metadata."
+                    ))
+                    return
+
+                print(DisplayManager.format_warning(
+                    f"WordlistSelector not ready (attempt {attempt}/{max_retries}).\n"
+                    f"Retrying in 2 minutes... (Agent-1 may still be implementing Phase 2)"
+                ))
+                time.sleep(retry_interval)
+
+        # Launch interactive selection
+        try:
+            selected = wordlist_selector.interactive_select()
+
+            if selected:
+                # Update task metadata
+                task.metadata['wordlist'] = selected.path
+                task.metadata['wordlist_name'] = selected.name
+                task.metadata['wordlist_line_count'] = selected.line_count
+
+                # Save profile
+                self.session.profile.save()
+
+                print(DisplayManager.format_success(
+                    f"Wordlist selected: {selected.name}\n"
+                    f"Path: {selected.path}\n"
+                    f"Lines: {selected.line_count:,}\n"
+                    f"Category: {selected.category}"
+                ))
+
+                self.session.last_action = f"Selected wordlist: {selected.name}"
+            else:
+                print(DisplayManager.format_warning("Wordlist selection cancelled"))
+
+        except Exception as e:
+            print(DisplayManager.format_error(f"Wordlist selection failed: {e}"))
+
+    def _task_needs_wordlist(self, task) -> bool:
+        """
+        Check if task needs a wordlist
+
+        Detection methods:
+        1. Check for <WORDLIST> placeholder in command
+        2. Check wordlist_purpose metadata field
+        3. Check tool patterns (gobuster, wfuzz, hydra, etc.)
+
+        Args:
+            task: TaskNode instance
+
+        Returns:
+            True if task needs wordlist, False otherwise
+        """
+        # Check metadata for wordlist placeholder
+        command = task.metadata.get('command', '')
+        if '<WORDLIST>' in command or '{WORDLIST}' in command:
+            return True
+
+        # Check wordlist_purpose field
+        if task.metadata.get('wordlist_purpose'):
+            return True
+
+        # Check tool patterns
+        wordlist_tools = [
+            'gobuster', 'wfuzz', 'ffuf', 'dirb', 'dirbuster',
+            'hydra', 'medusa', 'ncrack', 'patator',
+            'john', 'hashcat',  # password cracking
+            'amass', 'sublist3r',  # subdomain enum
+        ]
+
+        # Check task ID
+        task_id_lower = task.id.lower()
+        if any(tool in task_id_lower for tool in wordlist_tools):
+            return True
+
+        # Check command
+        command_lower = command.lower()
+        if any(tool in command_lower for tool in wordlist_tools):
+            return True
+
+        # Check for -w or --wordlist flags
+        if '-w ' in command or '--wordlist' in command:
+            return True
+
+        return False

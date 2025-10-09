@@ -332,8 +332,38 @@ class InteractiveSession:
             print(DisplayManager.format_warning("No command defined for this task"))
             return
 
+        # Phase 5.2: Check if task needs wordlist before execution
+        if self._task_needs_wordlist(task):
+            if not task.metadata.get('wordlist'):
+                print(DisplayManager.format_warning(
+                    "\nThis task requires a wordlist but none is selected."
+                ))
+                print("Hint: Press 'w' to select wordlist, or Enter to use default")
+
+                # Prompt user
+                from .input_handler import InputProcessor
+                response = input("\nSelect wordlist now? [Y/n]: ").strip()
+
+                if InputProcessor.parse_confirmation(response, default='Y'):
+                    # Launch wordlist selection
+                    self.shortcut_handler.select_wordlist()
+
+                    # Check if wordlist was selected
+                    if not task.metadata.get('wordlist'):
+                        print(DisplayManager.format_warning(
+                            "No wordlist selected. Using default placeholder."
+                        ))
+                else:
+                    print("Using default wordlist placeholder in command")
+
         # Replace placeholders
         command = command.replace('{TARGET}', self.profile.target)
+
+        # Phase 5.2: Substitute wordlist placeholder
+        if '<WORDLIST>' in command or '{WORDLIST}' in command:
+            wordlist_path = task.metadata.get('wordlist', '/usr/share/wordlists/dirb/common.txt')
+            command = command.replace('<WORDLIST>', wordlist_path)
+            command = command.replace('{WORDLIST}', wordlist_path)
 
         print(f"\n{DisplayManager.format_info('Command to execute:')}")
         print(f"  {command}\n")
@@ -931,13 +961,20 @@ class InteractiveSession:
             min_score: Minimum match score (0-100)
 
         Returns:
-            List of (TaskNode, score) tuples, sorted by score descending
+            List of TaskNode objects, sorted by relevance score descending
         """
         query = query.lower()
         results = []
 
         def search_node(node):
             """Recursively search task tree with fuzzy matching"""
+            # Skip root node
+            if node.id == 'root':
+                # Only recurse to children
+                for child in node.children:
+                    search_node(child)
+                return
+
             best_match = (False, 0)
 
             # Search in task name
@@ -945,9 +982,10 @@ class InteractiveSession:
             if match[1] > best_match[1]:
                 best_match = match
 
-            # Search in command
-            if node.metadata.get('command'):
-                match = self._fuzzy_match(query, node.metadata['command'])
+            # Search in command (with None check)
+            command = node.metadata.get('command')
+            if command:
+                match = self._fuzzy_match(query, command)
                 if match[1] > best_match[1]:
                     best_match = match
 
@@ -957,9 +995,10 @@ class InteractiveSession:
                 if match[1] > best_match[1]:
                     best_match = match
 
-            # Search in description
-            if node.metadata.get('description'):
-                match = self._fuzzy_match(query, node.metadata['description'])
+            # Search in description (with None check)
+            description = node.metadata.get('description')
+            if description:
+                match = self._fuzzy_match(query, description)
                 if match[1] > best_match[1]:
                     best_match = match
 
@@ -980,7 +1019,8 @@ class InteractiveSession:
         self.search_query = query
         self.search_results = [r[0] for r in results]  # Store nodes only
 
-        return results  # Return (node, score) tuples
+        # Return nodes only (not tuples) for consistent API
+        return [r[0] for r in results]
 
     def filter_tasks(self, filter_type: str, filter_value: str = None) -> list:
         """
@@ -997,6 +1037,13 @@ class InteractiveSession:
 
         def filter_node(node):
             """Recursively filter task tree"""
+            # Skip root node
+            if node.id == 'root':
+                # Only recurse to children
+                for child in node.children:
+                    filter_node(child)
+                return
+
             matched = False
 
             if filter_type == 'status' and node.status == filter_value:
@@ -1013,8 +1060,9 @@ class InteractiveSession:
                 # NEW: Service filtering
                 # Check service in task name, command, or metadata
                 service_lower = filter_value.lower()
+                command = node.metadata.get('command')
                 if (service_lower in node.name.lower() or
-                    (node.metadata.get('command') and service_lower in node.metadata['command'].lower()) or
+                    (command and service_lower in command.lower()) or
                     node.metadata.get('service', '').lower() == service_lower):
                     matched = True
 
@@ -4145,3 +4193,51 @@ Output: {output[:500]}{"..." if len(output) > 500 else ""}
 
         except Exception as e:
             print(DisplayManager.format_error(f"Execution error: {str(e)}"))
+
+    def _task_needs_wordlist(self, task) -> bool:
+        """
+        Check if task needs a wordlist (Phase 5.2)
+
+        Detection methods:
+        1. Check for <WORDLIST> or {WORDLIST} placeholder in command
+        2. Check wordlist_purpose metadata field
+        3. Check tool patterns (gobuster, wfuzz, hydra, etc.)
+
+        Args:
+            task: TaskNode instance
+
+        Returns:
+            True if task needs wordlist, False otherwise
+        """
+        # Check metadata for wordlist placeholder
+        command = task.metadata.get('command', '')
+        if '<WORDLIST>' in command or '{WORDLIST}' in command:
+            return True
+
+        # Check wordlist_purpose field
+        if task.metadata.get('wordlist_purpose'):
+            return True
+
+        # Check tool patterns
+        wordlist_tools = [
+            'gobuster', 'wfuzz', 'ffuf', 'dirb', 'dirbuster',
+            'hydra', 'medusa', 'ncrack', 'patator',
+            'john', 'hashcat',  # password cracking
+            'amass', 'sublist3r',  # subdomain enum
+        ]
+
+        # Check task ID
+        task_id_lower = task.id.lower()
+        if any(tool in task_id_lower for tool in wordlist_tools):
+            return True
+
+        # Check command
+        command_lower = command.lower()
+        if any(tool in command_lower for tool in wordlist_tools):
+            return True
+
+        # Check for -w or --wordlist flags
+        if '-w ' in command or '--wordlist' in command:
+            return True
+
+        return False

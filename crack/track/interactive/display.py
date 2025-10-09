@@ -215,6 +215,22 @@ class DisplayManager:
         if metadata.get('command'):
             output.append(f"  {Colors.CYAN}Command:{Colors.END} {metadata['command']}")
 
+        # Phase 5.3: Display wordlist info if present
+        if metadata.get('wordlist'):
+            wordlist_name = metadata.get('wordlist_name', 'custom')
+            line_count = metadata.get('wordlist_line_count')
+            if line_count:
+                # Format line count (e.g., "4.6K lines")
+                if line_count >= 1_000_000:
+                    line_str = f"{line_count / 1_000_000:.1f}M lines"
+                elif line_count >= 1_000:
+                    line_str = f"{line_count / 1_000:.1f}K lines"
+                else:
+                    line_str = f"{line_count} lines"
+                output.append(f"  {Colors.CYAN}Wordlist:{Colors.END} {wordlist_name} ({line_str})")
+            else:
+                output.append(f"  {Colors.CYAN}Wordlist:{Colors.END} {wordlist_name}")
+
         if metadata.get('tags'):
             tags_str = ', '.join(metadata['tags'])
             output.append(f"  {Colors.CYAN}Tags:{Colors.END} {tags_str}")
