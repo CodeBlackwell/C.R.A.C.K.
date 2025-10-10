@@ -38,6 +38,7 @@ from .overlays.help_overlay import HelpOverlay
 from .overlays.tree_overlay import TreeOverlay
 from .overlays.execution_overlay import ExecutionOverlay
 from .debug_logger import init_debug_logger, get_debug_logger
+from .hotkey_input import HotkeyInputHandler
 
 
 class TUISessionV2(InteractiveSession):
@@ -56,6 +57,10 @@ class TUISessionV2(InteractiveSession):
 
         # Initialize debug logger
         self.debug_logger = init_debug_logger(debug_enabled=debug, target=target)
+
+        # Initialize hotkey input handler
+        self.hotkey_handler = HotkeyInputHandler(debug_logger=self.debug_logger)
+
         if debug:
             self.debug_logger.section("TUI SESSION INITIALIZATION")
             self.debug_logger.info(f"Target: {target}")
@@ -151,7 +156,7 @@ class TUISessionV2(InteractiveSession):
             layout['menu'].update(config_panel)
 
             # Footer
-            footer_text = "[cyan](1-4)[/] Edit | [cyan](5)[/] Continue | [cyan](q)[/] Quit"
+            footer_text = "[cyan]1-4[/]:Edit | [cyan]5[/]:Continue | [cyan]q[/]:Quit | [dim]:[/]command"
             footer = Panel(footer_text, border_style="cyan", box=box.HEAVY)
             layout['footer'].update(footer)
 
@@ -161,10 +166,21 @@ class TUISessionV2(InteractiveSession):
             # Stop live to get input
             live.stop()
 
-            # Get input
-            self.console.print("\n[bold bright_yellow]Choice:[/] ", end="")
+            # Get input (vim-style hotkeys)
+            self.console.print("\n[dim]Press key (or : for command):[/] ", end="", flush=True)
             try:
-                user_input = input().strip()
+                # Read single key
+                key = self.hotkey_handler.read_key()
+                if key is None:
+                    live.start()
+                    return  # Exit without confirming
+
+                # Handle : command mode
+                if key == ':':
+                    user_input = self.hotkey_handler.read_command(":")
+                else:
+                    user_input = key
+
             except (EOFError, KeyboardInterrupt):
                 live.start()
                 return  # Exit without confirming
@@ -252,14 +268,37 @@ class TUISessionV2(InteractiveSession):
             self.debug_logger.log_live_action("STOP", "before input")
             live.stop()
 
-            # Get user input
-            self.console.print("\n[bold bright_yellow]Choice:[/] ", end="")
+            # Get user input (vim-style hotkeys)
+            self.console.print("\n[dim]Press key (or : for command):[/] ", end="", flush=True)
             try:
-                self.debug_logger.debug("Waiting for user input...")
-                user_input = input().strip()
-                self.debug_logger.log_user_input(user_input, context="main_loop")
+                self.debug_logger.debug("Waiting for hotkey input...")
+
+                # Read single key
+                key = self.hotkey_handler.read_key()
+
+                if key is None:
+                    # EOF or timeout
+                    self.debug_logger.warning("EOF or timeout during hotkey input")
+                    live.start()
+                    running = False
+                    continue
+
+                # Handle : command mode
+                if key == ':':
+                    self.debug_logger.debug("Command mode activated")
+                    user_input = self.hotkey_handler.read_command(":")
+                # Handle multi-digit numbers (buffer with timeout)
+                elif key.isdigit():
+                    self.debug_logger.debug(f"Digit detected: {key}, checking for multi-digit number")
+                    user_input = self.hotkey_handler.read_number(key, timeout=0.5)
+                else:
+                    # Single-key shortcut
+                    user_input = key
+
+                self.debug_logger.log_user_input(user_input, context="main_loop_hotkey")
+
             except (EOFError, KeyboardInterrupt):
-                self.debug_logger.warning("EOF or interrupt during input")
+                self.debug_logger.warning("EOF or interrupt during hotkey input")
                 live.start()
                 running = False
                 continue
@@ -337,14 +376,37 @@ class TUISessionV2(InteractiveSession):
             self.debug_logger.log_live_action("STOP", "before workspace input")
             live.stop()
 
-            # Get user input
-            self.console.print("\n[bold bright_yellow]Choice:[/] ", end="")
+            # Get user input (vim-style hotkeys)
+            self.console.print("\n[dim]Press key (b:Back, or : for command):[/] ", end="", flush=True)
             try:
-                self.debug_logger.debug("Waiting for workspace input...")
-                user_input = input().strip()
-                self.debug_logger.log_user_input(user_input, context="task_workspace")
+                self.debug_logger.debug("Waiting for workspace hotkey input...")
+
+                # Read single key
+                key = self.hotkey_handler.read_key()
+
+                if key is None:
+                    # EOF or timeout
+                    self.debug_logger.warning("EOF or timeout during workspace hotkey input")
+                    live.start()
+                    running = False
+                    continue
+
+                # Handle : command mode
+                if key == ':':
+                    self.debug_logger.debug("Command mode activated in workspace")
+                    user_input = self.hotkey_handler.read_command(":")
+                # Handle multi-digit numbers (buffer with timeout)
+                elif key.isdigit():
+                    self.debug_logger.debug(f"Digit detected in workspace: {key}, checking for multi-digit")
+                    user_input = self.hotkey_handler.read_number(key, timeout=0.5)
+                else:
+                    # Single-key shortcut
+                    user_input = key
+
+                self.debug_logger.log_user_input(user_input, context="task_workspace_hotkey")
+
             except (EOFError, KeyboardInterrupt):
-                self.debug_logger.warning("EOF or interrupt during workspace input")
+                self.debug_logger.warning("EOF or interrupt during workspace hotkey input")
                 live.start()
                 running = False
                 continue
@@ -653,8 +715,8 @@ class TUISessionV2(InteractiveSession):
         return panel
 
     def _render_footer(self) -> Panel:
-        """Render footer with shortcuts"""
-        shortcuts = "[cyan](h)[/] Help | [cyan](s)[/] Status | [cyan](t)[/] Tree | [cyan](q)[/] Quit"
+        """Render footer with vim-style shortcuts"""
+        shortcuts = "[cyan]h[/]:Help | [cyan]s[/]:Status | [cyan]t[/]:Tree | [cyan]q[/]:Quit | [dim]:[/]command"
         return Panel(
             shortcuts,
             border_style="cyan",
