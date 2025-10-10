@@ -1153,7 +1153,7 @@ class TUISessionV2(InteractiveSession):
 
     def _render_footer(self) -> Panel:
         """Render footer with vim-style shortcuts"""
-        shortcuts = "[cyan]n[/]:Next | [cyan]l[/]:List | [cyan]f[/]:Findings | [cyan]h[/]:Help | [cyan]s[/]:Status | [cyan]t[/]:Tree | [cyan]q[/]:Quit | [dim]:[/]cmd"
+        shortcuts = "[cyan]n[/]:Next | [cyan]l[/]:List | [cyan]f[/]:Findings | [cyan]p[/]:Progress | [cyan]h[/]:Help | [cyan]s[/]:Status | [cyan]t[/]:Tree | [cyan]q[/]:Quit | [dim]:[/]cmd"
         return Panel(
             shortcuts,
             border_style="cyan",
@@ -1185,6 +1185,12 @@ class TUISessionV2(InteractiveSession):
         if user_input.lower() == 't':
             self.debug_logger.info("Tree overlay requested")
             self._show_tree()
+            return None
+
+        # Progress dashboard shortcut
+        if user_input.lower() == 'p':
+            self.debug_logger.info("Progress dashboard requested")
+            self.handle_progress_dashboard()
             return None
 
         # Letter hotkeys for Dashboard actions
@@ -1304,6 +1310,106 @@ class TUISessionV2(InteractiveSession):
         tree_panel = TreeOverlay.render(self.profile)
         self.console.print(tree_panel)
         input()  # Wait for keypress
+
+    def handle_progress_dashboard(self):
+        """
+        Display progress dashboard overlay showing task completion metrics
+
+        Shows:
+        - Overall progress (completed/total tasks)
+        - ASCII progress bar visualization
+        - Tasks grouped by service (HTTP, SMB, SSH, etc.)
+        - Quick wins (low-effort, high-value tasks)
+        - High-priority tasks
+        - Next recommended task
+
+        Strategic logging:
+        - Entry: Dashboard display start
+        - Data: Task counts and metrics
+        """
+        # Strategic chokepoint: Progress dashboard entry
+        self.debug_logger.log("Progress dashboard requested",
+                             category=LogCategory.UI_PANEL,
+                             level=LogLevel.NORMAL)
+
+        # Calculate progress metrics
+        all_tasks = self.profile.task_tree.get_all_tasks()
+        total = len(all_tasks)
+        completed = len([t for t in all_tasks if t.status == 'completed'])
+        in_progress = len([t for t in all_tasks if t.status == 'in-progress'])
+        pending = len([t for t in all_tasks if t.status == 'pending'])
+
+        # Log metrics
+        self.debug_logger.log("Progress metrics calculated",
+                             category=LogCategory.UI_PANEL,
+                             level=LogLevel.VERBOSE,
+                             total=total, completed=completed, pending=pending)
+
+        # Build panel
+        table = Table(show_header=False, box=None, padding=(0, 2))
+        table.add_column("Label", style="bold cyan", width=20)
+        table.add_column("Value")
+
+        # Progress metrics
+        percent = int((completed / total * 100)) if total > 0 else 0
+        table.add_row("Total Tasks", str(total))
+        table.add_row("Completed", f"{completed} ({percent}%)")
+        table.add_row("In Progress", str(in_progress))
+        table.add_row("Pending", str(pending))
+
+        # ASCII progress bar (40 chars wide)
+        bar_width = 40
+        filled = int(bar_width * completed / total) if total > 0 else 0
+        empty = bar_width - filled
+        bar = f"[green]{'█' * filled}[/][dim]{'░' * empty}[/]"
+        table.add_row("", bar)
+
+        # Group by service
+        service_tasks = {}
+        for task in all_tasks:
+            # Extract service from task ID or metadata
+            service = task.metadata.get('service', 'general')
+            if service not in service_tasks:
+                service_tasks[service] = {'total': 0, 'done': 0}
+            service_tasks[service]['total'] += 1
+            if task.status == 'completed':
+                service_tasks[service]['done'] += 1
+
+        # Service breakdown
+        if service_tasks:
+            table.add_row("", "")
+            table.add_row("[bold]Service Breakdown[/]", "")
+            for svc, counts in sorted(service_tasks.items())[:5]:  # Top 5
+                svc_percent = int((counts['done'] / counts['total'] * 100)) if counts['total'] > 0 else 0
+                table.add_row(f"  {svc.upper()}", f"{counts['done']}/{counts['total']} ({svc_percent}%)")
+
+        # Quick wins (pending, QUICK_WIN tag)
+        quick_wins = [t for t in all_tasks if t.status == 'pending' and 'QUICK_WIN' in t.metadata.get('tags', [])]
+        if quick_wins:
+            table.add_row("", "")
+            table.add_row("[bold]Quick Wins[/]", f"{len(quick_wins)} available")
+
+        # High priority (pending, OSCP:HIGH tag)
+        high_pri = [t for t in all_tasks if t.status == 'pending' and any('OSCP:HIGH' in tag for tag in t.metadata.get('tags', []))]
+        if high_pri:
+            table.add_row("[bold]High Priority[/]", f"{len(high_pri)} pending")
+
+        # Next recommended
+        next_task = self.profile.task_tree.get_next_actionable(self.profile.task_tree)
+        if next_task:
+            table.add_row("", "")
+            table.add_row("[bold]Next Task[/]", next_task.name[:40] + "..." if len(next_task.name) > 40 else next_task.name)
+
+        panel = Panel(table, title="[bold]Progress Dashboard[/]", border_style="magenta")
+
+        # Display and wait
+        self.console.print(panel)
+        input()  # Wait for keypress
+
+        # Strategic chokepoint: Dashboard closed
+        self.debug_logger.log("Progress dashboard closed",
+                             category=LogCategory.UI_PANEL,
+                             level=LogLevel.NORMAL)
 
     def _check_interrupted_tasks_tui(self):
         """

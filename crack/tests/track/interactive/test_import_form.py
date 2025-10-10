@@ -129,7 +129,7 @@ class TestFilePathStage:
         panel, choices = form.render()
 
         assert panel is not None
-        assert "Step 1/4" in panel.renderable.__str__()
+        assert "Import" in str(panel.title)
         assert len(choices) > 0
         assert any(c['id'] == 'enter-path' for c in choices)
         assert any(c['id'] == 'back' for c in choices)

@@ -11,7 +11,8 @@ class CommandHistory:
         self.commands: List[Dict[str, Any]] = []
         self.max_size = 100  # Limit history size
 
-    def add(self, command: str, source: str, task_id: str = None, success: bool = True):
+    def add(self, command: str, source: str, task_id: str = None, success: bool = True,
+            exit_code: int = 0, output_length: int = 0):
         """Add command to history
 
         Args:
@@ -19,13 +20,17 @@ class CommandHistory:
             source: Source (template, manual, task)
             task_id: Task ID if from task execution
             success: Whether command succeeded
+            exit_code: Command exit code
+            output_length: Length of command output
         """
         entry = {
             'timestamp': datetime.now().isoformat(),
             'command': command,
             'source': source,
             'task_id': task_id,
-            'success': success
+            'success': success,
+            'exit_code': exit_code,
+            'output_length': output_length
         }
 
         self.commands.append(entry)
@@ -69,6 +74,38 @@ class CommandHistory:
             List of command entries
         """
         return list(reversed(self.commands[-limit:]))
+
+    def filter_by_status(self, success: bool) -> List[Dict[str, Any]]:
+        """Filter commands by success status
+
+        Args:
+            success: True for successful, False for failed
+
+        Returns:
+            List of filtered command entries
+        """
+        return [cmd for cmd in self.commands if cmd.get('success') == success]
+
+    def export_to_file(self, filepath: str) -> bool:
+        """Export history to file
+
+        Args:
+            filepath: Path to export file
+
+        Returns:
+            True if successful
+        """
+        try:
+            import json
+            with open(filepath, 'w') as f:
+                json.dump(self.to_dict(), f, indent=2)
+            return True
+        except Exception:
+            return False
+
+    def clear(self):
+        """Clear all command history"""
+        self.commands = []
 
     def to_dict(self) -> Dict[str, Any]:
         """Serialize for checkpoint"""

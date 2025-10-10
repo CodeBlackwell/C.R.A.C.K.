@@ -578,6 +578,21 @@ class InteractiveSession:
                     print(DisplayManager.format_warning(
                         f"Command exited with code {result.returncode}"))
 
+                    # Use ErrorHandler to show OSCP-specific suggestions
+                    error_msg = f"Task '{task.name}' failed with exit code {result.returncode}"
+                    suggestions = self.error_handler.get_suggestions(
+                        self.error_handler.categorize_error(
+                            subprocess.CalledProcessError(result.returncode, command)
+                        ),
+                        command
+                    )
+
+                    if suggestions:
+                        print("\n" + DisplayManager.format_info("Suggested fixes:"))
+                        for idx, suggestion in enumerate(suggestions[:3], 1):  # Show top 3
+                            print(f"  {idx}. {suggestion}")
+                        print()
+
                     # Ask user if task should be marked complete anyway
                     mark_done = input(DisplayManager.format_confirmation(
                         "Mark task as completed?", default='N'
@@ -590,8 +605,34 @@ class InteractiveSession:
 
                         # Record task if workflow recording is active
                         self._record_task(task)
+                    else:
+                        # Mark as failed with metadata
+                        task.status = 'failed'
+                        task.metadata['failed_at'] = datetime.now().isoformat()
+                        task.metadata.setdefault('retry_count', 0)
+                        task.metadata['retry_count'] += 1
+                        task.metadata['failure_reason'] = f"Exit code {result.returncode}"
+                        task.metadata['exit_code'] = result.returncode
+                        task.stop_timer()
+
+                        # Log failure
+                        self.debug_logger.log("Task marked as failed",
+                                             category=LogCategory.EXECUTION_ERROR,
+                                             level=LogLevel.NORMAL,
+                                             task_id=task.id,
+                                             exit_code=result.returncode,
+                                             retry_count=task.metadata['retry_count'])
 
             except Exception as e:
+                # Mark task as failed on exception
+                task.status = 'failed'
+                task.metadata['failed_at'] = datetime.now().isoformat()
+                task.metadata.setdefault('retry_count', 0)
+                task.metadata['retry_count'] += 1
+                task.metadata['failure_reason'] = str(e)
+                task.stop_timer()
+
+                # Log and display error with OSCP suggestions
                 self.error_handler.handle_exception(e, context="subprocess task execution")
                 input()  # Wait for user to acknowledge
 
@@ -2288,11 +2329,32 @@ Output: {output[:500]}{"..." if len(output) > 500 else ""}
             elif task.status == 'completed' and task.metadata.get('command'):
                 retryable.append(task)
 
-        # Sort: failed first, then by timestamp
-        retryable.sort(key=lambda t: (
-            0 if t.status == 'failed' else 1,
-            t.metadata.get('last_run', t.metadata.get('completed_at', ''))
-        ), reverse=False)
+        # Sort: failed first (by failed_at descending), then completed (by last_run descending)
+        # Tasks without timestamps go to end of their category
+        def sort_key(t):
+            if t.status == 'failed':
+                # Priority 0 = failed tasks come first
+                # For timestamp, invert so newest is first (empty string '' sorts last)
+                failed_at = t.metadata.get('failed_at', '')
+                # Invert timestamp: prepend '-' to make newer sort before older
+                return (0, failed_at if failed_at else '', -1 if failed_at else 0)
+            else:
+                # Priority 1 = completed tasks come second
+                last_run = t.metadata.get('last_run', t.metadata.get('completed_at', ''))
+                return (1, last_run if last_run else '', -1 if last_run else 0)
+
+        # Sort ascending by priority, descending within each priority by timestamp
+        retryable.sort(key=sort_key, reverse=False)
+        # Now manually reverse timestamps within each category
+        failed_tasks = [t for t in retryable if t.status == 'failed']
+        completed_tasks = [t for t in retryable if t.status == 'completed']
+
+        # Sort each group by timestamp descending (newest first)
+        failed_tasks.sort(key=lambda t: t.metadata.get('failed_at', ''), reverse=True)
+        completed_tasks.sort(key=lambda t: t.metadata.get('last_run', t.metadata.get('completed_at', '')), reverse=True)
+
+        # Combine: failed first, then completed
+        retryable = failed_tasks + completed_tasks
 
         return retryable
 
@@ -2417,6 +2479,11 @@ Output: {output[:500]}{"..." if len(output) > 500 else ""}
                 print(DisplayManager.format_success(f"Task completed successfully (exit code: {result.returncode})"))
             else:
                 task.status = 'failed'
+                # Add failed_at timestamp and increment retry_count
+                task.metadata['failed_at'] = datetime.now().isoformat()
+                task.metadata.setdefault('retry_count', 0)
+                task.metadata['retry_count'] += 1
+                task.metadata['failure_reason'] = result.stderr if result.stderr else f"Exit code {result.returncode}"
                 print(DisplayManager.format_error(f"Task failed (exit code: {result.returncode})"))
 
             # Update metadata
@@ -2745,8 +2812,19 @@ Output: {output[:500]}{"..." if len(output) > 500 else ""}
             selected = snapshots[idx]
             confirm = input(f"Delete snapshot '{selected['metadata']['name']}'? [y/N]: ").strip()
             if InputProcessor.parse_confirmation(confirm, default='N'):
-                selected['path'].unlink()
-                print(DisplayManager.format_success(f"Snapshot deleted: {selected['metadata']['name']}"))
+                snapshot_name = selected['metadata']['name']
+                snapshot_path = selected['path']
+                snapshot_path.unlink()
+
+                if hasattr(self, 'debug_logger'):
+                    from .log_types import LogCategory, LogLevel
+                    self.debug_logger.log("Snapshot deleted",
+                                         category=LogCategory.STATE_SAVE,
+                                         level=LogLevel.NORMAL,
+                                         snapshot_name=snapshot_name,
+                                         file_path=str(snapshot_path))
+
+                print(DisplayManager.format_success(f"Snapshot deleted: {snapshot_name}"))
             else:
                 print("Cancelled")
 
@@ -2778,6 +2856,8 @@ Output: {output[:500]}{"..." if len(output) > 500 else ""}
 
     def _list_snapshots(self) -> list:
         """List all snapshots for current target"""
+        from .log_types import LogCategory, LogLevel
+
         snapshots_dir = self._get_snapshots_dir()
         snapshots = []
 
@@ -2791,24 +2871,48 @@ Output: {output[:500]}{"..." if len(output) > 500 else ""}
                     'file': snapshot_file  # Alias for compatibility
                 })
             except json.JSONDecodeError:
+                if hasattr(self, 'debug_logger'):
+                    self.debug_logger.log("Invalid snapshot file",
+                                         category=LogCategory.DATA_PARSE,
+                                         level=LogLevel.VERBOSE,
+                                         file=str(snapshot_file))
                 continue
 
         # Sort by creation time (newest first)
         snapshots.sort(key=lambda x: x['metadata'].get('created', ''), reverse=True)
+
+        if hasattr(self, 'debug_logger'):
+            self.debug_logger.log("Listed snapshots",
+                                 category=LogCategory.STATE_LOAD,
+                                 level=LogLevel.VERBOSE,
+                                 snapshot_count=len(snapshots),
+                                 snapshots_dir=str(snapshots_dir))
 
         return snapshots
 
     def _save_snapshot(self, snapshot_name: str) -> bool:
         """Save current profile as named snapshot"""
         import re
+        from .log_types import LogCategory, LogLevel
 
         # Validate name
         if not snapshot_name or not snapshot_name.strip():
+            if hasattr(self, 'debug_logger'):
+                self.debug_logger.log("Snapshot save rejected: empty name",
+                                     category=LogCategory.STATE_SAVE,
+                                     level=LogLevel.NORMAL)
             print(DisplayManager.format_error("Snapshot name cannot be empty"))
             return False
 
         # Sanitize name
         safe_name = re.sub(r'[^a-zA-Z0-9_-]', '-', snapshot_name.strip())
+
+        if hasattr(self, 'debug_logger'):
+            self.debug_logger.log("Saving snapshot",
+                                 category=LogCategory.STATE_SAVE,
+                                 level=LogLevel.NORMAL,
+                                 original_name=snapshot_name,
+                                 sanitized_name=safe_name)
 
         # Create snapshot
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
@@ -2838,6 +2942,17 @@ Output: {output[:500]}{"..." if len(output) > 500 else ""}
 
         snapshot_path.write_text(json.dumps(snapshot_data, indent=2))
 
+        if hasattr(self, 'debug_logger'):
+            self.debug_logger.log("Snapshot saved successfully",
+                                 category=LogCategory.STATE_SAVE,
+                                 level=LogLevel.NORMAL,
+                                 snapshot_name=safe_name,
+                                 file_path=str(snapshot_path),
+                                 total_tasks=len(all_tasks),
+                                 completed_tasks=len(completed),
+                                 findings=len(self.profile.findings),
+                                 credentials=len(self.profile.credentials))
+
         print(DisplayManager.format_success(f"Snapshot saved: {safe_name}"))
         print(f"  Location: {snapshot_path}")
         print(f"  Tasks: {len(all_tasks)}, Findings: {len(self.profile.findings)}, Credentials: {len(self.profile.credentials)}")
@@ -2846,7 +2961,15 @@ Output: {output[:500]}{"..." if len(output) > 500 else ""}
 
     def _restore_snapshot(self, snapshot_path: Path) -> bool:
         """Restore profile from snapshot"""
+        from .log_types import LogCategory, LogLevel
+
         try:
+            if hasattr(self, 'debug_logger'):
+                self.debug_logger.log("Restoring snapshot",
+                                     category=LogCategory.STATE_LOAD,
+                                     level=LogLevel.NORMAL,
+                                     snapshot_path=str(snapshot_path))
+
             data = json.loads(snapshot_path.read_text())
             profile_data = data['profile_data']
 
@@ -2863,11 +2986,21 @@ Output: {output[:500]}{"..." if len(output) > 500 else ""}
             if hasattr(self, 'checkpoint_dir') and self.checkpoint_dir:
                 self.save_checkpoint()
 
-            print(DisplayManager.format_success("Snapshot restored successfully"))
-
             # Show stats
             all_tasks = self.profile.task_tree.get_all_tasks()
             completed = [t for t in all_tasks if t.status == 'completed']
+
+            if hasattr(self, 'debug_logger'):
+                self.debug_logger.log("Snapshot restored successfully",
+                                     category=LogCategory.STATE_LOAD,
+                                     level=LogLevel.NORMAL,
+                                     snapshot_name=data['snapshot_metadata']['name'],
+                                     total_tasks=len(all_tasks),
+                                     completed_tasks=len(completed),
+                                     findings=len(self.profile.findings),
+                                     credentials=len(self.profile.credentials))
+
+            print(DisplayManager.format_success("Snapshot restored successfully"))
             print(f"  Tasks: {len(all_tasks)} ({len(completed)} completed)")
             print(f"  Findings: {len(self.profile.findings)}")
             print(f"  Credentials: {len(self.profile.credentials)}")
@@ -2875,6 +3008,12 @@ Output: {output[:500]}{"..." if len(output) > 500 else ""}
 
             return True
         except Exception as e:
+            if hasattr(self, 'debug_logger'):
+                self.debug_logger.log("Snapshot restore failed",
+                                     category=LogCategory.STATE_LOAD,
+                                     level=LogLevel.NORMAL,
+                                     error=str(e),
+                                     error_type=type(e).__name__)
             self.error_handler.handle_exception(e, context="snapshot restore")
             input()  # Wait for user to acknowledge
             return False
@@ -3063,6 +3202,13 @@ Output: {output[:500]}{"..." if len(output) > 500 else ""}
         import concurrent.futures
         import time
 
+        # Debug logging: Batch execution start
+        self.debug_logger.log("Batch execution started",
+                             category=LogCategory.EXECUTION_START,
+                             level=LogLevel.NORMAL,
+                             total_steps=len(steps),
+                             total_tasks=sum(len(step) for step in steps))
+
         results = {
             'succeeded': [],
             'failed': [],
@@ -3072,62 +3218,144 @@ Output: {output[:500]}{"..." if len(output) > 500 else ""}
         total_tasks = sum(len(step) for step in steps)
         completed_count = 0
         start_time = time.time()
+        task_times = []  # Track individual task durations for ETA
 
-        for step_num, step_tasks in enumerate(steps, 1):
-            step_size = len(step_tasks)
+        try:
+            for step_num, step_tasks in enumerate(steps, 1):
+                step_size = len(step_tasks)
 
-            print(f"\n[{completed_count+1}-{completed_count+step_size}/{total_tasks}] ", end='')
-
-            if step_size == 1:
-                # Sequential execution
-                task = step_tasks[0]
-                print(f"⏳ {task.name}...")
-
-                success = self._execute_single_task(task)
-
-                if success:
-                    print(f"      ✓ Completed")
-                    results['succeeded'].append(task)
+                # Calculate ETA based on average task time
+                if task_times and completed_count < total_tasks:
+                    avg_time = sum(task_times) / len(task_times)
+                    remaining = total_tasks - completed_count
+                    eta_seconds = int(avg_time * remaining)
+                    eta_str = f" | ETA: {eta_seconds//60}m {eta_seconds%60}s"
                 else:
-                    print(f"      ✗ Failed")
-                    results['failed'].append(task)
+                    eta_str = ""
 
-                completed_count += 1
+                print(f"\n[{completed_count+1}-{completed_count+step_size}/{total_tasks}]{eta_str}")
 
-            else:
-                # Parallel execution
-                print(f"⏳ Running {step_size} tasks in parallel...")
+                if step_size == 1:
+                    # Sequential execution with timing
+                    task = step_tasks[0]
+                    task_start = time.time()
 
-                # Use thread pool for parallel execution
-                with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
-                    # Submit all tasks
-                    futures = {}
-                    for task in step_tasks:
-                        print(f"        ⏳ {task.name}...")
-                        future = executor.submit(self._execute_single_task, task)
-                        futures[future] = task
+                    self.debug_logger.log("Executing task",
+                                         category=LogCategory.EXECUTION_START,
+                                         level=LogLevel.VERBOSE,
+                                         task_id=task.id,
+                                         task_name=task.name,
+                                         mode="sequential")
 
-                    # Wait for completion
-                    for future in concurrent.futures.as_completed(futures):
-                        task = futures[future]
-                        try:
-                            success = future.result()
-                            if success:
-                                print(f"        ✓ {task.name}")
-                                results['succeeded'].append(task)
-                            else:
-                                print(f"        ✗ {task.name}")
-                                results['failed'].append(task)
-                        except Exception as e:
-                            print(f"        ✗ {task.name} (error: {e})")
-                            results['failed'].append(task)
+                    # Use LoadingIndicator spinner
+                    with self.loading_indicator.spinner(f"⏳ {task.name}...") as loader:
+                        success = self._execute_single_task(task)
+                        task_duration = time.time() - task_start
+                        task_times.append(task_duration)
 
-                        completed_count += 1
+                        loader.update(message=f"✓ {task.name} ({int(task_duration)}s)" if success else f"✗ {task.name} (failed)")
+
+                    if success:
+                        print(f"  ✓ {task.name} ({int(task_duration)}s)")
+                        results['succeeded'].append(task)
+                        self.debug_logger.log("Task completed",
+                                             category=LogCategory.EXECUTION_END,
+                                             level=LogLevel.NORMAL,
+                                             task_id=task.id,
+                                             duration=task_duration,
+                                             success=True)
+                    else:
+                        print(f"  ✗ {task.name} (exit code {task.metadata.get('exit_code', 'unknown')})")
+                        results['failed'].append(task)
+                        self.debug_logger.log("Task failed",
+                                             category=LogCategory.EXECUTION_ERROR,
+                                             level=LogLevel.NORMAL,
+                                             task_id=task.id,
+                                             duration=task_duration,
+                                             exit_code=task.metadata.get('exit_code'))
+
+                    completed_count += 1
+
+                else:
+                    # Parallel execution with progress bar
+                    self.debug_logger.log("Parallel execution starting",
+                                         category=LogCategory.EXECUTION_START,
+                                         level=LogLevel.VERBOSE,
+                                         parallel_tasks=step_size,
+                                         max_workers=4)
+
+                    print(f"⏳ Running {step_size} tasks in parallel...")
+
+                    # Use LoadingIndicator progress bar
+                    with self.loading_indicator.progress(total=step_size, message=f"Executing {step_size} tasks...") as loader:
+                        parallel_completed = 0
+
+                        # Use thread pool for parallel execution
+                        with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+                            # Submit all tasks
+                            futures = {}
+                            for task in step_tasks:
+                                future = executor.submit(self._execute_single_task, task)
+                                futures[future] = task
+
+                            # Wait for completion with progress updates
+                            for future in concurrent.futures.as_completed(futures):
+                                task = futures[future]
+                                task_start = getattr(task, '_batch_start_time', time.time())
+                                task_duration = time.time() - task_start
+                                task_times.append(task_duration)
+
+                                try:
+                                    success = future.result()
+                                    parallel_completed += 1
+                                    loader.update(parallel_completed, f"Completed {parallel_completed}/{step_size}")
+
+                                    if success:
+                                        print(f"  ✓ {task.name} ({int(task_duration)}s)")
+                                        results['succeeded'].append(task)
+                                    else:
+                                        print(f"  ✗ {task.name} (failed)")
+                                        results['failed'].append(task)
+                                except Exception as e:
+                                    parallel_completed += 1
+                                    loader.update(parallel_completed, f"Completed {parallel_completed}/{step_size}")
+                                    print(f"  ✗ {task.name} (error: {e})")
+                                    results['failed'].append(task)
+                                    self.debug_logger.log("Task exception",
+                                                         category=LogCategory.EXECUTION_ERROR,
+                                                         level=LogLevel.NORMAL,
+                                                         task_id=task.id,
+                                                         error=str(e))
+
+                                completed_count += 1
+
+        except KeyboardInterrupt:
+            # Graceful Ctrl+C handling
+            print("\n\n⊘ Batch execution interrupted by user")
+            self.debug_logger.log("Batch execution interrupted",
+                                 category=LogCategory.EXECUTION_ERROR,
+                                 level=LogLevel.NORMAL,
+                                 completed=completed_count,
+                                 total=total_tasks)
+
+            # Mark remaining tasks as skipped
+            all_tasks_flat = [t for step in steps for t in step]
+            completed_ids = {t.id for t in results['succeeded']} | {t.id for t in results['failed']}
+            results['skipped'] = [t for t in all_tasks_flat if t.id not in completed_ids]
 
         end_time = time.time()
         elapsed = end_time - start_time
 
         results['total_time'] = elapsed
+
+        # Debug logging: Batch execution complete
+        self.debug_logger.log("Batch execution completed",
+                             category=LogCategory.EXECUTION_END,
+                             level=LogLevel.NORMAL,
+                             succeeded=len(results['succeeded']),
+                             failed=len(results['failed']),
+                             skipped=len(results['skipped']),
+                             total_time=elapsed)
 
         return results
 

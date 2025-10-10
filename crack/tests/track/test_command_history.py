@@ -403,6 +403,132 @@ class TestFilterBySuccess:
         assert len(failed) == 2
 
 
+class TestMetadataTracking:
+    """Test command metadata (exit_code, output_length)"""
+
+    def test_exit_code_tracking(self):
+        """PROVES: Exit codes are tracked"""
+        history = CommandHistory()
+
+        history.add("successful_cmd", source="task", success=True, exit_code=0)
+        history.add("failed_cmd", source="task", success=False, exit_code=127)
+
+        assert history.commands[0]['exit_code'] == 0
+        assert history.commands[1]['exit_code'] == 127
+
+    def test_output_length_tracking(self):
+        """PROVES: Output length is tracked"""
+        history = CommandHistory()
+
+        history.add("nmap scan", source="task", success=True, output_length=1500)
+        history.add("gobuster scan", source="task", success=True, output_length=45000)
+
+        assert history.commands[0]['output_length'] == 1500
+        assert history.commands[1]['output_length'] == 45000
+
+    def test_metadata_defaults(self):
+        """PROVES: Metadata has sensible defaults"""
+        history = CommandHistory()
+
+        history.add("command", source="manual")
+
+        assert 'exit_code' in history.commands[0]
+        assert 'output_length' in history.commands[0]
+        assert history.commands[0]['exit_code'] == 0
+        assert history.commands[0]['output_length'] == 0
+
+
+class TestFilterByStatusMethod:
+    """Test filter_by_status method"""
+
+    def test_filter_by_status_success(self):
+        """PROVES: filter_by_status returns only successful"""
+        history = CommandHistory()
+
+        history.add("cmd1", source="task", success=True)
+        history.add("cmd2", source="task", success=False)
+        history.add("cmd3", source="task", success=True)
+
+        successful = history.filter_by_status(True)
+
+        assert len(successful) == 2
+        assert all(cmd['success'] for cmd in successful)
+
+    def test_filter_by_status_failed(self):
+        """PROVES: filter_by_status returns only failed"""
+        history = CommandHistory()
+
+        history.add("cmd1", source="task", success=True)
+        history.add("cmd2", source="task", success=False)
+        history.add("cmd3", source="task", success=False)
+
+        failed = history.filter_by_status(False)
+
+        assert len(failed) == 2
+        assert all(not cmd['success'] for cmd in failed)
+
+
+class TestExportToFile:
+    """Test export functionality"""
+
+    def test_export_to_file(self, tmp_path):
+        """PROVES: History exports to file"""
+        history = CommandHistory()
+
+        history.add("nmap -p- target", source="task", success=True)
+        history.add("gobuster dir", source="manual", success=True)
+
+        export_file = tmp_path / "history.json"
+        result = history.export_to_file(str(export_file))
+
+        assert result is True
+        assert export_file.exists()
+
+    def test_export_file_content(self, tmp_path):
+        """PROVES: Exported file contains history data"""
+        history = CommandHistory()
+
+        history.add("nmap scan", source="task", success=True)
+
+        export_file = tmp_path / "history.json"
+        history.export_to_file(str(export_file))
+
+        # Read and verify
+        import json
+        with open(export_file, 'r') as f:
+            data = json.load(f)
+
+        assert 'commands' in data
+        assert len(data['commands']) == 1
+        assert data['commands'][0]['command'] == "nmap scan"
+
+
+class TestClearHistory:
+    """Test clear functionality"""
+
+    def test_clear_history(self):
+        """PROVES: clear() removes all commands"""
+        history = CommandHistory()
+
+        history.add("cmd1", source="task", success=True)
+        history.add("cmd2", source="task", success=True)
+        history.add("cmd3", source="task", success=True)
+
+        assert len(history.commands) == 3
+
+        history.clear()
+
+        assert len(history.commands) == 0
+
+    def test_clear_empty_history(self):
+        """PROVES: clear() works on empty history"""
+        history = CommandHistory()
+
+        history.clear()
+
+        assert len(history.commands) == 0
+
+
 # Fixtures
 @pytest.fixture
 def temp_crack_home(tmp_path, monkeypatch):
