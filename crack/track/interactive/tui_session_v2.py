@@ -167,7 +167,7 @@ class TUISessionV2(InteractiveSession):
             live.stop()
 
             # Get input (vim-style hotkeys)
-            self.console.print("\n[dim]Press key (or : for command):[/] ", end="", flush=True)
+            self.console.print("\n[dim]Press key (or : for command):[/] ", end="")
             try:
                 # Read single key
                 key = self.hotkey_handler.read_key()
@@ -269,7 +269,7 @@ class TUISessionV2(InteractiveSession):
             live.stop()
 
             # Get user input (vim-style hotkeys)
-            self.console.print("\n[dim]Press key (or : for command):[/] ", end="", flush=True)
+            self.console.print("\n[dim]Press key (or : for command):[/] ", end="")
             try:
                 self.debug_logger.debug("Waiting for hotkey input...")
 
@@ -377,7 +377,7 @@ class TUISessionV2(InteractiveSession):
             live.stop()
 
             # Get user input (vim-style hotkeys)
-            self.console.print("\n[dim]Press key (b:Back, or : for command):[/] ", end="", flush=True)
+            self.console.print("\n[dim]Press key (b:Back, or : for command):[/] ", end="")
             try:
                 self.debug_logger.debug("Waiting for workspace hotkey input...")
 
