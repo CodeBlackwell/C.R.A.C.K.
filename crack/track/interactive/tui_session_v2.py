@@ -35,6 +35,8 @@ from .panels.dashboard_panel import DashboardPanel
 from .panels.task_workspace_panel import TaskWorkspacePanel
 from .panels.task_list_panel import TaskListPanel
 from .panels.findings_panel import FindingsPanel
+from .panels.template_browser_panel import TemplateBrowserPanel
+from .panels.template_detail_panel import TemplateDetailPanel
 from .overlays.status_overlay import StatusOverlay
 from .overlays.help_overlay import HelpOverlay
 from .overlays.tree_overlay import TreeOverlay
@@ -287,18 +289,42 @@ class TUISessionV2(InteractiveSession):
 
     def _build_layout(self) -> Layout:
         """
-        Build simple 3-panel layout:
-        - Header (top)
-        - Menu (center)
-        - Footer (bottom)
+        Build 3-panel layout with dynamic footer sizing:
+        - Header (top, fixed 3 rows)
+        - Menu (center, flexible)
+        - Footer (bottom, dynamic based on command count)
         """
         layout = Layout()
+
+        # Calculate footer size dynamically
+        footer_size = self._calculate_footer_size()
+
         layout.split_column(
             Layout(name='header', size=3),
             Layout(name='menu'),
-            Layout(name='footer', size=3)
+            Layout(name='footer', size=footer_size)
         )
         return layout
+
+    def _calculate_footer_size(self) -> int:
+        """
+        Calculate footer height based on number of commands
+
+        Returns:
+            Number of rows needed for footer (minimum 3, dynamically sized)
+        """
+        # Count total shortcuts
+        total_shortcuts = len(self.shortcut_handler.shortcuts) + 3  # +3 for TUI-specific
+
+        # 6 commands per row
+        commands_per_row = 6
+        rows_needed = (total_shortcuts + commands_per_row - 1) // commands_per_row
+
+        # Add 2 for panel borders and title
+        footer_height = rows_needed + 2
+
+        # Minimum 3 rows, maximum 10 rows (to leave room for menu)
+        return max(3, min(footer_height, 10))
 
     def _main_loop(self, live: Live, layout: Layout):
         """Main interaction loop"""
@@ -960,7 +986,463 @@ class TUISessionV2(InteractiveSession):
                 live.start()
 
         self.debug_logger.section("FINDINGS LOOP END")
+    def _template_browser_loop(self, live: Live, layout: Layout):
+        """
+        Template browser loop - navigate and select command templates
+
+        Args:
+            live: Rich Live context
+            layout: Layout object
+        """
+        self.debug_logger.section("TEMPLATE BROWSER LOOP START")
+
+        # Initialize state
+        category = 'all'  # Show all templates initially
+        page = 1
+
+        running = True
+        iteration = 0
+
+        while running:
+            iteration += 1
+            self.debug_logger.debug(f"Template browser loop iteration {iteration}")
+
+            # Render template browser panel
+            self.debug_logger.debug(f"Rendering TemplateBrowserPanel (category={category}, page={page})")
+            panel, choices = TemplateBrowserPanel.render(
+                category=category,
+                page=page
+            )
+            self.debug_logger.debug(f"TemplateBrowserPanel returned {len(choices)} choices")
+
+            # Update layout
+            layout['header'].update(self._render_header())
+            layout['menu'].update(panel)
+            layout['footer'].update(self._render_footer())
+
+            # Refresh display
+            self.debug_logger.log_live_action("REFRESH", "template browser display")
+            live.refresh()
+
+            # Stop live to get input
+            self.debug_logger.log_live_action("STOP", "before template browser input")
+            live.stop()
+
+            # Get user input (vim-style hotkeys)
+            self.console.print("\n[dim]Press key (1-12:Select, c:Category, s:Search, b:Back):[/] ", end="")
+            try:
+                self.debug_logger.debug("Waiting for template browser hotkey input...")
+
+                # Read single key
+                key = self.hotkey_handler.read_key()
+
+                if key is None:
+                    # EOF or timeout
+                    self.debug_logger.warning("EOF or timeout during template browser input")
+                    live.start()
+                    running = False
+                    continue
+
+                # Filter out ENTER/newline (treat as no input)
+                if key in ['\r', '\n']:
+                    self.debug_logger.debug(f"ENTER key detected (ord={ord(key)}), ignoring")
+                    user_input = ''
+                # Handle : command mode
+                elif key == ':':
+                    self.debug_logger.debug("Command mode activated in template browser")
+                    user_input = self.hotkey_handler.read_command(":")
+                # Handle multi-digit numbers (buffer with timeout)
+                elif key.isdigit():
+                    self.debug_logger.debug(f"Digit detected in template browser: {key}, checking for multi-digit")
+                    user_input = self.hotkey_handler.read_number(key, timeout=0.5)
+                else:
+                    # Single-key shortcut
+                    user_input = key
+
+                self.debug_logger.log_user_input(user_input, context="template_browser_hotkey")
+
+            except (EOFError, KeyboardInterrupt):
+                self.debug_logger.warning("EOF or interrupt during template browser input")
+                live.start()
+                running = False
+                continue
+
+            # Resume live
+            self.debug_logger.log_live_action("START", "after template browser input")
+            live.start()
+
+            # Process input
+            if not user_input:
+                self.debug_logger.debug("Empty input, continuing loop")
+                continue
+
+            self.debug_logger.debug(f"Processing template browser input: '{user_input}'")
+
+            # Handle shortcuts
+            if user_input.lower() == 'b':
+                self.debug_logger.info("Back to dashboard requested")
+                self.debug_logger.log_state_transition("TEMPLATE_BROWSER", "DASHBOARD", "back button pressed")
+                running = False
+                continue
+
+            elif user_input.lower() == 'c':
+                self.debug_logger.info("Category filter requested")
+                live.stop()
+
+                self.console.print("\n[bold cyan]Select Category:[/]")
+                self.console.print("  [bright_white]1.[/] All templates")
+                self.console.print("  [bright_white]2.[/] Recon (nmap, service detection)")
+                self.console.print("  [bright_white]3.[/] Web (gobuster, nikto, whatweb)")
+                self.console.print("  [bright_white]4.[/] Enumeration (SMB, LDAP, etc.)")
+                self.console.print("  [bright_white]5.[/] Exploitation (shells, exploits)")
+                self.console.print()
+
+                cat_choice = input("Choice [1-5]: ").strip()
+                category_map = {
+                    '1': 'all',
+                    '2': 'recon',
+                    '3': 'web',
+                    '4': 'enumeration',
+                    '5': 'exploitation'
+                }
+
+                if cat_choice in category_map:
+                    category = category_map[cat_choice]
+                    page = 1  # Reset to first page when changing category
+                    self.debug_logger.info(f"Category changed to: {category}")
+                else:
+                    self.console.print("[red]Invalid choice[/]")
+
+                self.console.print("[dim]Press Enter to continue...[/]")
+                input()
+                live.start()
+                continue
+
+            elif user_input.lower() == 's':
+                self.debug_logger.info("Search requested (placeholder)")
+                live.stop()
+                self.console.print("\n[yellow]Search not yet implemented[/]")
+                self.console.print("[dim]Press Enter to continue...[/]")
+                input()
+                live.start()
+                continue
+
+            elif user_input.lower() == 'n':
+                self.debug_logger.info("Next page requested")
+                # Find next page choice
+                next_choice = next((c for c in choices if c.get('action') == 'next_page'), None)
+                if next_choice:
+                    page = next_choice['page']
+                    self.debug_logger.debug(f"Moving to page {page}")
+                else:
+                    self.debug_logger.debug("No next page available")
+                continue
+
+            elif user_input.lower() == 'p':
+                self.debug_logger.info("Previous page requested")
+                # Find prev page choice
+                prev_choice = next((c for c in choices if c.get('action') == 'prev_page'), None)
+                if prev_choice:
+                    page = prev_choice['page']
+                    self.debug_logger.debug(f"Moving to page {page}")
+                else:
+                    self.debug_logger.debug("No previous page available")
+                continue
+
+            # Try to parse as template selection number
+            try:
+                choice_num = int(user_input)
+                self.debug_logger.debug(f"Parsed as choice number: {choice_num}")
+
+                if 1 <= choice_num <= len(choices):
+                    choice = choices[choice_num - 1]
+                    choice_action = choice.get('action')
+                    self.debug_logger.info(f"Template browser choice selected: {choice_action}")
+
+                    # Handle select template action
+                    if choice_action == 'select':
+                        template = choice.get('template')
+                        if template:
+                            self.debug_logger.info(f"Navigating to template detail for: {template.name}")
+                            self.debug_logger.log_state_transition("TEMPLATE_BROWSER", "TEMPLATE_DETAIL", f"selected: {template.name}")
+
+                            # Navigate to template detail
+                            self._template_detail_loop(live, layout, template)
+
+                            self.debug_logger.log_state_transition("TEMPLATE_DETAIL", "TEMPLATE_BROWSER", "returned from detail")
+                            self.debug_logger.info("Returned from template detail to browser")
+                            # Stay in browser loop, don't exit
+                        else:
+                            self.debug_logger.warning("select choice has no template object")
+
+                    else:
+                        self.debug_logger.warning(f"Unhandled action: {choice_action}")
+
+                else:
+                    self.debug_logger.warning(f"Choice {choice_num} out of range (1-{len(choices)})")
+
+                    live.stop()
+                    self.console.print(f"\n[red]Invalid choice: {choice_num}[/]")
+                    self.console.print(f"[dim]Please choose 1-{len(choices)} or 'b' for back. Press Enter...[/]")
+                    input()
+                    live.start()
+
+            except ValueError as e:
+                self.debug_logger.warning(f"Failed to parse template browser input: {e}")
+
+                live.stop()
+                self.console.print(f"\n[red]Invalid input: {user_input}[/]")
+                self.console.print(f"[dim]Please enter a number or shortcut. Press Enter...[/]")
+                input()
+                live.start()
+
+        self.debug_logger.section("TEMPLATE BROWSER LOOP END")
         self.debug_logger.info("Returning to dashboard")
+
+    def _template_detail_loop(self, live: Live, layout: Layout, template):
+        """
+        Template detail loop - fill variables and execute template
+
+        Args:
+            live: Rich Live context
+            layout: Layout object
+            template: CommandTemplate instance
+        """
+        self.debug_logger.section("TEMPLATE DETAIL LOOP START")
+        self.debug_logger.info(f"Template: {template.name}")
+
+        # Initialize state
+        filled_values = None  # Will be filled when user completes form
+        execution_result = None  # Will be set after execution
+
+        running = True
+        iteration = 0
+
+        while running:
+            iteration += 1
+            self.debug_logger.debug(f"Template detail loop iteration {iteration}")
+
+            # Render template detail panel
+            self.debug_logger.debug(f"Rendering TemplateDetailPanel (filled={filled_values is not None}, executed={execution_result is not None})")
+            panel, choices = TemplateDetailPanel.render(
+                template=template,
+                filled_values=filled_values,
+                execution_result=execution_result
+            )
+            self.debug_logger.debug(f"TemplateDetailPanel returned {len(choices)} choices")
+
+            # Update layout
+            layout['header'].update(self._render_header())
+            layout['menu'].update(panel)
+            layout['footer'].update(self._render_footer())
+
+            # Refresh display
+            self.debug_logger.log_live_action("REFRESH", "template detail display")
+            live.refresh()
+
+            # Stop live to get input
+            self.debug_logger.log_live_action("STOP", "before template detail input")
+            live.stop()
+
+            # Get user input (vim-style hotkeys)
+            self.console.print("\n[dim]Press key (see menu for options):[/] ", end="")
+            try:
+                self.debug_logger.debug("Waiting for template detail hotkey input...")
+
+                # Read single key
+                key = self.hotkey_handler.read_key()
+
+                if key is None:
+                    # EOF or timeout
+                    self.debug_logger.warning("EOF or timeout during template detail input")
+                    live.start()
+                    running = False
+                    continue
+
+                # Filter out ENTER/newline (treat as no input)
+                if key in ['\r', '\n']:
+                    self.debug_logger.debug(f"ENTER key detected (ord={ord(key)}), ignoring")
+                    user_input = ''
+                # Handle : command mode
+                elif key == ':':
+                    self.debug_logger.debug("Command mode activated in template detail")
+                    user_input = self.hotkey_handler.read_command(":")
+                else:
+                    # Single-key shortcut
+                    user_input = key
+
+                self.debug_logger.log_user_input(user_input, context="template_detail_hotkey")
+
+            except (EOFError, KeyboardInterrupt):
+                self.debug_logger.warning("EOF or interrupt during template detail input")
+                live.start()
+                running = False
+                continue
+
+            # Resume live
+            self.debug_logger.log_live_action("START", "after template detail input")
+            live.start()
+
+            # Process input
+            if not user_input:
+                self.debug_logger.debug("Empty input, continuing loop")
+                continue
+
+            self.debug_logger.debug(f"Processing template detail input: '{user_input}'")
+
+            # Handle shortcuts
+            if user_input.lower() == 'b':
+                self.debug_logger.info("Back to template browser requested")
+                self.debug_logger.log_state_transition("TEMPLATE_DETAIL", "TEMPLATE_BROWSER", "back button pressed")
+                running = False
+                continue
+
+            elif user_input.lower() == 'f':
+                self.debug_logger.info("Fill variables requested")
+                live.stop()
+
+                # Collect variable values
+                filled_values = {}
+                self.console.print("\n[bold cyan]Fill Template Variables:[/]\n")
+
+                for var in template.variables:
+                    var_name = var['name']
+                    var_desc = var.get('description', '')
+                    var_example = var.get('example', '')
+                    var_required = var.get('required', True)
+
+                    # Build prompt
+                    prompt = f"  [cyan]{var_name}[/]"
+                    if var_desc:
+                        prompt += f" ({var_desc})"
+                    if var_example:
+                        prompt += f" [dim]e.g., {var_example}[/]"
+                    if not var_required:
+                        prompt += " [dim](optional)[/]"
+                    prompt += ": "
+
+                    self.console.print(prompt, end="")
+                    value = input().strip()
+
+                    # Validate required fields
+                    if not value and var_required:
+                        self.console.print(f"[red]✗ {var_name} is required[/]")
+                        self.console.print("[dim]Press Enter to try again...[/]")
+                        input()
+                        filled_values = None
+                        break
+
+                    if value:
+                        filled_values[var_name] = value
+
+                if filled_values:
+                    self.console.print("\n[green]✓ Variables filled successfully[/]")
+                    self.console.print("[dim]Press Enter to continue...[/]")
+                    input()
+
+                live.start()
+                continue
+
+            elif user_input.lower() == 'e':
+                self.debug_logger.info("Execute requested")
+
+                if not filled_values:
+                    live.stop()
+                    self.console.print("\n[red]Cannot execute: variables not filled[/]")
+                    self.console.print("[dim]Press 'f' to fill variables first. Press Enter...[/]")
+                    input()
+                    live.start()
+                    continue
+
+                # Execute command
+                final_command = template.fill(filled_values)
+                self.debug_logger.info(f"Executing template command: {final_command}")
+
+                live.stop()
+                self.console.print(f"\n[bold cyan]Executing:[/] [green]{final_command}[/]\n")
+
+                import time
+                start_time = time.time()
+
+                try:
+                    result = subprocess.run(final_command, shell=True, capture_output=True, text=True)
+                    elapsed = time.time() - start_time
+
+                    execution_result = {
+                        'exit_code': result.returncode,
+                        'elapsed': elapsed,
+                        'output_lines': (result.stdout + result.stderr).split('\n') if result.stdout or result.stderr else []
+                    }
+
+                    if result.returncode == 0:
+                        self.console.print(f"\n[green]✓ Command executed successfully ({elapsed:.2f}s)[/]")
+                    else:
+                        self.console.print(f"\n[yellow]Command completed with exit code {result.returncode} ({elapsed:.2f}s)[/]")
+
+                    # Log to profile
+                    self.profile.add_note(
+                        note=f"Template: {template.name}\nCommand: {final_command}\nExit code: {result.returncode}",
+                        source="scan templates"
+                    )
+                    self.profile.save()
+
+                except Exception as e:
+                    self.console.print(f"\n[red]✗ Execution failed: {e}[/]")
+                    execution_result = {
+                        'exit_code': 1,
+                        'elapsed': time.time() - start_time,
+                        'output_lines': [f"Error: {str(e)}"]
+                    }
+
+                self.console.print("[dim]Press Enter to continue...[/]")
+                input()
+                live.start()
+                continue
+
+            elif user_input.lower() == 'c':
+                self.debug_logger.info("Copy to clipboard requested (placeholder)")
+                live.stop()
+                self.console.print("\n[yellow]Copy to clipboard not yet implemented[/]")
+                self.console.print("[dim]Press Enter to continue...[/]")
+                input()
+                live.start()
+                continue
+
+            elif user_input.lower() == 'r':
+                self.debug_logger.info("Reset requested")
+                filled_values = None
+                execution_result = None
+                self.debug_logger.debug("State reset")
+                continue
+
+            elif user_input.lower() == 'v':
+                self.debug_logger.info("View full output requested (placeholder)")
+                live.stop()
+                self.console.print("\n[yellow]Full output viewer not yet implemented[/]")
+                self.console.print("[dim]Use 'o' shortcut from dashboard to view execution history. Press Enter...[/]")
+                input()
+                live.start()
+                continue
+
+            elif user_input.lower() == 's':
+                self.debug_logger.info("Save output requested (placeholder)")
+                live.stop()
+                self.console.print("\n[yellow]Save output not yet implemented[/]")
+                self.console.print("[dim]Press Enter to continue...[/]")
+                input()
+                live.start()
+                continue
+
+            else:
+                self.debug_logger.warning(f"Unknown template detail input: {user_input}")
+                live.stop()
+                self.console.print(f"\n[red]Invalid input: {user_input}[/]")
+                self.console.print(f"[dim]Press Enter to continue...[/]")
+                input()
+                live.start()
+
+        self.debug_logger.section("TEMPLATE DETAIL LOOP END")
+        self.debug_logger.info("Returning to template browser")
 
     def _execute_task_streaming(
         self,
@@ -1166,10 +1648,106 @@ class TUISessionV2(InteractiveSession):
         return panel
 
     def _render_footer(self) -> Panel:
-        """Render footer with vim-style shortcuts"""
-        shortcuts = "[cyan]n[/]:Next | [cyan]l[/]:List | [cyan]f[/]:Findings | [cyan]o[/]:Output | [cyan]p[/]:Progress | [cyan]h[/]:Help | [cyan]s[/]:Status | [cyan]t[/]:Tree | [cyan]q[/]:Quit | [dim]:!cmd[/] | [dim]:[/]cmd"
+        """
+        Render footer with ALL shortcuts dynamically organized
+
+        Displays:
+        - Workflow-critical commands first (hardcoded priority)
+        - Remaining commands alphabetically sorted
+        - 6 commands per row for better density
+        - 100% dynamically extracted from ShortcutHandler
+        - Dynamically sized to fit all commands
+        """
+        from rich.table import Table
+
+        # Create table for multi-row layout (6 columns for better density)
+        table = Table.grid(padding=(0, 1), expand=True)
+        for _ in range(6):
+            table.add_column(style="cyan", ratio=1)
+
+        # Priority commands (OSCP workflow-critical, in order of importance)
+        # Mix of ShortcutHandler and TUI-specific commands
+        priority_order_handler = [
+            'n',    # Execute next task (most common)
+            'h',    # Help
+            's',    # Status
+            't',    # Tree
+            'x',    # Template browser
+            'alt',  # Alternative commands
+            'ch',   # Command history
+            'qn',   # Quick note
+            'pd',   # Progress dashboard
+            'q',    # Quit
+            'b',    # Back
+        ]
+
+        # TUI-specific priority commands (ONLY those not in ShortcutHandler)
+        # Note: l, f, o, i, d are TUI-only (not in ShortcutHandler)
+        # x and pd are in ShortcutHandler (added to priority_order_handler above)
+        priority_tui_specific = [
+            ('l', 'Browse all tasks'),
+            ('f', 'Browse findings'),
+            ('o', 'Output overlay'),
+            ('i', 'Import scan results'),
+            ('d', 'Document finding'),
+        ]
+
+        # Build shortcuts list
+        all_shortcuts = []
+        remaining_shortcuts = {}
+
+        # 1. Add priority commands from ShortcutHandler first
+        for key in priority_order_handler:
+            if key in self.shortcut_handler.shortcuts:
+                description, _ = self.shortcut_handler.shortcuts[key]
+                if len(key) == 1:
+                    formatted = f"[cyan]{key}[/]:{description}"
+                else:
+                    formatted = f"[cyan]:{key}[/]:{description}"
+                all_shortcuts.append(formatted)
+
+        # 1b. Add TUI-specific priority commands
+        for key, description in priority_tui_specific:
+            formatted = f"[cyan]{key}[/]:{description}"
+            all_shortcuts.append(formatted)
+
+        # 2. Collect remaining shortcuts (not in priority list)
+        for key, (description, _) in self.shortcut_handler.shortcuts.items():
+            if key not in priority_order_handler:
+                if len(key) == 1:
+                    formatted = f"[cyan]{key}[/]:{description}"
+                else:
+                    formatted = f"[cyan]:{key}[/]:{description}"
+                remaining_shortcuts[key] = formatted
+
+        # 3. Add remaining shortcuts alphabetically
+        for key in sorted(remaining_shortcuts.keys()):
+            all_shortcuts.append(remaining_shortcuts[key])
+
+        # 4. Add remaining TUI-specific commands (not in priority, not in ShortcutHandler)
+        all_shortcuts.extend([
+            "[dim]:!cmd[/]:Console injection",
+            "[dim]1-9[/]:Menu select"
+        ])
+        # Note: l, f, o, i, d already added in priority section (TUI-specific)
+        # x and pd are in priority section via ShortcutHandler
+
+        # Split into rows of 6 columns
+        rows = []
+        for i in range(0, len(all_shortcuts), 6):
+            chunk = all_shortcuts[i:i+6]
+            # Pad with empty strings if needed
+            while len(chunk) < 6:
+                chunk.append("")
+            rows.append(chunk)
+
+        # Add all rows to table
+        for row in rows:
+            table.add_row(*row)
+
         return Panel(
-            shortcuts,
+            table,
+            title="[bold]All Commands (h:Help for details)[/]",
             border_style="cyan",
             box=box.HEAVY
         )
@@ -1218,6 +1796,17 @@ class TUISessionV2(InteractiveSession):
         if user_input.lower() == 'o':
             self.debug_logger.info("Output overlay requested")
             self._show_output()
+            return None
+
+        # Template browser shortcut
+        if user_input.lower() == 'x':
+            self.debug_logger.info("Template browser requested")
+            self.debug_logger.log_state_transition("DASHBOARD", "TEMPLATE_BROWSER", "x shortcut pressed")
+
+            # Navigate to template browser
+            self._template_browser_loop(self._live, self._layout)
+
+            self.debug_logger.log_state_transition("TEMPLATE_BROWSER", "DASHBOARD", "returned from template browser")
             return None
 
         # Letter hotkeys for Dashboard actions
@@ -1361,11 +1950,26 @@ class TUISessionV2(InteractiveSession):
         try:
             help_panel = HelpOverlay.render(shortcut_handler=self.shortcut_handler)
             self.console.print(help_panel)
-            input()  # Wait for keypress
+            self.console.print("\n[dim]Press any key to dismiss (or 'h' to toggle off)...[/] ", end="")
+            dismiss_key = self.hotkey_handler.read_key()  # Single keypress (consistent with TUI)
+            self.debug_logger.log("Help overlay dismissed", category=LogCategory.UI_PANEL, level=LogLevel.NORMAL,
+                                 dismiss_key=dismiss_key)
         finally:
             # Resume Live context
             if hasattr(self, '_live'):
                 self._live.start()
+
+        # Toggle behavior: pressing 'h' again just closes (no re-execution)
+        if dismiss_key and dismiss_key.lower() == 'h':
+            self.debug_logger.log("Toggle dismiss: same key pressed, overlay closed",
+                                 category=LogCategory.UI_INPUT, level=LogLevel.VERBOSE, key=dismiss_key)
+            return  # Just close, don't re-execute
+
+        # Smart dismiss: if dismiss key is a valid command, execute it
+        if dismiss_key and dismiss_key not in ['\r', '\n', ' ']:
+            self.debug_logger.log("Smart dismiss: processing dismiss key as command",
+                                 category=LogCategory.UI_INPUT, level=LogLevel.VERBOSE, key=dismiss_key)
+            self._process_input(dismiss_key)
 
     def _show_status(self):
         """Show status overlay"""
@@ -1376,11 +1980,26 @@ class TUISessionV2(InteractiveSession):
         try:
             status_panel = StatusOverlay.render(self.profile)
             self.console.print(status_panel)
-            input()  # Wait for keypress
+            self.console.print("\n[dim]Press any key to dismiss (or 's' to toggle off)...[/] ", end="")
+            dismiss_key = self.hotkey_handler.read_key()  # Single keypress (consistent with TUI)
+            self.debug_logger.log("Status overlay dismissed", category=LogCategory.UI_PANEL, level=LogLevel.NORMAL,
+                                 dismiss_key=dismiss_key)
         finally:
             # Resume Live context
             if hasattr(self, '_live'):
                 self._live.start()
+
+        # Toggle behavior: pressing 's' again just closes (no re-execution)
+        if dismiss_key and dismiss_key.lower() == 's':
+            self.debug_logger.log("Toggle dismiss: same key pressed, overlay closed",
+                                 category=LogCategory.UI_INPUT, level=LogLevel.VERBOSE, key=dismiss_key)
+            return  # Just close, don't re-execute
+
+        # Smart dismiss: if dismiss key is a valid command, execute it
+        if dismiss_key and dismiss_key not in ['\r', '\n', ' ']:
+            self.debug_logger.log("Smart dismiss: processing dismiss key as command",
+                                 category=LogCategory.UI_INPUT, level=LogLevel.VERBOSE, key=dismiss_key)
+            self._process_input(dismiss_key)
 
     def _show_tree(self):
         """Show task tree overlay"""
@@ -1391,11 +2010,26 @@ class TUISessionV2(InteractiveSession):
         try:
             tree_panel = TreeOverlay.render(self.profile)
             self.console.print(tree_panel)
-            input()  # Wait for keypress
+            self.console.print("\n[dim]Press any key to dismiss (or 't' to toggle off)...[/] ", end="")
+            dismiss_key = self.hotkey_handler.read_key()  # Single keypress (consistent with TUI)
+            self.debug_logger.log("Tree overlay dismissed", category=LogCategory.UI_PANEL, level=LogLevel.NORMAL,
+                                 dismiss_key=dismiss_key)
         finally:
             # Resume Live context
             if hasattr(self, '_live'):
                 self._live.start()
+
+        # Toggle behavior: pressing 't' again just closes (no re-execution)
+        if dismiss_key and dismiss_key.lower() == 't':
+            self.debug_logger.log("Toggle dismiss: same key pressed, overlay closed",
+                                 category=LogCategory.UI_INPUT, level=LogLevel.VERBOSE, key=dismiss_key)
+            return  # Just close, don't re-execute
+
+        # Smart dismiss: if dismiss key is a valid command, execute it
+        if dismiss_key and dismiss_key not in ['\r', '\n', ' ']:
+            self.debug_logger.log("Smart dismiss: processing dismiss key as command",
+                                 category=LogCategory.UI_INPUT, level=LogLevel.VERBOSE, key=dismiss_key)
+            self._process_input(dismiss_key)
 
     def _show_output(self):
         """Show output overlay with interactive navigation"""
@@ -1465,6 +2099,7 @@ class TUISessionV2(InteractiveSession):
         if hasattr(self, '_live'):
             self._live.stop()
 
+        dismiss_key = None  # Initialize for smart dismiss logic
         try:
             # Calculate progress metrics
             all_tasks = self.profile.task_tree.get_all_tasks()
@@ -1538,16 +2173,30 @@ class TUISessionV2(InteractiveSession):
 
             # Display and wait
             self.console.print(panel)
-            input()  # Wait for keypress
+            self.console.print("\n[dim]Press any key to dismiss (or 'p' to toggle off)...[/] ", end="")
+            dismiss_key = self.hotkey_handler.read_key()  # Single keypress (consistent with TUI)
 
             # Strategic chokepoint: Dashboard closed
             self.debug_logger.log("Progress dashboard closed",
                                  category=LogCategory.UI_PANEL,
-                                 level=LogLevel.NORMAL)
+                                 level=LogLevel.NORMAL,
+                                 dismiss_key=dismiss_key)
         finally:
             # Resume Live context
             if hasattr(self, '_live'):
                 self._live.start()
+
+        # Toggle behavior: pressing 'p' again just closes (no re-execution)
+        if dismiss_key and dismiss_key.lower() == 'p':
+            self.debug_logger.log("Toggle dismiss: same key pressed, overlay closed",
+                                 category=LogCategory.UI_INPUT, level=LogLevel.VERBOSE, key=dismiss_key)
+            return  # Just close, don't re-execute
+
+        # Smart dismiss: if dismiss key is a valid command, execute it
+        if dismiss_key and dismiss_key not in ['\r', '\n', ' ']:
+            self.debug_logger.log("Smart dismiss: processing dismiss key as command",
+                                 category=LogCategory.UI_INPUT, level=LogLevel.VERBOSE, key=dismiss_key)
+            self._process_input(dismiss_key)
 
     def _check_interrupted_tasks_tui(self):
         """

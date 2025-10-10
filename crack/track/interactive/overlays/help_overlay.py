@@ -95,10 +95,19 @@ class HelpOverlay:
 
         Returns:
             Formatted help text string
+
+        Dynamic approach:
+        - Shows ALL shortcuts from ShortcutHandler
+        - Organizes known shortcuts by category
+        - Auto-includes any uncategorized shortcuts
+        - No shortcuts are hidden
         """
         lines = ["[bold cyan]KEYBOARD SHORTCUTS[/]\n"]
 
-        # Organize shortcuts by category
+        # Track which shortcuts have been shown
+        shown_shortcuts = set()
+
+        # Organize shortcuts by category (for known shortcuts)
         for category_key, category_info in cls.CATEGORIES.items():
             title = category_info['title']
             icon = category_info['icon']
@@ -111,11 +120,13 @@ class HelpOverlay:
             for key in category_shortcuts:
                 if key in shortcuts:
                     description, _ = shortcuts[key]
+                    shown_shortcuts.add(key)
+
                     # Format with color based on key length
                     if len(key) == 1:
                         formatted_key = f"[cyan]{key}[/]"
                     else:
-                        formatted_key = f"[cyan]{key}[/]"
+                        formatted_key = f"[cyan]:{key}[/]"
 
                     # Highlight dangerous operations
                     if category_key == 'danger':
@@ -125,23 +136,40 @@ class HelpOverlay:
 
             lines.append("")  # Blank line between categories
 
+        # AUTO-INCLUDE any shortcuts not in categories (dynamic discovery)
+        uncategorized = []
+        for key, (description, _) in sorted(shortcuts.items()):
+            if key not in shown_shortcuts:
+                if len(key) == 1:
+                    formatted_key = f"[cyan]{key}[/]"
+                else:
+                    formatted_key = f"[cyan]:{key}[/]"
+                uncategorized.append(f"  {formatted_key} - {description}")
+
+        if uncategorized:
+            lines.append("[bold yellow]📦 Other Commands:[/]")
+            lines.extend(uncategorized)
+            lines.append("")
+
         # Add TUI-specific shortcuts (not in ShortcutHandler)
         lines.append("[bold yellow]🖥️  TUI-Specific Shortcuts:[/]")
         lines.append("  [cyan]:[/] - Command mode (vim-style)")
         lines.append("  [cyan]:!cmd[/] - Console injection (execute command)")
         lines.append("  [cyan]o[/] - Output overlay (view task execution history)")
+        lines.append("  [cyan]p[/] - Progress dashboard (visual metrics)")
         lines.append("  [cyan]1-9[/] - Select numbered menu option")
         lines.append("")
 
         # Add note about multi-character shortcuts
         lines.append("[bold yellow]📝 Multi-Character Shortcuts:[/]")
-        lines.append("  Multi-char shortcuts (ch, qn, pl, alt, etc.) must use :[/]")
+        lines.append("  Multi-char shortcuts (ch, qn, pl, alt, etc.) must use [cyan]:[/] command mode")
         lines.append("  Examples: [cyan]:ch[/] [cyan]:qn[/] [cyan]:pl[/] [cyan]:alt[/]")
         lines.append("  Single-char shortcuts work instantly: [cyan]s[/] [cyan]t[/] [cyan]h[/] [cyan]q[/]")
         lines.append("")
 
-        # Add footer
-        lines.append("[dim]Press any key to close this help screen[/]")
+        # Add footer with total count
+        total_shortcuts = len(shortcuts) + 5  # +5 for TUI-specific
+        lines.append(f"[dim]Total: {total_shortcuts} commands available[/]")
 
         return "\n".join(lines)
 
@@ -222,17 +250,9 @@ class HelpOverlay:
   • [cyan]--debug-categories=UI:VERBOSE[/] - Filter by category
   • [cyan]--debug-output=both[/] - Stream to console too
   • Categories: UI, STATE, EXECUTION, PERFORMANCE
-  • Levels: MINIMAL, NORMAL, VERBOSE, TRACE
+  • Levels: MINIMAL, NORMAL, VERBOSE, TRACE"""
 
-[dim]Press any key to close this help screen[/]"""
-
-        return Panel(
-            help_text,
-            title="[bold blue]CRACK Track TUI - Help[/]",
-            subtitle="[dim]For full documentation: track/docs/[/]",
-            border_style="blue",
-            box=box.DOUBLE
-        )
+        return help_text
 
     @classmethod
     def render_dashboard_help(cls) -> Panel:
