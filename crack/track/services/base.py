@@ -90,6 +90,44 @@ class ServicePlugin(ABC):
         """
         return []
 
+    def detect_from_finding(self, finding: Dict[str, Any], profile: Optional['TargetProfile'] = None) -> float:
+        """Determine if this plugin should activate based on a finding
+
+        This method enables context-aware plugin activation beyond port-based detection.
+        Plugins should override this method if they want to activate based on findings
+        (e.g., shell obtained, OS detected, CMS discovered, credentials found).
+
+        Args:
+            finding: Finding dictionary with keys:
+                - type: Finding type (e.g., 'shell_obtained', 'cms_wordpress')
+                - description: Human-readable description
+                - source: Tool/method that discovered the finding
+                - timestamp: When the finding was made
+            profile: Optional TargetProfile for additional context (OS, services, etc.)
+
+        Returns:
+            Confidence score (0-100) that this plugin should handle this finding:
+            - 0: Cannot handle this finding (default)
+            - 1-30: Low confidence
+            - 31-70: Medium confidence
+            - 71-90: High confidence
+            - 91-100: Perfect match
+
+        Examples:
+            # Post-exploit plugin activates on shell obtained
+            if finding.get('type') == 'shell_obtained':
+                return 100
+
+            # WordPress plugin activates on CMS detection
+            if finding.get('type') == 'cms_wordpress':
+                return 95
+
+        Note:
+            Default implementation returns 0 (plugins opt-in to finding-based activation).
+            This ensures backward compatibility with existing plugins.
+        """
+        return 0
+
     def get_manual_alternatives(self, task_id: str) -> List[str]:
         """Get manual alternatives for automated tasks (OSCP exam preparation)
 

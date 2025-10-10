@@ -42,6 +42,43 @@ class ADAttacksPlugin(ServicePlugin):
         """Manual trigger only - returns False for auto-detection"""
         return False
 
+    def detect_from_finding(self, finding: Dict[str, Any], profile=None) -> float:
+        """Activate AD attacks when AD user/admin found, Kerberoastable users detected
+
+        Returns:
+            Confidence score (0-100):
+            - 100: Perfect match (kerberoastable_user, as_rep_roastable)
+            - 95: Very high (ad_admin_found)
+            - 85: High (ad_user_found)
+            - 75: Medium (domain_joined)
+            - 0: No match
+        """
+        from ..core.constants import FindingTypes
+        import logging
+        logger = logging.getLogger(__name__)
+
+        finding_type = finding.get('type', '').lower()
+        description = finding.get('description', '').lower()
+
+        # Perfect match - Kerberoastable
+        if finding_type in [FindingTypes.KERBEROASTABLE_USER, FindingTypes.AS_REP_ROASTABLE]:
+            logger.info("AD attacks activating: Kerberoast opportunity")
+            return 100
+
+        # High - AD admin found
+        if finding_type == FindingTypes.AD_ADMIN_FOUND:
+            return 95
+
+        # High - AD user found
+        if finding_type == FindingTypes.AD_USER_FOUND:
+            return 85
+
+        # Medium - Domain membership
+        if finding_type == FindingTypes.DOMAIN_JOINED:
+            return 75
+
+        return 0
+
     def get_task_tree(self, target: str, port: int, service_info: Dict[str, Any]) -> Dict[str, Any]:
         """Generate Active Directory attack task tree"""
         domain = service_info.get('domain', 'DOMAIN.LOCAL')

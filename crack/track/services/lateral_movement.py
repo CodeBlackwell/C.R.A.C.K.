@@ -44,6 +44,44 @@ class LateralMovementPlugin(ServicePlugin):
         """
         return False
 
+    def detect_from_finding(self, finding: Dict[str, Any], profile=None) -> float:
+        """Activate lateral movement on credentials found, pivot opportunity
+
+        Returns:
+            Confidence score (0-100):
+            - 100: Perfect match (pivot_opportunity)
+            - 90: Very high (credential_found, ssh_credential, database_credential)
+            - 85: High (network_share_found, writable_share)
+            - 70: Medium (domain_joined - potential lateral movement)
+            - 0: No match
+        """
+        from ..core.constants import FindingTypes
+        import logging
+        logger = logging.getLogger(__name__)
+
+        finding_type = finding.get('type', '').lower()
+        description = finding.get('description', '').lower()
+
+        # Perfect match - Pivot opportunity
+        if finding_type == FindingTypes.PIVOT_OPPORTUNITY:
+            logger.info("Lateral movement activating: Pivot detected")
+            return 100
+
+        # High - Credentials found
+        if finding_type in [FindingTypes.CREDENTIAL_FOUND, FindingTypes.SSH_CREDENTIAL,
+                           FindingTypes.DATABASE_CREDENTIAL]:
+            return 90
+
+        # High - Network share
+        if finding_type in [FindingTypes.NETWORK_SHARE_FOUND, FindingTypes.WRITABLE_SHARE]:
+            return 85
+
+        # Medium - Domain joined (potential lateral movement)
+        if finding_type == FindingTypes.DOMAIN_JOINED:
+            return 70
+
+        return 0
+
     def get_task_tree(self, target: str, port: int, service_info: Dict[str, Any]) -> Dict[str, Any]:
         """Generate Windows lateral movement task tree"""
 

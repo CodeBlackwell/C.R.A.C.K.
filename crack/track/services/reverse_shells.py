@@ -43,6 +43,44 @@ class ReverseShellPlugin(ServicePlugin):
         """This plugin is manually triggered, not auto-detected"""
         return False
 
+    def detect_from_finding(self, finding: Dict[str, Any], profile=None) -> int:
+        """
+        Detect if reverse shells plugin should activate based on finding.
+
+        Args:
+            finding: Finding dictionary with 'type' and 'description'
+            profile: Optional TargetProfile for additional context
+
+        Returns:
+            Confidence score 0-100 (0 = don't activate, 100 = perfect match)
+        """
+        from ..core.constants import FindingTypes
+        import logging
+        logger = logging.getLogger(__name__)
+
+        finding_type = finding.get('type', '').lower()
+        description = finding.get('description', '').lower()
+
+        # Perfect match - RCE
+        if finding_type == FindingTypes.REMOTE_CODE_EXECUTION:
+            logger.info("Reverse shells activating: RCE detected")
+            return 100
+
+        # High - Command injection
+        if finding_type == FindingTypes.COMMAND_INJECTION:
+            return 95
+
+        # High - RCE indicators
+        rce_indicators = ['rce', 'command execution', 'code execution', 'shell']
+        if any(ind in description for ind in rce_indicators):
+            return 90
+
+        # Medium - Deserialization (can lead to RCE)
+        if finding_type == FindingTypes.DESERIALIZATION_VULN:
+            return 75
+
+        return 0
+
     def get_task_tree(self, target: str, port: int, service_info: Dict[str, Any]) -> Dict[str, Any]:
         """Generate reverse shell generation and upgrade task tree
 

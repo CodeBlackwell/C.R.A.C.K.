@@ -71,6 +71,32 @@ class PythonWebPlugin(ServicePlugin):
 
         return False
 
+
+    def detect_from_finding(self, finding: Dict[str, Any], profile=None) -> int:
+        """Detect Python web frameworks (Django, Flask, FastAPI)"""
+        from ..core.constants import FindingTypes
+        import logging
+        logger = logging.getLogger(__name__)
+
+        finding_type = finding.get('type', '').lower()
+        description = finding.get('description', '').lower()
+
+        # Perfect match - Python web frameworks detected
+        python_frameworks = [FindingTypes.FRAMEWORK_DJANGO, FindingTypes.FRAMEWORK_FLASK,
+                             FindingTypes.TECH_PYTHON]
+        if finding_type in python_frameworks:
+            logger.info(f"Python web plugin activating: {finding_type} detected")
+            return 100
+
+        # High confidence - Python framework indicators
+        python_indicators = ['django', 'flask', 'fastapi', 'werkzeug',
+                             'pyramid', 'bottle', 'tornado', 'gunicorn', 'uvicorn']
+        if any(ind in description for ind in python_indicators):
+            logger.info(f"Python web plugin activating: Found '{description[:50]}'")
+            return 90
+
+        return 0
+
     def get_task_tree(self, target: str, port: int, service_info: Dict[str, Any]) -> Dict[str, Any]:
         """Generate Python web exploitation task tree"""
         version = service_info.get('version', '')

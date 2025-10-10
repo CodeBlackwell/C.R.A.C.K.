@@ -64,6 +64,43 @@ class MacOSPrivEscPlugin(ServicePlugin):
 
         return any(macos_indicators)
 
+    def detect_from_finding(self, finding: Dict[str, Any], profile=None) -> int:
+        """
+        Detect macOS privesc activation from findings
+
+        Activates on:
+        - macOS OS detected (high confidence)
+        - macOS shell obtained (high confidence)
+
+        Returns:
+            int: Confidence score (0-100)
+        """
+        from ..core.constants import FindingTypes
+        import logging
+        logger = logging.getLogger(__name__)
+
+        finding_type = finding.get('type', '').lower()
+        description = finding.get('description', '').lower()
+
+        # Perfect match - macOS OS
+        if finding_type == FindingTypes.OS_MACOS:
+            logger.info("macOS privesc activating: macOS OS detected")
+            return 95
+
+        # High - Shell on macOS
+        if finding_type == FindingTypes.SHELL_OBTAINED:
+            macos_hints = ['macos', 'darwin', 'osx', '/users/', '/applications/']
+            if any(hint in description for hint in macos_hints):
+                logger.info("macOS privesc activating: macOS shell detected")
+                return 90
+
+        # Medium - OS detected with macOS mention
+        if finding_type == FindingTypes.OS_DETECTED:
+            if any(term in description for term in ['macos', 'darwin', 'osx', 'mac os']):
+                return 85
+
+        return 0
+
     def get_task_tree(self, target: str, port: int, service_info: Dict[str, Any]) -> Dict[str, Any]:
         """Generate macOS privilege escalation task tree"""
 

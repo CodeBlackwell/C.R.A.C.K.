@@ -44,6 +44,44 @@ class WindowsCorePlugin(ServicePlugin):
         """
         return False
 
+    def detect_from_finding(self, finding: Dict[str, Any], profile=None) -> int:
+        """
+        Detect Windows core activation from findings
+
+        Activates on:
+        - Windows OS detected (perfect match)
+        - Windows shell obtained (high confidence)
+        - Windows-specific services detected
+
+        Returns:
+            int: Confidence score (0-100)
+        """
+        from ..core.constants import FindingTypes
+        import logging
+        logger = logging.getLogger(__name__)
+
+        finding_type = finding.get('type', '').lower()
+        description = finding.get('description', '').lower()
+
+        # Perfect match - Windows OS
+        if finding_type == FindingTypes.OS_WINDOWS:
+            logger.info("Windows core activating: Windows OS detected")
+            return 95
+
+        # High confidence - Windows shell
+        if finding_type == FindingTypes.SHELL_OBTAINED:
+            windows_hints = ['windows', 'win', 'cmd.exe', 'powershell', 'c:\\']
+            if any(hint in description for hint in windows_hints):
+                logger.info("Windows core activating: Windows shell detected")
+                return 90
+
+        # Medium - OS detected with Windows mention
+        if finding_type == FindingTypes.OS_DETECTED:
+            if 'windows' in description or 'win' in description:
+                return 85
+
+        return 0
+
     def get_task_tree(self, target: str, port: int, service_info: Dict[str, Any]) -> Dict[str, Any]:
         """
         Generate comprehensive Windows core techniques task tree.

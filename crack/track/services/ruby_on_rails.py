@@ -56,6 +56,30 @@ class RubyOnRailsPlugin(ServicePlugin):
 
         return False
 
+
+    def detect_from_finding(self, finding: Dict[str, Any], profile=None) -> int:
+        """Detect Ruby on Rails from technology findings"""
+        from ..core.constants import FindingTypes
+        import logging
+        logger = logging.getLogger(__name__)
+
+        finding_type = finding.get('type', '').lower()
+        description = finding.get('description', '').lower()
+
+        # Perfect match - Rails framework detected
+        if finding_type in [FindingTypes.FRAMEWORK_RAILS, FindingTypes.TECH_RUBY]:
+            logger.info("Rails plugin activating: Framework detected")
+            return 100
+
+        # High confidence - Rails indicators
+        rails_indicators = ['ruby on rails', 'rails', 'puma', 'unicorn',
+                            'passenger', 'gemfile', '/rails/info']
+        if any(ind in description for ind in rails_indicators):
+            logger.info(f"Rails plugin activating: Found '{description[:50]}'")
+            return 90
+
+        return 0
+
     def get_task_tree(self, target: str, port: int, service_info: Dict[str, Any]) -> Dict[str, Any]:
         """Generate Ruby on Rails enumeration task tree"""
         version = service_info.get('version', 'unknown')

@@ -42,6 +42,42 @@ class ADEnumerationPlugin(ServicePlugin):
         # Return False to prevent auto-detection
         return False
 
+    def detect_from_finding(self, finding: Dict[str, Any], profile=None) -> float:
+        """Activate AD enumeration when domain membership or AD services detected
+
+        Returns:
+            Confidence score (0-100):
+            - 100: Perfect match (domain_joined, domain_controller_found, ad_detected)
+            - 90: High confidence (AD indicators in description)
+            - 70: Medium confidence (Windows with domain hints)
+            - 0: No match
+        """
+        from ..core.constants import FindingTypes
+        import logging
+        logger = logging.getLogger(__name__)
+
+        finding_type = finding.get('type', '').lower()
+        description = finding.get('description', '').lower()
+
+        # Perfect match - Domain detected
+        if finding_type in [FindingTypes.DOMAIN_JOINED, FindingTypes.AD_DETECTED,
+                           FindingTypes.DOMAIN_CONTROLLER_FOUND]:
+            logger.info("AD enumeration activating: Domain detected")
+            return 100
+
+        # High - AD services
+        ad_indicators = ['active directory', 'domain controller', 'ldap', 'kerberos',
+                        'domain joined', 'ad.', '.local']
+        if any(ind in description for ind in ad_indicators):
+            return 90
+
+        # Medium - Windows with domain hints
+        if finding_type == FindingTypes.OS_WINDOWS:
+            if 'domain' in description or 'dc' in description:
+                return 70
+
+        return 0
+
     def get_task_tree(self, target: str, port: int, service_info: Dict[str, Any]) -> Dict[str, Any]:
         """Generate Active Directory enumeration task tree"""
         domain = service_info.get('domain', 'DOMAIN.LOCAL')

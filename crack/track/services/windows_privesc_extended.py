@@ -43,6 +43,41 @@ class WindowsPrivescExtendedPlugin(ServicePlugin):
         """
         return False
 
+    def detect_from_finding(self, finding: Dict[str, Any], profile=None) -> int:
+        """
+        Detect Windows privesc extended activation from findings
+
+        Activates on:
+        - Low privilege Windows shell (high confidence for privesc techniques)
+        - Windows OS detected (moderate confidence)
+
+        Returns:
+            int: Confidence score (0-100)
+        """
+        from ..core.constants import FindingTypes
+        import logging
+        logger = logging.getLogger(__name__)
+
+        finding_type = finding.get('type', '').lower()
+        description = finding.get('description', '').lower()
+
+        # Perfect match - Low privilege shell on Windows
+        if finding_type == FindingTypes.LOW_PRIVILEGE_SHELL:
+            if any(hint in description for hint in ['windows', 'win', 'cmd', 'powershell']):
+                logger.info("Windows privesc extended activating: Low privilege Windows shell")
+                return 95
+
+        # High - Standard shell on Windows
+        if finding_type == FindingTypes.SHELL_OBTAINED:
+            if 'windows' in description:
+                return 80
+
+        # Medium - Windows OS detected
+        if finding_type == FindingTypes.OS_WINDOWS:
+            return 65
+
+        return 0
+
     def get_task_tree(self, target: str, port: int, service_info: Dict[str, Any]) -> Dict[str, Any]:
         """
         Generate comprehensive extended privilege escalation task tree.

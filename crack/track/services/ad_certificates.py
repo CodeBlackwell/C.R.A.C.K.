@@ -52,6 +52,31 @@ class ADCertificatesPlugin(ServicePlugin):
 
         return False
 
+    def detect_from_finding(self, finding: Dict[str, Any], profile=None) -> float:
+        """Activate ADCS plugin when certificate services detected
+
+        Returns:
+            Confidence score (0-100):
+            - 100: Perfect match (adcs_detected)
+            - 90: High (certificate services indicators)
+            - 0: No match
+        """
+        from ..core.constants import FindingTypes
+
+        finding_type = finding.get('type', '').lower()
+        description = finding.get('description', '').lower()
+
+        # Perfect match
+        if finding_type == FindingTypes.ADCS_DETECTED:
+            return 100
+
+        # High - Certificate services
+        cert_indicators = ['adcs', 'certificate authority', 'certificate services', 'pki']
+        if any(ind in description for ind in cert_indicators):
+            return 90
+
+        return 0
+
     def get_task_tree(self, target: str, port: int, service_info: Dict[str, Any]) -> Dict[str, Any]:
         """Generate AD CS attack task tree"""
 

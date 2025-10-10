@@ -61,6 +61,26 @@ class PHPPlugin(ServicePlugin):
 
         return False
 
+
+    def detect_from_finding(self, finding: Dict[str, Any], profile=None) -> int:
+        """Detect PHP technology"""
+        from ..core.constants import FindingTypes
+
+        finding_type = finding.get('type', '').lower()
+        description = finding.get('description', '').lower()
+
+        # Perfect match - PHP detected
+        if finding_type == FindingTypes.TECH_PHP:
+            return 100
+
+        # High confidence - PHP indicators
+        php_indicators = ['php', 'index.php', 'phpinfo', 'composer.json',
+                          'x-powered-by: php', '.php']
+        if any(ind in description for ind in php_indicators):
+            return 90
+
+        return 0
+
     def get_task_tree(self, target: str, port: int, service_info: Dict[str, Any]) -> Dict[str, Any]:
         """Generate PHP exploitation task tree"""
         version = service_info.get('version', '')

@@ -39,6 +39,40 @@ class C2OperationsPlugin(ServicePlugin):
         """
         return False
 
+    def detect_from_finding(self, finding: Dict[str, Any], profile=None) -> int:
+        """
+        Detect if C2 operations plugin should suggest based on finding.
+
+        NOTE: C2 setup is a strategic decision - lower confidence scores.
+        User decides if C2 infrastructure is warranted.
+
+        Args:
+            finding: Finding dictionary with 'type' and 'description'
+            profile: Optional TargetProfile for additional context
+
+        Returns:
+            Confidence score 0-100 (0 = don't activate, 100 = perfect match)
+        """
+        from ..core.constants import FindingTypes
+
+        finding_type = finding.get('type', '').lower()
+        description = finding.get('description', '').lower()
+
+        # Medium confidence - Root/System shell (C2 might be useful)
+        if finding_type in [FindingTypes.ROOT_SHELL, FindingTypes.SYSTEM_SHELL,
+                           FindingTypes.ADMIN_SHELL]:
+            return 60  # Lower confidence - user decides if C2 needed
+
+        # Low - High privilege shell
+        if finding_type == FindingTypes.HIGH_PRIVILEGE_SHELL:
+            return 40
+
+        # Low - Persistent access indicators
+        if 'persistence' in description or 'maintain access' in description:
+            return 50
+
+        return 0
+
     def get_task_tree(self, target: str, port: int, service_info: Dict[str, Any]) -> Dict[str, Any]:
         """
         Generate C2 operations task tree.

@@ -60,6 +60,30 @@ class SpringBootPlugin(ServicePlugin):
 
         return False
 
+
+    def detect_from_finding(self, finding: Dict[str, Any], profile=None) -> int:
+        """Detect Spring Boot/Tomcat from technology findings"""
+        from ..core.constants import FindingTypes
+        import logging
+        logger = logging.getLogger(__name__)
+
+        finding_type = finding.get('type', '').lower()
+        description = finding.get('description', '').lower()
+
+        # Perfect match - Spring framework detected
+        if finding_type in [FindingTypes.FRAMEWORK_SPRING, FindingTypes.TECH_JAVA]:
+            logger.info("Spring Boot plugin activating: Framework detected")
+            return 100
+
+        # High confidence - Spring/Tomcat indicators
+        spring_indicators = ['spring', 'actuator', 'tomcat', 'apache tomcat',
+                             'jboss', '/actuator/', 'spring boot']
+        if any(ind in description for ind in spring_indicators):
+            logger.info(f"Spring plugin activating: Found '{description[:50]}'")
+            return 90
+
+        return 0
+
     def get_task_tree(self, target: str, port: int, service_info: Dict[str, Any]) -> Dict[str, Any]:
         """Generate Spring Boot / Tomcat enumeration task tree"""
         version = service_info.get('version', 'unknown')

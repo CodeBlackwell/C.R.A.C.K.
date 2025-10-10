@@ -69,6 +69,51 @@ class LinuxEnumerationPlugin(ServicePlugin):
 
         return False
 
+    def detect_from_finding(self, finding: Dict[str, Any], profile=None) -> int:
+        """
+        Detect Linux enumeration activation from findings
+
+        Activates on:
+        - Linux OS detection (perfect match)
+        - Unix OS detection (high confidence)
+        - Linux shell obtained (high confidence)
+        - Linux distro mentions (medium confidence)
+
+        Returns:
+            int: Confidence score (0-100)
+        """
+        from ..core.constants import FindingTypes
+        import logging
+        logger = logging.getLogger(__name__)
+
+        finding_type = finding.get('type', '').lower()
+        description = finding.get('description', '').lower()
+
+        # Perfect match - Linux OS detected
+        if finding_type in [FindingTypes.OS_LINUX, FindingTypes.OS_UNIX]:
+            logger.info(f"Linux enumeration activating: {finding_type} detected")
+            return 95
+
+        # High confidence - Shell obtained on Linux system
+        if finding_type == FindingTypes.SHELL_OBTAINED:
+            linux_hints = ['linux', 'ubuntu', 'debian', 'bash', '/bin/', '/etc/']
+            if any(hint in description for hint in linux_hints):
+                logger.info("Linux enumeration activating: Linux shell detected")
+                return 90
+
+        # High confidence - OS detected with Linux mention
+        if finding_type == FindingTypes.OS_DETECTED:
+            if 'linux' in description or 'unix' in description:
+                return 85
+
+        # Medium - Linux distros mentioned
+        distros = ['ubuntu', 'debian', 'centos', 'redhat', 'fedora', 'kali', 'mint', 'arch', 'suse']
+        if any(distro in description for distro in distros):
+            logger.info(f"Linux enumeration activating: Distro detected in {description}")
+            return 70
+
+        return 0
+
     def get_task_tree(self, target: str, port: int, service_info: Dict[str, Any]) -> Dict[str, Any]:
         """
         Generate comprehensive Linux enumeration task tree

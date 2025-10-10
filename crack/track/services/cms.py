@@ -65,6 +65,33 @@ class CMSPlugin(ServicePlugin):
 
         return False
 
+
+    def detect_from_finding(self, finding: Dict[str, Any], profile=None) -> int:
+        """Detect any CMS (Joomla, Drupal, Magento, TYPO3, Concrete5)"""
+        from ..core.constants import FindingTypes
+        import logging
+        logger = logging.getLogger(__name__)
+
+        finding_type = finding.get('type', '').lower()
+        description = finding.get('description', '').lower()
+
+        # High confidence - Specific CMS detected
+        cms_types = [FindingTypes.CMS_DETECTED, FindingTypes.CMS_JOOMLA,
+                     FindingTypes.CMS_DRUPAL, FindingTypes.CMS_MAGENTO,
+                     FindingTypes.CMS_TYPO3, FindingTypes.CMS_CONCRETE5]
+        if finding_type in cms_types:
+            logger.info(f"CMS plugin activating: {finding_type} detected")
+            return 95
+
+        # Medium - CMS indicators in description
+        cms_indicators = ['joomla', 'drupal', 'magento', 'typo3', 'concrete5',
+                          'administrator/index.php', 'user/login', 'admin/login']
+        if any(ind in description for ind in cms_indicators):
+            logger.info(f"CMS plugin activating: Found indicator '{description[:50]}'")
+            return 85
+
+        return 0
+
     def get_task_tree(self, target: str, port: int, service_info: Dict[str, Any]) -> Dict[str, Any]:
         """Generate CMS enumeration task tree"""
         version = service_info.get('version', '')

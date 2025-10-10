@@ -67,6 +67,35 @@ class WordPressPlugin(ServicePlugin):
 
         return False
 
+
+    def detect_from_finding(self, finding: Dict[str, Any], profile=None) -> int:
+        """Detect WordPress from findings (whatweb, wappalyzer, manual verification)"""
+        from ..core.constants import FindingTypes
+        import logging
+        logger = logging.getLogger(__name__)
+
+        finding_type = finding.get('type', '').lower()
+        description = finding.get('description', '').lower()
+
+        # Perfect match - CMS_WORDPRESS detected
+        if finding_type == FindingTypes.CMS_WORDPRESS:
+            logger.info(f"WordPress plugin activating: CMS detected via {finding.get('source', 'unknown')}")
+            return 100
+
+        # High confidence - WordPress indicators in description
+        wp_indicators = ['wordpress', 'wp-content', 'wp-admin', 'wp-login',
+                         'wp-includes', 'wp-json', '/wp/', 'wordpress.org', 'wpscan']
+        if any(ind in description for ind in wp_indicators):
+            logger.info(f"WordPress plugin activating: Found indicator in '{description[:50]}'")
+            return 90
+
+        # Medium - Generic CMS that might be WordPress
+        if finding_type == FindingTypes.CMS_DETECTED and 'php' in description:
+            logger.debug("Generic CMS with PHP detected, possible WordPress")
+            return 40
+
+        return 0
+
     def get_task_tree(self, target: str, port: int, service_info: Dict[str, Any]) -> Dict[str, Any]:
         """Generate WordPress enumeration task tree"""
 

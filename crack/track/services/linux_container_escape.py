@@ -62,6 +62,46 @@ class LinuxContainerEscapePlugin(ServicePlugin):
 
         return False
 
+    def detect_from_finding(self, finding: Dict[str, Any], profile=None) -> int:
+        """
+        Detect container escape activation from findings
+
+        Activates on:
+        - Container detected (perfect match)
+        - Docker detected (perfect match)
+        - Kubernetes detected (perfect match)
+        - Container indicators in description
+
+        Returns:
+            int: Confidence score (0-100)
+        """
+        from ..core.constants import FindingTypes
+        import logging
+        logger = logging.getLogger(__name__)
+
+        finding_type = finding.get('type', '').lower()
+        description = finding.get('description', '').lower()
+
+        # Perfect match - Container environment detected
+        if finding_type in [FindingTypes.CONTAINER_DETECTED, FindingTypes.DOCKER_DETECTED,
+                           FindingTypes.KUBERNETES_DETECTED]:
+            logger.info(f"Container escape activating: {finding_type} detected")
+            return 100
+
+        # High - Container indicators in description
+        container_hints = ['docker', 'container', 'kubernetes', 'k8s', 'pod', 'lxc', 'lxd',
+                          'containerd', 'cri-o', 'dockerenv', '/.dockerenv']
+        if any(hint in description for hint in container_hints):
+            logger.info(f"Container escape activating: Container hint in {description}")
+            return 90
+
+        # Medium - Shell obtained in containerized environment
+        if finding_type == FindingTypes.SHELL_OBTAINED:
+            if any(hint in description for hint in container_hints):
+                return 85
+
+        return 0
+
     def get_task_tree(self, target: str, port: int, service_info: Dict[str, Any]) -> Dict[str, Any]:
         """Generate Linux container escape enumeration task tree"""
 

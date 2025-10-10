@@ -33,6 +33,39 @@ class PhishingPlugin(ServicePlugin):
         # This plugin is manually triggered for phishing assessments
         return False
 
+    def detect_from_finding(self, finding: Dict[str, Any], profile=None) -> int:
+        """
+        Detect if phishing plugin should activate based on finding.
+
+        Args:
+            finding: Finding dictionary with 'type' and 'description'
+            profile: Optional TargetProfile for additional context
+
+        Returns:
+            Confidence score 0-100 (0 = don't activate, 100 = perfect match)
+        """
+        from ..core.constants import FindingTypes
+
+        finding_type = finding.get('type', '').lower()
+        description = finding.get('description', '').lower()
+
+        # High - Email access
+        email_indicators = ['email', 'smtp', 'mail server', 'exchange', 'outlook']
+        if any(ind in description for ind in email_indicators):
+            if 'access' in description or 'credential' in description:
+                return 80
+
+        # Medium - Email-related credentials
+        if finding_type == FindingTypes.CREDENTIAL_FOUND:
+            if any(ind in description for ind in email_indicators):
+                return 70
+
+        # Medium - SMTP access
+        if finding_type in [FindingTypes.EMAIL_ACCESS, FindingTypes.SMTP_ACCESS]:
+            return 75
+
+        return 0
+
     def get_task_tree(self, target: str, port: int, service_info: Dict[str, Any]) -> Dict[str, Any]:
         """Generate phishing campaign task tree
 

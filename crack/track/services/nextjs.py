@@ -61,6 +61,30 @@ class NextJSPlugin(ServicePlugin):
 
         return False
 
+
+    def detect_from_finding(self, finding: Dict[str, Any], profile=None) -> int:
+        """Detect Next.js from technology findings"""
+        from ..core.constants import FindingTypes
+        import logging
+        logger = logging.getLogger(__name__)
+
+        finding_type = finding.get('type', '').lower()
+        description = finding.get('description', '').lower()
+
+        # Perfect match - Next.js framework detected
+        if finding_type == FindingTypes.FRAMEWORK_NEXTJS:
+            logger.info("Next.js plugin activating: Framework detected")
+            return 100
+
+        # High confidence - Next.js indicators
+        nextjs_indicators = ['next.js', 'nextjs', '_next/', '__next_data__',
+                             'vercel', 'x-powered-by: next.js']
+        if any(ind in description for ind in nextjs_indicators):
+            logger.info(f"Next.js plugin activating: Found '{description[:50]}'")
+            return 90
+
+        return 0
+
     def get_task_tree(self, target: str, port: int, service_info: Dict[str, Any]) -> Dict[str, Any]:
         """Generate NextJS exploitation task tree"""
         version = service_info.get('version', '')

@@ -41,6 +41,46 @@ class CredentialTheftPlugin(ServicePlugin):
         """Manual trigger only - returns False"""
         return False
 
+    def detect_from_finding(self, finding: Dict[str, Any], profile=None) -> int:
+        """
+        Detect if credential theft plugin should activate based on finding.
+
+        Args:
+            finding: Finding dictionary with 'type' and 'description'
+            profile: Optional TargetProfile for additional context
+
+        Returns:
+            Confidence score 0-100 (0 = don't activate, 100 = perfect match)
+        """
+        from ..core.constants import FindingTypes
+        import logging
+        logger = logging.getLogger(__name__)
+
+        finding_type = finding.get('type', '').lower()
+        description = finding.get('description', '').lower()
+
+        # Perfect match - Credentials found
+        if finding_type in [FindingTypes.CREDENTIAL_FOUND, FindingTypes.PASSWORD_FOUND,
+                           FindingTypes.HASH_FOUND, FindingTypes.API_KEY_FOUND]:
+            logger.info("Credential theft activating: Credentials detected")
+            return 100
+
+        # High - Specific credential types
+        if finding_type in [FindingTypes.SSH_CREDENTIAL, FindingTypes.DATABASE_CREDENTIAL,
+                           FindingTypes.WEB_CREDENTIAL]:
+            return 95
+
+        # High - Credential indicators
+        cred_indicators = ['password', 'credential', 'api key', 'token', 'secret']
+        if any(ind in description for ind in cred_indicators):
+            return 85
+
+        # Medium - Database access (might have creds)
+        if finding_type == FindingTypes.DATABASE_ACCESS:
+            return 70
+
+        return 0
+
     def get_task_tree(self, target: str, port: int, service_info: Dict[str, Any]) -> Dict[str, Any]:
         """Generate Windows credential theft task tree"""
 

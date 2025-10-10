@@ -41,6 +41,32 @@ class ADPersistencePlugin(ServicePlugin):
         """Manual trigger only - returns False for auto-detection"""
         return False
 
+    def detect_from_finding(self, finding: Dict[str, Any], profile=None) -> float:
+        """Activate AD persistence when domain admin obtained
+
+        Returns:
+            Confidence score (0-100):
+            - 100: Perfect match (domain_admin_obtained with 'obtained' or 'compromised')
+            - 90: High (credential_found with 'domain admin' or 'administrator')
+            - 0: No match
+        """
+        from ..core.constants import FindingTypes
+
+        finding_type = finding.get('type', '').lower()
+        description = finding.get('description', '').lower()
+
+        # Perfect match - Domain admin
+        if finding_type == FindingTypes.DOMAIN_ADMIN_OBTAINED:
+            if 'obtained' in description or 'compromised' in description:
+                return 100
+
+        # High - Credential with DA
+        if finding_type == FindingTypes.CREDENTIAL_FOUND:
+            if 'domain admin' in description or 'administrator' in description:
+                return 90
+
+        return 0
+
     def get_task_tree(self, target: str, port: int, service_info: Dict[str, Any]) -> Dict[str, Any]:
         """Generate Active Directory persistence task tree"""
         domain = service_info.get('domain', 'DOMAIN.LOCAL')

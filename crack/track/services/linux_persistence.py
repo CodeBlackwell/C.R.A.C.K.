@@ -43,6 +43,53 @@ class LinuxPersistencePlugin(ServicePlugin):
         # Manually triggered - not auto-detected from port scans
         return False
 
+    def detect_from_finding(self, finding: Dict[str, Any], profile=None) -> int:
+        """
+        Detect Linux persistence activation from findings
+
+        Activates on:
+        - Root shell obtained (perfect match)
+        - High privilege shell on Linux (high confidence)
+        - Sudo permissions found (high confidence)
+
+        Returns:
+            int: Confidence score (0-100)
+        """
+        from ..core.constants import FindingTypes
+        import logging
+        logger = logging.getLogger(__name__)
+
+        finding_type = finding.get('type', '').lower()
+        description = finding.get('description', '').lower()
+
+        # Perfect match - Root shell obtained
+        if finding_type == FindingTypes.ROOT_SHELL:
+            logger.info("Linux persistence activating: Root shell obtained")
+            return 100
+
+        # High confidence - High privilege shell on Linux
+        if finding_type == FindingTypes.HIGH_PRIVILEGE_SHELL:
+            linux_hints = ['linux', 'root', 'uid=0', '/root/']
+            if any(hint in description for hint in linux_hints):
+                logger.info("Linux persistence activating: High privilege Linux shell")
+                return 95
+
+        # High confidence - System shell (typically root equivalent)
+        if finding_type == FindingTypes.SYSTEM_SHELL:
+            return 90
+
+        # High confidence - Sudo permissions found
+        if finding_type == FindingTypes.SUDO_PERMISSION_FOUND:
+            logger.info("Linux persistence activating: Sudo permissions found")
+            return 80
+
+        # Medium - Admin shell that might be Linux
+        if finding_type == FindingTypes.ADMIN_SHELL:
+            if 'linux' in description or 'unix' in description:
+                return 70
+
+        return 0
+
     def get_task_tree(self, target: str, port: int, service_info: Dict[str, Any]) -> Dict[str, Any]:
         """Generate Linux persistence and backdoor enumeration task tree
 

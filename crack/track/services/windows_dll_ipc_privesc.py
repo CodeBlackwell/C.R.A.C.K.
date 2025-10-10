@@ -59,6 +59,41 @@ class WindowsDllIpcPrivescPlugin(ServicePlugin):
 
         return False
 
+    def detect_from_finding(self, finding: Dict[str, Any], profile=None) -> int:
+        """
+        Detect Windows DLL/IPC privesc activation from findings
+
+        Activates on:
+        - Windows OS + shell obtained (high confidence for DLL hijacking)
+        - Low privilege shell on Windows (privesc needed)
+
+        Returns:
+            int: Confidence score (0-100)
+        """
+        from ..core.constants import FindingTypes
+        import logging
+        logger = logging.getLogger(__name__)
+
+        finding_type = finding.get('type', '').lower()
+        description = finding.get('description', '').lower()
+
+        # High - Windows shell obtained (DLL hijacking opportunities)
+        if finding_type == FindingTypes.SHELL_OBTAINED:
+            if any(hint in description for hint in ['windows', 'win', 'cmd.exe', 'powershell']):
+                logger.info("Windows DLL/IPC privesc activating: Windows shell detected")
+                return 85
+
+        # High - Low privilege shell (need privesc)
+        if finding_type == FindingTypes.LOW_PRIVILEGE_SHELL:
+            if 'windows' in description:
+                return 90
+
+        # Medium - Windows OS detected
+        if finding_type == FindingTypes.OS_WINDOWS:
+            return 60
+
+        return 0
+
     def get_task_tree(self, target: str, port: int, service_info: Dict[str, Any]) -> Dict[str, Any]:
         """Generate Windows DLL/IPC privilege escalation task tree"""
         ostype = service_info.get('ostype', 'Windows')

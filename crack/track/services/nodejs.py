@@ -66,6 +66,30 @@ class NodeJSPlugin(ServicePlugin):
 
         return False
 
+
+    def detect_from_finding(self, finding: Dict[str, Any], profile=None) -> int:
+        """Detect Node.js/Express from technology findings"""
+        from ..core.constants import FindingTypes
+        import logging
+        logger = logging.getLogger(__name__)
+
+        finding_type = finding.get('type', '').lower()
+        description = finding.get('description', '').lower()
+
+        # Perfect match - Node.js/Express framework detected
+        if finding_type in [FindingTypes.FRAMEWORK_NODEJS, FindingTypes.TECH_NODEJS, FindingTypes.FRAMEWORK_EXPRESS]:
+            logger.info("Node.js plugin activating: Framework detected")
+            return 100
+
+        # High confidence - Node.js/Express indicators
+        nodejs_indicators = ['node.js', 'nodejs', 'express.js', 'express',
+                             'npm', 'package.json', 'x-powered-by: express']
+        if any(ind in description for ind in nodejs_indicators):
+            logger.info(f"Node.js plugin activating: Found '{description[:50]}'")
+            return 90
+
+        return 0
+
     def get_task_tree(self, target: str, port: int, service_info: Dict[str, Any]) -> Dict[str, Any]:
         """Generate NodeJS/Express enumeration task tree"""
         version = service_info.get('version', '')
