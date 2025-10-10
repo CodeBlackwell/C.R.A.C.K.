@@ -174,7 +174,7 @@ class ConsoleInjection:
 
         if not task:
             # Create new task for console injections
-            from ..core.task_tree import TaskNode
+            from crack.track.core.task_tree import TaskNode
 
             task = TaskNode(
                 task_id='console-injection',
