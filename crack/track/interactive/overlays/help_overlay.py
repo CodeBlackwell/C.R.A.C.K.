@@ -68,6 +68,14 @@ class HelpOverlay:
   [cyan]4[/] - Mark complete
   [cyan]b[/] - Back to task list
 
+[bold yellow]Debug Logging:[/]
+  Launch with [cyan]--debug[/] for precision logging
+  • Logs saved to [cyan].debug_logs/[/] directory
+  • [cyan]--debug-categories=UI:VERBOSE[/] - Filter by category
+  • [cyan]--debug-output=both[/] - Stream to console too
+  • Categories: UI, STATE, EXECUTION, PERFORMANCE
+  • Levels: MINIMAL, NORMAL, VERBOSE, TRACE
+
 [dim]Press any key to close this help screen[/]"""
 
         return Panel(

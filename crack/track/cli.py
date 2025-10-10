@@ -27,6 +27,7 @@ from .parsers.registry import ParserRegistry
 from .recommendations.engine import RecommendationEngine
 from .formatters.console import ConsoleFormatter
 from .formatters.markdown import MarkdownFormatter
+from .interactive.debug_cli import create_config_from_args
 
 
 def _resolve_wordlist_arg(wordlist_arg: str) -> str:
@@ -127,6 +128,53 @@ def _resolve_wordlist_arg(wordlist_arg: str) -> str:
         raise ValueError(f"No wordlist found: {wordlist_arg}")
 
 
+def _should_use_tui(args) -> bool:
+    """
+    Determine if TUI should be used as default
+
+    TUI is default UNLESS:
+    - Already specified --tui or --interactive
+    - Using non-interactive flags (--import, --export, --mark-done, etc.)
+    - Not in a TTY (piped/scripted)
+
+    Args:
+        args: Parsed command-line arguments
+
+    Returns:
+        True if TUI should be used as default
+    """
+    # Already specified interactive mode - respect user choice
+    if args.interactive or args.tui:
+        return False  # Let existing logic handle it
+
+    # Check for non-interactive operation flags
+    non_interactive_flags = [
+        args.import_file,
+        args.mark_done,
+        args.skip_task,
+        args.finding,
+        args.cred,
+        args.note,
+        args.export,
+        args.export_commands,
+        args.show_findings,
+        args.show_creds,
+        args.show_all,
+        args.reset,
+        args.stats
+    ]
+
+    if any(non_interactive_flags):
+        return False  # User wants non-interactive operation
+
+    # Check if stdin is a TTY (not piped/scripted)
+    if not sys.stdin.isatty():
+        return False  # Piped input, use non-interactive mode
+
+    # Default to TUI for interactive work
+    return True
+
+
 def main():
     """Main CLI entry point for CRACK Track"""
     parser = argparse.ArgumentParser(
@@ -134,10 +182,10 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # Interactive mode (recommended for beginners)
-  crack track interactive 192.168.45.100
-  crack track -i 192.168.45.100
-  crack track interactive 192.168.45.100 --resume
+  # Interactive mode (TUI is now DEFAULT)
+  crack track 192.168.45.100                          # Launches TUI interface (default)
+  crack track -i 192.168.45.100                       # Terminal-based interactive mode
+  crack track 192.168.45.100 --resume                 # Resume TUI session
 
   # Start tracking a new target
   crack track new 192.168.45.100
@@ -192,6 +240,24 @@ Examples:
   # Delete target profile
   crack track delete 192.168.45.100
 
+Debug Options (Precision Logging):
+  # Basic debug logging to file (.debug_logs/)
+  crack track --tui 192.168.45.100 --debug
+
+  # Debug specific categories (UI, STATE, EXECUTION, etc.)
+  crack track --tui 192.168.45.100 --debug --debug-categories=UI:VERBOSE,STATE:NORMAL
+  crack track --tui 192.168.45.100 --debug --debug-categories=UI.INPUT:TRACE
+
+  # Debug with console output (see logs in real-time)
+  crack track --tui 192.168.45.100 --debug --debug-output=both
+
+  # Debug with performance timing
+  crack track --tui 192.168.45.100 --debug --debug-timing --debug-categories=PERFORMANCE
+
+  # Available categories: UI, STATE, EXECUTION, DATA, NETWORK, PERFORMANCE, SYSTEM
+  # Verbosity levels: MINIMAL, NORMAL, VERBOSE, TRACE
+  # Output targets: file (default), console, both, json
+
 For full documentation: See track/README.md or https://github.com/CodeBlackwell/Phantom-Protocol
         """
     )
@@ -200,9 +266,9 @@ For full documentation: See track/README.md or https://github.com/CodeBlackwell/
 
     # Interactive mode
     parser.add_argument('--interactive', '-i', action='store_true',
-                        help='Start interactive mode with progressive prompting')
+                        help='Use terminal-based interactive mode instead of TUI (TUI is default)')
     parser.add_argument('--tui', action='store_true',
-                        help='Use windowed TUI interface (rich panels, no flooding)')
+                        help='Explicitly launch TUI interface (now the default for interactive work)')
     parser.add_argument('-D', '--tui-debug', action='store_true', dest='tui_debug',
                         help='Enable TUI debug mode (shows detailed execution flow in output panel)')
     parser.add_argument('--resume', action='store_true',
@@ -285,7 +351,61 @@ For full documentation: See track/README.md or https://github.com/CodeBlackwell/
 
     # Advanced
     parser.add_argument('--debug', action='store_true',
-                        help='Enable debug output')
+                        help='Enable precision debug logging to .debug_logs/ (combine with --debug-categories for filtering)')
+
+    # Precision debug logging arguments (skip --debug as it's already defined above)
+    debug_group = parser.add_argument_group('precision debug logging options')
+
+    debug_group.add_argument(
+        '--debug-categories',
+        type=str,
+        metavar='SPECS',
+        help='Comma-separated category specs (e.g., "UI.INPUT:VERBOSE,STATE:NORMAL")'
+    )
+
+    debug_group.add_argument(
+        '--debug-modules',
+        type=str,
+        metavar='MODULES',
+        help='Comma-separated module names to log (prefix with ! to disable)'
+    )
+
+    debug_group.add_argument(
+        '--debug-level',
+        type=str,
+        choices=['MINIMAL', 'NORMAL', 'VERBOSE', 'TRACE'],
+        metavar='LEVEL',
+        help='Global log level (MINIMAL, NORMAL, VERBOSE, TRACE)'
+    )
+
+    debug_group.add_argument(
+        '--debug-output',
+        type=str,
+        choices=['file', 'console', 'both', 'json'],
+        metavar='TARGET',
+        help='Output target: file, console, both, or json'
+    )
+
+    debug_group.add_argument(
+        '--debug-format',
+        type=str,
+        choices=['text', 'json', 'compact'],
+        metavar='FORMAT',
+        help='Log format: text, json, or compact'
+    )
+
+    debug_group.add_argument(
+        '--debug-config',
+        type=str,
+        metavar='PATH',
+        help='Path to debug configuration JSON file'
+    )
+
+    debug_group.add_argument(
+        '--debug-timing',
+        action='store_true',
+        help='Include performance timing in logs'
+    )
 
     args = parser.parse_args()
 
@@ -313,9 +433,18 @@ For full documentation: See track/README.md or https://github.com/CodeBlackwell/
         parser.print_help()
         return
 
+    # Check if TUI should be default (new behavior)
+    # TUI becomes the default interactive mode unless user specifies otherwise
+    if _should_use_tui(args):
+        # Auto-enable TUI mode for interactive work
+        args.tui = True
+
     # Handle interactive mode (before loading profile)
-    if args.interactive:
-        handle_interactive(args.target, args.resume, args.screened, args.wordlist, args.tui, args.tui_debug)
+    # --tui flag automatically enables interactive mode
+    if args.interactive or args.tui:
+        # Create debug config from CLI args
+        debug_config = create_config_from_args(args)
+        handle_interactive(args.target, args.resume, args.screened, args.wordlist, args.tui, args.tui_debug, debug_config)
         return
 
     # Load or create profile
@@ -383,7 +512,7 @@ def load_or_create_profile(target: str) -> TargetProfile:
     return profile
 
 
-def handle_interactive(target: str, resume: bool = False, screened: bool = False, wordlist: str = None, tui: bool = False, tui_debug: bool = False):
+def handle_interactive(target: str, resume: bool = False, screened: bool = False, wordlist: str = None, tui: bool = False, tui_debug: bool = False, debug_config=None):
     """Handle interactive mode
 
     Args:
@@ -392,15 +521,16 @@ def handle_interactive(target: str, resume: bool = False, screened: bool = False
         screened: Screened mode with auto-parsing
         wordlist: Wordlist argument (raw, not resolved yet)
         tui: Use TUI windowed interface
-        tui_debug: Enable TUI debug mode
+        tui_debug: Enable TUI debug mode (legacy flag, use --debug for precision logging)
+        debug_config: LogConfig instance for precision debug logging
     """
     # Choose session type based on TUI flag
     if tui:
         from .interactive.tui_session_v2 import TUISessionV2
-        session = TUISessionV2(target, resume=resume, screened=screened, debug=tui_debug)
+        session = TUISessionV2(target, resume=resume, screened=screened, debug=tui_debug, debug_config=debug_config)
     else:
         from .interactive import InteractiveSession
-        session = InteractiveSession(target, resume=resume, screened=screened)
+        session = InteractiveSession(target, resume=resume, screened=screened, debug_config=debug_config)
 
     try:
 

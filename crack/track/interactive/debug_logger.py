@@ -136,7 +136,10 @@ class TUIDebugLogger:
             # Log startup
             self._log_startup()
 
-            print(f"[DEBUG] Logging to: {self.log_file}")
+            # Notify user with visible message (uses stderr to avoid TUI conflicts)
+            import sys
+            sys.stderr.write(f"\n[DEBUG] Precision logging enabled: {self.log_file}\n")
+            sys.stderr.flush()
 
         # Setup console logger if needed
         if self.config.output_target in (OutputTarget.CONSOLE, OutputTarget.BOTH):
