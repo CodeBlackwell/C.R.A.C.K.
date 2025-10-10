@@ -16,7 +16,7 @@ Usage:
 """
 
 from typing import List, Dict, Any, Optional, Tuple
-from rich.console import Console
+from rich.console import Console, Group
 from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
@@ -254,11 +254,12 @@ class OutputOverlay:
 
         output_text.append(scroll_info, style="cyan dim")
 
-        # Combine header and output
-        full_content = Text()
-        full_content.append(header)
-        full_content.append("\n\n")
-        full_content.append(output_text)
+        # Combine header and output using Group (allows mixed renderable types)
+        full_content = Group(
+            header,
+            Text("\n"),
+            output_text
+        )
 
         # Create panel
         title = "[bold cyan]Command Output Viewer[/]"

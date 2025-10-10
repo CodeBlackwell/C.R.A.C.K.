@@ -52,7 +52,7 @@ class DashboardPanel:
 
         # Build panel with phase info
         phase_display = profile.phase.replace('-', ' ').title()
-        title = f"[bold cyan]CRACK Track Dashboard[/] | [white]{phase_display}[/]"
+        title = f"[bold cyan]T.R.A.C.K.[/] [dim]Targeted Reconnaissance And Command Konsole[/] | [white]{phase_display}[/]"
         subtitle = f"[dim]Progress: {completed}/{total} tasks ({pct}%) | Ports: {len(profile.ports)} | Findings: {len(profile.findings)}[/]"
 
         return Panel(
@@ -243,7 +243,7 @@ class DashboardPanel:
             table.add_row(f"[bold bright_white]{i}.[/] {choice['label']}")
 
         phase_display = profile.phase.replace('-', ' ').title()
-        title = f"[bold cyan]CRACK Track Dashboard[/] | [white]{phase_display}[/]"
+        title = f"[bold cyan]T.R.A.C.K.[/] [dim]Targeted Reconnaissance And Command Konsole[/] | [white]{phase_display}[/]"
         subtitle = f"[dim]Target: {profile.target} | No tasks yet - import scan to begin[/]"
 
         return Panel(

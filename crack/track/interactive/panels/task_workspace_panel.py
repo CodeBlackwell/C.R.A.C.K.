@@ -29,7 +29,8 @@ class TaskWorkspacePanel:
         output_lines: Optional[List[str]] = None,
         elapsed: float = 0.0,
         exit_code: Optional[int] = None,
-        findings: Optional[List[Dict]] = None
+        findings: Optional[List[Dict]] = None,
+        target: Optional[str] = None
     ) -> Tuple[Layout, List[Dict]]:
         """
         Render complete task workspace with vertical split
@@ -41,6 +42,7 @@ class TaskWorkspacePanel:
             elapsed: Elapsed time in seconds (for streaming/complete)
             exit_code: Command exit code (for complete state)
             findings: Auto-detected findings (for complete state)
+            target: Target hostname/IP (for scan profile command preview)
 
         Returns:
             Tuple of (Layout with top/bottom sections, action choices list)
@@ -53,7 +55,7 @@ class TaskWorkspacePanel:
         )
 
         # Render top panel (task details + actions)
-        task_panel, choices = cls._render_task_details(task, output_state)
+        task_panel, choices = cls._render_task_details(task, output_state, target)
         layout['task_details'].update(task_panel)
 
         # Render bottom panel (I/O streaming)
@@ -69,13 +71,14 @@ class TaskWorkspacePanel:
         return layout, choices
 
     @classmethod
-    def _render_task_details(cls, task, output_state: str) -> Tuple[Panel, List[Dict]]:
+    def _render_task_details(cls, task, output_state: str, target: Optional[str] = None) -> Tuple[Panel, List[Dict]]:
         """
         Render task details panel (top section)
 
         Args:
             task: TaskNode instance
             output_state: Current output state
+            target: Target hostname/IP (for scan profile command preview)
 
         Returns:
             Tuple of (Panel, choices list)
@@ -113,7 +116,7 @@ class TaskWorkspacePanel:
         table.add_row("")  # Blank line
 
         # Action menu
-        choices = cls._build_action_menu(task, output_state, table)
+        choices = cls._build_action_menu(task, output_state, table, target)
 
         # Build panel
         breadcrumb = f"Dashboard > Task Workspace > {task_name}"
@@ -125,7 +128,7 @@ class TaskWorkspacePanel:
         ), choices
 
     @classmethod
-    def _build_action_menu(cls, task, output_state: str, table: Table) -> List[Dict]:
+    def _build_action_menu(cls, task, output_state: str, table: Table, target: Optional[str] = None) -> List[Dict]:
         """
         Build context-aware action menu
 
@@ -133,6 +136,7 @@ class TaskWorkspacePanel:
             task: TaskNode instance
             output_state: Current output state ('empty', 'streaming', 'complete')
             table: Table to add menu items to
+            target: Target hostname/IP (for scan profile command preview)
 
         Returns:
             List of choice dictionaries
@@ -142,18 +146,77 @@ class TaskWorkspacePanel:
 
         # Actions depend on output state
         if output_state == 'empty':
-            # Before execution
-            table.add_row(f"[bold bright_white]{menu_num}.[/] Execute this task")
-            choices.append({'id': 'execute', 'label': 'Execute this task', 'task': task})
-            menu_num += 1
+            # Check if this is a strategic choice task (requires profile selection)
+            command = task.metadata.get('command') if hasattr(task, 'metadata') else None
+            allow_custom = task.metadata.get('allow_custom', False) if hasattr(task, 'metadata') else False
 
-            table.add_row(f"[bold bright_white]{menu_num}.[/] Edit command")
-            choices.append({'id': 'edit', 'label': 'Edit command'})
-            menu_num += 1
+            if command is None and allow_custom:
+                # Strategic choice task - load scan profiles dynamically
+                from ...core.scan_profiles import ScanProfileRegistry
+                from ...core.command_builder import ScanCommandBuilder
 
-            table.add_row(f"[bold bright_white]{menu_num}.[/] View alternatives")
-            choices.append({'id': 'alternatives', 'label': 'View alternatives'})
-            menu_num += 1
+                # Load ALL available scan profiles
+                registry = ScanProfileRegistry()
+                available_profiles = registry.get_all_profiles()
+
+                # Use provided target or placeholder
+                if not target:
+                    target = 'TARGET'
+
+                # Add header
+                table.add_row("[bold bright_yellow]Select scan strategy:[/]")
+                table.add_row("")  # Blank line
+
+                # Add each profile as a choice
+                for scan_profile in available_profiles:
+                    profile_id = scan_profile['id']
+                    profile_name = scan_profile['name']
+                    use_case = scan_profile['use_case']
+                    estimated_time = scan_profile['estimated_time']
+
+                    # Build the actual command for preview
+                    try:
+                        builder = ScanCommandBuilder(target, scan_profile)
+                        command_preview = builder.build()
+                        # Truncate if too long (keep first 80 chars)
+                        if len(command_preview) > 80:
+                            command_preview = command_preview[:77] + '...'
+                    except Exception:
+                        command_preview = '[Error building command]'
+
+                    # Format with name, command, description
+                    table.add_row(f"[bold bright_white]{menu_num}.[/] {profile_name}")
+                    table.add_row(f"   [bright_black]Command:[/] [cyan]{command_preview}[/]")
+                    table.add_row(f"   [dim]{use_case} ({estimated_time})[/]")
+                    table.add_row("")  # Blank line between profiles
+
+                    choices.append({
+                        'id': f'scan-{profile_id}',
+                        'label': profile_name,
+                        'scan_profile': scan_profile,
+                        'task': task
+                    })
+                    menu_num += 1
+
+                # Add custom option
+                table.add_row("")  # Blank line
+                table.add_row(f"[bold bright_white]{menu_num}.[/] Custom scan command")
+                choices.append({'id': 'custom-scan', 'label': 'Custom scan command'})
+                menu_num += 1
+
+            else:
+                # Standard task - show normal execute option
+                table.add_row(f"[bold bright_white]{menu_num}.[/] Execute this task")
+                choices.append({'id': 'execute', 'label': 'Execute this task', 'task': task})
+                menu_num += 1
+
+                table.add_row(f"[bold bright_white]{menu_num}.[/] Edit command")
+                choices.append({'id': 'edit', 'label': 'Edit command'})
+                menu_num += 1
+
+                table.add_row(f"[bold bright_white]{menu_num}.[/] View alternatives")
+                choices.append({'id': 'alternatives', 'label': 'View alternatives'})
+                menu_num += 1
 
         elif output_state == 'complete':
             # After execution

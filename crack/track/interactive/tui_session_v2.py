@@ -24,8 +24,10 @@ from rich import box
 
 from ..core.state import TargetProfile
 from ..core.storage import Storage
+from ..core.events import EventBus
 from ..recommendations.engine import RecommendationEngine
 from ..parsers.output_patterns import OutputPatternMatcher
+from ..services.findings_processor import FindingsProcessor
 
 from .session import InteractiveSession
 from .prompts import PromptBuilder
@@ -68,6 +70,10 @@ class TUISessionV2(InteractiveSession):
         # Resize handler for terminal resize events
         self.resize_handler = ResizeHandler()
         self.terminal_too_small = False  # Flag for graceful degradation
+
+        # Initialize findings processor (listens for finding_added events)
+        self.findings_processor = FindingsProcessor(target=target)
+        self.debug_logger.log("FindingsProcessor initialized", category=LogCategory.SYSTEM_INIT, level=LogLevel.VERBOSE)
 
         # Strategic logging: TUI initialization
         self.debug_logger.log("TUI session initialization", category=LogCategory.SYSTEM_INIT, level=LogLevel.NORMAL,
@@ -224,7 +230,7 @@ class TUISessionV2(InteractiveSession):
             live.stop()
 
             # Get input (vim-style hotkeys)
-            self.console.print("\n[dim]Press key (or : for command):[/] ", end="")
+            self.console.print("[dim]Press key (or : for command):[/] ", end="")
             try:
                 # Read single key
                 key = self.hotkey_handler.read_key()
@@ -352,7 +358,7 @@ class TUISessionV2(InteractiveSession):
             live.stop()
 
             # Get user input (vim-style hotkeys)
-            self.console.print("\n[dim]Press key (or : for command):[/] ", end="")
+            self.console.print("[dim]Press key (or : for command):[/] ", end="")
             try:
                 # Read single key
                 key = self.hotkey_handler.read_key()
@@ -438,6 +444,20 @@ class TUISessionV2(InteractiveSession):
             self.debug_logger.debug(f"Workspace loop iteration {iteration}")
             self.debug_logger.debug(f"Current state: {output_state}")
 
+            # Define valid shortcuts based on state
+            valid_shortcuts = {
+                'b': 'Back to dashboard',
+                ':': 'Command mode',
+            }
+
+            # Add numeric choices based on menu
+            if output_state == 'empty':
+                valid_shortcuts['1-3'] = 'Actions'
+            elif output_state == 'complete':
+                valid_shortcuts['1-4'] = 'Actions'
+                valid_shortcuts['n'] = 'Next task'
+                valid_shortcuts['l'] = 'List tasks'
+
             # Render workspace panel with current state
             self.debug_logger.debug("Rendering TaskWorkspacePanel")
             workspace_layout, choices = TaskWorkspacePanel.render(
@@ -446,7 +466,8 @@ class TUISessionV2(InteractiveSession):
                 output_lines=output_lines,
                 elapsed=elapsed,
                 exit_code=exit_code,
-                findings=findings
+                findings=findings,
+                target=self.profile.target
             )
             self.debug_logger.debug(f"TaskWorkspacePanel returned {len(choices)} choices")
 
@@ -454,7 +475,7 @@ class TUISessionV2(InteractiveSession):
             self.debug_logger.debug("Updating layout sections")
             layout['header'].update(self._render_header())
             layout['menu'].update(workspace_layout)
-            layout['footer'].update(self._render_footer())
+            layout['footer'].update(self._render_footer(valid_shortcuts))
 
             # Refresh display
             self.debug_logger.log_live_action("REFRESH", "workspace display")
@@ -464,8 +485,14 @@ class TUISessionV2(InteractiveSession):
             self.debug_logger.log_live_action("STOP", "before workspace input")
             live.stop()
 
+            # Build dynamic prompt based on state
+            if output_state == 'complete':
+                prompt_text = "[dim]Press key (1-4:Actions, n:Next, l:List, b:Back, :cmd):[/] "
+            else:
+                prompt_text = "[dim]Press key (1-3:Actions, b:Back, :cmd):[/] "
+
             # Get user input (vim-style hotkeys)
-            self.console.print("\n[dim]Press key (b:Back, or : for command):[/] ", end="")
+            self.console.print(prompt_text, end="")
             try:
                 self.debug_logger.debug("Waiting for workspace hotkey input...")
 
@@ -521,6 +548,41 @@ class TUISessionV2(InteractiveSession):
                 running = False
                 continue
 
+            # Handle 'n' (next task) - only valid when complete
+            if user_input.lower() == 'n' and output_state == 'complete':
+                self.debug_logger.info("Next task requested from workspace")
+                # Mark current task as complete
+                task.status = 'completed'
+                self.profile.save()
+                # Exit workspace to return to dashboard, which will execute next task
+                running = False
+                continue
+            elif user_input.lower() == 'n' and output_state != 'complete':
+                self.debug_logger.warning("'n' pressed but not in complete state")
+                live.stop()
+                self.console.print("\n[yellow]'n' is only available after task completion[/]")
+                self.console.print("[dim]Press Enter to continue...[/]")
+                input()
+                live.start()
+                continue
+
+            # Handle 'l' (list tasks) - only valid when complete
+            if user_input.lower() == 'l' and output_state == 'complete':
+                self.debug_logger.info("List tasks requested from workspace")
+                self.debug_logger.log_state_transition("TASK_WORKSPACE", "TASK_LIST", "l shortcut pressed")
+                # Navigate to task list
+                self._task_list_loop(live, layout)
+                self.debug_logger.log_state_transition("TASK_LIST", "TASK_WORKSPACE", "returned from task list")
+                continue
+            elif user_input.lower() == 'l' and output_state != 'complete':
+                self.debug_logger.warning("'l' pressed but not in complete state")
+                live.stop()
+                self.console.print("\n[yellow]'l' is only available after task completion[/]")
+                self.console.print("[dim]Press Enter to continue...[/]")
+                input()
+                live.start()
+                continue
+
             # Try to parse as choice number
             try:
                 choice_num = int(user_input)
@@ -532,7 +594,95 @@ class TUISessionV2(InteractiveSession):
                     self.debug_logger.info(f"Workspace choice selected: {choice_id} - {choice.get('label')}")
 
                     # Handle different choice actions
-                    if choice_id == 'execute':
+                    if choice_id.startswith('scan-'):
+                        # Scan profile selected - inject command and execute
+                        profile_id = choice_id[5:]  # Remove 'scan-' prefix
+                        scan_profile = choice.get('scan_profile')
+
+                        self.debug_logger.info(f"Scan profile selected: {profile_id} - {scan_profile['name']}")
+
+                        # Build command using ScanCommandBuilder
+                        from ..core.command_builder import ScanCommandBuilder
+                        builder = ScanCommandBuilder(self.profile.target, scan_profile)
+                        command = builder.build()
+
+                        self.debug_logger.info(f"Generated command: {command}")
+
+                        # Inject command into task metadata
+                        task.metadata['command'] = command
+                        task.metadata['scan_profile_used'] = profile_id
+                        self.profile.save()
+
+                        # Show confirmation to user
+                        live.stop()
+                        self.console.print(f"\n[green]✓[/] Selected: [bold]{scan_profile['name']}[/]")
+                        self.console.print(f"[dim]Strategy:[/] {scan_profile['use_case']}")
+                        self.console.print(f"[dim]Estimated time:[/] {scan_profile['estimated_time']}")
+                        self.console.print(f"\n[dim]Command:[/] {command}")
+
+                        # Show flag explanations if available
+                        flag_explanations = scan_profile.get('flag_explanations', {})
+                        if flag_explanations:
+                            self.console.print("\n[dim]Flag Explanations:[/]")
+                            for flag, explanation in flag_explanations.items():
+                                self.console.print(f"  [cyan]{flag}:[/] {explanation}")
+
+                        # Warn if high detection risk
+                        detection_risk = scan_profile.get('detection_risk', 'medium')
+                        if detection_risk in ['high', 'very-high']:
+                            self.console.print(f"\n[yellow]⚠  WARNING: This scan is NOISY (detection risk: {detection_risk})[/]")
+                            self.console.print("[dim]This scan may trigger IDS/IPS alerts. Only use in labs or with permission.[/]")
+
+                        self.console.print("\n[dim]Press Enter to execute, or Ctrl+C to cancel...[/]")
+                        try:
+                            input()
+                        except KeyboardInterrupt:
+                            self.console.print("[yellow]Cancelled[/]")
+                            live.start()
+                            continue
+
+                        live.start()
+
+                        # Now execute with streaming
+                        try:
+                            output_lines, elapsed, exit_code, findings = self._execute_task_streaming(
+                                live, layout, task
+                            )
+
+                            # Update state to complete
+                            output_state = 'complete'
+
+                            self.debug_logger.log_state_transition("streaming", "complete", f"exit_code={exit_code}")
+                            self.debug_logger.info(f"Execution complete - exit_code={exit_code}, elapsed={elapsed:.1f}s")
+                            self.debug_logger.info(f"Output lines captured: {len(output_lines)}")
+                            self.debug_logger.info(f"Findings detected: {len(findings)}")
+
+                            # Save profile after execution
+                            self.profile.save()
+                            self.debug_logger.debug("Profile saved after execution")
+
+                        except KeyboardInterrupt:
+                            self.debug_logger.warning("Execution interrupted by user (Ctrl+C)")
+                            task.stop_timer()
+                            task.status = 'skipped'
+
+                            # Stop live to show message clearly
+                            live.stop()
+                            self.console.print("\n[yellow]⚠ Execution interrupted[/]")
+                            self.console.print("[dim]Press Enter to continue...[/]")
+                            input()
+                            live.start()
+
+                            # Reset to empty state
+                            output_state = 'empty'
+                            output_lines = []
+                            elapsed = 0.0
+                            exit_code = None
+                            findings = []
+
+                            self.debug_logger.log_state_transition("streaming", "empty", "interrupted by user")
+
+                    elif choice_id == 'execute':
                         self.debug_logger.info("Execute action selected - starting streaming execution")
                         command = task.metadata.get('command', 'N/A')
                         self.debug_logger.info(f"Command template: {command}")
@@ -1524,7 +1674,8 @@ class TUISessionV2(InteractiveSession):
                         output_lines=output_lines,
                         elapsed=elapsed,
                         exit_code=None,
-                        findings=[]
+                        findings=[],
+                        target=self.profile.target
                     )
 
                     layout['header'].update(self._render_header())
@@ -1549,7 +1700,8 @@ class TUISessionV2(InteractiveSession):
                 output_lines=output_lines,
                 elapsed=elapsed,
                 exit_code=None,
-                findings=[]
+                findings=[],
+                target=self.profile.target
             )
             layout['header'].update(self._render_header())
             layout['menu'].update(workspace_layout)
@@ -1584,8 +1736,17 @@ class TUISessionV2(InteractiveSession):
                                 'type': finding_type,
                                 'data': item
                             })
+                            # Save finding to profile
+                            try:
+                                self.profile.add_finding(
+                                    finding_type=finding_type,
+                                    description=str(item),
+                                    source=f"{command} (Task: {task.id})"
+                                )
+                            except Exception as e:
+                                self.debug_logger.warning(f"Failed to save finding: {e}")
 
-            self.debug_logger.info(f"Findings detected: {len(findings)}")
+            self.debug_logger.info(f"Findings detected and saved: {len(findings)}")
         except Exception as e:
             self.debug_logger.exception(f"Exception during finding analysis: {e}")
             findings = []
@@ -1605,7 +1766,23 @@ class TUISessionV2(InteractiveSession):
 
         self.debug_logger.section("STREAMING EXECUTION END")
 
-        # 10. Return results
+        # 10. Emit task completion event for plugins
+        self.debug_logger.debug("Emitting task_completed event")
+        try:
+            EventBus.emit('task_completed', {
+                'task': task,
+                'task_id': task.id,
+                'output': output_lines,
+                'findings': findings_dict,
+                'target': self.profile.target,
+                'command': command,
+                'exit_code': exit_code
+            })
+            self.debug_logger.info("task_completed event emitted")
+        except Exception as e:
+            self.debug_logger.warning(f"Failed to emit task_completed event: {e}")
+
+        # 11. Return results
         return (output_lines, elapsed, exit_code, findings)
 
     def _refresh_panels(self, layout: Layout):
@@ -1624,9 +1801,21 @@ class TUISessionV2(InteractiveSession):
 
     def _render_header(self) -> Panel:
         """Render header panel"""
-        title = f"[bold cyan]CRACK Track TUI V2[/] | [white]Target:[/] {self.profile.target}"
+        from rich.text import Text
+        from rich.align import Align
+
+        # CRACK = Comprehensive Recon & Attack Creation Kit
+        # TRACK = Targeted Reconnaissance And Command Konsole
+        # TUI = Tactical User Interface
+        line1 = "[dim]C.R.A.C.K.[/] [bright_white]Comprehensive Recon & Attack Creation Kit[/] | [dim]T.R.A.C.K.[/] [bright_white]Targeted Reconnaissance And Command Konsole[/] | [dim]T.U.I.[/] [bright_white]Tactical User Interface[/]"
+        target_line = f"[cyan]Target:[/] [bold white]{self.profile.target}[/]"
+
+        # Create text objects for centering
+        from rich.console import RenderableType
+        content = f"{line1}\n{target_line}"
+
         return Panel(
-            title,
+            Align.center(content),
             border_style="cyan",
             box=box.HEAVY
         )
@@ -1651,90 +1840,45 @@ class TUISessionV2(InteractiveSession):
 
         return panel
 
-    def _render_footer(self) -> Panel:
+    def _render_footer(self, valid_shortcuts: Optional[Dict[str, str]] = None) -> Panel:
         """
-        Render footer with ALL shortcuts dynamically organized
+        Render footer with context-aware shortcuts
+
+        Args:
+            valid_shortcuts: Dict of {key: description} for current context.
+                           If None, shows ALL shortcuts (dashboard default)
 
         Displays:
-        - Workflow-critical commands first (hardcoded priority)
-        - Remaining commands alphabetically sorted
+        - Only shortcuts valid in current context
         - 6 commands per row for better density
-        - 100% dynamically extracted from ShortcutHandler
-        - Dynamically sized to fit all commands
+        - Priority-ordered for common workflows
         """
         from rich.table import Table
 
-        # Create table for multi-row layout (6 columns for better density)
+        # Default to all shortcuts if not specified (dashboard mode)
+        if valid_shortcuts is None:
+            valid_shortcuts = self._get_dashboard_shortcuts()
+
+        # Create table for multi-row layout (6 columns)
         table = Table.grid(padding=(0, 1), expand=True)
         for _ in range(6):
             table.add_column(style="cyan", ratio=1)
 
-        # Priority commands (OSCP workflow-critical, in order of importance)
-        # Mix of ShortcutHandler and TUI-specific commands
-        priority_order_handler = [
-            'n',    # Execute next task (most common)
-            'h',    # Help
-            's',    # Status
-            't',    # Tree
-            'x',    # Template browser
-            'alt',  # Alternative commands
-            'ch',   # Command history
-            'qn',   # Quick note
-            'pd',   # Progress dashboard
-            'q',    # Quit
-            'b',    # Back
-        ]
-
-        # TUI-specific priority commands (ONLY those not in ShortcutHandler)
-        # Note: l, f, o, i, d are TUI-only (not in ShortcutHandler)
-        # x and pd are in ShortcutHandler (added to priority_order_handler above)
-        priority_tui_specific = [
-            ('l', 'Browse all tasks'),
-            ('f', 'Browse findings'),
-            ('o', 'Output overlay'),
-            ('i', 'Import scan results'),
-            ('d', 'Document finding'),
-        ]
-
-        # Build shortcuts list
+        # Format shortcuts
         all_shortcuts = []
-        remaining_shortcuts = {}
-
-        # 1. Add priority commands from ShortcutHandler first
-        for key in priority_order_handler:
-            if key in self.shortcut_handler.shortcuts:
-                description, _ = self.shortcut_handler.shortcuts[key]
-                if len(key) == 1:
-                    formatted = f"[cyan]{key}[/]:{description}"
-                else:
-                    formatted = f"[cyan]:{key}[/]:{description}"
-                all_shortcuts.append(formatted)
-
-        # 1b. Add TUI-specific priority commands
-        for key, description in priority_tui_specific:
-            formatted = f"[cyan]{key}[/]:{description}"
+        for key, description in valid_shortcuts.items():
+            if len(key) == 1:
+                formatted = f"[cyan]{key}[/]:{description}"
+            elif key.startswith(':'):
+                # Already prefixed with :
+                formatted = f"[cyan]{key}[/]:{description}"
+            elif '-' in key:
+                # Range like "1-4"
+                formatted = f"[dim]{key}[/]:{description}"
+            else:
+                # Multi-char shortcut needs : prefix
+                formatted = f"[cyan]:{key}[/]:{description}"
             all_shortcuts.append(formatted)
-
-        # 2. Collect remaining shortcuts (not in priority list)
-        for key, (description, _) in self.shortcut_handler.shortcuts.items():
-            if key not in priority_order_handler:
-                if len(key) == 1:
-                    formatted = f"[cyan]{key}[/]:{description}"
-                else:
-                    formatted = f"[cyan]:{key}[/]:{description}"
-                remaining_shortcuts[key] = formatted
-
-        # 3. Add remaining shortcuts alphabetically
-        for key in sorted(remaining_shortcuts.keys()):
-            all_shortcuts.append(remaining_shortcuts[key])
-
-        # 4. Add remaining TUI-specific commands (not in priority, not in ShortcutHandler)
-        all_shortcuts.extend([
-            "[dim]:!cmd[/]:Console injection",
-            "[dim]1-9[/]:Menu select"
-        ])
-        # Note: l, f, o, i, d already added in priority section (TUI-specific)
-        # x and pd are in priority section via ShortcutHandler
 
         # Split into rows of 6 columns
         rows = []
@@ -1755,6 +1899,51 @@ class TUISessionV2(InteractiveSession):
             border_style="cyan",
             box=box.HEAVY
         )
+
+    def _get_dashboard_shortcuts(self) -> Dict[str, str]:
+        """
+        Get all available shortcuts for dashboard view
+
+        Returns:
+            Dictionary of {key: description} for all dashboard shortcuts
+        """
+        shortcuts = {}
+
+        # Priority shortcuts (shown first)
+        priority_order = [
+            'n', 'h', 's', 't', 'x', 'alt', 'ch', 'qn', 'pd', 'q', 'b',
+            'l', 'f', 'o', 'i', 'd'
+        ]
+
+        # Add priority shortcuts from ShortcutHandler
+        for key in priority_order:
+            if key in self.shortcut_handler.shortcuts:
+                description, _ = self.shortcut_handler.shortcuts[key]
+                shortcuts[key] = description
+
+        # Add TUI-specific shortcuts (not in ShortcutHandler)
+        tui_shortcuts = {
+            'l': 'Browse all tasks',
+            'f': 'Browse findings',
+            'o': 'Output overlay',
+            'i': 'Import scan results',
+            'd': 'Document finding',
+        }
+
+        for key, desc in tui_shortcuts.items():
+            if key not in shortcuts:
+                shortcuts[key] = desc
+
+        # Add remaining shortcuts alphabetically
+        for key, (description, _) in sorted(self.shortcut_handler.shortcuts.items()):
+            if key not in shortcuts:
+                shortcuts[key] = description
+
+        # Add special commands
+        shortcuts[':!cmd'] = 'Console injection'
+        shortcuts['1-9'] = 'Menu select'
+
+        return shortcuts
 
     def _process_input(self, user_input: str) -> Optional[str]:
         """Process user input - supports numbers, letter hotkeys, and : commands"""
