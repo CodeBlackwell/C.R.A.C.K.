@@ -1167,7 +1167,7 @@ class TUISessionV2(InteractiveSession):
 
     def _render_footer(self) -> Panel:
         """Render footer with vim-style shortcuts"""
-        shortcuts = "[cyan]n[/]:Next | [cyan]l[/]:List | [cyan]f[/]:Findings | [cyan]o[/]:Output | [cyan]p[/]:Progress | [cyan]h[/]:Help | [cyan]s[/]:Status | [cyan]t[/]:Tree | [cyan]q[/]:Quit | [dim]:[/]cmd"
+        shortcuts = "[cyan]n[/]:Next | [cyan]l[/]:List | [cyan]f[/]:Findings | [cyan]o[/]:Output | [cyan]p[/]:Progress | [cyan]h[/]:Help | [cyan]s[/]:Status | [cyan]t[/]:Tree | [cyan]q[/]:Quit | [dim]:!cmd[/] | [dim]:[/]cmd"
         return Panel(
             shortcuts,
             border_style="cyan",
@@ -1177,6 +1177,13 @@ class TUISessionV2(InteractiveSession):
     def _process_input(self, user_input: str) -> Optional[str]:
         """Process user input - supports numbers, letter hotkeys, and : commands"""
         self.debug_logger.debug(f"_process_input called with: '{user_input}'")
+
+        # Console injection (:! command)
+        if user_input.startswith('!'):
+            command = user_input[1:].strip()  # Strip the '!' prefix
+            self.debug_logger.info(f"Console injection requested: {command}")
+            self._execute_console_injection(command)
+            return None
 
         # Quit
         if user_input.lower() == 'q':
@@ -1345,6 +1352,30 @@ class TUISessionV2(InteractiveSession):
                 console=self.console,
                 profile=self.profile
             )
+        finally:
+            # Resume Live context
+            if hasattr(self, '_live'):
+                self._live.start()
+
+    def _execute_console_injection(self, command: str):
+        """Execute console injection command"""
+        from .overlays.console_injection import ConsoleInjection
+
+        # Stop Live context to allow full terminal access
+        if hasattr(self, '_live'):
+            self._live.stop()
+
+        try:
+            # Execute command with optional save to history
+            ConsoleInjection.execute(
+                console=self.console,
+                command=command,
+                profile=self.profile
+            )
+
+            # Save profile (in case user saved to history)
+            self.profile.save()
+
         finally:
             # Resume Live context
             if hasattr(self, '_live'):

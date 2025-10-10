@@ -12,5 +12,6 @@ from .help_overlay import HelpOverlay
 from .tree_overlay import TreeOverlay
 from .execution_overlay import ExecutionOverlay
 from .output_overlay import OutputOverlay
+from .console_injection import ConsoleInjection
 
-__all__ = ['StatusOverlay', 'HelpOverlay', 'TreeOverlay', 'ExecutionOverlay', 'OutputOverlay']
+__all__ = ['StatusOverlay', 'HelpOverlay', 'TreeOverlay', 'ExecutionOverlay', 'OutputOverlay', 'ConsoleInjection']
