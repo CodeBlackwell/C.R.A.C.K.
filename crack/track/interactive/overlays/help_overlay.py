@@ -27,51 +27,46 @@ class HelpOverlay:
         """
         help_text = """[bold cyan]KEYBOARD SHORTCUTS[/]
 
-[bold yellow]Navigation:[/]
+[bold yellow]Global Navigation:[/]
   [cyan]h[/] - Show this help
-  [cyan]s[/] - Quick status
-  [cyan]t[/] - Task tree
+  [cyan]s[/] - Quick status overlay
+  [cyan]t[/] - Task tree overlay
   [cyan]q[/] - Quit and save
-  [cyan]b[/] - Back to previous menu
+  [cyan]b[/] - Back to previous panel
+  [cyan]:[/] - Command mode (vim-style)
 
-[bold yellow]Dashboard:[/]
-  [cyan]1-9[/] - Select menu option
-  [cyan]n[/] - Execute next recommended task
-  [cyan]r[/] - Refresh recommendations
+[bold yellow]Dashboard - Letter Hotkeys:[/]
+  [cyan]n[/] - Execute [bold]N[/]ext recommended task
+  [cyan]l[/] - Browse all tasks ([bold]L[/]ist)
+  [cyan]f[/] - Browse [bold]F[/]indings
+  [cyan]w[/] - Quick [bold]W[/]ins (fast, high-value tasks)
+  [cyan]i[/] - [bold]I[/]mport scan results
+  [cyan]d[/] - [bold]D[/]ocument finding
 
-[bold yellow]Task Management:[/]
-  [cyan]alt[/] - Alternative commands (browse and execute)
-  [cyan]tf[/] - Task filter (by status, port, service, tags)
-  [cyan]tr[/] - Task retry (retry failed tasks)
-  [cyan]be[/] - Batch execute (run multiple tasks)
+[bold yellow]Dashboard - Number Keys:[/]
+  [cyan]1-9[/] - Select numbered menu option
 
-[bold yellow]Quick Actions:[/]
-  [cyan]qn[/] - Quick note (add note without forms)
-  [cyan]qe[/] - Quick execute (run command without task)
-  [cyan]qx[/] - Quick export (export to file/clipboard)
+[bold yellow]Task List Panel:[/]
+  [cyan]1-10[/] - Select task from list
+  [cyan]f[/] - Filter tasks (status, port, service, tags)
+  [cyan]s[/] - Sort tasks (priority, name, port, time)
+  [cyan]n[/] - Next page
+  [cyan]p[/] - Previous page
+  [cyan]b[/] - Back to dashboard
 
-[bold yellow]Analysis Tools:[/]
-  [cyan]fc[/] - Finding correlator (analyze findings)
-  [cyan]sa[/] - Success analyzer (task optimization)
-  [cyan]sg[/] - Smart suggest (pattern-based suggestions)
+[bold yellow]Findings Panel:[/]
+  [cyan]f[/] - Filter findings (type, port, service)
+  [cyan]e[/] - Export findings
+  [cyan]n[/] - Next page
+  [cyan]p[/] - Previous page
+  [cyan]b[/] - Back to dashboard
 
-[bold yellow]Workflow Tools:[/]
-  [cyan]ch[/] - Command history (browse and search)
-  [cyan]wr[/] - Workflow recorder (record/replay)
-  [cyan]ss[/] - Session snapshot (save/restore)
-  [cyan]tt[/] - Time tracker (time management)
-  [cyan]pd[/] - Progress dashboard (visual overview)
-
-[bold yellow]Reference:[/]
-  [cyan]pl[/] - Port lookup (common OSCP ports)
-  [cyan]x[/] - Command templates (quick OSCP commands)
-  [cyan]w[/] - Wordlist selector
-
-[bold yellow]Special Commands:[/]
-  [cyan]menu[/] - Return to main menu
-  [cyan]back[/] - Go back
-  [cyan]exit[/] - Exit interactive mode
-  [cyan]!cmd[/] - Execute shell command
+[bold yellow]Task Workspace:[/]
+  [cyan]1[/] - Execute task
+  [cyan]2[/] - Save output
+  [cyan]3[/] - Add finding
+  [cyan]4[/] - Mark complete
+  [cyan]b[/] - Back to task list
 
 [dim]Press any key to close this help screen[/]"""
 
@@ -93,7 +88,7 @@ class HelpOverlay:
         """
         help_text = """[bold cyan]DASHBOARD HELP[/]
 
-[bold yellow]Actions:[/]
+[bold yellow]Number Keys (Menu Selection):[/]
   [cyan]1[/] - Execute next recommended task
   [cyan]2[/] - Browse all tasks
   [cyan]3[/] - Quick wins (fast, high-value tasks)
@@ -104,7 +99,15 @@ class HelpOverlay:
   [cyan]8[/] - Help
   [cyan]9[/] - Exit
 
-[bold yellow]Shortcuts:[/]
+[bold yellow]Letter Hotkeys (Direct Actions):[/]
+  [cyan]n[/] - Execute [bold]N[/]ext task (same as 1)
+  [cyan]l[/] - Browse task [bold]L[/]ist (same as 2)
+  [cyan]f[/] - Browse [bold]F[/]indings (same as 6)
+  [cyan]w[/] - Quick [bold]W[/]ins (same as 3)
+  [cyan]i[/] - [bold]I[/]mport scans (same as 4)
+  [cyan]d[/] - [bold]D[/]ocument finding (same as 5)
+
+[bold yellow]Global Shortcuts:[/]
   [cyan]s[/] - Quick status overlay
   [cyan]t[/] - Task tree overlay
   [cyan]h[/] - Full help overlay

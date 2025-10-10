@@ -33,6 +33,8 @@ from .input_handler import InputProcessor
 from .tui_config import ConfigPanel
 from .panels.dashboard_panel import DashboardPanel
 from .panels.task_workspace_panel import TaskWorkspacePanel
+from .panels.task_list_panel import TaskListPanel
+from .panels.findings_panel import FindingsPanel
 from .overlays.status_overlay import StatusOverlay
 from .overlays.help_overlay import HelpOverlay
 from .overlays.tree_overlay import TreeOverlay
@@ -532,6 +534,385 @@ class TUISessionV2(InteractiveSession):
         self.debug_logger.section("TASK WORKSPACE LOOP END")
         self.debug_logger.info("Returning to dashboard")
 
+    def _task_list_loop(self, live: Live, layout: Layout):
+        """
+        Task list browser loop
+
+        Allows browsing, filtering, sorting all tasks with pagination
+
+        Args:
+            live: Rich Live context
+            layout: Layout object
+        """
+        self.debug_logger.section("TASK LIST LOOP START")
+
+        # Initialize state
+        filter_state = None  # No filters initially
+        sort_by = 'priority'  # Default sort
+        page = 1
+
+        running = True
+        iteration = 0
+
+        while running:
+            iteration += 1
+            self.debug_logger.debug(f"Task list loop iteration {iteration}")
+
+            # Render task list panel
+            self.debug_logger.debug(f"Rendering TaskListPanel (sort={sort_by}, page={page})")
+            panel, choices = TaskListPanel.render(
+                profile=self.profile,
+                filter_state=filter_state,
+                sort_by=sort_by,
+                page=page
+            )
+            self.debug_logger.debug(f"TaskListPanel returned {len(choices)} choices")
+
+            # Update layout
+            layout['header'].update(self._render_header())
+            layout['menu'].update(panel)
+            layout['footer'].update(self._render_footer())
+
+            # Refresh display
+            self.debug_logger.log_live_action("REFRESH", "task list display")
+            live.refresh()
+
+            # Stop live to get input
+            self.debug_logger.log_live_action("STOP", "before task list input")
+            live.stop()
+
+            # Get user input (vim-style hotkeys)
+            self.console.print("\n[dim]Press key (1-10:Select, f:Filter, s:Sort, b:Back):[/] ", end="")
+            try:
+                self.debug_logger.debug("Waiting for task list hotkey input...")
+
+                # Read single key
+                key = self.hotkey_handler.read_key()
+
+                if key is None:
+                    # EOF or timeout
+                    self.debug_logger.warning("EOF or timeout during task list input")
+                    live.start()
+                    running = False
+                    continue
+
+                # Filter out ENTER/newline (treat as no input)
+                if key in ['\r', '\n']:
+                    self.debug_logger.debug(f"ENTER key detected (ord={ord(key)}), ignoring")
+                    user_input = ''
+                # Handle : command mode
+                elif key == ':':
+                    self.debug_logger.debug("Command mode activated in task list")
+                    user_input = self.hotkey_handler.read_command(":")
+                # Handle multi-digit numbers (buffer with timeout)
+                elif key.isdigit():
+                    self.debug_logger.debug(f"Digit detected in task list: {key}, checking for multi-digit")
+                    user_input = self.hotkey_handler.read_number(key, timeout=0.5)
+                else:
+                    # Single-key shortcut
+                    user_input = key
+
+                self.debug_logger.log_user_input(user_input, context="task_list_hotkey")
+
+            except (EOFError, KeyboardInterrupt):
+                self.debug_logger.warning("EOF or interrupt during task list input")
+                live.start()
+                running = False
+                continue
+
+            # Resume live
+            self.debug_logger.log_live_action("START", "after task list input")
+            live.start()
+
+            # Process input
+            if not user_input:
+                self.debug_logger.debug("Empty input, continuing loop")
+                continue
+
+            self.debug_logger.debug(f"Processing task list input: '{user_input}'")
+
+            # Handle shortcuts
+            if user_input.lower() == 'b':
+                self.debug_logger.info("Back to dashboard requested")
+                self.debug_logger.log_state_transition("TASK_LIST", "DASHBOARD", "back button pressed")
+                running = False
+                continue
+
+            elif user_input.lower() == 'f':
+                self.debug_logger.info("Filter menu requested (placeholder)")
+                live.stop()
+                self.console.print("\n[yellow]Filter menu not yet implemented[/]")
+                self.console.print("[dim]Press Enter to continue...[/]")
+                input()
+                live.start()
+                continue
+
+            elif user_input.lower() == 's':
+                self.debug_logger.info("Sort menu requested (placeholder)")
+                live.stop()
+                self.console.print("\n[yellow]Sort menu not yet implemented[/]")
+                self.console.print("[dim]Press Enter to continue...[/]")
+                input()
+                live.start()
+                continue
+
+            elif user_input.lower() == 'n':
+                self.debug_logger.info("Next page requested")
+                # Find next page choice
+                next_choice = next((c for c in choices if c.get('action') == 'next_page'), None)
+                if next_choice:
+                    page = next_choice['page']
+                    self.debug_logger.debug(f"Moving to page {page}")
+                else:
+                    self.debug_logger.debug("No next page available")
+                continue
+
+            elif user_input.lower() == 'p':
+                self.debug_logger.info("Previous page requested")
+                # Find prev page choice
+                prev_choice = next((c for c in choices if c.get('action') == 'prev_page'), None)
+                if prev_choice:
+                    page = prev_choice['page']
+                    self.debug_logger.debug(f"Moving to page {page}")
+                else:
+                    self.debug_logger.debug("No previous page available")
+                continue
+
+            # Try to parse as task selection number
+            try:
+                choice_num = int(user_input)
+                self.debug_logger.debug(f"Parsed as choice number: {choice_num}")
+
+                if 1 <= choice_num <= len(choices):
+                    choice = choices[choice_num - 1]
+                    choice_action = choice.get('action')
+                    self.debug_logger.info(f"Task list choice selected: {choice_action}")
+
+                    # Handle select_task action
+                    if choice_action == 'select_task':
+                        task = choice.get('task')
+                        if task:
+                            self.debug_logger.info(f"Navigating to workspace for task: {task.name}")
+                            self.debug_logger.log_state_transition("TASK_LIST", "TASK_WORKSPACE", f"selected: {task.name}")
+
+                            # Navigate to task workspace
+                            self._task_workspace_loop(live, layout, task)
+
+                            self.debug_logger.log_state_transition("TASK_WORKSPACE", "TASK_LIST", "returned from workspace")
+                            self.debug_logger.info("Returned from task workspace to task list")
+                            # Stay in task list loop, don't exit
+                        else:
+                            self.debug_logger.warning("select_task choice has no task object")
+
+                    else:
+                        self.debug_logger.warning(f"Unhandled action: {choice_action}")
+
+                else:
+                    self.debug_logger.warning(f"Choice {choice_num} out of range (1-{len(choices)})")
+
+                    live.stop()
+                    self.console.print(f"\n[red]Invalid choice: {choice_num}[/]")
+                    self.console.print(f"[dim]Please choose 1-{len(choices)} or 'b' for back. Press Enter...[/]")
+                    input()
+                    live.start()
+
+            except ValueError as e:
+                self.debug_logger.warning(f"Failed to parse task list input: {e}")
+
+                live.stop()
+                self.console.print(f"\n[red]Invalid input: {user_input}[/]")
+                self.console.print(f"[dim]Please enter a number or shortcut. Press Enter...[/]")
+                input()
+                live.start()
+
+        self.debug_logger.section("TASK LIST LOOP END")
+        self.debug_logger.info("Returning to dashboard")
+
+    def _findings_loop(self, live: Live, layout: Layout):
+        """
+        Findings browser loop
+
+        Allows browsing and filtering findings with pagination
+
+        Args:
+            live: Rich Live context
+            layout: Layout object
+        """
+        self.debug_logger.section("FINDINGS LOOP START")
+
+        # Initialize state
+        filter_type = 'all'  # No filters initially
+        page = 1
+
+        running = True
+        iteration = 0
+
+        while running:
+            iteration += 1
+            self.debug_logger.debug(f"Findings loop iteration {iteration}")
+
+            # Render findings panel
+            self.debug_logger.debug(f"Rendering FindingsPanel (filter={filter_type}, page={page})")
+            panel, choices = FindingsPanel.render(
+                profile=self.profile,
+                filter_type=filter_type,
+                page=page
+            )
+            self.debug_logger.debug(f"FindingsPanel returned {len(choices)} choices")
+
+            # Update layout
+            layout['header'].update(self._render_header())
+            layout['menu'].update(panel)
+            layout['footer'].update(self._render_footer())
+
+            # Refresh display
+            self.debug_logger.log_live_action("REFRESH", "findings display")
+            live.refresh()
+
+            # Stop live to get input
+            self.debug_logger.log_live_action("STOP", "before findings input")
+            live.stop()
+
+            # Get user input (vim-style hotkeys)
+            self.console.print("\n[dim]Press key (f:Filter, e:Export, b:Back):[/] ", end="")
+            try:
+                self.debug_logger.debug("Waiting for findings hotkey input...")
+
+                # Read single key
+                key = self.hotkey_handler.read_key()
+
+                if key is None:
+                    # EOF or timeout
+                    self.debug_logger.warning("EOF or timeout during findings input")
+                    live.start()
+                    running = False
+                    continue
+
+                # Filter out ENTER/newline (treat as no input)
+                if key in ['\r', '\n']:
+                    self.debug_logger.debug(f"ENTER key detected (ord={ord(key)}), ignoring")
+                    user_input = ''
+                # Handle : command mode
+                elif key == ':':
+                    self.debug_logger.debug("Command mode activated in findings")
+                    user_input = self.hotkey_handler.read_command(":")
+                # Handle multi-digit numbers (buffer with timeout)
+                elif key.isdigit():
+                    self.debug_logger.debug(f"Digit detected in findings: {key}, checking for multi-digit")
+                    user_input = self.hotkey_handler.read_number(key, timeout=0.5)
+                else:
+                    # Single-key shortcut
+                    user_input = key
+
+                self.debug_logger.log_user_input(user_input, context="findings_hotkey")
+
+            except (EOFError, KeyboardInterrupt):
+                self.debug_logger.warning("EOF or interrupt during findings input")
+                live.start()
+                running = False
+                continue
+
+            # Resume live
+            self.debug_logger.log_live_action("START", "after findings input")
+            live.start()
+
+            # Process input
+            if not user_input:
+                self.debug_logger.debug("Empty input, continuing loop")
+                continue
+
+            self.debug_logger.debug(f"Processing findings input: '{user_input}'")
+
+            # Handle shortcuts
+            if user_input.lower() == 'b':
+                self.debug_logger.info("Back to dashboard requested")
+                self.debug_logger.log_state_transition("FINDINGS", "DASHBOARD", "back button pressed")
+                running = False
+                continue
+
+            elif user_input.lower() == 'f':
+                self.debug_logger.info("Filter menu requested (placeholder)")
+                live.stop()
+                self.console.print("\n[yellow]Filter menu not yet implemented[/]")
+                self.console.print("[dim]Press Enter to continue...[/]")
+                input()
+                live.start()
+                continue
+
+            elif user_input.lower() == 'e':
+                self.debug_logger.info("Export requested (placeholder)")
+                live.stop()
+                self.console.print("\n[yellow]Export not yet implemented[/]")
+                self.console.print("[dim]Press Enter to continue...[/]")
+                input()
+                live.start()
+                continue
+
+            elif user_input.lower() == 'n':
+                self.debug_logger.info("Next page requested")
+                # Find next page choice
+                next_choice = next((c for c in choices if c.get('action') == 'next_page'), None)
+                if next_choice:
+                    page = next_choice['page']
+                    self.debug_logger.debug(f"Moving to page {page}")
+                else:
+                    self.debug_logger.debug("No next page available")
+                continue
+
+            elif user_input.lower() == 'p':
+                self.debug_logger.info("Previous page requested")
+                # Find prev page choice
+                prev_choice = next((c for c in choices if c.get('action') == 'prev_page'), None)
+                if prev_choice:
+                    page = prev_choice['page']
+                    self.debug_logger.debug(f"Moving to page {page}")
+                else:
+                    self.debug_logger.debug("No previous page available")
+                continue
+
+            # Try to parse as finding selection number (future feature)
+            try:
+                choice_num = int(user_input)
+                self.debug_logger.debug(f"Parsed as choice number: {choice_num}")
+
+                if 1 <= choice_num <= len(choices):
+                    choice = choices[choice_num - 1]
+                    choice_action = choice.get('action')
+                    self.debug_logger.info(f"Findings choice selected: {choice_action}")
+
+                    # Handle view action (future feature)
+                    if choice_action == 'view':
+                        self.debug_logger.info("View finding details (placeholder)")
+                        live.stop()
+                        self.console.print("\n[yellow]Finding details view not yet implemented[/]")
+                        self.console.print("[dim]Press Enter to continue...[/]")
+                        input()
+                        live.start()
+
+                    else:
+                        self.debug_logger.warning(f"Unhandled action: {choice_action}")
+
+                else:
+                    self.debug_logger.warning(f"Choice {choice_num} out of range (1-{len(choices)})")
+
+                    live.stop()
+                    self.console.print(f"\n[red]Invalid choice: {choice_num}[/]")
+                    self.console.print(f"[dim]Please choose 1-{len(choices)} or 'b' for back. Press Enter...[/]")
+                    input()
+                    live.start()
+
+            except ValueError as e:
+                self.debug_logger.warning(f"Failed to parse findings input: {e}")
+
+                live.stop()
+                self.console.print(f"\n[red]Invalid input: {user_input}[/]")
+                self.console.print(f"[dim]Please enter a number or shortcut. Press Enter...[/]")
+                input()
+                live.start()
+
+        self.debug_logger.section("FINDINGS LOOP END")
+        self.debug_logger.info("Returning to dashboard")
+
     def _execute_task_streaming(
         self,
         live: Live,
@@ -727,7 +1108,7 @@ class TUISessionV2(InteractiveSession):
 
     def _render_footer(self) -> Panel:
         """Render footer with vim-style shortcuts"""
-        shortcuts = "[cyan]h[/]:Help | [cyan]s[/]:Status | [cyan]t[/]:Tree | [cyan]q[/]:Quit | [dim]:[/]command"
+        shortcuts = "[cyan]n[/]:Next | [cyan]l[/]:List | [cyan]f[/]:Findings | [cyan]h[/]:Help | [cyan]s[/]:Status | [cyan]t[/]:Tree | [cyan]q[/]:Quit | [dim]:[/]cmd"
         return Panel(
             shortcuts,
             border_style="cyan",
@@ -735,7 +1116,7 @@ class TUISessionV2(InteractiveSession):
         )
 
     def _process_input(self, user_input: str) -> Optional[str]:
-        """Process user input"""
+        """Process user input - supports numbers, letter hotkeys, and : commands"""
         self.debug_logger.debug(f"_process_input called with: '{user_input}'")
 
         # Quit
@@ -759,6 +1140,34 @@ class TUISessionV2(InteractiveSession):
         if user_input.lower() == 't':
             self.debug_logger.info("Tree overlay requested")
             self._show_tree()
+            return None
+
+        # Letter hotkeys for Dashboard actions
+        # Map letters to choice IDs for faster navigation
+        hotkey_map = {
+            'n': 'next',              # Execute next task
+            'l': 'browse-tasks',      # Browse all tasks (l for "list")
+            'f': 'browse-findings',   # Browse findings
+            'w': 'quick-wins',        # Quick wins
+            'i': 'import',            # Import scan results
+            'd': 'finding',           # Document finding
+        }
+
+        # Check if input is a letter hotkey
+        if user_input.lower() in hotkey_map:
+            choice_id = hotkey_map[user_input.lower()]
+            self.debug_logger.info(f"Letter hotkey '{user_input}' mapped to choice ID: {choice_id}")
+
+            # Find the matching choice by ID
+            for idx, choice in enumerate(self._current_choices):
+                if choice.get('id') == choice_id:
+                    self.debug_logger.info(f"Executing choice via hotkey: {choice.get('label')}")
+                    self._execute_choice(idx)
+                    return None
+
+            # Hotkey mapped but choice not available
+            self.debug_logger.warning(f"Hotkey '{user_input}' maps to '{choice_id}' but choice not available")
+            self.console.print(f"[yellow]Action not available in current context[/]")
             return None
 
         # Try to parse as choice number
@@ -806,6 +1215,30 @@ class TUISessionV2(InteractiveSession):
                 return
             else:
                 self.debug_logger.warning("Choice ID 'next' has no task object")
+
+        # Check if this is task list navigation (Browse all tasks)
+        elif choice.get('id') == 'browse-tasks':
+            self.debug_logger.info("Navigating to task list browser")
+            self.debug_logger.log_state_transition("DASHBOARD", "TASK_LIST", "browse tasks selected")
+
+            # Enter task list loop with SAME Live and Layout
+            self._task_list_loop(self._live, self._layout)
+
+            self.debug_logger.log_state_transition("TASK_LIST", "DASHBOARD", "returned from task list")
+            self.debug_logger.info("Returned from task list browser")
+            return
+
+        # Check if this is findings navigation (Browse findings)
+        elif choice.get('id') == 'browse-findings':
+            self.debug_logger.info("Navigating to findings browser")
+            self.debug_logger.log_state_transition("DASHBOARD", "FINDINGS", "browse findings selected")
+
+            # Enter findings loop with SAME Live and Layout
+            self._findings_loop(self._live, self._layout)
+
+            self.debug_logger.log_state_transition("FINDINGS", "DASHBOARD", "returned from findings")
+            self.debug_logger.info("Returned from findings browser")
+            return
 
         # Use ExecutionOverlay to handle task execution outside Live context
         # This prevents the freeze issue where Live display conflicts with terminal I/O
