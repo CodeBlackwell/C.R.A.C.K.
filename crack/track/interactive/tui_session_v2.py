@@ -338,16 +338,15 @@ class TUISessionV2(InteractiveSession):
         running = True
         iteration = 0
 
+        # Initial render before loop starts
+        self._refresh_panels(layout)
+        live.refresh()
+
         while running:
             iteration += 1
             # Only log every 10 iterations to avoid spam
             if iteration % 10 == 0:
                 self.debug_logger.log(f"Loop iteration {iteration}", category=LogCategory.UI_RENDER, level=LogLevel.TRACE)
-
-            # Refresh display
-            self._refresh_panels(layout)
-
-            live.refresh()
 
             # Stop live to get input
             live.stop()
@@ -399,6 +398,11 @@ class TUISessionV2(InteractiveSession):
                 if result == 'exit':
                     self.debug_logger.log("Exit requested from input processing", category=LogCategory.SYSTEM_SHUTDOWN, level=LogLevel.NORMAL)
                     running = False
+                    continue
+
+            # Refresh display AFTER processing input (avoids duplication from error messages)
+            self._refresh_panels(layout)
+            live.refresh()
 
         self.debug_logger.log("Main interaction loop ended", category=LogCategory.SYSTEM_SHUTDOWN, level=LogLevel.NORMAL)
 
@@ -1834,7 +1838,19 @@ class TUISessionV2(InteractiveSession):
 
             # Hotkey mapped but choice not available
             self.debug_logger.warning(f"Hotkey '{user_input}' maps to '{choice_id}' but choice not available")
-            self.console.print(f"[yellow]Action not available in current context[/]")
+
+            # Stop Live to show error clearly
+            if hasattr(self, '_live'):
+                self._live.stop()
+
+            self.console.print(f"\n[yellow]Action not available in current context[/]")
+            self.console.print("[dim]Press Enter to continue...[/]")
+            input()
+
+            # Restart Live
+            if hasattr(self, '_live'):
+                self._live.start()
+
             return None
 
         # Try to parse as choice number
@@ -1848,7 +1864,18 @@ class TUISessionV2(InteractiveSession):
                 self._execute_choice(choice_num - 1)
             else:
                 self.debug_logger.warning(f"Choice {choice_num} out of range (1-{len(self._current_choices)})")
-                self.console.print(f"[red]Invalid choice: {choice_num}[/]")
+
+                # Stop Live to show error clearly
+                if hasattr(self, '_live'):
+                    self._live.stop()
+
+                self.console.print(f"\n[red]Invalid choice: {choice_num}[/]")
+                self.console.print(f"[dim]Please choose 1-{len(self._current_choices)} or press a valid shortcut. Press Enter...[/]")
+                input()
+
+                # Restart Live
+                if hasattr(self, '_live'):
+                    self._live.start()
         except (ValueError, AttributeError):
             # Not a number - try delegating to ShortcutHandler
             # This handles all the shortcuts not explicitly processed above
@@ -1883,7 +1910,18 @@ class TUISessionV2(InteractiveSession):
             else:
                 # Not a shortcut either - unknown input
                 self.debug_logger.warning(f"Unknown input: {user_input}")
-                self.console.print(f"[red]Invalid input: {user_input}[/]")
+
+                # Stop Live to show error clearly
+                if hasattr(self, '_live'):
+                    self._live.stop()
+
+                self.console.print(f"\n[red]Invalid input: {user_input}[/]")
+                self.console.print("[dim]Press any valid key or Enter to continue...[/]")
+                input()
+
+                # Restart Live
+                if hasattr(self, '_live'):
+                    self._live.start()
 
         return None
 

@@ -183,7 +183,8 @@ def main():
         epilog="""
 Examples:
   # Interactive mode (TUI is now DEFAULT)
-  crack track 192.168.45.100                          # Launches TUI interface (default)
+  crack track                                         # Quick test with google-gruyere.appspot.com (default)
+  crack track 192.168.45.100                          # Launches TUI interface for specific target
   crack track -i 192.168.45.100                       # Terminal-based interactive mode
   crack track 192.168.45.100 --resume                 # Resume TUI session
 
@@ -262,7 +263,9 @@ For full documentation: See track/README.md or https://github.com/CodeBlackwell/
         """
     )
 
-    parser.add_argument('target', nargs='?', help='Target IP or hostname')
+    parser.add_argument('target', nargs='?',
+                        default='google-gruyere.appspot.com',
+                        help='Target IP or hostname (default: google-gruyere.appspot.com for testing)')
 
     # Interactive mode
     parser.add_argument('--interactive', '-i', action='store_true',
@@ -428,10 +431,8 @@ For full documentation: See track/README.md or https://github.com/CodeBlackwell/
         handle_visualize(args)
         return
 
-    # Target is required for all other commands
-    if not args.target:
-        parser.print_help()
-        return
+    # Target now has a default (google-gruyere.appspot.com) for easy testing
+    # No need to check if target is provided
 
     # Check if TUI should be default (new behavior)
     # TUI becomes the default interactive mode unless user specifies otherwise
