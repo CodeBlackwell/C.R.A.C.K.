@@ -175,8 +175,11 @@ class TUISessionV2(InteractiveSession):
                     live.start()
                     return  # Exit without confirming
 
+                # Filter out ENTER/newline (treat as no input)
+                if key in ['\r', '\n']:
+                    user_input = ''
                 # Handle : command mode
-                if key == ':':
+                elif key == ':':
                     user_input = self.hotkey_handler.read_command(":")
                 else:
                     user_input = key
@@ -283,8 +286,12 @@ class TUISessionV2(InteractiveSession):
                     running = False
                     continue
 
+                # Filter out ENTER/newline (treat as no input)
+                if key in ['\r', '\n']:
+                    self.debug_logger.debug(f"ENTER key detected (ord={ord(key)}), ignoring")
+                    user_input = ''
                 # Handle : command mode
-                if key == ':':
+                elif key == ':':
                     self.debug_logger.debug("Command mode activated")
                     user_input = self.hotkey_handler.read_command(":")
                 # Handle multi-digit numbers (buffer with timeout)
@@ -391,8 +398,12 @@ class TUISessionV2(InteractiveSession):
                     running = False
                     continue
 
+                # Filter out ENTER/newline (treat as no input)
+                if key in ['\r', '\n']:
+                    self.debug_logger.debug(f"ENTER key detected (ord={ord(key)}), ignoring")
+                    user_input = ''
                 # Handle : command mode
-                if key == ':':
+                elif key == ':':
                     self.debug_logger.debug("Command mode activated in workspace")
                     user_input = self.hotkey_handler.read_command(":")
                 # Handle multi-digit numbers (buffer with timeout)
