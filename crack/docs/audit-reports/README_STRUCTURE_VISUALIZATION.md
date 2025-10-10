@@ -9,7 +9,7 @@
 ├── docs/
 │   ├── README.md (248 lines) ❌ DUPLICATE ← DELETE THIS
 │   │   └── 99% identical to /crack/README.md
-│   └── audit_reports/ ← YOU ARE HERE
+│   └── audit-reports/ ← YOU ARE HERE
 │       ├── README_CONSOLIDATION_PLAN.md
 │       ├── README_CONSOLIDATION_SUMMARY.md
 │       └── README_STRUCTURE_VISUALIZATION.md

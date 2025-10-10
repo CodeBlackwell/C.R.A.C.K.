@@ -25,8 +25,8 @@
 **You are here:** Track Module - Comprehensive enumeration system with 235+ service plugins
 
 **Quick Links:**
-- 📚 [**Master Documentation Index**](../docs/MASTER_INDEX.md) - Complete documentation catalog (302 files)
-- 📋 [**Quick Reference Card**](../docs/QUICK_REFERENCE.md) - One-page command reference
+- 📚 [**Master Documentation Index**](../docs/master-index.md) - Complete documentation catalog (302 files)
+- 📋 [**Quick Navigation**](../docs/master-index.md#quick-navigation) - One-page command reference
 
 **Related Documentation:**
 - [Project Overview](../README.md) - Installation, quick start, tool descriptions

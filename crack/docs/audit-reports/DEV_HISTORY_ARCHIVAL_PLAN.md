@@ -458,7 +458,7 @@ track/docs/archive/
 │   ├── README.md (docs index)
 │   ├── STARTER_USAGE.md (relocated from root)
 │   ├── scanner_validation_report.md
-│   └── audit_reports/ (this report)
+│   └── audit-reports/ (this report)
 ├── sessions/
 │   ├── README.md (sessions overview)
 │   ├── DNS_TUNNEL_GUIDE.md (active user guide)

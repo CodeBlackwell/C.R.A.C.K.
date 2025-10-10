@@ -375,10 +375,10 @@ grep -r "smb\|samba\|445" /home/kali/OSCP/crack/track/services/plugin_docs/minin
 ## Related Documentation
 
 This report complements previous audit reports:
-- [`DEV_HISTORY_ARCHIVAL_PLAN.md`](/home/kali/OSCP/crack/docs/audit_reports/DEV_HISTORY_ARCHIVAL_PLAN.md) - Phase 1
-- [`MINING_REPORT_CONSOLIDATION_REPORT.md`](/home/kali/OSCP/crack/docs/audit_reports/MINING_REPORT_CONSOLIDATION_REPORT.md) - Phase 2
-- [`VERBOSITY_REDUCTION_REPORT.md`](/home/kali/OSCP/crack/docs/audit_reports/VERBOSITY_REDUCTION_REPORT.md) - Phase 3
-- [`ROOT_CLEANUP_PLAN.md`](/home/kali/OSCP/crack/docs/audit_reports/ROOT_CLEANUP_PLAN.md) - Pending
+- [`DEV_HISTORY_ARCHIVAL_PLAN.md`](/home/kali/OSCP/crack/docs/audit-reports/DEV_HISTORY_ARCHIVAL_PLAN.md) - Phase 1
+- [`MINING_REPORT_CONSOLIDATION_REPORT.md`](/home/kali/OSCP/crack/docs/audit-reports/MINING_REPORT_CONSOLIDATION_REPORT.md) - Phase 2
+- [`VERBOSITY_REDUCTION_REPORT.md`](/home/kali/OSCP/crack/docs/audit-reports/VERBOSITY_REDUCTION_REPORT.md) - Phase 3
+- [`ROOT_CLEANUP_PLAN.md`](/home/kali/OSCP/crack/docs/audit-reports/ROOT_CLEANUP_PLAN.md) - Pending
 - **This Report:** Phase 4 - Master Index Creation
 
 ---

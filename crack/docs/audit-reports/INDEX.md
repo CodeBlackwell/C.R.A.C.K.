@@ -222,6 +222,6 @@ grep -r "docs/README.md" /home/kali/OSCP/crack/ --exclude-dir=.git
 
 ---
 
-**Location:** `/home/kali/OSCP/crack/docs/audit_reports/`
+**Location:** `/home/kali/OSCP/crack/docs/audit-reports/`
 **Maintained By:** CRACK Documentation Team
 **Last Updated:** 2025-10-10

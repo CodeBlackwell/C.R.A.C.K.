@@ -64,4 +64,4 @@ Add "Purpose" sections to major READMEs showing:
 
 ---
 
-**Full Details:** See `/home/kali/OSCP/crack/docs/audit_reports/README_CONSOLIDATION_PLAN.md`
+**Full Details:** See `/home/kali/OSCP/crack/docs/audit-reports/README_CONSOLIDATION_PLAN.md`

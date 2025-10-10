@@ -30,7 +30,7 @@
 
 **Project Overview & Getting Started**
 - [`/home/kali/OSCP/crack/README.md`](/home/kali/OSCP/crack/README.md) - Main project README
-- [`/home/kali/OSCP/crack/docs/guides/GETTING_STARTED.md`](/home/kali/OSCP/crack/docs/guides/GETTING_STARTED.md) - Quick start guide (relocated from STARTER_USAGE.md)
+- [`/home/kali/OSCP/crack/docs/guides/getting-started.md`](/home/kali/OSCP/crack/docs/guides/getting-started.md) - Quick start guide (relocated from STARTER_USAGE.md)
 
 **Track Module**
 - [`/home/kali/OSCP/crack/track/README.md`](/home/kali/OSCP/crack/track/README.md) - Comprehensive Track module guide
@@ -101,10 +101,14 @@
   - `chapter_09_nse_advanced.md` - NSE advanced
 
 **Tool-Specific Guides**
-- [`/home/kali/OSCP/crack/docs/PARAM_DISCOVERY_GUIDE.md`](/home/kali/OSCP/crack/docs/PARAM_DISCOVERY_GUIDE.md) - Parameter discovery
-- [`/home/kali/OSCP/crack/docs/SCAN_ANALYZER.md`](/home/kali/OSCP/crack/docs/SCAN_ANALYZER.md) - Scan analyzer
-- [`/home/kali/OSCP/crack/docs/PIPELINE_SQLI_FU.md`](/home/kali/OSCP/crack/docs/PIPELINE_SQLI_FU.md) - SQLi pipeline
-- [`/home/kali/OSCP/crack/docs/TIME_SQLI_METHODOLOGY.md`](/home/kali/OSCP/crack/docs/TIME_SQLI_METHODOLOGY.md) - Time-based SQLi
+- [`/home/kali/OSCP/crack/docs/guides/web-param-discovery.md`](/home/kali/OSCP/crack/docs/guides/web-param-discovery.md) - Parameter discovery
+- [`/home/kali/OSCP/crack/docs/guides/network-scan-analyzer.md`](/home/kali/OSCP/crack/docs/guides/network-scan-analyzer.md) - Scan analyzer
+- [`/home/kali/OSCP/crack/docs/guides/sqli/pipeline-methodology.md`](/home/kali/OSCP/crack/docs/guides/sqli/pipeline-methodology.md) - SQLi pipeline
+- [`/home/kali/OSCP/crack/docs/guides/sqli/time-based-methodology.md`](/home/kali/OSCP/crack/docs/guides/sqli/time-based-methodology.md) - Time-based SQLi
+
+**Educational Writeups**
+- [`/home/kali/OSCP/crack/docs/writeups/cms-made-simple/sqli-exploit-adaptation.md`](/home/kali/OSCP/crack/docs/writeups/cms-made-simple/sqli-exploit-adaptation.md) - CMS Made Simple SQLi
+- [`/home/kali/OSCP/crack/docs/writeups/cms-made-simple/authenticated-rce.md`](/home/kali/OSCP/crack/docs/writeups/cms-made-simple/authenticated-rce.md) - CMS Made Simple RCE
 
 **Integration & Checklists**
 - [`/home/kali/OSCP/crack/track/docs/TOOL_INTEGRATION_MATRIX.md`](/home/kali/OSCP/crack/track/docs/TOOL_INTEGRATION_MATRIX.md) - Tool integration matrix
@@ -293,7 +297,7 @@
 
 **Step 1: Overview**
 1. [`/home/kali/OSCP/crack/README.md`](/home/kali/OSCP/crack/README.md) - Project overview
-2. [`/home/kali/OSCP/crack/docs/guides/GETTING_STARTED.md`](/home/kali/OSCP/crack/docs/guides/GETTING_STARTED.md) - Quick start (relocated)
+2. [`/home/kali/OSCP/crack/docs/guides/getting-started.md`](/home/kali/OSCP/crack/docs/guides/getting-started.md) - Quick start (relocated)
 
 **Step 2: Core Usage**
 3. [`/home/kali/OSCP/crack/track/README.md`](/home/kali/OSCP/crack/track/README.md) - Comprehensive Track guide
@@ -699,7 +703,7 @@ vim /home/kali/OSCP/crack/track/services/plugin_docs/archive/ARCHIVE_MANIFEST.md
 
 ### For Beginners
 1. `/home/kali/OSCP/crack/README.md` - Start here
-2. `/home/kali/OSCP/crack/docs/guides/GETTING_STARTED.md` - Quick start (relocated)
+2. `/home/kali/OSCP/crack/docs/guides/getting-started.md` - Quick start (relocated)
 3. `/home/kali/OSCP/crack/track/docs/USAGE_GUIDE.md` - Basic usage
 4. `/home/kali/OSCP/crack/reference/docs/quick-wins.md` - Quick techniques
 
@@ -725,9 +729,9 @@ vim /home/kali/OSCP/crack/track/services/plugin_docs/archive/ARCHIVE_MANIFEST.md
 
 ## Related Documentation
 
-- **Audit Reports:** [`/home/kali/OSCP/crack/docs/audit_reports/INDEX.md`](/home/kali/OSCP/crack/docs/audit_reports/INDEX.md)
+- **Audit Reports:** [`/home/kali/OSCP/crack/docs/audit-reports/INDEX.md`](/home/kali/OSCP/crack/docs/audit-reports/INDEX.md)
 - **Track Index:** [`/home/kali/OSCP/crack/track/docs/INDEX.md`](/home/kali/OSCP/crack/track/docs/INDEX.md)
-- **Quick Reference:** [`/home/kali/OSCP/crack/docs/QUICK_REFERENCE.md`](/home/kali/OSCP/crack/docs/QUICK_REFERENCE.md) *(to be created)*
+- **Documentation Root:** [`/home/kali/OSCP/crack/docs/README.md`](/home/kali/OSCP/crack/docs/README.md)
 
 ---
 

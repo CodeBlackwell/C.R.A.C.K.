@@ -426,7 +426,7 @@ Files should remain active when they are:
 ### Follow-Up (Recommended)
 
 1. **Review Audit Reports** - Decide whether to archive or keep
-   - `docs/audit_reports/` contains phase 1 audit results
+   - `docs/audit-reports/` contains phase 1 audit results
    - Consider archiving after review by user
 
 2. **Create Documentation Index** - For track/docs/

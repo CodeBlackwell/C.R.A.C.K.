@@ -7,8 +7,8 @@ A hybrid command reference system combining human-readable documentation with pr
 **You are here:** Reference System - Command lookup with 70+ OSCP commands
 
 **Quick Links:**
-- 📚 [**Master Documentation Index**](../docs/MASTER_INDEX.md) - Complete documentation catalog (302 files)
-- 📋 [**Quick Reference Card**](../docs/QUICK_REFERENCE.md) - One-page command reference
+- 📚 [**Master Documentation Index**](../docs/master-index.md) - Complete documentation catalog (302 files)
+- 📋 [**Quick Navigation**](../docs/master-index.md#quick-navigation) - One-page command reference
 
 **Related Documentation:**
 - [Project Overview](../README.md) - Installation, quick start, CRACK toolkit introduction
