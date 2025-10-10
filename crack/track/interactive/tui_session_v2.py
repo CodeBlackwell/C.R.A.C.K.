@@ -109,7 +109,7 @@ class TUISessionV2(InteractiveSession):
             with Live(
                 layout,
                 console=self.console,
-                screen=False,
+                screen=True,  # Full-screen mode for proper clearing
                 refresh_per_second=4,
                 auto_refresh=False
             ) as live:
@@ -1103,9 +1103,22 @@ class TUISessionV2(InteractiveSession):
             self.debug_logger.exception(f"Exception during finding analysis: {e}")
             findings = []
 
+        # 9. Save execution to task history for output overlay
+        self.debug_logger.debug("Saving execution to task history")
+        try:
+            task.add_execution(
+                command=command,
+                output_lines=output_lines,
+                exit_code=exit_code,
+                duration=elapsed
+            )
+            self.debug_logger.info(f"Execution saved to history (context: {task.get_latest_execution().get('context_label')})")
+        except Exception as e:
+            self.debug_logger.warning(f"Failed to save execution history: {e}")
+
         self.debug_logger.section("STREAMING EXECUTION END")
 
-        # 9. Return results
+        # 10. Return results
         return (output_lines, elapsed, exit_code, findings)
 
     def _refresh_panels(self, layout: Layout):

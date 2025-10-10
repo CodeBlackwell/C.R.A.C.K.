@@ -85,7 +85,9 @@ class TaskNode:
             # Wordlist selection integration (Phase 4)
             'wordlist': None,  # Selected wordlist path (str or None)
             'wordlist_purpose': None,  # Purpose: 'web-enumeration', 'password-cracking', etc.
-            'wordlist_variant': 'default'  # Variant: 'default', 'thorough', 'quick'
+            'wordlist_variant': 'default',  # Variant: 'default', 'thorough', 'quick'
+            # Output overlay system (execution history tracking)
+            'execution_history': []  # List of execution records with full output
         }
 
         # Merge external metadata if provided (backward compatibility)
@@ -135,6 +137,68 @@ class TaskNode:
             'timestamp': datetime.now().isoformat(),
             'note': note
         })
+
+    def add_execution(
+        self,
+        command: str,
+        output_lines: List[str],
+        exit_code: int,
+        duration: float,
+        context_label: str = None,
+        max_history: int = 10
+    ):
+        """Add execution record to task history
+
+        Args:
+            command: Executed command string
+            output_lines: Full command output (list of lines)
+            exit_code: Command exit code
+            duration: Execution duration in seconds
+            context_label: Optional context label (auto-generated if None)
+            max_history: Maximum execution records to keep (default: 10)
+        """
+        # Auto-generate context label if not provided
+        if not context_label:
+            timestamp_short = datetime.now().strftime('%H%M%S')
+            context_label = f"{self.id}-{timestamp_short}"
+
+        execution_record = {
+            'timestamp': datetime.now().isoformat(),
+            'command': command,
+            'output_lines': output_lines,
+            'exit_code': exit_code,
+            'duration': duration,
+            'context_label': context_label,
+            'output_line_count': len(output_lines)
+        }
+
+        # Add to history
+        if 'execution_history' not in self.metadata:
+            self.metadata['execution_history'] = []
+
+        self.metadata['execution_history'].append(execution_record)
+
+        # Trim to max_history (keep most recent)
+        if len(self.metadata['execution_history']) > max_history:
+            self.metadata['execution_history'] = self.metadata['execution_history'][-max_history:]
+
+    def get_execution_history(self) -> List[Dict[str, Any]]:
+        """Get all execution records for this task
+
+        Returns:
+            List of execution records (most recent first)
+        """
+        history = self.metadata.get('execution_history', [])
+        return list(reversed(history))  # Most recent first
+
+    def get_latest_execution(self) -> Optional[Dict[str, Any]]:
+        """Get most recent execution record
+
+        Returns:
+            Latest execution record or None if no history
+        """
+        history = self.metadata.get('execution_history', [])
+        return history[-1] if history else None
 
     def get_next_actionable(self, root_node: Optional['TaskNode'] = None) -> Optional['TaskNode']:
         """Find next pending leaf task (DFS) with dependency checking
