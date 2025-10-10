@@ -375,6 +375,514 @@ simulated_input(['4', '1', '/path', 'b'])
 4. **Log-Driven Development**
    - All TUI state transitions logged → Tests assert log entries → Visual testing separate
 
+5. **Findings→Tasks→Findings Loop** (Core Enumeration Engine)
+   - Task execution → Output analysis → Finding extraction → Task generation → Repeat
+   - FindingsProcessor converts findings to actionable tasks automatically
+   - Deduplication prevents infinite loops
+   - Event-driven architecture enables extensibility
+
+## Findings Workflow Architecture
+
+**The Core Loop:** This is the foundation that enables infinite enumeration depth.
+
+```
+1. Initial Scan (Nmap)
+   ↓
+2. Service Detection (ServicePlugins)
+   ↓
+3. Task Generation (get_task_tree)
+   ↓
+4. Task Execution (TUI/CLI)
+   ↓
+5. Output Analysis (OutputPatternMatcher)
+   ↓
+6. Finding Extraction (directories, credentials, vulns, etc.)
+   ↓
+7. Finding Persistence (profile.add_finding)
+   ↓
+8. Event Emission (finding_added)
+   ↓
+9. Finding→Task Conversion (FindingsProcessor)
+   ↓
+10. New Task Generation → LOOP BACK TO STEP 4
+```
+
+### Key Components
+
+**1. OutputPatternMatcher** (`track/parsers/output_patterns.py`)
+- Analyzes command output line-by-line
+- Tool-specific matchers (gobuster, nmap, enum4linux, etc.)
+- Returns structured findings dict: `{'directories': [...], 'credentials': [...], 'vulnerabilities': [...]}`
+
+**2. TargetProfile.add_finding()** (`track/core/state.py:162`)
+- Persists findings to profile JSON
+- Emits `finding_added` event to EventBus
+- Tracks source for documentation/reporting
+
+**3. FindingsProcessor** (`track/services/findings_processor.py`)
+- Listens for `finding_added` events
+- Converts findings to tasks using registry pattern
+- Handles deduplication (same finding won't trigger multiple tasks)
+- Emits `plugin_tasks_generated` events
+
+**4. EventBus** (`track/core/events.py`)
+- Decoupled communication system
+- Events: `finding_added`, `task_completed`, `plugin_tasks_generated`, `service_detected`
+- Subscribe with `EventBus.on('event_name', handler)`
+- Emit with `EventBus.emit('event_name', {'key': 'value'})`
+
+### Finding Types & Converters
+
+| Finding Type | Example | Generated Task |
+|--------------|---------|----------------|
+| `directory` | `/admin` | Inspect directory, check for login forms |
+| `file` | `/.env`, `/config.php` | Download and analyze file |
+| `vulnerability` | `CVE-2021-44228` | Research exploit with searchsploit |
+| `credential` | `admin:password123` | Logged for manual verification (no auto-task) |
+| `user` | `admin` | Test common passwords |
+| `service` | `Apache 2.4.41` | (Handled by ServicePlugins, not FindingsProcessor) |
+
+### Example Flow
+
+```
+# User imports nmap scan
+1. Nmap detects HTTP on port 80
+2. HTTPPlugin generates gobuster task
+3. User executes gobuster
+4. OutputPatternMatcher extracts: "/admin" directory
+5. profile.add_finding(type='directory', description='/admin', source='gobuster')
+6. EventBus emits finding_added event
+7. FindingsProcessor receives event
+8. Checks deduplication (not seen before)
+9. Converts to task: "Inspect /admin"
+10. Emits plugin_tasks_generated event
+11. Task added to profile automatically
+12. User sees new task in TUI
+```
+
+### Deduplication Strategy
+
+**Fingerprint:** `{finding_type}:{description}`
+- Example: `"directory:/admin"`
+- Same directory found by gobuster AND dirb = only 1 task generated
+- Clear history: `processor.clear_history()` (for testing/reset)
+
+### Event Flow Diagram
+
+```
+[Nmap Parser] ─service_detected→ [ServiceRegistry]
+                                        ↓
+                                  [ServicePlugin]
+                                        ↓
+                              plugin_tasks_generated
+                                        ↓
+                                  [TargetProfile]
+                                        ↓
+                                  [Task Execution]
+                                        ↓
+                                  [OutputPatternMatcher] ─findings_dict→ [TUI]
+                                        ↓                                    ↓
+                                  [profile.add_finding] ←───────────────────┘
+                                        ↓
+                                  finding_added
+                                        ↓
+                                  [FindingsProcessor]
+                                        ↓
+                              plugin_tasks_generated
+                                        ↓
+                                  [TargetProfile] ← LOOP CLOSES
+```
+
+### Integration Points
+
+**TUI Integration** (`track/interactive/tui_session_v2.py`):
+1. Line 1720-1741: OutputPatternMatcher analyzes output, findings saved to profile
+2. Line 1764-1778: task_completed event emitted after execution
+3. Line 74-76: FindingsProcessor initialized in __init__
+
+**Testing** (`tests/track/test_findings_processor.py`):
+- 23 unit tests covering all finding types
+- Deduplication logic validation
+- Error handling for malformed findings
+- Task structure validation
+
+### Extending the System
+
+**Add New Finding Type:**
+```python
+# In track/services/findings_processor.py
+def _convert_new_type_finding(self, finding: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Convert new_type finding to tasks"""
+    description = finding.get('description', '')
+
+    # Generate task based on finding
+    return [{
+        'id': f'new-type-{description}',
+        'name': f'Handle {description}',
+        'type': 'executable',
+        'status': 'pending',
+        'metadata': {
+            'command': f'custom-command {description}',
+            'finding_source': finding.get('source', 'Unknown')
+        }
+    }]
+
+# Register in __init__
+self.converters['new_type'] = self._convert_new_type_finding
+```
+
+**Listen for Custom Events:**
+```python
+from crack.track.core.events import EventBus
+
+def my_handler(data):
+    finding = data['finding']
+    print(f"New finding: {finding['type']}")
+
+EventBus.on('finding_added', my_handler)
+```
+
+### Why This Architecture?
+
+**Event-Driven Benefits:**
+- Decoupled components (parsers, processors, plugins)
+- Easy to add new finding types without modifying existing code
+- Testable in isolation (mock events)
+
+**Automatic Task Generation:**
+- No manual intervention required
+- Infinite enumeration depth
+- Findings beget tasks beget findings (exponential discovery)
+
+**Deduplication:**
+- Prevents infinite loops
+- Efficient (set-based lookups)
+- Allows multiple tools to find same thing
+
+**Traceability:**
+- Every finding tracks its source
+- Every task knows its origin finding
+- Complete chain for reporting
+
+### ServicePlugin Task Completion (Service-Specific Intelligence)
+
+**Complementary System:** While FindingsProcessor handles generic finding→task conversion, ServicePlugins provide **service-specific intelligence** via `on_task_complete()` methods.
+
+**Key Difference:**
+- FindingsProcessor: "You found a directory → Inspect it" (generic)
+- HTTP Plugin: "Gobuster found /admin → Test default admin credentials" (service-specific)
+
+**Implementation** (`track/services/registry.py:183-288`):
+1. Task completes → EventBus emits `task_completed`
+2. ServiceRegistry._handle_task_completed receives event
+3. Fuzzy matching identifies which plugin owns the task
+4. Plugin's on_task_complete(task_id, output, target) called
+5. Plugin returns service-specific follow-up tasks
+6. Tasks emitted via plugin_tasks_generated event
+
+**Fuzzy Matching Logic** (flexible to avoid false negatives):
+- Direct match: `http-enum-80` → HTTP Plugin
+- Alias match: `gobuster-80` → HTTP Plugin (alias: "gobuster")
+- Port match: `custom-scan-80` → HTTP Plugin (default port: 80)
+- Metadata match: `{service: 'http'}` → HTTP Plugin
+
+**Service Aliases:**
+```python
+'http': ['web', 'https', 'whatweb', 'gobuster', 'nikto', 'wpscan'],
+'smb': ['smbclient', 'enum4linux', 'smbmap', 'crackmapexec'],
+'ssh': ['openssh', 'ssh-audit'],
+'sql': ['mysql', 'postgresql', 'mssql', 'oracle']
+```
+
+**Real-World Examples:**
+
+**Example 1: HTTP Admin Panel Detection**
+```
+Gobuster → Finds /admin → HTTP Plugin sees "gobuster" + "/admin"
+  → Generates: "Test Admin Panel Authentication (try admin:admin, admin:password)"
+```
+
+**Example 2: WordPress Detection**
+```
+WhatWeb → Detects WordPress → HTTP Plugin sees "whatweb" + "wordpress"
+  → Generates: "wpscan --url http://target:80 --enumerate u,vp"
+```
+
+**Example 3: SMB Share Discovery**
+```
+Enum4linux → Finds shares → SMB Plugin sees "enum4linux" + "share"
+  → Generates: "Mount SMB Share (smbclient //target/Share)"
+```
+
+**Active Plugins with on_task_complete (18+):**
+- HTTP Plugin (admin panels, CMS detection)
+- SMB Plugin (share mounting, null sessions)
+- SSH Plugin (exploit research based on version)
+- SQL Plugin (database enumeration)
+- Post-Exploit Plugin (privilege escalation)
+- Binary Exploit Plugin (shellcode generation)
+- Network Poisoning Plugin (MitM attacks)
+- Lua Exploit Plugin (command execution)
+- Linux Capabilities Plugin (capability exploitation)
+- AD Enumeration Plugin (Kerberoasting)
+- ... and 8 more
+
+**Testing** (`tests/track/test_plugin_task_completion.py`):
+- 10 comprehensive tests
+- Fuzzy matching validation
+- Multi-plugin coordination
+- Task generation verification
+
+**Integration Points:**
+- ServiceRegistry: Lines 60 (event handler), 183-221 (handler impl), 224-288 (fuzzy matching)
+- TUI: Line 1772 (emits task_completed event)
+
+**Why Both Systems?**
+
+| System | Strength | Example |
+|--------|----------|---------|
+| **FindingsProcessor** | Universal patterns | Any directory → Inspect |
+| **ServicePlugin** | Service optimization | HTTP /admin → Test defaults |
+
+Together they provide **comprehensive automatic enumeration** with both breadth (generic) and depth (service-specific).
+
+## TUI UX Philosophy (Established Patterns)
+
+**Core Principle:** Every keystroke has purpose. Minimize friction in high-pressure OSCP scenarios.
+
+### 1. One-Keystroke Transitions
+
+**Philosophy:** No Enter key required. Single keypress executes actions immediately.
+
+**Implementation:**
+- All overlays (`h`, `s`, `t`, `p`) - Single key opens, single key dismisses
+- All menu choices - Press number, action executes
+- All panel navigation - Press letter, panel switches
+- Command mode (`:`) - Only multi-char shortcuts require Enter
+
+**Example Flow:**
+```
+User presses: h
+Result: Help overlay appears (no Enter needed)
+
+User presses: s
+Result: Help dismisses AND status overlay appears (no Enter needed)
+
+User presses: s again
+Result: Status overlay closes, back to dashboard (no Enter needed)
+```
+
+**Code Pattern:**
+```python
+# ✓ Correct - Single keypress
+key = self.hotkey_handler.read_key()
+if key == 'h':
+    self._show_help()
+
+# ✗ Wrong - Requires Enter
+user_input = input("Press key: ")
+if user_input == 'h':
+    self._show_help()
+```
+
+### 2. Smart Dismissal
+
+**Philosophy:** Dismissal key can trigger next action. User's intent is clear from context.
+
+**Implementation:**
+- Overlay A is open
+- User presses key for Overlay B
+- Overlay A dismisses AND Overlay B opens (single keystroke)
+
+**Exception:** Pressing same key twice just closes (toggle behavior)
+
+**Code Pattern:**
+```python
+def _show_help(self):
+    # Show help overlay
+    dismiss_key = self.hotkey_handler.read_key()
+
+    # Toggle: pressing 'h' again just closes
+    if dismiss_key == 'h':
+        return  # Just close, don't re-execute
+
+    # Smart dismiss: any other valid command executes
+    if dismiss_key not in ['\r', '\n', ' ']:
+        self._process_input(dismiss_key)  # Execute the command
+```
+
+**Example Flow:**
+```
+Dashboard → Press 'h' → Help opens
+Help → Press 's' → Help closes + Status opens (smart dismiss)
+Status → Press 's' → Status closes (toggle)
+Dashboard → Press 't' → Tree opens
+Tree → Press 'h' → Tree closes + Help opens (smart dismiss)
+```
+
+### 3. Toggle Behavior
+
+**Philosophy:** Same key twice = close overlay. Prevents accidental re-triggering.
+
+**Implementation:**
+- `h` + `h` = Help opens, then closes
+- `s` + `s` = Status opens, then closes
+- `t` + `t` = Tree opens, then closes
+- `p` + `p` = Progress opens, then closes
+
+**Why:** Prevents infinite toggle loops. User has quick escape route.
+
+**Code Pattern:**
+```python
+# Prompt hints at toggle behavior
+self.console.print("[dim]Press any key to dismiss (or 'h' to toggle off)...[/]")
+
+# Toggle check happens BEFORE smart dismiss
+if dismiss_key == 'h':
+    return  # Just close, no smart dismiss
+
+# Smart dismiss only if NOT same key
+if dismiss_key not in ['\r', '\n', ' ']:
+    self._process_input(dismiss_key)
+```
+
+### 4. Vim-Inspired Navigation
+
+**Philosophy:** Modal interaction. `:` enters command mode for multi-char shortcuts.
+
+**Implementation:**
+- Single chars (`h`, `s`, `t`, `n`, `l`, `f`) = Instant action
+- Multi-char (`qn`, `ch`, `alt`, `pl`) = Require `:` prefix
+- Digits = Smart buffering (500ms timeout for multi-digit numbers)
+
+**Example:**
+```
+User: h      → Help opens instantly
+User: s      → Status opens instantly
+User: :qn    → Quick note form opens
+User: :ch    → Command history opens
+User: 12     → Selects choice #12 (buffered)
+User: 1      → After 500ms, selects choice #1
+```
+
+### 5. Consistent Prompts
+
+**Philosophy:** User always knows what keys are valid. Prompts guide next action.
+
+**Implementation:**
+```python
+# Dashboard
+"Press key (or : for command):"
+
+# Overlays with toggle hint
+"Press any key to dismiss (or 'h' to toggle off)..."
+
+# Panels with shortcuts
+"Press key (1-10:Select, f:Filter, s:Sort, b:Back):"
+```
+
+**Why:** Reduces cognitive load. User doesn't have to remember all shortcuts.
+
+### 6. Minimize Multi-Char Shortcuts
+
+**Philosophy:** Single-char shortcuts only. Multi-char shortcuts are a last resort when all single chars are exhausted.
+
+**Rule:** If we must use multi-char because single-char namespace is full, we must - but otherwise just doesn't make sense.
+
+**Implementation:**
+- **Preferred:** Single char (`n`, `l`, `f`, `o`, `p`, `h`, `s`, `t`, `q`)
+- **Acceptable:** Two chars only when functionally necessary (`qn`, `ch`, `alt`, `pl`)
+- **Avoid:** Three+ chars unless absolutely critical
+
+**Decision Criteria - Use Multi-Char Only When:**
+1. **All relevant single chars are taken** (e.g., `h` for help, so command history becomes `ch`)
+2. **Function is namespaced** (e.g., `qn` = quick note, `qx` = quick export - the `q` prefix groups "quick" actions)
+3. **Mnemonic is stronger** (e.g., `alt` for alternatives is clearer than `a`)
+4. **Collision would confuse** (e.g., `f` for findings vs filter)
+
+**Current Single-Char Allocations:**
+- `n` - Next task
+- `l` - List tasks
+- `f` - Findings
+- `o` - Output overlay
+- `p` - Progress dashboard
+- `h` - Help
+- `s` - Status
+- `t` - Tree
+- `q` - Quit
+- `b` - Back
+- `w` - Quick wins (Wordlist in basic mode)
+- `i` - Import scans
+- `d` - Document finding
+- `r` - Recommendations (basic mode)
+- `c` - Change confirmation (basic mode)
+- `x` - Command templates (basic mode)
+
+**Multi-Char Audit - Consolidation Opportunities:**
+- `pd` → Already aliased to `p` ✓
+- `qn`, `qx`, `qe` → Keep (quick-prefix namespace)
+- `ch` → Keep (`c` taken, `h` taken, command history is essential)
+- `pl` → Keep (`p` taken for progress, port lookup is OSCP-critical)
+- `tt`, `tf`, `tr` → Consider future consolidation if features prove low-value
+- `ss`, `sa`, `sg`, `wr`, `be` → Review usage metrics before OSCP exam
+
+**Footer Strategy:**
+- Display ALL single-letter shortcuts with short names
+- User sees available keys at all times
+- No need to memorize or press `h` for common actions
+- **Dynamic Generation:** Extracted from `ShortcutHandler.shortcuts` (single source of truth)
+- **Auto-Updates:** Footer automatically reflects added/removed shortcuts
+
+**Footer Code Pattern:**
+```python
+def _render_footer(self) -> Panel:
+    """Dynamically extract single-char shortcuts from ShortcutHandler"""
+    single_char_shortcuts = []
+
+    # Priority order for common actions
+    priority_keys = ['n', 'l', 'f', 'w', 'i', 'd', 'o', 'p', 'h', 's', 't', 'q', 'b']
+
+    for key in priority_keys:
+        if key in self.shortcut_handler.shortcuts and len(key) == 1:
+            description, _ = self.shortcut_handler.shortcuts[key]
+            short_desc = description.split()[0][:5].capitalize()
+            single_char_shortcuts.append(f"[cyan]{key}[/]:{short_desc}")
+
+    shortcuts_text = " | ".join(single_char_shortcuts)
+    return Panel(shortcuts_text, border_style="cyan")
+```
+
+### UX Decision Matrix
+
+**When designing new TUI features, ask:**
+
+1. **Can it be 1 keystroke?** → If yes, make it so
+2. **Can it use a single char?** → If yes, use single char (not multi-char)
+3. **If multi-char is required, why?** → Must justify: namespace full, namespaced feature, or stronger mnemonic
+4. **Does dismissal key have obvious next action?** → If yes, implement smart dismiss
+5. **Should same key twice close it?** → If overlay, yes (toggle)
+6. **Does user need guidance?** → If yes, add to prompt and footer
+
+**Anti-Patterns to Avoid:**
+
+- ✗ Requiring Enter after single-key shortcuts
+- ✗ Using multi-char shortcuts when single-char is available
+- ✗ Creating 3+ char shortcuts (max 2 chars, prefer 1)
+- ✗ Not hinting toggle behavior in prompts
+- ✗ Dismissing overlay and losing user's next intent
+- ✗ Inconsistent key behavior across panels
+- ✗ Silent key presses (always provide feedback)
+- ✗ Footer showing only subset of shortcuts (show ALL single-char)
+
+**Testing Checklist:**
+
+- [ ] Single keypress opens feature (no Enter)
+- [ ] Same key twice closes feature (toggle)
+- [ ] Different key closes + opens new feature (smart dismiss)
+- [ ] Prompt hints at available keys
+- [ ] Feedback on every keypress (visual or state change)
+- [ ] Debug logs capture dismiss key for troubleshooting
+
 ## Educational Philosophy (OSCP Focus)
 
 Every tool includes:
