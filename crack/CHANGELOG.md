@@ -6,7 +6,121 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
-## [Unreleased] - 2025-10-10
+## [Unreleased]
+
+---
+
+## [1.5.0] - 2025-10-10
+
+### Added - Findings Loop Architecture
+
+**Core Engine: Automatic Task Generation**
+
+- **FindingsProcessor**
+  - Automatic finding→task conversion via event-driven architecture
+  - Deduplication engine prevents infinite loops
+  - Registry pattern for extensible finding types
+  - Supports: directories, files, vulnerabilities, credentials, users
+  - Integration with EventBus for decoupled communication
+
+- **Enhanced Output Pattern Matching**
+  - Comprehensive tool support (gobuster, nmap, enum4linux, wpscan, nikto)
+  - Structured finding extraction from command output
+  - Line-by-line analysis with regex patterns
+  - Returns categorized findings dict for processing
+
+- **Service Plugin Intelligence**
+  - 235+ service plugins updated with `on_task_complete()` handlers
+  - Service-specific task generation (e.g., HTTP /admin → test default creds)
+  - Fuzzy matching for task-to-plugin routing (aliases, ports, metadata)
+  - Complementary to FindingsProcessor (generic + service-specific)
+
+- **TUI Template Browser**
+  - TemplateBrowserPanel for browsing command templates
+  - TemplateDetailPanel for viewing template details
+  - Enhanced template management capabilities
+
+- **ServiceConstants Module**
+  - Centralized service definitions and aliases
+  - Consistent service naming across plugins
+  - Improved fuzzy matching for task routing
+
+### Testing
+
+- **Comprehensive Plugin Activation Tests (11 test files, 4,846 lines)**
+  - FindingsProcessor tests (23 tests)
+  - Plugin task completion tests (10 tests)
+  - Service registry finding activation tests
+  - Tier 1-6 plugin activation coverage:
+    - Tier 1: Base services (HTTP, SMB, SSH, SQL)
+    - Tier 2: CMS platforms (WordPress, Joomla, Drupal)
+    - Tier 3: OS-specific (Linux, Windows, macOS privesc)
+    - Tier 4: Active Directory (enumeration, attacks, persistence)
+    - Tier 5: Exploitation (binary, injection, deserialization)
+    - Tier 6: Credential operations (theft, lateral movement)
+  - TUI template browser tests
+
+### Changed
+
+- **TUI Session Integration**
+  - FindingsProcessor initialized in TUI session
+  - OutputPatternMatcher analyzes command output in real-time
+  - Emits `finding_added` and `task_completed` events
+  - Automatic task generation from findings during execution
+
+- **Dashboard & Workspace Panels**
+  - Display auto-generated tasks from findings
+  - Enhanced task categorization and filtering
+  - Improved task execution flow with finding detection
+  - Better output analysis and finding extraction
+
+- **Parser Enhancements**
+  - Extended OutputPatternMatcher with tool-specific patterns
+  - Support for multiple finding types per command
+  - Structured output for downstream processing
+
+### Documentation
+
+- **Migrated to Logical Structure**
+  - Created `docs/development/plugins/` for plugin development docs
+  - Created `docs/development/implementations/` for implementation guides
+  - Moved TUI roadmap to `docs/roadmaps/`
+  - 9 documentation files reorganized
+
+- **CLAUDE.md Enhancements**
+  - Comprehensive findings loop architecture documentation
+  - FindingsProcessor and OutputPatternMatcher usage guide
+  - ServicePlugin task completion workflow
+  - Event-driven task generation system
+  - Integration points and extension guide
+
+### Tools
+
+- **Development Utilities**
+  - `audit_plugins.py` for analyzing plugin coverage
+  - `migrate_tier2_cms_plugins.py` for CMS plugin migration
+  - `plugin_audit.json` with plugin analysis results
+
+### Removed
+
+- **Deprecated Scripts**
+  - `clear_test_checkpoints.py` (replaced by TUI debug logging)
+  - `create_test_checkpoints.py` (replaced by TUI debug logging)
+  - `demo_correlator.py` (replaced by FindingsProcessor)
+  - `run_tests.sh` (use pytest directly)
+  - `run_tests_smart.py` (use pytest directly)
+
+### Technical Details
+
+- **Event Flow**: Nmap → ServicePlugin → Task Execution → OutputPatternMatcher → FindingsProcessor → New Tasks
+- **Deduplication**: Set-based fingerprinting (`{type}:{description}`)
+- **Extensibility**: Register new finding types via converter methods
+- **Traceability**: Every finding tracks source, every task knows origin
+- **Integration**: Zero breaking changes, seamless addition to existing architecture
+
+---
+
+## [1.4.1] - 2025-10-10
 
 ### Added - TUI Layered Pipeline (Stages 1-3)
 
