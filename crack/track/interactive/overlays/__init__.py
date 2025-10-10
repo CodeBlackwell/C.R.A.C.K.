@@ -11,5 +11,6 @@ from .status_overlay import StatusOverlay
 from .help_overlay import HelpOverlay
 from .tree_overlay import TreeOverlay
 from .execution_overlay import ExecutionOverlay
+from .output_overlay import OutputOverlay
 
-__all__ = ['StatusOverlay', 'HelpOverlay', 'TreeOverlay', 'ExecutionOverlay']
+__all__ = ['StatusOverlay', 'HelpOverlay', 'TreeOverlay', 'ExecutionOverlay', 'OutputOverlay']

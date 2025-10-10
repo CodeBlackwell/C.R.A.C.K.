@@ -39,6 +39,7 @@ from .overlays.status_overlay import StatusOverlay
 from .overlays.help_overlay import HelpOverlay
 from .overlays.tree_overlay import TreeOverlay
 from .overlays.execution_overlay import ExecutionOverlay
+from .overlays.output_overlay import OutputOverlay
 from .debug_logger import init_debug_logger, get_debug_logger
 from .log_types import LogCategory, LogLevel
 from .hotkey_input import HotkeyInputHandler
@@ -1166,7 +1167,7 @@ class TUISessionV2(InteractiveSession):
 
     def _render_footer(self) -> Panel:
         """Render footer with vim-style shortcuts"""
-        shortcuts = "[cyan]n[/]:Next | [cyan]l[/]:List | [cyan]f[/]:Findings | [cyan]p[/]:Progress | [cyan]h[/]:Help | [cyan]s[/]:Status | [cyan]t[/]:Tree | [cyan]q[/]:Quit | [dim]:[/]cmd"
+        shortcuts = "[cyan]n[/]:Next | [cyan]l[/]:List | [cyan]f[/]:Findings | [cyan]o[/]:Output | [cyan]p[/]:Progress | [cyan]h[/]:Help | [cyan]s[/]:Status | [cyan]t[/]:Tree | [cyan]q[/]:Quit | [dim]:[/]cmd"
         return Panel(
             shortcuts,
             border_style="cyan",
@@ -1204,6 +1205,12 @@ class TUISessionV2(InteractiveSession):
         if user_input.lower() == 'p':
             self.debug_logger.info("Progress dashboard requested")
             self.handle_progress_dashboard()
+            return None
+
+        # Output overlay shortcut
+        if user_input.lower() == 'o':
+            self.debug_logger.info("Output overlay requested")
+            self._show_output()
             return None
 
         # Letter hotkeys for Dashboard actions
@@ -1323,6 +1330,25 @@ class TUISessionV2(InteractiveSession):
         tree_panel = TreeOverlay.render(self.profile)
         self.console.print(tree_panel)
         input()  # Wait for keypress
+
+    def _show_output(self):
+        """Show output overlay with interactive navigation"""
+        from .overlays.output_overlay import OutputOverlay
+
+        # Stop Live context to allow full-screen overlay
+        if hasattr(self, '_live'):
+            self._live.stop()
+
+        try:
+            # Run interactive output viewer
+            OutputOverlay.render_and_navigate(
+                console=self.console,
+                profile=self.profile
+            )
+        finally:
+            # Resume Live context
+            if hasattr(self, '_live'):
+                self._live.start()
 
     def handle_progress_dashboard(self):
         """
