@@ -74,6 +74,10 @@ class TUISessionV2(InteractiveSession):
         """Main TUI loop - Phase 1 minimal version"""
         self.debug_logger.section("TUI RUN START")
 
+        # Check for interrupted task execution checkpoints (BEFORE Live context starts)
+        if hasattr(self, 'checkpoint_mgr'):
+            self._check_interrupted_tasks_tui()
+
         # Check terminal support
         if not self._supports_tui():
             self.debug_logger.warning("TUI not supported - falling back to basic mode")
@@ -1264,3 +1268,130 @@ class TUISessionV2(InteractiveSession):
         tree_panel = TreeOverlay.render(self.profile)
         self.console.print(tree_panel)
         input()  # Wait for keypress
+
+    def _check_interrupted_tasks_tui(self):
+        """
+        TUI-specific checkpoint detection (uses Rich console, called BEFORE Live context)
+
+        This method is called at the start of run(), before the Live context begins,
+        so we can use regular input() for prompts without conflicts.
+        """
+        self.debug_logger.section("CHECKPOINT DETECTION (TUI)")
+
+        interrupted = self.checkpoint_mgr.detect_interrupted_session(self.target)
+        self.debug_logger.info(f"Detected {len(interrupted)} interrupted tasks")
+
+        if not interrupted:
+            self.debug_logger.info("No interrupted tasks found")
+            return
+
+        # Display using Rich console
+        self.console.print()
+        self.console.print(f"[bold yellow]⚠ Found {len(interrupted)} interrupted task(s) from previous session:[/]")
+        self.console.print()
+
+        # Show up to 5 interrupted tasks
+        for task in interrupted[:5]:
+            timestamp = task.get('timestamp', 'unknown')
+            # Parse ISO timestamp to readable format
+            try:
+                from datetime import datetime
+                dt = datetime.fromisoformat(timestamp)
+                timestamp_str = dt.strftime('%Y-%m-%d %H:%M:%S')
+            except:
+                timestamp_str = timestamp
+
+            status_color = {
+                'running': 'yellow',
+                'paused': 'cyan',
+                'error': 'red'
+            }.get(task.get('status'), 'white')
+
+            self.console.print(f"  • [bold]{task['task_id']}[/]/[dim]{task['stage_id']}[/] - [{status_color}]{task['status']}[/] [dim]({timestamp_str})[/]")
+
+        if len(interrupted) > 5:
+            self.console.print(f"  [dim]... and {len(interrupted) - 5} more[/]")
+
+        self.console.print()
+        response = input("Resume interrupted tasks? [Y/n]: ").strip()
+
+        if not response or response.lower() == 'y':
+            # Offer to resume each task
+            self.debug_logger.info("User chose to resume tasks")
+            for task_info in interrupted[:3]:  # Only offer first 3
+                self._offer_task_resume_tui(task_info)
+
+            # Clear remaining checkpoints
+            if len(interrupted) > 3:
+                self.console.print(f"\n[dim]{len(interrupted) - 3} other checkpoint(s) will be cleared.[/]")
+                for task_info in interrupted[3:]:
+                    self.checkpoint_mgr.clear_checkpoint(
+                        task_info['task_id'],
+                        task_info['stage_id'],
+                        self.target
+                    )
+                self.debug_logger.info(f"Cleared {len(interrupted) - 3} additional checkpoints")
+        else:
+            # User declined - clear all checkpoints
+            self.debug_logger.info("User declined to resume, clearing all checkpoints")
+            self.console.print("[dim]Clearing all interrupted task checkpoints...[/]")
+            count = self.checkpoint_mgr.clear_all_checkpoints(self.target)
+            self.console.print(f"[green]✓ Cleared {count} checkpoint(s)[/]")
+
+        self.console.print()  # Add spacing before continuing to config panel
+
+    def _offer_task_resume_tui(self, task_info: Dict[str, str]):
+        """TUI-specific task resume offer (uses Rich console)"""
+        self.console.print(f"\n[bold cyan]──── Task: {task_info['task_id']} ────[/]")
+        self.console.print(f"[dim]Stage:[/] {task_info['stage_id']}")
+
+        # Load checkpoint state
+        state = self.checkpoint_mgr.load_checkpoint(
+            task_info['task_id'],
+            task_info['stage_id'],
+            self.target
+        )
+
+        if not state:
+            self.console.print("[yellow]⚠ Checkpoint data corrupted or missing[/]")
+            return
+
+        # Show checkpoint details
+        self.console.print(f"[dim]Status:[/] {state.get('status', 'unknown')}")
+        command = state.get('command', 'N/A')
+        if len(command) > 80:
+            command = command[:77] + '...'
+        self.console.print(f"[dim]Command:[/] [cyan]{command}[/]")
+
+        partial_output = state.get('partial_output', '')
+        if partial_output:
+            line_count = len(partial_output.split('\n'))
+            self.console.print(f"[dim]Output captured:[/] {line_count} lines")
+
+        self.console.print()
+        response = input("Resume this task? [Y/n]: ").strip()
+
+        if not response or response.lower() == 'y':
+            self.console.print()
+            self.console.print("[cyan]ℹ Task resume feature[/]")
+            self.console.print("[dim]This will be implemented when task execution is refactored[/]")
+            self.console.print("[dim]for checkpoint support. For now, the checkpoint will be cleared[/]")
+            self.console.print("[dim]and you can manually re-run the task.[/]")
+            self.console.print()
+            # TODO: Implement actual task resume
+            self.checkpoint_mgr.clear_checkpoint(
+                task_info['task_id'],
+                task_info['stage_id'],
+                self.target
+            )
+            self.console.print("[green]✓ Checkpoint cleared. Re-run task manually.[/]")
+            self.debug_logger.info(f"Cleared checkpoint for {task_info['task_id']}/{task_info['stage_id']}")
+        else:
+            # Clear checkpoint if user declined
+            self.checkpoint_mgr.clear_checkpoint(
+                task_info['task_id'],
+                task_info['stage_id'],
+                self.target
+            )
+            self.console.print("[dim]Checkpoint cleared.[/]")
+            self.debug_logger.info(f"User declined, cleared checkpoint for {task_info['task_id']}/{task_info['stage_id']}")

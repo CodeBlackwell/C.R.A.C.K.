@@ -63,6 +63,15 @@ class InteractiveSession:
         self.command_history = CommandHistory()
         self.last_action = None
 
+        # Initialize foundation components
+        from .components.input_validator import InputValidator
+        from .components.error_handler import ErrorHandler
+        from .state.checkpoint_manager import CheckpointManager
+
+        self.validator = InputValidator()
+        self.error_handler = ErrorHandler()
+        self.checkpoint_mgr = CheckpointManager()
+
         # Initialize executor based on mode
         if screened:
             # Import here to avoid circular dependency
@@ -125,6 +134,8 @@ class InteractiveSession:
         # Resume checkpoint if requested
         if resume:
             self.load_checkpoint()
+            # Check for interrupted task execution checkpoints
+            self._check_interrupted_tasks()
 
     def run(self):
         """
@@ -1422,6 +1433,111 @@ class InteractiveSession:
 
         except Exception as e:
             print(DisplayManager.format_warning(f"Could not load checkpoint: {e}"))
+
+    def _check_interrupted_tasks(self):
+        """Check for and offer to resume interrupted task execution checkpoints"""
+        interrupted = self.checkpoint_mgr.detect_interrupted_session(self.target)
+
+        if not interrupted:
+            return
+
+        print(DisplayManager.format_warning(
+            f"\n⚠ Found {len(interrupted)} interrupted task(s) from previous session:"
+        ))
+
+        # Show up to 5 interrupted tasks
+        for task in interrupted[:5]:
+            timestamp = task.get('timestamp', 'unknown')
+            # Parse ISO timestamp to readable format
+            try:
+                from datetime import datetime
+                dt = datetime.fromisoformat(timestamp)
+                timestamp_str = dt.strftime('%Y-%m-%d %H:%M:%S')
+            except:
+                timestamp_str = timestamp
+
+            print(f"  • {task['task_id']}/{task['stage_id']} - {task['status']} ({timestamp_str})")
+
+        if len(interrupted) > 5:
+            print(f"  ... and {len(interrupted) - 5} more")
+
+        print()
+        response = input("Resume interrupted tasks? [Y/n]: ").strip()
+
+        if InputProcessor.parse_confirmation(response, default='Y'):
+            # Offer to resume each task
+            for task_info in interrupted[:3]:  # Only offer first 3 to avoid overwhelming user
+                self._offer_task_resume(task_info)
+
+            # Clear remaining checkpoints
+            if len(interrupted) > 3:
+                print(f"\n{len(interrupted) - 3} other checkpoint(s) will be cleared.")
+                for task_info in interrupted[3:]:
+                    self.checkpoint_mgr.clear_checkpoint(
+                        task_info['task_id'],
+                        task_info['stage_id'],
+                        self.target
+                    )
+        else:
+            # User declined - clear all checkpoints
+            print("Clearing all interrupted task checkpoints...")
+            count = self.checkpoint_mgr.clear_all_checkpoints(self.target)
+            print(DisplayManager.format_success(f"Cleared {count} checkpoint(s)"))
+
+    def _offer_task_resume(self, task_info: Dict[str, str]):
+        """Offer to resume a specific interrupted task"""
+        print(f"\n─── Task: {task_info['task_id']} ───")
+        print(f"Stage: {task_info['stage_id']}")
+
+        # Load checkpoint state
+        state = self.checkpoint_mgr.load_checkpoint(
+            task_info['task_id'],
+            task_info['stage_id'],
+            self.target
+        )
+
+        if not state:
+            print(DisplayManager.format_warning("Checkpoint data corrupted or missing"))
+            return
+
+        # Show checkpoint details
+        print(f"Status: {state.get('status', 'unknown')}")
+        command = state.get('command', 'N/A')
+        if len(command) > 80:
+            command = command[:77] + '...'
+        print(f"Command: {command}")
+
+        partial_output = state.get('partial_output', '')
+        if partial_output:
+            line_count = len(partial_output.split('\n'))
+            print(f"Output captured: {line_count} lines")
+
+        print()
+        response = input("Resume this task? [Y/n]: ").strip()
+
+        if InputProcessor.parse_confirmation(response, default='Y'):
+            print(DisplayManager.format_info(
+                "\n[Task resume feature]"
+                "\nThis will be implemented when task execution is refactored"
+                "\nfor checkpoint support. For now, the checkpoint will be cleared"
+                "\nand you can manually re-run the task."
+            ))
+            # TODO: Implement actual task resume when execution supports it
+            # For now, just clear the checkpoint
+            self.checkpoint_mgr.clear_checkpoint(
+                task_info['task_id'],
+                task_info['stage_id'],
+                self.target
+            )
+            print(DisplayManager.format_success("Checkpoint cleared. Re-run task manually."))
+        else:
+            # Clear checkpoint if user declined
+            self.checkpoint_mgr.clear_checkpoint(
+                task_info['task_id'],
+                task_info['stage_id'],
+                self.target
+            )
+            print("Checkpoint cleared.")
 
     def handle_time_tracker(self):
         """Time tracking dashboard - show time statistics"""
