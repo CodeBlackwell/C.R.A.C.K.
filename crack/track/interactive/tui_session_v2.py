@@ -501,6 +501,7 @@ class TUISessionV2(InteractiveSession):
         output_lines = []
         start_time = time.time()
         line_count = 0
+        last_refresh = 0.0  # Throttle refreshes to reduce jitter
 
         self.debug_logger.info("Starting subprocess with streaming")
 
@@ -527,20 +528,23 @@ class TUISessionV2(InteractiveSession):
                 if line_count % 10 == 0:
                     self.debug_logger.debug(f"Lines received: {line_count}, Elapsed: {elapsed:.1f}s")
 
-                # Update workspace display (streaming state)
-                workspace_layout, choices = TaskWorkspacePanel.render(
-                    task=task,
-                    output_state='streaming',
-                    output_lines=output_lines,
-                    elapsed=elapsed,
-                    exit_code=None,
-                    findings=[]
-                )
+                # Throttle display updates to reduce jitter (max 10 refreshes/sec)
+                if elapsed - last_refresh >= 0.1:  # 100ms minimum between refreshes
+                    # Update workspace display (streaming state)
+                    workspace_layout, choices = TaskWorkspacePanel.render(
+                        task=task,
+                        output_state='streaming',
+                        output_lines=output_lines,
+                        elapsed=elapsed,
+                        exit_code=None,
+                        findings=[]
+                    )
 
-                layout['header'].update(self._render_header())
-                layout['menu'].update(workspace_layout)
-                layout['footer'].update(self._render_footer())
-                live.refresh()
+                    layout['header'].update(self._render_header())
+                    layout['menu'].update(workspace_layout)
+                    layout['footer'].update(self._render_footer())
+                    live.refresh()
+                    last_refresh = elapsed
 
             # 6. Wait for process completion
             self.debug_logger.debug("Process stdout closed, waiting for exit")
@@ -551,6 +555,21 @@ class TUISessionV2(InteractiveSession):
             self.debug_logger.info(f"Subprocess exited with code: {exit_code}")
             self.debug_logger.info(f"Total lines captured: {line_count}")
             self.debug_logger.info(f"Total elapsed time: {elapsed:.2f}s")
+
+            # Final refresh with complete state (ensures all output shown)
+            workspace_layout, choices = TaskWorkspacePanel.render(
+                task=task,
+                output_state='streaming',  # Still streaming state (findings not analyzed yet)
+                output_lines=output_lines,
+                elapsed=elapsed,
+                exit_code=None,
+                findings=[]
+            )
+            layout['header'].update(self._render_header())
+            layout['menu'].update(workspace_layout)
+            layout['footer'].update(self._render_footer())
+            live.refresh()
+            self.debug_logger.debug("Final refresh completed")
 
         except Exception as e:
             self.debug_logger.exception(f"Exception during streaming execution: {e}")
