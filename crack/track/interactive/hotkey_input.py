@@ -12,6 +12,7 @@ import tty
 import termios
 import time
 from typing import Optional
+from .log_types import LogCategory, LogLevel
 
 
 class HotkeyInputHandler:
@@ -36,8 +37,9 @@ class HotkeyInputHandler:
         self.original_settings = None
         self.in_raw_mode = False
 
+        # Strategic logging: Input handler initialization
         if self.debug_logger:
-            self.debug_logger.debug("HotkeyInputHandler initialized")
+            self.debug_logger.log("Hotkey input handler initialized", category=LogCategory.SYSTEM_INIT, level=LogLevel.VERBOSE)
 
     def read_key(self, timeout: float = None) -> Optional[str]:
         """
@@ -51,7 +53,7 @@ class HotkeyInputHandler:
         """
         if not sys.stdin.isatty():
             if self.debug_logger:
-                self.debug_logger.warning("stdin is not a TTY - falling back to line input")
+                self.debug_logger.log("stdin is not a TTY - falling back", category=LogCategory.UI_INPUT, level=LogLevel.MINIMAL)
             # Fallback: not a TTY
             return self._fallback_read_line()
 
@@ -70,26 +72,23 @@ class HotkeyInputHandler:
             else:
                 key = sys.stdin.read(1)
 
-            if self.debug_logger:
-                # Log key with repr to show special chars
-                self.debug_logger.debug(f"Key pressed: {repr(key)} (ord={ord(key) if key else 'None'})")
+            # Strategic logging: Only log special keys to reduce noise
+            if key in ['\x03', '\x04'] and self.debug_logger:
+                key_name = 'Ctrl+C' if key == '\x03' else 'Ctrl+D'
+                self.debug_logger.log(f"Special key detected: {key_name}", category=LogCategory.UI_INPUT, level=LogLevel.VERBOSE)
 
             # Handle special keys
             if key == '\x03':  # Ctrl+C
-                if self.debug_logger:
-                    self.debug_logger.warning("Ctrl+C detected in hotkey mode")
                 raise KeyboardInterrupt
 
             if key == '\x04':  # Ctrl+D (EOF)
-                if self.debug_logger:
-                    self.debug_logger.warning("Ctrl+D (EOF) detected")
                 return None
 
             return key
 
         except Exception as e:
             if self.debug_logger:
-                self.debug_logger.exception(f"Error reading key: {e}")
+                self.debug_logger.log("Key read error", category=LogCategory.UI_INPUT, level=LogLevel.MINIMAL, error=str(e))
             return None
         finally:
             # Always restore terminal mode

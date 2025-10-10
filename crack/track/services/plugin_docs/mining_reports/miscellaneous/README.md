@@ -6,48 +6,92 @@
 
 ## Overview
 
-**10 reports** - reports on cryptography, AI security, hardware hacking, and specialized domains
+**2 active reports** (OSCP:MEDIUM) - Cryptography basics and steganography reference
+
+**Archived:** 7 low-OSCP-relevance reports moved to `/archive/low_priority/`
 
 ---
 
-## Reports in this Category
+## Active Reports (OSCP:MEDIUM)
 
-- [AI Security Mining Report](./ai_security_mining_report.md)
-- [[← Back to Index](README.md) | [Miscellaneous Reports](#miscellaneous-reports)](./blockchain_mining_report.md)
-- [Blockchain Security Plugin - Mining Report](./blockchain_remine_report.md)
-- [[← Back to Index](README.md) | [Miscellaneous Reports](#miscellaneous-reports)](./cryptography_mining_report.md)
-- [Cryptography Plugin Re-Mining Report](./cryptography_remine_report.md)
-- [Hardware & Physical Access Plugin - Remine Report](./hardware_remine_report.md)
-- [LLM Attacks Mining Report - Phase 3 Agent 2](./llm_attacks_mining_report.md)
-- [Radio Hacking Mining Report](./radio_hacking_mining_report.md)
-- [Reversing Plugin - Remine Report](./reversing_remine_report.md)
-- [Steganography Mining Report](./steganography_mining_report.md)
+- [Cryptography Mining Report](./cryptography_mining_report.md) - Password cracking, hash analysis (OSCP:MEDIUM)
+- [Steganography Mining Report](./steganography_mining_report.md) - CTF reference, hidden data (OSCP:LOW)
 
+**Note:** Kept `cryptography_mining_report.md` (original) as it has broader coverage than the remine version for OSCP password cracking context.
+
+---
+
+## Archived Reports (OSCP:LOW/NONE)
+
+**Location:** `/track/services/plugin_docs/archive/low_priority/`
+
+### Emerging Technologies (OSCP:NONE)
+- `ai_security_mining_report.md` - AI/ML security (not tested in OSCP)
+- `llm_attacks_mining_report.md` - LLM prompt injection (not tested in OSCP)
+
+### Blockchain & Crypto (OSCP:NONE)
+- `blockchain_mining_report.md` - Blockchain security (not tested in OSCP)
+- `blockchain_remine_report.md` - Enhanced blockchain report (duplicate/archive)
+
+### Physical & Hardware (OSCP:NONE)
+- `radio_hacking_mining_report.md` - SDR/wireless attacks (not tested in OSCP)
+- `hardware_remine_report.md` - Hardware exploitation (not tested in OSCP)
+
+### Advanced Techniques (OSCP:LOW)
+- `reversing_remine_report.md` - Advanced reverse engineering (OSED-level)
+
+**Also Archived:** `cryptography_remine_report.md` - Duplicate of active cryptography report
 
 ---
 
 ## Key Topics Covered
 
-- **Cryptography:** Classic crypto attacks, blockchain security
+### Active Reports
+- **Cryptography Basics:** Password cracking, hash analysis, basic crypto attacks (OSCP-relevant)
+- **Steganography:** Hidden data detection (CTF/reference)
+
+### Archived Reports (Low OSCP Priority)
 - **Emerging Technologies:** LLM attacks, AI security testing
 - **Physical Security:** Radio hacking, hardware exploitation
-- **Reversing:** Reverse engineering techniques
-- **Steganography:** Hidden data detection and analysis
+- **Blockchain:** Smart contract security, crypto wallets
+- **Advanced Reversing:** Reverse engineering techniques
 
 ---
 
 ## Usage Notes
 
-### For OSCP Exam
-- Focus on HIGH relevance reports
-- Practice manual alternatives when tools fail
-- Track sources for report documentation
+### For OSCP Exam Preparation
+**Focus on active reports:**
+- `cryptography_mining_report.md` - Password cracking context (hashcat, john, common hashes)
+- `steganography_mining_report.md` - Quick CTF reference (low priority for exam)
+
+**Skip archived reports** - Focus on core OSCP content:
+- `pen300/` - Active Directory, Windows exploitation
+- `hacktricks_linux/` - Linux privilege escalation
+- `web_attacks/` - Web vulnerabilities
+- `network_services/` - Service exploitation
+
+### For Specialized Topics (Post-OSCP)
+**Review archived reports** for:
+- Advanced certifications (OSED for reversing)
+- Real-world engagements (blockchain, AI, hardware)
+- CTF competitions (LLM attacks, crypto challenges)
 
 ### Statistics
-- **Total Reports:** 10
+- **Active Reports:** 2 (OSCP:MEDIUM/LOW)
+- **Archived Reports:** 7 (OSCP:NONE/LOW)
+- **Deleted Reports:** 0 (kept original cryptography report over remine)
 - **Category:** Miscellaneous Security Topics
+
+### Consolidation Notes (2025-10-10)
+- Phase 3: Archived 7 low-OSCP-relevance reports (~100 KB)
+- Kept `cryptography_mining_report.md` (original) - broader OSCP context
+- Archived `cryptography_remine_report.md` - more specialized/less OSCP-focused
+- Result: 2 OSCP-relevant reports remain active
 
 ---
 
-**Last Updated:** 2025-10-09  
+**Last Updated:** 2025-10-10 (Consolidation)
 **Maintained By:** CRACK Track Team
+
+**See Also:** `/track/services/plugin_docs/archive/low_priority/MANIFEST.md` for archive details

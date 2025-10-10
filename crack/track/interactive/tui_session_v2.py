@@ -40,16 +40,18 @@ from .overlays.help_overlay import HelpOverlay
 from .overlays.tree_overlay import TreeOverlay
 from .overlays.execution_overlay import ExecutionOverlay
 from .debug_logger import init_debug_logger, get_debug_logger
+from .log_types import LogCategory, LogLevel
 from .hotkey_input import HotkeyInputHandler
+from .components.resize_handler import ResizeHandler, TerminalSizeError
 
 
 class TUISessionV2(InteractiveSession):
     """Minimal TUI - Phase 1"""
 
-    def __init__(self, target: str, resume: bool = False, screened: bool = False, debug: bool = False):
+    def __init__(self, target: str, resume: bool = False, screened: bool = False, debug: bool = False, debug_config=None):
         """Initialize minimal TUI session"""
-        # Initialize parent session
-        super().__init__(target, resume, screened)
+        # Initialize parent session with debug_config
+        super().__init__(target, resume, screened, debug_config=debug_config)
 
         # TUI components
         self.console = Console()
@@ -57,41 +59,53 @@ class TUISessionV2(InteractiveSession):
         self.show_help = False
         self.config_confirmed = False  # Config Panel must be shown first
 
-        # Initialize debug logger
-        self.debug_logger = init_debug_logger(debug_enabled=debug, target=target)
-
-        # Initialize hotkey input handler
+        # Debug logger inherited from parent, but initialize hotkey handler with it
         self.hotkey_handler = HotkeyInputHandler(debug_logger=self.debug_logger)
 
-        if debug:
-            self.debug_logger.section("TUI SESSION INITIALIZATION")
-            self.debug_logger.info(f"Target: {target}")
-            self.debug_logger.info(f"Resume: {resume}")
-            self.debug_logger.info(f"Screened: {screened}")
-            self.debug_logger.info(f"Debug: {debug}")
+        # Resize handler for terminal resize events
+        self.resize_handler = ResizeHandler()
+        self.terminal_too_small = False  # Flag for graceful degradation
+
+        # Strategic logging: TUI initialization
+        self.debug_logger.log("TUI session initialization", category=LogCategory.SYSTEM_INIT, level=LogLevel.NORMAL,
+                             target=target, resume=resume, screened=screened, debug=debug)
 
     def run(self):
         """Main TUI loop - Phase 1 minimal version"""
-        self.debug_logger.section("TUI RUN START")
+        # Strategic chokepoint: Main TUI loop entry
+        self.debug_logger.log("TUI main loop starting", category=LogCategory.SYSTEM_INIT, level=LogLevel.NORMAL)
 
         # Check for interrupted task execution checkpoints (BEFORE Live context starts)
         if hasattr(self, 'checkpoint_mgr'):
             self._check_interrupted_tasks_tui()
 
+        # Check minimum terminal size
+        try:
+            self.resize_handler.check_minimum_size()
+            width, height = self.resize_handler.get_terminal_size()
+            self.debug_logger.log("Terminal validated", category=LogCategory.SYSTEM_INIT, level=LogLevel.VERBOSE,
+                                 width=width, height=height)
+        except TerminalSizeError as e:
+            self.debug_logger.log("Terminal too small", category=LogCategory.SYSTEM_ERROR, level=LogLevel.MINIMAL,
+                                 error=str(e))
+            self.console.print(f"[yellow]⚠ {str(e)}[/]")
+            return super().run()
+
         # Check terminal support
         if not self._supports_tui():
-            self.debug_logger.warning("TUI not supported - falling back to basic mode")
+            self.debug_logger.log("TUI not supported - falling back", category=LogCategory.SYSTEM_ERROR, level=LogLevel.MINIMAL,
+                                 terminal_width=self.console.width, terminal_height=self.console.height)
             self.console.print("[yellow]⚠ TUI mode not supported - falling back[/]")
             return super().run()
 
-        self.debug_logger.info(f"Terminal size: {self.console.width}x{self.console.height}")
+        # Set up resize handler before Live context
+        self.resize_handler.setup_handler(self._handle_resize)
+        self.debug_logger.log("Resize handler registered", category=LogCategory.SYSTEM_INIT, level=LogLevel.VERBOSE)
 
         try:
             # Build simple layout
-            self.debug_logger.debug("Building layout")
+            self.debug_logger.log("Building TUI layout", category=LogCategory.UI_RENDER, level=LogLevel.VERBOSE)
             layout = self._build_layout()
-
-            self.debug_logger.debug("Starting Live context")
             with Live(
                 layout,
                 console=self.console,
@@ -111,19 +125,23 @@ class TUISessionV2(InteractiveSession):
                     self.debug_logger.log_state_transition("CONFIG_PANEL", "DASHBOARD", "config confirmed")
                     self._main_loop(live, layout)
 
-                self.debug_logger.log_live_action("ENDED")
+                self.debug_logger.log("Live display ended", category=LogCategory.UI_LIVE, level=LogLevel.VERBOSE)
 
         except KeyboardInterrupt:
-            self.debug_logger.warning("Keyboard interrupt received")
+            self.debug_logger.log("TUI interrupted by user (Ctrl+C)", category=LogCategory.SYSTEM_SHUTDOWN, level=LogLevel.NORMAL)
             self.console.print("\n[yellow]Interrupted. Saving...[/]")
         except Exception as e:
-            self.debug_logger.exception(f"Unexpected error in TUI run: {e}")
+            self.debug_logger.log("Unexpected TUI error", category=LogCategory.SYSTEM_ERROR, level=LogLevel.MINIMAL, error=str(e), exception=True)
             raise
         finally:
-            self.debug_logger.info("Saving profile")
+            # Unregister resize handler to restore default signal handling
+            self.resize_handler.unregister_handler()
+            self.debug_logger.log("Resize handler unregistered", category=LogCategory.SYSTEM_SHUTDOWN, level=LogLevel.VERBOSE)
+
+            self.debug_logger.log("TUI shutdown - saving profile", category=LogCategory.STATE_SAVE, level=LogLevel.NORMAL)
             self.profile.save()
             self.console.print("[bright_green]✓ Session saved. Goodbye![/]")
-            self.debug_logger.section("TUI RUN END")
+            self.debug_logger.log("TUI session ended", category=LogCategory.SYSTEM_SHUTDOWN, level=LogLevel.NORMAL)
 
     def _supports_tui(self) -> bool:
         """Check if terminal supports TUI"""
@@ -133,6 +151,36 @@ class TUISessionV2(InteractiveSession):
         if self.console.width < 80 or self.console.height < 24:
             return False
         return True
+
+    def _handle_resize(self, width: int, height: int):
+        """
+        Handle terminal resize events
+
+        Args:
+            width: New terminal width in columns
+            height: New terminal height in rows
+
+        Called automatically by ResizeHandler when SIGWINCH signal is received.
+        Checks minimum size and sets flag for graceful degradation if needed.
+        """
+        self.debug_logger.log("Terminal resized", category=LogCategory.SYSTEM_INIT, level=LogLevel.VERBOSE,
+                             width=width, height=height)
+
+        # Check if terminal meets minimum size requirements
+        if width < ResizeHandler.MIN_WIDTH or height < ResizeHandler.MIN_HEIGHT:
+            self.terminal_too_small = True
+            self.debug_logger.log("Terminal below minimum size", category=LogCategory.SYSTEM_ERROR, level=LogLevel.MINIMAL,
+                                 width=width, height=height,
+                                 min_width=ResizeHandler.MIN_WIDTH, min_height=ResizeHandler.MIN_HEIGHT)
+        else:
+            # Reset flag if terminal is now large enough
+            if self.terminal_too_small:
+                self.debug_logger.log("Terminal size restored", category=LogCategory.SYSTEM_INIT, level=LogLevel.NORMAL,
+                                     width=width, height=height)
+            self.terminal_too_small = False
+
+        # The Live context automatically handles re-rendering on resize
+        # No explicit refresh needed - Rich detects terminal size changes
 
     def _config_panel_loop(self, live: Live, layout: Layout):
         """
@@ -253,7 +301,8 @@ class TUISessionV2(InteractiveSession):
 
     def _main_loop(self, live: Live, layout: Layout):
         """Main interaction loop"""
-        self.debug_logger.section("MAIN LOOP START")
+        # Strategic chokepoint: Main interaction loop start
+        self.debug_logger.log("Main interaction loop started", category=LogCategory.SYSTEM_INIT, level=LogLevel.NORMAL)
 
         # Store live context AND layout for _execute_choice to access
         self._live = live
@@ -264,72 +313,67 @@ class TUISessionV2(InteractiveSession):
 
         while running:
             iteration += 1
-            self.debug_logger.debug(f"Loop iteration {iteration}")
+            # Only log every 10 iterations to avoid spam
+            if iteration % 10 == 0:
+                self.debug_logger.log(f"Loop iteration {iteration}", category=LogCategory.UI_RENDER, level=LogLevel.TRACE)
 
             # Refresh display
-            self.debug_logger.debug("Refreshing panels")
             self._refresh_panels(layout)
 
-            self.debug_logger.log_live_action("REFRESH")
             live.refresh()
 
             # Stop live to get input
-            self.debug_logger.log_live_action("STOP", "before input")
             live.stop()
 
             # Get user input (vim-style hotkeys)
             self.console.print("\n[dim]Press key (or : for command):[/] ", end="")
             try:
-                self.debug_logger.debug("Waiting for hotkey input...")
-
                 # Read single key
                 key = self.hotkey_handler.read_key()
 
                 if key is None:
                     # EOF or timeout
-                    self.debug_logger.warning("EOF or timeout during hotkey input")
+                    self.debug_logger.log("Input timeout or EOF", category=LogCategory.UI_INPUT, level=LogLevel.MINIMAL)
                     live.start()
                     running = False
                     continue
 
                 # Filter out ENTER/newline (treat as no input)
                 if key in ['\r', '\n']:
-                    self.debug_logger.debug(f"ENTER key detected (ord={ord(key)}), ignoring")
                     user_input = ''
                 # Handle : command mode
                 elif key == ':':
-                    self.debug_logger.debug("Command mode activated")
                     user_input = self.hotkey_handler.read_command(":")
+                    # Strategic logging: Command mode input
+                    self.debug_logger.log("Command mode input", category=LogCategory.UI_INPUT, level=LogLevel.VERBOSE, command=user_input)
                 # Handle multi-digit numbers (buffer with timeout)
                 elif key.isdigit():
-                    self.debug_logger.debug(f"Digit detected: {key}, checking for multi-digit number")
                     user_input = self.hotkey_handler.read_number(key, timeout=0.5)
+                    # Strategic logging: Numeric input
+                    self.debug_logger.log("Numeric input", category=LogCategory.UI_INPUT, level=LogLevel.VERBOSE, number=user_input)
                 else:
                     # Single-key shortcut
                     user_input = key
-
-                self.debug_logger.log_user_input(user_input, context="main_loop_hotkey")
+                    # Strategic logging: Shortcut key
+                    self.debug_logger.log("Shortcut key pressed", category=LogCategory.UI_INPUT, level=LogLevel.VERBOSE, key=user_input)
 
             except (EOFError, KeyboardInterrupt):
-                self.debug_logger.warning("EOF or interrupt during hotkey input")
+                self.debug_logger.log("Input interrupted", category=LogCategory.UI_INPUT, level=LogLevel.MINIMAL)
                 live.start()
                 running = False
                 continue
 
             # Resume live
-            self.debug_logger.log_live_action("START", "after input")
             live.start()
 
             # Process input
             if user_input:
-                self.debug_logger.debug(f"Processing input: '{user_input}'")
                 result = self._process_input(user_input)
-                self.debug_logger.debug(f"Process input result: {result}")
                 if result == 'exit':
-                    self.debug_logger.info("Exit requested")
+                    self.debug_logger.log("Exit requested from input processing", category=LogCategory.SYSTEM_SHUTDOWN, level=LogLevel.NORMAL)
                     running = False
 
-        self.debug_logger.section("MAIN LOOP END")
+        self.debug_logger.log("Main interaction loop ended", category=LogCategory.SYSTEM_SHUTDOWN, level=LogLevel.NORMAL)
 
     def _task_workspace_loop(self, live: Live, layout: Layout, task):
         """
@@ -934,34 +978,31 @@ class TUISessionV2(InteractiveSession):
         Returns:
             Tuple of (output_lines, elapsed, exit_code, findings)
         """
-        self.debug_logger.section("STREAMING EXECUTION START")
-        self.debug_logger.info(f"Task: {task.name}")
-        self.debug_logger.info(f"Task ID: {task.id}")
+        # Strategic chokepoint: Streaming execution start
+        self.debug_logger.log("Streaming execution started", category=LogCategory.EXECUTION_START, level=LogLevel.NORMAL,
+                             task_id=task.id, task_name=task.name)
 
         # 1. Extract and validate command
         command = task.metadata.get('command')
         if not command:
-            self.debug_logger.warning("No command defined for task")
+            self.debug_logger.log("Task execution failed: no command", category=LogCategory.EXECUTION_ERROR, level=LogLevel.MINIMAL, task_id=task.id)
             return (["Error: No command defined"], 0.0, 1, [])
 
         # Replace {TARGET} placeholder
         original_command = command
         command = command.replace('{TARGET}', self.profile.target)
-        self.debug_logger.info(f"Command template: {original_command}")
-        self.debug_logger.info(f"Command resolved: {command}")
 
         # 2. Start timer and update task status
         task.start_timer()
         task.status = 'in-progress'
-        self.debug_logger.info("Task timer started, status set to 'in-progress'")
+        self.debug_logger.log("Command prepared for execution", category=LogCategory.EXECUTION_START, level=LogLevel.VERBOSE,
+                             task_id=task.id, command_length=len(command))
 
         # 3. Initialize state
         output_lines = []
         start_time = time.time()
         line_count = 0
         last_refresh = 0.0  # Throttle refreshes to reduce jitter
-
-        self.debug_logger.info("Starting subprocess with streaming")
 
         try:
             # 4. Create subprocess with streaming
@@ -974,7 +1015,7 @@ class TUISessionV2(InteractiveSession):
                 bufsize=1  # Line buffered
             )
 
-            self.debug_logger.info(f"Subprocess created (PID: {process.pid})")
+            self.debug_logger.log("Subprocess started", category=LogCategory.EXECUTION_START, level=LogLevel.VERBOSE, pid=process.pid)
 
             # 5. Stream output line-by-line
             for line in process.stdout:
@@ -982,9 +1023,10 @@ class TUISessionV2(InteractiveSession):
                 output_lines.append(line.rstrip())
                 elapsed = time.time() - start_time
 
-                # Debug every 10 lines (avoid log spam)
-                if line_count % 10 == 0:
-                    self.debug_logger.debug(f"Lines received: {line_count}, Elapsed: {elapsed:.1f}s")
+                # Log every 100 lines (avoid spam, but track progress)
+                if line_count % 100 == 0:
+                    self.debug_logger.log(f"Output streaming", category=LogCategory.EXECUTION_OUTPUT, level=LogLevel.TRACE,
+                                         lines_received=line_count, elapsed=f"{elapsed:.1f}s")
 
                 # Throttle display updates to reduce jitter (max 10 refreshes/sec)
                 if elapsed - last_refresh >= 0.1:  # 100ms minimum between refreshes
@@ -1005,14 +1047,13 @@ class TUISessionV2(InteractiveSession):
                     last_refresh = elapsed
 
             # 6. Wait for process completion
-            self.debug_logger.debug("Process stdout closed, waiting for exit")
             process.wait()
             exit_code = process.returncode
             elapsed = time.time() - start_time
 
-            self.debug_logger.info(f"Subprocess exited with code: {exit_code}")
-            self.debug_logger.info(f"Total lines captured: {line_count}")
-            self.debug_logger.info(f"Total elapsed time: {elapsed:.2f}s")
+            # Strategic chokepoint: Execution completion
+            self.debug_logger.log("Subprocess completed", category=LogCategory.EXECUTION_END, level=LogLevel.NORMAL,
+                                 exit_code=exit_code, lines_captured=line_count, elapsed=f"{elapsed:.2f}s")
 
             # Final refresh with complete state (ensures all output shown)
             workspace_layout, choices = TaskWorkspacePanel.render(
@@ -1196,29 +1237,24 @@ class TUISessionV2(InteractiveSession):
         """Execute a menu choice"""
         choice = self._current_choices[index]
 
-        self.debug_logger.section("EXECUTE CHOICE")
-        self.debug_logger.info(f"Choice index: {index}")
-        self.debug_logger.info(f"Choice ID: {choice.get('id')}")
-        self.debug_logger.info(f"Choice label: {choice.get('label')}")
+        # Strategic chokepoint: Choice execution (major decision point)
+        choice_id = choice.get('id')
+        self.debug_logger.log("Choice execution", category=LogCategory.UI_INPUT, level=LogLevel.NORMAL,
+                             index=index, choice_id=choice_id, label=choice.get('label'))
 
         # Check if this is workspace navigation (Execute next task)
-        if choice.get('id') == 'next':
+        if choice_id == 'next':
             task = choice.get('task')
             if task:
-                self.debug_logger.info(f"Navigating to task workspace for: {task.name}")
                 self.debug_logger.log_state_transition("DASHBOARD", "TASK_WORKSPACE", f"execute next: {task.name}")
-
-                # Reuse existing layout (bound to Live context)
-                self.debug_logger.debug("Reusing main layout for workspace")
 
                 # Enter workspace loop with SAME Live and Layout
                 self._task_workspace_loop(self._live, self._layout, task)
 
                 self.debug_logger.log_state_transition("TASK_WORKSPACE", "DASHBOARD", "returned from workspace")
-                self.debug_logger.info("Returned from task workspace")
                 return
             else:
-                self.debug_logger.warning("Choice ID 'next' has no task object")
+                self.debug_logger.log("Invalid choice: no task object", category=LogCategory.UI_INPUT, level=LogLevel.MINIMAL, choice_id=choice_id)
 
         # Check if this is task list navigation (Browse all tasks)
         elif choice.get('id') == 'browse-tasks':

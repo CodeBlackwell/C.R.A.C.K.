@@ -5,6 +5,20 @@
 
 A professional penetration testing toolkit designed for OSCP preparation and web application security testing.
 
+## Documentation Map
+
+**You are here:** Project Overview - Installation, quick start, and tool descriptions
+
+**Quick Links:**
+- 📚 [**Master Documentation Index**](docs/MASTER_INDEX.md) - Complete documentation catalog (302 files)
+- 📋 [**Quick Reference Card**](docs/QUICK_REFERENCE.md) - One-page command reference
+
+**Related Documentation:**
+- [Architecture & Development](CLAUDE.md) - Development patterns, CLI architecture, testing philosophy
+- [Track Module](track/README.md) - Enumeration system with 235+ service plugins
+- [Reference System](reference/README.md) - Command lookup with 70+ OSCP commands
+- [Testing Guide](tests/README.md) - Test suite documentation and patterns
+
 ## Features
 
 ### 🎯 Scan Analyzer (`crack scan-analyze`)

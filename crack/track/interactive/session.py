@@ -29,6 +29,8 @@ from .input_handler import InputProcessor
 from .shortcuts import ShortcutHandler
 from .decision_trees import DecisionTreeFactory
 from .history import CommandHistory
+from .debug_logger import init_debug_logger, get_debug_logger
+from .log_types import LogCategory, LogLevel
 
 
 class InteractiveSession:
@@ -37,7 +39,7 @@ class InteractiveSession:
     # Class variable for test isolation override
     SNAPSHOTS_BASE_DIR = None
 
-    def __init__(self, target: str, resume: bool = False, screened: bool = False):
+    def __init__(self, target: str, resume: bool = False, screened: bool = False, debug_config=None):
         """
         Initialize interactive session
 
@@ -45,18 +47,28 @@ class InteractiveSession:
             target: Target IP or hostname
             resume: Whether to resume existing session
             screened: Whether to use screened terminal mode
+            debug_config: LogConfig for precision debug logging
         """
         self.target = target
         self.screened_mode = screened
 
-        # Load or create profile
+        # Initialize debug logger (strategic chokepoint #1: Session initialization)
+        self.debug_logger = init_debug_logger(config=debug_config, target=target) if debug_config else init_debug_logger(debug_enabled=False, target=target)
+        self.debug_logger.log("Session initialization started", category=LogCategory.SYSTEM_INIT, level=LogLevel.NORMAL, target=target, resume=resume, screened=screened)
+
+        # Load or create profile (strategic chokepoint #2: State loading)
         if TargetProfile.exists(target):
+            self.debug_logger.log("Loading existing profile", category=LogCategory.STATE_LOAD, level=LogLevel.NORMAL)
             self.profile = TargetProfile.load(target)
             print(DisplayManager.format_success(f"Loaded profile for {target}"))
+            self.debug_logger.log("Profile loaded successfully", category=LogCategory.STATE_LOAD, level=LogLevel.NORMAL,
+                                 ports=len(self.profile.ports), findings=len(self.profile.findings), phase=self.profile.phase)
         else:
+            self.debug_logger.log("Creating new profile", category=LogCategory.STATE_LOAD, level=LogLevel.NORMAL)
             self.profile = TargetProfile(target)
             self.profile.save()
             print(DisplayManager.format_success(f"Created new profile for {target}"))
+            self.debug_logger.log("New profile created and saved", category=LogCategory.STATE_SAVE, level=LogLevel.NORMAL)
 
         # Initialize components
         self.shortcut_handler = ShortcutHandler(self)
@@ -66,11 +78,15 @@ class InteractiveSession:
         # Initialize foundation components
         from .components.input_validator import InputValidator
         from .components.error_handler import ErrorHandler
+        from .components.loading_indicator import LoadingIndicator
         from .state.checkpoint_manager import CheckpointManager
 
         self.validator = InputValidator()
-        self.error_handler = ErrorHandler()
+        self.error_handler = ErrorHandler(debug_logger=self.debug_logger)
+        self.loading_indicator = LoadingIndicator()
         self.checkpoint_mgr = CheckpointManager()
+
+        self.debug_logger.log("Core components initialized", category=LogCategory.SYSTEM_INIT, level=LogLevel.NORMAL)
 
         # Initialize executor based on mode
         if screened:
@@ -194,8 +210,9 @@ class InteractiveSession:
                 print("\n\nInterrupted. Type 'q' to exit or press Enter to continue...")
                 continue
             except Exception as e:
-                print(DisplayManager.format_error(f"Unexpected error: {e}"))
+                self.error_handler.handle_exception(e, context="main session loop")
                 print("Session will continue. Type 'q' to exit safely.")
+                input()  # Wait for user to acknowledge error
 
         # Final save before exit
         self.profile.save()
@@ -339,6 +356,10 @@ class InteractiveSession:
         Args:
             task: TaskNode instance
         """
+        # Strategic chokepoint #3: Task execution start
+        self.debug_logger.log("Task execution requested", category=LogCategory.EXECUTION_START, level=LogLevel.NORMAL,
+                             task_id=task.id, task_name=task.name, task_type=task.metadata.get('type', 'command'))
+
         print(f"\n{DisplayManager.format_task_summary(task)}")
 
         # Check if this is a 'scan' type task (needs scan profile selection)
@@ -361,6 +382,8 @@ class InteractiveSession:
 
         command = task.metadata.get('command')
         if not command:
+            self.debug_logger.log("Task execution aborted: no command", category=LogCategory.EXECUTION_ERROR, level=LogLevel.MINIMAL,
+                                 task_id=task.id)
             print(DisplayManager.format_warning("No command defined for this task"))
             return
 
@@ -440,6 +463,8 @@ class InteractiveSession:
             proceed = InputProcessor.parse_confirmation(confirm, default='Y')
 
         if not proceed:
+            self.debug_logger.log("Task execution cancelled by user", category=LogCategory.EXECUTION_END, level=LogLevel.NORMAL,
+                                 task_id=task.id)
             print("Cancelled")
             return
 
@@ -447,6 +472,10 @@ class InteractiveSession:
         task.status = 'in-progress'
         task.start_timer()
         self.profile.save()
+
+        # Strategic chokepoint #4: Command execution start
+        self.debug_logger.log("Command execution starting", category=LogCategory.EXECUTION_START, level=LogLevel.NORMAL,
+                             task_id=task.id, command=command[:100])  # Truncate command for readability
 
         # Execute command using executor abstraction
         print(f"\n{DisplayManager.format_info('Executing...')}\n")
@@ -488,7 +517,13 @@ class InteractiveSession:
                     task.stop_timer()
                     task.mark_complete()
                     self.last_action = f"Completed: {task.name}"
+                    # Strategic chokepoint #5: Task completion
+                    self.debug_logger.log("Task completed successfully", category=LogCategory.EXECUTION_END, level=LogLevel.NORMAL,
+                                         task_id=task.id, elapsed=task.get_elapsed_time() if hasattr(task, 'get_elapsed_time') else None,
+                                         findings=len(result.findings) if result.findings else 0)
                 else:
+                    self.debug_logger.log("Command failed or returned non-zero exit", category=LogCategory.EXECUTION_ERROR, level=LogLevel.MINIMAL,
+                                         task_id=task.id, success=result.success)
                     print(DisplayManager.format_warning("Command failed or returned non-zero exit"))
 
                     # Show output for debugging
@@ -508,7 +543,8 @@ class InteractiveSession:
                         self.last_action = f"Completed: {task.name}"
 
             except Exception as e:
-                print(DisplayManager.format_error(f"Screened execution failed: {e}"))
+                self.error_handler.handle_exception(e, context="screened task execution")
+                input()  # Wait for user to acknowledge
 
         else:
             # Use subprocess executor (current implementation)
@@ -556,7 +592,8 @@ class InteractiveSession:
                         self._record_task(task)
 
             except Exception as e:
-                print(DisplayManager.format_error(f"Execution failed: {e}"))
+                self.error_handler.handle_exception(e, context="subprocess task execution")
+                input()  # Wait for user to acknowledge
 
         self.profile.save()
 
@@ -730,17 +767,24 @@ class InteractiveSession:
         if not filepath:
             filepath = input(PromptBuilder.build_import_prompt()).strip()
 
-        if not filepath or not os.path.exists(filepath):
-            print(DisplayManager.format_error(f"File not found: {filepath}"))
+        # Validate file path
+        is_valid, error = self.validator.validate_file_path(filepath, mode='r', must_exist=True)
+        if not is_valid:
+            self.error_handler.show_error(
+                self.error_handler.categorize_error(FileNotFoundError(error)),
+                error
+            )
+            input()  # Wait for user to acknowledge
             return
 
         try:
-            # Parse file
-            print(DisplayManager.format_info(f"Importing {filepath}..."))
-            data = ParserRegistry.parse_file(filepath, self.profile.target, self.profile)
+            # Parse file with loading indicator
+            with LoadingIndicator.spinner(f"Parsing {os.path.basename(filepath)}...") as loader:
+                data = ParserRegistry.parse_file(filepath, self.profile.target, self.profile)
+                loader.update(message="Saving profile...")
 
-            # Save profile
-            self.profile.save()
+                # Save profile
+                self.profile.save()
 
             print(DisplayManager.format_success("Import complete!"))
             print(f"\nDiscovered {len(self.profile.ports)} port(s)")
@@ -751,7 +795,7 @@ class InteractiveSession:
             PhaseManager.advance_phase(self.profile.phase, self.profile)
 
         except Exception as e:
-            print(DisplayManager.format_error(f"Import failed: {e}"))
+            self.error_handler.handle_exception(e, context="scan file import")
 
     def add_finding(self):
         """Add finding through guided entry"""
@@ -828,15 +872,50 @@ class InteractiveSession:
 
             value = input(f"{field['name']}: ").strip()
 
-            is_valid, parsed_value = InputProcessor.parse_field_value(
-                value,
-                field['type'],
-                field['required']
-            )
+            # Apply InputValidator for specific fields
+            if field['name'] == 'port' and value:
+                is_valid, error = self.validator.validate_port(value)
+                if not is_valid:
+                    self.error_handler.show_error(
+                        self.error_handler.categorize_error(ValueError(error)),
+                        error
+                    )
+                    input()  # Wait for user to acknowledge
+                    return
+                parsed_value = int(value)
+            elif field['name'] == 'username' and field['required']:
+                # Validate username is not empty
+                is_valid, error = self.validator.validate_required({'username': value})
+                if not is_valid:
+                    self.error_handler.show_error(
+                        self.error_handler.categorize_error(ValueError(error)),
+                        error
+                    )
+                    input()  # Wait for user to acknowledge
+                    return
+                parsed_value = value
+            elif field['name'] == 'service' and field['required']:
+                # Validate service is not empty
+                is_valid, error = self.validator.validate_required({'service': value})
+                if not is_valid:
+                    self.error_handler.show_error(
+                        self.error_handler.categorize_error(ValueError(error)),
+                        error
+                    )
+                    input()  # Wait for user to acknowledge
+                    return
+                parsed_value = value
+            else:
+                # Use existing validation
+                is_valid, parsed_value = InputProcessor.parse_field_value(
+                    value,
+                    field['type'],
+                    field['required']
+                )
 
-            if not is_valid and field['required']:
-                print(DisplayManager.format_error(f"Invalid {field['name']}"))
-                return
+                if not is_valid and field['required']:
+                    print(DisplayManager.format_error(f"Invalid {field['name']}"))
+                    return
 
             data[field['name']] = parsed_value
 
@@ -1432,6 +1511,7 @@ class InteractiveSession:
             print(DisplayManager.format_success("Resumed previous session"))
 
         except Exception as e:
+            self.error_handler.log_error(e, context="checkpoint loading")
             print(DisplayManager.format_warning(f"Could not load checkpoint: {e}"))
 
     def _check_interrupted_tasks(self):
@@ -1807,6 +1887,7 @@ class InteractiveSession:
             process.terminate()
             return (-1, "", "Interrupted by user")
         except Exception as e:
+            self.error_handler.log_error(e, context="command execution")
             print(f"\n✗ Execution error: {e}")
             return (-1, "", str(e))
 
@@ -2379,7 +2460,8 @@ Output: {output[:500]}{"..." if len(output) > 500 else ""}
             return result.returncode == 0
 
         except Exception as e:
-            print(DisplayManager.format_error(f"Execution failed: {e}"))
+            self.error_handler.handle_exception(e, context="alternative command execution")
+            input()  # Wait for user to acknowledge
             return False
 
     def handle_task_retry(self, task_id: str = None):
@@ -2793,9 +2875,8 @@ Output: {output[:500]}{"..." if len(output) > 500 else ""}
 
             return True
         except Exception as e:
-            print(DisplayManager.format_error(f"Restore failed: {e}"))
-            import traceback
-            traceback.print_exc()
+            self.error_handler.handle_exception(e, context="snapshot restore")
+            input()  # Wait for user to acknowledge
             return False
 
     def handle_batch_execute(self, selection: str = None):
@@ -3924,7 +4005,8 @@ Output: {output[:500]}{"..." if len(output) > 500 else ""}
         try:
             workflow = json.loads(workflow_path.read_text())
         except Exception as e:
-            print(DisplayManager.format_error(f"Failed to load workflow: {e}"))
+            self.error_handler.handle_exception(e, context="workflow loading")
+            input()  # Wait for user to acknowledge
             return
 
         print(f"Workflow: {workflow['name']}")
@@ -4329,7 +4411,8 @@ Output: {output[:500]}{"..." if len(output) > 500 else ""}
                     print(f"Error: {result.error}")
 
         except Exception as e:
-            print(DisplayManager.format_error(f"Execution error: {str(e)}"))
+            self.error_handler.handle_exception(e, context="alternative command execution with context")
+            input()  # Wait for user to acknowledge
 
     def _task_needs_wordlist(self, task) -> bool:
         """

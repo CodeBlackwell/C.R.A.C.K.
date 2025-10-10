@@ -20,6 +20,25 @@
 
 ---
 
+## Documentation Map
+
+**You are here:** Track Module - Comprehensive enumeration system with 235+ service plugins
+
+**Quick Links:**
+- 📚 [**Master Documentation Index**](../docs/MASTER_INDEX.md) - Complete documentation catalog (302 files)
+- 📋 [**Quick Reference Card**](../docs/QUICK_REFERENCE.md) - One-page command reference
+
+**Related Documentation:**
+- [Project Overview](../README.md) - Installation, quick start, tool descriptions
+- [Architecture](../CLAUDE.md) - Development patterns, plugin system, CLI integration
+- [Alternative Commands](alternatives/README.md) - 45+ manual methods for exam scenarios
+- [Service Plugins](services/plugin_docs/README.md) - 235+ service-specific plugins
+- [Wordlist System](wordlists/README.md) - Intelligent wordlist management
+- [Interactive State](interactive/state/README.md) - TUI state machine architecture
+- [Testing Guide](../tests/track/README.md) - Track module test suite
+
+---
+
 ## 🚀 What is This Wizardry?
 
 **C.R.A.C.K. T.R.A.C.K.**

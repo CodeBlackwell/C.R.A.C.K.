@@ -175,6 +175,10 @@ class ExecutionOverlay:
                 live.start()
                 # Don't wait for input, just exit
 
+            elif choice_id == 'import':
+                logger.info("Choice type: import (scan file import wizard)")
+                cls._run_import_wizard(live, session)
+
             else:
                 logger.warning(f"Choice type: {choice_id} (NOT IMPLEMENTED - would cause freeze)")
                 session.console.print(f"[yellow]Choice '{choice_label}' not yet implemented in TUI[/]")
@@ -203,3 +207,141 @@ class ExecutionOverlay:
 
             logger.log_live_action("START", "after error")
             live.start()
+
+    @classmethod
+    def _run_import_wizard(cls, live: Live, session: 'TUISessionV2') -> None:
+        """
+        Run import wizard outside Live context
+
+        Args:
+            live: Rich Live context
+            session: TUI session instance
+        """
+        from ..panels.import_form import ImportForm
+        from ..input_handler import InputProcessor
+
+        logger = get_debug_logger()
+        logger.section("IMPORT WIZARD")
+        logger.info("Starting import wizard")
+
+        # Create import form with debug logging
+        import_form = ImportForm(
+            profile=session.profile,
+            console=session.console,
+            debug_logger=logger
+        )
+
+        # Wizard loop
+        wizard_running = True
+        while wizard_running:
+            try:
+                # Render current stage
+                panel, choices = import_form.render()
+
+                # Display panel
+                session.console.print("\n")
+                session.console.print(panel)
+                session.console.print()
+
+                # Get user input
+                user_input = input("Choice: ").strip()
+                logger.debug(f"User input: {repr(user_input)}")
+
+                # Parse input against choices
+                parsed = InputProcessor.parse_choice(user_input, choices)
+
+                if not parsed:
+                    session.console.print("[yellow]Invalid choice. Please try again.[/]")
+                    continue
+
+                # Get action from choice
+                action = parsed.get('action', '')
+                logger.info(f"Action: {action}")
+
+                # Handle actions
+                if action == 'back':
+                    # Exit wizard, return to dashboard
+                    logger.info("User cancelled import wizard")
+                    wizard_running = False
+
+                elif action == 'enter_path':
+                    # Prompt for custom file path
+                    file_path = input("\nEnter file path: ").strip()
+                    logger.debug(f"File path entered: {file_path}")
+
+                    if file_path:
+                        import_form.set_file_path(file_path)
+
+                elif action == 'use_path':
+                    # Use suggested path
+                    file_path = parsed.get('path')
+                    logger.debug(f"Using suggested path: {file_path}")
+                    import_form.set_file_path(file_path)
+
+                elif action == 'next_stage':
+                    # Advance to next stage
+                    logger.info(f"Advancing from stage {import_form.stage}")
+                    import_form.next_stage()
+                    logger.info(f"Now at stage {import_form.stage}")
+
+                elif action == 'prev_stage':
+                    # Go back to previous stage
+                    logger.info(f"Going back from stage {import_form.stage}")
+                    import_form.prev_stage()
+                    logger.info(f"Now at stage {import_form.stage}")
+
+                elif action == 'select_strategy':
+                    # Set merge strategy
+                    strategy = parsed.get('strategy')
+                    logger.info(f"Merge strategy selected: {strategy}")
+                    import_form.merge_strategy = strategy
+
+                elif action == 'import':
+                    # Execute import
+                    logger.info("Executing import...")
+                    session.console.print("\n[cyan]Importing scan data...[/]")
+
+                    success = import_form.import_to_profile(session.profile)
+
+                    if success:
+                        logger.info("Import successful")
+                        session.console.print("[green]✓ Import complete![/]")
+                    else:
+                        logger.warning("Import failed")
+                        session.console.print("[red]✗ Import failed[/]")
+
+                    # Form automatically moves to COMPLETE stage
+
+                elif action == 'cancel':
+                    # Cancel import
+                    logger.info("Import cancelled by user")
+                    wizard_running = False
+
+                elif action == 'reset':
+                    # Reset form for another import
+                    logger.info("Resetting form for new import")
+                    import_form.reset()
+
+                else:
+                    logger.warning(f"Unknown action: {action}")
+                    session.console.print(f"[yellow]Unknown action: {action}[/]")
+
+            except KeyboardInterrupt:
+                logger.warning("Import wizard interrupted by user")
+                session.console.print("\n[yellow]Import cancelled[/]")
+                wizard_running = False
+
+            except Exception as e:
+                logger.exception(f"Error in import wizard: {e}")
+                session.console.print(f"\n[red]Error: {e}[/]")
+                if session.debug_mode:
+                    import traceback
+                    traceback.print_exc()
+                # Don't exit wizard on error, let user try again
+
+        # Wizard complete
+        logger.info("Import wizard finished")
+
+        # Restart Live display (no confirmation needed - user already exited wizard)
+        logger.log_live_action("START", "after import wizard")
+        live.start()

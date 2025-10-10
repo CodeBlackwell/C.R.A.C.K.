@@ -12,6 +12,8 @@ Handles all user input including:
 
 import re
 from typing import List, Dict, Any, Optional, Tuple, Union
+from .debug_logger import get_debug_logger
+from .log_types import LogCategory, LogLevel
 
 
 class InputProcessor:
@@ -55,7 +57,12 @@ class InputProcessor:
         if user_input.isdigit():
             index = int(user_input) - 1  # Convert to 0-based index
             if 0 <= index < len(choices):
-                return choices[index]
+                matched = choices[index]
+                # Strategic logging: Choice parsed successfully
+                logger = get_debug_logger()
+                logger.log("Choice parsed", category=LogCategory.UI_INPUT, level=LogLevel.TRACE,
+                          input=user_input, matched_id=matched.get('id'))
+                return matched
             return None
 
         # Try keyword matching (match against label, name, or id)

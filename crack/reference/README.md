@@ -2,6 +2,22 @@
 
 A hybrid command reference system combining human-readable documentation with programmatic command management for OSCP preparation.
 
+## Documentation Map
+
+**You are here:** Reference System - Command lookup with 70+ OSCP commands
+
+**Quick Links:**
+- 📚 [**Master Documentation Index**](../docs/MASTER_INDEX.md) - Complete documentation catalog (302 files)
+- 📋 [**Quick Reference Card**](../docs/QUICK_REFERENCE.md) - One-page command reference
+
+**Related Documentation:**
+- [Project Overview](../README.md) - Installation, quick start, CRACK toolkit introduction
+- [Architecture](../CLAUDE.md) - Development patterns, when to reinstall, package structure
+- [Track Module](../track/README.md) - Enumeration system that uses reference commands
+- [Configuration Guide](docs/config.md) - Central variable configuration
+- [Placeholder Reference](docs/placeholders.md) - Variable substitution system
+- [Tag Reference](docs/tags.md) - Command tag explanations
+
 ## Quick Start
 
 ```bash

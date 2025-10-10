@@ -10,6 +10,8 @@ Creates menus, questions, and prompts based on:
 
 from typing import List, Dict, Any, Optional
 from .display import DisplayManager
+from .debug_logger import get_debug_logger
+from .log_types import LogCategory, LogLevel
 
 
 class PromptBuilder:
@@ -27,6 +29,11 @@ class PromptBuilder:
         Returns:
             Tuple of (prompt_text, choices_list)
         """
+        # Strategic logging: Menu generation (chokepoint for UI flow)
+        logger = get_debug_logger()
+        logger.log("Building main menu", category=LogCategory.UI_MENU, level=LogLevel.VERBOSE,
+                  phase=profile.phase, recommendations_count=len(recommendations))
+
         choices = []
 
         # Get current phase
