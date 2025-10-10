@@ -1663,66 +1663,140 @@ class InteractiveSession:
     def handle_time_tracker(self):
         """Time tracking dashboard - show time statistics"""
         from .time_tracker import TimeStats
+        from .input_handler import InputProcessor
 
-        print(DisplayManager.format_info("Time Tracker Dashboard"))
-        print("Track time spent on target enumeration\n")
+        # Initialize session_start if not exists
+        if 'session_start' not in self.profile.metadata:
+            self.profile.metadata['session_start'] = datetime.now().isoformat()
+            self.profile.save()
 
-        # Calculate stats
-        total_time = TimeStats.get_total_time(self.profile.task_tree)
-        breakdown = TimeStats.get_phase_breakdown(self.profile.task_tree)
-        longest = TimeStats.get_longest_tasks(self.profile.task_tree, 10)
-        running = TimeStats.get_running_tasks(self.profile.task_tree)
-        avg_time = TimeStats.get_average_task_time(self.profile.task_tree)
-        estimated_remaining = TimeStats.estimate_remaining_time(self.profile.task_tree)
+        # Show time tracker display
+        while True:
+            print("\n" + "=" * 70)
+            print(DisplayManager.format_info("Session Time Tracker"))
+            print("=" * 70 + "\n")
 
-        # Total time
-        print(f"{DisplayManager.format_success('Total Time Spent:')}")
-        print(f"  {TimeStats.format_duration(total_time)}\n")
+            # Session time
+            session_start = datetime.fromisoformat(self.profile.metadata['session_start'])
+            session_elapsed = (datetime.now() - session_start).total_seconds()
+            print(f"{DisplayManager.format_success('Session Time:')}")
+            print(f"  {TimeStats.format_duration(int(session_elapsed))}")
+            print(f"  Started: {session_start.strftime('%Y-%m-%d %H:%M:%S')}\n")
 
-        # Average task time
-        if avg_time:
-            print(f"{DisplayManager.format_info('Average Task Time:')}")
-            print(f"  {TimeStats.format_duration(avg_time)}\n")
+            # Exam mode status
+            exam_mode = self.profile.metadata.get('exam_mode', False)
+            if exam_mode:
+                exam_duration = self.profile.metadata.get('exam_duration', 86400)
+                exam_start = datetime.fromisoformat(self.profile.metadata['exam_start'])
+                exam_elapsed = (datetime.now() - exam_start).total_seconds()
+                remaining = max(0, exam_duration - exam_elapsed)
+                completion_time = exam_start + timedelta(seconds=exam_duration)
 
-        # Estimated remaining
-        if estimated_remaining:
-            print(f"{DisplayManager.format_info('Estimated Time Remaining:')}")
-            print(f"  {TimeStats.format_duration(estimated_remaining)} ({len(self.profile.task_tree.get_all_pending())} pending tasks)\n")
+                print(f"{DisplayManager.format_warning('Exam Mode: ENABLED')}")
+                print(f"  Time Remaining: {TimeStats.format_duration(int(remaining))}")
+                print(f"  Target Completion: {completion_time.strftime('%Y-%m-%d %H:%M:%S')}\n")
 
-        # Breakdown by phase/category
-        if breakdown:
-            print(f"{DisplayManager.format_info('Time by Category:')}")
-            # Sort by time descending
-            sorted_breakdown = sorted(breakdown.items(), key=lambda x: x[1], reverse=True)
-            for category, seconds in sorted_breakdown:
-                formatted = TimeStats.format_duration(seconds)
-                percentage = (seconds / total_time * 100) if total_time > 0 else 0
-                bar_length = int(percentage / 5)  # 20 chars max
-                bar = '█' * bar_length + '░' * (20 - bar_length)
-                print(f"  {category:15s} {bar} {formatted} ({percentage:.0f}%)")
+            # Calculate stats
+            total_time = TimeStats.get_total_time(self.profile.task_tree)
+            breakdown = TimeStats.get_phase_breakdown(self.profile.task_tree)
+            longest = TimeStats.get_longest_tasks(self.profile.task_tree, 5)
+            running = TimeStats.get_running_tasks(self.profile.task_tree)
+
+            # Breakdown by phase/category
+            if breakdown:
+                print(f"{DisplayManager.format_info('Time by Phase:')}")
+                sorted_breakdown = sorted(breakdown.items(), key=lambda x: x[1], reverse=True)
+                for category, seconds in sorted_breakdown:
+                    formatted = TimeStats.format_duration(seconds)
+                    percentage = (seconds / total_time * 100) if total_time > 0 else 0
+                    bar_length = int(percentage / 10)  # 10 chars max
+                    bar = '█' * bar_length + '░' * (10 - bar_length)
+                    print(f"  {category:15s} {formatted:>10s} ({percentage:>3.0f}%)  {bar}")
+                print()
+
+            # Longest tasks
+            if longest:
+                print(f"{DisplayManager.format_info('Longest Tasks:')}")
+                for i, (task, duration) in enumerate(longest, 1):
+                    formatted = TimeStats.format_duration(duration)
+                    print(f"  {i}. {task.name[:50]:50s} {formatted}")
+                print()
+
+            # Long-running task alerts (>20 minutes)
+            long_threshold = self.profile.metadata.get('long_task_threshold', 1200)
+            long_running = [(t, (datetime.now() - datetime.fromisoformat(t.metadata['start_time'])).total_seconds())
+                           for t in running
+                           if 'start_time' in t.metadata and
+                           (datetime.now() - datetime.fromisoformat(t.metadata['start_time'])).total_seconds() > long_threshold]
+
+            if long_running:
+                print(f"{DisplayManager.format_warning('⚠️  ALERTS:')}")
+                for task, duration in long_running:
+                    mins = int(duration / 60)
+                    print(f"  • Task \"{task.name}\" running for {mins}m (>{long_threshold//60}m threshold)")
+                print()
+
+            # Menu
+            print("Actions:")
+            print("  [r]eset session  [e]xam mode  [t]hreshold  [b]ack")
             print()
 
-        # Longest tasks
-        if longest:
-            print(f"{DisplayManager.format_info('Longest Running Tasks:')}")
-            for i, (task, duration) in enumerate(longest, 1):
-                formatted = TimeStats.format_duration(duration)
-                status_icon = {
-                    'completed': '✅',
-                    'in-progress': '🔄',
-                    'pending': '⏳'
-                }.get(task.status, '❓')
-                print(f"  {i:2d}. {status_icon} {task.name:45s} {formatted}")
-            print()
+            choice = input("Choice: ").strip().lower()
 
-        # Running tasks
-        if running:
-            print(f"{DisplayManager.format_warning('Currently Running:')}")
-            for task in running:
-                print(f"  • {task.name} - {task.get_formatted_duration()}")
-            print()
-        elif total_time == 0:
-            print(DisplayManager.format_info("No tasks timed yet. Execute tasks to start tracking time.\n"))
+            if choice == 'b' or not choice:
+                break
+            elif choice == 'r':
+                self._reset_session_time()
+            elif choice == 'e':
+                self._toggle_exam_mode()
+            elif choice == 't':
+                self._set_long_task_threshold()
+
+    def _reset_session_time(self):
+        """Reset session start time"""
+        confirm = input("Reset session timer to zero? [y/N]: ").strip().lower()
+        if confirm == 'y':
+            self.profile.metadata['session_start'] = datetime.now().isoformat()
+            self.profile.save()
+            print(DisplayManager.format_success("Session timer reset"))
+
+    def _toggle_exam_mode(self):
+        """Toggle exam countdown mode"""
+        exam_mode = self.profile.metadata.get('exam_mode', False)
+
+        if exam_mode:
+            # Disable exam mode
+            confirm = input("Disable exam mode? [y/N]: ").strip().lower()
+            if confirm == 'y':
+                self.profile.metadata['exam_mode'] = False
+                self.profile.save()
+                print(DisplayManager.format_success("Exam mode disabled"))
+        else:
+            # Enable exam mode
+            print("\nExam Mode - Set countdown timer")
+            duration_input = input("Duration in hours [default: 24]: ").strip()
+            try:
+                hours = float(duration_input) if duration_input else 24.0
+                self.profile.metadata['exam_mode'] = True
+                self.profile.metadata['exam_start'] = datetime.now().isoformat()
+                self.profile.metadata['exam_duration'] = int(hours * 3600)
+                self.profile.save()
+                print(DisplayManager.format_success(f"Exam mode enabled ({hours}h countdown)"))
+            except ValueError:
+                print(DisplayManager.format_error("Invalid duration"))
+
+    def _set_long_task_threshold(self):
+        """Set threshold for long-running task alerts"""
+        current = self.profile.metadata.get('long_task_threshold', 1200)
+        print(f"\nCurrent threshold: {current//60} minutes")
+        threshold_input = input("New threshold in minutes [20]: ").strip()
+        try:
+            mins = int(threshold_input) if threshold_input else 20
+            self.profile.metadata['long_task_threshold'] = mins * 60
+            self.profile.save()
+            print(DisplayManager.format_success(f"Threshold set to {mins} minutes"))
+        except ValueError:
+            print(DisplayManager.format_error("Invalid input"))
 
     def handle_port_lookup(self):
         """Port lookup reference tool"""
@@ -3413,369 +3487,152 @@ Output: {output[:500]}{"..." if len(output) > 500 else ""}
             return False
 
     def handle_finding_correlator(self):
-        """Analyze and correlate findings to identify attack chains"""
+        """Finding correlation analysis (shortcut: fc)"""
+        from .correlator import FindingCorrelator
+
         print(DisplayManager.format_info("Finding Correlator"))
-        print("=" * 50)
+        print("=" * 70)
         print()
 
         # Count data
         num_ports = len(self.profile.ports)
-        num_findings = len(self.profile.findings)
-        num_creds = len(self.profile.credentials)
+        num_findings = len(self.profile.findings or [])
+        num_creds = len(self.profile.credentials or [])
 
         print(f"Analyzing {num_ports} ports, {num_findings} findings, {num_creds} credentials...")
         print()
 
-        # Find correlations
-        correlations = self._find_correlations()
+        # Initialize correlator
+        correlator = FindingCorrelator(self.profile)
 
-        if not correlations:
+        # 1. Credential Reuse Opportunities
+        cred_opportunities = correlator.detect_credential_reuse()
+
+        if cred_opportunities:
+            print("🔑 CREDENTIAL REUSE OPPORTUNITIES")
+            print("=" * 70)
+            print()
+
+            for opp in cred_opportunities:
+                cred = opp['credential']
+                untested = opp['untested_services']
+                confidence = opp['confidence']
+
+                print(f"{confidence} CONFIDENCE:")
+                print(f"  {cred.get('username')}:{cred.get('password', '[hash]')} (found in {cred.get('source', 'N/A')})")
+
+                services_str = ', '.join([f"{s.get('service', 'unknown')} ({s.get('port', 0)})" for s in untested[:3]])
+                print(f"  → Untested: {services_str}")
+
+                print(f"  → Actions:")
+                for action in opp['actions'][:2]:
+                    print(f"     - {action}")
+                print()
+
+            print()
+
+        # 2. Attack Chains
+        attack_chains = correlator.detect_attack_chains()
+
+        if attack_chains:
+            print("🔗 ATTACK CHAINS")
+            print("=" * 70)
+            print()
+
+            for chain in attack_chains:
+                print(f"Path: {chain['name']}")
+                print(f"  {chain['description']}")
+                print(f"  Confidence: {chain['confidence']}")
+                print(f"  Next step: {chain['next_step']}")
+                print()
+
+            print()
+
+        # 3. CVE Matches
+        cve_matches = correlator.correlate_cves()
+
+        if cve_matches:
+            print("🔍 CVE MATCHES")
+            print("=" * 70)
+            print()
+
+            for match in cve_matches[:10]:  # Limit to top 10
+                severity_icon = {
+                    'Critical': '🔴',
+                    'High': '🟠',
+                    'Medium': '🟡',
+                    'Low': '🟢'
+                }.get(match['severity'], '⚪')
+
+                print(f"{match['service']} {match['version']} (Port {match['port']}):")
+                print(f"  {severity_icon} {match['cve_id']} - {match['description']}")
+                print(f"     Severity: {match['severity']} (CVSS {match['cvss']})")
+                if match.get('exploit_url'):
+                    print(f"     Exploit: {match['exploit_url']}")
+                print(f"     Confidence: {match['confidence']}")
+                print()
+
+            print()
+
+        # Summary
+        total_correlations = len(cred_opportunities) + len(attack_chains) + len(cve_matches)
+
+        if total_correlations == 0:
             print(DisplayManager.format_warning("No correlations found"))
             print("\nTips:")
             print("  - Ensure scan results are imported")
             print("  - Document findings as you discover them")
-            print("  - Correlator works best with complete enumeration")
+            print("  - Add credentials when found")
             return
 
-        # Rank by priority
-        correlations = self._rank_correlations(correlations)
-
-        print(f"🔗 Correlations Found:\n")
-
-        # Display correlations
-        for i, corr in enumerate(correlations, 1):
-            priority_icon = {
-                'high': '🔴',
-                'medium': '🟡',
-                'low': '🟢'
-            }.get(corr['priority'], '⚪')
-
-            print(f"{i}. {corr['title']} {priority_icon}")
-
-            for j, elem in enumerate(corr['elements']):
-                if j == 0:
-                    print(f"   ├─ {elem}")
-                elif j == len(corr['elements']) - 1:
-                    print(f"   └─ {elem}")
-                else:
-                    print(f"   ├─ {elem}")
-
-            print(f"   └─ → TRY: {corr['recommendation']}")
-            print()
-
-        # Summary recommendations
-        print("Recommendations:")
-        high_priority = [c for c in correlations if c['priority'] == 'high']
-        medium_priority = [c for c in correlations if c['priority'] == 'medium']
-
-        if high_priority:
-            for corr in high_priority:
-                print(f"  → High Priority: {corr['title']} (Correlation #{correlations.index(corr)+1})")
-
-        if medium_priority:
-            for corr in medium_priority[:3]:  # Limit to top 3
-                print(f"  → Medium Priority: {corr['title']} (Correlation #{correlations.index(corr)+1})")
-
+        print(f"Actions: [d]etails [e]xport [b]ack")
         print()
 
-        # Offer to create tasks
-        if high_priority:
-            create_tasks = input(DisplayManager.format_confirmation("Create tasks for high-priority correlations?", default='Y'))
+        choice = input("Choice: ").strip().lower()
 
-            if InputProcessor.parse_confirmation(create_tasks, default='Y'):
-                self._create_correlation_tasks(high_priority)
+        if choice == 'e':
+            self._export_correlations(cred_opportunities, attack_chains, cve_matches)
 
-        self.last_action = f"Analyzed correlations: {len(correlations)} found"
+        self.last_action = f"Analyzed correlations: {total_correlations} found"
 
-    def _find_correlations(self) -> List[Dict[str, Any]]:
-        """Find correlations between discoveries"""
-        correlations = []
+    def _export_correlations(self, cred_opps, chains, cves):
+        """Export correlations to markdown file"""
+        filename = f"{self.profile.target}_correlations.md"
 
-        # Get data
-        ports = self.profile.ports
-        findings = self.profile.findings
-        credentials = self.profile.credentials
+        with open(filename, 'w') as f:
+            f.write(f"# Finding Correlations - {self.profile.target}\n\n")
+            f.write(f"Generated: {datetime.now().isoformat()}\n\n")
 
-        # Pattern 1: Service + Credentials
-        for cred in credentials:
-            username = cred.get('username')
-            password = cred.get('password')
-            cred_service = cred.get('service', '').lower()
+            if cred_opps:
+                f.write("## Credential Reuse Opportunities\n\n")
+                for opp in cred_opps:
+                    cred = opp['credential']
+                    f.write(f"### {opp['confidence']} - {cred.get('username')}\n")
+                    f.write(f"- Source: {cred.get('source')}\n")
+                    f.write(f"- Untested services: {len(opp['untested_services'])}\n")
+                    f.write("- Actions:\n")
+                    for action in opp['actions']:
+                        f.write(f"  - `{action}`\n")
+                    f.write("\n")
 
-            # Check for compatible services
-            for port, info in ports.items():
-                service = info.get('service', '').lower()
+            if chains:
+                f.write("## Attack Chains\n\n")
+                for chain in chains:
+                    f.write(f"### {chain['name']}\n")
+                    f.write(f"- {chain['description']}\n")
+                    f.write(f"- Next: {chain['next_step']}\n\n")
 
-                # Don't correlate with the same service the cred came from
-                if service in ['smb', 'ssh', 'mysql', 'ftp', 'rdp', 'vnc', 'mssql', 'postgresql'] and service != cred_service:
-                    correlations.append({
-                        'type': 'service_credential',
-                        'priority': 'high',
-                        'title': f'{service.upper()} + Credentials',
-                        'elements': [
-                            f'Port {port} ({service}) is open',
-                            f'Username \'{username}\' discovered',
-                            f'Password available' if password else 'Hash/token available'
-                        ],
-                        'recommendation': self._get_service_auth_command(service, port, username, password)
-                    })
+            if cves:
+                f.write("## CVE Matches\n\n")
+                for cve in cves:
+                    f.write(f"### {cve['cve_id']} - {cve['service']} {cve['version']}\n")
+                    f.write(f"- Port: {cve['port']}\n")
+                    f.write(f"- Severity: {cve['severity']} (CVSS {cve['cvss']})\n")
+                    if cve.get('exploit_url'):
+                        f.write(f"- Exploit: {cve['exploit_url']}\n")
+                    f.write("\n")
 
-        # Pattern 2: CVE + Version
-        for port, info in ports.items():
-            version = info.get('version', '')
-            product = info.get('product', '')
-            service = info.get('service', '')
-
-            if version and (product or service):
-                # Check for known CVEs (simple pattern matching)
-                cve_pattern = self._check_known_vulnerabilities(product or service, version)
-                if cve_pattern:
-                    correlations.append({
-                        'type': 'cve_match',
-                        'priority': 'high',
-                        'title': f'Technology Match: {product or service} {version}',
-                        'elements': [
-                            f'Service: {product or service} {version} (Port {port})',
-                            f'{cve_pattern["cve_id"]}: {cve_pattern["description"]}'
-                        ],
-                        'recommendation': f"searchsploit {product or service} {version}"
-                    })
-
-        # Pattern 3: Credential Reuse
-        if credentials:
-            for cred in credentials:
-                username = cred.get('username')
-                password = cred.get('password')
-                source_service = cred.get('service', 'HTTP').lower()
-
-                # Find other services
-                other_services = []
-                for port, info in ports.items():
-                    service = info.get('service', '').lower()
-                    if service in ['ssh', 'mysql', 'smb', 'ftp', 'rdp', 'mssql', 'postgresql'] and service != source_service:
-                        other_services.append(f'{service.upper()} ({port})')
-
-                if other_services and len(other_services) > 0:
-                    correlations.append({
-                        'type': 'credential_reuse',
-                        'priority': 'medium',
-                        'title': 'Credential Reuse Opportunity',
-                        'elements': [
-                            f'Credential: {username}/{password or "hash"} (found on {source_service.upper()})',
-                            f'Open services: {", ".join(other_services[:3])}{"..." if len(other_services) > 3 else ""}'
-                        ],
-                        'recommendation': 'Try credentials on other services'
-                    })
-                    break  # Only create one credential reuse correlation
-
-        # Pattern 4: Directory + Upload
-        upload_findings = [f for f in findings if 'upload' in f.get('description', '').lower() or
-                           'writable' in f.get('description', '').lower()]
-
-        web_ports = [p for p, i in ports.items() if i.get('service', '').lower() in ['http', 'https']]
-
-        if upload_findings and web_ports:
-            correlations.append({
-                'type': 'upload_directory',
-                'priority': 'medium',
-                'title': 'Upload Directory Pattern',
-                'elements': [
-                    'Writable/upload directory found',
-                    f'Web service available on port(s): {", ".join(str(p) for p in web_ports)}'
-                ],
-                'recommendation': 'Upload web shell for RCE (check file type restrictions)'
-            })
-
-        # Pattern 5: Weak Auth
-        basic_auth = [f for f in findings if 'basic auth' in f.get('description', '').lower() or
-                      'authentication' in f.get('description', '').lower()]
-
-        if basic_auth and web_ports:
-            correlations.append({
-                'type': 'weak_auth',
-                'priority': 'medium',
-                'title': 'Weak Authentication Pattern',
-                'elements': [
-                    'HTTP authentication detected',
-                    'No lockout policy observed'
-                ],
-                'recommendation': 'Credential brute-force with hydra or medusa'
-            })
-
-        # Pattern 6: LFI + Writable
-        lfi_findings = [f for f in findings if 'lfi' in f.get('description', '').lower() or
-                        'file inclusion' in f.get('description', '').lower() or
-                        'traversal' in f.get('description', '').lower()]
-        writable_dirs = [f for f in findings if 'writable' in f.get('description', '').lower() or
-                         'upload' in f.get('description', '').lower()]
-
-        if lfi_findings and writable_dirs:
-            correlations.append({
-                'type': 'lfi_upload',
-                'priority': 'high',
-                'title': 'LFI + Shell Upload',
-                'elements': [
-                    'LFI/Path traversal vulnerability detected',
-                    'Writable directory found'
-                ],
-                'recommendation': 'Upload shell and include via LFI: <?php system($_GET["cmd"]); ?>'
-            })
-
-        # Pattern 7: SQLi + Database Port
-        sqli_findings = [f for f in findings if 'sql' in f.get('description', '').lower() and
-                         'injection' in f.get('description', '').lower()]
-        db_ports = {p: i for p, i in ports.items() if i.get('service', '').lower() in ['mysql', 'mssql', 'postgresql']}
-
-        if sqli_findings and db_ports:
-            db_port = list(db_ports.keys())[0]
-            db_service = db_ports[db_port].get('service', 'database')
-            correlations.append({
-                'type': 'sqli_db',
-                'priority': 'high',
-                'title': f'SQL Injection + {db_service.upper()} Service',
-                'elements': [
-                    'SQL injection vulnerability found',
-                    f'Open {db_service} port: {db_port}'
-                ],
-                'recommendation': f'Extract credentials via SQLi, then direct {db_service} connection'
-            })
-
-        # Pattern 8: Username Enum + Weak Passwords
-        user_findings = [f for f in findings if 'username' in f.get('description', '').lower() or
-                         'user' in f.get('type', '').lower() or
-                         f.get('type') == 'user']
-
-        auth_services = [p for p, i in ports.items() if i.get('service', '').lower() in ['ssh', 'smb', 'ftp', 'rdp']]
-
-        if user_findings and auth_services and not credentials:
-            correlations.append({
-                'type': 'user_enum',
-                'priority': 'medium',
-                'title': 'Username Enumeration Detected',
-                'elements': [
-                    f'{len(user_findings)} valid username(s) discovered',
-                    f'Auth services: {", ".join(str(p) for p in auth_services[:3])}',
-                    'No passwords found yet'
-                ],
-                'recommendation': 'Password spraying with common passwords'
-            })
-
-        return correlations
-
-    def _get_service_auth_command(self, service: str, port: int, username: str, password: str) -> str:
-        """Generate authentication command for service"""
-        target = self.profile.target
-
-        commands = {
-            'smb': f'smbclient //{target}/C$ -U {username}{"%" + password if password else ""}',
-            'ssh': f'ssh {username}@{target} {"-p " + str(port) if port != 22 else ""}',
-            'mysql': f'mysql -h {target} -u {username} {"-p" + password if password else "-p"}',
-            'mssql': f'impacket-mssqlclient {username}:{password or "hash"}@{target}',
-            'postgresql': f'psql -h {target} -U {username} {"" if not password else ""}',
-            'ftp': f'ftp {username}@{target}',
-            'rdp': f'rdesktop -u {username} {"-p " + password if password else ""} {target}',
-            'vnc': f'vncviewer {target}:{port}'
-        }
-
-        return commands.get(service, f'Try {username}/{password or "hash"} on {service}')
-
-    def _check_known_vulnerabilities(self, product: str, version: str) -> Optional[Dict]:
-        """Check for known vulnerabilities (simple pattern matching)"""
-        # Known CVE patterns (expand this database)
-        known_cves = {
-            ('Apache httpd', '2.4.41'): {
-                'cve_id': 'CVE-2021-41773',
-                'description': 'Path traversal vulnerability'
-            },
-            ('Apache httpd', '2.4.49'): {
-                'cve_id': 'CVE-2021-41773',
-                'description': 'Path traversal and RCE'
-            },
-            ('OpenSSH', '7.4'): {
-                'cve_id': 'CVE-2018-15473',
-                'description': 'Username enumeration'
-            },
-            ('ProFTPD', '1.3.5'): {
-                'cve_id': 'CVE-2015-3306',
-                'description': 'Remote code execution'
-            },
-            ('vsftpd', '2.3.4'): {
-                'cve_id': 'Backdoor',
-                'description': 'Backdoored version with command execution'
-            },
-            ('Samba smbd', '3.0.20'): {
-                'cve_id': 'CVE-2007-2447',
-                'description': 'Command execution via username'
-            },
-            ('Microsoft Windows RPC', '5.0'): {
-                'cve_id': 'MS08-067',
-                'description': 'Remote code execution (EternalBlue family)'
-            }
-        }
-
-        # Normalize product name
-        product_lower = product.lower()
-
-        # Simple version matching
-        for (known_product, known_version), cve_data in known_cves.items():
-            if known_product.lower() in product_lower and known_version in version:
-                return cve_data
-
-        # Partial version match (for ranges)
-        for (known_product, known_version), cve_data in known_cves.items():
-            if known_product.lower() in product_lower:
-                # Check version prefix match
-                if version.startswith(known_version.split('.')[0]):
-                    return cve_data
-
-        return None
-
-    def _rank_correlations(self, correlations: List[Dict]) -> List[Dict]:
-        """Rank correlations by priority and exploitability"""
-        priority_order = {'high': 0, 'medium': 1, 'low': 2}
-
-        return sorted(correlations, key=lambda c: (
-            priority_order.get(c['priority'], 99),
-            -len(c['elements'])  # More elements = more interesting
-        ))
-
-    def _create_correlation_tasks(self, correlations: List[Dict]):
-        """Create tasks for high-priority correlations"""
-        from ..core.task_tree import TaskNode
-
-        created_count = 0
-
-        for corr in correlations:
-            # Create task based on correlation type
-            task_id = f"correlation-{corr['type']}-{int(time.time())}"
-
-            # Build task metadata
-            metadata = {
-                'command': corr['recommendation'],
-                'description': corr['title'],
-                'tags': ['CORRELATION', 'OSCP:HIGH'] if corr['priority'] == 'high' else ['CORRELATION'],
-                'correlation_type': corr['type']
-            }
-
-            # Create task node
-            task_node = TaskNode(
-                task_id=task_id,
-                name=f"[CORRELATION] {corr['title']}",
-                task_type='command'
-            )
-
-            # Set metadata after creation
-            task_node.metadata.update(metadata)
-
-            # Add to task tree
-            self.profile.task_tree.add_child(task_node)
-
-            print(DisplayManager.format_success(f"✓ Created task: {corr['title']}"))
-            created_count += 1
-
-        self.profile.save()
-        print(f"\n✓ Created {created_count} correlation task(s)")
-
+        print(DisplayManager.format_success(f"Exported to {filename}"))
     def handle_success_analyzer(self):
         """Analyze task success rates and provide optimization insights"""
         print(DisplayManager.format_info("Success Analyzer"))

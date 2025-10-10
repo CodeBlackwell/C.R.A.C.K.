@@ -42,9 +42,29 @@ class HelpOverlay:
   [cyan]w[/] - Quick [bold]W[/]ins (fast, high-value tasks)
   [cyan]i[/] - [bold]I[/]mport scan results
   [cyan]d[/] - [bold]D[/]ocument finding
+  [cyan]c[/] - [bold]C[/]redentials entry
+  [cyan]alt[/] - [bold]Alt[/]ernative commands (manual methods)
 
 [bold yellow]Dashboard - Number Keys:[/]
   [cyan]1-9[/] - Select numbered menu option
+
+[bold yellow]Foundation Shortcuts (Stage 1):[/]
+  [cyan]pd[/] - Progress dashboard (visual metrics)
+  [cyan]ss[/] - Session snapshot (save/restore)
+  [cyan]tr[/] - Task retry (edit failed tasks)
+
+[bold yellow]Core Features (Stage 2):[/]
+  [cyan]qn[/] - Quick note (rapid note-taking)
+  [cyan]tf[/] - Task filter (multi-criteria search)
+  [cyan]ch[/] - Command history (searchable log)
+  [cyan]be[/] - Batch execute (multi-task run)
+
+[bold yellow]Enhanced Tools (Stage 3):[/]
+  [cyan]tt[/] - Time tracker (session timing)
+  [cyan]qx[/] - Quick export (findings/status)
+  [cyan]fc[/] - Finding correlator (attack chains)
+  [cyan]pl[/] - Port lookup (OSCP reference)
+  [cyan]qe[/] - Quick execute (one-off commands)
 
 [bold yellow]Task List Panel:[/]
   [cyan]1-10[/] - Select task from list
