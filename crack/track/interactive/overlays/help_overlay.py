@@ -8,8 +8,14 @@ Shows:
 - Advanced shortcuts
 
 Non-state-changing overlay - dismisses on keypress.
+
+DYNAMIC GENERATION:
+- Shortcuts extracted from ShortcutHandler.shortcuts at runtime
+- Single source of truth - no hardcoded duplicates
+- Auto-updates when shortcuts are added/removed
 """
 
+from typing import Optional, Dict, Tuple
 from rich.panel import Panel
 from rich import box
 
@@ -17,13 +23,135 @@ from rich import box
 class HelpOverlay:
     """Help information overlay"""
 
+    # Category definitions for organizing shortcuts
+    CATEGORIES = {
+        'navigation': {
+            'title': 'Navigation & Views',
+            'shortcuts': ['s', 't', 'r', 'h', 'b', 'q'],
+            'icon': '🧭'
+        },
+        'tasks': {
+            'title': 'Task Actions',
+            'shortcuts': ['n', 'x', 'tf', 'tr', 'be'],
+            'icon': '⚡'
+        },
+        'quick': {
+            'title': 'Quick Tools',
+            'shortcuts': ['qn', 'qe', 'qx'],
+            'icon': '🚀'
+        },
+        'analysis': {
+            'title': 'Analysis & Tracking',
+            'shortcuts': ['ch', 'pl', 'tt', 'pd', 'fc', 'sa', 'sg'],
+            'icon': '📊'
+        },
+        'session': {
+            'title': 'Session Management',
+            'shortcuts': ['ss', 'c', 'w', 'alt', 'wr'],
+            'icon': '⚙️'
+        },
+        'danger': {
+            'title': 'Dangerous Operations',
+            'shortcuts': ['R'],
+            'icon': '⚠️'
+        }
+    }
+
     @classmethod
-    def render(cls) -> Panel:
+    def render(cls, shortcut_handler=None) -> Panel:
         """
-        Render help overlay panel
+        Render help overlay panel with dynamic shortcuts
+
+        Args:
+            shortcut_handler: ShortcutHandler instance (optional)
+                             If provided, shortcuts are dynamically extracted
+                             If None, falls back to static help text
 
         Returns:
             Rich Panel for overlay display
+        """
+        if shortcut_handler:
+            # Dynamic generation from ShortcutHandler
+            help_text = cls._build_dynamic_help(shortcut_handler.shortcuts)
+        else:
+            # Fallback to static help text (backward compatibility)
+            help_text = cls._build_static_help()
+
+        return Panel(
+            help_text,
+            title="[bold blue]CRACK Track TUI - Help[/]",
+            subtitle="[dim]For full documentation: track/docs/[/]",
+            border_style="blue",
+            box=box.DOUBLE
+        )
+
+    @classmethod
+    def _build_dynamic_help(cls, shortcuts: Dict[str, Tuple[str, str]]) -> str:
+        """
+        Build help text dynamically from shortcuts dictionary
+
+        Args:
+            shortcuts: Dict mapping shortcut keys to (description, handler) tuples
+
+        Returns:
+            Formatted help text string
+        """
+        lines = ["[bold cyan]KEYBOARD SHORTCUTS[/]\n"]
+
+        # Organize shortcuts by category
+        for category_key, category_info in cls.CATEGORIES.items():
+            title = category_info['title']
+            icon = category_info['icon']
+            category_shortcuts = category_info['shortcuts']
+
+            # Add category header
+            lines.append(f"[bold yellow]{icon} {title}:[/]")
+
+            # Add shortcuts in this category
+            for key in category_shortcuts:
+                if key in shortcuts:
+                    description, _ = shortcuts[key]
+                    # Format with color based on key length
+                    if len(key) == 1:
+                        formatted_key = f"[cyan]{key}[/]"
+                    else:
+                        formatted_key = f"[cyan]{key}[/]"
+
+                    # Highlight dangerous operations
+                    if category_key == 'danger':
+                        lines.append(f"  {formatted_key} - [red]{description}[/]")
+                    else:
+                        lines.append(f"  {formatted_key} - {description}")
+
+            lines.append("")  # Blank line between categories
+
+        # Add TUI-specific shortcuts (not in ShortcutHandler)
+        lines.append("[bold yellow]🖥️  TUI-Specific Shortcuts:[/]")
+        lines.append("  [cyan]:[/] - Command mode (vim-style)")
+        lines.append("  [cyan]:!cmd[/] - Console injection (execute command)")
+        lines.append("  [cyan]o[/] - Output overlay (view task execution history)")
+        lines.append("  [cyan]1-9[/] - Select numbered menu option")
+        lines.append("")
+
+        # Add note about multi-character shortcuts
+        lines.append("[bold yellow]📝 Multi-Character Shortcuts:[/]")
+        lines.append("  Multi-char shortcuts (ch, qn, pl, alt, etc.) must use :[/]")
+        lines.append("  Examples: [cyan]:ch[/] [cyan]:qn[/] [cyan]:pl[/] [cyan]:alt[/]")
+        lines.append("  Single-char shortcuts work instantly: [cyan]s[/] [cyan]t[/] [cyan]h[/] [cyan]q[/]")
+        lines.append("")
+
+        # Add footer
+        lines.append("[dim]Press any key to close this help screen[/]")
+
+        return "\n".join(lines)
+
+    @classmethod
+    def _build_static_help(cls) -> str:
+        """
+        Build static help text (fallback for backward compatibility)
+
+        Returns:
+            Formatted help text string
         """
         help_text = """[bold cyan]KEYBOARD SHORTCUTS[/]
 

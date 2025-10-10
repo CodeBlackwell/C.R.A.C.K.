@@ -186,6 +186,72 @@ class HotkeyInputHandler:
         finally:
             self._restore_mode()
 
+    def read_shortcut(self, first_char: str, timeout: float = 0.3) -> str:
+        """
+        Read multi-character shortcut with timeout
+
+        Handles shortcuts like 'ch', 'qn', 'pl', 'alt', etc.
+        Shorter timeout than numbers (300ms vs 500ms) for responsiveness.
+
+        Args:
+            first_char: First character already pressed
+            timeout: Timeout for additional characters (seconds)
+
+        Returns:
+            Complete shortcut string (e.g., "ch", "qn", "a")
+        """
+        if self.debug_logger:
+            self.debug_logger.debug(f"Reading multi-char shortcut, first char: '{first_char}'")
+
+        buffer = first_char
+        start_time = time.time()
+
+        try:
+            self._set_raw_mode()
+
+            while True:
+                elapsed = time.time() - start_time
+                remaining = timeout - elapsed
+
+                if remaining <= 0:
+                    if self.debug_logger:
+                        self.debug_logger.debug(f"Shortcut input timeout, returning: '{buffer}'")
+                    break
+
+                # Check if input available
+                import select
+                if sys.stdin in select.select([sys.stdin], [], [], remaining)[0]:
+                    key = sys.stdin.read(1)
+
+                    if self.debug_logger:
+                        self.debug_logger.debug(f"Additional key: {repr(key)}")
+
+                    # Only accept alphanumeric characters for shortcuts
+                    if key.isalnum():
+                        buffer += key
+                        # Limit to reasonable shortcut length (e.g., max 3 chars: 'alt')
+                        if len(buffer) >= 3:
+                            if self.debug_logger:
+                                self.debug_logger.debug(f"Max shortcut length reached: '{buffer}'")
+                            break
+                    else:
+                        # Non-alphanumeric = end of shortcut
+                        if self.debug_logger:
+                            self.debug_logger.debug(f"Non-alphanumeric detected, shortcut complete: '{buffer}'")
+                        break
+                else:
+                    # Timeout - no more input
+                    break
+
+            return buffer
+
+        except Exception as e:
+            if self.debug_logger:
+                self.debug_logger.exception(f"Error reading shortcut: {e}")
+            return buffer
+        finally:
+            self._restore_mode()
+
     def _set_raw_mode(self):
         """Put terminal in raw mode (single-char input, no echo)"""
         if self.in_raw_mode:

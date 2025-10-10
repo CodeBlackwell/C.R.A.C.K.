@@ -110,7 +110,7 @@ class TUISessionV2(InteractiveSession):
             with Live(
                 layout,
                 console=self.console,
-                screen=True,  # Full-screen mode for proper clearing
+                screen=False,
                 refresh_per_second=4,
                 auto_refresh=False
             ) as live:
@@ -353,7 +353,7 @@ class TUISessionV2(InteractiveSession):
                     # Strategic logging: Numeric input
                     self.debug_logger.log("Numeric input", category=LogCategory.UI_INPUT, level=LogLevel.VERBOSE, number=user_input)
                 else:
-                    # Single-key shortcut
+                    # Single-key shortcut (alphabetic or other)
                     user_input = key
                     # Strategic logging: Shortcut key
                     self.debug_logger.log("Shortcut key pressed", category=LogCategory.UI_INPUT, level=LogLevel.VERBOSE, key=user_input)
@@ -1260,9 +1260,41 @@ class TUISessionV2(InteractiveSession):
             else:
                 self.debug_logger.warning(f"Choice {choice_num} out of range (1-{len(self._current_choices)})")
                 self.console.print(f"[red]Invalid choice: {choice_num}[/]")
-        except (ValueError, AttributeError) as e:
-            self.debug_logger.warning(f"Failed to parse input: {e}")
-            self.console.print(f"[red]Invalid input: {user_input}[/]")
+        except (ValueError, AttributeError):
+            # Not a number - try delegating to ShortcutHandler
+            # This handles all the shortcuts not explicitly processed above
+            # (r, x, c, ch, pl, tf, qn, tt, qx, fc, qe, ss, tr, be, sa, wr, sg, alt, R, etc.)
+            if user_input in self.shortcut_handler.shortcuts:
+                self.debug_logger.info(f"Delegating '{user_input}' to ShortcutHandler")
+
+                # Shortcuts from basic mode expect terminal I/O, not Live context
+                # Stop Live temporarily to allow input() and print()
+                if hasattr(self, '_live'):
+                    self._live.stop()
+
+                try:
+                    # Execute shortcut via handler
+                    continue_session = self.shortcut_handler.handle(user_input)
+
+                    # Some shortcuts return False to signal exit
+                    if not continue_session:
+                        self.debug_logger.info("Shortcut handler requested exit")
+                        if hasattr(self, '_live'):
+                            self._live.start()
+                        return 'exit'
+
+                except Exception as e:
+                    self.debug_logger.warning(f"Shortcut handler error: {e}")
+                    self.console.print(f"[red]Error executing '{user_input}': {e}[/]")
+
+                finally:
+                    # Always restart Live context
+                    if hasattr(self, '_live'):
+                        self._live.start()
+            else:
+                # Not a shortcut either - unknown input
+                self.debug_logger.warning(f"Unknown input: {user_input}")
+                self.console.print(f"[red]Invalid input: {user_input}[/]")
 
         return None
 
@@ -1321,22 +1353,49 @@ class TUISessionV2(InteractiveSession):
         self.debug_logger.info("Returned from ExecutionOverlay")
 
     def _show_help(self):
-        """Show help overlay"""
-        help_panel = HelpOverlay.render()
-        self.console.print(help_panel)
-        input()  # Wait for keypress
+        """Show help overlay with dynamic shortcuts"""
+        # Stop Live context to allow overlay display
+        if hasattr(self, '_live'):
+            self._live.stop()
+
+        try:
+            help_panel = HelpOverlay.render(shortcut_handler=self.shortcut_handler)
+            self.console.print(help_panel)
+            input()  # Wait for keypress
+        finally:
+            # Resume Live context
+            if hasattr(self, '_live'):
+                self._live.start()
 
     def _show_status(self):
         """Show status overlay"""
-        status_panel = StatusOverlay.render(self.profile)
-        self.console.print(status_panel)
-        input()  # Wait for keypress
+        # Stop Live context to allow overlay display
+        if hasattr(self, '_live'):
+            self._live.stop()
+
+        try:
+            status_panel = StatusOverlay.render(self.profile)
+            self.console.print(status_panel)
+            input()  # Wait for keypress
+        finally:
+            # Resume Live context
+            if hasattr(self, '_live'):
+                self._live.start()
 
     def _show_tree(self):
         """Show task tree overlay"""
-        tree_panel = TreeOverlay.render(self.profile)
-        self.console.print(tree_panel)
-        input()  # Wait for keypress
+        # Stop Live context to allow overlay display
+        if hasattr(self, '_live'):
+            self._live.stop()
+
+        try:
+            tree_panel = TreeOverlay.render(self.profile)
+            self.console.print(tree_panel)
+            input()  # Wait for keypress
+        finally:
+            # Resume Live context
+            if hasattr(self, '_live'):
+                self._live.start()
 
     def _show_output(self):
         """Show output overlay with interactive navigation"""
@@ -1402,84 +1461,93 @@ class TUISessionV2(InteractiveSession):
                              category=LogCategory.UI_PANEL,
                              level=LogLevel.NORMAL)
 
-        # Calculate progress metrics
-        all_tasks = self.profile.task_tree.get_all_tasks()
-        total = len(all_tasks)
-        completed = len([t for t in all_tasks if t.status == 'completed'])
-        in_progress = len([t for t in all_tasks if t.status == 'in-progress'])
-        pending = len([t for t in all_tasks if t.status == 'pending'])
+        # Stop Live context to allow overlay display
+        if hasattr(self, '_live'):
+            self._live.stop()
 
-        # Log metrics
-        self.debug_logger.log("Progress metrics calculated",
-                             category=LogCategory.UI_PANEL,
-                             level=LogLevel.VERBOSE,
-                             total=total, completed=completed, pending=pending)
+        try:
+            # Calculate progress metrics
+            all_tasks = self.profile.task_tree.get_all_tasks()
+            total = len(all_tasks)
+            completed = len([t for t in all_tasks if t.status == 'completed'])
+            in_progress = len([t for t in all_tasks if t.status == 'in-progress'])
+            pending = len([t for t in all_tasks if t.status == 'pending'])
 
-        # Build panel
-        table = Table(show_header=False, box=None, padding=(0, 2))
-        table.add_column("Label", style="bold cyan", width=20)
-        table.add_column("Value")
+            # Log metrics
+            self.debug_logger.log("Progress metrics calculated",
+                                 category=LogCategory.UI_PANEL,
+                                 level=LogLevel.VERBOSE,
+                                 total=total, completed=completed, pending=pending)
 
-        # Progress metrics
-        percent = int((completed / total * 100)) if total > 0 else 0
-        table.add_row("Total Tasks", str(total))
-        table.add_row("Completed", f"{completed} ({percent}%)")
-        table.add_row("In Progress", str(in_progress))
-        table.add_row("Pending", str(pending))
+            # Build panel
+            table = Table(show_header=False, box=None, padding=(0, 2))
+            table.add_column("Label", style="bold cyan", width=20)
+            table.add_column("Value")
 
-        # ASCII progress bar (40 chars wide)
-        bar_width = 40
-        filled = int(bar_width * completed / total) if total > 0 else 0
-        empty = bar_width - filled
-        bar = f"[green]{'█' * filled}[/][dim]{'░' * empty}[/]"
-        table.add_row("", bar)
+            # Progress metrics
+            percent = int((completed / total * 100)) if total > 0 else 0
+            table.add_row("Total Tasks", str(total))
+            table.add_row("Completed", f"{completed} ({percent}%)")
+            table.add_row("In Progress", str(in_progress))
+            table.add_row("Pending", str(pending))
 
-        # Group by service
-        service_tasks = {}
-        for task in all_tasks:
-            # Extract service from task ID or metadata
-            service = task.metadata.get('service', 'general')
-            if service not in service_tasks:
-                service_tasks[service] = {'total': 0, 'done': 0}
-            service_tasks[service]['total'] += 1
-            if task.status == 'completed':
-                service_tasks[service]['done'] += 1
+            # ASCII progress bar (40 chars wide)
+            bar_width = 40
+            filled = int(bar_width * completed / total) if total > 0 else 0
+            empty = bar_width - filled
+            bar = f"[green]{'█' * filled}[/][dim]{'░' * empty}[/]"
+            table.add_row("", bar)
 
-        # Service breakdown
-        if service_tasks:
-            table.add_row("", "")
-            table.add_row("[bold]Service Breakdown[/]", "")
-            for svc, counts in sorted(service_tasks.items())[:5]:  # Top 5
-                svc_percent = int((counts['done'] / counts['total'] * 100)) if counts['total'] > 0 else 0
-                table.add_row(f"  {svc.upper()}", f"{counts['done']}/{counts['total']} ({svc_percent}%)")
+            # Group by service
+            service_tasks = {}
+            for task in all_tasks:
+                # Extract service from task ID or metadata
+                service = task.metadata.get('service', 'general')
+                if service not in service_tasks:
+                    service_tasks[service] = {'total': 0, 'done': 0}
+                service_tasks[service]['total'] += 1
+                if task.status == 'completed':
+                    service_tasks[service]['done'] += 1
 
-        # Quick wins (pending, QUICK_WIN tag)
-        quick_wins = [t for t in all_tasks if t.status == 'pending' and 'QUICK_WIN' in t.metadata.get('tags', [])]
-        if quick_wins:
-            table.add_row("", "")
-            table.add_row("[bold]Quick Wins[/]", f"{len(quick_wins)} available")
+            # Service breakdown
+            if service_tasks:
+                table.add_row("", "")
+                table.add_row("[bold]Service Breakdown[/]", "")
+                for svc, counts in sorted(service_tasks.items())[:5]:  # Top 5
+                    svc_percent = int((counts['done'] / counts['total'] * 100)) if counts['total'] > 0 else 0
+                    table.add_row(f"  {svc.upper()}", f"{counts['done']}/{counts['total']} ({svc_percent}%)")
 
-        # High priority (pending, OSCP:HIGH tag)
-        high_pri = [t for t in all_tasks if t.status == 'pending' and any('OSCP:HIGH' in tag for tag in t.metadata.get('tags', []))]
-        if high_pri:
-            table.add_row("[bold]High Priority[/]", f"{len(high_pri)} pending")
+            # Quick wins (pending, QUICK_WIN tag)
+            quick_wins = [t for t in all_tasks if t.status == 'pending' and 'QUICK_WIN' in t.metadata.get('tags', [])]
+            if quick_wins:
+                table.add_row("", "")
+                table.add_row("[bold]Quick Wins[/]", f"{len(quick_wins)} available")
 
-        # Next recommended
-        next_task = self.profile.task_tree.get_next_actionable(self.profile.task_tree)
-        if next_task:
-            table.add_row("", "")
-            table.add_row("[bold]Next Task[/]", next_task.name[:40] + "..." if len(next_task.name) > 40 else next_task.name)
+            # High priority (pending, OSCP:HIGH tag)
+            high_pri = [t for t in all_tasks if t.status == 'pending' and any('OSCP:HIGH' in tag for tag in t.metadata.get('tags', []))]
+            if high_pri:
+                table.add_row("[bold]High Priority[/]", f"{len(high_pri)} pending")
 
-        panel = Panel(table, title="[bold]Progress Dashboard[/]", border_style="magenta")
+            # Next recommended
+            next_task = self.profile.task_tree.get_next_actionable(self.profile.task_tree)
+            if next_task:
+                table.add_row("", "")
+                table.add_row("[bold]Next Task[/]", next_task.name[:40] + "..." if len(next_task.name) > 40 else next_task.name)
 
-        # Display and wait
-        self.console.print(panel)
-        input()  # Wait for keypress
+            panel = Panel(table, title="[bold]Progress Dashboard[/]", border_style="magenta")
 
-        # Strategic chokepoint: Dashboard closed
-        self.debug_logger.log("Progress dashboard closed",
-                             category=LogCategory.UI_PANEL,
-                             level=LogLevel.NORMAL)
+            # Display and wait
+            self.console.print(panel)
+            input()  # Wait for keypress
+
+            # Strategic chokepoint: Dashboard closed
+            self.debug_logger.log("Progress dashboard closed",
+                                 category=LogCategory.UI_PANEL,
+                                 level=LogLevel.NORMAL)
+        finally:
+            # Resume Live context
+            if hasattr(self, '_live'):
+                self._live.start()
 
     def _check_interrupted_tasks_tui(self):
         """
