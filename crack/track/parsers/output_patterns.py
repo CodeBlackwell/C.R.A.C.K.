@@ -77,6 +77,7 @@ class OutputPatternMatcher:
             'enum4linux': Enum4LinuxOutputMatcher(),
             'sqlmap': SqlmapOutputMatcher(),
             'nikto': NiktoOutputMatcher(),
+            'ping': PingOutputMatcher(),
         }
 
     def analyze(self, output: List[str], task: TaskNode) -> Dict[str, Any]:
@@ -130,7 +131,7 @@ class OutputPatternMatcher:
             Tool name or None
         """
         tools = ['nmap', 'gobuster', 'enum4linux', 'sqlmap', 'nikto',
-                 'dirb', 'wfuzz', 'hydra', 'john', 'hashcat']
+                 'dirb', 'wfuzz', 'hydra', 'john', 'hashcat', 'ping']
 
         for tool in tools:
             if tool in command:
@@ -391,5 +392,53 @@ class NiktoOutputMatcher:
             # Server information
             if 'Server:' in line:
                 findings['server_info'].append(line.strip())
+
+        return findings
+
+
+class PingOutputMatcher:
+    """Ping-specific output parsing"""
+
+    def parse(self, output: List[str], task: TaskNode) -> Dict[str, Any]:
+        """Parse ping output"""
+        findings = {
+            'connectivity': [],
+            'statistics': []
+        }
+
+        icmp_detected = False
+        packets_transmitted = 0
+        packets_received = 0
+        packet_loss = 100
+
+        for line in output:
+            # ICMP response: 64 bytes from 192.168.45.100
+            icmp_match = re.search(r'(\d+) bytes from ([\d.]+)', line)
+            if icmp_match:
+                icmp_detected = True
+                findings['connectivity'].append({
+                    'type': 'icmp_response',
+                    'description': f'Target responding to ICMP (received {icmp_match.group(1)} bytes)'
+                })
+
+            # Packet statistics: 3 packets transmitted, 3 received, 0% packet loss
+            stats_match = re.search(r'(\d+) packets transmitted, (\d+) received, (\d+)% packet loss', line)
+            if stats_match:
+                packets_transmitted = int(stats_match.group(1))
+                packets_received = int(stats_match.group(2))
+                packet_loss = int(stats_match.group(3))
+
+                findings['statistics'].append({
+                    'transmitted': packets_transmitted,
+                    'received': packets_received,
+                    'loss_percent': packet_loss
+                })
+
+        # Overall connectivity determination
+        if icmp_detected and packet_loss < 100:
+            findings['connectivity'].append({
+                'type': 'host_alive',
+                'description': f'Target is alive ({packets_received}/{packets_transmitted} packets received, {packet_loss}% loss)'
+            })
 
         return findings
