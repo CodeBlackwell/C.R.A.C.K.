@@ -42,14 +42,21 @@ class TaskOrchestrator:
         Returns:
             List of task dicts sorted by priority (highest first)
         """
-        # Placeholder: In Stage 2, will query correlation + methodology engines
-        # For now, returns empty list (passive)
         all_tasks = []
 
         logger.debug(f"[ORCHESTRATOR] Generating next {max_tasks} tasks")
 
-        # Future: all_tasks.extend(self.correlation_engine.get_tasks())
-        # Future: all_tasks.extend(self.methodology_engine.get_tasks())
+        # Query Method 1: Correlation (reactive)
+        if hasattr(self, 'correlation_engine') and self.correlation_engine:
+            correlation_tasks = self.correlation_engine.get_correlation_tasks()
+            all_tasks.extend(correlation_tasks)
+            logger.debug(f"[ORCHESTRATOR] Correlation: {len(correlation_tasks)} tasks")
+
+        # Query Method 2: Methodology (proactive)
+        if hasattr(self, 'methodology_engine') and self.methodology_engine:
+            methodology_tasks = self.methodology_engine.get_phase_suggestions()
+            all_tasks.extend(methodology_tasks)
+            logger.debug(f"[ORCHESTRATOR] Methodology: {len(methodology_tasks)} tasks")
 
         if not all_tasks:
             return []

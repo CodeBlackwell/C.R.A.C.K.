@@ -1,0 +1,35 @@
+{
+  "credential_spray": {
+    "description": "Services that accept authentication for credential reuse",
+    "services": ["ssh", "ftp", "smb", "rdp", "telnet", "mysql", "postgresql", "mssql"],
+    "priority_multiplier": 1.5
+  },
+  "username_variants": {
+    "description": "Common username variations to test",
+    "patterns": [
+      "{username}",
+      "{username}123",
+      "{username}@{domain}",
+      "admin",
+      "administrator",
+      "root"
+    ]
+  },
+  "technology_exploits": {
+    "description": "Technologies with known OSCP-relevant exploits",
+    "technologies": {
+      "apache_2.4.49": {
+        "cve": "CVE-2021-41773",
+        "likelihood": 0.9
+      },
+      "wordpress": {
+        "attack": "wpscan",
+        "likelihood": 0.7
+      },
+      "tomcat": {
+        "attack": "default_credentials",
+        "likelihood": 0.8
+      }
+    }
+  }
+}
