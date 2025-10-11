@@ -37,7 +37,7 @@ class HelpOverlay:
         },
         'quick': {
             'title': 'Quick Tools',
-            'shortcuts': ['qn', 'qe', 'qx'],
+            'shortcuts': ['qn', 'qe', 'qx', 'df'],
             'icon': '🚀'
         },
         'analysis': {
@@ -221,7 +221,7 @@ class HelpOverlay:
   [{hk}]f[/] - Browse [bold]F[/]indings
   [{hk}]w[/] - Quick [bold]W[/]ins (fast, high-value tasks)
   [{hk}]i[/] - [bold]I[/]mport scan results
-  [{hk}]d[/] - [bold]D[/]ocument finding
+  [{hk}]:df[/] - [bold]D[/]ocument [bold]F[/]inding (colon command)
   [{hk}]c[/] - [bold]C[/]redentials entry
   [{hk}]alt[/] - [bold]Alt[/]ernative commands (manual methods)
 
@@ -316,7 +316,7 @@ class HelpOverlay:
   [{hk}]f[/] - Browse [bold]F[/]indings (same as 6)
   [{hk}]w[/] - Quick [bold]W[/]ins (same as 3)
   [{hk}]i[/] - [bold]I[/]mport scans (same as 4)
-  [{hk}]d[/] - [bold]D[/]ocument finding (same as 5)
+  [{hk}]:df[/] - [bold]D[/]ocument [bold]F[/]inding (colon command)
 
 [bold {warn}]Global Shortcuts:[/]
   [{hk}]s[/] - Quick status overlay
