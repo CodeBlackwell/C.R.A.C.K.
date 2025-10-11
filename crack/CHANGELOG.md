@@ -106,6 +106,99 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+### Added - Debug Stream Panel (TUI)
+
+**Live Debug Log Viewer (D Shortcut - Debug Mode Only)**
+
+- **DebugStreamOverlay** (`track/interactive/overlays/debug_stream_overlay.py`)
+  - Real-time colorized debug log viewing in TUI
+  - Automatic log file detection from `.debug_logs/tui_debug_*.log`
+  - Structured log parsing with regex pattern matching
+  - Colorization by level (INFO=cyan, WARNING=yellow, ERROR=red, TRACE=dim cyan)
+  - Colorization by category (UI=green, STATE=blue, EXECUTION=magenta, DATA=yellow)
+  - Pagination system (20 lines per page with navigation)
+  - Search term highlighting with bold yellow emphasis
+  - Filter by category/level support
+  - Max 1000 lines loaded (prevents memory issues on large logs)
+
+- **Navigation Controls (Vim-style)**
+  - `↑/k` - Scroll up one line
+  - `↓/j` - Scroll down one line
+  - `PgUp/b` - Page up (20 lines)
+  - `PgDn/f` - Page down (20 lines)
+  - `g` - Jump to top (first line)
+  - `G` - Jump to bottom (last line)
+  - `r` - Refresh (re-read log file)
+  - `t` - Toggle live tail mode (auto-refresh every 500ms)
+  - `?` - Show help panel
+  - `D` - Close (toggle behavior)
+
+- **TUI Integration**
+  - Conditional shortcut registration (only when `--debug` flag active)
+  - `_show_debug_stream()` method following established overlay pattern
+  - Live tail mode with select-based non-blocking polling
+  - Smart dismiss support (press another key to execute that command)
+  - Toggle close behavior (press `D` twice to open and close)
+  - Stop/Start Live context management for overlay display
+
+- **ShortcutHandler Enhancement**
+  - Support for callable handlers (backward compatible)
+  - Enables TUI-specific shortcuts without polluting ShortcutHandler
+  - Dynamic registration pattern for conditional features
+
+- **Help System Integration**
+  - Added "Debug Tools" category with 🐛 icon
+  - Shows `D` shortcut only when registered (debug mode active)
+  - Clear indication: "Debug Tools (--debug mode only)"
+  - Dynamic help generation from registered shortcuts
+
+### Testing
+
+- **Comprehensive Test Coverage** (`tests/track/interactive/test_debug_stream.py`)
+  - 21 tests, all passing (100% success rate)
+  - Log pattern parsing validation (with/without metadata/category)
+  - Colorization logic verification (level and category colors)
+  - Pagination boundary testing (page calculation, offset handling)
+  - Filter/search functionality (category prefix matching, search highlighting)
+  - Integration tests for conditional registration
+  - Edge case handling (malformed logs, missing files, empty logs)
+  - Help panel rendering validation
+  - Navigation help text generation
+
+### Technical Details
+
+- **Pattern Matching**: Regex-based log parsing (`HH:MM:SS.mmm [LEVEL] func:line - [CATEGORY] Message | key=value`)
+- **Performance**: Non-blocking file reads, efficient pagination, regex pre-compilation
+- **Graceful Degradation**: Friendly messages when no logs exist or debug mode disabled
+- **UX Consistency**: Follows established overlay pattern (help, status, tree overlays)
+- **Conditional Access**: Shortcut only available when `debug=True` in TUI initialization
+
+### Usage
+
+```bash
+# Enable debug mode and open TUI
+crack track --tui <target> --debug
+
+# Inside TUI, press 'D' to open debug stream
+# Navigate with vim keys (j/k, g/G, PgUp/PgDn)
+# Press 't' for live tail mode (auto-refresh)
+# Press 'D' again to close (toggle)
+# Press any other valid key for smart dismiss
+```
+
+### Files Added
+
+- `track/interactive/overlays/debug_stream_overlay.py` (400 lines - NEW)
+- `tests/track/interactive/test_debug_stream.py` (407 lines - NEW)
+
+### Files Changed
+
+- `track/interactive/tui_session_v2.py` (added `_show_debug_stream()` method, conditional registration)
+- `track/interactive/shortcuts.py` (support for callable handlers)
+- `track/interactive/overlays/help_overlay.py` (debug category with dynamic display)
+
+---
+
 ## [1.7.0] - 2025-10-11
 
 ### Added - Command Editor System (Wave 3 Complete)
