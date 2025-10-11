@@ -775,9 +775,33 @@ class TUISessionV2(InteractiveSession):
                 # Mark current task as complete
                 task.status = 'completed'
                 self.profile.save()
-                # Exit workspace to return to dashboard, which will execute next task
-                running = False
-                continue
+
+                # Get next actionable task
+                next_task = self.profile.task_tree.get_next_actionable(self.profile.task_tree)
+
+                if next_task:
+                    self.debug_logger.log_state_transition("TASK_COMPLETE", "NEXT_TASK", f"transitioning from {task.name} to {next_task.name}")
+
+                    # Update task and reset workspace state
+                    task = next_task
+                    output_state = 'empty'
+                    output_lines = []
+                    elapsed = 0.0
+                    exit_code = None
+                    findings = []
+
+                    self.debug_logger.info(f"Now working on: {task.name}")
+                    continue  # Continue loop with new task
+                else:
+                    # No more tasks - return to dashboard
+                    self.debug_logger.info("No more actionable tasks available")
+                    live.stop()
+                    self.console.print(f"\n{self.theme.success('✓ All tasks complete!')}")
+                    self.console.print(self.theme.muted("Press Enter to return to dashboard..."))
+                    input()
+                    live.start()
+                    running = False
+                    continue
             elif user_input.lower() == 'n' and output_state != 'complete':
                 self.debug_logger.warning("'n' pressed but not in complete state")
                 live.stop()

@@ -242,6 +242,10 @@ Examples:
   crack track delete 192.168.45.100
 
 Debug Options (Precision Logging):
+  # Developer mode (auto-reset + debug enabled, perfect for QA from step 0)
+  crack track --dev 192.168.45.100
+  crack track --dev                                   # Uses default target
+
   # Basic debug logging to file (.debug_logs/)
   crack track --tui 192.168.45.100 --debug
 
@@ -353,6 +357,8 @@ For full documentation: See track/README.md or https://github.com/CodeBlackwell/
                         help='Wordlist path or fuzzy name (e.g., common, rockyou)')
 
     # Advanced
+    parser.add_argument('--dev', action='store_true',
+                        help='Developer mode: auto-reset profile + enable debug (no confirmation prompts)')
     parser.add_argument('--debug', action='store_true',
                         help='Enable precision debug logging to .debug_logs/ (combine with --debug-categories for filtering)')
 
@@ -412,6 +418,12 @@ For full documentation: See track/README.md or https://github.com/CodeBlackwell/
 
     args = parser.parse_args()
 
+    # Handle developer mode (auto-reset + auto-debug)
+    dev_mode = args.dev
+    if dev_mode:
+        args.debug = True  # Auto-enable debug mode
+        args.tui = True    # Auto-enable TUI mode
+
     # Enable debug mode if requested (re-enable INFO logs)
     if args.debug:
         logging.getLogger('crack.track.services.registry').setLevel(logging.INFO)
@@ -420,6 +432,22 @@ For full documentation: See track/README.md or https://github.com/CodeBlackwell/
     # Initialize plugins and parsers
     ServiceRegistry.initialize_plugins()
     ParserRegistry.initialize_parsers()
+
+    # Print dev mode banner AFTER plugin initialization (for visibility)
+    if dev_mode:
+        print(f"\n{'='*50}")
+        print(f"[DEV MODE] Enabled for {args.target}")
+        print(f"{'='*50}")
+        print("  • Auto-reset: ON")
+        print("  • Debug logging: ON (.debug_logs/)")
+        print("  • TUI mode: ON")
+
+        # Auto-reset profile without confirmation
+        if TargetProfile.exists(args.target):
+            Storage.delete(args.target)
+            print(f"\n  ✓ Profile reset (clean slate for QA)")
+
+        print(f"{'='*50}\n")
 
     # Handle list command
     if args.list:
