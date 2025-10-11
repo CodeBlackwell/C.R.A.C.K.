@@ -686,6 +686,7 @@ class TUISessionV2(InteractiveSession):
 
             # Define valid shortcuts based on state
             valid_shortcuts = {
+                'e': 'Edit command',
                 'b': 'Back to dashboard',
                 ':': 'Command mode',
             }
@@ -728,9 +729,9 @@ class TUISessionV2(InteractiveSession):
 
             # Build dynamic prompt based on state
             if output_state == 'complete':
-                prompt_text = self.theme.muted("Press key (1-4:Actions, n:Next, l:List, b:Back, :cmd):") + " "
+                prompt_text = self.theme.muted("Press key (1-4:Actions, e:Edit, n:Next, l:List, b:Back, :cmd):") + " "
             else:
-                prompt_text = self.theme.muted("Press key (1-3:Actions, b:Back, :cmd):") + " "
+                prompt_text = self.theme.muted("Press key (1-3:Actions, e:Edit, b:Back, :cmd):") + " "
 
             # Get user input (vim-style hotkeys)
             self.console.print(prompt_text, end="")
@@ -846,6 +847,61 @@ class TUISessionV2(InteractiveSession):
                 self.console.print(self.theme.muted("Press Enter to continue..."))
                 input()
                 live.start()
+                continue
+
+            # Handle 'e' (edit command)
+            if user_input.lower() == 'e':
+                self.debug_logger.info("Edit command requested")
+                self.debug_logger.log_state_transition(output_state, "COMMAND_EDITOR", "edit command")
+
+                command = task.metadata.get('command')
+                if not command:
+                    live.stop()
+                    self.console.print(f"\n{self.theme.warning('No command found for this task')}")
+                    self.console.print(self.theme.muted("Press Enter to continue..."))
+                    input()
+                    live.start()
+                    continue
+
+                # Stop live for command editor
+                live.stop()
+
+                try:
+                    # Launch command editor TUI
+                    from .components.command_editor.tui_integration import CommandEditorTUI
+
+                    editor_tui = CommandEditorTUI(
+                        command=command,
+                        metadata=task.metadata,
+                        profile=self.profile,
+                        console=self.console
+                    )
+
+                    result = editor_tui.edit()
+
+                    if result and result.action == "execute":
+                        # Update task command
+                        task.metadata['command'] = result.command
+                        self.profile.save()
+
+                        self.console.print(f"\n{self.theme.success('✓ Command updated successfully')}")
+                        self.console.print(self.theme.muted("Press Enter to continue..."))
+                        input()
+
+                        self.debug_logger.log_state_transition("COMMAND_EDITOR", output_state, "command updated")
+                    else:
+                        self.debug_logger.log_state_transition("COMMAND_EDITOR", output_state, "edit cancelled")
+
+                except Exception as e:
+                    self.console.print(f"\n{self.theme.danger(f'Error in command editor: {e}')}")
+                    self.console.print(self.theme.muted("Press Enter to continue..."))
+                    input()
+                    self.debug_logger.error(f"Command editor error: {e}", category=LogCategory.SYSTEM_ERROR)
+
+                finally:
+                    # Resume live
+                    live.start()
+
                 continue
 
             # Try to parse as choice number
