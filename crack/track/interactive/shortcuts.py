@@ -73,13 +73,18 @@ class ShortcutHandler:
         if shortcut_key not in self.shortcuts:
             return True  # Continue session
 
-        _, handler_name = self.shortcuts[shortcut_key]
+        _, handler_ref = self.shortcuts[shortcut_key]
 
-        # Get handler method
-        handler = getattr(self, handler_name, None)
-        if not handler:
-            print(f"Shortcut '{shortcut_key}' not implemented yet")
-            return True
+        # Support both string method names and callable handlers
+        if callable(handler_ref):
+            # Direct callable (e.g., for TUI-specific shortcuts)
+            handler = handler_ref
+        else:
+            # String method name (original behavior)
+            handler = getattr(self, handler_ref, None)
+            if not handler:
+                print(f"Shortcut '{shortcut_key}' not implemented yet")
+                return True
 
         # Execute handler
         result = handler()

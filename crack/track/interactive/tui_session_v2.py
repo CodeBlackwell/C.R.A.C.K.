@@ -83,6 +83,16 @@ class TUISessionV2(InteractiveSession):
         self.debug_logger.log("ThemeManager initialized", category=LogCategory.SYSTEM_INIT, level=LogLevel.VERBOSE,
                              theme=self.theme.get_theme_name())
 
+        # Register debug-only shortcuts (conditional registration)
+        if debug:
+            # Add debug stream to shortcuts dictionary
+            # Note: ShortcutHandler expects (description, method_name_string) tuples
+            # But for TUI-specific shortcuts, we can add them directly with callable
+            # We'll make _show_debug_stream accessible via the shortcut system
+            self.shortcut_handler.shortcuts['D'] = ('Debug Stream (live log viewer)', self._show_debug_stream)
+            self.debug_logger.log("Debug stream shortcut registered", category=LogCategory.SYSTEM_INIT,
+                                 level=LogLevel.VERBOSE, shortcut='D')
+
         # Strategic logging: TUI initialization
         self.debug_logger.log("TUI session initialization", category=LogCategory.SYSTEM_INIT, level=LogLevel.NORMAL,
                              target=target, resume=resume, screened=screened, debug=debug)
@@ -915,7 +925,76 @@ class TUISessionV2(InteractiveSession):
                     self.debug_logger.info(f"Workspace choice selected: {choice_id} - {choice.get('label')}")
 
                     # Handle different choice actions
-                    if choice_id.startswith('scan-'):
+                    if choice_id == 'select-profile':
+                        # Open full-screen profile selector
+                        self.debug_logger.info("Opening profile selection panel")
+
+                        # Stop live display for profile selector
+                        live.stop()
+
+                        # Load available profiles
+                        from ..core.scan_profiles import ScanProfileRegistry
+                        registry = ScanProfileRegistry()
+                        task_profile_ids = task.metadata.get('scan_profiles') if hasattr(task, 'metadata') else None
+
+                        if task_profile_ids:
+                            # Load task-specific profiles
+                            available_profiles = []
+                            for profile_id in task_profile_ids:
+                                profile = registry.get_profile(profile_id)
+                                if profile:
+                                    available_profiles.append(profile)
+                        else:
+                            # Load all profiles
+                            available_profiles = registry.get_all_profiles()
+
+                        self.debug_logger.info(f"Profile selector loaded {len(available_profiles)} profiles")
+
+                        # Create and run profile selector
+                        from .panels.profile_selection_panel import ProfileSelectionPanel
+                        selector = ProfileSelectionPanel(
+                            console=self.console,
+                            theme=self.theme,
+                            hotkey_handler=self.hotkey_handler,
+                            debug_logger=self.debug_logger,
+                            target=self.profile.target
+                        )
+
+                        selected_profile = selector.select_profile(available_profiles)
+
+                        # Resume live display
+                        live.start()
+
+                        if selected_profile:
+                            # Profile selected - inject command and metadata
+                            self.debug_logger.info(f"Profile selected: {selected_profile['id']} - {selected_profile['name']}")
+
+                            # Build command using ScanCommandBuilder
+                            from ..core.command_builder import ScanCommandBuilder
+                            builder = ScanCommandBuilder(self.profile.target, selected_profile)
+                            command = builder.build()
+
+                            self.debug_logger.info(f"Generated command: {command}")
+
+                            # Inject command into task metadata
+                            task.metadata['command'] = command
+                            task.metadata['scan_profile_used'] = selected_profile['id']
+                            task.metadata['scan_profile_name'] = selected_profile['name']
+                            task.metadata['scan_profile_strategy'] = selected_profile['use_case']
+                            task.metadata['scan_profile_time'] = selected_profile['estimated_time']
+                            task.metadata['scan_profile_risk'] = selected_profile.get('detection_risk', 'medium')
+                            self.profile.save()
+
+                            self.debug_logger.info(f"Profile metadata stored - returning to workspace")
+
+                            # Return to workspace (don't auto-execute - let user review and press 1)
+                            output_state = 'empty'
+
+                        else:
+                            # No profile selected (user cancelled)
+                            self.debug_logger.info("Profile selection cancelled by user")
+
+                    elif choice_id.startswith('scan-'):
                         # Scan profile selected - inject command and execute
                         profile_id = choice_id[5:]  # Remove 'scan-' prefix
                         scan_profile = choice.get('scan_profile')
@@ -2629,6 +2708,132 @@ class TUISessionV2(InteractiveSession):
             # Resume Live context
             if hasattr(self, '_live'):
                 self._live.start()
+
+    def _show_debug_stream(self):
+        """Show debug stream overlay (debug mode only)"""
+        from .overlays.debug_stream_overlay import DebugStreamOverlay
+
+        self.debug_logger.log("Debug stream overlay opened", category=LogCategory.UI_PANEL, level=LogLevel.NORMAL)
+
+        # Stop Live context to allow overlay display
+        if hasattr(self, '_live'):
+            self._live.stop()
+
+        try:
+            # Render initial panel and get state
+            panel, state = DebugStreamOverlay.render(
+                theme=self.theme,
+                target=self.profile.target
+            )
+
+            self.console.print(panel)
+
+            # Interactive navigation loop
+            live_tail = False
+            while True:
+                # In live tail mode, auto-refresh
+                if live_tail:
+                    self.console.print(f"\n{self.theme.primary('[LIVE TAIL]')} {self.theme.muted('Press any key to stop...')} ", end="")
+                    import select
+                    import sys
+
+                    # Check for keypress with timeout
+                    if select.select([sys.stdin], [], [], 0.5)[0]:
+                        key = self.hotkey_handler.read_key()
+                        live_tail = False  # Stop tail on any key
+                    else:
+                        # Refresh display
+                        state['log_lines'] = DebugStreamOverlay._parse_log_file(state['log_file'])
+                        state['current_offset'] = max(0, len(state['log_lines']) - state['lines_per_page'])
+
+                        panel, _ = DebugStreamOverlay.render(
+                            theme=self.theme,
+                            target=self.profile.target
+                        )
+                        self.console.clear()
+                        self.console.print(panel)
+                        continue
+                else:
+                    self.console.print(f"\n{self.theme.muted('Press any key (D to close, ? for help)...')} ", end="")
+                    key = self.hotkey_handler.read_key()
+
+                self.debug_logger.log("Debug stream key pressed", category=LogCategory.UI_INPUT, level=LogLevel.VERBOSE, key=key)
+
+                # Handle navigation
+                if key == 'D':
+                    # Toggle close
+                    self.debug_logger.log("Debug stream closed (toggle)", category=LogCategory.UI_PANEL, level=LogLevel.NORMAL)
+                    break
+                elif key == '?':
+                    # Show help
+                    help_panel = DebugStreamOverlay.render_help(self.theme)
+                    self.console.clear()
+                    self.console.print(help_panel)
+                    continue
+                elif key in ['k', '\x1b[A']:  # Up arrow
+                    state['current_offset'] = max(0, state['current_offset'] - 1)
+                elif key in ['j', '\x1b[B']:  # Down arrow
+                    state['current_offset'] = min(
+                        len(state['log_lines']) - state['lines_per_page'],
+                        state['current_offset'] + 1
+                    )
+                elif key in ['b', '\x1b[5~']:  # Page Up
+                    state['current_offset'] = max(0, state['current_offset'] - state['lines_per_page'])
+                elif key in ['f', '\x1b[6~']:  # Page Down
+                    state['current_offset'] = min(
+                        len(state['log_lines']) - state['lines_per_page'],
+                        state['current_offset'] + state['lines_per_page']
+                    )
+                elif key == 'g':  # Top
+                    state['current_offset'] = 0
+                elif key == 'G':  # Bottom
+                    state['current_offset'] = max(0, len(state['log_lines']) - state['lines_per_page'])
+                elif key == 'r':  # Refresh
+                    state['log_lines'] = DebugStreamOverlay._parse_log_file(state['log_file'])
+                    self.debug_logger.log("Debug stream refreshed", category=LogCategory.UI_PANEL, level=LogLevel.NORMAL)
+                elif key == 't':  # Toggle live tail
+                    live_tail = not live_tail
+                    self.debug_logger.log(f"Live tail {'enabled' if live_tail else 'disabled'}",
+                                        category=LogCategory.UI_PANEL, level=LogLevel.NORMAL)
+                elif key in ['\r', '\n', ' ', '\x1b']:  # Neutral dismiss keys
+                    break
+                else:
+                    # Smart dismiss - execute other command
+                    self.debug_logger.log("Debug stream smart dismiss", category=LogCategory.UI_INPUT,
+                                        level=LogLevel.VERBOSE, key=key)
+                    break
+
+                # Re-render with new offset
+                if not live_tail:
+                    display_text = DebugStreamOverlay._render_log_page(
+                        state['log_lines'],
+                        offset=state['current_offset'],
+                        lines_per_page=state['lines_per_page'],
+                        theme=self.theme
+                    )
+                    nav_help = DebugStreamOverlay._build_navigation_help(self.theme)
+
+                    panel = Panel(
+                        display_text + "\n\n" + nav_help,
+                        title=f"[bold {self.theme.get_color('info')}]Debug Stream - {state['log_file'].name}[/]",
+                        subtitle=self.theme.muted(f"{len(state['log_lines'])} entries | Offset {state['current_offset']} | Press 'D' to close"),
+                        border_style=self.theme.overlay_border(),
+                        box=box.DOUBLE
+                    )
+
+                    self.console.clear()
+                    self.console.print(panel)
+
+        finally:
+            # Resume Live context
+            if hasattr(self, '_live'):
+                self._live.start()
+
+        # Smart dismiss: if dismiss key is a valid command, execute it
+        if key and key not in ['\r', '\n', ' ', 'D', '\x1b']:
+            self.debug_logger.log("Smart dismiss: processing dismiss key as command",
+                                 category=LogCategory.UI_INPUT, level=LogLevel.VERBOSE, key=key)
+            self._process_input(key)
 
     def _list_themes(self):
         """List all available themes with current theme highlighted"""

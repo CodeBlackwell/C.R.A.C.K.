@@ -50,6 +50,11 @@ class HelpOverlay:
             'shortcuts': ['ss', 'c', 'w', 'alt', 'wr'],
             'icon': '⚙️'
         },
+        'debug': {
+            'title': 'Debug Tools (--debug mode only)',
+            'shortcuts': ['D'],
+            'icon': '🐛'
+        },
         'danger': {
             'title': 'Dangerous Operations',
             'shortcuts': ['R'],
