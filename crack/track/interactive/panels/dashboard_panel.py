@@ -15,9 +15,39 @@ from rich.panel import Panel
 from rich.table import Table
 from rich import box
 
+from .base_panel import PanelShortcutMixin
 
-class DashboardPanel:
+
+class DashboardPanel(PanelShortcutMixin):
     """Dashboard rendering and menu generation"""
+
+    @classmethod
+    def get_available_shortcuts(cls) -> List[str]:
+        """
+        Get shortcuts valid on dashboard
+
+        Returns:
+            List of shortcut keys available on dashboard
+        """
+        return [
+            # Global shortcuts (always available)
+            'h', 's', 't', 'q', 'b',
+            # Dashboard-specific actions
+            'n',      # Execute next task
+            'l',      # Browse all tasks
+            'f',      # Browse findings
+            'i',      # Import scan results
+            'd',      # Document finding
+            'o',      # Output overlay
+            'p',      # Progress dashboard (also :pd)
+            # TUI shortcuts
+            '-',      # Config panel
+            # Multi-char shortcuts (require : prefix)
+            ':alt',   # Alternative commands
+            ':ch',    # Command history
+            ':qn',    # Quick note
+            ':pd',    # Progress dashboard
+        ]
 
     @classmethod
     def render(cls, profile, recommendations: Dict[str, Any], theme=None) -> Tuple[Panel, List[Dict]]:

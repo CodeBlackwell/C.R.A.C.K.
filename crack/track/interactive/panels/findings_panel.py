@@ -13,9 +13,33 @@ from rich import box
 from rich.text import Text
 from datetime import datetime
 
+from .base_panel import PanelShortcutMixin
 
-class FindingsPanel:
+
+class FindingsPanel(PanelShortcutMixin):
     """Findings panel with filtering and pagination"""
+
+    @classmethod
+    def get_available_shortcuts(cls) -> List[str]:
+        """
+        Get shortcuts valid in findings panel
+
+        Returns:
+            List of shortcut keys available in findings panel
+        """
+        return [
+            # Global shortcuts (always available)
+            'h', 's', 't', 'q', 'b',
+            # Findings-specific actions
+            'f',      # Filter findings by type
+            's',      # Sort findings
+            '/',      # Search findings
+            'd',      # Document finding (add new)
+            'p',      # Previous page (if pagination active)
+            'n',      # Next page (if pagination active)
+            # Number range for selection
+            '1-9',    # Select finding by number
+        ]
 
     # Items per page for pagination
     ITEMS_PER_PAGE = 10

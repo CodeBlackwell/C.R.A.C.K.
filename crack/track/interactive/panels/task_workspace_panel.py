@@ -1,9 +1,10 @@
 """
 Task Workspace Panel - Vertical split task execution view
 
-Vertical layout (REVISED from horizontal spec):
-- Top 20%: Task details + action menu
-- Bottom 80%: I/O streaming panel (from components.io_panel)
+Vertical layout:
+- Task details (fixed 12 lines): Task info + action menu
+- I/O panel (variable): Command output streaming
+- Footer (fixed 3 lines): All available commands
 
 Follows hub-spoke navigation - this is a spoke panel.
 """
@@ -17,10 +18,36 @@ from rich.text import Text
 
 from ..components.io_panel import IOPanel
 from ..themes.helpers import format_menu_number, format_command
+from .base_panel import PanelShortcutMixin
 
 
-class TaskWorkspacePanel:
+class TaskWorkspacePanel(PanelShortcutMixin):
     """Task execution workspace with vertical split layout"""
+
+    @classmethod
+    def get_available_shortcuts(cls) -> List[str]:
+        """
+        Get shortcuts valid in task workspace
+
+        Returns:
+            List of shortcut keys available in workspace
+        """
+        return [
+            # Global shortcuts (always available)
+            'h', 's', 't', 'q', 'b',
+            # Workspace-specific actions
+            'e',      # Edit command
+            'n',      # Next task
+            'l',      # List tasks
+            'o',      # Output overlay
+            'v',      # View task details
+            # Multi-char shortcuts (require : prefix)
+            ':alt',   # Alternative commands
+            ':qn',    # Quick note
+            ':tr',    # Task retry
+            # Number range for menu selection
+            '1-9',    # Select menu option
+        ]
 
     @classmethod
     def render(
@@ -55,18 +82,19 @@ class TaskWorkspacePanel:
             from ..themes import ThemeManager
             theme = ThemeManager()
 
-        # Build vertical layout
+        # Build vertical layout with footer
         layout = Layout()
         layout.split_column(
             Layout(name='task_details', size=12),  # Fixed height for task info
-            Layout(name='io_panel')                # Remaining space for output
+            Layout(name='io_panel'),               # Remaining space for output
+            Layout(name='footer', size=3)          # Footer with commands
         )
 
         # Render top panel (task details + actions)
         task_panel, choices = cls._render_task_details(task, output_state, target, theme)
         layout['task_details'].update(task_panel)
 
-        # Render bottom panel (I/O streaming)
+        # Render middle panel (I/O streaming)
         io_panel = cls._render_io_section(
             output_state,
             output_lines or [],
@@ -76,6 +104,10 @@ class TaskWorkspacePanel:
             theme
         )
         layout['io_panel'].update(io_panel)
+
+        # Render footer with all commands
+        footer_panel = cls._build_footer(choices, output_state, theme)
+        layout['footer'].update(footer_panel)
 
         return layout, choices
 
@@ -191,57 +223,28 @@ class TaskWorkspacePanel:
             allow_custom = task.metadata.get('allow_custom', False) if hasattr(task, 'metadata') else False
 
             if command is None and allow_custom:
-                # Strategic choice task - load scan profiles dynamically
+                # Strategic choice task - show "Select scan profile" action
                 from ...core.scan_profiles import ScanProfileRegistry
-                from ...core.command_builder import ScanCommandBuilder
 
-                # Load ALL available scan profiles
+                # Load profiles to count them
                 registry = ScanProfileRegistry()
-                available_profiles = registry.get_all_profiles()
+                task_profile_ids = task.metadata.get('scan_profiles') if hasattr(task, 'metadata') else None
 
-                # Use provided target or placeholder
-                if not target:
-                    target = 'TARGET'
+                if task_profile_ids:
+                    # Task-specific profiles
+                    profile_count = len(task_profile_ids)
+                else:
+                    # All available profiles
+                    profile_count = len(registry.get_all_profiles())
 
-                # Add header
-                table.add_row(f"[bold {theme.get_color('warning')}]Select scan strategy:[/]")
-                table.add_row("")  # Blank line
-
-                # Add each profile as a choice
-                for scan_profile in available_profiles:
-                    profile_id = scan_profile['id']
-                    profile_name = scan_profile['name']
-                    use_case = scan_profile['use_case']
-                    estimated_time = scan_profile['estimated_time']
-
-                    # Build the actual command for preview
-                    try:
-                        builder = ScanCommandBuilder(target, scan_profile)
-                        command_preview = builder.build()
-                        # Truncate if too long (keep first 80 chars)
-                        if len(command_preview) > 80:
-                            command_preview = command_preview[:77] + '...'
-                    except Exception:
-                        command_preview = '[Error building command]'
-
-                    # Format with name, command, description
-                    table.add_row(f"{format_menu_number(theme, menu_num)} {profile_name}")
-                    table.add_row(f"   {theme.muted('Command:')} {theme.primary(command_preview)}")
-                    table.add_row(f"   {theme.muted(f'{use_case} ({estimated_time})')}")
-                    table.add_row("")  # Blank line between profiles
-
-                    choices.append({
-                        'id': f'scan-{profile_id}',
-                        'label': profile_name,
-                        'scan_profile': scan_profile,
-                        'task': task
-                    })
-                    menu_num += 1
-
-                # Add custom option
-                table.add_row("")  # Blank line
-                table.add_row(f"{format_menu_number(theme, menu_num)} Custom scan command")
-                choices.append({'id': 'custom-scan', 'label': 'Custom scan command'})
+                # Single action to open profile selector
+                table.add_row(f"{format_menu_number(theme, menu_num)} Select scan profile ({profile_count} available)")
+                choices.append({
+                    'id': 'select-profile',
+                    'label': f'Select scan profile ({profile_count} available)',
+                    'task': task,
+                    'profile_count': profile_count
+                })
                 menu_num += 1
 
             else:
@@ -249,6 +252,13 @@ class TaskWorkspacePanel:
                 table.add_row(f"{format_menu_number(theme, menu_num)} Execute this task")
                 choices.append({'id': 'execute', 'label': 'Execute this task', 'task': task})
                 menu_num += 1
+
+                # If this is a scan task with a profile selected, allow changing profile
+                scan_profile_name = task.metadata.get('scan_profile_name') if hasattr(task, 'metadata') else None
+                if allow_custom and scan_profile_name:
+                    table.add_row(f"{format_menu_number(theme, menu_num)} Change scan profile")
+                    choices.append({'id': 'select-profile', 'label': 'Change scan profile'})
+                    menu_num += 1
 
                 table.add_row(f"{format_menu_number(theme, menu_num)} Edit command")
                 choices.append({'id': 'edit', 'label': 'Edit command'})
@@ -330,3 +340,48 @@ class TaskWorkspacePanel:
         else:
             # Fallback for unknown state
             return IOPanel.render_empty()
+
+    @classmethod
+    def _build_footer(cls, choices: List[Dict], output_state: str, theme=None) -> Panel:
+        """Build footer panel with all available commands"""
+        # Initialize theme if not provided
+        if theme is None:
+            from ..themes import ThemeManager
+            theme = ThemeManager()
+
+        # Extract command shortcuts from choices
+        commands = []
+
+        # Add numbered actions with their actual labels
+        action_choices = [c for c in choices if c['id'] != 'back']
+        for i, choice in enumerate(action_choices, start=1):
+            label = choice.get('label', 'Action')
+            # Truncate long labels for footer display
+            if len(label) > 30:
+                label = label[:27] + '...'
+            commands.append(f"{i}:{theme.primary(label)}")
+
+        # Add common commands
+        commands.extend([
+            f":::{theme.primary('Command mode')}",
+            f"b:{theme.primary('Back to dashboard')}"
+        ])
+
+        # Format as two lines if too many commands
+        if len(commands) > 4:
+            # Split into two lines
+            mid = (len(commands) + 1) // 2
+            line1 = "     ".join(commands[:mid])
+            line2 = "     ".join(commands[mid:])
+            footer_content = f"{line1}\n{line2}"
+        else:
+            # Single line for simpler cases
+            footer_content = "     ".join(commands)
+
+        return Panel(
+            footer_content,
+            title=f"[bold {theme.get_color('primary')}]All Commands[/] {theme.muted('(h:Help for details)')}",
+            border_style=theme.panel_border(),
+            box=box.ROUNDED,
+            padding=(0, 2)
+        )

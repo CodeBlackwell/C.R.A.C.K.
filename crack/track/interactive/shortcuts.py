@@ -29,35 +29,48 @@ class ShortcutHandler:
         """
         self.session = session
 
-        # Define shortcuts: key → (description, handler_method_name)
-        self.shortcuts: Dict[str, Tuple[str, str]] = {
-            's': ('Show full status', 'show_status'),
-            't': ('Show task tree', 'show_tree'),
-            'r': ('Show recommendations', 'show_recommendations'),
-            'n': ('Execute next recommended task', 'do_next'),
-            'c': ('Change confirmation mode', 'change_confirmation'),
-            'x': ('Command templates', 'show_templates'),
-            'w': ('Select wordlist', 'select_wordlist'),  # Phase 5.1
-            'alt': ('Alternative commands', 'alternative_commands'),
-            'ch': ('Command history', 'command_history'),
-            'pl': ('Port lookup reference', 'port_lookup'),
-            'tf': ('Task filter', 'task_filter'),
-            'qn': ('Quick note', 'quick_note'),
-            'tt': ('Time tracker dashboard', 'time_tracker'),
-            'pd': ('Progress dashboard', 'progress_dashboard'),
-            'qx': ('Quick export', 'quick_export'),
-            'fc': ('Finding correlator', 'finding_correlator'),
-            'qe': ('Quick execute', 'quick_execute'),
-            'ss': ('Session snapshot', 'session_snapshot'),
-            'tr': ('Task retry', 'task_retry'),
-            'be': ('Batch execute tasks', 'batch_execute'),
-            'sa': ('Success analyzer', 'success_analyzer'),
-            'wr': ('Workflow recorder', 'workflow_recorder'),
-            'sg': ('Smart suggest', 'smart_suggest'),
-            'R': ('Reset session (WARNING: deletes ALL data)', 'reset_session'),
-            'b': ('Go back', 'go_back'),
-            'h': ('Show help', 'show_help'),
-            'q': ('Quit and save', 'quit')
+        # Define shortcuts with enhanced metadata
+        # Structure: key → {description, handler, scope, priority}
+        # Scopes: 'global', 'dashboard', 'task-list', 'workspace', 'findings', 'debug_mode', 'basic_mode'
+        self.shortcuts: Dict[str, Dict[str, Any]] = {
+            # Global shortcuts (always available)
+            'h': {'description': 'Show help', 'handler': 'show_help', 'scope': 'global', 'priority': 1},
+            's': {'description': 'Show full status', 'handler': 'show_status', 'scope': 'global', 'priority': 2},
+            't': {'description': 'Show task tree', 'handler': 'show_tree', 'scope': 'global', 'priority': 3},
+            'q': {'description': 'Quit and save', 'handler': 'quit', 'scope': 'global', 'priority': 4},
+            'b': {'description': 'Go back', 'handler': 'go_back', 'scope': 'global', 'priority': 5},
+
+            # Dashboard-specific shortcuts
+            'n': {'description': 'Execute next recommended task', 'handler': 'do_next', 'scope': 'dashboard', 'priority': 10},
+            'r': {'description': 'Show recommendations', 'handler': 'show_recommendations', 'scope': 'dashboard', 'priority': 11},
+
+            # Basic mode shortcuts (only visible in basic/simple mode)
+            'c': {'description': 'Change confirmation mode', 'handler': 'change_confirmation', 'scope': 'basic_mode', 'priority': 20},
+            'x': {'description': 'Command templates', 'handler': 'show_templates', 'scope': 'basic_mode', 'priority': 21},
+            'w': {'description': 'Select wordlist', 'handler': 'select_wordlist', 'scope': 'basic_mode', 'priority': 22},
+
+            # Multi-char shortcuts (require : prefix)
+            'alt': {'description': 'Alternative commands', 'handler': 'alternative_commands', 'scope': 'global', 'priority': 30},
+            'ch': {'description': 'Command history', 'handler': 'command_history', 'scope': 'global', 'priority': 31},
+            'pl': {'description': 'Port lookup reference', 'handler': 'port_lookup', 'scope': 'global', 'priority': 32},
+            'qn': {'description': 'Quick note', 'handler': 'quick_note', 'scope': 'global', 'priority': 33},
+            'pd': {'description': 'Progress dashboard', 'handler': 'progress_dashboard', 'scope': 'global', 'priority': 34},
+
+            # Advanced features (lower priority)
+            'tf': {'description': 'Task filter', 'handler': 'task_filter', 'scope': 'task-list', 'priority': 40},
+            'tt': {'description': 'Time tracker dashboard', 'handler': 'time_tracker', 'scope': 'dashboard', 'priority': 41},
+            'qx': {'description': 'Quick export', 'handler': 'quick_export', 'scope': 'global', 'priority': 42},
+            'fc': {'description': 'Finding correlator', 'handler': 'finding_correlator', 'scope': 'findings', 'priority': 43},
+            'qe': {'description': 'Quick execute', 'handler': 'quick_execute', 'scope': 'workspace', 'priority': 44},
+            'ss': {'description': 'Session snapshot', 'handler': 'session_snapshot', 'scope': 'global', 'priority': 45},
+            'tr': {'description': 'Task retry', 'handler': 'task_retry', 'scope': 'workspace', 'priority': 46},
+            'be': {'description': 'Batch execute tasks', 'handler': 'batch_execute', 'scope': 'task-list', 'priority': 47},
+            'sa': {'description': 'Success analyzer', 'handler': 'success_analyzer', 'scope': 'dashboard', 'priority': 48},
+            'wr': {'description': 'Workflow recorder', 'handler': 'workflow_recorder', 'scope': 'global', 'priority': 49},
+            'sg': {'description': 'Smart suggest', 'handler': 'smart_suggest', 'scope': 'dashboard', 'priority': 50},
+
+            # Dangerous operations (lowest priority)
+            'R': {'description': 'Reset session (WARNING: deletes ALL data)', 'handler': 'reset_session', 'scope': 'global', 'priority': 99},
         }
 
     def handle(self, shortcut_key: str) -> bool:
@@ -73,7 +86,14 @@ class ShortcutHandler:
         if shortcut_key not in self.shortcuts:
             return True  # Continue session
 
-        _, handler_ref = self.shortcuts[shortcut_key]
+        # Get shortcut metadata (supports both old tuple format and new dict format)
+        shortcut_meta = self.shortcuts[shortcut_key]
+
+        # Backwards compatibility: handle both tuple and dict formats
+        if isinstance(shortcut_meta, tuple):
+            _, handler_ref = shortcut_meta
+        else:
+            handler_ref = shortcut_meta['handler']
 
         # Support both string method names and callable handlers
         if callable(handler_ref):
@@ -432,7 +452,14 @@ class ShortcutHandler:
 
     def get_shortcuts_help(self) -> str:
         """Get formatted shortcuts help text"""
-        return DisplayManager.format_shortcuts_help(self.shortcuts)
+        # Convert dict format to tuple format for backwards compatibility
+        shortcuts_compat = {}
+        for key, meta in self.shortcuts.items():
+            if isinstance(meta, dict):
+                shortcuts_compat[key] = (meta['description'], meta['handler'])
+            else:
+                shortcuts_compat[key] = meta
+        return DisplayManager.format_shortcuts_help(shortcuts_compat)
 
     def port_lookup(self):
         """Port reference lookup (shortcut: pl)"""
