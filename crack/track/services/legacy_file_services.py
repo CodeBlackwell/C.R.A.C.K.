@@ -41,7 +41,7 @@ class LegacyFileServicesPlugin(ServicePlugin):
     def service_names(self) -> List[str]:
         return ['rlogin', 'login', 'rsh', 'shell', 'rexec', 'exec', 'afp', 'apple-filing']
 
-    def detect(self, port_info: Dict[str, Any]) -> bool:
+    def detect(self, port_info: Dict[str, Any], profile: 'TargetProfile') -> bool:
         """Detect legacy file/remote services"""
         service = port_info.get('service', '').lower()
         port = port_info.get('port')

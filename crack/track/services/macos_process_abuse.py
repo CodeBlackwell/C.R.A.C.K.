@@ -37,7 +37,7 @@ class MacOSProcessAbusePlugin(ServicePlugin):
     def service_names(self) -> List[str]:
         return ['macos', 'darwin', 'osx']
 
-    def detect(self, port_info: Dict[str, Any]) -> bool:
+    def detect(self, port_info: Dict[str, Any], profile: 'TargetProfile') -> bool:
         """
         Detect macOS systems for process abuse techniques.
         Triggers on macOS-specific service fingerprints or OS detection.

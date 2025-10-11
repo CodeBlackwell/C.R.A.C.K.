@@ -36,7 +36,7 @@ class SSOAttacksPlugin(ServicePlugin):
     def service_names(self) -> List[str]:
         return ['http', 'https', 'ssl/http', 'http-proxy']
 
-    def detect(self, port_info: Dict[str, Any]) -> bool:
+    def detect(self, port_info: Dict[str, Any], profile: 'TargetProfile') -> bool:
         """
         Detect web services that may implement SSO/OAuth/SAML
 

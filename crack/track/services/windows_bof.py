@@ -37,7 +37,7 @@ class WindowsBufferOverflowPlugin(ServicePlugin):
     def service_names(self) -> List[str]:
         return ['pop3', 'slmail', 'vulnserver', 'brainstorm', 'gatekeeper', 'windows-service']
 
-    def detect(self, port_info: Dict[str, Any]) -> bool:
+    def detect(self, port_info: Dict[str, Any], profile: 'TargetProfile') -> bool:
         """Detect Windows services suitable for BOF exploitation"""
         service = port_info.get('service', '').lower()
         port = port_info.get('port')

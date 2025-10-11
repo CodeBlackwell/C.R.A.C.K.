@@ -46,7 +46,7 @@ class NetworkPoisoningPlugin(ServicePlugin):
     def service_names(self) -> List[str]:
         return ['smb', 'ldap', 'netbios-ssn', 'microsoft-ds', 'ldaps']
 
-    def detect(self, port_info: Dict[str, Any]) -> bool:
+    def detect(self, port_info: Dict[str, Any], profile: 'TargetProfile') -> bool:
         """
         Detect when network poisoning attacks are applicable
 

@@ -33,7 +33,7 @@ class CryptographyPlugin(ServicePlugin):
     def service_names(self) -> List[str]:
         return ['crypto', 'cipher', 'encryption']
 
-    def detect(self, port_info: Dict[str, Any]) -> float:
+    def detect(self, port_info: Dict[str, Any], profile: 'TargetProfile') -> float:
         """Detect cryptography-related services with confidence scoring
 
         Returns:

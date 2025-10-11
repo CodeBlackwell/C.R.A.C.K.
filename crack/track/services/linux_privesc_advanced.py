@@ -34,7 +34,7 @@ class LinuxPrivEscAdvancedPlugin(ServicePlugin):
     def service_names(self) -> List[str]:
         return ['linux', 'unix', 'shell']
 
-    def detect(self, port_info: Dict[str, Any]) -> bool:
+    def detect(self, port_info: Dict[str, Any], profile: 'TargetProfile') -> bool:
         """Detect Linux systems - manual trigger only"""
         # This plugin requires manual trigger or OS detection
         # Not auto-triggered by port scans

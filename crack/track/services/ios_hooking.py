@@ -43,7 +43,7 @@ class iOSHookingPlugin(ServicePlugin):
     def service_names(self) -> List[str]:
         return ['ios-app', 'ios-hooking', 'mobile-app', 'frida', 'objection']
 
-    def detect(self, port_info: Dict[str, Any]) -> bool:
+    def detect(self, port_info: Dict[str, Any], profile: 'TargetProfile') -> bool:
         """
         Detect iOS application testing context
 

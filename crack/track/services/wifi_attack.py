@@ -38,7 +38,7 @@ class WiFiAttackPlugin(ServicePlugin):
     def service_names(self) -> List[str]:
         return ['wifi', 'wireless', '802.11', 'wlan']
 
-    def detect(self, port_info: Dict[str, Any]) -> bool:
+    def detect(self, port_info: Dict[str, Any], profile: 'TargetProfile') -> bool:
         """Detect if WiFi attack tasks should be triggered - usually manually invoked"""
         # This plugin is manually triggered for wireless pentesting
         return False

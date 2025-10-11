@@ -37,7 +37,7 @@ class HardwarePhysicalAccessPlugin(ServicePlugin):
     def service_names(self) -> List[str]:
         return ['hardware', 'physical', 'firmware', 'bootloader', 'jtag', 'uart']
 
-    def detect(self, port_info: Dict[str, Any]) -> bool:
+    def detect(self, port_info: Dict[str, Any], profile: 'TargetProfile') -> bool:
         """Detect hardware/physical testing scenarios
 
         This plugin is manually triggered, not auto-detected from scans.

@@ -33,7 +33,7 @@ class ADCertificatesPlugin(ServicePlugin):
     def service_names(self) -> List[str]:
         return ['ad-cs', 'adcs', 'certificate-services', 'pki']
 
-    def detect(self, port_info: Dict[str, Any]) -> bool:
+    def detect(self, port_info: Dict[str, Any], profile: 'TargetProfile') -> bool:
         """
         Detect AD CS services
 

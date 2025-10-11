@@ -36,7 +36,7 @@ class FingerPlugin(ServicePlugin):
     def service_names(self) -> List[str]:
         return ['finger']
 
-    def detect(self, port_info: Dict[str, Any]) -> bool:
+    def detect(self, port_info: Dict[str, Any], profile: 'TargetProfile') -> bool:
         """Detect Finger services"""
         service = port_info.get('service', '').lower()
         port = port_info.get('port')

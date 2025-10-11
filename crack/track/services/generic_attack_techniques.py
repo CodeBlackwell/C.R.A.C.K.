@@ -39,7 +39,7 @@ class GenericAttackTechniquesPlugin(ServicePlugin):
     def service_names(self) -> List[str]:
         return ['*']  # Universal plugin
 
-    def detect(self, port_info: Dict[str, Any]) -> bool:
+    def detect(self, port_info: Dict[str, Any], profile: 'TargetProfile') -> bool:
         """Always activates to provide generic attack options"""
         # Only activate once per target, not per port
         # Implementation note: This should be called once globally

@@ -36,7 +36,7 @@ class PHPBypassPlugin(ServicePlugin):
     def service_names(self) -> List[str]:
         return ['http', 'https', 'http-proxy', 'http-alt']
 
-    def detect(self, port_info: Dict[str, Any]) -> bool:
+    def detect(self, port_info: Dict[str, Any], profile: 'TargetProfile') -> bool:
         """
         Detect HTTP services running PHP
         Note: This plugin should be manually triggered when PHP webshell access is obtained

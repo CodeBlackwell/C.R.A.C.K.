@@ -41,7 +41,7 @@ class LinuxShellEscapingPlugin(ServicePlugin):
     def service_names(self) -> List[str]:
         return ['shell-escape', 'rbash-escape', 'jail-break', 'restricted-shell']
 
-    def detect(self, port_info: Dict[str, Any]) -> bool:
+    def detect(self, port_info: Dict[str, Any], profile: 'TargetProfile') -> bool:
         """
         This plugin is manually triggered, not auto-detected.
         Activate with: crack track add-plugin linux-shell-escape <target>

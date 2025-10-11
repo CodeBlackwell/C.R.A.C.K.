@@ -39,7 +39,7 @@ class MySQLPlugin(ServicePlugin):
     def service_names(self) -> List[str]:
         return ['mysql', 'mariadb', 'mysqld', 'mysql-server']
 
-    def detect(self, port_info: Dict[str, Any]) -> bool:
+    def detect(self, port_info: Dict[str, Any], profile: 'TargetProfile') -> bool:
         """Detect MySQL services"""
         service = port_info.get('service', '').lower()
         port = port_info.get('port')

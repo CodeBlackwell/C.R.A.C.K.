@@ -33,7 +33,7 @@ class RabbitMQPlugin(ServicePlugin):
     def service_names(self) -> List[str]:
         return ['rabbitmq', 'rabbitmq-management', 'http']
 
-    def detect(self, port_info: Dict[str, Any]) -> bool:
+    def detect(self, port_info: Dict[str, Any], profile: 'TargetProfile') -> bool:
         """Detect RabbitMQ Management services"""
         service = port_info.get('service', '').lower()
         product = port_info.get('product', '').lower()

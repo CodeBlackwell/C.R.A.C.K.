@@ -34,7 +34,7 @@ class OraclePlugin(ServicePlugin):
     def service_names(self) -> List[str]:
         return ['oracle', 'oracle-tns', 'oracle-db', 'tnslsnr']
 
-    def detect(self, port_info: Dict[str, Any]) -> bool:
+    def detect(self, port_info: Dict[str, Any], profile: 'TargetProfile') -> bool:
         """Detect Oracle database services"""
         service = port_info.get('service', '').lower()
         port = port_info.get('port')

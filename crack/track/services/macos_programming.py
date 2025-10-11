@@ -35,7 +35,7 @@ class MacOSProgrammingPlugin(ServicePlugin):
     def service_names(self) -> List[str]:
         return ['macos', 'osx', 'darwin']
 
-    def detect(self, port_info: Dict[str, Any]) -> bool:
+    def detect(self, port_info: Dict[str, Any], profile: 'TargetProfile') -> bool:
         """
         Detect macOS environments or contexts where Objective-C/Swift analysis is relevant
 

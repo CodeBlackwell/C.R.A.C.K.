@@ -36,7 +36,7 @@ class IMAPPlugin(ServicePlugin):
     def service_names(self) -> List[str]:
         return ['imap', 'imaps', 'imap4', 'imap4-ssl']
 
-    def detect(self, port_info: Dict[str, Any]) -> bool:
+    def detect(self, port_info: Dict[str, Any], profile: 'TargetProfile') -> bool:
         """Detect IMAP services"""
         service = port_info.get('service', '').lower()
         port = port_info.get('port')

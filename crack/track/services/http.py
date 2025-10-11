@@ -30,7 +30,7 @@ class HTTPPlugin(ServicePlugin):
     def service_names(self) -> List[str]:
         return ['http', 'https', 'http-proxy', 'http-alt', 'ssl/http']
 
-    def detect(self, port_info: Dict[str, Any]) -> float:
+    def detect(self, port_info: Dict[str, Any], profile: 'TargetProfile') -> float:
         """Detect HTTP/HTTPS services with confidence scoring
 
         Returns:

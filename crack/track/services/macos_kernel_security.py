@@ -43,7 +43,7 @@ class MacOSKernelSecurityPlugin(ServicePlugin):
     def service_names(self) -> List[str]:
         return ['macos', 'darwin', 'osx']
 
-    def detect(self, port_info: Dict[str, Any]) -> bool:
+    def detect(self, port_info: Dict[str, Any], profile: 'TargetProfile') -> bool:
         """Detect macOS systems"""
         # This plugin is triggered manually or via OS detection
         service = port_info.get('service', '').lower()

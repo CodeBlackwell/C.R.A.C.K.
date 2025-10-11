@@ -45,7 +45,7 @@ class LinuxEnumerationPlugin(ServicePlugin):
     def service_names(self) -> List[str]:
         return ['ssh', 'linux', 'unix']
 
-    def detect(self, port_info: Dict[str, Any]) -> bool:
+    def detect(self, port_info: Dict[str, Any], profile: 'TargetProfile') -> bool:
         """
         Detect Linux systems via SSH or explicit Linux service detection
 

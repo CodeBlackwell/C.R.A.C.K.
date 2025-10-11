@@ -34,7 +34,7 @@ class NFSPlugin(ServicePlugin):
     def service_names(self) -> List[str]:
         return ['nfs', 'nfs_acl', 'nfs3', 'nfs4', 'rpcbind']
 
-    def detect(self, port_info: Dict[str, Any]) -> bool:
+    def detect(self, port_info: Dict[str, Any], profile: 'TargetProfile') -> bool:
         """Detect NFS services"""
         service = port_info.get('service', '').lower()
         port = port_info.get('port')

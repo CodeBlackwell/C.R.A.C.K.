@@ -32,7 +32,7 @@ class BlockchainSecurityPlugin(ServicePlugin):
     def service_names(self) -> List[str]:
         return ['ethereum', 'web3', 'geth', 'blockchain', 'smart-contract', 'rpc']
 
-    def detect(self, port_info: Dict[str, Any]) -> float:
+    def detect(self, port_info: Dict[str, Any], profile: 'TargetProfile') -> float:
         """Detect blockchain-related services with confidence scoring
 
         Returns:

@@ -38,7 +38,7 @@ class LinuxPersistencePlugin(ServicePlugin):
     def service_names(self) -> List[str]:
         return ['linux-persistence', 'linux-backdoor', 'post-exploit-persistence']
 
-    def detect(self, port_info: Dict[str, Any]) -> bool:
+    def detect(self, port_info: Dict[str, Any], profile: 'TargetProfile') -> bool:
         """This plugin is manually triggered for post-exploitation scenarios"""
         # Manually triggered - not auto-detected from port scans
         return False

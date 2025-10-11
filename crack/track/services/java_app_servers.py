@@ -47,7 +47,7 @@ class JavaAppServerPlugin(ServicePlugin):
             'ajp', 'ajp13', 'java-rmi', 'jdwp'
         ]
 
-    def detect(self, port_info: Dict[str, Any]) -> bool:
+    def detect(self, port_info: Dict[str, Any], profile: 'TargetProfile') -> bool:
         """Detect Java application servers"""
         service = port_info.get('service', '').lower()
         product = port_info.get('product', '').lower()

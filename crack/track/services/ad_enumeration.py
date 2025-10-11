@@ -36,7 +36,7 @@ class ADEnumerationPlugin(ServicePlugin):
     def service_names(self) -> List[str]:
         return ['kerberos', 'ldap', 'ldaps', 'globalcat', 'adws', 'active-directory']
 
-    def detect(self, port_info: Dict[str, Any]) -> bool:
+    def detect(self, port_info: Dict[str, Any], profile: 'TargetProfile') -> bool:
         """Detect AD services - returns False for manual trigger"""
         # AD enumeration is complex and often requires manual trigger
         # Return False to prevent auto-detection

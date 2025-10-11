@@ -46,7 +46,7 @@ class AuthBypassPlugin(ServicePlugin):
     def service_names(self) -> List[str]:
         return ['http', 'https', 'http-proxy', 'http-alt', 'ssl/http']
 
-    def detect(self, port_info: Dict[str, Any]) -> bool:
+    def detect(self, port_info: Dict[str, Any], profile: 'TargetProfile') -> bool:
         """Detect HTTP services for authentication testing"""
         service = port_info.get('service', '').lower()
         port = port_info.get('port')

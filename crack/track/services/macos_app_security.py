@@ -36,7 +36,7 @@ class MacOSAppSecurityPlugin(ServicePlugin):
     def service_names(self) -> List[str]:
         return ['macos-app', 'darwin-binary', 'mach-o']
 
-    def detect(self, port_info: Dict[str, Any]) -> bool:
+    def detect(self, port_info: Dict[str, Any], profile: 'TargetProfile') -> bool:
         """Detect macOS application analysis context"""
         service = port_info.get('service', '').lower()
         product = port_info.get('product', '').lower()

@@ -37,7 +37,7 @@ class MacOSPrivEscPlugin(ServicePlugin):
     def service_names(self) -> List[str]:
         return ['ssh', 'afp', 'vnc', 'kerberos', 'smb', 'netbios-ssn']
 
-    def detect(self, port_info: Dict[str, Any]) -> bool:
+    def detect(self, port_info: Dict[str, Any], profile: 'TargetProfile') -> bool:
         """
         Detect macOS services or SSH which often leads to macOS access
 

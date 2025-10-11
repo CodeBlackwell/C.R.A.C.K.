@@ -38,7 +38,7 @@ class iOSAppAnalysisPlugin(ServicePlugin):
     def service_names(self) -> List[str]:
         return ['ios', 'ios-app', 'mobile', 'iphone', 'ipad']
 
-    def detect(self, port_info: Dict[str, Any]) -> bool:
+    def detect(self, port_info: Dict[str, Any], profile: 'TargetProfile') -> bool:
         """Detect iOS analysis opportunities"""
         service = port_info.get('service', '').lower()
         version = port_info.get('version', '').lower()

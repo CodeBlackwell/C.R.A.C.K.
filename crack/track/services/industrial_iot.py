@@ -39,7 +39,7 @@ class IPMIPlugin(ServicePlugin):
     def service_names(self) -> List[str]:
         return ['ipmi', 'bmc', 'baseboard-management']
 
-    def detect(self, port_info: Dict[str, Any]) -> bool:
+    def detect(self, port_info: Dict[str, Any], profile: 'TargetProfile') -> bool:
         """Detect IPMI services"""
         service = port_info.get('service', '').lower()
         port = port_info.get('port')

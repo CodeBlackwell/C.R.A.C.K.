@@ -46,7 +46,7 @@ class ElectronDesktopAppsPlugin(ServicePlugin):
     def service_names(self) -> List[str]:
         return ['electron', 'desktop-app', 'angular', 'angular-app', 'node-webkit', 'nw.js']
 
-    def detect(self, port_info: Dict[str, Any]) -> bool:
+    def detect(self, port_info: Dict[str, Any], profile: 'TargetProfile') -> bool:
         """
         Desktop apps and Angular testing is manually triggered, not auto-detected.
         Returns False to prevent automatic detection.

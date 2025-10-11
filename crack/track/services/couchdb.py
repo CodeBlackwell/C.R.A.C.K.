@@ -34,7 +34,7 @@ class CouchDBPlugin(ServicePlugin):
     def service_names(self) -> List[str]:
         return ['couchdb', 'couch']
 
-    def detect(self, port_info: Dict[str, Any]) -> bool:
+    def detect(self, port_info: Dict[str, Any], profile: 'TargetProfile') -> bool:
         """Detect CouchDB services"""
         service = port_info.get('service', '').lower()
         port = port_info.get('port')

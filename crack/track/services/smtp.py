@@ -45,7 +45,7 @@ class SMTPPlugin(ServicePlugin):
     def service_names(self) -> List[str]:
         return ['smtp', 'smtps', 'esmtp', 'sendmail', 'submission']
 
-    def detect(self, port_info: Dict[str, Any]) -> bool:
+    def detect(self, port_info: Dict[str, Any], profile: 'TargetProfile') -> bool:
         """Detect SMTP services"""
         service = port_info.get('service', '').lower()
         port = port_info.get('port')

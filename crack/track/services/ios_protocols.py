@@ -39,7 +39,7 @@ class iOSProtocolsPlugin(ServicePlugin):
     def service_names(self) -> List[str]:
         return ['ios-app', 'ios-mobile', 'mobile-app', 'ios-protocols']
 
-    def detect(self, port_info: Dict[str, Any]) -> bool:
+    def detect(self, port_info: Dict[str, Any], profile: 'TargetProfile') -> bool:
         """
         Detect iOS protocol handler testing context
 

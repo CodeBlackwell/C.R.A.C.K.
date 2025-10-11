@@ -36,7 +36,7 @@ class LateralMovementPlugin(ServicePlugin):
     def service_names(self) -> List[str]:
         return ['lateral-movement', 'windows-lateral', 'lateral-exec']
 
-    def detect(self, port_info: Dict[str, Any]) -> bool:
+    def detect(self, port_info: Dict[str, Any], profile: 'TargetProfile') -> bool:
         """
         Lateral movement is manually triggered, not auto-detected.
         Returns False to prevent automatic detection.

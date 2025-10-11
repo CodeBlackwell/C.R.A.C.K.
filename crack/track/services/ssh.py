@@ -34,7 +34,7 @@ class SSHPlugin(ServicePlugin):
     def service_names(self) -> List[str]:
         return ['ssh', 'openssh', 'dropbear', 'libssh', 'sftp', 'ssh-server']
 
-    def detect(self, port_info: Dict[str, Any]) -> bool:
+    def detect(self, port_info: Dict[str, Any], profile: 'TargetProfile') -> bool:
         """Detect SSH services"""
         service = port_info.get('service', '').lower()
         port = port_info.get('port')

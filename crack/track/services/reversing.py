@@ -33,7 +33,7 @@ class ReversingPlugin(ServicePlugin):
     def service_names(self) -> List[str]:
         return ['wasm', 'binary', 'reverse-engineering', 'reversing']
 
-    def detect(self, port_info: Dict[str, Any]) -> bool:
+    def detect(self, port_info: Dict[str, Any], profile: 'TargetProfile') -> bool:
         """Detect reversing-related services (primarily for manual triggering)"""
         # This plugin is primarily for manual analysis tasks
         # It can detect WebAssembly endpoints or binary download services

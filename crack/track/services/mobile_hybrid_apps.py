@@ -37,7 +37,7 @@ class MobileHybridAppsPlugin(ServicePlugin):
     def service_names(self) -> List[str]:
         return ['cordova', 'xamarin', 'hybrid-app', 'mobile-app']
 
-    def detect(self, port_info: Dict[str, Any]) -> bool:
+    def detect(self, port_info: Dict[str, Any], profile: 'TargetProfile') -> bool:
         """
         Detect mobile hybrid app analysis context
 

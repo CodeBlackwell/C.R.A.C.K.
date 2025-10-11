@@ -39,7 +39,7 @@ class ReverseShellPlugin(ServicePlugin):
     def service_names(self) -> List[str]:
         return ['reverse-shell', 'shell', 'tty-upgrade']
 
-    def detect(self, port_info: Dict[str, Any]) -> bool:
+    def detect(self, port_info: Dict[str, Any], profile: 'TargetProfile') -> bool:
         """This plugin is manually triggered, not auto-detected"""
         return False
 

@@ -36,7 +36,7 @@ class LinuxCapabilitiesPlugin(ServicePlugin):
     def service_names(self) -> List[str]:
         return ['linux-capabilities', 'linux-caps', 'capabilities']
 
-    def detect(self, port_info: Dict[str, Any]) -> bool:
+    def detect(self, port_info: Dict[str, Any], profile: 'TargetProfile') -> bool:
         """This plugin is manually triggered for Linux privilege escalation"""
         return False
 

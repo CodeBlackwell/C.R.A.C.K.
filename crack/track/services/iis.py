@@ -37,7 +37,7 @@ class IISPlugin(ServicePlugin):
     def service_names(self) -> List[str]:
         return ['http', 'https', 'http-proxy', 'https-alt']
 
-    def detect(self, port_info: Dict[str, Any]) -> bool:
+    def detect(self, port_info: Dict[str, Any], profile: 'TargetProfile') -> bool:
         """Detect IIS web servers"""
         service = port_info.get('service', '').lower()
         product = port_info.get('product', '').lower()

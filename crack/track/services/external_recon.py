@@ -35,7 +35,7 @@ class ExternalReconPlugin(ServicePlugin):
     def service_names(self) -> List[str]:
         return ['recon', 'osint', 'external-recon']
 
-    def detect(self, port_info: Dict[str, Any]) -> bool:
+    def detect(self, port_info: Dict[str, Any], profile: 'TargetProfile') -> bool:
         """Detect if external recon should be triggered - usually manually invoked"""
         # This plugin is typically manually triggered for a target domain/company
         # Not automatically detected from port scans

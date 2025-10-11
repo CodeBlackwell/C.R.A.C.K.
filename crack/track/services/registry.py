@@ -68,8 +68,14 @@ class ServiceRegistry:
 
         Args:
             plugin: Service plugin
-            data: Event data (target, port, service, version)
+            data: Event data (target, port, service, version, profile)
         """
+        # Extract profile from event
+        profile = data.get('profile')
+        if not profile:
+            logger.warning("service_detected event missing profile - skipping detection")
+            return
+
         port_info = {
             'port': data.get('port'),
             'service': data.get('service'),
@@ -78,11 +84,12 @@ class ServiceRegistry:
         }
 
         # Check if plugin can handle this service (now returns confidence score)
-        detection_result = plugin.detect(port_info)
+        detection_result = plugin.detect(port_info, profile)
 
         # Handle both old boolean and new confidence score formats
+        # Penalize boolean returns to encourage proper confidence scoring
         if isinstance(detection_result, bool):
-            confidence = 100 if detection_result else 0
+            confidence = 75 if detection_result else 0  # Changed from 100 to 75
         elif isinstance(detection_result, (int, float)):
             confidence = detection_result
         else:

@@ -41,7 +41,7 @@ class LinuxContainerEscapePlugin(ServicePlugin):
     def service_names(self) -> List[str]:
         return ['docker', 'docker-proxy', 'containerd', 'cri-o', 'podman']
 
-    def detect(self, port_info: Dict[str, Any]) -> bool:
+    def detect(self, port_info: Dict[str, Any], profile: 'TargetProfile') -> bool:
         """Detect container runtime services
 
         Detects:

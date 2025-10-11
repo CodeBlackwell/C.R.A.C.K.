@@ -34,7 +34,7 @@ class MacOSSandboxBypassPlugin(ServicePlugin):
     def service_names(self) -> List[str]:
         return ['macos', 'darwin', 'osx']
 
-    def detect(self, port_info: Dict[str, Any]) -> bool:
+    def detect(self, port_info: Dict[str, Any], profile: 'TargetProfile') -> bool:
         """Detect macOS systems"""
         ostype = port_info.get('ostype', '').lower()
         service = port_info.get('service', '').lower()

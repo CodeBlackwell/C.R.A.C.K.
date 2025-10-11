@@ -34,7 +34,7 @@ class MongoDBPlugin(ServicePlugin):
     def service_names(self) -> List[str]:
         return ['mongodb', 'mongo', 'mongod']
 
-    def detect(self, port_info: Dict[str, Any]) -> bool:
+    def detect(self, port_info: Dict[str, Any], profile: 'TargetProfile') -> bool:
         """Detect MongoDB services"""
         service = port_info.get('service', '').lower()
         port = port_info.get('port')

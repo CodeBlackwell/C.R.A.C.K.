@@ -29,7 +29,7 @@ class AntiForensicsPlugin(ServicePlugin):
     def service_names(self) -> List[str]:
         return ['anti-forensics', 'evasion', 'covering-tracks']
 
-    def detect(self, port_info: Dict[str, Any]) -> bool:
+    def detect(self, port_info: Dict[str, Any], profile: 'TargetProfile') -> bool:
         """Not auto-detected - manually triggered during post-exploitation"""
         return False
 

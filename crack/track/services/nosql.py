@@ -41,7 +41,7 @@ class NoSQLPlugin(ServicePlugin):
     def service_names(self) -> List[str]:
         return ['mongodb', 'redis', 'cassandra', 'cassandra-native', 'hsqldb', 'h2', 'nosql']
 
-    def detect(self, port_info: Dict[str, Any]) -> bool:
+    def detect(self, port_info: Dict[str, Any], profile: 'TargetProfile') -> bool:
         """Detect NoSQL database services
 
         Manual trigger only - user must explicitly enable via crack track manual

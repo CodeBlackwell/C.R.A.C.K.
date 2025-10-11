@@ -33,7 +33,7 @@ class ADBPlugin(ServicePlugin):
     def service_names(self) -> List[str]:
         return ['adb', 'android debug bridge', 'android-debug-bridge']
 
-    def detect(self, port_info: Dict[str, Any]) -> bool:
+    def detect(self, port_info: Dict[str, Any], profile: 'TargetProfile') -> bool:
         """Detect ADB services"""
         service = port_info.get('service', '').lower()
         product = port_info.get('product', '').lower()

@@ -29,7 +29,7 @@ class PhishingPlugin(ServicePlugin):
     def name(self) -> str:
         return "phishing"
 
-    def detect(self, port_info: Dict[str, Any]) -> bool:
+    def detect(self, port_info: Dict[str, Any], profile: 'TargetProfile') -> bool:
         # This plugin is manually triggered for phishing assessments
         return False
 

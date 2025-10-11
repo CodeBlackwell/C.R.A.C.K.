@@ -44,7 +44,7 @@ class PythonWebPlugin(ServicePlugin):
     def service_names(self) -> List[str]:
         return ['http', 'https', 'http-proxy', 'http-alt', 'ssl/http']
 
-    def detect(self, port_info: Dict[str, Any]) -> bool:
+    def detect(self, port_info: Dict[str, Any], profile: 'TargetProfile') -> bool:
         """Detect Python web frameworks (Flask, Django, FastAPI, etc.)"""
         service = port_info.get('service', '').lower()
         product = port_info.get('product', '').lower()

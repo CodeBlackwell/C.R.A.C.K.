@@ -36,7 +36,7 @@ class WindowsPrivescExtendedPlugin(ServicePlugin):
     def service_names(self) -> list:
         return ['windows-privesc-extended']  # Manual trigger only
 
-    def detect(self, port_info: Dict[str, Any]) -> bool:
+    def detect(self, port_info: Dict[str, Any], profile: 'TargetProfile') -> bool:
         """
         Manual trigger only - not auto-detected from port scans.
         User must explicitly request extended privilege escalation enumeration.

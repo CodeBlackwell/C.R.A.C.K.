@@ -39,7 +39,7 @@ class IPv6AttacksPlugin(ServicePlugin):
         # Trigger on common services to add IPv6 attack vectors
         return ['http', 'https', 'ssh', 'ftp', 'smb', 'rdp', 'microsoft-ds']
 
-    def detect(self, port_info: Dict[str, Any]) -> bool:
+    def detect(self, port_info: Dict[str, Any], profile: 'TargetProfile') -> bool:
         """
         Detect when IPv6 attacks are applicable
 

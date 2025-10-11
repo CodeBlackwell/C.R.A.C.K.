@@ -35,7 +35,7 @@ class POP3Plugin(ServicePlugin):
     def service_names(self) -> List[str]:
         return ['pop3', 'pop3s', 'spop3']
 
-    def detect(self, port_info: Dict[str, Any]) -> bool:
+    def detect(self, port_info: Dict[str, Any], profile: 'TargetProfile') -> bool:
         """Detect POP3 services"""
         service = port_info.get('service', '').lower()
         port = port_info.get('port')

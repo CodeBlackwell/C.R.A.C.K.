@@ -23,7 +23,7 @@ class SQLPlugin(ServicePlugin):
     def service_names(self) -> List[str]:
         return ['mysql', 'postgresql', 'postgres', 'ms-sql', 'mssql', 'oracle']
 
-    def detect(self, port_info: Dict[str, Any]) -> bool:
+    def detect(self, port_info: Dict[str, Any], profile: 'TargetProfile') -> bool:
         service = port_info.get('service', '').lower()
         port = port_info.get('port')
 

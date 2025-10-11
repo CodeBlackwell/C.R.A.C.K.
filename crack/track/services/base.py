@@ -39,11 +39,12 @@ class ServicePlugin(ABC):
         return [self.name]
 
     @abstractmethod
-    def detect(self, port_info: Dict[str, Any]) -> float:
+    def detect(self, port_info: Dict[str, Any], profile: 'TargetProfile') -> float:
         """Determine if this plugin can handle this port/service
 
         Args:
             port_info: Port information dict with keys: port, state, service, version
+            profile: Target profile for accessing findings, task progress, etc.
 
         Returns:
             Confidence score (0-100) that this plugin should handle this port

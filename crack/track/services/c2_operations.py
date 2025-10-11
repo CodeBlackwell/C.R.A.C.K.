@@ -32,7 +32,7 @@ class C2OperationsPlugin(ServicePlugin):
     def service_names(self) -> List[str]:
         return []  # Manual trigger only - no service detection
 
-    def detect(self, port_info: Dict[str, Any]) -> bool:
+    def detect(self, port_info: Dict[str, Any], profile: 'TargetProfile') -> bool:
         """
         Manual trigger only - C2 operations are user-initiated, not port-detected.
         User must explicitly request C2 operations tasks.

@@ -38,7 +38,7 @@ class ADAttacksPlugin(ServicePlugin):
     def service_names(self) -> List[str]:
         return ['ad-attacks', 'active-directory-attacks']
 
-    def detect(self, port_info: Dict[str, Any]) -> bool:
+    def detect(self, port_info: Dict[str, Any], profile: 'TargetProfile') -> bool:
         """Manual trigger only - returns False for auto-detection"""
         return False
 
