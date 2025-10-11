@@ -21,6 +21,8 @@ from rich.console import Console
 from pathlib import Path
 import os
 
+from ..themes.helpers import format_menu_number, format_hotkey
+
 
 class ImportForm:
     """Import wizard for scan results"""
@@ -47,7 +49,7 @@ class ImportForm:
         './output.xml'
     ]
 
-    def __init__(self, profile=None, validator=None, error_handler=None, console=None, debug_logger=None):
+    def __init__(self, profile=None, validator=None, error_handler=None, console=None, debug_logger=None, theme=None):
         """
         Initialize import form
 
@@ -57,10 +59,17 @@ class ImportForm:
             error_handler: ErrorHandler instance (optional, created if None)
             console: Rich Console instance (optional, created if None)
             debug_logger: DebugLogger instance (optional, for logging validation)
+            theme: ThemeManager instance (optional, created if None)
         """
         self.profile = profile
         self.console = console or Console()
         self.debug_logger = debug_logger
+
+        # Initialize theme (fallback for backward compatibility)
+        if theme is None:
+            from ..themes import ThemeManager
+            theme = ThemeManager()
+        self.theme = theme
 
         # Initialize validation components (create if not provided)
         if validator:
@@ -120,51 +129,51 @@ class ImportForm:
         table.add_column("Section", style="white", width=80)
 
         # Header
-        table.add_row("[bold bright_cyan]📥 IMPORT SCAN RESULTS[/]")
-        table.add_row("[dim]Step 1/4: Select file to import[/]")
+        table.add_row(f"[bold {self.theme.get_color('primary')}]📥 IMPORT SCAN RESULTS[/]")
+        table.add_row(self.theme.muted("Step 1/4: Select file to import"))
         table.add_row("")
 
         # Show current file path if set
         if self.file_path:
             status = self._check_file_exists(self.file_path)
             if status['exists']:
-                table.add_row(f"[cyan]File:[/] {self.file_path}")
-                table.add_row(f"[green]✓ File found ({status['size']})[/]")
+                table.add_row(f"{self.theme.primary('File:')} {self.file_path}")
+                table.add_row(self.theme.success(f"✓ File found ({status['size']})"))
             else:
-                table.add_row(f"[cyan]File:[/] {self.file_path}")
-                table.add_row(f"[red]✗ File not found[/]")
+                table.add_row(f"{self.theme.primary('File:')} {self.file_path}")
+                table.add_row(self.theme.danger("✗ File not found"))
         else:
-            table.add_row("[dim]No file selected yet[/]")
+            table.add_row(self.theme.muted("No file selected yet"))
 
         # Show error if any
         if self.error_message:
             table.add_row("")
-            table.add_row(f"[bold red]Error:[/] {self.error_message}")
+            table.add_row(f"[bold {self.theme.get_color('danger')}]Error:[/] {self.error_message}")
 
         table.add_row("")
 
         # Common paths suggestions
-        table.add_row("[bold bright_white]Common Paths:[/]")
+        table.add_row(f"[bold {self.theme.get_color('text')}]Common Paths:[/]")
         table.add_row("")
 
         existing_paths = []
         for path in self.COMMON_PATHS:
             if os.path.exists(path):
                 file_size = self._format_file_size(os.path.getsize(path))
-                table.add_row(f"  [green]✓[/] {path} [dim]({file_size})[/]")
+                table.add_row(f"  {self.theme.success('✓')} {path} {self.theme.muted(f'({file_size})')}")
                 existing_paths.append(path)
             else:
-                table.add_row(f"  [dim]✗ {path}[/]")
+                table.add_row(f"  {self.theme.muted(f'✗ {path}')}")
 
         table.add_row("")
 
         # Build action menu
         choices = []
 
-        table.add_row("[bold bright_white]Actions:[/]")
+        table.add_row(f"[bold {self.theme.get_color('text')}]Actions:[/]")
         table.add_row("")
 
-        table.add_row("[bold bright_white]1.[/] Enter custom file path")
+        table.add_row(f"{format_menu_number(self.theme, '1')} Enter custom file path")
         choices.append({
             'id': 'enter-path',
             'label': 'Enter custom file path',
@@ -174,7 +183,7 @@ class ImportForm:
         # Quick select for existing common paths
         if existing_paths:
             for idx, path in enumerate(existing_paths, 2):
-                table.add_row(f"[bold bright_white]{idx}.[/] Use {path}")
+                table.add_row(f"{format_menu_number(self.theme, str(idx))} Use {path}")
                 choices.append({
                     'id': f'use-{idx}',
                     'label': f'Use {path}',
@@ -185,7 +194,7 @@ class ImportForm:
         table.add_row("")
 
         if self.file_path and self._check_file_exists(self.file_path)['exists']:
-            table.add_row("[bold bright_white]n.[/] Next (detect file type)")
+            table.add_row(f"{format_hotkey(self.theme, 'n')} Next (detect file type)")
             choices.append({
                 'id': 'next',
                 'label': 'Next (detect file type)',
@@ -193,7 +202,7 @@ class ImportForm:
             })
             table.add_row("")
 
-        table.add_row("[bold bright_white]b.[/] Back to dashboard")
+        table.add_row(f"{format_hotkey(self.theme, 'b')} Back to dashboard")
         choices.append({
             'id': 'back',
             'label': 'Back to dashboard',
@@ -202,15 +211,15 @@ class ImportForm:
 
         # Build panel
         breadcrumb = "Dashboard > Import Scan"
-        title = f"[bold cyan]{breadcrumb}[/]"
+        title = f"[bold {self.theme.get_color('primary')}]{breadcrumb}[/]"
         target_info = f"Target: {self.profile.target}" if self.profile else "Standalone Mode"
-        subtitle = f"[dim]{target_info} | Step 1: File Selection[/]"
+        subtitle = f"{self.theme.muted(target_info + ' | Step 1: File Selection')}"
 
         return Panel(
             table,
             title=title,
             subtitle=subtitle,
-            border_style="cyan",
+            border_style=self.theme.panel_border(),
             box=box.ROUNDED
         ), choices
 
@@ -225,18 +234,18 @@ class ImportForm:
         table.add_column("Section", style="white", width=80)
 
         # Header
-        table.add_row("[bold bright_cyan]📥 IMPORT SCAN RESULTS[/]")
-        table.add_row("[dim]Step 2/4: Preview parsed data[/]")
+        table.add_row(f"[bold {self.theme.get_color('primary')}]📥 IMPORT SCAN RESULTS[/]")
+        table.add_row(self.theme.muted("Step 2/4: Preview parsed data"))
         table.add_row("")
 
         # File info
-        table.add_row(f"[cyan]File:[/] {self.file_path}")
-        table.add_row(f"[cyan]Type:[/] {self.file_type or 'Unknown'}")
+        table.add_row(f"{self.theme.primary('File:')} {self.file_path}")
+        table.add_row(f"{self.theme.primary('Type:')} {self.file_type or 'Unknown'}")
         table.add_row("")
 
         # Parse results summary
         if self.parse_results:
-            table.add_row("[bold bright_white]PARSE RESULTS:[/]")
+            table.add_row(f"[bold {self.theme.get_color('text')}]PARSE RESULTS:[/]")
             table.add_row("")
 
             target = self.parse_results.get('target', 'N/A')
@@ -244,25 +253,25 @@ class ImportForm:
             hostnames = self.parse_results.get('hostnames', [])
             os_guess = self.parse_results.get('os_guess')
 
-            table.add_row(f"  [cyan]Target:[/] {target}")
-            table.add_row(f"  [cyan]Open Ports:[/] {len(ports)}")
+            table.add_row(f"  {self.theme.primary('Target:')} {target}")
+            table.add_row(f"  {self.theme.primary('Open Ports:')} {len(ports)}")
 
             if hostnames:
-                table.add_row(f"  [cyan]Hostnames:[/] {', '.join(hostnames[:3])}")
+                table.add_row(f"  {self.theme.primary('Hostnames:')} {', '.join(hostnames[:3])}")
 
             if os_guess:
-                table.add_row(f"  [cyan]OS Detection:[/] {os_guess}")
+                table.add_row(f"  {self.theme.primary('OS Detection:')} {os_guess}")
 
             # Show port preview (first 5)
             if ports:
                 table.add_row("")
-                table.add_row("[bold bright_white]Port Preview:[/]")
+                table.add_row(f"[bold {self.theme.get_color('text')}]Port Preview:[/]")
                 table.add_row("")
 
                 port_table = Table(show_header=True, box=box.SIMPLE, padding=(0, 1))
-                port_table.add_column("Port", style="cyan", width=8)
+                port_table.add_column("Port", style=self.theme.get_color('primary'), width=8)
                 port_table.add_column("Service", style="white", width=15)
-                port_table.add_column("Version", style="dim", width=45)
+                port_table.add_column("Version", style=self.theme.get_color('muted'), width=45)
 
                 for port_data in ports[:5]:
                     port_num = str(port_data.get('port', 'N/A'))
@@ -272,33 +281,33 @@ class ImportForm:
                     port_table.add_row(port_num, service, version)
 
                 if len(ports) > 5:
-                    port_table.add_row("[dim]...[/]", f"[dim]({len(ports) - 5} more)[/]", "")
+                    port_table.add_row(self.theme.muted("..."), self.theme.muted(f"({len(ports) - 5} more)"), "")
 
                 table.add_row(port_table)
 
         elif self.error_message:
-            table.add_row(f"[bold red]Parse Error:[/] {self.error_message}")
+            table.add_row(f"[bold {self.theme.get_color('danger')}]Parse Error:[/] {self.error_message}")
 
         table.add_row("")
 
         # Build action menu
         choices = []
 
-        table.add_row("[bold bright_white]Actions:[/]")
+        table.add_row(f"[bold {self.theme.get_color('text')}]Actions:[/]")
         table.add_row("")
 
         if self.parse_results:
-            table.add_row("[bold bright_white]n.[/] Next (select merge strategy)")
+            table.add_row(f"{format_hotkey(self.theme, 'n')} Next (select merge strategy)")
             choices.append({
                 'id': 'next',
                 'label': 'Next (select merge strategy)',
                 'action': 'next_stage'
             })
         else:
-            table.add_row("[dim]Fix errors before continuing[/]")
+            table.add_row(self.theme.muted("Fix errors before continuing"))
 
         table.add_row("")
-        table.add_row("[bold bright_white]b.[/] Back (change file)")
+        table.add_row(f"{format_hotkey(self.theme, 'b')} Back (change file)")
         choices.append({
             'id': 'back',
             'label': 'Back (change file)',
@@ -307,14 +316,14 @@ class ImportForm:
 
         # Build panel
         breadcrumb = "Dashboard > Import Scan > Preview"
-        title = f"[bold cyan]{breadcrumb}[/]"
-        subtitle = f"[dim]Step 2: Preview parsed data[/]"
+        title = f"[bold {self.theme.get_color('primary')}]{breadcrumb}[/]"
+        subtitle = self.theme.muted("Step 2: Preview parsed data")
 
         return Panel(
             table,
             title=title,
             subtitle=subtitle,
-            border_style="cyan",
+            border_style=self.theme.panel_border(),
             box=box.ROUNDED
         ), choices
 
@@ -329,19 +338,19 @@ class ImportForm:
         table.add_column("Section", style="white", width=80)
 
         # Header
-        table.add_row("[bold bright_cyan]📥 IMPORT SCAN RESULTS[/]")
-        table.add_row("[dim]Step 3/4: Select merge strategy[/]")
+        table.add_row(f"[bold {self.theme.get_color('primary')}]📥 IMPORT SCAN RESULTS[/]")
+        table.add_row(self.theme.muted("Step 3/4: Select merge strategy"))
         table.add_row("")
 
         # Current profile stats (if available)
         if self.profile:
             existing_ports = len(self.profile.ports)
             existing_findings = len(self.profile.findings)
-            table.add_row(f"[cyan]Current Profile:[/] {existing_ports} ports, {existing_findings} findings")
+            table.add_row(f"{self.theme.primary('Current Profile:')} {existing_ports} ports, {existing_findings} findings")
             table.add_row("")
 
         # Merge strategy options
-        table.add_row("[bold bright_white]MERGE STRATEGIES:[/]")
+        table.add_row(f"[bold {self.theme.get_color('text')}]MERGE STRATEGIES:[/]")
         table.add_row("")
 
         strategies = [
@@ -352,18 +361,18 @@ class ImportForm:
 
         for strategy_id, label, description in strategies:
             selected = "✓ " if self.merge_strategy == strategy_id else "  "
-            style = "bold bright_white" if self.merge_strategy == strategy_id else "white"
+            style = f"bold {self.theme.get_color('text')}" if self.merge_strategy == strategy_id else "white"
             table.add_row(f"[{style}]{selected}{label}[/]")
-            table.add_row(f"  [dim]{description}[/]")
+            table.add_row(f"  {self.theme.muted(description)}")
             table.add_row("")
 
         # Build action menu
         choices = []
 
-        table.add_row("[bold bright_white]Actions:[/]")
+        table.add_row(f"[bold {self.theme.get_color('text')}]Actions:[/]")
         table.add_row("")
 
-        table.add_row("[bold bright_white]1.[/] Smart Merge (recommended)")
+        table.add_row(f"{format_menu_number(self.theme, '1')} Smart Merge (recommended)")
         choices.append({
             'id': 'smart',
             'label': 'Smart Merge',
@@ -371,7 +380,7 @@ class ImportForm:
             'strategy': self.MERGE_SMART
         })
 
-        table.add_row("[bold bright_white]2.[/] Append Only")
+        table.add_row(f"{format_menu_number(self.theme, '2')} Append Only")
         choices.append({
             'id': 'append',
             'label': 'Append Only',
@@ -379,7 +388,7 @@ class ImportForm:
             'strategy': self.MERGE_APPEND
         })
 
-        table.add_row("[bold bright_white]3.[/] Replace All")
+        table.add_row(f"{format_menu_number(self.theme, '3')} Replace All")
         choices.append({
             'id': 'replace',
             'label': 'Replace All',
@@ -388,7 +397,7 @@ class ImportForm:
         })
 
         table.add_row("")
-        table.add_row("[bold bright_white]n.[/] Next (confirm import)")
+        table.add_row(f"{format_hotkey(self.theme, 'n')} Next (confirm import)")
         choices.append({
             'id': 'next',
             'label': 'Next (confirm import)',
@@ -396,7 +405,7 @@ class ImportForm:
         })
 
         table.add_row("")
-        table.add_row("[bold bright_white]b.[/] Back (change file)")
+        table.add_row(f"{format_hotkey(self.theme, 'b')} Back (change file)")
         choices.append({
             'id': 'back',
             'label': 'Back (change file)',
@@ -405,14 +414,14 @@ class ImportForm:
 
         # Build panel
         breadcrumb = "Dashboard > Import Scan > Merge Strategy"
-        title = f"[bold cyan]{breadcrumb}[/]"
-        subtitle = f"[dim]Step 3: Choose how to merge data[/]"
+        title = f"[bold {self.theme.get_color('primary')}]{breadcrumb}[/]"
+        subtitle = self.theme.muted("Step 3: Choose how to merge data")
 
         return Panel(
             table,
             title=title,
             subtitle=subtitle,
-            border_style="cyan",
+            border_style=self.theme.panel_border(),
             box=box.ROUNDED
         ), choices
 
@@ -427,38 +436,38 @@ class ImportForm:
         table.add_column("Section", style="white", width=80)
 
         # Header
-        table.add_row("[bold bright_cyan]📥 IMPORT SCAN RESULTS[/]")
-        table.add_row("[dim]Step 4/4: Confirm import[/]")
+        table.add_row(f"[bold {self.theme.get_color('primary')}]📥 IMPORT SCAN RESULTS[/]")
+        table.add_row(self.theme.muted("Step 4/4: Confirm import"))
         table.add_row("")
 
         # Import summary
-        table.add_row("[bold bright_white]IMPORT SUMMARY:[/]")
+        table.add_row(f"[bold {self.theme.get_color('text')}]IMPORT SUMMARY:[/]")
         table.add_row("")
-        table.add_row(f"  [cyan]File:[/] {self.file_path}")
-        table.add_row(f"  [cyan]Type:[/] {self.file_type}")
-        table.add_row(f"  [cyan]Merge Strategy:[/] {self._get_strategy_label(self.merge_strategy)}")
+        table.add_row(f"  {self.theme.primary('File:')} {self.file_path}")
+        table.add_row(f"  {self.theme.primary('Type:')} {self.file_type}")
+        table.add_row(f"  {self.theme.primary('Merge Strategy:')} {self._get_strategy_label(self.merge_strategy)}")
         table.add_row("")
 
         if self.parse_results:
             ports_count = len(self.parse_results.get('ports', []))
             target = self.parse_results.get('target', 'N/A')
-            table.add_row(f"  [cyan]Target:[/] {target}")
-            table.add_row(f"  [cyan]Ports to Import:[/] {ports_count}")
+            table.add_row(f"  {self.theme.primary('Target:')} {target}")
+            table.add_row(f"  {self.theme.primary('Ports to Import:')} {ports_count}")
 
         table.add_row("")
 
         # Warning for replace strategy
         if self.merge_strategy == self.MERGE_REPLACE:
-            table.add_row("[bold red]⚠ WARNING:[/] This will delete all existing data!")
+            table.add_row(f"[bold {self.theme.get_color('danger')}]⚠ WARNING:[/] This will delete all existing data!")
             table.add_row("")
 
         # Build action menu
         choices = []
 
-        table.add_row("[bold bright_white]Actions:[/]")
+        table.add_row(f"[bold {self.theme.get_color('text')}]Actions:[/]")
         table.add_row("")
 
-        table.add_row("[bold bright_white]c.[/] Confirm and Import")
+        table.add_row(f"{format_hotkey(self.theme, 'c')} Confirm and Import")
         choices.append({
             'id': 'confirm',
             'label': 'Confirm and Import',
@@ -466,7 +475,7 @@ class ImportForm:
         })
 
         table.add_row("")
-        table.add_row("[bold bright_white]b.[/] Back (change settings)")
+        table.add_row(f"{format_hotkey(self.theme, 'b')} Back (change settings)")
         choices.append({
             'id': 'back',
             'label': 'Back (change settings)',
@@ -474,7 +483,7 @@ class ImportForm:
         })
 
         table.add_row("")
-        table.add_row("[bold bright_white]x.[/] Cancel import")
+        table.add_row(f"{format_hotkey(self.theme, 'x')} Cancel import")
         choices.append({
             'id': 'cancel',
             'label': 'Cancel import',
@@ -483,14 +492,14 @@ class ImportForm:
 
         # Build panel
         breadcrumb = "Dashboard > Import Scan > Confirm"
-        title = f"[bold cyan]{breadcrumb}[/]"
-        subtitle = f"[dim]Step 4: Review and confirm[/]"
+        title = f"[bold {self.theme.get_color('primary')}]{breadcrumb}[/]"
+        subtitle = self.theme.muted("Step 4: Review and confirm")
 
         return Panel(
             table,
             title=title,
             subtitle=subtitle,
-            border_style="cyan",
+            border_style=self.theme.panel_border(),
             box=box.ROUNDED
         ), choices
 
@@ -506,38 +515,38 @@ class ImportForm:
 
         # Header
         if self.import_success:
-            table.add_row("[bold bright_green]✓ IMPORT COMPLETE[/]")
+            table.add_row(f"[bold {self.theme.get_color('success')}]✓ IMPORT COMPLETE[/]")
             table.add_row("")
 
             # Import summary
             if self.import_summary:
-                table.add_row("[bold bright_white]Import Summary:[/]")
+                table.add_row(f"[bold {self.theme.get_color('text')}]Import Summary:[/]")
                 table.add_row("")
-                table.add_row(f"  [cyan]Ports Added:[/] {self.import_summary.get('ports_added', 0)}")
-                table.add_row(f"  [cyan]Notes Added:[/] {self.import_summary.get('notes_added', 0)}")
-                table.add_row(f"  [cyan]Tasks Generated:[/] {self.import_summary.get('tasks_generated', 'N/A')}")
+                table.add_row(f"  {self.theme.primary('Ports Added:')} {self.import_summary.get('ports_added', 0)}")
+                table.add_row(f"  {self.theme.primary('Notes Added:')} {self.import_summary.get('notes_added', 0)}")
+                table.add_row(f"  {self.theme.primary('Tasks Generated:')} {self.import_summary.get('tasks_generated', 'N/A')}")
         else:
-            table.add_row("[bold red]✗ IMPORT FAILED[/]")
+            table.add_row(f"[bold {self.theme.get_color('danger')}]✗ IMPORT FAILED[/]")
             table.add_row("")
             if self.error_message:
-                table.add_row(f"[red]Error:[/] {self.error_message}")
+                table.add_row(f"{self.theme.danger('Error:')} {self.error_message}")
 
         table.add_row("")
 
         # Build action menu
         choices = []
 
-        table.add_row("[bold bright_white]Actions:[/]")
+        table.add_row(f"[bold {self.theme.get_color('text')}]Actions:[/]")
         table.add_row("")
 
-        table.add_row("[bold bright_white]i.[/] Import another file")
+        table.add_row(f"{format_hotkey(self.theme, 'i')} Import another file")
         choices.append({
             'id': 'import-another',
             'label': 'Import another file',
             'action': 'reset'
         })
 
-        table.add_row("[bold bright_white]b.[/] Back to dashboard")
+        table.add_row(f"{format_hotkey(self.theme, 'b')} Back to dashboard")
         choices.append({
             'id': 'back',
             'label': 'Back to dashboard',
@@ -546,14 +555,14 @@ class ImportForm:
 
         # Build panel
         breadcrumb = "Dashboard > Import Scan > Complete"
-        title = f"[bold cyan]{breadcrumb}[/]"
-        subtitle = f"[dim]Import finished[/]"
+        title = f"[bold {self.theme.get_color('primary')}]{breadcrumb}[/]"
+        subtitle = self.theme.muted("Import finished")
 
         return Panel(
             table,
             title=title,
             subtitle=subtitle,
-            border_style="cyan",
+            border_style=self.theme.panel_border(),
             box=box.ROUNDED
         ), choices
 

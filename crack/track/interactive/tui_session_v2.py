@@ -48,6 +48,7 @@ from .debug_logger import init_debug_logger, get_debug_logger
 from .log_types import LogCategory, LogLevel
 from .hotkey_input import HotkeyInputHandler
 from .components.resize_handler import ResizeHandler, TerminalSizeError
+from .themes.helpers import format_hotkey, format_menu_number
 
 
 class TUISessionV2(InteractiveSession):
@@ -77,7 +78,7 @@ class TUISessionV2(InteractiveSession):
 
         # Initialize theme manager (loads theme from config)
         from .themes import ThemeManager
-        self.theme = ThemeManager()
+        self.theme = ThemeManager(debug_logger=self.debug_logger)
         self.debug_logger.log("ThemeManager initialized", category=LogCategory.SYSTEM_INIT, level=LogLevel.VERBOSE,
                              theme=self.theme.get_theme_name())
 
@@ -103,14 +104,14 @@ class TUISessionV2(InteractiveSession):
         except TerminalSizeError as e:
             self.debug_logger.log("Terminal too small", category=LogCategory.SYSTEM_ERROR, level=LogLevel.MINIMAL,
                                  error=str(e))
-            self.console.print(f"[yellow]⚠ {str(e)}[/]")
+            self.console.print(self.theme.warning(f"⚠ {str(e)}"))
             return super().run()
 
         # Check terminal support
         if not self._supports_tui():
             self.debug_logger.log("TUI not supported - falling back", category=LogCategory.SYSTEM_ERROR, level=LogLevel.MINIMAL,
                                  terminal_width=self.console.width, terminal_height=self.console.height)
-            self.console.print("[yellow]⚠ TUI mode not supported - falling back[/]")
+            self.console.print(self.theme.warning("⚠ TUI mode not supported - falling back"))
             return super().run()
 
         # Set up resize handler before Live context
@@ -144,7 +145,7 @@ class TUISessionV2(InteractiveSession):
 
         except KeyboardInterrupt:
             self.debug_logger.log("TUI interrupted by user (Ctrl+C)", category=LogCategory.SYSTEM_SHUTDOWN, level=LogLevel.NORMAL)
-            self.console.print("\n[yellow]Interrupted. Saving...[/]")
+            self.console.print(f"\n{self.theme.warning('Interrupted. Saving...')}")
         except Exception as e:
             self.debug_logger.log("Unexpected TUI error", category=LogCategory.SYSTEM_ERROR, level=LogLevel.MINIMAL, error=str(e), exception=True)
             raise
@@ -155,7 +156,7 @@ class TUISessionV2(InteractiveSession):
 
             self.debug_logger.log("TUI shutdown - saving profile", category=LogCategory.STATE_SAVE, level=LogLevel.NORMAL)
             self.profile.save()
-            self.console.print("[bright_green]✓ Session saved. Goodbye![/]")
+            self.console.print(self.theme.success("✓ Session saved. Goodbye!"))
             self.debug_logger.log("TUI session ended", category=LogCategory.SYSTEM_SHUTDOWN, level=LogLevel.NORMAL)
 
     def _supports_tui(self) -> bool:
@@ -213,20 +214,20 @@ class TUISessionV2(InteractiveSession):
 
         running = True
         while running:
-            # Render config panel
-            config_panel = ConfigPanel.render_panel(config, self.profile.target)
+            # Render config panel (pass theme)
+            config_panel = ConfigPanel.render_panel(config, self.profile.target, theme=self.theme)
 
             # Update header
-            header_text = f"[bold cyan]CRACK Track TUI[/] | [white]Target:[/] {self.profile.target}"
-            header = Panel(header_text, border_style="cyan", box=box.HEAVY)
+            header_text = f"{self.theme.emphasis('CRACK Track TUI')} | {self.theme.muted('Target:')} {self.profile.target}"
+            header = Panel(header_text, border_style=self.theme.panel_border(), box=box.HEAVY)
             layout['header'].update(header)
 
             # Put config panel in menu area
             layout['menu'].update(config_panel)
 
             # Footer
-            footer_text = "[cyan]1-4[/]:Edit | [cyan]5[/]:Continue | [cyan]q[/]:Quit | [dim]:[/]command"
-            footer = Panel(footer_text, border_style="cyan", box=box.HEAVY)
+            footer_text = f"{format_hotkey(self.theme, '1-5')}:Edit | {format_hotkey(self.theme, '6')}:Continue | {format_hotkey(self.theme, 'q')}:Quit | {self.theme.muted(':')}command"
+            footer = Panel(footer_text, border_style=self.theme.panel_border(), box=box.HEAVY)
             layout['footer'].update(footer)
 
             # Refresh display
@@ -236,7 +237,7 @@ class TUISessionV2(InteractiveSession):
             live.stop()
 
             # Get input (vim-style hotkeys)
-            self.console.print("[dim]Press key (or : for command):[/] ", end="")
+            self.console.print(f"{self.theme.muted('Press key (or : for command):')} ", end="")
             try:
                 # Read single key
                 key = self.hotkey_handler.read_key()
@@ -274,17 +275,17 @@ class TUISessionV2(InteractiveSession):
 
                 # Get current value
                 current = ConfigPanel.get_variable(config, var_name)
-                self.console.print(f"\n[cyan]{var_name}:[/] [dim](current: {current})[/]")
-                self.console.print("[cyan]New value (or Enter to keep):[/] ", end="")
+                self.console.print(f"\n{self.theme.primary(f'{var_name}:')} {self.theme.muted(f'(current: {current})')}")
+                self.console.print(f"{self.theme.primary('New value (or Enter to keep):')} ", end="")
 
                 try:
                     new_value = input().strip()
                     if new_value:
                         ConfigPanel.set_variable(config, var_name, new_value)
                         ConfigPanel.save_config(config)
-                        self.console.print(f"[green]✓ Updated {var_name}[/]")
+                        self.console.print(self.theme.success(f"✓ Updated {var_name}"))
                     else:
-                        self.console.print("[dim]No change[/]")
+                        self.console.print(self.theme.muted("No change"))
                 except (EOFError, KeyboardInterrupt):
                     pass
 
@@ -295,9 +296,178 @@ class TUISessionV2(InteractiveSession):
                 live.start()
 
             elif user_input == '5':
+                # Theme selection
+                live.stop()
+                self._select_theme_interactive(config)
+                live.start()
+
+            elif user_input == '6':
                 # Continue to main menu
                 self.config_confirmed = True
                 return
+
+    def _select_theme_interactive(self, config: Dict[str, Any]):
+        """
+        Interactive theme selection with arrow key navigation
+
+        Args:
+            config: Config dictionary
+
+        Keys:
+            ↑/↓ - Navigate themes
+            Enter - Select theme
+            b - Back to config
+        """
+        from .themes import list_themes
+        from rich.table import Table
+        import time
+
+        self.debug_logger.log("Interactive theme selector opened", category=LogCategory.UI_PANEL, level=LogLevel.NORMAL)
+
+        available_themes = list_themes()
+        current_theme_name = config.get('theme', {}).get('current', 'oscp')
+
+        self.debug_logger.log("Theme selector initialized", category=LogCategory.UI_PANEL, level=LogLevel.VERBOSE,
+                             current_theme=current_theme_name, available_count=len(available_themes))
+
+        # Find current theme index
+        selected_idx = 0
+        for i, theme_info in enumerate(available_themes):
+            if theme_info['name'] == current_theme_name:
+                selected_idx = i
+                break
+
+        def build_theme_panel():
+            """Build theme selection panel with current selection highlighted"""
+            table = Table(show_header=False, box=None, padding=(0, 1))
+            table.add_column("Cursor", style=f"bold {self.theme.get_color('primary')}", width=4)
+            table.add_column("Theme", style=self.theme.get_color('text'), width=15)
+            table.add_column("Description", style=self.theme.get_color('muted'))
+
+            for idx, theme_info in enumerate(available_themes):
+                theme_name = theme_info['name']
+                display_name = theme_info['display_name']
+                description = theme_info['description']
+
+                # Highlight selected theme
+                if idx == selected_idx:
+                    cursor = self.theme.primary("→")
+                    theme_display = f"[bold {self.theme.get_color('primary')}]{display_name}[/]"
+                else:
+                    cursor = " "
+                    theme_display = display_name
+
+                # Mark current theme
+                if theme_name == current_theme_name:
+                    theme_display += self.theme.success(" ✓")
+
+                table.add_row(cursor, theme_display, description)
+
+            # Add preview section
+            table.add_row("", "", "")
+            table.add_row("", self.theme.emphasis("Preview:"), "")
+            table.add_row("", self.theme.primary("Primary"), self.theme.muted("Panel borders, hotkeys"))
+            table.add_row("", self.theme.success("Success"), self.theme.muted("Completed tasks"))
+            table.add_row("", self.theme.warning("Warning"), self.theme.muted("Pending tasks"))
+            table.add_row("", self.theme.danger("Danger"), self.theme.muted("Failed tasks, errors"))
+
+            return Panel(
+                table,
+                title=f"[bold {self.theme.get_color('primary')}] Theme Selection [/]",
+                subtitle=self.theme.muted("↑↓:Navigate | Enter:Select | b:Back"),
+                border_style=self.theme.panel_border(),
+                box=box.ROUNDED
+            )
+
+        # Direct console control - no Live wrapper needed
+        # Print panel once initially
+        self.console.clear()
+        self.console.print(build_theme_panel())
+
+        while True:
+            # Wait for key
+            key = self.hotkey_handler.read_key()
+
+            if not key:
+                break
+
+            # Handle escape sequences (arrow keys)
+            if key == '\x1b':  # ESC character - might be arrow key
+                # Wait briefly for rest of escape sequence to arrive
+                time.sleep(0.01)  # 10ms is enough for escape sequence
+
+                # Use hotkey_handler to read next chars (already in raw mode)
+                next1 = self.hotkey_handler.read_key(timeout=0.05)
+                next2 = self.hotkey_handler.read_key(timeout=0.05) if next1 else None
+
+                self.debug_logger.log("ESC sequence detected", category=LogCategory.UI_INPUT,
+                                     level=LogLevel.TRACE, next1=repr(next1), next2=repr(next2))
+
+                if next1 == '[' and next2:
+                    if next2 == 'A':  # Up arrow
+                        selected_idx = (selected_idx - 1) % len(available_themes)
+                        self.debug_logger.log("Arrow key navigation: UP", category=LogCategory.UI_INPUT,
+                                             level=LogLevel.TRACE, selected_idx=selected_idx,
+                                             theme=available_themes[selected_idx]['name'])
+                        # Clear and reprint panel with new selection
+                        self.console.clear()
+                        self.console.print(build_theme_panel())
+                        continue
+                    elif next2 == 'B':  # Down arrow
+                        selected_idx = (selected_idx + 1) % len(available_themes)
+                        self.debug_logger.log("Arrow key navigation: DOWN", category=LogCategory.UI_INPUT,
+                                             level=LogLevel.TRACE, selected_idx=selected_idx,
+                                             theme=available_themes[selected_idx]['name'])
+                        # Clear and reprint panel with new selection
+                        self.console.clear()
+                        self.console.print(build_theme_panel())
+                        continue
+                # If not arrow key, treat ESC as cancel
+                self.debug_logger.log("Theme selector cancelled (ESC)", category=LogCategory.UI_INPUT,
+                                     level=LogLevel.NORMAL)
+                break
+
+            elif key in ['\r', '\n']:  # Enter - select theme
+                selected_theme = available_themes[selected_idx]['name']
+                selected_display = available_themes[selected_idx]['display_name']
+
+                self.debug_logger.log("Theme selected (Enter)", category=LogCategory.UI_INPUT, level=LogLevel.NORMAL,
+                                     from_theme=current_theme_name, to_theme=selected_theme)
+
+                # Update theme in memory and config
+                ConfigPanel.set_variable(config, 'THEME', selected_theme)
+                ConfigPanel.save_config(config)
+
+                # Reload theme manager (will log internally)
+                from .themes import ThemeManager
+                self.theme = ThemeManager(debug_logger=self.debug_logger)
+
+                # Show confirmation
+                self.console.print(f"\n{self.theme.success(f'✓ Theme changed to {selected_display}')} ", end="")
+                self.hotkey_handler.read_key()  # Wait for any key
+
+                self.debug_logger.log("Theme selector closed (theme changed)", category=LogCategory.UI_PANEL,
+                                     level=LogLevel.NORMAL, new_theme=selected_theme)
+
+                # Exit selector and return to config panel
+                break
+
+            elif key.lower() == 'b':  # Back to config
+                self.debug_logger.log("Theme selector cancelled (back button)", category=LogCategory.UI_INPUT,
+                                     level=LogLevel.NORMAL)
+                break
+
+            # Also support numeric selection for backward compatibility
+            elif key.isdigit():
+                idx = int(key) - 1
+                if 0 <= idx < len(available_themes):
+                    selected_idx = idx
+                    self.debug_logger.log("Numeric theme selection", category=LogCategory.UI_INPUT,
+                                         level=LogLevel.VERBOSE, key=key, selected_idx=selected_idx,
+                                         theme=available_themes[selected_idx]['name'])
+                    # Clear and reprint panel with new selection
+                    self.console.clear()
+                    self.console.print(build_theme_panel())
 
     def _build_layout(self) -> Layout:
         """
@@ -364,7 +534,7 @@ class TUISessionV2(InteractiveSession):
             live.stop()
 
             # Get user input (vim-style hotkeys)
-            self.console.print("[dim]Press key (or : for command):[/] ", end="")
+            self.console.print(f"{self.theme.muted('Press key (or : for command):')} ", end="")
             try:
                 # Read single key
                 key = self.hotkey_handler.read_key()
@@ -473,7 +643,8 @@ class TUISessionV2(InteractiveSession):
                 elapsed=elapsed,
                 exit_code=exit_code,
                 findings=findings,
-                target=self.profile.target
+                target=self.profile.target,
+                theme=self.theme
             )
             self.debug_logger.debug(f"TaskWorkspacePanel returned {len(choices)} choices")
 
@@ -493,9 +664,9 @@ class TUISessionV2(InteractiveSession):
 
             # Build dynamic prompt based on state
             if output_state == 'complete':
-                prompt_text = "[dim]Press key (1-4:Actions, n:Next, l:List, b:Back, :cmd):[/] "
+                prompt_text = self.theme.muted("Press key (1-4:Actions, n:Next, l:List, b:Back, :cmd):") + " "
             else:
-                prompt_text = "[dim]Press key (1-3:Actions, b:Back, :cmd):[/] "
+                prompt_text = self.theme.muted("Press key (1-3:Actions, b:Back, :cmd):") + " "
 
             # Get user input (vim-style hotkeys)
             self.console.print(prompt_text, end="")
@@ -566,8 +737,8 @@ class TUISessionV2(InteractiveSession):
             elif user_input.lower() == 'n' and output_state != 'complete':
                 self.debug_logger.warning("'n' pressed but not in complete state")
                 live.stop()
-                self.console.print("\n[yellow]'n' is only available after task completion[/]")
-                self.console.print("[dim]Press Enter to continue...[/]")
+                self.console.print(f"\n{self.theme.warning('\"n\" is only available after task completion')}")
+                self.console.print(self.theme.muted("Press Enter to continue..."))
                 input()
                 live.start()
                 continue
@@ -583,8 +754,8 @@ class TUISessionV2(InteractiveSession):
             elif user_input.lower() == 'l' and output_state != 'complete':
                 self.debug_logger.warning("'l' pressed but not in complete state")
                 live.stop()
-                self.console.print("\n[yellow]'l' is only available after task completion[/]")
-                self.console.print("[dim]Press Enter to continue...[/]")
+                self.console.print(f"\n{self.theme.warning('\"l\" is only available after task completion')}")
+                self.console.print(self.theme.muted("Press Enter to continue..."))
                 input()
                 live.start()
                 continue
@@ -650,8 +821,8 @@ class TUISessionV2(InteractiveSession):
 
                             # Stop live to show message clearly
                             live.stop()
-                            self.console.print("\n[yellow]⚠ Execution interrupted[/]")
-                            self.console.print("[dim]Press Enter to continue...[/]")
+                            self.console.print(f"\n{self.theme.warning('⚠ Execution interrupted')}")
+                            self.console.print(self.theme.muted("Press Enter to continue..."))
                             input()
                             live.start()
 
@@ -694,8 +865,8 @@ class TUISessionV2(InteractiveSession):
 
                             # Stop live to show message clearly
                             live.stop()
-                            self.console.print("\n[yellow]⚠ Execution interrupted[/]")
-                            self.console.print("[dim]Press Enter to continue...[/]")
+                            self.console.print(f"\n{self.theme.warning('⚠ Execution interrupted')}")
+                            self.console.print(self.theme.muted("Press Enter to continue..."))
                             input()
                             live.start()
 
@@ -718,8 +889,8 @@ class TUISessionV2(InteractiveSession):
 
                         # Stop live to show message clearly
                         live.stop()
-                        self.console.print(f"\n[yellow]⚠ Action '{choice_id}' not yet implemented in Stage 2[/]")
-                        self.console.print("[dim]This will be added in future stages. Press Enter to continue...[/]")
+                        self.console.print(f"\n{self.theme.warning(f'⚠ Action \"{choice_id}\" not yet implemented in Stage 2')}")
+                        self.console.print(self.theme.muted("This will be added in future stages. Press Enter to continue..."))
                         input()
                         live.start()
                 else:
@@ -727,8 +898,8 @@ class TUISessionV2(InteractiveSession):
 
                     # Stop live to show error clearly
                     live.stop()
-                    self.console.print(f"\n[red]Invalid choice: {choice_num}[/]")
-                    self.console.print(f"[dim]Please choose 1-{len(choices)} or 'b' for back. Press Enter...[/]")
+                    self.console.print(self.theme.danger(f"Invalid choice: {choice_num}"))
+                    self.console.print(self.theme.muted(f"Please choose 1-{len(choices)} or 'b' for back. Press Enter..."))
                     input()
                     live.start()
 
@@ -737,8 +908,8 @@ class TUISessionV2(InteractiveSession):
 
                 # Stop live to show error clearly
                 live.stop()
-                self.console.print(f"\n[red]Invalid input: {user_input}[/]")
-                self.console.print(f"[dim]Please enter a number or 'b' for back. Press Enter...[/]")
+                self.console.print(self.theme.danger(f"Invalid input: {user_input}"))
+                self.console.print(self.theme.muted("Please enter a number or 'b' for back. Press Enter..."))
                 input()
                 live.start()
 
@@ -794,7 +965,7 @@ class TUISessionV2(InteractiveSession):
             live.stop()
 
             # Get user input (vim-style hotkeys)
-            self.console.print("\n[dim]Press key (1-10:Select, f:Filter, s:Sort, b:Back):[/] ", end="")
+            self.console.print(f"\n{self.theme.muted('Press key (1-10:Select, f:Filter, s:Sort, b:Back):')} ", end="")
             try:
                 self.debug_logger.debug("Waiting for task list hotkey input...")
 
@@ -853,8 +1024,8 @@ class TUISessionV2(InteractiveSession):
             elif user_input.lower() == 'f':
                 self.debug_logger.info("Filter menu requested (placeholder)")
                 live.stop()
-                self.console.print("\n[yellow]Filter menu not yet implemented[/]")
-                self.console.print("[dim]Press Enter to continue...[/]")
+                self.console.print(f"\n{self.theme.warning('Filter menu not yet implemented')}")
+                self.console.print(self.theme.muted("Press Enter to continue..."))
                 input()
                 live.start()
                 continue
@@ -862,8 +1033,8 @@ class TUISessionV2(InteractiveSession):
             elif user_input.lower() == 's':
                 self.debug_logger.info("Sort menu requested (placeholder)")
                 live.stop()
-                self.console.print("\n[yellow]Sort menu not yet implemented[/]")
-                self.console.print("[dim]Press Enter to continue...[/]")
+                self.console.print(f"\n{self.theme.warning('Sort menu not yet implemented')}")
+                self.console.print(self.theme.muted("Press Enter to continue..."))
                 input()
                 live.start()
                 continue
@@ -923,8 +1094,8 @@ class TUISessionV2(InteractiveSession):
                     self.debug_logger.warning(f"Choice {choice_num} out of range (1-{len(choices)})")
 
                     live.stop()
-                    self.console.print(f"\n[red]Invalid choice: {choice_num}[/]")
-                    self.console.print(f"[dim]Please choose 1-{len(choices)} or 'b' for back. Press Enter...[/]")
+                    self.console.print(self.theme.danger(f"Invalid choice: {choice_num}"))
+                    self.console.print(self.theme.muted(f"Please choose 1-{len(choices)} or 'b' for back. Press Enter..."))
                     input()
                     live.start()
 
@@ -932,8 +1103,8 @@ class TUISessionV2(InteractiveSession):
                 self.debug_logger.warning(f"Failed to parse task list input: {e}")
 
                 live.stop()
-                self.console.print(f"\n[red]Invalid input: {user_input}[/]")
-                self.console.print(f"[dim]Please enter a number or shortcut. Press Enter...[/]")
+                self.console.print(self.theme.danger(f"Invalid input: {user_input}"))
+                self.console.print(self.theme.muted("Please enter a number or shortcut. Press Enter..."))
                 input()
                 live.start()
 
@@ -968,7 +1139,8 @@ class TUISessionV2(InteractiveSession):
             panel, choices = FindingsPanel.render(
                 profile=self.profile,
                 filter_type=filter_type,
-                page=page
+                page=page,
+                theme=self.theme
             )
             self.debug_logger.debug(f"FindingsPanel returned {len(choices)} choices")
 
@@ -986,7 +1158,7 @@ class TUISessionV2(InteractiveSession):
             live.stop()
 
             # Get user input (vim-style hotkeys)
-            self.console.print("\n[dim]Press key (f:Filter, e:Export, b:Back):[/] ", end="")
+            self.console.print(f"\n{self.theme.muted('Press key (f:Filter, e:Export, b:Back):')} ", end="")
             try:
                 self.debug_logger.debug("Waiting for findings hotkey input...")
 
@@ -1045,8 +1217,8 @@ class TUISessionV2(InteractiveSession):
             elif user_input.lower() == 'f':
                 self.debug_logger.info("Filter menu requested (placeholder)")
                 live.stop()
-                self.console.print("\n[yellow]Filter menu not yet implemented[/]")
-                self.console.print("[dim]Press Enter to continue...[/]")
+                self.console.print(f"\n{self.theme.warning('Filter menu not yet implemented')}")
+                self.console.print(self.theme.muted("Press Enter to continue..."))
                 input()
                 live.start()
                 continue
@@ -1054,8 +1226,8 @@ class TUISessionV2(InteractiveSession):
             elif user_input.lower() == 'e':
                 self.debug_logger.info("Export requested (placeholder)")
                 live.stop()
-                self.console.print("\n[yellow]Export not yet implemented[/]")
-                self.console.print("[dim]Press Enter to continue...[/]")
+                self.console.print(f"\n{self.theme.warning('Export not yet implemented')}")
+                self.console.print(self.theme.muted("Press Enter to continue..."))
                 input()
                 live.start()
                 continue
@@ -1096,8 +1268,8 @@ class TUISessionV2(InteractiveSession):
                     if choice_action == 'view':
                         self.debug_logger.info("View finding details (placeholder)")
                         live.stop()
-                        self.console.print("\n[yellow]Finding details view not yet implemented[/]")
-                        self.console.print("[dim]Press Enter to continue...[/]")
+                        self.console.print(f"\n{self.theme.warning('Finding details view not yet implemented')}")
+                        self.console.print(self.theme.muted("Press Enter to continue..."))
                         input()
                         live.start()
 
@@ -1108,8 +1280,8 @@ class TUISessionV2(InteractiveSession):
                     self.debug_logger.warning(f"Choice {choice_num} out of range (1-{len(choices)})")
 
                     live.stop()
-                    self.console.print(f"\n[red]Invalid choice: {choice_num}[/]")
-                    self.console.print(f"[dim]Please choose 1-{len(choices)} or 'b' for back. Press Enter...[/]")
+                    self.console.print(self.theme.danger(f"Invalid choice: {choice_num}"))
+                    self.console.print(self.theme.muted(f"Please choose 1-{len(choices)} or 'b' for back. Press Enter..."))
                     input()
                     live.start()
 
@@ -1117,8 +1289,8 @@ class TUISessionV2(InteractiveSession):
                 self.debug_logger.warning(f"Failed to parse findings input: {e}")
 
                 live.stop()
-                self.console.print(f"\n[red]Invalid input: {user_input}[/]")
-                self.console.print(f"[dim]Please enter a number or shortcut. Press Enter...[/]")
+                self.console.print(self.theme.danger(f"Invalid input: {user_input}"))
+                self.console.print(self.theme.muted("Please enter a number or shortcut. Press Enter..."))
                 input()
                 live.start()
 
@@ -1148,7 +1320,8 @@ class TUISessionV2(InteractiveSession):
             self.debug_logger.debug(f"Rendering TemplateBrowserPanel (category={category}, page={page})")
             panel, choices = TemplateBrowserPanel.render(
                 category=category,
-                page=page
+                page=page,
+                theme=self.theme
             )
             self.debug_logger.debug(f"TemplateBrowserPanel returned {len(choices)} choices")
 
@@ -1166,7 +1339,7 @@ class TUISessionV2(InteractiveSession):
             live.stop()
 
             # Get user input (vim-style hotkeys)
-            self.console.print("\n[dim]Press key (1-12:Select, c:Category, s:Search, b:Back):[/] ", end="")
+            self.console.print(f"\n{self.theme.muted('Press key (1-12:Select, c:Category, s:Search, b:Back):')} ", end="")
             try:
                 self.debug_logger.debug("Waiting for template browser hotkey input...")
 
@@ -1226,12 +1399,12 @@ class TUISessionV2(InteractiveSession):
                 self.debug_logger.info("Category filter requested")
                 live.stop()
 
-                self.console.print("\n[bold cyan]Select Category:[/]")
-                self.console.print("  [bright_white]1.[/] All templates")
-                self.console.print("  [bright_white]2.[/] Recon (nmap, service detection)")
-                self.console.print("  [bright_white]3.[/] Web (gobuster, nikto, whatweb)")
-                self.console.print("  [bright_white]4.[/] Enumeration (SMB, LDAP, etc.)")
-                self.console.print("  [bright_white]5.[/] Exploitation (shells, exploits)")
+                self.console.print(f"\n{self.theme.emphasis('Select Category:')}")
+                self.console.print(f"  {format_menu_number(self.theme, 1)} All templates")
+                self.console.print(f"  {format_menu_number(self.theme, 2)} Recon (nmap, service detection)")
+                self.console.print(f"  {format_menu_number(self.theme, 3)} Web (gobuster, nikto, whatweb)")
+                self.console.print(f"  {format_menu_number(self.theme, 4)} Enumeration (SMB, LDAP, etc.)")
+                self.console.print(f"  {format_menu_number(self.theme, 5)} Exploitation (shells, exploits)")
                 self.console.print()
 
                 cat_choice = input("Choice [1-5]: ").strip()
@@ -1248,9 +1421,9 @@ class TUISessionV2(InteractiveSession):
                     page = 1  # Reset to first page when changing category
                     self.debug_logger.info(f"Category changed to: {category}")
                 else:
-                    self.console.print("[red]Invalid choice[/]")
+                    self.console.print(self.theme.danger("Invalid choice"))
 
-                self.console.print("[dim]Press Enter to continue...[/]")
+                self.console.print(self.theme.muted("Press Enter to continue..."))
                 input()
                 live.start()
                 continue
@@ -1258,8 +1431,8 @@ class TUISessionV2(InteractiveSession):
             elif user_input.lower() == 's':
                 self.debug_logger.info("Search requested (placeholder)")
                 live.stop()
-                self.console.print("\n[yellow]Search not yet implemented[/]")
-                self.console.print("[dim]Press Enter to continue...[/]")
+                self.console.print(f"\n{self.theme.warning('Search not yet implemented')}")
+                self.console.print(self.theme.muted("Press Enter to continue..."))
                 input()
                 live.start()
                 continue
@@ -1319,8 +1492,8 @@ class TUISessionV2(InteractiveSession):
                     self.debug_logger.warning(f"Choice {choice_num} out of range (1-{len(choices)})")
 
                     live.stop()
-                    self.console.print(f"\n[red]Invalid choice: {choice_num}[/]")
-                    self.console.print(f"[dim]Please choose 1-{len(choices)} or 'b' for back. Press Enter...[/]")
+                    self.console.print(self.theme.danger(f"Invalid choice: {choice_num}"))
+                    self.console.print(self.theme.muted(f"Please choose 1-{len(choices)} or 'b' for back. Press Enter..."))
                     input()
                     live.start()
 
@@ -1328,8 +1501,8 @@ class TUISessionV2(InteractiveSession):
                 self.debug_logger.warning(f"Failed to parse template browser input: {e}")
 
                 live.stop()
-                self.console.print(f"\n[red]Invalid input: {user_input}[/]")
-                self.console.print(f"[dim]Please enter a number or shortcut. Press Enter...[/]")
+                self.console.print(self.theme.danger(f"Invalid input: {user_input}"))
+                self.console.print(self.theme.muted("Please enter a number or shortcut. Press Enter..."))
                 input()
                 live.start()
 
@@ -1364,7 +1537,8 @@ class TUISessionV2(InteractiveSession):
             panel, choices = TemplateDetailPanel.render(
                 template=template,
                 filled_values=filled_values,
-                execution_result=execution_result
+                execution_result=execution_result,
+                theme=self.theme
             )
             self.debug_logger.debug(f"TemplateDetailPanel returned {len(choices)} choices")
 
@@ -1382,7 +1556,7 @@ class TUISessionV2(InteractiveSession):
             live.stop()
 
             # Get user input (vim-style hotkeys)
-            self.console.print("\n[dim]Press key (see menu for options):[/] ", end="")
+            self.console.print(f"\n{self.theme.muted('Press key (see menu for options):')} ", end="")
             try:
                 self.debug_logger.debug("Waiting for template detail hotkey input...")
 
@@ -1440,7 +1614,7 @@ class TUISessionV2(InteractiveSession):
 
                 # Collect variable values
                 filled_values = {}
-                self.console.print("\n[bold cyan]Fill Template Variables:[/]\n")
+                self.console.print(f"\n{self.theme.emphasis('Fill Template Variables:')}\n")
 
                 for var in template.variables:
                     var_name = var['name']
@@ -1449,13 +1623,13 @@ class TUISessionV2(InteractiveSession):
                     var_required = var.get('required', True)
 
                     # Build prompt
-                    prompt = f"  [cyan]{var_name}[/]"
+                    prompt = f"  {self.theme.primary(var_name)}"
                     if var_desc:
                         prompt += f" ({var_desc})"
                     if var_example:
-                        prompt += f" [dim]e.g., {var_example}[/]"
+                        prompt += f" {self.theme.muted(f'e.g., {var_example}')}"
                     if not var_required:
-                        prompt += " [dim](optional)[/]"
+                        prompt += f" {self.theme.muted('(optional)')}"
                     prompt += ": "
 
                     self.console.print(prompt, end="")
@@ -1463,8 +1637,8 @@ class TUISessionV2(InteractiveSession):
 
                     # Validate required fields
                     if not value and var_required:
-                        self.console.print(f"[red]✗ {var_name} is required[/]")
-                        self.console.print("[dim]Press Enter to try again...[/]")
+                        self.console.print(self.theme.danger(f"✗ {var_name} is required"))
+                        self.console.print(self.theme.muted("Press Enter to try again..."))
                         input()
                         filled_values = None
                         break
@@ -1473,8 +1647,8 @@ class TUISessionV2(InteractiveSession):
                         filled_values[var_name] = value
 
                 if filled_values:
-                    self.console.print("\n[green]✓ Variables filled successfully[/]")
-                    self.console.print("[dim]Press Enter to continue...[/]")
+                    self.console.print(f"\n{self.theme.success('✓ Variables filled successfully')}")
+                    self.console.print(self.theme.muted("Press Enter to continue..."))
                     input()
 
                 live.start()
@@ -1485,8 +1659,8 @@ class TUISessionV2(InteractiveSession):
 
                 if not filled_values:
                     live.stop()
-                    self.console.print("\n[red]Cannot execute: variables not filled[/]")
-                    self.console.print("[dim]Press 'f' to fill variables first. Press Enter...[/]")
+                    self.console.print(f"\n{self.theme.danger('Cannot execute: variables not filled')}")
+                    self.console.print(self.theme.muted("Press 'f' to fill variables first. Press Enter..."))
                     input()
                     live.start()
                     continue
@@ -1496,7 +1670,7 @@ class TUISessionV2(InteractiveSession):
                 self.debug_logger.info(f"Executing template command: {final_command}")
 
                 live.stop()
-                self.console.print(f"\n[bold cyan]Executing:[/] [green]{final_command}[/]\n")
+                self.console.print(f"\n{self.theme.emphasis('Executing:')} {self.theme.success(final_command)}\n")
 
                 import time
                 start_time = time.time()
@@ -1512,9 +1686,9 @@ class TUISessionV2(InteractiveSession):
                     }
 
                     if result.returncode == 0:
-                        self.console.print(f"\n[green]✓ Command executed successfully ({elapsed:.2f}s)[/]")
+                        self.console.print(f"\n{self.theme.success(f'✓ Command executed successfully ({elapsed:.2f}s)')}")
                     else:
-                        self.console.print(f"\n[yellow]Command completed with exit code {result.returncode} ({elapsed:.2f}s)[/]")
+                        self.console.print(f"\n{self.theme.warning(f'Command completed with exit code {result.returncode} ({elapsed:.2f}s)')}")
 
                     # Log to profile
                     self.profile.add_note(
@@ -1524,14 +1698,14 @@ class TUISessionV2(InteractiveSession):
                     self.profile.save()
 
                 except Exception as e:
-                    self.console.print(f"\n[red]✗ Execution failed: {e}[/]")
+                    self.console.print(f"\n{self.theme.danger(f'✗ Execution failed: {e}')}")
                     execution_result = {
                         'exit_code': 1,
                         'elapsed': time.time() - start_time,
                         'output_lines': [f"Error: {str(e)}"]
                     }
 
-                self.console.print("[dim]Press Enter to continue...[/]")
+                self.console.print(self.theme.muted("Press Enter to continue..."))
                 input()
                 live.start()
                 continue
@@ -1539,8 +1713,8 @@ class TUISessionV2(InteractiveSession):
             elif user_input.lower() == 'c':
                 self.debug_logger.info("Copy to clipboard requested (placeholder)")
                 live.stop()
-                self.console.print("\n[yellow]Copy to clipboard not yet implemented[/]")
-                self.console.print("[dim]Press Enter to continue...[/]")
+                self.console.print(f"\n{self.theme.warning('Copy to clipboard not yet implemented')}")
+                self.console.print(self.theme.muted("Press Enter to continue..."))
                 input()
                 live.start()
                 continue
@@ -1555,8 +1729,8 @@ class TUISessionV2(InteractiveSession):
             elif user_input.lower() == 'v':
                 self.debug_logger.info("View full output requested (placeholder)")
                 live.stop()
-                self.console.print("\n[yellow]Full output viewer not yet implemented[/]")
-                self.console.print("[dim]Use 'o' shortcut from dashboard to view execution history. Press Enter...[/]")
+                self.console.print(f"\n{self.theme.warning('Full output viewer not yet implemented')}")
+                self.console.print(self.theme.muted("Use 'o' shortcut from dashboard to view execution history. Press Enter..."))
                 input()
                 live.start()
                 continue
@@ -1564,8 +1738,8 @@ class TUISessionV2(InteractiveSession):
             elif user_input.lower() == 's':
                 self.debug_logger.info("Save output requested (placeholder)")
                 live.stop()
-                self.console.print("\n[yellow]Save output not yet implemented[/]")
-                self.console.print("[dim]Press Enter to continue...[/]")
+                self.console.print(f"\n{self.theme.warning('Save output not yet implemented')}")
+                self.console.print(self.theme.muted("Press Enter to continue..."))
                 input()
                 live.start()
                 continue
@@ -1573,8 +1747,8 @@ class TUISessionV2(InteractiveSession):
             else:
                 self.debug_logger.warning(f"Unknown template detail input: {user_input}")
                 live.stop()
-                self.console.print(f"\n[red]Invalid input: {user_input}[/]")
-                self.console.print(f"[dim]Press Enter to continue...[/]")
+                self.console.print(self.theme.danger(f"Invalid input: {user_input}"))
+                self.console.print(self.theme.muted("Press Enter to continue..."))
                 input()
                 live.start()
 
@@ -1658,7 +1832,8 @@ class TUISessionV2(InteractiveSession):
                         elapsed=elapsed,
                         exit_code=None,
                         findings=[],
-                        target=self.profile.target
+                        target=self.profile.target,
+                        theme=self.theme
                     )
 
                     layout['header'].update(self._render_header())
@@ -1684,7 +1859,8 @@ class TUISessionV2(InteractiveSession):
                 elapsed=elapsed,
                 exit_code=None,
                 findings=[],
-                target=self.profile.target
+                target=self.profile.target,
+                theme=self.theme
             )
             layout['header'].update(self._render_header())
             layout['menu'].update(workspace_layout)
@@ -1798,8 +1974,8 @@ class TUISessionV2(InteractiveSession):
         # CRACK = Comprehensive Recon & Attack Creation Kit
         # TRACK = Targeted Reconnaissance And Command Konsole
         # TUI = Tactical User Interface
-        line1 = "[dim]C.R.A.C.K.[/] [bright_white]Comprehensive Recon & Attack Creation Kit[/] | [dim]T.R.A.C.K.[/] [bright_white]Targeted Reconnaissance And Command Konsole[/] | [dim]T.U.I.[/] [bright_white]Tactical User Interface[/]"
-        target_line = f"[cyan]Target:[/] [bold white]{self.profile.target}[/]"
+        line1 = f"{self.theme.muted('C.R.A.C.K.')} {self.theme.emphasis('Comprehensive Recon & Attack Creation Kit')} | {self.theme.muted('T.R.A.C.K.')} {self.theme.emphasis('Targeted Reconnaissance And Command Konsole')} | {self.theme.muted('T.U.I.')} {self.theme.emphasis('Tactical User Interface')}"
+        target_line = f"{self.theme.primary('Target:')} {self.theme.emphasis(self.profile.target)}"
 
         # Create text objects for centering
         from rich.console import RenderableType
@@ -1807,7 +1983,7 @@ class TUISessionV2(InteractiveSession):
 
         return Panel(
             Align.center(content),
-            border_style="cyan",
+            border_style=self.theme.panel_border(),
             box=box.HEAVY
         )
 
@@ -1859,16 +2035,16 @@ class TUISessionV2(InteractiveSession):
         all_shortcuts = []
         for key, description in valid_shortcuts.items():
             if len(key) == 1:
-                formatted = f"[cyan]{key}[/]:{description}"
+                formatted = f"{format_hotkey(self.theme, key)}:{description}"
             elif key.startswith(':'):
                 # Already prefixed with :
-                formatted = f"[cyan]{key}[/]:{description}"
+                formatted = f"{format_hotkey(self.theme, key)}:{description}"
             elif '-' in key:
                 # Range like "1-4"
-                formatted = f"[dim]{key}[/]:{description}"
+                formatted = f"{self.theme.muted(key)}:{description}"
             else:
                 # Multi-char shortcut needs : prefix
-                formatted = f"[cyan]:{key}[/]:{description}"
+                formatted = f"{format_hotkey(self.theme, f':{key}')}:{description}"
             all_shortcuts.append(formatted)
 
         # Split into rows of 6 columns
@@ -1886,8 +2062,8 @@ class TUISessionV2(InteractiveSession):
 
         return Panel(
             table,
-            title="[bold]All Commands (h:Help for details)[/]",
-            border_style="cyan",
+            title=self.theme.emphasis("All Commands (h:Help for details)"),
+            border_style=self.theme.panel_border(),
             box=box.HEAVY
         )
 
@@ -1903,7 +2079,7 @@ class TUISessionV2(InteractiveSession):
         # Priority shortcuts (shown first)
         priority_order = [
             'n', 'h', 's', 't', 'x', 'alt', 'ch', 'qn', 'pd', 'q', 'b',
-            'l', 'f', 'o', 'i', 'd'
+            'l', 'f', 'o', 'i', 'd', '-'
         ]
 
         # Add priority shortcuts from ShortcutHandler
@@ -1919,6 +2095,7 @@ class TUISessionV2(InteractiveSession):
             'o': 'Output overlay',
             'i': 'Import scan results',
             'd': 'Document finding',
+            '-': 'Config panel',
         }
 
         for key, desc in tui_shortcuts.items():
@@ -1932,6 +2109,8 @@ class TUISessionV2(InteractiveSession):
 
         # Add special commands
         shortcuts[':!cmd'] = 'Console injection'
+        shortcuts[':theme'] = 'Switch theme'
+        shortcuts[':themes'] = 'List themes'
         shortcuts['1-9'] = 'Menu select'
 
         return shortcuts
@@ -1939,6 +2118,25 @@ class TUISessionV2(InteractiveSession):
     def _process_input(self, user_input: str) -> Optional[str]:
         """Process user input - supports numbers, letter hotkeys, and : commands"""
         self.debug_logger.debug(f"_process_input called with: '{user_input}'")
+
+        # Theme commands (:theme and :themes)
+        if user_input == 'themes':
+            self.debug_logger.info("List themes command")
+            self._list_themes()
+            return None
+
+        if user_input.startswith('theme'):
+            # Parse :theme <name> command
+            parts = user_input.split(maxsplit=1)
+            if len(parts) == 2:
+                theme_name = parts[1].strip()
+                self.debug_logger.info(f"Switch theme command: {theme_name}")
+                self._switch_theme(theme_name)
+            else:
+                # No theme name - show current theme
+                self.debug_logger.info("Show current theme")
+                self._show_current_theme()
+            return None
 
         # Console injection (:! command)
         if user_input.startswith('!'):
@@ -1982,6 +2180,18 @@ class TUISessionV2(InteractiveSession):
             self._show_output()
             return None
 
+        # Config panel shortcut
+        if user_input == '-':
+            self.debug_logger.info("Config panel requested")
+            self.debug_logger.log_state_transition("DASHBOARD", "CONFIG_PANEL", "- shortcut pressed")
+
+            # Re-open config panel (allows editing settings mid-session)
+            if hasattr(self, '_live') and hasattr(self, '_layout'):
+                self._config_panel_loop(self._live, self._layout)
+
+            self.debug_logger.log_state_transition("CONFIG_PANEL", "DASHBOARD", "returned from config panel")
+            return None
+
         # Template browser shortcut
         if user_input.lower() == 'x':
             self.debug_logger.info("Template browser requested")
@@ -2023,8 +2233,8 @@ class TUISessionV2(InteractiveSession):
             if hasattr(self, '_live'):
                 self._live.stop()
 
-            self.console.print(f"\n[yellow]Action not available in current context[/]")
-            self.console.print("[dim]Press Enter to continue...[/]")
+            self.console.print(f"\n{self.theme.warning('Action not available in current context')}")
+            self.console.print(self.theme.muted("Press Enter to continue..."))
             input()
 
             # Restart Live
@@ -2049,8 +2259,8 @@ class TUISessionV2(InteractiveSession):
                 if hasattr(self, '_live'):
                     self._live.stop()
 
-                self.console.print(f"\n[red]Invalid choice: {choice_num}[/]")
-                self.console.print(f"[dim]Please choose 1-{len(self._current_choices)} or press a valid shortcut. Press Enter...[/]")
+                self.console.print(self.theme.danger(f"Invalid choice: {choice_num}"))
+                self.console.print(self.theme.muted(f"Please choose 1-{len(self._current_choices)} or press a valid shortcut. Press Enter..."))
                 input()
 
                 # Restart Live
@@ -2081,7 +2291,7 @@ class TUISessionV2(InteractiveSession):
 
                 except Exception as e:
                     self.debug_logger.warning(f"Shortcut handler error: {e}")
-                    self.console.print(f"[red]Error executing '{user_input}': {e}[/]")
+                    self.console.print(self.theme.danger(f"Error executing '{user_input}': {e}"))
 
                 finally:
                     # Always restart Live context
@@ -2095,8 +2305,8 @@ class TUISessionV2(InteractiveSession):
                 if hasattr(self, '_live'):
                     self._live.stop()
 
-                self.console.print(f"\n[red]Invalid input: {user_input}[/]")
-                self.console.print("[dim]Press any valid key or Enter to continue...[/]")
+                self.console.print(self.theme.danger(f"Invalid input: {user_input}"))
+                self.console.print(self.theme.muted("Press any valid key or Enter to continue..."))
                 input()
 
                 # Restart Live
@@ -2168,7 +2378,7 @@ class TUISessionV2(InteractiveSession):
         try:
             help_panel = HelpOverlay.render(shortcut_handler=self.shortcut_handler, theme=self.theme)
             self.console.print(help_panel)
-            self.console.print("\n[dim]Press any key to dismiss (or 'h' to toggle off)...[/] ", end="")
+            self.console.print(f"\n{self.theme.muted('Press any key to dismiss (or \"h\" to toggle off)...')} ", end="")
             dismiss_key = self.hotkey_handler.read_key()  # Single keypress (consistent with TUI)
             self.debug_logger.log("Help overlay dismissed", category=LogCategory.UI_PANEL, level=LogLevel.NORMAL,
                                  dismiss_key=dismiss_key)
@@ -2198,7 +2408,7 @@ class TUISessionV2(InteractiveSession):
         try:
             status_panel = StatusOverlay.render(self.profile, theme=self.theme)
             self.console.print(status_panel)
-            self.console.print("\n[dim]Press any key to dismiss (or 's' to toggle off)...[/] ", end="")
+            self.console.print(f"\n{self.theme.muted('Press any key to dismiss (or \"s\" to toggle off)...')} ", end="")
             dismiss_key = self.hotkey_handler.read_key()  # Single keypress (consistent with TUI)
             self.debug_logger.log("Status overlay dismissed", category=LogCategory.UI_PANEL, level=LogLevel.NORMAL,
                                  dismiss_key=dismiss_key)
@@ -2228,7 +2438,7 @@ class TUISessionV2(InteractiveSession):
         try:
             tree_panel = TreeOverlay.render(self.profile, theme=self.theme)
             self.console.print(tree_panel)
-            self.console.print("\n[dim]Press any key to dismiss (or 't' to toggle off)...[/] ", end="")
+            self.console.print(f"\n{self.theme.muted('Press any key to dismiss (or \"t\" to toggle off)...')} ", end="")
             dismiss_key = self.hotkey_handler.read_key()  # Single keypress (consistent with TUI)
             self.debug_logger.log("Tree overlay dismissed", category=LogCategory.UI_PANEL, level=LogLevel.NORMAL,
                                  dismiss_key=dismiss_key)
@@ -2269,6 +2479,98 @@ class TUISessionV2(InteractiveSession):
             if hasattr(self, '_live'):
                 self._live.start()
 
+    def _list_themes(self):
+        """List all available themes with current theme highlighted"""
+        from .themes.presets import BUILT_IN_THEMES
+
+        self.debug_logger.log("List themes command invoked", category=LogCategory.UI_COMMAND, level=LogLevel.NORMAL)
+
+        # Stop Live context
+        if hasattr(self, '_live'):
+            self._live.stop()
+
+        try:
+            current_theme = self.theme.get_theme_name()
+
+            self.debug_logger.log("Displaying theme list", category=LogCategory.UI_RENDER, level=LogLevel.VERBOSE,
+                                 current_theme=current_theme, theme_count=len(BUILT_IN_THEMES))
+
+            self.console.print(f"\n{self.theme.emphasis('Available Themes:')}\n")
+
+            for theme_id, theme_data in BUILT_IN_THEMES.items():
+                name = theme_data['name']
+                desc = theme_data.get('description', 'No description')
+
+                if theme_id == current_theme:
+                    # Highlight current theme
+                    self.console.print(f"  {self.theme.success('✓')} {self.theme.primary(theme_id)} - {self.theme.emphasis(name)}")
+                    self.console.print(f"    {self.theme.muted(desc)} {self.theme.success('[ACTIVE]')}")
+                else:
+                    self.console.print(f"    {self.theme.muted(theme_id)} - {name}")
+                    self.console.print(f"    {self.theme.muted(desc)}")
+
+            self.console.print(f"\n{self.theme.muted('Use')} {self.theme.primary(':theme <name>')} {self.theme.muted('to switch')}")
+            self.console.print(f"{self.theme.muted('Press any key to dismiss...')} ", end="")
+            self.hotkey_handler.read_key()  # Single keypress
+
+        finally:
+            # Resume Live context
+            if hasattr(self, '_live'):
+                self._live.start()
+
+    def _switch_theme(self, theme_name: str):
+        """Switch to a different theme"""
+        self.debug_logger.log("Switch theme command invoked", category=LogCategory.UI_COMMAND, level=LogLevel.NORMAL,
+                             theme_name=theme_name)
+
+        # Stop Live context
+        if hasattr(self, '_live'):
+            self._live.stop()
+
+        try:
+            if self.theme.set_theme(theme_name):
+                self.debug_logger.log("✓ Theme switch successful (via command)", category=LogCategory.THEME_SWITCH,
+                                     level=LogLevel.NORMAL, theme_name=theme_name)
+                self.console.print(f"\n{self.theme.success('✓ Theme switched to:')} {self.theme.emphasis(theme_name)}")
+                self.console.print(self.theme.muted("Changes take effect immediately"))
+            else:
+                self.debug_logger.log("✗ Theme switch failed: invalid theme (via command)", category=LogCategory.THEME_SWITCH,
+                                     level=LogLevel.NORMAL, theme_name=theme_name)
+                self.console.print(f"\n{self.theme.danger('✗ Invalid theme:')} {theme_name}")
+                self.console.print(f"{self.theme.muted('Use')} {self.theme.primary(':themes')} {self.theme.muted('to see available themes')}")
+
+            self.console.print(f"\n{self.theme.muted('Press any key to continue...')} ", end="")
+            self.hotkey_handler.read_key()  # Single keypress
+
+        finally:
+            # Resume Live context
+            if hasattr(self, '_live'):
+                self._live.start()
+
+    def _show_current_theme(self):
+        """Show current theme name"""
+        self.debug_logger.log("Show current theme command invoked", category=LogCategory.UI_COMMAND, level=LogLevel.NORMAL)
+
+        # Stop Live context
+        if hasattr(self, '_live'):
+            self._live.stop()
+
+        try:
+            current_theme = self.theme.get_theme_name()
+
+            self.debug_logger.log("Displaying current theme", category=LogCategory.UI_RENDER, level=LogLevel.VERBOSE,
+                                 theme_name=current_theme)
+
+            self.console.print(f"\n{self.theme.muted('Current theme:')} {self.theme.emphasis(current_theme)}")
+            self.console.print(f"{self.theme.muted('Use')} {self.theme.primary(':themes')} {self.theme.muted('to see all available themes')}")
+            self.console.print(f"{self.theme.muted('Press any key to continue...')} ", end="")
+            self.hotkey_handler.read_key()  # Single keypress
+
+        finally:
+            # Resume Live context
+            if hasattr(self, '_live'):
+                self._live.start()
+
     def _execute_console_injection(self, command: str):
         """Execute console injection command"""
         from .overlays.console_injection import ConsoleInjection
@@ -2282,7 +2584,8 @@ class TUISessionV2(InteractiveSession):
             ConsoleInjection.execute(
                 console=self.console,
                 command=command,
-                profile=self.profile
+                profile=self.profile,
+                theme=self.theme
             )
 
             # Save profile (in case user saved to history)
@@ -2349,7 +2652,7 @@ class TUISessionV2(InteractiveSession):
             bar_width = 40
             filled = int(bar_width * completed / total) if total > 0 else 0
             empty = bar_width - filled
-            bar = f"[green]{'█' * filled}[/][dim]{'░' * empty}[/]"
+            bar = f"{self.theme.success('█' * filled)}{self.theme.muted('░' * empty)}"
             table.add_row("", bar)
 
             # Group by service
@@ -2392,7 +2695,7 @@ class TUISessionV2(InteractiveSession):
 
             # Display and wait
             self.console.print(panel)
-            self.console.print("\n[dim]Press any key to dismiss (or 'p' to toggle off)...[/] ", end="")
+            self.console.print(f"\n{self.theme.muted('Press any key to dismiss (or \"p\" to toggle off)...')} ", end="")
             dismiss_key = self.hotkey_handler.read_key()  # Single keypress (consistent with TUI)
 
             # Strategic chokepoint: Dashboard closed
@@ -2482,16 +2785,17 @@ class TUISessionV2(InteractiveSession):
         else:
             # User declined - clear all checkpoints
             self.debug_logger.info("User declined to resume, clearing all checkpoints")
-            self.console.print("[dim]Clearing all interrupted task checkpoints...[/]")
+            self.console.print(self.theme.muted("Clearing all interrupted task checkpoints..."))
             count = self.checkpoint_mgr.clear_all_checkpoints(self.target)
-            self.console.print(f"[green]✓ Cleared {count} checkpoint(s)[/]")
+            self.console.print(self.theme.success(f"✓ Cleared {count} checkpoint(s)"))
 
         self.console.print()  # Add spacing before continuing to config panel
 
     def _offer_task_resume_tui(self, task_info: Dict[str, str]):
         """TUI-specific task resume offer (uses Rich console)"""
-        self.console.print(f"\n[bold cyan]──── Task: {task_info['task_id']} ────[/]")
-        self.console.print(f"[dim]Stage:[/] {task_info['stage_id']}")
+        task_id = task_info['task_id']
+        self.console.print(f"\n{self.theme.primary(f'──── Task: {task_id} ────')}")
+        self.console.print(f"{self.theme.muted('Stage:')} {task_info['stage_id']}")
 
         # Load checkpoint state
         state = self.checkpoint_mgr.load_checkpoint(
@@ -2501,30 +2805,30 @@ class TUISessionV2(InteractiveSession):
         )
 
         if not state:
-            self.console.print("[yellow]⚠ Checkpoint data corrupted or missing[/]")
+            self.console.print(self.theme.warning("⚠ Checkpoint data corrupted or missing"))
             return
 
         # Show checkpoint details
-        self.console.print(f"[dim]Status:[/] {state.get('status', 'unknown')}")
+        self.console.print(f"{self.theme.muted('Status:')} {state.get('status', 'unknown')}")
         command = state.get('command', 'N/A')
         if len(command) > 80:
             command = command[:77] + '...'
-        self.console.print(f"[dim]Command:[/] [cyan]{command}[/]")
+        self.console.print(f"{self.theme.muted('Command:')} {self.theme.primary(command)}")
 
         partial_output = state.get('partial_output', '')
         if partial_output:
             line_count = len(partial_output.split('\n'))
-            self.console.print(f"[dim]Output captured:[/] {line_count} lines")
+            self.console.print(f"{self.theme.muted('Output captured:')} {line_count} lines")
 
         self.console.print()
         response = input("Resume this task? [Y/n]: ").strip()
 
         if not response or response.lower() == 'y':
             self.console.print()
-            self.console.print("[cyan]ℹ Task resume feature[/]")
-            self.console.print("[dim]This will be implemented when task execution is refactored[/]")
-            self.console.print("[dim]for checkpoint support. For now, the checkpoint will be cleared[/]")
-            self.console.print("[dim]and you can manually re-run the task.[/]")
+            self.console.print(self.theme.info("ℹ Task resume feature"))
+            self.console.print(self.theme.muted("This will be implemented when task execution is refactored"))
+            self.console.print(self.theme.muted("for checkpoint support. For now, the checkpoint will be cleared"))
+            self.console.print(self.theme.muted("and you can manually re-run the task."))
             self.console.print()
             # TODO: Implement actual task resume
             self.checkpoint_mgr.clear_checkpoint(
@@ -2532,7 +2836,7 @@ class TUISessionV2(InteractiveSession):
                 task_info['stage_id'],
                 self.target
             )
-            self.console.print("[green]✓ Checkpoint cleared. Re-run task manually.[/]")
+            self.console.print(self.theme.success("✓ Checkpoint cleared. Re-run task manually."))
             self.debug_logger.info(f"Cleared checkpoint for {task_info['task_id']}/{task_info['stage_id']}")
         else:
             # Clear checkpoint if user declined
@@ -2541,5 +2845,5 @@ class TUISessionV2(InteractiveSession):
                 task_info['stage_id'],
                 self.target
             )
-            self.console.print("[dim]Checkpoint cleared.[/]")
+            self.console.print(self.theme.muted("Checkpoint cleared."))
             self.debug_logger.info(f"User declined, cleared checkpoint for {task_info['task_id']}/{task_info['stage_id']}")

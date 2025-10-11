@@ -31,7 +31,8 @@ class OutputOverlay:
         cls,
         console: Console,
         profile: 'TargetProfile',
-        initial_task_id: str = None
+        initial_task_id: str = None,
+        theme=None
     ):
         """
         Interactive output viewer with navigation
@@ -40,6 +41,7 @@ class OutputOverlay:
             console: Rich Console instance
             profile: TargetProfile with task execution history
             initial_task_id: Optional task ID to start with
+            theme: ThemeManager instance (optional for backward compat)
 
         Controls:
             n/p: Next/Previous context
@@ -49,12 +51,17 @@ class OutputOverlay:
             e: Export to file (not yet implemented)
             q: Close overlay
         """
+        # Fallback theme for backward compatibility
+        if theme is None:
+            from ..themes import ThemeManager
+            theme = ThemeManager()
+
         # Collect all execution contexts from all tasks
         contexts = cls._collect_contexts(profile)
 
         if not contexts:
-            console.print("[yellow]No execution history available[/]")
-            console.print("[dim]Execute tasks to build output history[/]")
+            console.print(theme.warning("No execution history available"))
+            console.print(theme.muted("Execute tasks to build output history"))
             input("\nPress Enter to continue...")
             return
 
@@ -81,7 +88,8 @@ class OutputOverlay:
                 current_index + 1,
                 len(contexts),
                 scroll_offset,
-                display_lines
+                display_lines,
+                theme=theme
             )
 
             # Clear screen and display
@@ -89,15 +97,16 @@ class OutputOverlay:
             console.print(overlay_panel)
 
             # Show controls
+            hotkey_color = theme.get_component_color('hotkey')
             controls = (
-                f"[cyan]n[/]:Next Context | [cyan]p[/]:Prev | "
-                f"[cyan]j/k[/]:Scroll | [cyan]g/G[/]:Top/Bottom | "
-                f"[cyan]e[/]:Export | [cyan]q[/]:Close"
+                f"[{hotkey_color}]n[/]:Next Context | [{hotkey_color}]p[/]:Prev | "
+                f"[{hotkey_color}]j/k[/]:Scroll | [{hotkey_color}]g/G[/]:Top/Bottom | "
+                f"[{hotkey_color}]e[/]:Export | [{hotkey_color}]q[/]:Close"
             )
             console.print(f"\n{controls}")
 
             # Get user input
-            console.print("\n[dim]Command:[/] ", end="")
+            console.print("\n" + theme.muted("Command: "), end="")
             try:
                 user_input = input().strip().lower()
             except (EOFError, KeyboardInterrupt):
@@ -137,11 +146,11 @@ class OutputOverlay:
 
             elif user_input == 'e':
                 # Export context to file
-                cls._export_context(console, context)
+                cls._export_context(console, context, theme=theme)
 
             elif user_input.startswith('/'):
                 # Search (future feature)
-                console.print("[yellow]Search not yet implemented[/]")
+                console.print(theme.warning("Search not yet implemented"))
                 input("Press Enter...")
 
     @classmethod
@@ -190,7 +199,8 @@ class OutputOverlay:
         context_num: int,
         total_contexts: int,
         scroll_offset: int,
-        display_lines: int
+        display_lines: int,
+        theme=None
     ) -> Panel:
         """
         Render a single context for display
@@ -201,14 +211,22 @@ class OutputOverlay:
             total_contexts: Total number of contexts
             scroll_offset: Current scroll position
             display_lines: Number of lines to display
+            theme: ThemeManager instance (optional for backward compat)
 
         Returns:
             Rich Panel with context information and output
         """
+        # Fallback theme for backward compatibility
+        if theme is None:
+            from ..themes import ThemeManager
+            theme = ThemeManager()
+
         # Build header table
         header = Table(show_header=False, box=None, padding=(0, 1))
-        header.add_column("Label", style="bold cyan", width=15)
-        header.add_column("Value", style="white")
+        label_color = theme.get_color('primary')
+        text_color = theme.get_color('text')
+        header.add_column("Label", style=f"bold {label_color}", width=15)
+        header.add_column("Value", style=text_color)
 
         header.add_row("Context", f"{context_num}/{total_contexts}: {context['context_label']}")
         header.add_row("Task", context['task_name'][:60])
@@ -218,7 +236,7 @@ class OutputOverlay:
 
         # Exit code with color
         exit_code = context['exit_code']
-        exit_color = "green" if exit_code == 0 else "red"
+        exit_color = theme.get_color('success') if exit_code == 0 else theme.get_color('danger')
         header.add_row("Exit Code", f"[{exit_color}]{exit_code}[/]")
 
         # Output stats
@@ -232,18 +250,19 @@ class OutputOverlay:
 
         # Build output text
         output_text = Text()
-        output_text.append("\n" + "─" * 80 + "\n", style="dim")
+        muted_color = theme.get_color('muted')
+        output_text.append("\n" + "─" * 80 + "\n", style=muted_color)
 
         if not output_slice:
-            output_text.append("[No output]\n", style="dim")
+            output_text.append("[No output]\n", style=muted_color)
         else:
             for i, line in enumerate(output_slice):
                 line_num = start_line + i + 1
-                # Show line numbers in dim style
-                output_text.append(f"{line_num:5d} │ ", style="dim")
+                # Show line numbers in muted style
+                output_text.append(f"{line_num:5d} │ ", style=muted_color)
                 output_text.append(line + "\n")
 
-        output_text.append("\n" + "─" * 80 + "\n", style="dim")
+        output_text.append("\n" + "─" * 80 + "\n", style=muted_color)
 
         # Scroll indicator
         if total_lines > display_lines:
@@ -252,7 +271,8 @@ class OutputOverlay:
         else:
             scroll_info = f"[All {total_lines} lines shown]"
 
-        output_text.append(scroll_info, style="cyan dim")
+        info_color = theme.get_color('info')
+        output_text.append(scroll_info, style=f"{info_color} {muted_color}")
 
         # Combine header and output using Group (allows mixed renderable types)
         full_content = Group(
@@ -262,23 +282,29 @@ class OutputOverlay:
         )
 
         # Create panel
-        title = "[bold cyan]Command Output Viewer[/]"
+        title = f"[bold {theme.get_color('info')}]Command Output Viewer[/]"
         return Panel(
             full_content,
             title=title,
-            border_style="cyan",
+            border_style=theme.overlay_border(),
             box=box.DOUBLE
         )
 
     @classmethod
-    def _export_context(cls, console: Console, context: Dict[str, Any]):
+    def _export_context(cls, console: Console, context: Dict[str, Any], theme=None):
         """
         Export context to file
 
         Args:
             console: Rich Console instance
             context: Context to export
+            theme: ThemeManager instance (optional for backward compat)
         """
+        # Fallback theme for backward compatibility
+        if theme is None:
+            from ..themes import ThemeManager
+            theme = ThemeManager()
+
         import os
         from datetime import datetime
 
@@ -288,11 +314,11 @@ class OutputOverlay:
         filename = f"output_{safe_label}_{timestamp}.txt"
 
         # Get user confirmation
-        console.print(f"\n[cyan]Export to:[/] {filename}")
+        console.print("\n" + theme.primary(f"Export to: {filename}"))
         response = input("Confirm? [Y/n]: ").strip().lower()
 
         if response and response != 'y':
-            console.print("[dim]Export cancelled[/]")
+            console.print(theme.muted("Export cancelled"))
             input("Press Enter...")
             return
 
@@ -318,9 +344,9 @@ class OutputOverlay:
                 f.write("\n" + "=" * 80 + "\n")
                 f.write(f"Total Lines: {len(context['output_lines'])}\n")
 
-            console.print(f"[green]✓ Exported to:[/] {export_path}")
+            console.print(theme.success(f"✓ Exported to: {export_path}"))
             input("\nPress Enter...")
 
         except Exception as e:
-            console.print(f"[red]✗ Export failed:[/] {str(e)}")
+            console.print(theme.danger(f"✗ Export failed: {str(e)}"))
             input("\nPress Enter...")

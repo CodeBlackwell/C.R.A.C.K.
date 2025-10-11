@@ -30,22 +30,6 @@ class TaskListPanel:
         'skipped': '-'
     }
 
-    # Status colors mapping
-    STATUS_COLORS = {
-        'completed': 'green',
-        'in-progress': 'yellow',
-        'failed': 'red',
-        'pending': 'white',
-        'skipped': 'bright_black'
-    }
-
-    # Priority colors
-    PRIORITY_COLORS = {
-        'HIGH': 'bright_red',
-        'MEDIUM': 'yellow',
-        'LOW': 'bright_black'
-    }
-
     @classmethod
     def render(
         cls,
@@ -53,7 +37,8 @@ class TaskListPanel:
         filter_state: Optional[Dict[str, Any]] = None,
         sort_by: str = 'priority',
         page: int = 1,
-        page_size: int = 10
+        page_size: int = 10,
+        theme=None
     ) -> Tuple[Panel, List[Dict]]:
         """
         Render task list panel with filtering and pagination
@@ -64,10 +49,16 @@ class TaskListPanel:
             sort_by: Sort field ('priority', 'name', 'port', 'time_estimate')
             page: Current page number (1-indexed)
             page_size: Tasks per page (default 10)
+            theme: ThemeManager instance (optional for backward compat)
 
         Returns:
             Tuple of (Rich Panel, choices list for input processing)
         """
+        # Fallback theme for backward compatibility
+        if theme is None:
+            from ..themes import ThemeManager
+            theme = ThemeManager()
+
         # Initialize filter state if not provided
         if filter_state is None:
             filter_state = {
@@ -98,7 +89,7 @@ class TaskListPanel:
 
         # Determine panel state
         if total_tasks == 0:
-            return cls._render_empty_state(profile, filter_state)
+            return cls._render_empty_state(profile, filter_state, theme=theme)
         else:
             return cls._render_task_table(
                 profile,
@@ -108,7 +99,8 @@ class TaskListPanel:
                 page,
                 total_pages,
                 total_tasks,
-                start_idx
+                start_idx,
+                theme=theme
             )
 
     @classmethod
@@ -203,7 +195,8 @@ class TaskListPanel:
         page: int,
         total_pages: int,
         total_tasks: int,
-        start_idx: int
+        start_idx: int,
+        theme=None
     ) -> Tuple[Panel, List[Dict]]:
         """
         Render task table with tasks
@@ -217,17 +210,25 @@ class TaskListPanel:
             total_pages: Total number of pages
             total_tasks: Total number of tasks (after filtering)
             start_idx: Starting index in full list
+            theme: ThemeManager instance (optional for backward compat)
 
         Returns:
             Tuple of (Panel, choices)
         """
+        # Fallback theme for backward compatibility
+        if theme is None:
+            from ..themes import ThemeManager
+            theme = ThemeManager()
+
         # Create table
         table = Table(show_header=True, box=box.SIMPLE, padding=(0, 1))
 
         # Define columns
-        table.add_column("#", style="dim", width=4, justify="right")
+        muted_color = theme.get_color('muted')
+        text_color = theme.get_color('text')
+        table.add_column("#", style=muted_color, width=4, justify="right")
         table.add_column("St", width=3, justify="center")
-        table.add_column("Task Name", style="white", min_width=30)
+        table.add_column("Task Name", style=text_color, min_width=30)
         table.add_column("Port", width=6, justify="right")
         table.add_column("Pri", width=6, justify="center")
         table.add_column("Tags", width=15)
@@ -240,7 +241,7 @@ class TaskListPanel:
         for idx, task in enumerate(tasks, 1):
             # Status icon
             icon = cls.STATUS_ICONS.get(task.status, '?')
-            color = cls.STATUS_COLORS.get(task.status, 'white')
+            color = theme.task_state_color(task.status)
             status_cell = f"[{color}]{icon}[/]"
 
             # Task name (truncate if too long)
@@ -255,17 +256,18 @@ class TaskListPanel:
             # Priority
             priority = task.metadata.get('priority', 'MED')
             priority_abbr = priority[:3] if priority else 'MED'
-            priority_color = cls.PRIORITY_COLORS.get(priority, 'white')
+            priority_color = cls._get_priority_color(priority, theme)
             priority_cell = f"[{priority_color}]{priority_abbr}[/]"
 
             # Tags (show first 2)
             tags = task.metadata.get('tags', [])
-            tag_display = ' '.join([f'[cyan]{tag}[/]' for tag in tags[:2]])
+            tag_color = theme.get_component_color('tag')
+            tag_display = ' '.join([f'[{tag_color}]{tag}[/]' for tag in tags[:2]])
             if not tag_display:
-                tag_display = '[dim]-[/]'
+                tag_display = theme.muted('-')
 
             # Multi-stage indicator
-            stage_info = cls._get_stage_info(task)
+            stage_info = cls._get_stage_info(task, theme)
 
             # Add row
             table.add_row(
@@ -293,34 +295,35 @@ class TaskListPanel:
 
         # Build footer
         footer_table = Table(show_header=False, box=None, padding=(0, 1))
-        footer_table.add_column("Actions", style="white")
+        footer_table.add_column("Actions", style=text_color)
 
-        footer_table.add_row(f"[dim]{filter_info}[/]")
+        footer_table.add_row(theme.muted(filter_info))
         footer_table.add_row("")
 
         # Action menu
-        footer_table.add_row("[bold bright_white]1-{0}.[/] Select task".format(len(tasks)))
+        from ..themes.helpers import format_menu_number
+        footer_table.add_row(f"{format_menu_number(theme, f'1-{len(tasks)}')} Select task")
         choices.append({'id': 'select', 'label': 'Select task by number'})
 
-        footer_table.add_row("[bold bright_white]f.[/] Filter tasks")
+        footer_table.add_row(f"{format_menu_number(theme, 'f')} Filter tasks")
         choices.append({'id': 'filter', 'label': 'Filter tasks'})
 
-        footer_table.add_row("[bold bright_white]s.[/] Sort options")
+        footer_table.add_row(f"{format_menu_number(theme, 's')} Sort options")
         choices.append({'id': 'sort', 'label': 'Sort options'})
 
-        footer_table.add_row("[bold bright_white]/.[/] Search tasks")
+        footer_table.add_row(f"{format_menu_number(theme, '/')} Search tasks")
         choices.append({'id': 'search', 'label': 'Search tasks'})
 
         # Pagination
         if total_pages > 1:
             if page > 1:
-                footer_table.add_row("[bold bright_white]p.[/] Previous page")
+                footer_table.add_row(f"{format_menu_number(theme, 'p')} Previous page")
                 choices.append({'id': 'prev-page', 'label': 'Previous page'})
             if page < total_pages:
-                footer_table.add_row("[bold bright_white]n.[/] Next page")
+                footer_table.add_row(f"{format_menu_number(theme, 'n')} Next page")
                 choices.append({'id': 'next-page', 'label': 'Next page'})
 
-        footer_table.add_row("[bold bright_white]b.[/] Back to dashboard")
+        footer_table.add_row(f"{format_menu_number(theme, 'b')} Back to dashboard")
         choices.append({'id': 'back', 'label': 'Back to dashboard'})
 
         # Combine table and footer
@@ -332,14 +335,14 @@ class TaskListPanel:
         # Build panel
         breadcrumb = "Dashboard > Task List"
         page_info = f"Page {page}/{total_pages}" if total_pages > 1 else "All Tasks"
-        title = f"[bold cyan]{breadcrumb}[/] | [white]{page_info}[/]"
-        subtitle = f"[dim]Showing {len(tasks)} of {total_tasks} tasks | Sort: {sort_by}[/]"
+        title = f"[bold {theme.get_color('primary')}]{breadcrumb}[/] | [{text_color}]{page_info}[/]"
+        subtitle = theme.muted(f"Showing {len(tasks)} of {total_tasks} tasks | Sort: {sort_by}")
 
         return Panel(
             combined_table,
             title=title,
             subtitle=subtitle,
-            border_style="cyan",
+            border_style=theme.panel_border(),
             box=box.ROUNDED
         ), choices
 
@@ -347,7 +350,8 @@ class TaskListPanel:
     def _render_empty_state(
         cls,
         profile,
-        filter_state: Dict[str, Any]
+        filter_state: Dict[str, Any],
+        theme=None
     ) -> Tuple[Panel, List[Dict]]:
         """
         Render empty state (no tasks or all filtered out)
@@ -355,53 +359,61 @@ class TaskListPanel:
         Args:
             profile: TargetProfile instance
             filter_state: Current filter state
+            theme: ThemeManager instance (optional for backward compat)
 
         Returns:
             Tuple of (Panel, choices)
         """
+        # Fallback theme for backward compatibility
+        if theme is None:
+            from ..themes import ThemeManager
+            theme = ThemeManager()
+
         # Check if this is due to filtering or truly empty
         all_tasks = profile.task_tree.get_all_tasks()
         is_filtered_empty = len(all_tasks) > 0
 
         # Build message
         table = Table(show_header=False, box=None, padding=(0, 2))
-        table.add_column("Content", style="white")
+        text_color = theme.get_color('text')
+        table.add_column("Content", style=text_color)
 
         if is_filtered_empty:
-            table.add_row("[yellow]No tasks match current filters[/]")
+            table.add_row(theme.warning("No tasks match current filters"))
             table.add_row("")
-            table.add_row(f"[dim]Total tasks: {len(all_tasks)}[/]")
-            table.add_row(f"[dim]Active filters: {cls._describe_filters(filter_state)}[/]")
+            table.add_row(theme.muted(f"Total tasks: {len(all_tasks)}"))
+            table.add_row(theme.muted(f"Active filters: {cls._describe_filters(filter_state)}"))
         else:
-            table.add_row("[yellow]No tasks yet[/]")
+            table.add_row(theme.warning("No tasks yet"))
             table.add_row("")
-            table.add_row("[dim]Import scan results or add tasks manually to get started[/]")
+            table.add_row(theme.muted("Import scan results or add tasks manually to get started"))
 
         table.add_row("")
 
         # Action menu
+        from ..themes.helpers import format_menu_number
         choices = []
 
         if is_filtered_empty:
-            table.add_row("[bold bright_white]c.[/] Clear filters")
+            table.add_row(f"{format_menu_number(theme, 'c')} Clear filters")
             choices.append({'id': 'clear-filters', 'label': 'Clear filters'})
 
-        table.add_row("[bold bright_white]f.[/] Filter tasks")
+        table.add_row(f"{format_menu_number(theme, 'f')} Filter tasks")
         choices.append({'id': 'filter', 'label': 'Filter tasks'})
 
-        table.add_row("[bold bright_white]b.[/] Back to dashboard")
+        table.add_row(f"{format_menu_number(theme, 'b')} Back to dashboard")
         choices.append({'id': 'back', 'label': 'Back to dashboard'})
 
         # Build panel
         breadcrumb = "Dashboard > Task List"
-        title = f"[bold cyan]{breadcrumb}[/]"
-        subtitle = "[dim]No tasks to display[/]"
+        title = f"[bold {theme.get_color('primary')}]{breadcrumb}[/]"
+        subtitle = theme.muted("No tasks to display")
 
         return Panel(
             table,
             title=title,
             subtitle=subtitle,
-            border_style="cyan",
+            border_style=theme.panel_border(),
             box=box.ROUNDED
         ), choices
 
@@ -484,27 +496,50 @@ class TaskListPanel:
             return value  # Assume minutes
 
     @classmethod
-    def _get_stage_info(cls, task) -> str:
+    def _get_stage_info(cls, task, theme) -> str:
         """
         Get multi-stage task indicator
 
         Args:
             task: TaskNode instance
+            theme: ThemeManager instance
 
         Returns:
             Stage info string (e.g., "[2/3]" or "-")
         """
         if not hasattr(task, 'metadata'):
-            return '[dim]-[/]'
+            return theme.muted('-')
 
         stages = task.metadata.get('stages')
         current_stage = task.metadata.get('current_stage')
 
         if stages and current_stage:
             total = len(stages) if isinstance(stages, list) else stages
-            return f"[cyan][{current_stage}/{total}][/]"
+            info_color = theme.get_color('info')
+            return f"[{info_color}][{current_stage}/{total}][/]"
 
-        return '[dim]-[/]'
+        return theme.muted('-')
+
+    @classmethod
+    def _get_priority_color(cls, priority: str, theme) -> str:
+        """
+        Get color for priority level
+
+        Args:
+            priority: Priority string (HIGH, MEDIUM, LOW)
+            theme: ThemeManager instance
+
+        Returns:
+            Color name
+        """
+        if priority == 'HIGH':
+            return theme.get_color('danger')
+        elif priority == 'MEDIUM':
+            return theme.get_color('warning')
+        elif priority == 'LOW':
+            return theme.get_color('muted')
+        else:
+            return theme.get_color('text')
 
     @classmethod
     def _build_filter_status(

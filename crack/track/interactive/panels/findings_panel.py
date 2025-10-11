@@ -25,7 +25,8 @@ class FindingsPanel:
         cls,
         profile,  # TargetProfile instance
         filter_type: str = 'all',
-        page: int = 1
+        page: int = 1,
+        theme=None
     ) -> Tuple[Panel, List[Dict]]:
         """
         Render findings panel with filtering and pagination
@@ -34,10 +35,15 @@ class FindingsPanel:
             profile: TargetProfile instance with findings data
             filter_type: Filter by type ('all', 'vulnerability', 'directory', 'credential', 'user', 'note')
             page: Current page number (1-indexed)
+            theme: ThemeManager instance (optional for backward compat)
 
         Returns:
             Tuple of (Panel, action choices list)
         """
+        # Fallback theme for backward compatibility
+        if theme is None:
+            from ..themes import ThemeManager
+            theme = ThemeManager()
         # Get findings from profile
         all_findings = profile.findings if hasattr(profile, 'findings') else []
 
@@ -62,7 +68,7 @@ class FindingsPanel:
         page_findings = filtered_findings[start_idx:end_idx]
 
         # Build panel content
-        table = cls._build_findings_table(page_findings, start_idx)
+        table = cls._build_findings_table(page_findings, start_idx, theme)
 
         # Build action menu
         choices = cls._build_action_menu(
@@ -71,7 +77,8 @@ class FindingsPanel:
             current_page,
             total_pages,
             filter_type,
-            page_findings
+            page_findings,
+            theme
         )
 
         # Build subtitle with stats
@@ -87,55 +94,58 @@ class FindingsPanel:
         breadcrumb = "Dashboard > Findings"
         panel = Panel(
             table,
-            title=f"[bold cyan]{breadcrumb}[/]",
-            subtitle=f"[dim]{subtitle}[/]",
-            border_style="cyan",
+            title=theme.emphasis(breadcrumb),
+            subtitle=theme.muted(subtitle),
+            border_style=theme.panel_border(),
             box=box.ROUNDED
         )
 
         return panel, choices
 
     @classmethod
-    def _build_findings_table(cls, findings: List[Dict], start_idx: int) -> Table:
+    def _build_findings_table(cls, findings: List[Dict], start_idx: int, theme) -> Table:
         """
         Build findings table with formatted columns
 
         Args:
             findings: List of findings for current page
             start_idx: Starting index for numbering
+            theme: ThemeManager instance
 
         Returns:
             Rich Table with findings
         """
         table = Table(show_header=True, box=box.SIMPLE, padding=(0, 1))
-        table.add_column("#", style="dim", width=3, justify="right")
-        table.add_column("Type", style="white", width=15)
-        table.add_column("Description", style="white", width=50)
-        table.add_column("Source", style="bright_black", width=25)
-        table.add_column("Time", style="bright_black", width=12)
+        table.add_column("#", style=theme.get_color('muted'), width=3, justify="right")
+        table.add_column("Type", style=theme.get_color('text'), width=15)
+        table.add_column("Description", style=theme.get_color('text'), width=50)
+        table.add_column("Source", style=theme.get_component_color('metadata'), width=25)
+        table.add_column("Time", style=theme.get_component_color('timestamp'), width=12)
 
         if not findings:
             # Empty state
-            table.add_row("", "", "[dim italic]No findings yet - start enumeration to discover vulnerabilities[/]", "", "")
+            empty_msg = theme.muted("No findings yet - start enumeration to discover vulnerabilities")
+            table.add_row("", "", empty_msg, "", "")
             return table
 
         # Add findings to table
+        from ..themes.helpers import format_finding_type, format_timestamp
+
         for idx, finding in enumerate(findings, start=start_idx + 1):
             finding_type = finding.get('type', 'general')
             description = finding.get('description', 'N/A')
             source = finding.get('source', 'N/A')
             timestamp = finding.get('timestamp', '')
 
-            # Get icon for type
-            icon = cls._get_finding_icon(finding_type)
-            type_display = f"{icon} {finding_type.capitalize()}"
+            # Use theme helper for finding type
+            type_display = format_finding_type(theme, finding_type)
 
             # Truncate long descriptions
             description_display = cls._truncate(description, 48)
             source_display = cls._truncate(source, 23)
 
             # Format timestamp (show relative time)
-            time_display = cls._format_timestamp(timestamp)
+            time_display = format_timestamp(theme, cls._format_timestamp(timestamp))
 
             # Add row with proper styling
             table.add_row(
@@ -156,7 +166,8 @@ class FindingsPanel:
         current_page: int,
         total_pages: int,
         filter_type: str,
-        page_findings: List[Dict]
+        page_findings: List[Dict],
+        theme
     ) -> List[Dict]:
         """
         Build context-aware action menu
@@ -168,10 +179,13 @@ class FindingsPanel:
             total_pages: Total number of pages
             filter_type: Current filter type
             page_findings: Findings on current page
+            theme: ThemeManager instance
 
         Returns:
             List of choice dictionaries
         """
+        from ..themes.helpers import format_menu_number
+
         choices = []
 
         # Add blank line before menu
@@ -181,7 +195,7 @@ class FindingsPanel:
         if page_findings:
             num_items = len(page_findings)
             range_text = f"1-{num_items}" if num_items > 1 else "1"
-            table.add_row("", "", f"[bold bright_white]{range_text}.[/] Select finding (view details)", "", "")
+            table.add_row("", "", f"{format_menu_number(theme, range_text)} Select finding (view details)", "", "")
 
             # Add choices for each finding
             for idx, finding in enumerate(page_findings, start=1):
@@ -193,7 +207,7 @@ class FindingsPanel:
                 })
 
         # Filter option
-        table.add_row("", "", f"[bold bright_white]f.[/] Filter by type (current: {filter_type})", "", "")
+        table.add_row("", "", f"{format_menu_number(theme, 'f')} Filter by type (current: {filter_type})", "", "")
         choices.append({
             'id': 'f',
             'label': 'Filter by type',
@@ -203,7 +217,7 @@ class FindingsPanel:
 
         # Export options (only if findings exist)
         if total_findings > 0:
-            table.add_row("", "", f"[bold bright_white]e.[/] Export findings (Markdown/JSON)", "", "")
+            table.add_row("", "", f"{format_menu_number(theme, 'e')} Export findings (Markdown/JSON)", "", "")
             choices.append({
                 'id': 'e',
                 'label': 'Export findings',
@@ -211,7 +225,8 @@ class FindingsPanel:
             })
 
             # Correlate findings (future feature - placeholder)
-            table.add_row("", "", f"[bold bright_white]c.[/] Correlate findings [dim](coming soon)[/]", "", "")
+            coming_soon = theme.muted("(coming soon)")
+            table.add_row("", "", f"{format_menu_number(theme, 'c')} Correlate findings {coming_soon}", "", "")
             choices.append({
                 'id': 'c',
                 'label': 'Correlate findings',
@@ -223,7 +238,7 @@ class FindingsPanel:
             table.add_row("", "", "", "", "")
 
             if current_page < total_pages:
-                table.add_row("", "", f"[bold bright_white]n.[/] Next page ({current_page + 1}/{total_pages})", "", "")
+                table.add_row("", "", f"{format_menu_number(theme, 'n')} Next page ({current_page + 1}/{total_pages})", "", "")
                 choices.append({
                     'id': 'n',
                     'label': 'Next page',
@@ -232,7 +247,7 @@ class FindingsPanel:
                 })
 
             if current_page > 1:
-                table.add_row("", "", f"[bold bright_white]p.[/] Previous page ({current_page - 1}/{total_pages})", "", "")
+                table.add_row("", "", f"{format_menu_number(theme, 'p')} Previous page ({current_page - 1}/{total_pages})", "", "")
                 choices.append({
                     'id': 'p',
                     'label': 'Previous page',
@@ -241,7 +256,7 @@ class FindingsPanel:
                 })
 
         # Always show back option
-        table.add_row("", "", f"[bold bright_white]b.[/] Back to dashboard", "", "")
+        table.add_row("", "", f"{format_menu_number(theme, 'b')} Back to dashboard", "", "")
         choices.append({
             'id': 'b',
             'label': 'Back to dashboard',
@@ -249,26 +264,6 @@ class FindingsPanel:
         })
 
         return choices
-
-    @classmethod
-    def _get_finding_icon(cls, finding_type: str) -> str:
-        """
-        Get emoji icon for finding type
-
-        Args:
-            finding_type: Type of finding
-
-        Returns:
-            Emoji icon string
-        """
-        icons = {
-            'vulnerability': '🔓',
-            'directory': '📁',
-            'credential': '🔑',
-            'user': '👤',
-            'note': '📝'
-        }
-        return icons.get(finding_type.lower(), '•')
 
     @classmethod
     def _filter_findings(cls, findings: List[Dict], filter_type: str) -> List[Dict]:

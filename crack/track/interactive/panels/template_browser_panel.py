@@ -21,7 +21,8 @@ class TemplateBrowserPanel:
     def render(
         cls,
         category: str = 'all',
-        page: int = 1
+        page: int = 1,
+        theme=None
     ) -> Tuple[Panel, List[Dict]]:
         """
         Render template browser panel with category filtering
@@ -29,10 +30,15 @@ class TemplateBrowserPanel:
         Args:
             category: Filter by category ('all', 'recon', 'web', 'enumeration', 'exploitation')
             page: Current page number (1-indexed)
+            theme: ThemeManager instance (optional for backward compat)
 
         Returns:
             Tuple of (Panel, action choices list)
         """
+        # Fallback theme for backward compatibility
+        if theme is None:
+            from ..themes import ThemeManager
+            theme = ThemeManager()
         from ..templates import TemplateRegistry
 
         # Get all templates
@@ -61,7 +67,7 @@ class TemplateBrowserPanel:
         page_templates = sorted_templates[start_idx:end_idx]
 
         # Build panel content
-        table = cls._build_templates_table(page_templates, start_idx)
+        table = cls._build_templates_table(page_templates, start_idx, theme)
 
         # Build action menu
         choices = cls._build_action_menu(
@@ -70,7 +76,8 @@ class TemplateBrowserPanel:
             current_page,
             total_pages,
             category,
-            page_templates
+            page_templates,
+            theme
         )
 
         # Build subtitle with stats
@@ -83,39 +90,41 @@ class TemplateBrowserPanel:
             subtitle += f" | Page {current_page}/{total_pages}"
 
         # Build panel
+        from ..themes.helpers import format_panel_title
         breadcrumb = "Dashboard > Scan Templates"
         panel = Panel(
             table,
-            title=f"[bold cyan]{breadcrumb}[/]",
-            subtitle=f"[dim]{subtitle}[/]",
-            border_style="cyan",
+            title=format_panel_title(theme, breadcrumb),
+            subtitle=theme.muted(subtitle),
+            border_style=theme.panel_border(),
             box=box.ROUNDED
         )
 
         return panel, choices
 
     @classmethod
-    def _build_templates_table(cls, templates: List[Any], start_idx: int) -> Table:
+    def _build_templates_table(cls, templates: List[Any], start_idx: int, theme) -> Table:
         """
         Build templates table with formatted columns
 
         Args:
             templates: List of CommandTemplate instances for current page
             start_idx: Starting index for numbering
+            theme: ThemeManager instance
 
         Returns:
             Rich Table with templates
         """
         table = Table(show_header=True, box=box.SIMPLE, padding=(0, 1))
-        table.add_column("#", style="dim", width=3, justify="right")
-        table.add_column("Name", style="white", width=30)
-        table.add_column("Description", style="white", width=45)
-        table.add_column("Category", style="bright_black", width=12)
-        table.add_column("Time", style="bright_black", width=8)
+        table.add_column("#", style=theme.get_color('muted'), width=3, justify="right")
+        table.add_column("Name", style=theme.get_color('text'), width=30)
+        table.add_column("Description", style=theme.get_color('text'), width=45)
+        table.add_column("Category", style=theme.get_color('muted'), width=12)
+        table.add_column("Time", style=theme.get_color('muted'), width=8)
 
         if not templates:
             # Empty state
-            table.add_row("", "", "[dim italic]No templates found for this category[/]", "", "")
+            table.add_row("", "", theme.muted("[italic]No templates found for this category[/]"), "", "")
             return table
 
         # Add templates to table
@@ -159,7 +168,8 @@ class TemplateBrowserPanel:
         current_page: int,
         total_pages: int,
         category: str,
-        page_templates: List[Any]
+        page_templates: List[Any],
+        theme
     ) -> List[Dict]:
         """
         Build context-aware action menu
@@ -171,10 +181,12 @@ class TemplateBrowserPanel:
             total_pages: Total number of pages
             category: Current category filter
             page_templates: Templates on current page
+            theme: ThemeManager instance
 
         Returns:
             List of choice dictionaries
         """
+        from ..themes.helpers import format_menu_number, format_hotkey
         choices = []
 
         # Add blank line before menu
@@ -184,7 +196,7 @@ class TemplateBrowserPanel:
         if page_templates:
             num_items = len(page_templates)
             range_text = f"1-{num_items}" if num_items > 1 else "1"
-            table.add_row("", "", f"[bold bright_white]{range_text}.[/] Select template", "", "")
+            table.add_row("", "", f"{theme.emphasis(range_text + '.')} Select template", "", "")
 
             # Add choices for each template
             for idx, template in enumerate(page_templates, start=1):
@@ -196,7 +208,7 @@ class TemplateBrowserPanel:
                 })
 
         # Category filter option
-        table.add_row("", "", f"[bold bright_white]c.[/] Change category (current: {category})", "", "")
+        table.add_row("", "", f"{format_hotkey(theme, 'c')}. Change category {theme.muted(f'(current: {category})')}", "", "")
         choices.append({
             'id': 'c',
             'label': 'Change category',
@@ -205,7 +217,7 @@ class TemplateBrowserPanel:
         })
 
         # Search option
-        table.add_row("", "", f"[bold bright_white]s.[/] Search templates by keyword", "", "")
+        table.add_row("", "", f"{format_hotkey(theme, 's')}. Search templates by keyword", "", "")
         choices.append({
             'id': 's',
             'label': 'Search templates',
@@ -217,7 +229,7 @@ class TemplateBrowserPanel:
             table.add_row("", "", "", "", "")
 
             if current_page < total_pages:
-                table.add_row("", "", f"[bold bright_white]n.[/] Next page ({current_page + 1}/{total_pages})", "", "")
+                table.add_row("", "", f"{format_hotkey(theme, 'n')}. Next page {theme.muted(f'({current_page + 1}/{total_pages})')}", "", "")
                 choices.append({
                     'id': 'n',
                     'label': 'Next page',
@@ -226,7 +238,7 @@ class TemplateBrowserPanel:
                 })
 
             if current_page > 1:
-                table.add_row("", "", f"[bold bright_white]p.[/] Previous page ({current_page - 1}/{total_pages})", "", "")
+                table.add_row("", "", f"{format_hotkey(theme, 'p')}. Previous page {theme.muted(f'({current_page - 1}/{total_pages})')}", "", "")
                 choices.append({
                     'id': 'p',
                     'label': 'Previous page',
@@ -235,7 +247,7 @@ class TemplateBrowserPanel:
                 })
 
         # Always show back option
-        table.add_row("", "", f"[bold bright_white]b.[/] Back to dashboard", "", "")
+        table.add_row("", "", f"{format_hotkey(theme, 'b')}. Back to dashboard", "", "")
         choices.append({
             'id': 'b',
             'label': 'Back to dashboard',

@@ -23,16 +23,21 @@ class StatusOverlay:
     """Status information overlay"""
 
     @classmethod
-    def render(cls, profile) -> Panel:
+    def render(cls, profile, theme=None) -> Panel:
         """
         Render status overlay panel
 
         Args:
             profile: TargetProfile instance
+            theme: ThemeManager instance (optional for backward compat)
 
         Returns:
             Rich Panel for overlay display
         """
+        # Fallback theme for backward compatibility
+        if theme is None:
+            from ..themes import ThemeManager
+            theme = ThemeManager()
         # Get progress data
         progress = profile.get_progress()
         total = progress['total']
@@ -42,8 +47,9 @@ class StatusOverlay:
 
         # Build status table
         table = Table(show_header=False, box=None, padding=(0, 2))
-        table.add_column("Label", style="bold cyan", width=20)
-        table.add_column("Value", style="white")
+        label_style = f"bold {theme.get_color('primary')}"
+        table.add_column("Label", style=label_style, width=20)
+        table.add_column("Value", style=theme.get_color('text'))
 
         # Basic info
         table.add_row("Target:", profile.target)
@@ -53,9 +59,9 @@ class StatusOverlay:
 
         # Progress
         table.add_row("Progress:", f"{completed}/{total} tasks ({pct}%)")
-        table.add_row("  Completed:", f"[green]{completed}[/]")
-        table.add_row("  Pending:", f"[yellow]{pending}[/]")
-        table.add_row("  In-Progress:", f"[cyan]{progress.get('in_progress', 0)}[/]")
+        table.add_row("  Completed:", theme.success(str(completed)))
+        table.add_row("  Pending:", theme.warning(str(pending)))
+        table.add_row("  In-Progress:", theme.primary(str(progress.get('in_progress', 0))))
         table.add_row("", "")
 
         # Ports
@@ -64,6 +70,7 @@ class StatusOverlay:
 
         if profile.ports:
             # Show first 5 ports with details
+            from ..themes.helpers import format_port_state
             sorted_ports = sorted(profile.ports.keys())[:5]
             for port in sorted_ports:
                 info = profile.ports[port]
@@ -71,23 +78,12 @@ class StatusOverlay:
                 version = info.get('version', '')
                 state = info.get('state', 'unknown')
 
-                # Format port line
-                port_line = f"{port}/tcp"
-                if service and service != 'unknown':
-                    port_line += f" - {service}"
-                if version:
-                    port_line += f" ({version})"
-
-                # Color code by state
-                if state == 'open':
-                    port_line = f"[green]{port_line}[/]"
-                elif state == 'filtered':
-                    port_line = f"[yellow]{port_line}[/]"
-
+                # Format port line with theme colors
+                port_line = format_port_state(theme, port, state, service, version)
                 table.add_row("", f"  • {port_line}")
 
             if port_count > 5:
-                table.add_row("", f"  [dim]... and {port_count - 5} more[/]")
+                table.add_row("", theme.muted(f"  ... and {port_count - 5} more"))
 
         table.add_row("", "")
 
@@ -97,20 +93,21 @@ class StatusOverlay:
 
         if profile.findings:
             # Count by type
+            from ..themes.helpers import format_finding_type
             finding_types = {}
             for finding in profile.findings:
                 f_type = finding.get('type', 'general')
                 finding_types[f_type] = finding_types.get(f_type, 0) + 1
 
             for f_type, count in finding_types.items():
-                icon = cls._get_finding_icon(f_type)
-                table.add_row("", f"  {icon} {f_type.title()}: {count}")
+                formatted = format_finding_type(theme, f_type, count)
+                table.add_row("", f"  {formatted}")
 
         table.add_row("", "")
 
         # Credentials
         cred_count = len(profile.credentials)
-        table.add_row("Credentials:", f"[yellow]{cred_count}[/]")
+        table.add_row("Credentials:", theme.warning(str(cred_count)))
 
         table.add_row("", "")
 
@@ -132,9 +129,9 @@ class StatusOverlay:
 
         return Panel(
             table,
-            title="[bold green]Quick Status[/]",
-            subtitle="[dim]Press any key to close[/]",
-            border_style="green",
+            title=f"[bold {theme.get_color('success')}]Quick Status[/]",
+            subtitle=theme.muted("Press any key to close"),
+            border_style=theme.overlay_border(),
             box=box.ROUNDED
         )
 

@@ -11,6 +11,7 @@ Usage:
 
 from crack.track.core.state import TargetProfile
 from crack.track.interactive.panels.finding_form import FindingFormPanel
+from crack.track.interactive.themes import ThemeManager
 from rich.console import Console
 
 
@@ -20,9 +21,10 @@ def demo_basic_usage():
 
     # Create or load profile
     profile = TargetProfile('192.168.1.100')
+    theme = ThemeManager()
 
     # Create form instance
-    form = FindingFormPanel.create(profile)
+    form = FindingFormPanel.create(profile, theme)
 
     # Render panel (returns Panel and choices)
     panel, choices = form.render()
@@ -42,7 +44,8 @@ def demo_field_editing():
 
     # Create profile and form
     profile = TargetProfile('192.168.1.100')
-    form = FindingFormPanel.create(profile)
+    theme = ThemeManager()
+    form = FindingFormPanel.create(profile, theme)
 
     # Simulate user filling out form
     console.print("[cyan]Simulating form entry...[/]\n")
@@ -99,9 +102,10 @@ def demo_field_editing():
 def demo_type_selector():
     """Demonstrate type selection dropdown"""
     console = Console()
+    theme = ThemeManager()
 
     # Render type selector
-    panel, choices = FindingFormPanel.render_type_selector()
+    panel, choices = FindingFormPanel.render_type_selector(theme=theme)
 
     console.print(panel)
 
@@ -113,9 +117,10 @@ def demo_type_selector():
 def demo_severity_selector():
     """Demonstrate severity selection dropdown"""
     console = Console()
+    theme = ThemeManager()
 
     # Render severity selector with current selection
-    panel, choices = FindingFormPanel.render_severity_selector('high')
+    panel, choices = FindingFormPanel.render_severity_selector('high', theme=theme)
 
     console.print(panel)
 
@@ -129,7 +134,8 @@ def demo_validation_errors():
     console = Console()
 
     profile = TargetProfile('192.168.1.100')
-    form = FindingFormPanel.create(profile)
+    theme = ThemeManager()
+    form = FindingFormPanel.create(profile, theme)
 
     # Try to save without filling required fields
     console.print("[cyan]Attempting to save empty form...[/]\n")
@@ -156,7 +162,7 @@ def demo_integration_example():
 
 [dim]def _finding_form_loop(self):
     '''Finding entry form panel loop'''
-    form = FindingFormPanel.create(self.profile)
+    form = FindingFormPanel.create(self.profile, self.theme)
 
     while True:
         # Render panel
@@ -181,10 +187,10 @@ def demo_integration_example():
             if field_info['type'] == 'dropdown':
                 # Show dropdown selector
                 if field_info['field_name'] == 'type':
-                    panel, choices = FindingFormPanel.render_type_selector()
+                    panel, choices = FindingFormPanel.render_type_selector(theme=self.theme)
                     # ... handle selection
                 elif field_info['field_name'] == 'severity':
-                    panel, choices = FindingFormPanel.render_severity_selector()
+                    panel, choices = FindingFormPanel.render_severity_selector(theme=self.theme)
                     # ... handle selection
             else:
                 # Text/numeric input

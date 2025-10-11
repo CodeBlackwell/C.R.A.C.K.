@@ -20,30 +20,36 @@ class TreeOverlay:
     """Task tree visualization overlay"""
 
     @classmethod
-    def render(cls, profile, max_tasks: int = 20) -> Panel:
+    def render(cls, profile, max_tasks: int = 20, theme=None) -> Panel:
         """
         Render task tree overlay panel
 
         Args:
             profile: TargetProfile instance
             max_tasks: Maximum number of tasks to display
+            theme: ThemeManager instance (optional for backward compat)
 
         Returns:
             Rich Panel for overlay display
         """
+        # Fallback theme for backward compatibility
+        if theme is None:
+            from ..themes import ThemeManager
+            theme = ThemeManager()
+
         # Get all tasks
         all_tasks = profile.task_tree.get_all_tasks()
 
         if not all_tasks:
             # Empty state
-            tree_text = "[dim]No tasks yet.[/]\n\n"
-            tree_text += "[cyan]Import a scan file to generate tasks automatically.[/]"
+            tree_text = theme.muted("No tasks yet.") + "\n\n"
+            tree_text += theme.primary("Import a scan file to generate tasks automatically.")
 
             return Panel(
                 tree_text,
-                title="[bold blue]Task Tree[/]",
-                subtitle="[dim]Press any key to close[/]",
-                border_style="blue",
+                title=f"[bold {theme.get_color('info')}]Task Tree[/]",
+                subtitle=theme.muted("Press any key to close"),
+                border_style=theme.overlay_border(),
                 box=box.ROUNDED
             )
 
@@ -53,7 +59,7 @@ class TreeOverlay:
 
         for task in shown_tasks:
             # Get status symbol and color
-            symbol, color = cls._get_status_symbol(task.status)
+            symbol, color = cls._get_status_symbol(task.status, theme)
 
             # Get task info
             name = task.name
@@ -82,12 +88,16 @@ class TreeOverlay:
         if len(all_tasks) > max_tasks:
             remaining = len(all_tasks) - max_tasks
             tree_lines.append("")
-            tree_lines.append(f"[dim]... and {remaining} more tasks[/]")
+            tree_lines.append(theme.muted(f"... and {remaining} more tasks"))
 
         tree_text = "\n".join(tree_lines)
 
-        # Add legend
-        legend = "\n\n[dim]Legend: [green]✓[/] Complete | [cyan]~[/] In-Progress | [yellow]•[/] Pending | [red]✗[/] Failed[/]"
+        # Add legend with themed colors
+        legend = "\n\n" + theme.muted("Legend: ")
+        legend += f"[{theme.task_state_color('completed')}]✓[/] Complete | "
+        legend += f"[{theme.task_state_color('in-progress')}]~[/] In-Progress | "
+        legend += f"[{theme.task_state_color('pending')}]•[/] Pending | "
+        legend += f"[{theme.task_state_color('failed')}]✗[/] Failed"
         tree_text += legend
 
         # Progress summary
@@ -96,37 +106,41 @@ class TreeOverlay:
         completed = progress['completed']
         pct = int((completed / total * 100) if total > 0 else 0)
 
-        subtitle = f"[dim]Showing {len(shown_tasks)}/{total} tasks | {completed} completed ({pct}%) | Press any key to close[/]"
+        subtitle = theme.muted(f"Showing {len(shown_tasks)}/{total} tasks | {completed} completed ({pct}%) | Press any key to close")
 
         return Panel(
             tree_text,
-            title="[bold blue]Task Tree[/]",
+            title=f"[bold {theme.get_color('info')}]Task Tree[/]",
             subtitle=subtitle,
-            border_style="blue",
+            border_style=theme.overlay_border(),
             box=box.ROUNDED
         )
 
     @classmethod
-    def _get_status_symbol(cls, status: str) -> tuple:
+    def _get_status_symbol(cls, status: str, theme) -> tuple:
         """
         Get status symbol and color
 
         Args:
             status: Task status
+            theme: ThemeManager instance
 
         Returns:
             Tuple of (symbol, color)
         """
-        status_map = {
-            'completed': ('✓', 'green'),
-            'in-progress': ('~', 'cyan'),
-            'pending': ('•', 'yellow'),
-            'failed': ('✗', 'red'),
-            'blocked': ('⊗', 'red'),
-            'skipped': ('○', 'dim')
+        symbol_map = {
+            'completed': '✓',
+            'in-progress': '~',
+            'pending': '•',
+            'failed': '✗',
+            'blocked': '⊗',
+            'skipped': '○'
         }
 
-        return status_map.get(status, ('•', 'yellow'))
+        symbol = symbol_map.get(status, '•')
+        color = theme.task_state_color(status)
+
+        return (symbol, color)
 
     @classmethod
     def _get_indent_level(cls, task) -> int:
@@ -150,7 +164,7 @@ class TreeOverlay:
         return level
 
     @classmethod
-    def render_filtered(cls, profile, filter_status: str = None, max_tasks: int = 20) -> Panel:
+    def render_filtered(cls, profile, filter_status: str = None, max_tasks: int = 20, theme=None) -> Panel:
         """
         Render filtered task tree
 
@@ -158,10 +172,15 @@ class TreeOverlay:
             profile: TargetProfile instance
             filter_status: Status to filter by (completed, pending, etc.)
             max_tasks: Maximum tasks to display
+            theme: ThemeManager instance (optional for backward compat)
 
         Returns:
             Rich Panel with filtered tree
         """
+        # Fallback theme for backward compatibility
+        if theme is None:
+            from ..themes import ThemeManager
+            theme = ThemeManager()
         # Get filtered tasks
         if filter_status == 'completed':
             tasks = profile.task_tree.get_completed_tasks()
@@ -179,7 +198,7 @@ class TreeOverlay:
         shown_tasks = tasks[:max_tasks]
 
         for task in shown_tasks:
-            symbol, color = cls._get_status_symbol(task.status)
+            symbol, color = cls._get_status_symbol(task.status, theme)
             name = task.name
 
             # Add tags
@@ -202,24 +221,24 @@ class TreeOverlay:
             tree_lines.append(line)
 
         if not tree_lines:
-            tree_text = f"[dim]No {filter_status} tasks found.[/]"
+            tree_text = theme.muted(f"No {filter_status} tasks found.")
         else:
             tree_text = "\n".join(tree_lines)
 
             if len(tasks) > max_tasks:
                 remaining = len(tasks) - max_tasks
-                tree_text += f"\n\n[dim]... and {remaining} more[/]"
+                tree_text += "\n\n" + theme.muted(f"... and {remaining} more")
 
         # Title with filter
         filter_label = f" - {filter_status.title()}" if filter_status else ""
-        title = f"[bold blue]Task Tree{filter_label}[/]"
+        title = f"[bold {theme.get_color('info')}]Task Tree{filter_label}[/]"
 
-        subtitle = f"[dim]Showing {len(shown_tasks)}/{len(tasks)} tasks | Press any key to close[/]"
+        subtitle = theme.muted(f"Showing {len(shown_tasks)}/{len(tasks)} tasks | Press any key to close")
 
         return Panel(
             tree_text,
             title=title,
             subtitle=subtitle,
-            border_style="blue",
+            border_style=theme.overlay_border(),
             box=box.ROUNDED
         )

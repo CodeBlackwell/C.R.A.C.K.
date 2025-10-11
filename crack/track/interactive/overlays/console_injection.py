@@ -33,7 +33,8 @@ class ConsoleInjection:
         cls,
         console: Console,
         command: str,
-        profile: 'TargetProfile' = None
+        profile: 'TargetProfile' = None,
+        theme=None
     ) -> Optional[Tuple[List[str], int, float]]:
         """
         Execute command and display results
@@ -42,12 +43,18 @@ class ConsoleInjection:
             console: Rich Console instance
             command: Command to execute (without :! prefix)
             profile: Optional TargetProfile for context saving
+            theme: ThemeManager instance (optional for backward compat)
 
         Returns:
             Tuple of (output_lines, exit_code, duration) or None if execution failed
         """
+        # Fallback theme for backward compatibility
+        if theme is None:
+            from ..themes import ThemeManager
+            theme = ThemeManager()
+
         if not command or not command.strip():
-            console.print("[yellow]No command specified[/]")
+            console.print(theme.warning("No command specified"))
             return None
 
         # Clean command
@@ -55,10 +62,10 @@ class ConsoleInjection:
 
         # Display execution banner
         console.print()
-        console.print("=" * 80, style="dim")
-        console.print(f"[bold cyan]Console Injection[/] [dim](:! mode)[/]")
-        console.print(f"[white]>[/] [cyan]{command}[/]")
-        console.print("=" * 80, style="dim")
+        console.print(theme.muted("=" * 80))
+        console.print(f"[bold {theme.get_color('primary')}]Console Injection[/] {theme.muted('(:! mode)')}")
+        console.print(f"[white]>[/] [{theme.get_color('primary')}]{command}[/]")
+        console.print(theme.muted("=" * 80))
         console.print()
 
         # Execute command
@@ -69,19 +76,19 @@ class ConsoleInjection:
             for line in output_lines:
                 console.print(line)
         else:
-            console.print("[dim](no output)[/]", style="dim")
+            console.print(theme.muted("(no output)"))
 
         # Display footer
         console.print()
-        console.print("=" * 80, style="dim")
+        console.print(theme.muted("=" * 80))
 
         # Status with color
         if exit_code == 0:
-            status_text = f"[green]✓ Success[/]"
+            status_text = theme.success("✓ Success")
         else:
-            status_text = f"[red]✗ Failed (exit code: {exit_code})[/]"
+            status_text = theme.danger(f"✗ Failed (exit code: {exit_code})")
 
-        console.print(f"{status_text} | [cyan]Duration: {duration:.2f}s[/] | [white]Lines: {len(output_lines)}[/]")
+        console.print(f"{status_text} | [{theme.get_color('primary')}]Duration: {duration:.2f}s[/] | [white]Lines: {len(output_lines)}[/]")
 
         # Offer to save to context (if profile provided)
         if profile and len(output_lines) > 0:
@@ -104,12 +111,12 @@ class ConsoleInjection:
                 # Save profile
                 profile.save()
 
-                console.print("[green]✓ Saved to output history[/]")
-                console.print(f"[dim]View with 'o' (Output overlay)[/]")
+                console.print(theme.success("✓ Saved to output history"))
+                console.print(theme.muted("View with 'o' (Output overlay)"))
 
-        console.print("=" * 80, style="dim")
+        console.print(theme.muted("=" * 80))
         console.print()
-        console.print("[dim]Press Enter to continue...[/]", end="")
+        console.print(theme.muted("Press Enter to continue..."), end="")
         input()
 
         return (output_lines, exit_code, duration)

@@ -113,6 +113,21 @@ class LogCategory(Enum):
     SYSTEM_SHUTDOWN = "SYSTEM.SHUTDOWN"
     SYSTEM_ERROR = "SYSTEM.ERROR"
 
+    # Theme Categories
+    THEME = "THEME"
+    THEME_LOAD = "THEME.LOAD"
+    THEME_SWITCH = "THEME.SWITCH"
+    THEME_ERROR = "THEME.ERROR"
+
+    # Config Categories
+    CONFIG = "CONFIG"
+    CONFIG_LOAD = "CONFIG.LOAD"
+    CONFIG_SAVE = "CONFIG.SAVE"
+    CONFIG_ERROR = "CONFIG.ERROR"
+
+    # UI Command Categories
+    UI_COMMAND = "UI.COMMAND"
+
     def matches(self, pattern: str) -> bool:
         """
         Check if this category matches a pattern

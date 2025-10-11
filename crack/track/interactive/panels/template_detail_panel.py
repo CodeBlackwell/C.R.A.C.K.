@@ -20,7 +20,8 @@ class TemplateDetailPanel:
         cls,
         template,  # CommandTemplate instance
         filled_values: Optional[Dict[str, str]] = None,
-        execution_result: Optional[Dict[str, Any]] = None
+        execution_result: Optional[Dict[str, Any]] = None,
+        theme=None
     ) -> Tuple[Panel, List[Dict]]:
         """
         Render template detail panel with variable input form
@@ -29,38 +30,45 @@ class TemplateDetailPanel:
             template: CommandTemplate instance
             filled_values: Dict of variable_name -> value (if already filled)
             execution_result: Result of command execution if completed
+            theme: ThemeManager instance (optional for backward compat)
 
         Returns:
             Tuple of (Panel, action choices list)
         """
+        # Fallback theme for backward compatibility
+        if theme is None:
+            from ..themes import ThemeManager
+            theme = ThemeManager()
         # Build panel content
         table = Table(show_header=False, box=None, padding=(0, 1))
-        table.add_column("Content", style="white", width=100)
+        table.add_column("Content", style=theme.get_color('text'), width=100)
 
         # Template header
-        table.add_row(f"[bold cyan]{template.name}[/]")
-        table.add_row(f"[dim]{template.description}[/]")
+        table.add_row(theme.primary(f"[bold]{template.name}[/]"))
+        table.add_row(theme.muted(template.description))
         table.add_row("")
 
         # Metadata
         icon = cls._get_category_icon(template.category)
-        table.add_row(f"{icon} Category: [cyan]{template.category.upper()}[/]  |  ⏱ Time: [yellow]{template.estimated_time}[/]")
+        table.add_row(f"{icon} Category: {theme.primary(template.category.upper())}  |  ⏱ Time: {theme.warning(template.estimated_time)}")
 
         # Tags
         if template.tags:
-            tags_str = " ".join([f"[magenta]#{tag}[/]" for tag in template.tags])
+            tags_str = " ".join([f"{theme.secondary(f'#{tag}')}" for tag in template.tags])
             table.add_row(f"Tags: {tags_str}")
 
         table.add_row("")
 
         # Command template (with syntax highlighting)
-        table.add_row("[bold]Command Template:[/]")
-        table.add_row(f"[bright_black]$ [/][green]{template.command}[/]")
+        table.add_row(theme.emphasis("Command Template:"))
+        prompt_color = theme.get_color('muted')
+        cmd_color = theme.get_color('success')
+        table.add_row(f"[{prompt_color}]$ [/][{cmd_color}]{template.command}[/]")
         table.add_row("")
 
         # Variables section
         if template.variables:
-            table.add_row("[bold]Required Variables:[/]")
+            table.add_row(theme.emphasis("Required Variables:"))
             for var in template.variables:
                 var_name = var['name']
                 var_desc = var.get('description', '')
@@ -70,55 +78,55 @@ class TemplateDetailPanel:
                 # Show filled value if available
                 if filled_values and var_name in filled_values:
                     filled_value = filled_values[var_name]
-                    table.add_row(f"  • [cyan]{var_name}[/]: [green]{filled_value}[/] ✓")
+                    table.add_row(f"  • {theme.primary(var_name)}: {theme.success(filled_value)} ✓")
                 else:
-                    req_indicator = "[red]*[/]" if var_required else "[dim](optional)[/]"
-                    var_line = f"  • [cyan]{var_name}[/] {req_indicator}"
+                    req_indicator = theme.danger("*") if var_required else theme.muted("(optional)")
+                    var_line = f"  • {theme.primary(var_name)} {req_indicator}"
                     if var_desc:
                         var_line += f" - {var_desc}"
                     if var_example:
-                        var_line += f" [dim]e.g., {var_example}[/]"
+                        var_line += f" {theme.muted(f'e.g., {var_example}')}"
                     table.add_row(var_line)
 
             table.add_row("")
 
         # Flag explanations
         if template.flag_explanations:
-            table.add_row("[bold]Flag Explanations:[/]")
+            table.add_row(theme.emphasis("Flag Explanations:"))
             for flag, explanation in template.flag_explanations.items():
-                table.add_row(f"  • [yellow]{flag}[/]: {explanation}")
+                table.add_row(f"  • {theme.warning(flag)}: {explanation}")
             table.add_row("")
 
         # Filled command preview (if values provided)
         if filled_values:
             try:
                 final_command = template.fill(filled_values)
-                table.add_row("[bold]Final Command:[/]")
-                table.add_row(f"[bright_black]$ [/][bright_green]{final_command}[/]")
+                table.add_row(theme.emphasis("Final Command:"))
+                table.add_row(f"[{theme.get_color('muted')}]$ [/]{theme.success(final_command)}")
                 table.add_row("")
             except Exception as e:
-                table.add_row(f"[red]Error filling template: {e}[/]")
+                table.add_row(theme.danger(f"Error filling template: {e}"))
                 table.add_row("")
 
         # Success indicators
         if template.success_indicators:
-            table.add_row("[bold]Success Indicators:[/]")
+            table.add_row(theme.emphasis("Success Indicators:"))
             for indicator in template.success_indicators:
                 table.add_row(f"  ✓ {indicator}")
             table.add_row("")
 
         # Manual alternatives
         if template.alternatives:
-            table.add_row("[bold]Manual Alternatives:[/]")
+            table.add_row(theme.emphasis("Manual Alternatives:"))
             for alt in template.alternatives:
                 # Fill alternatives with values if available
                 if filled_values:
                     alt_filled = alt
                     for key, value in filled_values.items():
                         alt_filled = alt_filled.replace(f"<{key}>", value)
-                    table.add_row(f"  • [dim]{alt_filled}[/]")
+                    table.add_row(f"  • {theme.muted(alt_filled)}")
                 else:
-                    table.add_row(f"  • [dim]{alt}[/]")
+                    table.add_row(f"  • {theme.muted(alt)}")
             table.add_row("")
 
         # Execution result (if available)
@@ -128,29 +136,30 @@ class TemplateDetailPanel:
             output_lines = execution_result.get('output_lines', [])
 
             if exit_code == 0:
-                table.add_row(f"[bold green]✓ Execution successful[/] [dim]({elapsed:.2f}s)[/]")
+                table.add_row(f"{theme.success('[bold]✓ Execution successful[/]')} {theme.muted(f'({elapsed:.2f}s)')}")
             else:
-                table.add_row(f"[bold red]✗ Execution failed[/] [dim](exit code: {exit_code}, {elapsed:.2f}s)[/]")
+                table.add_row(f"{theme.danger('[bold]✗ Execution failed[/]')} {theme.muted(f'(exit code: {exit_code}, {elapsed:.2f}s)')}")
 
             # Show first/last few lines of output
             if output_lines:
                 table.add_row("")
-                table.add_row("[bold]Output Preview:[/]")
+                table.add_row(theme.emphasis("Output Preview:"))
                 preview_lines = output_lines[:3] + ['...'] + output_lines[-3:] if len(output_lines) > 6 else output_lines
                 for line in preview_lines:
-                    table.add_row(f"[dim]{line}[/]")
+                    table.add_row(theme.muted(line))
 
             table.add_row("")
 
         # Build action menu
-        choices = cls._build_action_menu(table, template, filled_values, execution_result)
+        choices = cls._build_action_menu(table, template, filled_values, execution_result, theme)
 
         # Build panel
+        from ..themes.helpers import format_panel_title
         breadcrumb = f"Dashboard > Scan Templates > {template.name}"
         panel = Panel(
             table,
-            title=f"[bold cyan]{breadcrumb}[/]",
-            border_style="cyan",
+            title=format_panel_title(theme, breadcrumb),
+            border_style=theme.panel_border(),
             box=box.ROUNDED
         )
 
@@ -162,7 +171,8 @@ class TemplateDetailPanel:
         table: Table,
         template,
         filled_values: Optional[Dict[str, str]],
-        execution_result: Optional[Dict[str, Any]]
+        execution_result: Optional[Dict[str, Any]],
+        theme
     ) -> List[Dict]:
         """
         Build context-aware action menu
@@ -172,18 +182,21 @@ class TemplateDetailPanel:
             template: CommandTemplate instance
             filled_values: Filled variable values (if any)
             execution_result: Execution result (if any)
+            theme: ThemeManager instance
 
         Returns:
             List of choice dictionaries
         """
+        from ..themes.helpers import format_hotkey
         choices = []
 
         # Add separator
-        table.add_row("[dim]" + "─" * 80 + "[/]")
+        separator_color = theme.get_color('muted')
+        table.add_row(f"[{separator_color}]" + "─" * 80 + "[/]")
 
         # If variables not filled yet, offer to fill them
         if not filled_values:
-            table.add_row(f"[bold bright_white]f.[/] Fill variables and preview command")
+            table.add_row(f"{format_hotkey(theme, 'f')}. Fill variables and preview command")
             choices.append({
                 'id': 'f',
                 'label': 'Fill variables',
@@ -198,7 +211,7 @@ class TemplateDetailPanel:
             all_filled = all(var in filled_values for var in required_vars)
 
             if all_filled:
-                table.add_row(f"[bold bright_white]e.[/] Execute command")
+                table.add_row(f"{format_hotkey(theme, 'e')}. Execute command")
                 choices.append({
                     'id': 'e',
                     'label': 'Execute command',
@@ -207,7 +220,7 @@ class TemplateDetailPanel:
                     'filled_values': filled_values
                 })
 
-                table.add_row(f"[bold bright_white]c.[/] Copy command to clipboard")
+                table.add_row(f"{format_hotkey(theme, 'c')}. Copy command to clipboard")
                 choices.append({
                     'id': 'c',
                     'label': 'Copy to clipboard',
@@ -216,15 +229,15 @@ class TemplateDetailPanel:
                     'filled_values': filled_values
                 })
 
-                table.add_row(f"[bold bright_white]r.[/] Reset and re-enter variables")
+                table.add_row(f"{format_hotkey(theme, 'r')}. Reset and re-enter variables")
                 choices.append({
                     'id': 'r',
                     'label': 'Reset variables',
                     'action': 'reset'
                 })
             else:
-                table.add_row(f"[red]⚠ Not all required variables are filled[/]")
-                table.add_row(f"[bold bright_white]f.[/] Fill remaining variables")
+                table.add_row(theme.danger("⚠ Not all required variables are filled"))
+                table.add_row(f"{format_hotkey(theme, 'f')}. Fill remaining variables")
                 choices.append({
                     'id': 'f',
                     'label': 'Fill variables',
@@ -234,7 +247,7 @@ class TemplateDetailPanel:
 
         # If execution completed, offer to view full output
         if execution_result:
-            table.add_row(f"[bold bright_white]v.[/] View full output")
+            table.add_row(f"{format_hotkey(theme, 'v')}. View full output")
             choices.append({
                 'id': 'v',
                 'label': 'View full output',
@@ -242,7 +255,7 @@ class TemplateDetailPanel:
                 'execution_result': execution_result
             })
 
-            table.add_row(f"[bold bright_white]s.[/] Save output to file")
+            table.add_row(f"{format_hotkey(theme, 's')}. Save output to file")
             choices.append({
                 'id': 's',
                 'label': 'Save output',
@@ -250,7 +263,7 @@ class TemplateDetailPanel:
                 'execution_result': execution_result
             })
 
-            table.add_row(f"[bold bright_white]r.[/] Run again")
+            table.add_row(f"{format_hotkey(theme, 'r')}. Run again")
             choices.append({
                 'id': 'r',
                 'label': 'Run again',
@@ -258,7 +271,7 @@ class TemplateDetailPanel:
             })
 
         # Always show back option
-        table.add_row(f"[bold bright_white]b.[/] Back to template browser")
+        table.add_row(f"{format_hotkey(theme, 'b')}. Back to template browser")
         choices.append({
             'id': 'b',
             'label': 'Back to browser',

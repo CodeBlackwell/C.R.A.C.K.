@@ -20,7 +20,7 @@ class ExecutionOverlay:
     """Execution overlay for running tasks outside Live context"""
 
     @classmethod
-    def execute_task(cls, live: Live, session: 'TUISessionV2', task: Any) -> None:
+    def execute_task(cls, live: Live, session: 'TUISessionV2', task: Any, theme=None) -> None:
         """
         Execute a task outside the Live display context
 
@@ -28,6 +28,7 @@ class ExecutionOverlay:
             live: Rich Live context (will be stopped during execution)
             session: TUI session instance with access to parent's execute_task()
             task: TaskNode to execute
+            theme: ThemeManager instance (optional for backward compat)
 
         Flow:
             1. Stop Live display
@@ -35,6 +36,11 @@ class ExecutionOverlay:
             3. Wait for user acknowledgment
             4. Restart Live display
         """
+        # Fallback theme for backward compatibility
+        if theme is None:
+            from ..themes import ThemeManager
+            theme = ThemeManager()
+
         logger = get_debug_logger()
         logger.section("EXECUTE TASK OVERLAY")
         logger.log_execution_start(task.name, task.task_id)
@@ -47,7 +53,7 @@ class ExecutionOverlay:
         try:
             # Print header
             session.console.print("\n" + "=" * 80)
-            session.console.print(f"[bold cyan]Executing Task: {task.name}[/]")
+            session.console.print(theme.emphasis(f"Executing Task: {task.name}"))
             session.console.print("=" * 80 + "\n")
 
             # Execute task using parent's method
@@ -64,19 +70,19 @@ class ExecutionOverlay:
 
             # Print footer
             session.console.print("\n" + "=" * 80)
-            session.console.print("[bold green]Task execution complete[/]")
+            session.console.print(theme.success("Task execution complete"))
             session.console.print("=" * 80)
 
             logger.log_execution_end(task.name, success=True)
 
         except KeyboardInterrupt:
             logger.warning("Task execution interrupted by user")
-            session.console.print("\n[yellow]Task execution interrupted[/]")
+            session.console.print("\n" + theme.warning("Task execution interrupted"))
             logger.log_execution_end(task.name, success=False)
 
         except Exception as e:
             logger.exception(f"Exception during task execution: {e}")
-            session.console.print(f"\n[red]Error during execution: {e}[/]")
+            session.console.print("\n" + theme.danger(f"Error during execution: {e}"))
             import traceback
             if session.debug_mode:
                 traceback.print_exc()
@@ -84,7 +90,7 @@ class ExecutionOverlay:
 
         finally:
             # Wait for user to acknowledge before returning to TUI
-            session.console.print("\n[dim]Press Enter to return to dashboard...[/]")
+            session.console.print("\n" + theme.muted("Press Enter to return to dashboard..."))
             logger.debug("Waiting for user acknowledgment...")
             try:
                 input()
@@ -98,7 +104,7 @@ class ExecutionOverlay:
             logger.debug("Live display restarted successfully")
 
     @classmethod
-    def execute_choice(cls, live: Live, session: 'TUISessionV2', choice: Dict[str, Any]) -> None:
+    def execute_choice(cls, live: Live, session: 'TUISessionV2', choice: Dict[str, Any], theme=None) -> None:
         """
         Execute a menu choice outside the Live display context
 
@@ -106,10 +112,16 @@ class ExecutionOverlay:
             live: Rich Live context
             session: TUI session instance
             choice: Choice dictionary from dashboard menu
+            theme: ThemeManager instance (optional for backward compat)
 
         This is a higher-level wrapper that handles routing different choice types.
         Currently just wraps execute_task, but can be extended for other choice types.
         """
+        # Fallback theme for backward compatibility
+        if theme is None:
+            from ..themes import ThemeManager
+            theme = ThemeManager()
+
         logger = get_debug_logger()
         logger.section("EXECUTE CHOICE OVERLAY")
 
@@ -128,7 +140,7 @@ class ExecutionOverlay:
         logger.debug("Live display stopped")
 
         try:
-            session.console.print(f"\n[cyan]Executing: {choice_label}[/]")
+            session.console.print("\n" + theme.primary(f"Executing: {choice_label}"))
 
             # Route based on choice type
             if choice_id == 'next':
@@ -145,10 +157,10 @@ class ExecutionOverlay:
                     logger.log_live_action("START", "temporary restart for execute_task")
                     live.start()
 
-                    cls.execute_task(live, session, next_task)
+                    cls.execute_task(live, session, next_task, theme=theme)
                 else:
                     logger.warning("No recommended task available")
-                    session.console.print("[yellow]No recommended task available[/]")
+                    session.console.print(theme.warning("No recommended task available"))
                     logger.debug("Waiting for user acknowledgment...")
                     input("\nPress Enter to continue...")
                     logger.log_live_action("START", "after no-task acknowledgment")
@@ -156,34 +168,34 @@ class ExecutionOverlay:
 
             elif choice_id == 'help':
                 logger.info("Choice type: help (showing help overlay)")
-                session.console.print("[yellow]Help overlay - not yet implemented in TUI[/]")
+                session.console.print(theme.warning("Help overlay - not yet implemented in TUI"))
                 input("\nPress Enter to continue...")
                 logger.log_live_action("START", "after help acknowledgment")
                 live.start()
 
             elif choice_id == 'show-status':
                 logger.info("Choice type: show-status (showing status overlay)")
-                session.console.print("[yellow]Status overlay - use 's' shortcut instead[/]")
+                session.console.print(theme.warning("Status overlay - use 's' shortcut instead"))
                 input("\nPress Enter to continue...")
                 logger.log_live_action("START", "after status acknowledgment")
                 live.start()
 
             elif choice_id == 'exit':
                 logger.info("Choice type: exit (exiting TUI)")
-                session.console.print("[yellow]Exiting TUI...[/]")
+                session.console.print(theme.warning("Exiting TUI..."))
                 logger.log_live_action("START", "before exit")
                 live.start()
                 # Don't wait for input, just exit
 
             elif choice_id == 'import':
                 logger.info("Choice type: import (scan file import wizard)")
-                cls._run_import_wizard(live, session)
+                cls._run_import_wizard(live, session, theme=theme)
 
             else:
                 logger.warning(f"Choice type: {choice_id} (NOT IMPLEMENTED - would cause freeze)")
-                session.console.print(f"[yellow]Choice '{choice_label}' not yet implemented in TUI[/]")
-                session.console.print(f"[dim]Choice ID: {choice_id}[/]")
-                session.console.print(f"[cyan]This choice needs to be implemented to work properly.[/]")
+                session.console.print(theme.warning(f"Choice '{choice_label}' not yet implemented in TUI"))
+                session.console.print(theme.muted(f"Choice ID: {choice_id}"))
+                session.console.print(theme.primary("This choice needs to be implemented to work properly."))
                 logger.debug("Waiting for user acknowledgment...")
                 input("\nPress Enter to return to dashboard...")
                 logger.log_live_action("START", "after not-implemented acknowledgment")
@@ -191,13 +203,13 @@ class ExecutionOverlay:
 
         except KeyboardInterrupt:
             logger.warning("Choice execution interrupted by user")
-            session.console.print("\n[yellow]Action interrupted[/]")
+            session.console.print("\n" + theme.warning("Action interrupted"))
             logger.log_live_action("START", "after interrupt")
             live.start()
 
         except Exception as e:
             logger.exception(f"Exception during choice execution: {e}")
-            session.console.print(f"\n[red]Error: {e}[/]")
+            session.console.print("\n" + theme.danger(f"Error: {e}"))
             if session.debug_mode:
                 import traceback
                 traceback.print_exc()
@@ -209,14 +221,19 @@ class ExecutionOverlay:
             live.start()
 
     @classmethod
-    def _run_import_wizard(cls, live: Live, session: 'TUISessionV2') -> None:
+    def _run_import_wizard(cls, live: Live, session: 'TUISessionV2', theme=None) -> None:
         """
         Run import wizard outside Live context
 
         Args:
             live: Rich Live context
             session: TUI session instance
+            theme: ThemeManager instance (optional for backward compat)
         """
+        # Fallback theme for backward compatibility
+        if theme is None:
+            from ..themes import ThemeManager
+            theme = ThemeManager()
         from ..panels.import_form import ImportForm
         from ..input_handler import InputProcessor
 
@@ -228,7 +245,8 @@ class ExecutionOverlay:
         import_form = ImportForm(
             profile=session.profile,
             console=session.console,
-            debug_logger=logger
+            debug_logger=logger,
+            theme=theme
         )
 
         # Wizard loop
@@ -251,7 +269,7 @@ class ExecutionOverlay:
                 parsed = InputProcessor.parse_choice(user_input, choices)
 
                 if not parsed:
-                    session.console.print("[yellow]Invalid choice. Please try again.[/]")
+                    session.console.print(theme.warning("Invalid choice. Please try again."))
                     continue
 
                 # Get action from choice
@@ -299,16 +317,16 @@ class ExecutionOverlay:
                 elif action == 'import':
                     # Execute import
                     logger.info("Executing import...")
-                    session.console.print("\n[cyan]Importing scan data...[/]")
+                    session.console.print("\n" + theme.primary("Importing scan data..."))
 
                     success = import_form.import_to_profile(session.profile)
 
                     if success:
                         logger.info("Import successful")
-                        session.console.print("[green]✓ Import complete![/]")
+                        session.console.print(theme.success("✓ Import complete!"))
                     else:
                         logger.warning("Import failed")
-                        session.console.print("[red]✗ Import failed[/]")
+                        session.console.print(theme.danger("✗ Import failed"))
 
                     # Form automatically moves to COMPLETE stage
 
@@ -324,16 +342,16 @@ class ExecutionOverlay:
 
                 else:
                     logger.warning(f"Unknown action: {action}")
-                    session.console.print(f"[yellow]Unknown action: {action}[/]")
+                    session.console.print(theme.warning(f"Unknown action: {action}"))
 
             except KeyboardInterrupt:
                 logger.warning("Import wizard interrupted by user")
-                session.console.print("\n[yellow]Import cancelled[/]")
+                session.console.print("\n" + theme.warning("Import cancelled"))
                 wizard_running = False
 
             except Exception as e:
                 logger.exception(f"Error in import wizard: {e}")
-                session.console.print(f"\n[red]Error: {e}[/]")
+                session.console.print("\n" + theme.danger(f"Error: {e}"))
                 if session.debug_mode:
                     import traceback
                     traceback.print_exc()
