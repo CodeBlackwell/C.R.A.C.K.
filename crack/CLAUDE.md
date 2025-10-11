@@ -883,6 +883,51 @@ def _render_footer(self) -> Panel:
 - [ ] Feedback on every keypress (visual or state change)
 - [ ] Debug logs capture dismiss key for troubleshooting
 
+## Theme System Usage
+
+**Always use ThemeManager for TUI colors** - Never hardcode color strings.
+
+**Quick Start:**
+```python
+# In __init__ or panel initialization
+from .themes import ThemeManager
+self.theme = ThemeManager(debug_logger=self.debug_logger)
+
+# Semantic colors (automatic theme switching)
+self.theme.primary("Text")      # Panel borders, hotkeys
+self.theme.success("Text")      # Completed tasks, success messages
+self.theme.warning("Text")      # Pending tasks, warnings
+self.theme.danger("Text")       # Failed tasks, errors
+self.theme.muted("Text")        # Dim text, subtitles
+
+# Component-specific colors
+self.theme.panel_border()       # Get color name for Panel(border_style=...)
+self.theme.task_state_color("completed")
+self.theme.finding_type_color("vulnerability")
+self.theme.port_state_color("open")
+
+# Helper functions (track/interactive/themes/helpers.py)
+from .themes.helpers import format_menu_number, format_hotkey, format_task_status
+format_menu_number(self.theme, 1)     # "[bold bright_white]1.[/]"
+format_hotkey(self.theme, 'h')        # "[cyan]h[/]"
+```
+
+**Why:**
+- User can switch themes instantly (6 built-in: oscp, dark, light, nord, dracula, mono)
+- Live preview shows changes immediately
+- Accessibility support (monochrome mode for screenreaders)
+- Centralized color management (one place to update)
+
+**Built-in Themes:**
+- `oscp` - Cyan-heavy, OSCP workflow optimized (default)
+- `dark` - Dark terminal with bright colors
+- `light` - Light terminal with darker colors for contrast
+- `nord` - Arctic blue color scheme
+- `dracula` - Dark with purple accents
+- `mono` - No colors, exam-safe, accessible
+
+**Location:** `track/interactive/themes/` (manager.py, presets.py, helpers.py)
+
 ## Educational Philosophy (OSCP Focus)
 
 Every tool includes:
