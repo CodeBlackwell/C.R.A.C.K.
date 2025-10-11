@@ -64,6 +64,7 @@ class TUISessionV2(InteractiveSession):
         self.debug_mode = debug
         self.show_help = False
         self.config_confirmed = False  # Config Panel must be shown first
+        self.restart_requested = False  # Flag for :XX command to restart from Step-0
 
         # Debug logger inherited from parent, but initialize hotkey handler with it
         self.hotkey_handler = HotkeyInputHandler(debug_logger=self.debug_logger)
@@ -131,15 +132,30 @@ class TUISessionV2(InteractiveSession):
             ) as live:
                 self.debug_logger.log_live_action("STARTED")
 
-                # Phase 1: Show Config Panel FIRST (MANDATORY - Screen 1)
-                if not self.config_confirmed:
-                    self.debug_logger.log_state_transition("INIT", "CONFIG_PANEL", "mandatory first screen")
-                    self._config_panel_loop(live, layout)
+                # Main session loop (restarts if :XX command triggers reset)
+                session_running = True
+                while session_running:
+                    # Reset restart flag at start of each session iteration
+                    self.restart_requested = False
 
-                # Phase 2: Main Menu (only after config confirmed)
-                if self.config_confirmed:
-                    self.debug_logger.log_state_transition("CONFIG_PANEL", "DASHBOARD", "config confirmed")
-                    self._main_loop(live, layout)
+                    # Phase 1: Show Config Panel FIRST (MANDATORY - Screen 1)
+                    if not self.config_confirmed:
+                        self.debug_logger.log_state_transition("INIT", "CONFIG_PANEL", "mandatory first screen")
+                        self._config_panel_loop(live, layout)
+
+                    # Phase 2: Main Menu (only after config confirmed)
+                    if self.config_confirmed:
+                        self.debug_logger.log_state_transition("CONFIG_PANEL", "DASHBOARD", "config confirmed")
+                        self._main_loop(live, layout)
+
+                    # Check if restart was requested (:XX command)
+                    if self.restart_requested:
+                        self.debug_logger.log("Session restart requested - looping back to config panel",
+                                            category=LogCategory.SYSTEM_INIT, level=LogLevel.NORMAL)
+                        continue  # Loop back to config panel with new profile
+                    else:
+                        # Normal exit
+                        session_running = False
 
                 self.debug_logger.log("Live display ended", category=LogCategory.UI_LIVE, level=LogLevel.VERBOSE)
 
@@ -623,6 +639,10 @@ class TUISessionV2(InteractiveSession):
                 result = self._process_input(user_input)
                 if result == 'exit':
                     self.debug_logger.log("Exit requested from input processing", category=LogCategory.SYSTEM_SHUTDOWN, level=LogLevel.NORMAL)
+                    running = False
+                    continue
+                elif result == 'restart':
+                    self.debug_logger.log("Restart requested from input processing", category=LogCategory.SYSTEM_INIT, level=LogLevel.NORMAL)
                     running = False
                     continue
 
@@ -2179,6 +2199,7 @@ class TUISessionV2(InteractiveSession):
         shortcuts[':!cmd'] = 'Console injection'
         shortcuts[':theme'] = 'Switch theme'
         shortcuts[':themes'] = 'List themes'
+        shortcuts[':XX'] = 'DEV: Reset & restart'
         shortcuts['1-9'] = 'Menu select'
 
         return shortcuts
@@ -2186,6 +2207,12 @@ class TUISessionV2(InteractiveSession):
     def _process_input(self, user_input: str) -> Optional[str]:
         """Process user input - supports numbers, letter hotkeys, and : commands"""
         self.debug_logger.debug(f"_process_input called with: '{user_input}'")
+
+        # Development reset command (:XX)
+        if user_input.upper() == 'XX':
+            self.debug_logger.log("DEV RESET requested", category=LogCategory.SYSTEM_INIT, level=LogLevel.NORMAL)
+            self._reset_and_restart()
+            return 'restart'
 
         # Theme commands (:theme and :themes)
         if user_input == 'themes':
@@ -2633,6 +2660,53 @@ class TUISessionV2(InteractiveSession):
             self.console.print(f"{self.theme.muted('Use')} {self.theme.primary(':themes')} {self.theme.muted('to see all available themes')}")
             self.console.print(f"{self.theme.muted('Press any key to continue...')} ", end="")
             self.hotkey_handler.read_key()  # Single keypress
+
+        finally:
+            # Resume Live context
+            if hasattr(self, '_live'):
+                self._live.start()
+
+    def _reset_and_restart(self):
+        """
+        Development command: Reset profile and restart from Step-0
+
+        Triggered by :XX command for quick QA workflow
+        """
+        # Stop Live context for clean rendering
+        if hasattr(self, '_live'):
+            self._live.stop()
+
+        try:
+            self.debug_logger.log("Resetting profile and restarting", category=LogCategory.SYSTEM_INIT, level=LogLevel.NORMAL,
+                                 target=self.profile.target)
+
+            # Show confirmation with visual banner
+            self.console.print(f"\n{self.theme.warning('='*50)}")
+            self.console.print(self.theme.emphasis("[DEV] Profile Reset & Restart"))
+            self.console.print(f"{self.theme.warning('='*50)}")
+            self.console.print(f"{self.theme.muted('Target:')} {self.profile.target}")
+            self.console.print()
+
+            # Delete profile
+            Storage.delete(self.profile.target)
+            self.console.print(self.theme.success("✓ Profile deleted"))
+
+            # Create new profile
+            self.profile = TargetProfile(self.profile.target)
+            self.profile.save()
+            self.console.print(self.theme.success("✓ New profile created"))
+
+            # Reset flags
+            self.config_confirmed = False
+            self.restart_requested = True
+
+            self.console.print()
+            self.console.print(self.theme.success("✓ Restart complete - returning to config panel"))
+            self.console.print(f"{self.theme.warning('='*50)}\n")
+
+            # Brief pause for user to see confirmation
+            import time
+            time.sleep(1.5)
 
         finally:
             # Resume Live context
