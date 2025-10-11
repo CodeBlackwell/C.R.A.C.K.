@@ -23,6 +23,15 @@ class TargetProfile:
         Args:
             target: Target IP or hostname
         """
+        self._init_data(target)
+        self._init_runtime()
+
+    def _init_data(self, target: str):
+        """Initialize data structures for new profile (skip on load)
+
+        Args:
+            target: Target IP or hostname
+        """
         self.target = target
         self.created = datetime.now().isoformat()
         self.updated = datetime.now().isoformat()
@@ -62,6 +71,12 @@ class TargetProfile:
         for task in initial_tasks:
             self.task_tree.add_child(task)
 
+    def _init_runtime(self):
+        """Initialize runtime components (always call, even on load)
+
+        Sets up event handlers and plugin registry. Must be called for both
+        new profiles and loaded profiles to ensure event-driven task generation works.
+        """
         # Initialize service plugins
         from ..services.registry import ServiceRegistry
         ServiceRegistry.initialize_plugins()
@@ -148,7 +163,8 @@ class TargetProfile:
                 'target': self.target,
                 'port': port,
                 'service': service,
-                'version': version
+                'version': version,
+                'profile': self  # Profile reference for smart detection
             })
 
         if version:
@@ -418,6 +434,10 @@ class TargetProfile:
                 name=f'Enumeration: {profile.target}',
                 task_type='parent'
             )
+
+        # Initialize runtime components (event handlers, plugin registry)
+        # This is critical for event-driven task generation to work!
+        profile._init_runtime()
 
         return profile
 
