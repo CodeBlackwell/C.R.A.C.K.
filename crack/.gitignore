@@ -57,3 +57,15 @@ output/
 *.log
 *.txt
 !requirements.txt
+
+# Scan files (nmap, etc.)
+*.nmap
+*.gnmap
+*.xml
+*.nse
+
+# Target directories (development/testing scan results)
+google-gruyere.appspot.com/
+*-quick_scan.nmap
+*-full_scan.*
+*-ping_scan.*
