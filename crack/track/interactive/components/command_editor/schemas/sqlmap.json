@@ -1,0 +1,73 @@
+{
+  "tool": "sqlmap",
+  "common_params": ["url", "dbs", "tables", "dump", "threads"],
+  "parameters": {
+    "url": {
+      "type": "text",
+      "flag": "-u",
+      "required": true
+    },
+    "data": {
+      "type": "text",
+      "flag": "--data",
+      "required": false,
+      "description": "POST data"
+    },
+    "cookie": {
+      "type": "text",
+      "flag": "--cookie",
+      "required": false
+    },
+    "threads": {
+      "type": "number",
+      "flag": "--threads",
+      "default": 1,
+      "min": 1,
+      "max": 10
+    },
+    "level": {
+      "type": "enum",
+      "flag": "--level",
+      "options": ["1", "2", "3", "4", "5"],
+      "default": "1"
+    },
+    "risk": {
+      "type": "enum",
+      "flag": "--risk",
+      "options": ["1", "2", "3"],
+      "default": "1"
+    },
+    "technique": {
+      "type": "enum",
+      "flag": "--technique",
+      "options": ["B", "E", "U", "S", "T", "Q"],
+      "required": false
+    }
+  },
+  "flags": {
+    "dbs": {
+      "flag": "--dbs",
+      "description": "Enumerate databases"
+    },
+    "tables": {
+      "flag": "--tables",
+      "description": "Enumerate tables"
+    },
+    "columns": {
+      "flag": "--columns",
+      "description": "Enumerate columns"
+    },
+    "dump": {
+      "flag": "--dump",
+      "description": "Dump data"
+    },
+    "batch": {
+      "flag": "--batch",
+      "description": "Never ask for user input"
+    },
+    "random_agent": {
+      "flag": "--random-agent",
+      "description": "Use random User-Agent"
+    }
+  }
+}

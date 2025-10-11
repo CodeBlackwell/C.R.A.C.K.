@@ -45,6 +45,9 @@ class LogCategory(Enum):
     - UI.RENDER: Screen updates, Live displays
     - UI.INPUT: User input, key handling
     - UI.MENU: Menu generation, navigation
+    - UI.EDITOR: Command editor operations
+    - UI.EDITOR.TIER: Editor tier routing and escalation
+    - UI.EDITOR.SCHEMA: Schema loading and validation
     - STATE.TRANSITION: State machine changes
     - STATE.CHECKPOINT: Save/load operations
     - EXECUTION.START: Task/command execution start
@@ -66,6 +69,12 @@ class LogCategory(Enum):
     UI_PANEL = "UI.PANEL"
     UI_FORM = "UI.FORM"
     UI_LIVE = "UI.LIVE"
+
+    # UI Editor Categories (Command Editor Component)
+    UI_EDITOR = "UI.EDITOR"
+    UI_EDITOR_TIER = "UI.EDITOR.TIER"
+    UI_EDITOR_PARSE = "UI.EDITOR.PARSE"
+    UI_EDITOR_SCHEMA = "UI.EDITOR.SCHEMA"
 
     # State Categories
     STATE = "STATE"
