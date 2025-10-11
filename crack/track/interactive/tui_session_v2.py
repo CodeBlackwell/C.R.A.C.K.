@@ -75,6 +75,12 @@ class TUISessionV2(InteractiveSession):
         self.findings_processor = FindingsProcessor(target=target)
         self.debug_logger.log("FindingsProcessor initialized", category=LogCategory.SYSTEM_INIT, level=LogLevel.VERBOSE)
 
+        # Initialize theme manager (loads theme from config)
+        from .themes import ThemeManager
+        self.theme = ThemeManager()
+        self.debug_logger.log("ThemeManager initialized", category=LogCategory.SYSTEM_INIT, level=LogLevel.VERBOSE,
+                             theme=self.theme.get_theme_name())
+
         # Strategic logging: TUI initialization
         self.debug_logger.log("TUI session initialization", category=LogCategory.SYSTEM_INIT, level=LogLevel.NORMAL,
                              target=target, resume=resume, screened=screened, debug=debug)
@@ -611,39 +617,15 @@ class TUISessionV2(InteractiveSession):
                         # Inject command into task metadata
                         task.metadata['command'] = command
                         task.metadata['scan_profile_used'] = profile_id
+                        task.metadata['scan_profile_name'] = scan_profile['name']
+                        task.metadata['scan_profile_strategy'] = scan_profile['use_case']
+                        task.metadata['scan_profile_time'] = scan_profile['estimated_time']
+                        task.metadata['scan_profile_risk'] = scan_profile.get('detection_risk', 'medium')
                         self.profile.save()
 
-                        # Show confirmation to user
-                        live.stop()
-                        self.console.print(f"\n[green]✓[/] Selected: [bold]{scan_profile['name']}[/]")
-                        self.console.print(f"[dim]Strategy:[/] {scan_profile['use_case']}")
-                        self.console.print(f"[dim]Estimated time:[/] {scan_profile['estimated_time']}")
-                        self.console.print(f"\n[dim]Command:[/] {command}")
+                        self.debug_logger.info(f"Scan profile metadata stored - executing immediately")
 
-                        # Show flag explanations if available
-                        flag_explanations = scan_profile.get('flag_explanations', {})
-                        if flag_explanations:
-                            self.console.print("\n[dim]Flag Explanations:[/]")
-                            for flag, explanation in flag_explanations.items():
-                                self.console.print(f"  [cyan]{flag}:[/] {explanation}")
-
-                        # Warn if high detection risk
-                        detection_risk = scan_profile.get('detection_risk', 'medium')
-                        if detection_risk in ['high', 'very-high']:
-                            self.console.print(f"\n[yellow]⚠  WARNING: This scan is NOISY (detection risk: {detection_risk})[/]")
-                            self.console.print("[dim]This scan may trigger IDS/IPS alerts. Only use in labs or with permission.[/]")
-
-                        self.console.print("\n[dim]Press Enter to execute, or Ctrl+C to cancel...[/]")
-                        try:
-                            input()
-                        except KeyboardInterrupt:
-                            self.console.print("[yellow]Cancelled[/]")
-                            live.start()
-                            continue
-
-                        live.start()
-
-                        # Now execute with streaming
+                        # Execute with streaming (no blocking confirmation)
                         try:
                             output_lines, elapsed, exit_code, findings = self._execute_task_streaming(
                                 live, layout, task
@@ -793,7 +775,8 @@ class TUISessionV2(InteractiveSession):
                 profile=self.profile,
                 filter_state=filter_state,
                 sort_by=sort_by,
-                page=page
+                page=page,
+                theme=self.theme
             )
             self.debug_logger.debug(f"TaskListPanel returned {len(choices)} choices")
 
@@ -1721,7 +1704,11 @@ class TUISessionV2(InteractiveSession):
         self.debug_logger.info(f"Task status set to '{task.status}'")
 
         # 8. Analyze output for findings
+        # Show progress indicator during post-processing
+        layout['footer'].update(Panel("🔍 Analyzing findings...", style="cyan", box=box.ROUNDED))
+        live.refresh()
         self.debug_logger.debug("Analyzing output for findings")
+
         try:
             pattern_matcher = OutputPatternMatcher()
             findings_dict = pattern_matcher.analyze(output_lines, task)
@@ -1750,6 +1737,10 @@ class TUISessionV2(InteractiveSession):
         except Exception as e:
             self.debug_logger.exception(f"Exception during finding analysis: {e}")
             findings = []
+
+        # Restore normal footer after analysis
+        layout['footer'].update(self._render_footer())
+        live.refresh()
 
         # 9. Save execution to task history for output overlay
         self.debug_logger.debug("Saving execution to task history")
@@ -1830,10 +1821,10 @@ class TUISessionV2(InteractiveSession):
 
         if not all_tasks or len(all_tasks) == 0:
             # Empty state
-            panel, choices = DashboardPanel.render_empty_state(self.profile)
+            panel, choices = DashboardPanel.render_empty_state(self.profile, theme=self.theme)
         else:
             # Normal dashboard with recommendations
-            panel, choices = DashboardPanel.render(self.profile, self._current_recommendations)
+            panel, choices = DashboardPanel.render(self.profile, self._current_recommendations, theme=self.theme)
 
         # Store choices for input processing
         self._current_choices = choices
@@ -2164,7 +2155,7 @@ class TUISessionV2(InteractiveSession):
         # Use ExecutionOverlay to handle task execution outside Live context
         # This prevents the freeze issue where Live display conflicts with terminal I/O
         self.debug_logger.info("Delegating to ExecutionOverlay")
-        ExecutionOverlay.execute_choice(self._live, self, choice)
+        ExecutionOverlay.execute_choice(self._live, self, choice, theme=self.theme)
 
         self.debug_logger.info("Returned from ExecutionOverlay")
 
@@ -2175,7 +2166,7 @@ class TUISessionV2(InteractiveSession):
             self._live.stop()
 
         try:
-            help_panel = HelpOverlay.render(shortcut_handler=self.shortcut_handler)
+            help_panel = HelpOverlay.render(shortcut_handler=self.shortcut_handler, theme=self.theme)
             self.console.print(help_panel)
             self.console.print("\n[dim]Press any key to dismiss (or 'h' to toggle off)...[/] ", end="")
             dismiss_key = self.hotkey_handler.read_key()  # Single keypress (consistent with TUI)
@@ -2205,7 +2196,7 @@ class TUISessionV2(InteractiveSession):
             self._live.stop()
 
         try:
-            status_panel = StatusOverlay.render(self.profile)
+            status_panel = StatusOverlay.render(self.profile, theme=self.theme)
             self.console.print(status_panel)
             self.console.print("\n[dim]Press any key to dismiss (or 's' to toggle off)...[/] ", end="")
             dismiss_key = self.hotkey_handler.read_key()  # Single keypress (consistent with TUI)
@@ -2235,7 +2226,7 @@ class TUISessionV2(InteractiveSession):
             self._live.stop()
 
         try:
-            tree_panel = TreeOverlay.render(self.profile)
+            tree_panel = TreeOverlay.render(self.profile, theme=self.theme)
             self.console.print(tree_panel)
             self.console.print("\n[dim]Press any key to dismiss (or 't' to toggle off)...[/] ", end="")
             dismiss_key = self.hotkey_handler.read_key()  # Single keypress (consistent with TUI)
@@ -2270,7 +2261,8 @@ class TUISessionV2(InteractiveSession):
             # Run interactive output viewer
             OutputOverlay.render_and_navigate(
                 console=self.console,
-                profile=self.profile
+                profile=self.profile,
+                theme=self.theme
             )
         finally:
             # Resume Live context

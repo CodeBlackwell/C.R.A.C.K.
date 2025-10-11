@@ -99,6 +99,26 @@ class TaskWorkspacePanel:
         if description:
             table.add_row(f"[dim]Description:[/] {description}")
 
+        # Show scan profile details if this is a scan task
+        scan_profile_name = task.metadata.get('scan_profile_name') if hasattr(task, 'metadata') else None
+        if scan_profile_name:
+            scan_strategy = task.metadata.get('scan_profile_strategy', 'Unknown strategy')
+            scan_time = task.metadata.get('scan_profile_time', 'Unknown')
+            scan_risk = task.metadata.get('scan_profile_risk', 'medium')
+
+            # Display scan profile banner
+            table.add_row("")  # Blank line
+            table.add_row(f"[bold green]▶ Scan Profile:[/] [bold bright_white]{scan_profile_name}[/]")
+            table.add_row(f"  [dim]Strategy:[/] {scan_strategy}")
+            table.add_row(f"  [dim]Estimated:[/] {scan_time}")
+
+            # Warn if high detection risk
+            if scan_risk in ['high', 'very-high']:
+                table.add_row(f"  [yellow]⚠ Detection Risk:[/] [bold yellow]{scan_risk.upper()}[/] [dim](may trigger IDS/IPS)[/]")
+            else:
+                table.add_row(f"  [dim]Detection Risk:[/] {scan_risk}")
+            table.add_row("")  # Blank line
+
         # Command (truncate if too long)
         cmd_display = command[:70] + '...' if len(command) > 70 else command
         table.add_row(f"[dim]Command:[/] [bright_black]{cmd_display}[/]")
