@@ -1,0 +1,68 @@
+{
+  "tool": "hydra",
+  "common_params": ["target", "username", "password_list", "service", "threads"],
+  "parameters": {
+    "username": {
+      "type": "text",
+      "flag": "-l",
+      "required": false,
+      "description": "Single username"
+    },
+    "username_list": {
+      "type": "path",
+      "flag": "-L",
+      "required": false,
+      "description": "Username list file"
+    },
+    "password": {
+      "type": "text",
+      "flag": "-p",
+      "required": false,
+      "description": "Single password"
+    },
+    "password_list": {
+      "type": "path",
+      "flag": "-P",
+      "required": false,
+      "description": "Password list file"
+    },
+    "threads": {
+      "type": "number",
+      "flag": "-t",
+      "default": 16,
+      "min": 1,
+      "max": 64
+    },
+    "service": {
+      "type": "enum",
+      "flag": null,
+      "position": "last",
+      "options": ["ssh", "ftp", "http-post-form", "http-get", "rdp", "smb", "telnet"],
+      "required": true
+    },
+    "target": {
+      "type": "text",
+      "flag": null,
+      "position": "second-to-last",
+      "required": true
+    }
+  },
+  "flags": {
+    "verbose": {
+      "flag": "-v",
+      "description": "Verbose mode"
+    },
+    "verbose_very": {
+      "flag": "-V",
+      "description": "Very verbose mode"
+    },
+    "exit_on_found": {
+      "flag": "-f",
+      "description": "Exit when login/pass found"
+    },
+    "show_attempts": {
+      "flag": "-d",
+      "description": "Debug mode, show attempts"
+    }
+  }
+}

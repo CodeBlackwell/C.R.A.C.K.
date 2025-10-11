@@ -11,7 +11,11 @@ UI
 ├── UI.MENU
 ├── UI.PANEL
 ├── UI.FORM
-└── UI.LIVE
+├── UI.LIVE
+└── UI.EDITOR
+    ├── UI.EDITOR.TIER
+    ├── UI.EDITOR.PARSE
+    └── UI.EDITOR.SCHEMA
 
 STATE
 ├── STATE.TRANSITION
@@ -192,6 +196,105 @@ logger.log_menu("task selection", choices=10)
 **Example:**
 ```python
 logger.log_live_action("start", details="task execution")
+```
+
+### UI.EDITOR
+**Parent category for command editor operations**
+
+**When to use:** Enable all command editor logging
+
+**Example:**
+```bash
+--debug-categories=UI.EDITOR:VERBOSE
+```
+
+### UI.EDITOR.TIER
+**Editor tier routing and escalation**
+
+**Logs when:**
+- Tier is selected (Quick/Advanced/Raw)
+- User escalates between tiers
+- Tier transition occurs
+- Routing decision is made
+
+**Common log messages:**
+- "EDITOR: tier selected | tier=quick | tool=gobuster"
+- "EDITOR: escalation requested | from=quick | to=advanced"
+- "EDITOR: tier routing | tool=nmap | has_schema=true | tier=advanced"
+- "EDITOR: escalation complete | from=advanced | to=raw | preserved=true"
+
+**Use for:**
+- Debugging tier selection logic
+- Understanding escalation flow
+- Tracking which tier is used for which tool
+- Verifying state preservation during escalation
+
+**Example:**
+```python
+logger.log("Tier selected: quick",
+           category=LogCategory.UI_EDITOR_TIER,
+           level=LogLevel.VERBOSE,
+           tool="gobuster",
+           has_schema=True)
+```
+
+### UI.EDITOR.PARSE
+**Command parsing in editor context**
+
+**Logs when:**
+- Command is parsed for editing
+- Parameters are extracted
+- Tool is identified from command
+- Parse errors occur
+
+**Common log messages:**
+- "EDITOR: parse command | tool=gobuster | params=5"
+- "EDITOR: extract parameters | url=http://target | wordlist=/path"
+- "EDITOR: parse error | reason=invalid syntax | command=malformed"
+
+**Use for:**
+- Debugging command parsing in editor
+- Understanding parameter extraction
+- Tracking parse failures
+
+**Example:**
+```python
+logger.log("Command parsed",
+           category=LogCategory.UI_EDITOR_PARSE,
+           level=LogLevel.VERBOSE,
+           tool=tool,
+           param_count=len(params))
+```
+
+### UI.EDITOR.SCHEMA
+**Schema loading and validation**
+
+**Logs when:**
+- Schema file is loaded
+- Schema cache is checked
+- Schema validation occurs
+- Schema not found
+
+**Common log messages:**
+- "EDITOR: schema check | tool=gobuster | exists=true | cached=false"
+- "EDITOR: schema loaded | tool=nmap | fields=8"
+- "EDITOR: schema not found | tool=custom | fallback=raw"
+- "EDITOR: schema cache hit | tool=gobuster"
+
+**Use for:**
+- Debugging schema loading issues
+- Understanding schema availability
+- Tracking cache performance
+- Verifying fallback behavior
+
+**Example:**
+```python
+logger.log("Schema check",
+           category=LogCategory.UI_EDITOR_SCHEMA,
+           level=LogLevel.VERBOSE,
+           tool=tool,
+           exists=has_schema,
+           cached=is_cached)
 ```
 
 ---
@@ -698,6 +801,11 @@ with log_timing("Parse Nmap XML"):
 --debug-categories=EXECUTION:VERBOSE
 ```
 
+**Command Editor Development:**
+```bash
+--debug-categories=UI.EDITOR:VERBOSE,STATE.TRANSITION:NORMAL
+```
+
 ### By Issue Type
 
 **UI Freezes:**
@@ -756,6 +864,8 @@ with log_timing("Parse Nmap XML"):
 | UI.RENDER | Display issues | Screen not updating | VERBOSE |
 | UI.INPUT | Input problems | Keys not working | TRACE |
 | UI.MENU | Menu bugs | Wrong choices shown | VERBOSE |
+| UI.EDITOR.TIER | Editor routing | Wrong tier selected | VERBOSE |
+| UI.EDITOR.SCHEMA | Schema issues | Schema not loading | VERBOSE |
 | STATE.TRANSITION | State bugs | Wrong state reached | TRACE |
 | STATE.CHECKPOINT | Save issues | Data not persisting | NORMAL |
 | EXECUTION.START | Task not starting | Nothing happens | NORMAL |

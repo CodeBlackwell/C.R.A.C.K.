@@ -1,0 +1,57 @@
+{
+  "tool": "gobuster",
+  "subcommands": ["dir", "dns", "vhost"],
+  "common_params": ["u", "w", "t", "x", "o"],
+  "parameters": {
+    "u": {
+      "type": "text",
+      "flag": "-u",
+      "description": "Target URL",
+      "required": true
+    },
+    "w": {
+      "type": "path",
+      "flag": "-w",
+      "description": "Wordlist path",
+      "required": true
+    },
+    "t": {
+      "type": "number",
+      "flag": "-t",
+      "description": "Threads",
+      "default": 50,
+      "min": 1,
+      "max": 200
+    },
+    "x": {
+      "type": "text",
+      "flag": "-x",
+      "description": "Extensions",
+      "default": "php,html,txt"
+    },
+    "o": {
+      "type": "path",
+      "flag": "-o",
+      "description": "Output file",
+      "required": false
+    }
+  },
+  "flags": {
+    "v": {
+      "flag": "-v",
+      "description": "Verbose"
+    },
+    "f": {
+      "flag": "-f",
+      "description": "Follow redirects"
+    },
+    "e": {
+      "flag": "-e",
+      "description": "Expanded"
+    },
+    "q": {
+      "flag": "-q",
+      "description": "Quiet"
+    }
+  }
+}
