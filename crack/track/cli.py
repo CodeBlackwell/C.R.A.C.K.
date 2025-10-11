@@ -356,9 +356,22 @@ For full documentation: See track/README.md or https://github.com/CodeBlackwell/
     parser.add_argument('--wordlist',
                         help='Wordlist path or fuzzy name (e.g., common, rockyou)')
 
-    # Advanced
-    parser.add_argument('--dev', action='store_true',
-                        help='Developer mode: auto-reset profile + enable debug (no confirmation prompts)')
+    # Advanced / Developer mode
+    parser.add_argument('--dev', nargs='?', const=True, metavar='FIXTURE',
+                        help='Developer mode: auto-reset profile OR load fixture (e.g., --dev=web-enum)')
+
+    # Fixture management (dev mode extensions)
+    dev_group = parser.add_argument_group('fixture management (dev mode)')
+    dev_group.add_argument('--dev-save', metavar='NAME',
+                          help='Save current profile as dev fixture')
+    dev_group.add_argument('--dev-list', action='store_true',
+                          help='List available dev fixtures')
+    dev_group.add_argument('--dev-show', metavar='NAME',
+                          help='Show fixture details')
+    dev_group.add_argument('--dev-delete', metavar='NAME',
+                          help='Delete dev fixture')
+    dev_group.add_argument('--dev-description', metavar='TEXT',
+                          help='Description for --dev-save (optional)')
     parser.add_argument('--debug', action='store_true',
                         help='Enable precision debug logging to .debug_logs/ (combine with --debug-categories for filtering)')
 
@@ -418,11 +431,34 @@ For full documentation: See track/README.md or https://github.com/CodeBlackwell/
 
     args = parser.parse_args()
 
-    # Handle developer mode (auto-reset + auto-debug)
+    # Handle fixture management commands (early exit)
+    if args.dev_list:
+        handle_dev_list()
+        return
+
+    if args.dev_show:
+        handle_dev_show(args.dev_show)
+        return
+
+    if args.dev_delete:
+        handle_dev_delete(args.dev_delete)
+        return
+
+    if args.dev_save:
+        handle_dev_save(args.target, args.dev_save, args.dev_description)
+        return
+
+    # Handle developer mode (auto-reset OR fixture load)
     dev_mode = args.dev
+    dev_fixture = None
+
     if dev_mode:
         args.debug = True  # Auto-enable debug mode
         args.tui = True    # Auto-enable TUI mode
+
+        # Check if dev_mode is a string (fixture name)
+        if isinstance(dev_mode, str):
+            dev_fixture = dev_mode
 
     # Enable debug mode if requested (re-enable INFO logs)
     if args.debug:
@@ -435,17 +471,46 @@ For full documentation: See track/README.md or https://github.com/CodeBlackwell/
 
     # Print dev mode banner AFTER plugin initialization (for visibility)
     if dev_mode:
+        from .core.fixtures import FixtureStorage
+
         print(f"\n{'='*50}")
         print(f"[DEV MODE] Enabled for {args.target}")
         print(f"{'='*50}")
-        print("  • Auto-reset: ON")
-        print("  • Debug logging: ON (.debug_logs/)")
-        print("  • TUI mode: ON")
 
-        # Auto-reset profile without confirmation
-        if TargetProfile.exists(args.target):
-            Storage.delete(args.target)
-            print(f"\n  ✓ Profile reset (clean slate for QA)")
+        if dev_fixture:
+            # Load fixture mode
+            print(f"  • Fixture: {dev_fixture}")
+            print("  • Debug logging: ON (.debug_logs/)")
+            print("  • TUI mode: ON")
+
+            try:
+                FixtureStorage.load_fixture(dev_fixture, args.target)
+                print(f"\n  ✓ Fixture '{dev_fixture}' loaded successfully")
+
+                # Show fixture summary
+                details = FixtureStorage.get_fixture_details(dev_fixture)
+                profile_info = details['profile']
+                print(f"  ✓ Phase: {profile_info['phase']}")
+                print(f"  ✓ Ports: {profile_info['port_summary']}")
+                print(f"  ✓ Tasks: {profile_info['task_count']}")
+
+            except ValueError as e:
+                print(f"\n  ✗ Error: {e}")
+                print(f"\nAvailable fixtures:")
+                for fixture in FixtureStorage.list_fixtures():
+                    print(f"  - {fixture['name']}: {fixture['description']}")
+                sys.exit(1)
+
+        else:
+            # Reset mode (original behavior)
+            print("  • Auto-reset: ON")
+            print("  • Debug logging: ON (.debug_logs/)")
+            print("  • TUI mode: ON")
+
+            # Auto-reset profile without confirmation
+            if TargetProfile.exists(args.target):
+                Storage.delete(args.target)
+                print(f"\n  ✓ Profile reset (clean slate for QA)")
 
         print(f"{'='*50}\n")
 
@@ -789,6 +854,121 @@ def handle_visualize(args):
     else:
         # Print to terminal
         print(output)
+
+
+def handle_dev_save(target: str, fixture_name: str, description: str = None):
+    """Save current profile as dev fixture"""
+    from .core.fixtures import FixtureStorage
+
+    try:
+        # Check if profile exists
+        if not TargetProfile.exists(target):
+            print(f"Error: No profile found for {target}")
+            print(f"Create a profile first: crack track {target}")
+            sys.exit(1)
+
+        # Save fixture
+        fixture_path = FixtureStorage.save_fixture(target, fixture_name, description)
+        print(f"✓ Saved fixture '{fixture_name}' from {target}")
+        print(f"  Location: {fixture_path}")
+
+        # Show fixture details
+        details = FixtureStorage.get_fixture_details(fixture_name)
+        profile_info = details['profile']
+        print(f"\nFixture Summary:")
+        print(f"  Phase: {profile_info['phase']}")
+        print(f"  Ports: {profile_info['port_summary']}")
+        print(f"  Findings: {profile_info['finding_summary'] or 'None'}")
+        print(f"  Tasks: {profile_info['task_count']}")
+        print(f"\nLoad with: crack track --dev={fixture_name} <target>")
+
+    except Exception as e:
+        print(f"Error saving fixture: {e}")
+        sys.exit(1)
+
+
+def handle_dev_list():
+    """List available dev fixtures"""
+    from .core.fixtures import FixtureStorage
+
+    fixtures = FixtureStorage.list_fixtures()
+
+    if not fixtures:
+        print("No dev fixtures available")
+        print("\nCreate a fixture:")
+        print("  crack track --dev-save <name> <target>")
+        return
+
+    print(f"Available Dev Fixtures ({len(fixtures)}):\n")
+
+    for fixture in fixtures:
+        print(f"  • {fixture['name']}")
+        print(f"    Description: {fixture['description']}")
+        print(f"    Phase: {fixture['phase']} | Ports: {fixture['ports']} | Findings: {fixture['findings']} | Tasks: {fixture['tasks']}")
+        print(f"    Source: {fixture['source_target']} | Created: {fixture['created'][:10]}")
+        print()
+
+    print("Load a fixture:")
+    print(f"  crack track --dev=<fixture-name> <target>")
+
+
+def handle_dev_show(fixture_name: str):
+    """Show detailed fixture info"""
+    from .core.fixtures import FixtureStorage
+
+    try:
+        details = FixtureStorage.get_fixture_details(fixture_name)
+
+        metadata = details['metadata']
+        profile = details['profile']
+
+        print(f"\nFixture: {fixture_name}")
+        print("=" * 60)
+        print(f"\nDescription: {metadata.get('description', 'No description')}")
+        print(f"Created: {metadata.get('created', 'Unknown')}")
+        print(f"Source Target: {metadata.get('source_target', 'Unknown')}")
+
+        print(f"\nProfile State:")
+        print(f"  Target: {profile['target']}")
+        print(f"  Phase: {profile['phase']}")
+        print(f"  Status: {profile['status']}")
+
+        print(f"\nEnumeration Summary:")
+        print(f"  Ports: {profile['port_summary']}")
+        print(f"  Findings: {profile['finding_summary'] or 'None'}")
+        print(f"  Credentials: {profile['credential_count']}")
+        print(f"  Notes: {profile['note_count']}")
+        print(f"  Tasks: {profile['task_count']}")
+
+        print(f"\nLoad this fixture:")
+        print(f"  crack track --dev={fixture_name} <target>")
+
+    except ValueError as e:
+        print(f"Error: {e}")
+        sys.exit(1)
+
+
+def handle_dev_delete(fixture_name: str):
+    """Delete dev fixture"""
+    from .core.fixtures import FixtureStorage
+
+    try:
+        # Show what will be deleted
+        details = FixtureStorage.get_fixture_details(fixture_name)
+        print(f"\nFixture to delete: {fixture_name}")
+        print(f"  Description: {details['metadata'].get('description', 'No description')}")
+
+        # Confirm deletion
+        confirm = input(f"\nDelete fixture '{fixture_name}'? (yes/no): ")
+        if confirm.lower() == 'yes':
+            FixtureStorage.delete_fixture(fixture_name)
+            print(f"✓ Deleted fixture '{fixture_name}'")
+        else:
+            print("Cancelled")
+
+    except ValueError as e:
+        print(f"Error: {e}")
+        sys.exit(1)
 
 
 if __name__ == '__main__':

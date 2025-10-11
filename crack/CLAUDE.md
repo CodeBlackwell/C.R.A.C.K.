@@ -220,6 +220,117 @@ class NewServicePlugin(ServicePlugin):
 
 **Example:** TUI freeze diagnosed via logs showing choice ID mismatch (`'next'` vs `'execute-next'`)
 
+### 5. Dev Fixtures - Rapid State Loading
+
+**Pattern:** Save state once → Load instantly → Test immediately
+
+**Use Case:** Testing plugins/features at specific enumeration states without manual setup
+
+#### Quick Start
+```bash
+# List available fixtures
+crack track --dev-list
+
+# Load fixture (auto-enables --tui and --debug)
+crack track --dev=web-enum 192.168.45.100
+
+# Create custom fixture from current state
+crack track --dev-save my-state 192.168.45.100 \
+  --dev-description "SQLi discovered, exploitation pending"
+```
+
+#### Built-in Fixtures
+
+**minimal** - Fresh start with services discovered
+- Ports: 22 (SSH), 80 (HTTP)
+- Findings: None
+- Tasks: Initial enumeration pending
+- Use: Test service plugin initialization
+
+**web-enum** - HTTP enumeration completed
+- Ports: 22 (SSH), 80 (HTTP)
+- Findings: 2 directories, 1 vulnerability
+- Tasks: gobuster/nikto done, inspection pending
+- Use: Test finding-to-task conversion
+
+**smb-shares** - SMB discovery completed
+- Ports: 22 (SSH), 139/445 (SMB)
+- Findings: 3 shares, anonymous access
+- Tasks: enum4linux done, mounting pending
+- Use: Test SMB plugin logic
+
+**post-exploit** - Initial access achieved
+- Ports: 22 (SSH), 80 (HTTP)
+- Findings: RCE, reverse shell
+- Credentials: www-data shell
+- Tasks: Privesc enumeration pending
+- Use: Test post-exploit plugins
+
+#### Fixture Management
+```bash
+# View fixture details
+crack track --dev-show web-enum
+
+# Delete fixture
+crack track --dev-delete old-fixture
+
+# Regenerate sample fixtures (if corrupted)
+python3 track/scripts/generate_sample_fixtures.py
+```
+
+#### Workflow Comparison
+
+**Before Fixtures (10+ minutes):**
+```bash
+crack track --dev 192.168.45.100
+# ... import nmap scan
+# ... run gobuster
+# ... document findings
+# ... finally test feature
+```
+
+**With Fixtures (0 minutes):**
+```bash
+crack track --dev=web-enum 192.168.45.100
+# Loads instantly - start testing immediately
+```
+
+#### Development Benefits
+
+**Plugin Testing:** Load exact state needed to trigger plugin logic
+```bash
+crack track --dev=smb-shares 192.168.45.100
+# Test SMB plugin's share mounting tasks immediately
+```
+
+**Bug Reproduction:** Save problematic states
+```bash
+crack track --dev-save bug-123 192.168.45.100
+# Later: crack track --dev=bug-123 192.168.45.100
+```
+
+**Training/Demos:** Show different phases without live scanning
+```bash
+crack track --dev=minimal 192.168.45.100        # Demo 1
+crack track --dev=web-enum 192.168.45.100       # Demo 2
+crack track --dev=post-exploit 192.168.45.100   # Demo 3
+```
+
+#### Fixture Architecture
+
+**Location:** `~/.crack/fixtures/` (immutable)
+**Format:** Standard profile JSON + metadata
+**Loading:** Copies fixture to `~/.crack/targets/<TARGET>.json`
+**Immutability:** Original fixture never modified
+
+**Storage:**
+- `track/core/fixtures.py` - FixtureStorage class
+- `track/scripts/generate_sample_fixtures.py` - Sample generator
+- `~/.crack/fixtures/README.md` - Complete documentation
+- `tests/track/test_fixtures.py` - Comprehensive tests
+
+**See Also:** `~/.crack/fixtures/README.md` for advanced usage
+
 ### Debug Logging Quick Reference
 
 **Quick Start Commands:**

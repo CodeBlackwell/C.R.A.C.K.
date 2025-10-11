@@ -8,6 +8,102 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added - Dev Fixture System
+
+**Rapid State Loading for Development**
+
+- **FixtureStorage Class** (`track/core/fixtures.py`)
+  - Save profiles as immutable dev fixtures
+  - Load fixtures to any target (instant state replication)
+  - List/preview/delete fixtures with rich metadata
+  - Recursive task counting and port summarization
+  - Filename sanitization for filesystem safety
+  - Complete immutability (original fixtures never modified)
+
+- **CLI Integration**
+  - `--dev` → Reset profile (original behavior preserved)
+  - `--dev=<fixture>` → Load fixture with auto-debug/auto-TUI
+  - `--dev-save <name>` → Save current profile as reusable fixture
+  - `--dev-list` → List all fixtures with metadata summary
+  - `--dev-show <name>` → Preview fixture details before loading
+  - `--dev-delete <name>` → Delete fixture with confirmation
+  - `--dev-description <text>` → Add description when saving fixtures
+
+- **Built-in Sample Fixtures** (4 pre-configured states)
+  - **minimal** - Fresh start with services discovered (2 ports, 0 findings, 8 tasks)
+  - **web-enum** - HTTP enumeration completed (gobuster + nikto done, 3 findings)
+  - **smb-shares** - SMB discovery completed (enum4linux done, shares found)
+  - **post-exploit** - Initial access achieved (shell obtained, privesc pending)
+
+- **Workflow Automation**
+  - Generate sample fixtures via `track/scripts/generate_sample_fixtures.py`
+  - Automatic timestamp updates on fixture load
+  - Fixture metadata preservation (phase, ports, findings, tasks)
+  - Complete documentation in `~/.crack/fixtures/README.md`
+
+### Testing
+
+- **Comprehensive Test Suite** (`tests/track/test_fixtures.py`)
+  - 16 tests covering all fixture operations (100% passing)
+  - Save/load/list/delete operation validation
+  - Immutability verification (fixtures unchanged after load)
+  - Error handling for missing/invalid fixtures
+  - Timestamp update verification
+  - Task counting accuracy tests
+  - Filename sanitization validation
+  - Metadata fallback handling
+
+### Documentation
+
+- **Developer Guide** (`~/.crack/fixtures/README.md`)
+  - Complete fixture usage documentation
+  - Custom fixture creation workflows
+  - Use case examples (plugin testing, bug reproduction, training)
+  - Fixture vs Profile comparison
+  - Troubleshooting guide
+  - Advanced usage patterns
+
+- **CLAUDE.md Updates**
+  - Added "Dev Fixtures - Rapid State Loading" workflow section
+  - Built-in fixture catalog with use cases
+  - Workflow comparison (before/after fixtures)
+  - Development benefits documentation
+  - Fixture architecture overview
+
+### Changed
+
+- **Dev Mode Enhancement**
+  - `--dev` now accepts optional fixture name argument
+  - Auto-enables `--tui` and `--debug` when fixture loaded
+  - Displays fixture summary after successful load
+  - Falls back to reset mode when no fixture specified
+  - Error handling shows available fixtures on failure
+
+### Technical Details
+
+- **Workflow Improvement**: 10+ minutes manual setup → 0 seconds with fixtures
+- **Storage Location**: `~/.crack/fixtures/` (separate from active profiles)
+- **Immutability Pattern**: Fixtures copied to `~/.crack/targets/` on load
+- **Metadata Schema**: `_fixture_metadata` header with creation info
+- **Use Cases**:
+  - Plugin testing at specific enumeration states
+  - Bug reproduction with saved problematic states
+  - Training/demos without live scanning
+  - Regression testing with known baseline states
+
+### Files Added
+
+- `track/core/fixtures.py` (241 lines - NEW)
+- `track/scripts/generate_sample_fixtures.py` (657 lines - NEW)
+- `tests/track/test_fixtures.py` (293 lines - NEW)
+- `~/.crack/fixtures/README.md` (comprehensive documentation - NEW)
+- `~/.crack/fixtures/*.json` (4 sample fixtures - NEW)
+
+### Files Changed
+
+- `track/cli.py` (fixture management handlers + dev mode logic)
+- `CLAUDE.md` (dev fixture workflow section)
+
 ---
 
 ## [1.7.0] - 2025-10-11
