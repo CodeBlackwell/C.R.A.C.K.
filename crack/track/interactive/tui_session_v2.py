@@ -226,7 +226,7 @@ class TUISessionV2(InteractiveSession):
             layout['menu'].update(config_panel)
 
             # Footer
-            footer_text = f"{format_hotkey(self.theme, '1-5')}:Edit | {format_hotkey(self.theme, '6')}:Continue | {format_hotkey(self.theme, 'q')}:Quit | {self.theme.muted(':')}command"
+            footer_text = f"{format_hotkey(self.theme, '1-5')}:Edit | {format_hotkey(self.theme, '6/n')}:Continue | {format_hotkey(self.theme, 'q')}:Quit | {self.theme.muted(':')}command"
             footer = Panel(footer_text, border_style=self.theme.panel_border(), box=box.HEAVY)
             layout['footer'].update(footer)
 
@@ -301,7 +301,7 @@ class TUISessionV2(InteractiveSession):
                 self._select_theme_interactive(config)
                 live.start()
 
-            elif user_input == '6':
+            elif user_input == '6' or user_input.lower() == 'n':
                 # Continue to main menu
                 self.config_confirmed = True
                 return
