@@ -35,14 +35,24 @@ class PHPPlugin(ServicePlugin):
     def service_names(self) -> List[str]:
         return ['http', 'https', 'http-proxy', 'http-alt', 'ssl/http']
 
-    def detect(self, port_info: Dict[str, Any]) -> bool:
+    def detect(self, port_info: Dict[str, Any], profile: 'TargetProfile') -> float:
         """
-        Detect PHP-based web applications
+        Detect PHP-based web applications with confidence scoring
 
-        Triggers on:
-        - Service banners mentioning PHP
-        - Common PHP version strings
-        - HTTP services (potential PHP hosting)
+        Smart activation: Returns high confidence for explicit PHP indicators,
+        or low confidence after enumeration yields no findings.
+
+        Args:
+            port_info: Port information dict
+            profile: Target profile for accessing findings and task progress
+
+        Returns:
+            Confidence score (0-100):
+            - 95: PHP explicitly detected in banner/headers
+            - 40: PHP-related product (Apache+PHP, Nginx+PHP)
+            - 30: Web service on common PHP port (let HTTP plugin win first)
+            - 25: 5+ tasks completed with 0 findings (suggest deeper discovery)
+            - 0: No PHP indicators
         """
         service = port_info.get('service', '').lower()
         product = port_info.get('product', '').lower()
@@ -50,16 +60,43 @@ class PHPPlugin(ServicePlugin):
         extrainfo = port_info.get('extrainfo', '').lower()
         port = port_info.get('port')
 
-        # Check for PHP in service details
-        php_indicators = ['php', 'apache', 'nginx', 'lighttpd']
-        if any(indicator in f"{service} {product} {version} {extrainfo}" for indicator in php_indicators):
-            return True
+        # HIGH confidence: PHP explicitly mentioned
+        if 'php' in f"{service} {product} {version} {extrainfo}":
+            return 95
 
-        # Check common web ports (potential PHP hosting)
-        if port in self.default_ports:
-            return True
+        # MEDIUM confidence: PHP-related products
+        php_products = ['apache', 'nginx', 'lighttpd']
+        if any(prod in f"{product} {service}" for prod in php_products):
+            # But only if it's a web server, not just the name
+            if 'http' in service or port in [80, 443]:
+                return 40  # Let HTTP plugin handle initial enum
 
-        return False
+        # Only consider HTTP/web services for smart detection
+        if not ('http' in service or port in self.default_ports):
+            return 0
+
+        # Quality-based detection: Only defer if ACTIONABLE findings exist
+        # Actionable = Would trigger task generation (interesting dirs/files, CVEs, users)
+        # Non-actionable = Boring dirs, credentials (logged only), services
+        from track.core.finding_classifier import FindingClassifier
+        if FindingClassifier.has_actionable(profile.findings):
+            return 0  # Defer to finding-based activation
+
+        # Smart activation: Suggest deeper discovery when enum yields nothing actionable
+        # Get task completion stats
+        progress = profile.get_progress()
+        completed = progress.get('completed', 0)
+
+        # Activate after 5+ tasks complete with 0 actionable findings
+        # This catches scenarios like: gobuster finds /images, /css → boring, no tasks generated
+        if completed >= 5 and not FindingClassifier.has_actionable(profile.findings):
+            return 25  # Low confidence fallback
+
+        # LOW confidence: Common web port only (don't claim yet)
+        if port in self.default_ports and 'http' in service:
+            return 30  # HTTP plugin should win initially
+
+        return 0
 
 
     def detect_from_finding(self, finding: Dict[str, Any], profile=None) -> int:

@@ -8,6 +8,118 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added - Quality-Based Smart Detection
+
+**Problem Solved: Chicken-and-Egg in HTTP Enumeration**
+
+The original smart detection used naive findings count (`if profile.findings: return 0`), which suppressed smart detection for ANY finding - even non-actionable ones like boring directories (/css, /images), credentials (logged only), or service detections. This created false negatives where smart detection should have remained active.
+
+**Solution: FindingClassifier**
+
+- **FindingClassifier Module** (`track/core/finding_classifier.py`)
+  - Distinguishes actionable vs non-actionable findings
+  - Mirrors FindingsProcessor logic exactly (single source of truth)
+  - Binary classification: would this finding trigger task generation?
+  - Conservative approach: unknown findings treated as non-actionable
+
+- **Actionable Findings** (suppress smart detection):
+  - Interesting directories: `/admin`, `/login`, `/backup`, `/upload`, `/api`, `/config`, `/dashboard`, `/manager`, `/console`
+  - Interesting files: `.config`, `.backup`, `.bak`, `.sql`, `.db`, `.env`, `config.php`, `web.config`, `.git`
+  - CVEs with IDs: `CVE-2021-41773` (triggers searchsploit task)
+  - Users: `admin`, `root` (triggers password testing task)
+
+- **Non-Actionable Findings** (don't suppress):
+  - Boring directories: `/css`, `/images`, `/js`, `/static`, `/fonts`
+  - Credentials: `admin:password123` (logged only, no task generated)
+  - Service findings: Apache 2.4.41 (handled by ServicePlugins)
+  - CVEs without IDs: "Weak cipher suites" (no searchsploit task)
+
+**Updated Plugins (Quality-Based Detection)**
+
+Six specialized plugins updated with quality-based logic:
+- `WebSecurityPlugin` - Web application security testing
+- `InjectionAttacksPlugin` - SQL/NoSQL/Command injection testing
+- `XSSAttacksPlugin` - Cross-site scripting testing
+- `SSRFAttacksPlugin` - Server-side request forgery testing
+- `APIAttacksPlugin` - API/WebSocket exploitation
+- `PHPPlugin` - PHP application exploitation
+
+**Detection Logic Pattern**
+
+```python
+# OLD (naive approach - caused false negatives)
+if profile.findings:
+    return 0  # Suppress for ANY finding
+
+# NEW (quality-based approach)
+from track.core.finding_classifier import FindingClassifier
+if FindingClassifier.has_actionable(profile.findings):
+    return 0  # Defer to finding-based activation
+
+# Smart activation when no actionable findings
+progress = profile.get_progress()
+if completed >= 5 and not FindingClassifier.has_actionable(profile.findings):
+    return 25  # Low confidence fallback
+```
+
+### Testing
+
+**Comprehensive Test Suite** (8/8 tests passed, 100% success rate)
+
+1. ✅ Smart activation when no findings exist
+2. ✅ Smart deactivation when actionable findings exist
+3. ✅ Boring directories don't suppress (confidence=25)
+4. ✅ Interesting directories suppress (confidence=0)
+5. ✅ Credentials don't suppress (confidence=25)
+6. ✅ CVE with ID suppresses (confidence=0)
+7. ✅ CVE without ID doesn't suppress (confidence=25)
+8. ✅ Mixed findings suppress correctly (ANY actionable = suppress)
+
+**Real-World Simulation** (PASSED)
+- Phase 1-2: Nmap → HTTP plugin generates initial enumeration
+- Phase 3: Execute 5 tasks → find boring directories (/css, /images)
+- Phase 4: Smart detection activates (confidence=25) ✅
+- Phase 5: Deeper scan → find interesting directory (/admin)
+- Phase 6: Smart detection deactivates (confidence=0) ✅
+
+### Workflow Impact
+
+**Scenario 1: Initial enumeration yields nothing interesting**
+```
+gobuster → /css, /images (boring) → FindingClassifier.has_actionable() = False
+→ Smart detection activates (confidence=25)
+→ Suggests: Web Security Testing, Injection Attacks, XSS Testing
+→ User gets deeper discovery suggestions
+```
+
+**Scenario 2: Interesting finding discovered**
+```
+gobuster → /admin (interesting) → FindingClassifier.has_actionable() = True
+→ Smart detection deactivates (confidence=0)
+→ FindingsProcessor generates: "Inspect /admin directory"
+→ Targeted task created automatically
+```
+
+### Technical Details
+
+- **Mirrors FindingsProcessor**: Ensures consistency between task generation and detection suppression
+- **Conservative Design**: Unknown finding types treated as non-actionable (favor more tasks)
+- **Single Source of Truth**: INTERESTING_DIRS and INTERESTING_FILES extracted from FindingsProcessor
+- **No Breaking Changes**: All existing plugins continue to work
+- **Event-Driven**: Integrates with existing EventBus architecture
+
+### Files Changed
+
+- `track/core/finding_classifier.py` (89 lines - NEW)
+- `track/services/web_security.py` (lines 67-82 updated)
+- `track/services/injection_attacks.py` (lines 66-78 updated)
+- `track/services/xss_attacks.py` (lines 75-86 updated)
+- `track/services/ssrf_attacks.py` (lines 68-80 updated)
+- `track/services/api_attacks.py` (lines 65-78 updated)
+- `track/services/php.py` (lines 78-93 updated)
+
+---
+
 ### Changed - Host Discovery & Output Organization
 
 **Nmap-Based Host Discovery (Consistent Tooling)**

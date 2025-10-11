@@ -32,30 +32,50 @@ class APIAttacksPlugin(ServicePlugin):
     def service_names(self) -> List[str]:
         return ['grpc', 'websocket', 'socket.io']  # API/WebSocket services
 
-    def detect(self, port_info: Dict[str, Any]) -> bool:
+    def detect(self, port_info: Dict[str, Any], profile: 'TargetProfile') -> float:
         """
-        Detect API services (gRPC-Web, WebSocket, REST)
+        Detect API services (gRPC-Web, WebSocket, REST) with confidence scoring
 
-        Triggers on HTTP/HTTPS services where API indicators might exist
+        Smart activation: Returns high confidence for explicit API indicators,
+        or low confidence after enumeration yields no findings.
+
+        Args:
+            port_info: Port information dict
+            profile: Target profile for accessing findings and task progress
+
+        Returns:
+            Confidence score (0-100):
+            - 85: Explicit API indicators (gRPC, WebSocket, socket.io detected)
+            - 25: 5+ tasks completed with 0 actionable findings (suggest deeper discovery)
+            - 0: Generic HTTP (let HTTP plugin handle initial enum first)
         """
         service = port_info.get('service', '').lower()
         product = port_info.get('product', '').lower()
         version = port_info.get('version', '').lower()
 
-        # Detect HTTP/HTTPS services (potential API hosts)
-        if 'http' in service or 'https' in service:
-            # Check for explicit API indicators in product/version
-            api_indicators = ['grpc', 'websocket', 'api', 'rest', 'socket.io']
-            if any(indicator in product.lower() for indicator in api_indicators):
-                return True
-            if any(indicator in version.lower() for indicator in api_indicators):
-                return True
+        # HIGH confidence: Explicit API/WebSocket indicators
+        api_indicators = ['grpc', 'websocket', 'ws', 'socket.io']
+        if any(indicator in f"{service} {product} {version}" for indicator in api_indicators):
+            return 85
 
-        # Detect WebSocket explicitly
-        if 'websocket' in service or 'ws' in service:
-            return True
+        # Only consider HTTP/web services for smart detection
+        if not any(proto in service for proto in ['http', 'https', 'web']):
+            return 0
 
-        return False
+        # Quality-based detection: Only defer if ACTIONABLE findings exist
+        from track.core.finding_classifier import FindingClassifier
+        if FindingClassifier.has_actionable(profile.findings):
+            return 0  # Defer to finding-based activation
+
+        # Smart activation: Suggest deeper discovery when enum yields nothing actionable
+        progress = profile.get_progress()
+        completed = progress.get('completed', 0)
+
+        # Activate after 5+ tasks complete with 0 actionable findings
+        if completed >= 5 and not FindingClassifier.has_actionable(profile.findings):
+            return 25  # Low confidence fallback
+
+        return 0  # Default: don't claim generic HTTP ports
 
     def get_task_tree(self, target: str, port: int, service_info: Dict[str, Any]) -> Dict[str, Any]:
         """Generate modern API attack task tree"""

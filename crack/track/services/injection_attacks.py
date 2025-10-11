@@ -40,23 +40,43 @@ class InjectionAttacksPlugin(ServicePlugin):
     def name(self) -> str:
         return "injection-attacks"
 
-    def detect(self, port_info: Dict[str, Any]) -> bool:
+    def detect(self, port_info: Dict[str, Any], profile: 'TargetProfile') -> float:
         """
-        Detect web services that might be vulnerable to injection attacks.
-        This plugin activates on HTTP/HTTPS ports.
+        Detect web services for injection attack testing with confidence scoring
+
+        This plugin provides injection testing (command, XPath, LDAP, email, CRLF, CSV, LaTeX, XSLT, phone).
+        Smart activation: Activates AFTER initial enumeration if no ACTIONABLE findings discovered.
+
+        Args:
+            port_info: Port information dict
+            profile: Target profile for accessing findings and task progress
+
+        Returns:
+            Confidence score (0-100):
+            - 0: Actionable findings exist (wait for finding-based activation)
+            - 25: 5+ tasks completed with 0 actionable findings (suggest deeper discovery)
+            - 0: Default (let HTTP plugin handle initial enum)
         """
         service = port_info.get('service', '').lower()
-        port = port_info.get('port')
 
-        # Activate on HTTP/HTTPS services
-        if any(http in service for http in ['http', 'https', 'www', 'web']):
-            return True
+        # Only consider HTTP/web services
+        if not any(proto in service for proto in ['http', 'https', 'web']):
+            return 0
 
-        # Common web ports
-        if port in [80, 443, 8000, 8008, 8080, 8443, 8888, 3000, 4443, 9000, 9090]:
-            return True
+        # Quality-based detection: Only defer if ACTIONABLE findings exist
+        from track.core.finding_classifier import FindingClassifier
+        if FindingClassifier.has_actionable(profile.findings):
+            return 0  # Defer to finding-based activation
 
-        return False
+        # Smart activation: Suggest deeper discovery when enum yields nothing actionable
+        progress = profile.get_progress()
+        completed = progress.get('completed', 0)
+
+        # Activate after 5+ tasks complete with 0 actionable findings
+        if completed >= 5 and not FindingClassifier.has_actionable(profile.findings):
+            return 25  # Low confidence fallback
+
+        return 0  # Default: don't auto-activate
 
     def get_task_tree(self, target: str, port: int, service_info: Dict[str, Any]) -> Dict[str, Any]:
         """Generate injection attacks task tree"""
