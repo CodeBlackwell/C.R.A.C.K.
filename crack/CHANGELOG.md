@@ -10,6 +10,144 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [1.7.0] - 2025-10-11
+
+### Added - Command Editor System (Wave 3 Complete)
+
+**Three-Tier Command Editor Architecture**
+
+- **CommandEditor Orchestrator**
+  - Smart tier routing based on tool capabilities and schema availability
+  - Three-tier system: QuickEditor (Tier 1) → AdvancedEditor (Tier 2) → RawEditor (Tier 3)
+  - Seamless escalation with state preservation
+  - Schema caching for performance optimization
+  - Loop prevention with MAX_ITERATIONS safety limit (10 iterations)
+  - Exception handling with graceful degradation
+  - Pure logic components (NO TUI rendering) ready for Phase 5 integration
+
+- **QuickEditor (Tier 1) - Parameter Menu**
+  - Extract 5 most common parameters per tool
+  - Numbered menu navigation (1-5)
+  - Context-aware parameter editing
+  - Preview with diff display
+  - Escalation to Advanced or Raw tiers
+  - Supports: gobuster, nmap, nikto, hydra, sqlmap
+
+- **AdvancedEditor (Tier 2) - Form Interface**
+  - Schema-driven form generation from JSON definitions
+  - Field navigation (Tab, Arrow keys, direct selection)
+  - Boolean flag toggles
+  - Type validation (text, number, path, enum, boolean)
+  - Required field validation with missing field reporting
+  - Real-time preview updates
+  - Escalation to Raw tier if needed
+
+- **RawEditor (Tier 3) - Text Editor**
+  - Multi-line command editing with line insert/delete
+  - Cursor position tracking with boundary clamping
+  - Line numbers display (data structure)
+  - Validation on demand via CommandValidator
+  - Revert to original command support
+  - Dirty flag tracking for unsaved changes
+  - Preserves line continuations
+
+- **Supporting Components**
+  - **CommandParser**: Tool-specific parsing (gobuster, nmap, nikto, hydra, sqlmap)
+  - **CommandValidator**: Safety checks (syntax, paths, flags, runtime estimation, security patterns)
+  - **CommandFormatter**: Pretty printing, syntax highlighting, diff display
+  - **Tool Schemas**: JSON definitions for 5 OSCP tools (gobuster, nmap, nikto, hydra, sqlmap)
+
+- **Debug Logging Categories**
+  - `UI.EDITOR`: Main orchestrator events
+  - `UI.EDITOR.TIER`: Tier routing and escalation operations
+  - `UI.EDITOR.PARSE`: Command parsing in editor context
+  - `UI.EDITOR.SCHEMA`: Schema loading and validation operations
+  - Complete documentation in `CATEGORY_REFERENCE.md`
+
+### Testing
+
+- **143 tests passing (100% success rate)**
+  - CommandParser: 23 tests (115% of requirement)
+  - CommandValidator: 20 tests (100% of requirement)
+  - CommandFormatter: 14 tests (140% of requirement)
+  - QuickEditor: 17 tests (113% of requirement)
+  - AdvancedEditor: 18 tests (100% of requirement)
+  - RawEditor: 24 tests (200% of requirement)
+  - CommandEditor: 12 tests (120% of requirement)
+  - Schemas: 15 tests (100% of requirement)
+
+- **Coverage**: 89-100% across all components
+- **Testing Pattern**: Mock-based unit tests with comprehensive edge case coverage
+
+### Changed
+
+- **CATEGORY_REFERENCE.md**
+  - Added UI.EDITOR hierarchy to category tree
+  - Documented all 4 new editor categories with examples
+  - Updated Quick Reference Table with editor categories
+  - Added editor-specific debugging commands
+
+- **log_types.py**
+  - Added 4 new LogCategory enum values for command editor
+  - Updated docstring with editor category hierarchy
+
+### Technical Details
+
+- **Tier Selection Logic**:
+  1. QuickEditor (Tier 1): If tool in COMMON_PARAMS and no escalation needed
+  2. AdvancedEditor (Tier 2): If tool has JSON schema and user escalates from Quick
+  3. RawEditor (Tier 3): If user escalates from Advanced OR no schema exists
+
+- **Escalation Flow**:
+  - Quick --[a]--> Advanced --[r]--> Raw
+  - Quick --------[r]---------------> Raw
+  - Chained escalation handling (catches invalid escalations like raw→quick)
+
+- **State Preservation**:
+  - Command edits preserved across tier transitions
+  - Metadata unchanged during escalation
+  - Original command stored for revert functionality
+
+- **Safety Mechanisms**:
+  - MAX_ITERATIONS prevents infinite escalation loops
+  - Exception catching with graceful degradation to None
+  - Invalid escalation path detection with error logging
+  - Schema caching prevents redundant file I/O
+
+### Documentation
+
+- **CMD_PANEL_CHECKLIST.md**
+  - Phase 4.1 marked complete
+  - Updated success metrics (143/148 tests, 97% progress)
+  - Completion notes with file locations and additional features
+  - Ready for Phase 5 integration
+
+### Files Changed
+
+- `crack/track/interactive/log_types.py` (4 categories added)
+- `crack/track/interactive/CATEGORY_REFERENCE.md` (documentation added)
+- `crack/track/interactive/components/command_editor/editor.py` (348 lines - NEW)
+- `crack/track/interactive/components/command_editor/quick_editor.py` (286 lines - NEW)
+- `crack/track/interactive/components/command_editor/advanced_editor.py` (345 lines - NEW)
+- `crack/track/interactive/components/command_editor/raw_editor.py` (193 lines - NEW)
+- `crack/track/interactive/components/command_editor/parser.py` (255 lines - NEW)
+- `crack/track/interactive/components/command_editor/validator.py` (434 lines - NEW)
+- `crack/track/interactive/components/command_editor/formatter.py` (235 lines - NEW)
+- `crack/track/interactive/components/command_editor/tests/test_*.py` (8 files - NEW)
+- `crack/track/interactive/components/command_editor/schemas/*.json` (5 files - NEW)
+- `track/docs/CMD_PANEL_CHECKLIST.md` (updated)
+
+### Next Steps
+
+**Phase 5: TUI Integration** (separate task)
+- Wire CommandEditor to TUISessionV2
+- Add 'e' hotkey for command editing
+- Handle EditResult actions (execute, save template, cancel)
+- Update task command or save as template based on user choice
+- Show confirmation messages
+
+---
+
 ## [1.6.0] - 2025-10-11
 
 ### Added - Live Theme Preview
