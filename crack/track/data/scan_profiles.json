@@ -5,7 +5,7 @@
     {
       "id": "lab-quick",
       "name": "Quick Scan (Top 1000 Ports)",
-      "base_command": "nmap --top-ports 1000",
+      "base_command": "sudo nmap --top-ports 1000",
       "timing": "normal",
       "coverage": "quick",
       "use_case": "OSCP labs, CTF - fast initial discovery",
@@ -34,7 +34,7 @@
     {
       "id": "lab-full",
       "name": "Full Port Scan (All 65535)",
-      "base_command": "nmap -p-",
+      "base_command": "sudo nmap -p-",
       "timing": "aggressive",
       "coverage": "full",
       "use_case": "OSCP labs - comprehensive port discovery (CRITICAL: never skip in OSCP)",
@@ -72,7 +72,7 @@
     {
       "id": "stealth-slow",
       "name": "Stealth Scan (Paranoid - T0)",
-      "base_command": "nmap -sS -T0 -p-",
+      "base_command": "sudo nmap -sS -T0 -p-",
       "timing": "paranoid",
       "coverage": "full",
       "use_case": "Production systems with IDS/IPS - maximum stealth",
@@ -104,7 +104,7 @@
     {
       "id": "stealth-normal",
       "name": "Stealth Scan (Polite - T2)",
-      "base_command": "nmap -sS -T2 -p-",
+      "base_command": "sudo nmap -sS -T2 -p-",
       "timing": "polite",
       "coverage": "full",
       "use_case": "Production systems - moderate stealth, reasonable speed",
@@ -131,7 +131,7 @@
     {
       "id": "aggressive-full",
       "name": "Aggressive Full Scan (T4)",
-      "base_command": "nmap -sV -sC -A -T4 -p-",
+      "base_command": "sudo nmap -sV -sC -A -T4 -p-",
       "timing": "aggressive",
       "coverage": "full",
       "use_case": "Labs, time-critical pentests - maximum information, maximum speed",
@@ -167,7 +167,7 @@
     {
       "id": "udp-common",
       "name": "UDP Scan (Common Ports)",
-      "base_command": "nmap -sU --top-ports 100",
+      "base_command": "sudo nmap -sU --top-ports 100",
       "timing": "normal",
       "coverage": "quick",
       "use_case": "Discover common UDP services (DNS, SNMP, TFTP)",
@@ -197,7 +197,7 @@
     {
       "id": "service-detect-default",
       "name": "Service Version Detection",
-      "base_command": "nmap -sV -sC",
+      "base_command": "sudo nmap -sV -sC",
       "timing": "normal",
       "use_case": "Detect service versions and run safe scripts on known ports",
       "estimated_time": "2-5 minutes",
@@ -226,7 +226,7 @@
     {
       "id": "http-enum-full",
       "name": "HTTP Enumeration (Full)",
-      "base_command": "nmap --script http-enum,http-methods,http-headers",
+      "base_command": "sudo nmap --script http-enum,http-methods,http-headers",
       "timing": "normal",
       "coverage": "targeted",
       "use_case": "Comprehensive HTTP enumeration - directories, methods, headers",
@@ -270,7 +270,7 @@
     {
       "id": "http-vuln-scan",
       "name": "HTTP Vulnerability Scan",
-      "base_command": "nmap --script http-vuln-*,http-sql-injection,http-waf-detect",
+      "base_command": "sudo nmap --script http-vuln-*,http-sql-injection,http-waf-detect",
       "timing": "normal",
       "coverage": "targeted",
       "use_case": "Automated vulnerability detection (XSS, SQLi, WAF, known CVEs)",
@@ -315,7 +315,7 @@
     {
       "id": "http-auth-brute",
       "name": "HTTP Authentication Brute-force",
-      "base_command": "nmap --script http-brute,http-default-accounts",
+      "base_command": "sudo nmap --script http-brute,http-default-accounts",
       "timing": "normal",
       "coverage": "targeted",
       "use_case": "Test HTTP Basic Auth and default credentials on web apps",
@@ -367,7 +367,7 @@
     {
       "id": "http-cms-scan",
       "name": "CMS Detection and Scanning",
-      "base_command": "nmap --script http-wordpress-enum,http-joomla-brute",
+      "base_command": "sudo nmap --script http-wordpress-enum,http-joomla-brute",
       "timing": "normal",
       "coverage": "targeted",
       "use_case": "Detect and enumerate WordPress/Joomla installations",
@@ -414,7 +414,7 @@
     {
       "id": "http-ssl-scan",
       "name": "HTTPS/SSL Enumeration",
-      "base_command": "nmap --script ssl-cert,ssl-enum-ciphers,http-security-headers",
+      "base_command": "sudo nmap --script ssl-cert,ssl-enum-ciphers,http-security-headers",
       "timing": "normal",
       "coverage": "targeted",
       "use_case": "Analyze SSL/TLS configuration and security headers on HTTPS",
@@ -461,7 +461,7 @@
     {
       "id": "quick-discovery-nodns",
       "name": "Quick Host Discovery (Skip DNS)",
-      "base_command": "nmap -n -sn",
+      "base_command": "sudo nmap -n -sn",
       "timing": "normal",
       "coverage": "quick",
       "use_case": "OSCP labs - fast host discovery when DNS is slow or broken (2-5x faster)",
@@ -503,7 +503,7 @@
     {
       "id": "documented-full",
       "name": "Full Scan with Complete Documentation",
-      "base_command": "nmap -p- -sV -sC",
+      "base_command": "sudo nmap -p- -sV -sC",
       "timing": "normal",
       "coverage": "full",
       "use_case": "OSCP exam - comprehensive scan with all output formats for reporting",
@@ -595,7 +595,7 @@
     {
       "id": "version-intensity-max",
       "name": "Maximum Service Version Detection",
-      "base_command": "nmap -sV --version-intensity 9",
+      "base_command": "sudo nmap -sV --version-intensity 9",
       "timing": "slow",
       "coverage": "deep",
       "use_case": "Maximum version detection accuracy (use when standard -sV fails to identify service)",
@@ -640,7 +640,7 @@
     {
       "id": "interface-specific-vpn",
       "name": "VPN Interface Scan (tun0)",
-      "base_command": "nmap -e tun0",
+      "base_command": "sudo nmap -e tun0",
       "timing": "normal",
       "coverage": "standard",
       "use_case": "OSCP VPN scanning - force traffic through VPN interface (critical for exam)",
@@ -680,13 +680,262 @@
         "Manual interface selection: --source-port flag for additional control"
       ],
       "notes": "OSCP CRITICAL: In exam, ALWAYS verify you're using tun0 (VPN) not eth0 (local network). Check with 'ip addr show' before scanning. Wrong interface = scanning wrong network = zero points."
+    },
+    {
+      "id": "host-icmp-ping",
+      "name": "Host Discovery: ICMP Ping (Default)",
+      "base_command": "sudo nmap -sn -PE",
+      "timing": "fast",
+      "coverage": "host-check",
+      "use_case": "OSCP: Standard ICMP echo request - quickest host alive check",
+      "estimated_time": "5-15 seconds",
+      "detection_risk": "low",
+      "tags": [
+        "OSCP:HIGH",
+        "HOST_DISCOVERY",
+        "QUICK_WIN"
+      ],
+      "phases": [
+        "discovery"
+      ],
+      "flag_explanations": {
+        "-sn": "Ping scan only (no port scan) - discovers online hosts",
+        "-PE": "ICMP echo ping - standard ping probe via nmap (RFC 792)"
+      },
+      "success_indicators": [
+        "Host replies to ICMP echo requests",
+        "Average RTT shown (latency indicator)"
+      ],
+      "failure_indicators": [
+        "100% packet loss (host down or blocking ICMP)",
+        "Destination unreachable (routing issue)"
+      ],
+      "alternatives": [
+        "If ICMP blocked: Try TCP SYN ping (nmap -PS)",
+        "If all ICMP fails: Use ARP ping on local network (nmap -PR)",
+        "Nuclear option: Skip host discovery entirely (nmap -Pn)"
+      ],
+      "next_steps": [
+        "If host responds: Proceed to port discovery",
+        "If ICMP blocked: Try alternative host discovery methods",
+        "Document RTT for network performance notes"
+      ],
+      "notes": "OSCP: ICMP may be blocked by firewalls. Always have backup discovery methods ready. Ping is fastest but least reliable in hardened environments."
+    },
+    {
+      "id": "host-icmp-nmap",
+      "name": "Host Discovery: Nmap ICMP Echo Ping",
+      "base_command": "sudo nmap -sn -PE",
+      "timing": "fast",
+      "coverage": "host-check",
+      "use_case": "OSCP: Nmap-based ICMP echo - integrates with nmap workflow",
+      "estimated_time": "5-15 seconds",
+      "detection_risk": "low",
+      "tags": [
+        "OSCP:HIGH",
+        "HOST_DISCOVERY",
+        "QUICK_WIN"
+      ],
+      "phases": [
+        "discovery"
+      ],
+      "flag_explanations": {
+        "-sn": "Ping scan only (no port scan) - discovers online hosts",
+        "-PE": "ICMP echo ping - standard ping probe via nmap (RFC 792)"
+      },
+      "success_indicators": [
+        "Hosts marked as 'up' in nmap output",
+        "ICMP echo replies received",
+        "Output format consistent with other nmap scans"
+      ],
+      "failure_indicators": [
+        "All hosts shown as 'down' - ICMP may be blocked",
+        "No echo replies - try TCP-based discovery"
+      ],
+      "alternatives": [
+        "Standalone ping: ping -c 3 <target> (simpler, faster)",
+        "TCP SYN ping: nmap -sn -PS22,80,443 <target>",
+        "ARP ping (local): nmap -sn -PR <target>"
+      ],
+      "next_steps": [
+        "If successful: Proceed to port scanning",
+        "If blocked: Try TCP SYN/ACK or ARP discovery",
+        "Document which discovery method worked"
+      ],
+      "notes": "OSCP: Use this for nmap consistency when building scan pipelines. For quick manual checks, standalone 'ping -c 3' is faster. Both are valid - choose based on workflow integration needs."
+    },
+    {
+      "id": "host-tcp-syn",
+      "name": "Host Discovery: TCP SYN Ping (Firewall Bypass)",
+      "base_command": "sudo nmap -sn -PS22,80,443,3389",
+      "timing": "fast",
+      "coverage": "host-check",
+      "use_case": "OSCP: When ICMP is blocked - TCP SYN to common ports",
+      "estimated_time": "1-3 seconds",
+      "detection_risk": "low",
+      "tags": [
+        "OSCP:HIGH",
+        "HOST_DISCOVERY",
+        "BYPASS"
+      ],
+      "phases": [
+        "discovery"
+      ],
+      "flag_explanations": {
+        "-sn": "Skip port scan, only do host discovery (ping scan)",
+        "-PS22,80,443,3389": "TCP SYN ping to common ports (SSH, HTTP, HTTPS, RDP) - if any port responds, host is alive"
+      },
+      "success_indicators": [
+        "Host responds to TCP SYN on any specified port",
+        "Works even when ICMP is filtered"
+      ],
+      "failure_indicators": [
+        "No response on any tested ports (try more ports)",
+        "All ports filtered (try ACK ping)"
+      ],
+      "alternatives": [
+        "Add more ports: -PS21,22,23,25,80,443,445,3389,8080",
+        "Try ACK ping instead: -PA (bypasses stateless firewalls)",
+        "Try UDP ping: -PU53,161 (DNS, SNMP)"
+      ],
+      "next_steps": [
+        "If host responds: Note which port responded (might be open)",
+        "If no response: Try ACK ping or skip host discovery (-Pn)",
+        "Document discovery method for reporting"
+      ],
+      "notes": "OSCP CRITICAL: Many exam boxes block ICMP. TCP SYN ping to common ports (22,80,443) is the most reliable alternative. Faster than full port scan."
+    },
+    {
+      "id": "host-ack",
+      "name": "Host Discovery: TCP ACK Ping (Stateless Firewall Bypass)",
+      "base_command": "sudo nmap -sn -PA22,80,443,3389",
+      "timing": "fast",
+      "coverage": "host-check",
+      "use_case": "OSCP: Bypass stateless firewalls - ACK packets look like return traffic",
+      "estimated_time": "1-3 seconds",
+      "detection_risk": "low",
+      "tags": [
+        "OSCP:MEDIUM",
+        "HOST_DISCOVERY",
+        "BYPASS",
+        "STEALTH"
+      ],
+      "phases": [
+        "discovery"
+      ],
+      "flag_explanations": {
+        "-sn": "Skip port scan, only do host discovery",
+        "-PA22,80,443,3389": "TCP ACK ping to common ports - sends ACK packets (not SYN) to look like established connections"
+      },
+      "success_indicators": [
+        "Host responds with RST (reset) packet - proves host is alive",
+        "Works against stateless firewalls that allow 'return' traffic"
+      ],
+      "failure_indicators": [
+        "No RST received (stateful firewall or host down)",
+        "All probes filtered (try -Pn)"
+      ],
+      "alternatives": [
+        "Try SYN ping if ACK fails: -PS",
+        "Combine both: nmap -PS -PA (doubles chances)",
+        "Last resort: Skip discovery entirely with -Pn"
+      ],
+      "next_steps": [
+        "If RST received: Host is alive, proceed to port scan",
+        "If no response: Document firewall behavior",
+        "Consider using -Pn for port scan (assume host is up)"
+      ],
+      "notes": "OSCP: ACK ping is useful against stateless firewalls that allow ACK packets (thinking they're part of established connections). Less common than SYN ping but valuable in hardened environments."
+    },
+    {
+      "id": "host-arp",
+      "name": "Host Discovery: ARP Ping (Local Network Only)",
+      "base_command": "sudo nmap -sn -PR",
+      "timing": "fastest",
+      "coverage": "host-check",
+      "use_case": "OSCP: Local network host discovery - most reliable on same subnet",
+      "estimated_time": "1-2 seconds",
+      "detection_risk": "very-low",
+      "tags": [
+        "OSCP:HIGH",
+        "HOST_DISCOVERY",
+        "LOCAL",
+        "RELIABLE"
+      ],
+      "phases": [
+        "discovery"
+      ],
+      "flag_explanations": {
+        "-sn": "Skip port scan, only do host discovery",
+        "-PR": "ARP ping - sends ARP requests to discover hosts on local network (Layer 2)"
+      },
+      "success_indicators": [
+        "ARP reply received - host is definitely alive",
+        "MAC address obtained (useful for device identification)",
+        "Fastest and most reliable on local networks"
+      ],
+      "failure_indicators": [
+        "No ARP reply (host not on local network or down)",
+        "ARP only works on same subnet (not routed)"
+      ],
+      "alternatives": [
+        "If not local network: Use TCP SYN ping (-PS)",
+        "Scan multiple hosts: nmap -sn -PR 192.168.1.0/24"
+      ],
+      "next_steps": [
+        "If ARP reply: Host is alive, note MAC address",
+        "Proceed to port scan with confidence",
+        "Use MAC for device fingerprinting (vendor lookup)"
+      ],
+      "notes": "OSCP: ARP ping is the MOST RELIABLE host discovery method on local networks (same subnet). Cannot be blocked by firewalls since it operates at Layer 2. Always use for local targets. Requires root/admin privileges."
+    },
+    {
+      "id": "host-disable-ping",
+      "name": "Host Discovery: Skip Ping (Assume Host Up)",
+      "base_command": "sudo nmap -Pn",
+      "timing": "n/a",
+      "coverage": "n/a",
+      "use_case": "OSCP: When host discovery fails - skip it and scan all ports anyway",
+      "estimated_time": "0 seconds (no discovery)",
+      "detection_risk": "low",
+      "tags": [
+        "OSCP:HIGH",
+        "BYPASS",
+        "NUCLEAR",
+        "EVASION"
+      ],
+      "phases": [
+        "discovery"
+      ],
+      "flag_explanations": {
+        "-Pn": "Skip host discovery - treat all hosts as online and scan them anyway (no ping, no nothing)"
+      },
+      "success_indicators": [
+        "Port scan proceeds regardless of host status",
+        "Finds hosts that block all discovery methods"
+      ],
+      "failure_indicators": [
+        "Wastes time scanning hosts that are actually down",
+        "Slower than discovery+scan (scans unnecessary hosts)"
+      ],
+      "alternatives": [
+        "Before using -Pn: Try all other discovery methods first",
+        "Combine with fast port scan: nmap -Pn -F (top 100 ports)",
+        "Or targeted scan: nmap -Pn -p80,443 (specific ports)"
+      ],
+      "next_steps": [
+        "Use -Pn when all other discovery fails",
+        "Proceed directly to port scanning",
+        "Document that host discovery was skipped"
+      ],
+      "notes": "OSCP CRITICAL: -Pn is your LAST RESORT when all host discovery methods fail. Treats all targets as up and scans them anyway. Slower but guarantees coverage. Common in hardened networks where ICMP, TCP, UDP discovery all fail. Always try other methods first."
     }
   ],
   "os_fingerprinting_profiles": [
     {
       "id": "os-detect-standard",
       "name": "OS Detection (Standard)",
-      "base_command": "nmap -O",
+      "base_command": "sudo nmap -O",
       "timing": "normal",
       "coverage": "metadata",
       "use_case": "Identify operating system for exploit selection (OSCP CRITICAL)",
@@ -728,7 +977,7 @@
     {
       "id": "os-detect-aggressive",
       "name": "OS Detection (Aggressive Guess)",
-      "base_command": "nmap -O --osscan-guess",
+      "base_command": "sudo nmap -O --osscan-guess",
       "timing": "normal",
       "coverage": "metadata",
       "use_case": "Fallback when standard OS detection fails",
@@ -807,7 +1056,7 @@
     {
       "id": "firewall-detect-ack",
       "name": "Firewall Detection (TCP ACK Scan)",
-      "base_command": "nmap -sA",
+      "base_command": "sudo nmap -sA",
       "timing": "normal",
       "coverage": "firewall",
       "use_case": "Identify stateful firewalls before exploitation",
@@ -846,7 +1095,7 @@
     {
       "id": "udp-critical-oscp",
       "name": "UDP Critical Services (OSCP Focus)",
-      "base_command": "nmap -sU -p 53,69,123,161,162,500",
+      "base_command": "sudo nmap -sU -p 53,69,123,161,162,500",
       "timing": "normal",
       "coverage": "udp-targeted",
       "use_case": "Target critical UDP services for OSCP (SNMP, TFTP, DNS, NTP)",
@@ -1013,7 +1262,7 @@
     "host_discovery_recommended": [
       "host-discovery-arp",
       "host-discovery-syn",
-      "host-discovery-icmp-echo",
+      "host-icmp-nmap",
       "host-discovery-ack"
     ],
     "firewall_evasion_recommended": [
@@ -1027,7 +1276,7 @@
     {
       "id": "mysql-enum-full",
       "name": "MySQL Full Enumeration",
-      "base_command": "nmap --script mysql-empty-password,mysql-info,mysql-users,mysql-databases,mysql-dump-hashes,mysql-variables,mysql-audit,mysql-vuln-cve2012-2122 -p3306",
+      "base_command": "sudo nmap --script mysql-empty-password,mysql-info,mysql-users,mysql-databases,mysql-dump-hashes,mysql-variables,mysql-audit,mysql-vuln-cve2012-2122 -p3306",
       "timing": "normal",
       "use_case": "Comprehensive MySQL enumeration (auth bypass, users, databases, hashes, insecure config)",
       "estimated_time": "2-5 minutes",
@@ -1079,7 +1328,7 @@
     {
       "id": "mssql-enum-full",
       "name": "MS SQL Full Enumeration",
-      "base_command": "nmap --script ms-sql-info,ms-sql-empty-password,ms-sql-config,ms-sql-ntlm-info,ms-sql-tables,ms-sql-dump-hashes -p1433",
+      "base_command": "sudo nmap --script ms-sql-info,ms-sql-empty-password,ms-sql-config,ms-sql-ntlm-info,ms-sql-tables,ms-sql-dump-hashes -p1433",
       "timing": "normal",
       "use_case": "Comprehensive MS SQL enumeration (version, NTLM info, tables, hashes)",
       "estimated_time": "2-5 minutes",
@@ -1115,7 +1364,7 @@
     {
       "id": "oracle-sid-brute",
       "name": "Oracle SID Enumeration",
-      "base_command": "nmap -sV --script oracle-sid-brute -p1521",
+      "base_command": "sudo nmap -sV --script oracle-sid-brute -p1521",
       "timing": "normal",
       "use_case": "Enumerate Oracle SID names via TNS listener",
       "estimated_time": "5-10 minutes",
@@ -1144,7 +1393,7 @@
     {
       "id": "oracle-brute",
       "name": "Oracle Password Brute-Force",
-      "base_command": "nmap -sV --script oracle-brute --script-args oracle-brute.sid=ORCL -p1521",
+      "base_command": "sudo nmap -sV --script oracle-brute --script-args oracle-brute.sid=ORCL -p1521",
       "timing": "normal",
       "use_case": "Dictionary attack against Oracle database (needs SID from oracle-sid-brute)",
       "estimated_time": "5-30 minutes",
@@ -1173,7 +1422,7 @@
     {
       "id": "mongodb-enum",
       "name": "MongoDB Enumeration",
-      "base_command": "nmap -p27017 --script mongodb-databases,mongodb-info",
+      "base_command": "sudo nmap -p27017 --script mongodb-databases,mongodb-info",
       "timing": "normal",
       "use_case": "Enumerate MongoDB databases (often no auth required)",
       "estimated_time": "1-3 minutes",
@@ -1204,7 +1453,7 @@
     {
       "id": "couchdb-enum",
       "name": "CouchDB Enumeration",
-      "base_command": "nmap -p5984 --script couchdb-databases,couchdb-stats",
+      "base_command": "sudo nmap -p5984 --script couchdb-databases,couchdb-stats",
       "timing": "normal",
       "use_case": "Enumerate CouchDB databases and statistics (HTTP-based NoSQL)",
       "estimated_time": "1-2 minutes",
@@ -1237,7 +1486,7 @@
     {
       "id": "smtp-enum-full",
       "name": "SMTP Full Enumeration",
-      "base_command": "nmap --script smtp-commands,smtp-enum-users,smtp-open-relay,smtp-ntlm-info -p25,465,587",
+      "base_command": "sudo nmap --script smtp-commands,smtp-enum-users,smtp-open-relay,smtp-ntlm-info -p25,465,587",
       "timing": "normal",
       "use_case": "Comprehensive SMTP enumeration (commands, users, relay test, NTLM info)",
       "estimated_time": "2-5 minutes",
@@ -1293,7 +1542,7 @@
     {
       "id": "smtp-vuln-scan",
       "name": "SMTP Vulnerability Scan",
-      "base_command": "nmap --script smtp-vuln-*,smtp-brute -p25,465,587",
+      "base_command": "sudo nmap --script smtp-vuln-*,smtp-brute -p25,465,587",
       "timing": "normal",
       "use_case": "Detect SMTP vulnerabilities and brute-force authentication",
       "estimated_time": "5-30 minutes (depends on brute-force wordlist)",
@@ -1339,7 +1588,7 @@
     {
       "id": "imap-enum-full",
       "name": "IMAP Full Enumeration",
-      "base_command": "nmap --script imap-capabilities,imap-ntlm-info -p143,993",
+      "base_command": "sudo nmap --script imap-capabilities,imap-ntlm-info -p143,993",
       "timing": "normal",
       "use_case": "Comprehensive IMAP enumeration (capabilities, NTLM info)",
       "estimated_time": "1-3 minutes",
@@ -1384,7 +1633,7 @@
     {
       "id": "imap-brute",
       "name": "IMAP Authentication Brute-Force",
-      "base_command": "nmap -p143,993 --script imap-brute",
+      "base_command": "sudo nmap -p143,993 --script imap-brute",
       "timing": "normal",
       "use_case": "Dictionary attack against IMAP authentication",
       "estimated_time": "5-30 minutes (depends on wordlist)",
@@ -1429,7 +1678,7 @@
     {
       "id": "pop3-enum-full",
       "name": "POP3 Full Enumeration",
-      "base_command": "nmap --script pop3-capabilities,pop3-ntlm-info -p110,995",
+      "base_command": "sudo nmap --script pop3-capabilities,pop3-ntlm-info -p110,995",
       "timing": "normal",
       "use_case": "Comprehensive POP3 enumeration (capabilities, NTLM info)",
       "estimated_time": "1-3 minutes",
@@ -1474,7 +1723,7 @@
     {
       "id": "pop3-brute",
       "name": "POP3 Authentication Brute-Force",
-      "base_command": "nmap -p110,995 --script pop3-brute",
+      "base_command": "sudo nmap -p110,995 --script pop3-brute",
       "timing": "normal",
       "use_case": "Dictionary attack against POP3 authentication",
       "estimated_time": "5-30 minutes (depends on wordlist)",
@@ -1519,7 +1768,7 @@
     {
       "id": "mail-all-enum",
       "name": "All Mail Protocols Enumeration",
-      "base_command": "nmap --script smtp-commands,smtp-enum-users,smtp-open-relay,imap-capabilities,pop3-capabilities -p25,110,143,465,587,993,995",
+      "base_command": "sudo nmap --script smtp-commands,smtp-enum-users,smtp-open-relay,imap-capabilities,pop3-capabilities -p25,110,143,465,587,993,995",
       "timing": "normal",
       "use_case": "Enumerate ALL mail protocols in one scan (SMTP, IMAP, POP3)",
       "estimated_time": "3-7 minutes",
@@ -1560,7 +1809,7 @@
     {
       "id": "lab-speed-optimized",
       "name": "Lab Speed Optimized (Hostgroup Tuning)",
-      "base_command": "nmap -T4 -n -Pn --min-hostgroup 100 --max-hostgroup 500",
+      "base_command": "sudo nmap -T4 -n -Pn --min-hostgroup 100 --max-hostgroup 500",
       "timing": "aggressive",
       "coverage": "optimized",
       "use_case": "OSCP labs - maximize speed with multiple targets",
@@ -1606,7 +1855,7 @@
     {
       "id": "lab-retry-optimized",
       "name": "Retry Optimized (Lab Reliability)",
-      "base_command": "nmap -p- --max-retries 2 --min-rate 1000",
+      "base_command": "sudo nmap -p- --max-retries 2 --min-rate 1000",
       "timing": "aggressive",
       "coverage": "full",
       "use_case": "OSCP labs - balance speed vs thoroughness (when network is stable)",
@@ -1650,7 +1899,7 @@
     {
       "id": "lab-rate-limited",
       "name": "Rate Limited (Avoid Firewall Blocks)",
-      "base_command": "nmap -p- --max-rate 500 --max-retries 6",
+      "base_command": "sudo nmap -p- --max-rate 500 --max-retries 6",
       "timing": "polite",
       "coverage": "full",
       "use_case": "OSCP exam - conservative scan when target has firewall/IDS",
@@ -1692,7 +1941,7 @@
     {
       "id": "lab-parallelism-controlled",
       "name": "Parallelism Controlled (Custom Probe Tuning)",
-      "base_command": "nmap -p- --min-parallelism 10 --max-parallelism 250",
+      "base_command": "sudo nmap -p- --min-parallelism 10 --max-parallelism 250",
       "timing": "custom",
       "coverage": "full",
       "use_case": "Advanced - manually control probe parallelism for unstable networks",
@@ -1734,7 +1983,7 @@
     {
       "id": "lab-rtt-optimized",
       "name": "RTT Optimized (Custom Timeout Tuning)",
-      "base_command": "nmap -p- --initial-rtt-timeout 150ms --max-rtt-timeout 600ms --min-rtt-timeout 50ms",
+      "base_command": "sudo nmap -p- --initial-rtt-timeout 150ms --max-rtt-timeout 600ms --min-rtt-timeout 50ms",
       "timing": "custom",
       "coverage": "full",
       "use_case": "Low-latency networks (local lab) - optimize for fast RTT",
@@ -1778,7 +2027,7 @@
     {
       "id": "lab-scan-delay",
       "name": "Scan Delay Controlled (Anti-IDS Timing)",
-      "base_command": "nmap -p- --scan-delay 1s --max-scan-delay 10s",
+      "base_command": "sudo nmap -p- --scan-delay 1s --max-scan-delay 10s",
       "timing": "polite",
       "coverage": "full",
       "use_case": "IDS evasion - add artificial delay between probes",
@@ -1820,7 +2069,7 @@
     {
       "id": "lab-discovery-only",
       "name": "Discovery Only (Skip Service Detection)",
-      "base_command": "nmap -p- -n -Pn -T4",
+      "base_command": "sudo nmap -p- -n -Pn -T4",
       "timing": "aggressive",
       "coverage": "ports-only",
       "use_case": "OSCP labs - fast port discovery, defer service detection",
@@ -1864,7 +2113,7 @@
     {
       "id": "lab-service-detect-targeted",
       "name": "Service Detection Only (Targeted)",
-      "base_command": "nmap -sV -sC -n",
+      "base_command": "sudo nmap -sV -sC -n",
       "timing": "normal",
       "coverage": "targeted",
       "use_case": "OSCP - second phase after discovery (service versions on known ports)",
@@ -1909,7 +2158,7 @@
     {
       "id": "host-discovery-syn",
       "name": "Host Discovery - TCP SYN Ping",
-      "base_command": "nmap -sn -PS",
+      "base_command": "sudo nmap -sn -PS22,80,443,3389",
       "timing": "normal",
       "coverage": "quick",
       "use_case": "OSCP: Discover hosts behind firewalls that block ICMP but allow TCP (common in DMZ)",
@@ -1926,7 +2175,7 @@
       ],
       "flag_explanations": {
         "-sn": "Ping scan only (no port scan) - discovers online hosts fast",
-        "-PS": "TCP SYN ping - sends SYN packet to port 80 (default), waits for SYN/ACK or RST response"
+        "-PS22,80,443,3389": "TCP SYN ping - sends SYN packets to SSH, HTTP, HTTPS, RDP ports (increases discovery success rate vs single port)"
       },
       "success_indicators": [
         "Hosts marked as 'up' in output",
@@ -1952,7 +2201,7 @@
     {
       "id": "host-discovery-ack",
       "name": "Host Discovery - TCP ACK Ping",
-      "base_command": "nmap -sn -PA",
+      "base_command": "sudo nmap -sn -PA22,80,443,3389",
       "timing": "normal",
       "coverage": "quick",
       "use_case": "OSCP: Discover hosts when SYN pings fail (bypasses stateless SYN filters)",
@@ -1969,7 +2218,7 @@
       ],
       "flag_explanations": {
         "-sn": "Ping scan mode (no port enumeration)",
-        "-PA": "TCP ACK ping - sends ACK packet to port 80, expects RST response from online hosts"
+        "-PA22,80,443,3389": "TCP ACK ping - sends ACK packets to SSH, HTTP, HTTPS, RDP (expects RST from online hosts, bypasses stateless SYN filters)"
       },
       "success_indicators": [
         "Hosts respond with RST packets (indicates host is up)",
@@ -1995,7 +2244,7 @@
     {
       "id": "host-discovery-arp",
       "name": "Host Discovery - ARP Ping (Local Network)",
-      "base_command": "nmap -sn -PR",
+      "base_command": "sudo nmap -sn -PR",
       "timing": "fast",
       "coverage": "full",
       "use_case": "OSCP: Most reliable host discovery on local networks (Layer 2) - cannot be blocked by firewalls",
@@ -2043,7 +2292,7 @@
     {
       "id": "evasion-skip-ping",
       "name": "Skip Host Discovery (Assume All Hosts Up)",
-      "base_command": "nmap -Pn",
+      "base_command": "sudo nmap -Pn",
       "timing": "normal",
       "coverage": "full",
       "use_case": "OSCP CRITICAL: Scan hosts that don't respond to ping probes (firewalls blocking all ping types)",
@@ -2088,7 +2337,7 @@
     {
       "id": "dns-no-resolve",
       "name": "Disable DNS Resolution (Speed Optimization)",
-      "base_command": "nmap -n",
+      "base_command": "sudo nmap -n",
       "timing": "fast",
       "coverage": "full",
       "use_case": "OSCP Exam: Skip DNS resolution to speed up scans (save time when hostnames not needed)",
@@ -2131,7 +2380,7 @@
     {
       "id": "nse-safe",
       "name": "NSE Safe Scripts (Default + Safe Categories)",
-      "base_command": "nmap -sV -sC --script=safe",
+      "base_command": "sudo nmap -sV -sC --script=safe",
       "timing": "normal",
       "coverage": "service-specific",
       "use_case": "OSCP: Run safe NSE scripts that won't crash services or trigger IDS (default + safe categories)",
@@ -2151,7 +2400,10 @@
         "-sC": "Default NSE scripts (safe, well-tested scripts like http-title, banner grabbing)",
         "--script=safe": "Run all scripts marked 'safe' category (no crashes, no exploits, pure enumeration)"
       },
-      "nse_categories": ["default", "safe"],
+      "nse_categories": [
+        "default",
+        "safe"
+      ],
       "success_indicators": [
         "Service information enumerated (HTTP titles, banners, versions)",
         "No service crashes or errors",
@@ -2177,7 +2429,7 @@
     {
       "id": "nse-discovery",
       "name": "NSE Discovery Scripts",
-      "base_command": "nmap -sV --script=discovery",
+      "base_command": "sudo nmap -sV --script=discovery",
       "timing": "normal",
       "coverage": "service-specific",
       "use_case": "OSCP: Run discovery/enumeration scripts (users, shares, directories, DNS records)",
@@ -2196,7 +2448,9 @@
         "-sV": "Service version detection",
         "--script=discovery": "Run discovery category scripts (enumeration without exploitation)"
       },
-      "nse_categories": ["discovery"],
+      "nse_categories": [
+        "discovery"
+      ],
       "script_examples": [
         "http-enum (directory brute-force with NSE fingerprint database)",
         "smb-enum-shares (list SMB shares)",
@@ -2229,7 +2483,7 @@
     {
       "id": "nse-vuln",
       "name": "NSE Vulnerability Detection",
-      "base_command": "nmap -sV --script=vuln",
+      "base_command": "sudo nmap -sV --script=vuln",
       "timing": "normal",
       "coverage": "service-specific",
       "use_case": "OSCP: Automated vulnerability detection (EternalBlue, Shellshock, SQLi, etc.)",
@@ -2248,7 +2502,9 @@
         "-sV": "Service version detection (required for accurate vuln matching)",
         "--script=vuln": "Run vulnerability detection scripts (checks for known CVEs and exploits)"
       },
-      "nse_categories": ["vuln"],
+      "nse_categories": [
+        "vuln"
+      ],
       "script_examples": [
         "smb-vuln-ms17-010 (EternalBlue - Windows SMB RCE)",
         "http-shellshock (Shellshock CGI vulnerability)",
@@ -2282,7 +2538,7 @@
     {
       "id": "nse-auth",
       "name": "NSE Authentication Scripts",
-      "base_command": "nmap -sV --script=auth",
+      "base_command": "sudo nmap -sV --script=auth",
       "timing": "normal",
       "coverage": "service-specific",
       "use_case": "OSCP: Test authentication mechanisms (default creds, auth bypass, weak auth)",
@@ -2301,7 +2557,9 @@
         "-sV": "Service version detection",
         "--script=auth": "Run authentication testing scripts"
       },
-      "nse_categories": ["auth"],
+      "nse_categories": [
+        "auth"
+      ],
       "script_examples": [
         "http-auth-finder (find HTTP auth pages)",
         "ssh-auth-methods (enumerate SSH auth methods)",
@@ -2332,7 +2590,7 @@
     {
       "id": "nse-brute",
       "name": "NSE Brute Force Scripts",
-      "base_command": "nmap -sV --script=brute --script-args userdb=/usr/share/wordlists/seclists/Usernames/top-usernames-shortlist.txt",
+      "base_command": "sudo nmap -sV --script=brute --script-args userdb=/usr/share/wordlists/seclists/Usernames/top-usernames-shortlist.txt",
       "timing": "slow",
       "coverage": "service-specific",
       "use_case": "OSCP: Credential brute-forcing (SSH, FTP, HTTP, SMB) - LAST RESORT, NOISY",
@@ -2354,7 +2612,9 @@
         "--script-args passdb": "Custom password wordlist path (optional)",
         "--script-args brute.firstOnly": "Stop after first valid account (faster)"
       },
-      "nse_categories": ["brute"],
+      "nse_categories": [
+        "brute"
+      ],
       "script_examples": [
         "ssh-brute (SSH password brute-force using NSE brute library)",
         "ftp-brute (FTP credential attacks)",
@@ -2386,7 +2646,7 @@
     {
       "id": "nse-http-all",
       "name": "NSE HTTP Comprehensive Scan",
-      "base_command": "nmap -sV --script \"http-*\" -p80,443,8080,8443",
+      "base_command": "sudo nmap -sV --script \"http-*\" -p80,443,8080,8443",
       "timing": "normal",
       "coverage": "http-specific",
       "use_case": "OSCP: Run ALL HTTP NSE scripts on web servers (enum, vulns, auth, headers)",
@@ -2407,7 +2667,9 @@
         "--script \"http-*\"": "Run all scripts matching 'http-*' pattern (comprehensive HTTP testing)",
         "-p80,443,8080,8443": "Common HTTP/HTTPS ports"
       },
-      "nse_categories": ["http"],
+      "nse_categories": [
+        "http"
+      ],
       "script_examples": [
         "http-enum (directory/file enumeration)",
         "http-methods (HTTP method testing)",
@@ -2444,7 +2706,7 @@
     {
       "id": "nse-smb-all",
       "name": "NSE SMB Comprehensive Scan",
-      "base_command": "nmap -sV --script \"smb-*\" -p139,445",
+      "base_command": "sudo nmap -sV --script \"smb-*\" -p139,445",
       "timing": "normal",
       "coverage": "smb-specific",
       "use_case": "OSCP: Run ALL SMB NSE scripts (enum, vulns, brute-force, exploits)",
@@ -2465,7 +2727,9 @@
         "--script \"smb-*\"": "Run all SMB-related NSE scripts",
         "-p139,445": "SMB ports (NetBIOS session service, SMB direct)"
       },
-      "nse_categories": ["smb"],
+      "nse_categories": [
+        "smb"
+      ],
       "script_examples": [
         "smb-os-discovery (OS version, domain, workgroup)",
         "smb-enum-shares (share enumeration)",
@@ -2502,7 +2766,7 @@
     {
       "id": "nse-script-args-example",
       "name": "NSE Script Arguments Example (HTTP Enum with Custom Paths)",
-      "base_command": "nmap -sV --script http-enum --script-args http-enum.basepath=/admin/,http-enum.fingerprintfile=/custom/fingerprints.txt -p80",
+      "base_command": "sudo nmap -sV --script http-enum --script-args http-enum.basepath=/admin/,http-enum.fingerprintfile=/custom/fingerprints.txt -p80",
       "timing": "normal",
       "coverage": "http-specific",
       "use_case": "OSCP: Demonstrate NSE script argument usage (customize script behavior)",
@@ -2523,7 +2787,9 @@
         "--script-args http-enum.basepath": "Set custom base path for enumeration (e.g., /admin/)",
         "--script-args http-enum.fingerprintfile": "Use custom fingerprint database (extend default checks)"
       },
-      "nse_categories": ["http"],
+      "nse_categories": [
+        "http"
+      ],
       "script_args_examples": {
         "http.useragent": "Set custom User-Agent header",
         "http.max-cache-size": "Control HTTP library cache size",

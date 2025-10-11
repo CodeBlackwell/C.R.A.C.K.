@@ -10,6 +10,7 @@ Supports:
 - Evasion techniques (future)
 """
 
+import re
 from typing import Dict, Any, Optional
 
 
@@ -192,11 +193,25 @@ class ScanCommandBuilder:
 
         return ' '.join(parts)
 
+    def _sanitize_target(self) -> str:
+        """Sanitize target for use in directory/file names
+
+        Returns:
+            Sanitized target string safe for filesystem
+        """
+        # Replace slashes with underscores (CIDR notation)
+        sanitized = self.target.replace('/', '_')
+        # Remove or replace other problematic characters
+        sanitized = re.sub(r'[<>:"|?*]', '_', sanitized)
+        # Remove leading/trailing dots and spaces
+        sanitized = sanitized.strip('. ')
+        return sanitized if sanitized else 'target'
+
     def _get_output(self) -> str:
         """Get output format specification
 
         Returns:
-            Output flags
+            Output flags with target/scans/ directory structure
         """
         base_cmd = self.profile.get('base_command', '')
 
@@ -208,12 +223,15 @@ class ScanCommandBuilder:
         coverage = self.profile.get('coverage', '')
         profile_id = self.profile.get('id', 'scan')
 
+        # Create output path with target/scans/ directory structure
+        sanitized_target = self._sanitize_target()
+
         if coverage == 'full':
             # Full scans get all formats for import
-            return f'-oA {profile_id}_scan'
+            return f'-oA {sanitized_target}/scans/{profile_id}_scan'
         else:
             # Quick scans get normal format only
-            return f'-oN {profile_id}_scan.nmap'
+            return f'-oN {sanitized_target}/scans/{profile_id}_scan.nmap'
 
 
 class ServiceScanCommandBuilder(ScanCommandBuilder):
@@ -245,8 +263,9 @@ class ServiceScanCommandBuilder(ScanCommandBuilder):
         return ''
 
     def _get_output(self) -> str:
-        """Service scans always use XML for import"""
-        return '-oA service_scan'
+        """Service scans always use XML for import with target/scans/ directory"""
+        sanitized_target = self._sanitize_target()
+        return f'-oA {sanitized_target}/scans/service_scan'
 
 
 def build_discovery_command(target: str, profile_id: str) -> str:

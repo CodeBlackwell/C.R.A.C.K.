@@ -56,6 +56,12 @@ class PhaseManager:
         # Copy metadata
         task.metadata.update(task_def.get('metadata', {}))
 
+        # Copy scan profile references (NEW - for scan type tasks)
+        if 'scan_profiles' in task_def:
+            task.metadata['scan_profiles'] = task_def['scan_profiles']
+        if 'default_profile' in task_def:
+            task.metadata['default_profile'] = task_def['default_profile']
+
         # Replace placeholders in command
         if 'command' in task.metadata and task.metadata['command']:
             command = task.metadata['command']

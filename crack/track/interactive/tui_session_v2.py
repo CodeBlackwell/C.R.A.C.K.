@@ -9,6 +9,8 @@ Phase 1: Minimal viable TUI
 Build incrementally from what worked in config panel.
 """
 
+import os
+import re
 import time
 import subprocess
 from typing import Optional, List, Dict, Any, Tuple
@@ -92,6 +94,11 @@ class TUISessionV2(InteractiveSession):
             self.shortcut_handler.shortcuts['D'] = ('Debug Stream (live log viewer)', self._show_debug_stream)
             self.debug_logger.log("Debug stream shortcut registered", category=LogCategory.SYSTEM_INIT,
                                  level=LogLevel.VERBOSE, shortcut='D')
+
+        # Register TUI-specific shortcuts
+        self.shortcut_handler.shortcuts['df'] = ('Document finding', self._document_finding)
+        self.debug_logger.log("Document finding shortcut registered", category=LogCategory.SYSTEM_INIT,
+                             level=LogLevel.VERBOSE, shortcut='df')
 
         # Strategic logging: TUI initialization
         self.debug_logger.log("TUI session initialization", category=LogCategory.SYSTEM_INIT, level=LogLevel.NORMAL,
@@ -685,6 +692,36 @@ class TUISessionV2(InteractiveSession):
         findings = []
 
         self.debug_logger.log_state_transition("INIT", "EMPTY", "workspace opened")
+
+        # Auto-apply default_profile if task has no command set
+        if not task.metadata.get('command'):
+            default_profile_id = task.metadata.get('default_profile')
+            if default_profile_id:
+                self.debug_logger.info(f"No command found - auto-applying default profile: {default_profile_id}")
+
+                # Load default profile
+                from ..core.scan_profiles import ScanProfileRegistry
+                registry = ScanProfileRegistry()
+                default_profile = registry.get_profile(default_profile_id)
+
+                if default_profile:
+                    # Build command using ScanCommandBuilder
+                    from ..core.command_builder import ScanCommandBuilder
+                    builder = ScanCommandBuilder(self.profile.target, default_profile)
+                    command = builder.build()
+
+                    # Inject command and metadata into task
+                    task.metadata['command'] = command
+                    task.metadata['scan_profile_used'] = default_profile['id']
+                    task.metadata['scan_profile_name'] = default_profile['name']
+                    task.metadata['scan_profile_strategy'] = default_profile['use_case']
+                    task.metadata['scan_profile_time'] = default_profile['estimated_time']
+                    task.metadata['scan_profile_risk'] = default_profile.get('detection_risk', 'medium')
+                    self.profile.save()
+
+                    self.debug_logger.info(f"Default profile applied: {command}")
+                else:
+                    self.debug_logger.warning(f"Default profile '{default_profile_id}' not found")
 
         running = True
         iteration = 0
@@ -2021,6 +2058,21 @@ class TUISessionV2(InteractiveSession):
         line_count = 0
         last_refresh = 0.0  # Throttle refreshes to reduce jitter
 
+        # 3.5. Create target/scans/ output directory if needed
+        # Sanitize target for directory name
+        sanitized_target = self.profile.target.replace('/', '_')
+        sanitized_target = re.sub(r'[<>:"|?*]', '_', sanitized_target)
+        sanitized_target = sanitized_target.strip('. ') or 'target'
+
+        # Create target/scans/ directory structure
+        scans_dir = os.path.join(sanitized_target, 'scans')
+        if not os.path.exists(scans_dir):
+            try:
+                os.makedirs(scans_dir, exist_ok=True)
+                self.debug_logger.info(f"Created output directory: {scans_dir}")
+            except OSError as e:
+                self.debug_logger.warning(f"Failed to create directory {scans_dir}: {e}")
+
         try:
             # 4. Create subprocess with streaming
             process = subprocess.Popen(
@@ -2122,7 +2174,31 @@ class TUISessionV2(InteractiveSession):
                                 'type': finding_type,
                                 'data': item
                             })
-                            # Save finding to profile
+
+                            # Special handling for port findings: add to ports dict AND findings
+                            if finding_type == 'ports' and isinstance(item, dict):
+                                try:
+                                    # Add to ports dictionary (triggers service plugins)
+                                    port_num = item.get('port')
+                                    state = item.get('state', 'open')
+                                    service = item.get('service')
+                                    version = item.get('version')
+                                    protocol = item.get('protocol', 'tcp')
+
+                                    if port_num:
+                                        self.profile.add_port(
+                                            port=port_num,
+                                            state=state,
+                                            service=service,
+                                            version=version,
+                                            source=f"{command} (Task: {task.id})",
+                                            protocol=protocol
+                                        )
+                                        self.debug_logger.info(f"Port {port_num}/{protocol} ({service}) added to profile and service_detected event emitted")
+                                except Exception as e:
+                                    self.debug_logger.warning(f"Failed to add port to profile: {e}")
+
+                            # Save finding to profile (for documentation)
                             try:
                                 self.profile.add_finding(
                                     finding_type=finding_type,
@@ -2410,6 +2486,12 @@ class TUISessionV2(InteractiveSession):
             self._show_output()
             return None
 
+        # Debug stream shortcut (debug mode only, capital D)
+        if user_input == 'D' and self.debug_mode:
+            self.debug_logger.info("Debug stream overlay requested")
+            self._show_debug_stream()
+            return None
+
         # Config panel shortcut
         if user_input == '-':
             self.debug_logger.info("Config panel requested")
@@ -2441,7 +2523,6 @@ class TUISessionV2(InteractiveSession):
             'f': 'browse-findings',   # Browse findings
             'w': 'quick-wins',        # Quick wins
             'i': 'import',            # Import scan results
-            'd': 'finding',           # Document finding
         }
 
         # Check if input is a letter hotkey
@@ -2834,6 +2915,106 @@ class TUISessionV2(InteractiveSession):
             self.debug_logger.log("Smart dismiss: processing dismiss key as command",
                                  category=LogCategory.UI_INPUT, level=LogLevel.VERBOSE, key=key)
             self._process_input(key)
+
+    def _document_finding(self):
+        """Document finding form (shortcut: :df)"""
+        from .panels.finding_form import FindingFormPanel
+
+        self.debug_logger.log("Document finding form opened", category=LogCategory.UI_PANEL, level=LogLevel.NORMAL)
+
+        # Stop Live context
+        if hasattr(self, '_live'):
+            self._live.stop()
+
+        try:
+            # Create form
+            form = FindingFormPanel(profile=self.profile, theme=self.theme)
+
+            # Form loop
+            running = True
+            while running:
+                # Render form
+                panel, choices = form.render()
+
+                # Display
+                self.console.clear()
+                self.console.print(panel)
+
+                # Get input
+                user_input = input("\nAction: ").strip()
+
+                # Process shortcuts
+                if user_input.lower() == 'b':
+                    # Back to dashboard
+                    running = False
+                elif user_input.lower() == 's':
+                    # Save finding
+                    if form.validate():
+                        form.save_to_profile()
+                        self.console.print(self.theme.success("✓ Finding saved!"))
+                        input("\nPress Enter to continue...")
+                    else:
+                        self.console.print(self.theme.danger("✗ Validation errors - please fix and try again"))
+                        input("\nPress Enter to continue...")
+                elif user_input.lower() == 'c':
+                    # Clear form
+                    form.reset()
+                elif user_input.lower() == 'e':
+                    # Edit current field
+                    field_info = form.get_current_field_info()
+                    field_name = field_info['field_name']
+                    label = field_info['label']
+
+                    # Prompt for field value
+                    if field_info['type'] == 'dropdown':
+                        # Show dropdown options
+                        options = field_info.get('options', [])
+                        self.console.print(f"\n{self.theme.emphasis(label)}:")
+                        for idx, option in enumerate(options, 1):
+                            self.console.print(f"  {idx}. {option}")
+                        choice = input("\nSelect option (number or name): ").strip()
+
+                        # Parse choice
+                        try:
+                            choice_num = int(choice)
+                            if 1 <= choice_num <= len(options):
+                                new_value = options[choice_num - 1]
+                            else:
+                                self.console.print(self.theme.warning("Invalid choice"))
+                                input("Press Enter to continue...")
+                                continue
+                        except ValueError:
+                            # Use as literal value
+                            new_value = choice
+                    else:
+                        # Text/numeric input
+                        current_value = field_info.get('current_value', '')
+                        prompt = f"\n{self.theme.emphasis(label)}"
+                        if current_value:
+                            prompt += f" [current: {current_value}]"
+                        prompt += ": "
+                        new_value = input(prompt).strip()
+
+                    # Update field
+                    if new_value:
+                        form.edit_current_field(new_value)
+                elif user_input in ['tab', 'down', '\t']:
+                    # Next field
+                    form._next_field()
+                elif user_input == 'up':
+                    # Previous field
+                    form._prev_field()
+                else:
+                    # Unknown input
+                    self.console.print(self.theme.warning("Invalid action. Use e/s/c/b"))
+                    input("Press Enter to continue...")
+
+        except KeyboardInterrupt:
+            self.debug_logger.log("Document finding form interrupted", category=LogCategory.UI_PANEL, level=LogLevel.NORMAL)
+        finally:
+            # Resume Live context
+            if hasattr(self, '_live'):
+                self._live.start()
 
     def _list_themes(self):
         """List all available themes with current theme highlighted"""

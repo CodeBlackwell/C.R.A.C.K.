@@ -8,6 +8,81 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Changed - Host Discovery & Output Organization
+
+**Nmap-Based Host Discovery (Consistent Tooling)**
+
+- **host-icmp-ping Profile**
+  - Changed from `ping -c 3` to `sudo nmap -sn -PE`
+  - Reason: Enables automatic output capture with `-oN` flag (ping doesn't support nmap output formats)
+  - Benefit: Consistent nmap workflow + OSCP documentation requirements
+  - Flag explanations updated to match nmap syntax (`-sn`, `-PE`)
+  - Timing adjusted from 1-5s to 5-15s (nmap overhead)
+
+**Default Profile Auto-Apply**
+
+- **Task Workspace Enhancement** (`track/interactive/tui_session_v2.py:694-722`)
+  - Tasks now auto-apply `default_profile` when entering workspace with no command set
+  - Eliminates "None selected" state - profile pre-loaded on task open
+  - Uses same logic as manual profile selection (command build + metadata injection)
+  - User can execute immediately OR change profile if needed
+  - Debug logging: "No command found - auto-applying default profile: {profile_id}"
+
+**Organized Scan Output Structure**
+
+- **Command Builder** (`track/core/command_builder.py`)
+  - Added `_sanitize_target()` method for filesystem-safe directory names
+  - CIDR notation support: `192.168.45.0/24` → `192.168.45.0_24/`
+  - Output paths now use `{target}/scans/{profile_id}_scan` structure
+  - Service scans also use target/scans/ directory
+  - Special character sanitization: `/<>:"|?*` replaced with `_`
+
+- **TUI Execution** (`track/interactive/tui_session_v2.py:2061-2074`)
+  - Automatic creation of `{target}/scans/` directory before command execution
+  - Uses `os.makedirs()` with `exist_ok=True` for safe directory creation
+  - Debug logging for directory creation/failures
+  - No manual intervention required
+
+**Directory Structure**
+
+```
+Before:
+./
+├── host-icmp-ping_scan.nmap
+└── service_scan.xml
+
+After:
+./
+└── 192.168.45.100/
+    └── scans/
+        ├── host-icmp-ping_scan.nmap
+        ├── lab-full_scan.nmap
+        ├── lab-full_scan.xml
+        └── service_scan.xml
+```
+
+### Technical Details
+
+- **Output Formats**:
+  - Quick scans: `-oN {target}/scans/{profile_id}_scan.nmap`
+  - Full scans: `-oA {target}/scans/{profile_id}_scan` (creates .nmap, .xml, .gnmap)
+  - Service scans: `-oA {target}/scans/service_scan`
+
+- **Benefits**:
+  - Organized by target for OSCP exam documentation
+  - Separate scans directory leaves room for notes, screenshots, exploits
+  - CIDR notation safe for filesystem (slashes converted to underscores)
+  - Multi-target support without file collisions
+  - Easy archiving: `tar -czf {target}.tar.gz {target}/`
+
+### Files Changed
+
+- `track/data/scan_profiles.json` (host-icmp-ping profile command + flags)
+- `track/core/command_builder.py` (sanitization + target/scans/ path structure)
+- `track/interactive/tui_session_v2.py` (default profile auto-apply + directory creation)
+
+---
+
 ### Added - Dev Fixture System
 
 **Rapid State Loading for Development**

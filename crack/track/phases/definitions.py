@@ -36,14 +36,25 @@ PHASES: Dict[str, Dict[str, Any]] = {
             {
                 'id': 'ping-check',
                 'name': 'Verify host is alive',
-                'type': 'command',
+                'type': 'scan',  # Changed from 'command' to 'scan'
+                'scan_profiles': [  # Reference profiles instead of hardcoded command
+                    'host-icmp-ping',      # Default ICMP ping
+                    'host-tcp-syn',        # TCP SYN ping (ICMP bypass)
+                    'host-ack',            # TCP ACK ping (stateless FW bypass)
+                    'host-arp',            # ARP ping (local network)
+                    'host-disable-ping'    # Skip host discovery (-Pn)
+                ],
+                'default_profile': 'host-icmp-ping',  # Default for OSCP
                 'metadata': {
-                    'command': 'ping -c 3 {TARGET}',
                     'description': 'Quick ICMP ping to verify host responds',
                     'tags': ['QUICK_WIN', 'OSCP:HIGH'],
-                    'flag_explanations': {
-                        '-c 3': 'Send 3 ICMP echo requests'
-                    }
+                    'allow_custom': True,  # Allow user to enter custom discovery command
+                    'notes': [
+                        'Choose discovery method based on network restrictions',
+                        'ICMP blocked? Try TCP SYN ping to common ports',
+                        'Local network? Use ARP ping (most reliable)',
+                        'All blocked? Use -Pn to skip discovery'
+                    ]
                 }
             },
             {
