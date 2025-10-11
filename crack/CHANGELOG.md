@@ -10,6 +10,36 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [1.6.0] - 2025-10-11
+
+### Added - Live Theme Preview
+
+- **Real-Time Theme Preview**
+  - Instant visual feedback on arrow key navigation (↑/↓)
+  - Panel borders, colors, and badges update immediately when hovering themes
+  - Preview indicator shows current selection (👁 PREVIEWING: Theme Name)
+  - Numeric theme selection (1-6) triggers instant preview
+  - Safe cancellation restores original theme (ESC or 'b' key)
+  - One-keystroke confirmation workflow (Enter returns immediately)
+  - Added `THEME.PREVIEW` debug logging category for troubleshooting
+
+### Changed
+
+- **Theme Selector UX Improvements**
+  - Removed double-Enter requirement after theme selection
+  - Enter key now returns immediately to config panel with new theme applied
+  - Enhanced subtitle with dynamic preview state indicators
+  - Original theme stored on entry for safe revert on cancel
+
+### Technical Details
+
+- Preview applied via `ThemeManager.set_theme()` on arrow key press
+- Theme restoration on cancel ensures no unwanted changes persist
+- Visual feedback through subtitle text changes with each navigation
+- Zero configuration needed - works with all 6 built-in themes
+
+---
+
 ## [1.5.0] - 2025-10-10
 
 ### Added - Findings Loop Architecture

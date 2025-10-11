@@ -330,6 +330,11 @@ class TUISessionV2(InteractiveSession):
         self.debug_logger.log("Theme selector initialized", category=LogCategory.UI_PANEL, level=LogLevel.VERBOSE,
                              current_theme=current_theme_name, available_count=len(available_themes))
 
+        # Store original theme for restoration if user cancels
+        original_theme_name = current_theme_name
+        self.debug_logger.log("Original theme stored for preview mode", category=LogCategory.THEME_PREVIEW,
+                             level=LogLevel.VERBOSE, original_theme=original_theme_name)
+
         # Find current theme index
         selected_idx = 0
         for i, theme_info in enumerate(available_themes):
@@ -371,10 +376,20 @@ class TUISessionV2(InteractiveSession):
             table.add_row("", self.theme.warning("Warning"), self.theme.muted("Pending tasks"))
             table.add_row("", self.theme.danger("Danger"), self.theme.muted("Failed tasks, errors"))
 
+            # Build subtitle with preview indicator
+            selected_theme_name = available_themes[selected_idx]['name']
+            if selected_theme_name != original_theme_name:
+                # Previewing a different theme
+                preview_display = available_themes[selected_idx]['display_name']
+                subtitle = f"{self.theme.warning('👁 PREVIEWING:')} {self.theme.emphasis(preview_display)} | {self.theme.muted('Enter:Keep | b:Cancel')}"
+            else:
+                # On current theme
+                subtitle = self.theme.muted("↑↓:Navigate | Enter:Select | b:Back")
+
             return Panel(
                 table,
                 title=f"[bold {self.theme.get_color('primary')}] Theme Selection [/]",
-                subtitle=self.theme.muted("↑↓:Navigate | Enter:Select | b:Back"),
+                subtitle=subtitle,
                 border_style=self.theme.panel_border(),
                 box=box.ROUNDED
             )
@@ -406,25 +421,45 @@ class TUISessionV2(InteractiveSession):
                 if next1 == '[' and next2:
                     if next2 == 'A':  # Up arrow
                         selected_idx = (selected_idx - 1) % len(available_themes)
+                        preview_theme_name = available_themes[selected_idx]['name']
                         self.debug_logger.log("Arrow key navigation: UP", category=LogCategory.UI_INPUT,
                                              level=LogLevel.TRACE, selected_idx=selected_idx,
-                                             theme=available_themes[selected_idx]['name'])
-                        # Clear and reprint panel with new selection
+                                             theme=preview_theme_name)
+
+                        # Apply theme preview (temporarily load theme)
+                        self.theme.set_theme(preview_theme_name)
+                        self.debug_logger.log("Live theme preview applied", category=LogCategory.THEME_PREVIEW,
+                                             level=LogLevel.VERBOSE, preview_theme=preview_theme_name)
+
+                        # Clear and reprint panel with new theme colors
                         self.console.clear()
                         self.console.print(build_theme_panel())
                         continue
                     elif next2 == 'B':  # Down arrow
                         selected_idx = (selected_idx + 1) % len(available_themes)
+                        preview_theme_name = available_themes[selected_idx]['name']
                         self.debug_logger.log("Arrow key navigation: DOWN", category=LogCategory.UI_INPUT,
                                              level=LogLevel.TRACE, selected_idx=selected_idx,
-                                             theme=available_themes[selected_idx]['name'])
-                        # Clear and reprint panel with new selection
+                                             theme=preview_theme_name)
+
+                        # Apply theme preview (temporarily load theme)
+                        self.theme.set_theme(preview_theme_name)
+                        self.debug_logger.log("Live theme preview applied", category=LogCategory.THEME_PREVIEW,
+                                             level=LogLevel.VERBOSE, preview_theme=preview_theme_name)
+
+                        # Clear and reprint panel with new theme colors
                         self.console.clear()
                         self.console.print(build_theme_panel())
                         continue
                 # If not arrow key, treat ESC as cancel
                 self.debug_logger.log("Theme selector cancelled (ESC)", category=LogCategory.UI_INPUT,
                                      level=LogLevel.NORMAL)
+
+                # Restore original theme if preview was active
+                if self.theme.get_theme_name() != original_theme_name:
+                    self.theme.set_theme(original_theme_name)
+                    self.debug_logger.log("Theme preview reverted (ESC)", category=LogCategory.THEME_PREVIEW,
+                                         level=LogLevel.VERBOSE, restored_theme=original_theme_name)
                 break
 
             elif key in ['\r', '\n']:  # Enter - select theme
@@ -442,19 +477,21 @@ class TUISessionV2(InteractiveSession):
                 from .themes import ThemeManager
                 self.theme = ThemeManager(debug_logger=self.debug_logger)
 
-                # Show confirmation
-                self.console.print(f"\n{self.theme.success(f'✓ Theme changed to {selected_display}')} ", end="")
-                self.hotkey_handler.read_key()  # Wait for any key
-
                 self.debug_logger.log("Theme selector closed (theme changed)", category=LogCategory.UI_PANEL,
                                      level=LogLevel.NORMAL, new_theme=selected_theme)
 
-                # Exit selector and return to config panel
+                # Exit selector and return to config panel (no confirmation needed - visual feedback is immediate)
                 break
 
             elif key.lower() == 'b':  # Back to config
                 self.debug_logger.log("Theme selector cancelled (back button)", category=LogCategory.UI_INPUT,
                                      level=LogLevel.NORMAL)
+
+                # Restore original theme if preview was active
+                if self.theme.get_theme_name() != original_theme_name:
+                    self.theme.set_theme(original_theme_name)
+                    self.debug_logger.log("Theme preview reverted (back)", category=LogCategory.THEME_PREVIEW,
+                                         level=LogLevel.VERBOSE, restored_theme=original_theme_name)
                 break
 
             # Also support numeric selection for backward compatibility
@@ -462,10 +499,17 @@ class TUISessionV2(InteractiveSession):
                 idx = int(key) - 1
                 if 0 <= idx < len(available_themes):
                     selected_idx = idx
+                    preview_theme_name = available_themes[selected_idx]['name']
                     self.debug_logger.log("Numeric theme selection", category=LogCategory.UI_INPUT,
                                          level=LogLevel.VERBOSE, key=key, selected_idx=selected_idx,
-                                         theme=available_themes[selected_idx]['name'])
-                    # Clear and reprint panel with new selection
+                                         theme=preview_theme_name)
+
+                    # Apply theme preview (temporarily load theme)
+                    self.theme.set_theme(preview_theme_name)
+                    self.debug_logger.log("Live theme preview applied", category=LogCategory.THEME_PREVIEW,
+                                         level=LogLevel.VERBOSE, preview_theme=preview_theme_name)
+
+                    # Clear and reprint panel with new theme colors
                     self.console.clear()
                     self.console.print(build_theme_panel())
 

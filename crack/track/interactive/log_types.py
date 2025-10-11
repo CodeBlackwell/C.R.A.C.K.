@@ -117,6 +117,7 @@ class LogCategory(Enum):
     THEME = "THEME"
     THEME_LOAD = "THEME.LOAD"
     THEME_SWITCH = "THEME.SWITCH"
+    THEME_PREVIEW = "THEME.PREVIEW"
     THEME_ERROR = "THEME.ERROR"
 
     # Config Categories
