@@ -17,9 +17,33 @@ from rich.table import Table
 from rich import box
 from rich.text import Text
 
+from .base_panel import PanelShortcutMixin
 
-class TaskListPanel:
+
+class TaskListPanel(PanelShortcutMixin):
     """Task list rendering and filtering"""
+
+    @classmethod
+    def get_available_shortcuts(cls) -> List[str]:
+        """
+        Get shortcuts valid in task list panel
+
+        Returns:
+            List of shortcut keys available in task list
+        """
+        return [
+            # Global shortcuts (always available)
+            'h', 's', 't', 'q', 'b',
+            # Task list-specific actions
+            'f',      # Filter tasks
+            's',      # Sort tasks
+            '/',      # Search tasks
+            't',      # Toggle tree view
+            'p',      # Previous page (if pagination active)
+            'n',      # Next page (if pagination active)
+            # Number range for selection
+            '1-9',    # Select task by number
+        ]
 
     # Status icons mapping
     STATUS_ICONS = {
@@ -38,6 +62,7 @@ class TaskListPanel:
         sort_by: str = 'priority',
         page: int = 1,
         page_size: int = 10,
+        show_hierarchy: bool = False,
         theme=None
     ) -> Tuple[Panel, List[Dict]]:
         """
@@ -49,6 +74,7 @@ class TaskListPanel:
             sort_by: Sort field ('priority', 'name', 'port', 'time_estimate')
             page: Current page number (1-indexed)
             page_size: Tasks per page (default 10)
+            show_hierarchy: Show tree structure with indentation (default False)
             theme: ThemeManager instance (optional for backward compat)
 
         Returns:
@@ -69,14 +95,26 @@ class TaskListPanel:
                 'tags': []
             }
 
-        # Get all tasks
-        all_tasks = profile.task_tree.get_all_tasks()
+        # Get all tasks (with hierarchy info if requested)
+        if show_hierarchy:
+            # Get tasks as list of (task, depth) tuples preserving tree order
+            all_tasks = cls._get_tasks_with_depth(profile.task_tree)
+        else:
+            # Flat list (backward compatible)
+            all_tasks = [(task, 0) for task in profile.task_tree.get_all_tasks()]
 
         # Apply filters
-        filtered_tasks = cls._apply_filters(all_tasks, filter_state)
+        filtered_tasks = cls._apply_filters_with_depth(all_tasks, filter_state)
 
-        # Apply sorting
-        sorted_tasks = cls._apply_sort(filtered_tasks, sort_by)
+        # Apply sorting (if not showing hierarchy, sort is allowed)
+        if show_hierarchy:
+            # Keep tree order when showing hierarchy
+            sorted_tasks = filtered_tasks
+        else:
+            # Extract tasks, sort, re-wrap with depth=0
+            tasks_only = [t for t, d in filtered_tasks]
+            tasks_sorted = cls._apply_sort(tasks_only, sort_by)
+            sorted_tasks = [(t, 0) for t in tasks_sorted]
 
         # Paginate
         total_tasks = len(sorted_tasks)
@@ -100,8 +138,79 @@ class TaskListPanel:
                 total_pages,
                 total_tasks,
                 start_idx,
+                show_hierarchy=show_hierarchy,
                 theme=theme
             )
+
+    @classmethod
+    def _get_tasks_with_depth(cls, root_node, current_depth: int = 0) -> List[Tuple]:
+        """
+        Get tasks in tree order with depth information
+
+        Args:
+            root_node: TaskNode (usually task_tree root)
+            current_depth: Current depth in tree (0 = root)
+
+        Returns:
+            List of (task, depth) tuples in DFS order
+        """
+        tasks_with_depth = []
+
+        # Skip root node (id='root')
+        if root_node.id != 'root':
+            tasks_with_depth.append((root_node, current_depth))
+
+        # Recursively add children
+        for child in root_node.children:
+            tasks_with_depth.extend(cls._get_tasks_with_depth(child, current_depth + 1))
+
+        return tasks_with_depth
+
+    @classmethod
+    def _apply_filters_with_depth(cls, tasks_with_depth: List[Tuple], filter_state: Dict[str, Any]) -> List[Tuple]:
+        """
+        Apply filters to task list with depth
+
+        Args:
+            tasks_with_depth: List of (task, depth) tuples
+            filter_state: Filter configuration
+
+        Returns:
+            Filtered list of (task, depth) tuples
+        """
+        filtered = []
+
+        for task, depth in tasks_with_depth:
+            # Apply same filters as _apply_filters
+            # Filter by status
+            status_filter = filter_state.get('status', 'all')
+            if status_filter != 'all' and task.status != status_filter:
+                continue
+
+            # Filter by port
+            port_filter = filter_state.get('port')
+            if port_filter is not None and cls._extract_port_from_task(task) != port_filter:
+                continue
+
+            # Filter by service
+            service_filter = filter_state.get('service')
+            if service_filter and cls._extract_service_from_task(task) != service_filter:
+                continue
+
+            # Filter by priority
+            priority_filter = filter_state.get('priority')
+            if priority_filter and task.metadata.get('priority') != priority_filter:
+                continue
+
+            # Filter by tags
+            tag_filters = filter_state.get('tags', [])
+            if tag_filters and not any(tag in task.metadata.get('tags', []) for tag in tag_filters):
+                continue
+
+            # Passed all filters
+            filtered.append((task, depth))
+
+        return filtered
 
     @classmethod
     def _apply_filters(cls, tasks: List, filter_state: Dict[str, Any]) -> List:
@@ -196,6 +305,7 @@ class TaskListPanel:
         total_pages: int,
         total_tasks: int,
         start_idx: int,
+        show_hierarchy: bool = False,
         theme=None
     ) -> Tuple[Panel, List[Dict]]:
         """
@@ -210,6 +320,7 @@ class TaskListPanel:
             total_pages: Total number of pages
             total_tasks: Total number of tasks (after filtering)
             start_idx: Starting index in full list
+            show_hierarchy: Show tree structure with indentation
             theme: ThemeManager instance (optional for backward compat)
 
         Returns:
@@ -238,16 +349,32 @@ class TaskListPanel:
         choices = []
 
         # Add tasks to table
-        for idx, task in enumerate(tasks, 1):
+        for idx, task_tuple in enumerate(tasks, 1):
+            # Unpack task and depth
+            if isinstance(task_tuple, tuple):
+                task, depth = task_tuple
+            else:
+                # Backward compatibility: if not tuple, assume depth=0
+                task, depth = task_tuple, 0
+
             # Status icon
             icon = cls.STATUS_ICONS.get(task.status, '?')
             color = theme.task_state_color(task.status)
             status_cell = f"[{color}]{icon}[/]"
 
-            # Task name (truncate if too long)
-            task_name = task.name
-            if len(task_name) > 35:
-                task_name = task_name[:32] + "..."
+            # Task name with optional indentation for hierarchy
+            if depth > 0:
+                # Hierarchy mode - apply indentation and truncation
+                indent = "  " * depth
+                tree_prefix = theme.muted("└─ ")
+                max_length = 60 - (len(indent) + len(tree_prefix))  # Increased limit
+                if len(task.name) > max_length:
+                    task_name = f"{indent}{tree_prefix}{task.name[:max_length-3]}..."
+                else:
+                    task_name = f"{indent}{tree_prefix}{task.name}"
+            else:
+                # Flat mode - show full task name (no truncation)
+                task_name = task.name
 
             # Port
             port = cls._extract_port_from_task(task)
@@ -284,6 +411,7 @@ class TaskListPanel:
             choices.append({
                 'id': f'select-{idx}',
                 'label': f'Select task: {task.name}',
+                'action': 'select_task',
                 'task': task
             })
 
@@ -303,28 +431,33 @@ class TaskListPanel:
         # Action menu
         from ..themes.helpers import format_menu_number
         footer_table.add_row(f"{format_menu_number(theme, f'1-{len(tasks)}')} Select task")
-        choices.append({'id': 'select', 'label': 'Select task by number'})
+        choices.append({'id': 'select', 'label': 'Select task by number', 'action': 'select'})
 
         footer_table.add_row(f"{format_menu_number(theme, 'f')} Filter tasks")
-        choices.append({'id': 'filter', 'label': 'Filter tasks'})
+        choices.append({'id': 'filter', 'label': 'Filter tasks', 'action': 'filter'})
 
         footer_table.add_row(f"{format_menu_number(theme, 's')} Sort options")
-        choices.append({'id': 'sort', 'label': 'Sort options'})
+        choices.append({'id': 'sort', 'label': 'Sort options', 'action': 'sort'})
 
         footer_table.add_row(f"{format_menu_number(theme, '/')} Search tasks")
-        choices.append({'id': 'search', 'label': 'Search tasks'})
+        choices.append({'id': 'search', 'label': 'Search tasks', 'action': 'search'})
+
+        # Tree view toggle
+        tree_status = "hierarchical" if show_hierarchy else "flat"
+        footer_table.add_row(f"{format_menu_number(theme, 't')} Toggle tree view ({tree_status})")
+        choices.append({'id': 'toggle-tree', 'label': f'Toggle tree view (current: {tree_status})', 'action': 'toggle_hierarchy'})
 
         # Pagination
         if total_pages > 1:
             if page > 1:
                 footer_table.add_row(f"{format_menu_number(theme, 'p')} Previous page")
-                choices.append({'id': 'prev-page', 'label': 'Previous page'})
+                choices.append({'id': 'prev-page', 'label': 'Previous page', 'action': 'prev_page', 'page': page - 1})
             if page < total_pages:
                 footer_table.add_row(f"{format_menu_number(theme, 'n')} Next page")
-                choices.append({'id': 'next-page', 'label': 'Next page'})
+                choices.append({'id': 'next-page', 'label': 'Next page', 'action': 'next_page', 'page': page + 1})
 
         footer_table.add_row(f"{format_menu_number(theme, 'b')} Back to dashboard")
-        choices.append({'id': 'back', 'label': 'Back to dashboard'})
+        choices.append({'id': 'back', 'label': 'Back to dashboard', 'action': 'back'})
 
         # Combine table and footer
         combined_table = Table(show_header=False, box=None, padding=(0, 0))
@@ -396,13 +529,13 @@ class TaskListPanel:
 
         if is_filtered_empty:
             table.add_row(f"{format_menu_number(theme, 'c')} Clear filters")
-            choices.append({'id': 'clear-filters', 'label': 'Clear filters'})
+            choices.append({'id': 'clear-filters', 'label': 'Clear filters', 'action': 'clear_filters'})
 
         table.add_row(f"{format_menu_number(theme, 'f')} Filter tasks")
-        choices.append({'id': 'filter', 'label': 'Filter tasks'})
+        choices.append({'id': 'filter', 'label': 'Filter tasks', 'action': 'filter'})
 
         table.add_row(f"{format_menu_number(theme, 'b')} Back to dashboard")
-        choices.append({'id': 'back', 'label': 'Back to dashboard'})
+        choices.append({'id': 'back', 'label': 'Back to dashboard', 'action': 'back'})
 
         # Build panel
         breadcrumb = "Dashboard > Task List"

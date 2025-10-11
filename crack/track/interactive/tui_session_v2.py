@@ -75,6 +75,9 @@ class TUISessionV2(InteractiveSession):
         self.resize_handler = ResizeHandler()
         self.terminal_too_small = False  # Flag for graceful degradation
 
+        # Panel tracking for dynamic footer
+        self.current_panel = 'dashboard'  # Current active panel: dashboard, task-list, workspace, findings
+
         # Initialize findings processor (listens for finding_added events)
         self.findings_processor = FindingsProcessor(target=target)
         self.debug_logger.log("FindingsProcessor initialized", category=LogCategory.SYSTEM_INIT, level=LogLevel.VERBOSE)
@@ -87,16 +90,23 @@ class TUISessionV2(InteractiveSession):
 
         # Register debug-only shortcuts (conditional registration)
         if debug:
-            # Add debug stream to shortcuts dictionary
-            # Note: ShortcutHandler expects (description, method_name_string) tuples
-            # But for TUI-specific shortcuts, we can add them directly with callable
-            # We'll make _show_debug_stream accessible via the shortcut system
-            self.shortcut_handler.shortcuts['D'] = ('Debug Stream (live log viewer)', self._show_debug_stream)
+            # Add debug stream to shortcuts dictionary (new dict format with metadata)
+            self.shortcut_handler.shortcuts['D'] = {
+                'description': 'Debug Stream (live log viewer)',
+                'handler': self._show_debug_stream,
+                'scope': 'debug_mode',
+                'priority': 60
+            }
             self.debug_logger.log("Debug stream shortcut registered", category=LogCategory.SYSTEM_INIT,
                                  level=LogLevel.VERBOSE, shortcut='D')
 
-        # Register TUI-specific shortcuts
-        self.shortcut_handler.shortcuts['df'] = ('Document finding', self._document_finding)
+        # Register TUI-specific shortcuts (new dict format with metadata)
+        self.shortcut_handler.shortcuts['df'] = {
+            'description': 'Document finding',
+            'handler': self._document_finding,
+            'scope': 'global',
+            'priority': 35
+        }
         self.debug_logger.log("Document finding shortcut registered", category=LogCategory.SYSTEM_INIT,
                              level=LogLevel.VERBOSE, shortcut='df')
 
@@ -788,6 +798,10 @@ class TUISessionV2(InteractiveSession):
                 # Read single key
                 key = self.hotkey_handler.read_key()
 
+                # Log raw key immediately
+                if key is not None:
+                    self.debug_logger.debug(f"RAW KEY CAPTURED: repr={repr(key)}, len={len(key)}, ord={[ord(c) for c in key]}")
+
                 if key is None:
                     # EOF or timeout
                     self.debug_logger.warning("EOF or timeout during workspace hotkey input")
@@ -797,18 +811,21 @@ class TUISessionV2(InteractiveSession):
 
                 # Filter out ENTER/newline (treat as no input)
                 if key in ['\r', '\n']:
-                    self.debug_logger.debug(f"ENTER key detected (ord={ord(key)}), ignoring")
+                    self.debug_logger.debug(f"ENTER key detected (ord={ord(key)}), ignoring → user_input=''")
                     user_input = ''
                 # Handle : command mode
                 elif key == ':':
-                    self.debug_logger.debug("Command mode activated in workspace")
+                    self.debug_logger.debug("Command mode activated in workspace → reading command")
                     user_input = self.hotkey_handler.read_command(":")
+                    self.debug_logger.debug(f"Command mode result → user_input={repr(user_input)}")
                 # Handle multi-digit numbers (buffer with timeout)
                 elif key.isdigit():
                     self.debug_logger.debug(f"Digit detected in workspace: {key}, checking for multi-digit")
                     user_input = self.hotkey_handler.read_number(key, timeout=0.5)
+                    self.debug_logger.debug(f"Multi-digit number result → user_input={repr(user_input)}")
                 else:
                     # Single-key shortcut
+                    self.debug_logger.debug(f"Single-key shortcut branch → user_input={repr(key)}")
                     user_input = key
 
                 self.debug_logger.log_user_input(user_input, context="task_workspace_hotkey")
@@ -828,14 +845,18 @@ class TUISessionV2(InteractiveSession):
                 self.debug_logger.debug("Empty input, continuing loop")
                 continue
 
-            self.debug_logger.debug(f"Processing workspace input: '{user_input}'")
+            self.debug_logger.debug(f"Processing workspace input: '{user_input}' (repr={repr(user_input)}, len={len(user_input)})")
 
             # Handle 'b' (back to dashboard)
+            self.debug_logger.debug(f"Checking 'b' handler: user_input.lower()={repr(user_input.lower())}, comparing with 'b'")
             if user_input.lower() == 'b':
-                self.debug_logger.info("Back to dashboard requested")
+                self.debug_logger.info("✓ MATCH: Back to dashboard requested")
                 self.debug_logger.log_state_transition(output_state, "DASHBOARD", "back button pressed")
                 running = False
+                self.debug_logger.info(f"✓ running flag set to False, will exit workspace loop")
                 continue
+            else:
+                self.debug_logger.debug(f"✗ NO MATCH: '{user_input.lower()}' != 'b', continuing to next check")
 
             # Handle 'n' (next task) - only valid when complete
             if user_input.lower() == 'n' and output_state == 'complete':
@@ -1071,8 +1092,9 @@ class TUISessionV2(InteractiveSession):
                             self.debug_logger.info(f"Findings detected: {len(findings)}")
 
                             # Save profile after execution
+                            self.debug_logger.info("Saving profile to disk...")
                             self.profile.save()
-                            self.debug_logger.debug("Profile saved after execution")
+                            self.debug_logger.info("✓ Profile saved successfully")
 
                         except KeyboardInterrupt:
                             self.debug_logger.warning("Execution interrupted by user (Ctrl+C)")
@@ -1115,8 +1137,9 @@ class TUISessionV2(InteractiveSession):
                             self.debug_logger.info(f"Findings detected: {len(findings)}")
 
                             # Save profile after execution
+                            self.debug_logger.info("Saving profile to disk...")
                             self.profile.save()
-                            self.debug_logger.debug("Profile saved after execution")
+                            self.debug_logger.info("✓ Profile saved successfully")
 
                         except KeyboardInterrupt:
                             self.debug_logger.warning("Execution interrupted by user (Ctrl+C)")
@@ -1173,7 +1196,11 @@ class TUISessionV2(InteractiveSession):
                 input()
                 live.start()
 
+            # End of iteration - log running flag status
+            self.debug_logger.debug(f"End of iteration {iteration}, running={running}")
+
         self.debug_logger.section("TASK WORKSPACE LOOP END")
+        self.debug_logger.info(f"Exiting workspace loop (running={running})")
         self.debug_logger.info("Returning to dashboard")
 
     def _task_list_loop(self, live: Live, layout: Layout):
@@ -1192,6 +1219,7 @@ class TUISessionV2(InteractiveSession):
         filter_state = None  # No filters initially
         sort_by = 'priority'  # Default sort
         page = 1
+        show_hierarchy = True  # Default to tree view
 
         running = True
         iteration = 0
@@ -1201,12 +1229,13 @@ class TUISessionV2(InteractiveSession):
             self.debug_logger.debug(f"Task list loop iteration {iteration}")
 
             # Render task list panel
-            self.debug_logger.debug(f"Rendering TaskListPanel (sort={sort_by}, page={page})")
+            self.debug_logger.debug(f"Rendering TaskListPanel (sort={sort_by}, page={page}, hierarchy={show_hierarchy})")
             panel, choices = TaskListPanel.render(
                 profile=self.profile,
                 filter_state=filter_state,
                 sort_by=sort_by,
                 page=page,
+                show_hierarchy=show_hierarchy,
                 theme=self.theme
             )
             self.debug_logger.debug(f"TaskListPanel returned {len(choices)} choices")
@@ -1225,7 +1254,7 @@ class TUISessionV2(InteractiveSession):
             live.stop()
 
             # Get user input (vim-style hotkeys)
-            self.console.print(f"\n{self.theme.muted('Press key (1-10:Select, f:Filter, s:Sort, b:Back):')} ", end="")
+            self.console.print(f"\n{self.theme.muted('Press key (1-10:Select, f:Filter, s:Sort, t:Tree, b:Back):')} ", end="")
             try:
                 self.debug_logger.debug("Waiting for task list hotkey input...")
 
@@ -1297,6 +1326,13 @@ class TUISessionV2(InteractiveSession):
                 self.console.print(self.theme.muted("Press Enter to continue..."))
                 input()
                 live.start()
+                continue
+
+            elif user_input.lower() == 't':
+                self.debug_logger.info("Toggle tree view requested")
+                show_hierarchy = not show_hierarchy
+                view_mode = "hierarchical" if show_hierarchy else "flat"
+                self.debug_logger.debug(f"Tree view toggled to: {view_mode}")
                 continue
 
             elif user_input.lower() == 'n':
@@ -1882,6 +1918,9 @@ class TUISessionV2(InteractiveSession):
                     var_example = var.get('example', '')
                     var_required = var.get('required', True)
 
+                    # Auto-fill common variables from profile
+                    auto_filled = self._auto_fill_variable(var_name, var_desc)
+
                     # Build prompt
                     prompt = f"  {self.theme.primary(var_name)}"
                     if var_desc:
@@ -1890,10 +1929,20 @@ class TUISessionV2(InteractiveSession):
                         prompt += f" {self.theme.muted(f'e.g., {var_example}')}"
                     if not var_required:
                         prompt += f" {self.theme.muted('(optional)')}"
+
+                    # Show auto-filled value if available
+                    if auto_filled:
+                        prompt += f" {self.theme.success(f'[{auto_filled}]')}"
+
                     prompt += ": "
 
                     self.console.print(prompt, end="")
                     value = input().strip()
+
+                    # Use auto-filled value if user pressed Enter
+                    if not value and auto_filled:
+                        value = auto_filled
+                        self.debug_logger.debug(f"Using auto-filled value for {var_name}: {value}")
 
                     # Validate required fields
                     if not value and var_required:
@@ -2265,6 +2314,68 @@ class TUISessionV2(InteractiveSession):
         footer = self._render_footer()
         layout['footer'].update(footer)
 
+    def _auto_fill_variable(self, var_name: str, var_desc: str = '') -> Optional[str]:
+        """
+        Auto-fill common template variables from profile
+
+        Args:
+            var_name: Variable name (e.g., '<URL>', '<TARGET>')
+            var_desc: Variable description
+
+        Returns:
+            Auto-filled value or None
+        """
+        # Get profile target
+        target = self.profile.target
+
+        # <URL> - Target URL (add http:// if not present)
+        if var_name == '<URL>':
+            # Check if target already has protocol
+            if target.startswith(('http://', 'https://')):
+                return target
+
+            # Check if we have open ports to determine protocol
+            ports = self.profile.ports
+            if 443 in ports:
+                return f"https://{target}"
+            elif 80 in ports:
+                return f"http://{target}"
+            else:
+                # Default to http if no ports discovered yet
+                return f"http://{target}"
+
+        # <TARGET> - Target IP/hostname (as-is)
+        elif var_name == '<TARGET>':
+            return target
+
+        # <RHOST> - Target for exploit frameworks
+        elif var_name == '<RHOST>':
+            return target
+
+        # <LHOST> - Local attack machine IP (from config)
+        elif var_name == '<LHOST>':
+            from ..core.config import Config
+            config = Config.load()
+            lhost = config.get('lhost')
+            if lhost:
+                return lhost
+
+        # <LPORT> - Local listening port (from config)
+        elif var_name == '<LPORT>':
+            from ..core.config import Config
+            config = Config.load()
+            lport = config.get('lport')
+            if lport:
+                return str(lport)
+
+        # <PORT> - First discovered port (if only one open)
+        elif var_name == '<PORT>':
+            open_ports = [p for p, info in self.profile.ports.items() if info.get('state') == 'open']
+            if len(open_ports) == 1:
+                return str(open_ports[0])
+
+        return None
+
     def _render_header(self) -> Panel:
         """Render header panel"""
         from rich.text import Text
@@ -2312,7 +2423,7 @@ class TUISessionV2(InteractiveSession):
 
         Args:
             valid_shortcuts: Dict of {key: description} for current context.
-                           If None, shows ALL shortcuts (dashboard default)
+                           If None, dynamically determines from current panel
 
         Displays:
         - Only shortcuts valid in current context
@@ -2321,9 +2432,9 @@ class TUISessionV2(InteractiveSession):
         """
         from rich.table import Table
 
-        # Default to all shortcuts if not specified (dashboard mode)
+        # Dynamic shortcut resolution based on current panel
         if valid_shortcuts is None:
-            valid_shortcuts = self._get_dashboard_shortcuts()
+            valid_shortcuts = self._get_contextual_shortcuts()
 
         # Create table for multi-row layout (6 columns)
         table = Table.grid(padding=(0, 1), expand=True)
@@ -2359,12 +2470,94 @@ class TUISessionV2(InteractiveSession):
         for row in rows:
             table.add_row(*row)
 
+        # Dynamic title based on current panel
+        panel_titles = {
+            'dashboard': 'Dashboard Commands',
+            'task-list': 'Task List Commands',
+            'findings': 'Findings Commands',
+            'workspace': 'Workspace Commands'
+        }
+        title_text = panel_titles.get(self.current_panel, 'Commands')
+
         return Panel(
             table,
-            title=self.theme.emphasis("All Commands (h:Help for details)"),
+            title=self.theme.emphasis(f"{title_text} (h:Help for details)"),
             border_style=self.theme.panel_border(),
             box=box.HEAVY
         )
+
+    def _get_contextual_shortcuts(self) -> Dict[str, str]:
+        """
+        Get shortcuts valid in current context (panel + mode + state)
+
+        Dynamically queries current panel for applicable shortcuts and
+        filters ShortcutHandler shortcuts by scope.
+
+        Returns:
+            Dictionary of {key: description} for current context
+        """
+        shortcuts = {}
+
+        # 1. Get panel-specific shortcuts from current panel class
+        panel_shortcuts = self._get_panel_shortcuts(self.current_panel)
+
+        # 2. Filter ShortcutHandler shortcuts by scope and panel
+        for key in panel_shortcuts:
+            if key in self.shortcut_handler.shortcuts:
+                shortcut_meta = self.shortcut_handler.shortcuts[key]
+                if isinstance(shortcut_meta, dict):
+                    description = shortcut_meta['description']
+                else:
+                    description, _ = shortcut_meta
+                shortcuts[key] = description
+
+        # 3. Add TUI-specific shortcuts not in ShortcutHandler
+        tui_shortcuts = {
+            'l': 'Browse all tasks',
+            'f': 'Browse findings',
+            'o': 'Output overlay',
+            'i': 'Import scan results',
+            'd': 'Document finding',
+            '-': 'Config panel',
+        }
+
+        for key, desc in tui_shortcuts.items():
+            if key in panel_shortcuts and key not in shortcuts:
+                shortcuts[key] = desc
+
+        # 4. Add special commands (always available)
+        shortcuts[':!cmd'] = 'Console injection'
+        shortcuts[':theme'] = 'Switch theme'
+        shortcuts[':themes'] = 'List themes'
+        shortcuts[':XX'] = 'DEV: Reset & restart'
+        shortcuts['1-9'] = 'Menu select'
+
+        return shortcuts
+
+    def _get_panel_shortcuts(self, panel_name: str) -> List[str]:
+        """
+        Get shortcuts specific to a panel
+
+        Args:
+            panel_name: Name of panel ('dashboard', 'task-list', 'findings', 'workspace')
+
+        Returns:
+            List of shortcut keys applicable to that panel
+        """
+        panel_map = {
+            'dashboard': DashboardPanel,
+            'task-list': TaskListPanel,
+            'findings': FindingsPanel,
+            'workspace': TaskWorkspacePanel
+        }
+
+        panel_class = panel_map.get(panel_name)
+        if not panel_class or not hasattr(panel_class, 'get_available_shortcuts'):
+            # Fallback to global shortcuts only
+            return ['h', 's', 't', 'q', 'b']
+
+        # Get keys from panel
+        return panel_class.get_available_shortcuts()
 
     def _get_dashboard_shortcuts(self) -> Dict[str, str]:
         """
@@ -2384,7 +2577,12 @@ class TUISessionV2(InteractiveSession):
         # Add priority shortcuts from ShortcutHandler
         for key in priority_order:
             if key in self.shortcut_handler.shortcuts:
-                description, _ = self.shortcut_handler.shortcuts[key]
+                shortcut_meta = self.shortcut_handler.shortcuts[key]
+                # Handle both dict and tuple formats for backwards compatibility
+                if isinstance(shortcut_meta, dict):
+                    description = shortcut_meta['description']
+                else:
+                    description, _ = shortcut_meta
                 shortcuts[key] = description
 
         # Add TUI-specific shortcuts (not in ShortcutHandler)
@@ -2402,8 +2600,13 @@ class TUISessionV2(InteractiveSession):
                 shortcuts[key] = desc
 
         # Add remaining shortcuts alphabetically
-        for key, (description, _) in sorted(self.shortcut_handler.shortcuts.items()):
+        for key, shortcut_meta in sorted(self.shortcut_handler.shortcuts.items()):
             if key not in shortcuts:
+                # Handle both dict and tuple formats for backwards compatibility
+                if isinstance(shortcut_meta, dict):
+                    description = shortcut_meta['description']
+                else:
+                    description, _ = shortcut_meta
                 shortcuts[key] = description
 
         # Add special commands
@@ -2641,9 +2844,14 @@ class TUISessionV2(InteractiveSession):
             if task:
                 self.debug_logger.log_state_transition("DASHBOARD", "TASK_WORKSPACE", f"execute next: {task.name}")
 
+                # Update current panel for dynamic footer
+                self.current_panel = 'workspace'
+
                 # Enter workspace loop with SAME Live and Layout
                 self._task_workspace_loop(self._live, self._layout, task)
 
+                # Return to dashboard
+                self.current_panel = 'dashboard'
                 self.debug_logger.log_state_transition("TASK_WORKSPACE", "DASHBOARD", "returned from workspace")
                 return
             else:
@@ -2654,9 +2862,14 @@ class TUISessionV2(InteractiveSession):
             self.debug_logger.info("Navigating to task list browser")
             self.debug_logger.log_state_transition("DASHBOARD", "TASK_LIST", "browse tasks selected")
 
+            # Update current panel for dynamic footer
+            self.current_panel = 'task-list'
+
             # Enter task list loop with SAME Live and Layout
             self._task_list_loop(self._live, self._layout)
 
+            # Return to dashboard
+            self.current_panel = 'dashboard'
             self.debug_logger.log_state_transition("TASK_LIST", "DASHBOARD", "returned from task list")
             self.debug_logger.info("Returned from task list browser")
             return
@@ -2666,9 +2879,14 @@ class TUISessionV2(InteractiveSession):
             self.debug_logger.info("Navigating to findings browser")
             self.debug_logger.log_state_transition("DASHBOARD", "FINDINGS", "browse findings selected")
 
+            # Update current panel for dynamic footer
+            self.current_panel = 'findings'
+
             # Enter findings loop with SAME Live and Layout
             self._findings_loop(self._live, self._layout)
 
+            # Return to dashboard
+            self.current_panel = 'dashboard'
             self.debug_logger.log_state_transition("FINDINGS", "DASHBOARD", "returned from findings")
             self.debug_logger.info("Returned from findings browser")
             return

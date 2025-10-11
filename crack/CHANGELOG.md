@@ -8,6 +8,91 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Fixed - Task List Panel Navigation
+
+**Task Selection Bug Fixes**
+
+- **Missing Action Keys** (`task_list_panel.py:287, 406-433`)
+  - Added `'action'` key to all 13 choice dictionaries in TaskListPanel
+  - Task selections now include `'action': 'select_task'` for proper routing
+  - Footer menu choices (filter, sort, search, back) now have action keys
+  - Pagination choices include both `'action'` and `'page'` keys
+  - Fixes: `KeyError: 'page'` when navigating pages
+  - Fixes: Pressing number keys no longer results in "Unhandled action: None"
+
+- **Empty State Choices** (`task_list_panel.py:467-473`)
+  - Added action keys to clear-filters, filter, and back choices
+  - Consistent choice structure across all panel states
+
+**Task Display Improvements**
+
+- **Default Flat View** (`task_list_panel.py:41`)
+  - Changed `show_hierarchy` default from `True` to `False`
+  - Task list now opens in flat, sortable mode by default
+  - Users can toggle to tree view with 't' hotkey
+
+- **Full Task Names** (`task_list_panel.py:338-350`)
+  - Removed truncation for flat mode (no more "..." cutoff)
+  - Hierarchical mode still truncates at 60 chars (was 35)
+  - Task names now fully visible for easier scanning
+
+**Tree Toggle Feature**
+
+- **'t' Hotkey** (`tui_session_v2.py:1212, 1321-1326`)
+  - Added state variable `show_hierarchy` to task list loop
+  - Toggle between hierarchical and flat views instantly
+  - Visual feedback shows current mode: "(hierarchical)" or "(flat)"
+  - State preserved during session (doesn't reset on navigation)
+
+- **Menu Integration** (`task_list_panel.py:418-421`)
+  - Added "Toggle tree view" menu item with current state indicator
+  - Shows dynamic status: "Toggle tree view (flat)" or "(hierarchical)"
+  - Follows established UX pattern (single-key action)
+
+- **Prompt Update** (`tui_session_v2.py:1247`)
+  - Updated input prompt to include 't:Tree' option
+  - Clear indication of available shortcuts
+
+**Debug Logging**
+
+- All toggle operations logged with `show_hierarchy` state
+- Panel render calls log current hierarchy mode
+- Helpful for troubleshooting view mode issues
+
+### Technical Details
+
+- **Choice Structure**: All choices now include `{'id': '...', 'label': '...', 'action': '...', ...}`
+- **Pagination**: Pagination choices include `'page'` value for direct page navigation
+- **Backward Compatibility**: `show_hierarchy` parameter defaults to False in render()
+- **Performance**: No performance impact - simple boolean toggle
+
+### Testing
+
+```bash
+# Verify task selection works
+1. crack track --tui <target>
+2. Navigate to Task List (choice 2)
+3. Press '2' to select second task
+4. ✓ Should navigate to task workspace (not "Unhandled action: None")
+
+# Verify tree toggle works
+1. Press 't' to toggle to hierarchical view
+2. ✓ Tasks show with indentation and tree structure
+3. Press 't' again to return to flat view
+4. ✓ Tasks show without indentation, full names visible
+
+# Verify pagination works
+1. If 10+ tasks exist, press 'n' for next page
+2. ✓ Should move to page 2 (not KeyError: 'page')
+```
+
+### Files Changed
+
+- `track/interactive/panels/task_list_panel.py` (choice dictionaries, hierarchy default, truncation logic)
+- `track/interactive/tui_session_v2.py` (tree toggle handler, state variable, prompt text)
+
+---
+
 ### Added - Quality-Based Smart Detection
 
 **Problem Solved: Chicken-and-Egg in HTTP Enumeration**
