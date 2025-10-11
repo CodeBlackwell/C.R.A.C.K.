@@ -330,33 +330,39 @@ class TestFindingsPanelHelperMethods:
     """Test helper methods"""
 
     def test_get_finding_icon_vulnerability(self):
-        """Test vulnerability icon"""
-        icon = FindingsPanel._get_finding_icon('vulnerability')
+        """Test vulnerability icon via theme helper"""
+        from crack.track.interactive.themes.helpers import format_finding_icon
+        icon = format_finding_icon('vulnerability')
         assert icon == '🔓'
 
     def test_get_finding_icon_directory(self):
-        """Test directory icon"""
-        icon = FindingsPanel._get_finding_icon('directory')
+        """Test directory icon via theme helper"""
+        from crack.track.interactive.themes.helpers import format_finding_icon
+        icon = format_finding_icon('directory')
         assert icon == '📁'
 
     def test_get_finding_icon_credential(self):
-        """Test credential icon"""
-        icon = FindingsPanel._get_finding_icon('credential')
+        """Test credential icon via theme helper"""
+        from crack.track.interactive.themes.helpers import format_finding_icon
+        icon = format_finding_icon('credential')
         assert icon == '🔑'
 
     def test_get_finding_icon_user(self):
-        """Test user icon"""
-        icon = FindingsPanel._get_finding_icon('user')
+        """Test user icon via theme helper"""
+        from crack.track.interactive.themes.helpers import format_finding_icon
+        icon = format_finding_icon('user')
         assert icon == '👤'
 
     def test_get_finding_icon_note(self):
-        """Test note icon"""
-        icon = FindingsPanel._get_finding_icon('note')
+        """Test note icon via theme helper"""
+        from crack.track.interactive.themes.helpers import format_finding_icon
+        icon = format_finding_icon('note')
         assert icon == '📝'
 
     def test_get_finding_icon_unknown(self):
-        """Test unknown type returns default icon"""
-        icon = FindingsPanel._get_finding_icon('unknown_type')
+        """Test unknown type returns default icon via theme helper"""
+        from crack.track.interactive.themes.helpers import format_finding_icon
+        icon = format_finding_icon('unknown_type')
         assert icon == '•'
 
     def test_filter_findings_all(self):
