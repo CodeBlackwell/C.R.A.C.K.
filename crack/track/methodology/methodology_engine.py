@@ -15,7 +15,11 @@ Phases:
 
 from typing import Dict, Any, List, Optional
 import logging
+import json
+from pathlib import Path
 from .phases import Phase, PhaseTransition
+from .attack_chains import AttackChain, ChainRegistry
+from .chain_executor import ChainExecutor
 
 logger = logging.getLogger(__name__)
 
@@ -77,7 +81,12 @@ class MethodologyEngine:
         self.phase_history = [Phase.RECONNAISSANCE]
         self.phase_progress = {phase: 0.0 for phase in Phase}
 
+        # Initialize attack chains (Stage 3)
+        self.chain_registry = self._load_attack_chains()
+        self.chain_executor = ChainExecutor(target, profile, self.chain_registry)
+
         logger.info(f"[METHODOLOGY] Initialized at {self.current_phase.name} phase")
+        logger.info(f"[METHODOLOGY] Loaded {len(self.chain_registry.list_all())} attack chains")
 
     def get_phase_suggestions(self) -> List[Dict[str, Any]]:
         """
@@ -94,7 +103,11 @@ class MethodologyEngine:
         quick_wins = self._detect_quick_wins()
         suggestions.extend(quick_wins)
 
-        # Priority 2: Phase-specific tasks
+        # Priority 2: Attack chain next steps (Stage 3)
+        chain_suggestions = self._get_chain_suggestions()
+        suggestions.extend(chain_suggestions)
+
+        # Priority 3: Phase-specific tasks
         phase_tasks = self._get_phase_tasks()
         suggestions.extend(phase_tasks)
 
@@ -301,3 +314,87 @@ class MethodologyEngine:
 
         # Default: assume met for Stage 2
         return True
+
+    def _load_attack_chains(self) -> ChainRegistry:
+        """
+        Load attack chains from JSON catalog
+
+        Returns:
+            Populated ChainRegistry
+        """
+        registry = ChainRegistry()
+
+        # Find attack_chains.json in intelligence/patterns/
+        chains_file = Path(__file__).parent.parent / 'intelligence' / 'patterns' / 'attack_chains.json'
+
+        if not chains_file.exists():
+            logger.warning(f"[METHODOLOGY] Attack chains file not found: {chains_file}")
+            return registry
+
+        try:
+            with open(chains_file, 'r') as f:
+                data = json.load(f)
+
+            # Load chains from JSON
+            for chain_data in data.get('attack_chains', []):
+                chain = AttackChain.from_dict(chain_data)
+                registry.register(chain)
+
+            logger.info(f"[METHODOLOGY] Loaded {len(registry.list_all())} attack chains from JSON")
+
+        except Exception as e:
+            logger.error(f"[METHODOLOGY] Failed to load attack chains: {e}")
+
+        return registry
+
+    def _get_chain_suggestions(self) -> List[Dict[str, Any]]:
+        """
+        Get next step suggestions from active attack chains
+
+        Returns:
+            List of chain-based task suggestions
+        """
+        tasks = []
+
+        # Get next steps from ChainExecutor
+        chain_steps = self.chain_executor.get_next_steps(max_chains=3)
+
+        for suggestion in chain_steps:
+            step = suggestion['step']
+            chain_name = suggestion['chain_name']
+            progress = suggestion['progress']
+            step_index = suggestion['step_index']
+
+            # Convert ChainStep to task dict
+            task_id = f"chain-{suggestion['chain_id']}-step-{step_index}"
+
+            # Replace placeholders in command template
+            command = step.command_template
+            command = command.replace('<TARGET>', self.target)
+            command = command.replace('<PORT>', '80')  # TODO: Get from context
+
+            tasks.append({
+                'id': task_id,
+                'name': f"⛓️ [{chain_name}] {step.name}",
+                'type': 'executable' if not step.manual else 'manual',
+                'status': 'pending',
+                'metadata': {
+                    'command': command,
+                    'category': 'attack_chain',
+                    'chain_id': suggestion['chain_id'],
+                    'chain_name': chain_name,
+                    'step_id': step.id,
+                    'step_index': step_index,
+                    'chain_progress': progress,
+                    'description': step.description,
+                    'success_indicators': step.success_indicators,
+                    'failure_indicators': step.failure_indicators,
+                    'estimated_time_minutes': step.estimated_time_minutes,
+                    'manual': step.manual
+                }
+            })
+
+        if tasks:
+            logger.info(f"[METHODOLOGY] Generated {len(tasks)} chain suggestions")
+
+        return tasks

