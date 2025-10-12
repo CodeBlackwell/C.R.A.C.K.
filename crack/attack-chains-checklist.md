@@ -2,16 +2,16 @@
 
 ## Phase 1: Schema Definition and Structure
 
-- [ ] Create `crack/reference/schemas/` directory for schema definitions
-- [ ] Define `attack_chain.schema.json` with minimal required fields (id, name, description, steps)
-- [ ] Establish ID naming convention pattern: `{platform}-{category}-{technique}-{variant}`
-- [ ] Add version field with semantic versioning (start with 1.0.0)
-- [ ] Define metadata object with required fields (author, created, updated, tags, category)
-- [ ] Add difficulty rating enum (beginner, intermediate, advanced, expert)
-- [ ] Include time_estimate and oscp_relevant boolean fields
-- [ ] Define step structure with command_ref as required field
-- [ ] Create JSON Schema validation rules for all field types
-- [ ] Document schema in `crack/reference/schemas/README.md`
+- [x] Create `crack/reference/schemas/` directory for schema definitions
+- [x] Define `attack_chain.schema.json` with minimal required fields (id, name, description, steps)
+- [x] Establish ID naming convention pattern: `{platform}-{category}-{technique}-{variant}`
+- [x] Add version field with semantic versioning (start with 1.0.0)
+- [x] Define metadata object with required fields (author, created, updated, tags, category)
+- [x] Add difficulty rating enum (beginner, intermediate, advanced, expert)
+- [x] Include time_estimate and oscp_relevant boolean fields
+- [x] Define step structure with command_ref as required field
+- [x] Create JSON Schema validation rules for all field types
+- [x] Document schema in `crack/reference/schemas/README.md`
 
 ## Phase 2: Directory Structure Setup
 
