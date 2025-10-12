@@ -1,5 +1,162 @@
 # CHANGELOG - CRACK Toolkit
 
+## [Unreleased]
+
+### Added - Command ID Direct Lookup & Interactive Mode
+**Files Modified:** `reference/cli.py`
+
+#### New Feature: Direct Command ID Lookup
+Display comprehensive, colorized command details by ID:
+```bash
+crack reference <command-id>
+```
+
+**Output includes:**
+- Command ID, category, and subcategory
+- OSCP relevance (color-coded: high=green, medium=yellow)
+- Tags and description
+- Command template with syntax highlighting
+- Auto-filled examples (using config values)
+- Prerequisites (auto-filled)
+- Variables with examples and required/optional status
+- Flag explanations
+- Success/failure indicators
+- Troubleshooting with auto-filled solutions
+- Next steps and alternatives
+- Usage hints
+
+**Example:**
+```bash
+crack reference nmap-ping-sweep
+# Shows full colorized details with all metadata
+```
+
+#### Enhanced Interactive Mode
+Simplified interactive fill workflow with `-i` flag:
+```bash
+crack reference <command-id> -i
+```
+
+**Features:**
+- Directly enters interactive fill mode for specified command
+- Prompts for placeholder variables with descriptions
+- Auto-fills from config (LHOST, LPORT, TARGET)
+- Displays final filled command
+- Offers to execute with confirmation
+
+**Before:**
+```bash
+crack reference --fill bash-reverse-shell  # Fills only, no execute
+crack reference bash-reverse-shell         # No output (not found)
+```
+
+**After:**
+```bash
+crack reference bash-reverse-shell         # Shows full details
+crack reference bash-reverse-shell -i      # Fill and execute
+```
+
+### Changed - Streamlined Interactive Mode
+
+#### Removed Redundant `--fill` Flag
+- **Deleted:** `--fill` argument from argument parser
+- **Deleted:** `fill_command()` method (unused)
+- **Updated:** All help text to use `-i` flag exclusively
+- **Simplified:** Interactive REPL (removed `fill` command)
+
+**Migration:**
+- Old: `crack reference --fill <cmd>`
+- New: `crack reference <cmd> -i`
+
+**Benefits:**
+- Clearer UX - single flag for interactive mode
+- Less mental overhead - one way to do things
+- Consistent with other CLI patterns
+
+### Fixed - Tag Selection with Numbered Selection
+
+**Issue:** `crack reference --tag STARTER 1` did not enter interactive mode
+
+**Root Cause:**
+- argparse `nargs='+'` on `--tags` flag captured trailing "1" as part of tags array
+- Result: `args.tags = ['STARTER', '1']` instead of `args.tags = ['STARTER']`
+- System searched for commands with BOTH "STARTER" and "1" tags → no results
+
+**Solution:**
+```python
+# Extract trailing digit from tags before processing
+if args.tags and args.tags[-1].isdigit() and len(args.tags[-1]) <= 3:
+    selection_number = args.tags[-1]
+    args.tags = args.tags[:-1]
+```
+
+**Test Results:**
+```bash
+crack reference --tag STARTER 1
+# ✓ Filters by STARTER tag (10 commands)
+# ✓ Extracts "1" as selection
+# ✓ Auto-selects command #1 (nmap-ping-sweep)
+# ✓ Enters interactive fill mode
+# ✓ Offers to execute
+```
+
+### Implementation Details
+
+**New Method:** `show_command_details(cmd)` (Lines 444-541)
+- Comprehensive themed display
+- Auto-fills examples and prerequisites
+- Color-codes OSCP relevance
+- Resolves alternative command IDs
+- Provides usage hints
+
+**Modified Logic:** `run()` method (Lines 244-254)
+- Checks for direct command ID before search
+- Routes to `show_command_details()` for display
+- Routes to `fill_command_with_execute()` for interactive mode
+
+**Color Scheme (ReferenceTheme):**
+- Primary (Cyan): Section headers
+- Secondary (Blue): IDs, tags, flags
+- Command Name (Bold White): Command names
+- Success (Green): Success indicators, HIGH relevance
+- Warning (Yellow): MEDIUM relevance
+- Error (Red): Required variables
+- Hint (Dim): Examples, optional fields
+
+### Backward Compatibility
+All existing workflows unchanged:
+- ✅ `crack reference --tag STARTER 1` - Tag with numbered selection
+- ✅ `crack reference rdp -i` - Search with interactive mode
+- ✅ `crack reference rdp 2` - Search with numbered selection
+- ✅ `crack reference --tree` - Command tree view
+
+### Testing
+**All workflows verified:**
+- ✅ Command ID displays full details
+- ✅ Command ID + `-i` enters fill mode
+- ✅ Tag filtering with number works
+- ✅ Search with `-i` works
+- ✅ Invalid command ID gracefully falls back to search
+- ✅ All help text updated
+- ✅ No `--fill` flag exists
+
+**Usage Examples:**
+```bash
+# Display details
+crack reference nmap-ping-sweep
+
+# Interactive fill
+crack reference bash-reverse-shell -i
+
+# Tag selection (fixed)
+crack reference --tag STARTER 1
+
+# Search with interactive
+crack reference rdp -i
+```
+
+---
+
 ## [2.2.2] - 2025-10-12
 
 ### Changed - Reference STARTER Tag Expansion

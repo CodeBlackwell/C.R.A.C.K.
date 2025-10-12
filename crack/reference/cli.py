@@ -91,13 +91,7 @@ class ReferenceCLI:
         parser.add_argument(
             '-i', '--interactive',
             action='store_true',
-            help='Interactive mode'
-        )
-
-        parser.add_argument(
-            '--fill',
-            metavar='COMMAND_ID',
-            help='Fill placeholders for a command'
+            help='Interactive mode - fill placeholders and offer to execute'
         )
 
         # Special commands
@@ -202,20 +196,29 @@ class ReferenceCLI:
         if args.tree:
             return self.show_command_tree()
 
-        if args.fill:
-            return self.fill_command(args.fill)
-
-        if args.interactive:
+        # Handle interactive mode - if -i with no search criteria, open REPL
+        if args.interactive and not (args.args or args.category or args.tags):
             return self.interactive_mode()
 
         # Parse positional args to determine category/subcategory/query
         category = args.category
         subcategory = args.subcategory
         query = None
+        selection_number = None
+
+        # Check if --tags has a number at the end (argparse captures it as part of tags)
+        if args.tags and args.tags[-1].isdigit() and len(args.tags[-1]) <= 3:
+            selection_number = args.tags[-1]
+            args.tags = args.tags[:-1]  # Remove selection from tags
 
         if args.args:
+            # Check if last arg is a digit (selection number when used with --tag or category)
+            if args.args[-1].isdigit() and len(args.args[-1]) <= 3:  # Reasonable selection number
+                selection_number = args.args[-1]
+                args.args = args.args[:-1]  # Remove selection from args
+
             # Check if first arg is a valid category
-            if args.args[0] in self.registry.categories.keys():
+            if args.args and args.args[0] in self.registry.categories.keys():
                 category = args.args[0]
 
                 # Check if second arg is a valid subcategory for this category
@@ -226,9 +229,30 @@ class ReferenceCLI:
                     else:
                         # Not a subcategory, treat as search query
                         query = ' '.join(args.args[1:])
-            else:
+            elif args.args:
                 # First arg is not a category, treat all as search query
                 query = ' '.join(args.args)
+
+        # If selection number provided, append to query for existing logic to handle
+        if selection_number:
+            if query:
+                query = f"{query} {selection_number}"
+            elif args.tags:
+                # For tag filtering with number, pass as part of query
+                # This will be handled in search_commands
+                query = selection_number
+
+        # Check if query is a direct command ID before searching
+        if query and not category and not args.tags:
+            # Try direct command ID lookup first
+            cmd = self.registry.get_command(query)
+            if cmd:
+                if args.interactive:
+                    # Enter fill mode
+                    return self.fill_command_with_execute(cmd.id)
+                else:
+                    # Show full details (colorized, verbose)
+                    return self.show_command_details(cmd)
 
         # Search/filter commands
         if query or category or args.tags:
@@ -239,14 +263,15 @@ class ReferenceCLI:
                 tags=args.tags,
                 exclude_tags=args.exclude_tags,
                 format=args.format,
-                verbose=args.verbose
+                verbose=args.verbose,
+                interactive=args.interactive
             )
 
         # No arguments - show help
         self.parser.print_help()
 
     def search_commands(self, query=None, category=None, subcategory=None, tags=None,
-                       exclude_tags=None, format='text', verbose=False):
+                       exclude_tags=None, format='text', verbose=False, interactive=False):
         """Search and display commands"""
         commands = []
         selection = None
@@ -256,13 +281,13 @@ class ReferenceCLI:
             parts = query.rsplit(None, 1)
             actual_query = parts[0] if len(parts) > 1 else None
             selection = int(parts[-1]) - 1  # Convert to 0-indexed
-            query = actual_query
+            query = actual_query  # This may be None if query was ONLY a number
 
         if category:
             commands = self.registry.filter_by_category(category, subcategory)
 
             # If only category provided and subcategories exist, show them
-            if not subcategory and not query and selection is None:
+            if not subcategory and not query and selection is None and not interactive:
                 subcats = self.registry.get_subcategories(category)
                 if subcats and not commands:
                     # Category has subcategories but no root commands
@@ -295,10 +320,14 @@ class ReferenceCLI:
         # If selection specified, open interactive fill for that command
         if selection is not None:
             if 0 <= selection < len(commands):
-                return self.fill_command(commands[selection].id)
+                return self.fill_command_with_execute(commands[selection].id)
             else:
                 print(f"Invalid selection: {selection + 1} (only {len(commands)} command(s) found)")
                 return
+
+        # If interactive mode enabled, enter selection workflow
+        if interactive and commands:
+            return self.interactive_select_and_fill(commands)
 
         self.display_commands(commands, format, verbose)
 
@@ -403,8 +432,116 @@ class ReferenceCLI:
                     if cmd.notes:
                         print(f"\n   Notes: {cmd.notes}")
 
-    def fill_command(self, command_id: str):
-        """Interactively fill command placeholders"""
+    def show_command_details(self, cmd):
+        """Display full details for a single command (colorized, verbose)"""
+        # Header
+        print(f"\n{'═' * 70}")
+        print(f"{self.theme.command_name(cmd.name)}")
+        print(f"{'═' * 70}")
+
+        # Command ID
+        print(f"\n{self.theme.primary('ID:')} {self.theme.secondary(cmd.id)}")
+
+        # Category and subcategory
+        category_display = cmd.category
+        if cmd.subcategory:
+            category_display = f"{cmd.category} > {cmd.subcategory}"
+        print(f"{self.theme.primary('Category:')} {self.theme.secondary(category_display)}")
+
+        # OSCP Relevance
+        if cmd.oscp_relevance:
+            relevance_color = self.theme.success if cmd.oscp_relevance == 'high' else self.theme.warning if cmd.oscp_relevance == 'medium' else self.theme.hint
+            print(f"{self.theme.primary('OSCP Relevance:')} {relevance_color(cmd.oscp_relevance.upper())}")
+
+        # Tags
+        if cmd.tags:
+            tags_str = ', '.join([self.theme.secondary(tag) for tag in cmd.tags])
+            print(f"{self.theme.primary('Tags:')} {tags_str}")
+
+        # Description
+        print(f"\n{self.theme.primary('Description:')}")
+        print(f"  {cmd.description}")
+
+        # Command template
+        print(f"\n{self.theme.primary('Command Template:')}")
+        print(f"  {self.theme.command_name(cmd.command)}")
+
+        # Autofilled example
+        filled = self.placeholder_engine.substitute(cmd.command)
+        if filled != cmd.command:
+            print(f"\n{self.theme.primary('Autofilled Example:')}")
+            print(f"  {self.theme.success(filled)}")
+
+        # Prerequisites
+        if cmd.prerequisites:
+            print(f"\n{self.theme.primary('Prerequisites:')}")
+            for i, prereq in enumerate(cmd.prerequisites, 1):
+                prereq_filled = self.placeholder_engine.substitute(prereq)
+                print(f"  {self.theme.hint(f'{i}.')} {prereq_filled}")
+
+        # Variables
+        if cmd.variables:
+            print(f"\n{self.theme.primary('Variables:')}")
+            for var in cmd.variables:
+                req_str = self.theme.error("(required)") if var.required else self.theme.hint("(optional)")
+                var_name = self.theme.secondary(f"<{var.name.strip('<>')}>")
+                example = f" {self.theme.hint(f'[e.g., {var.example}]')}" if var.example else ""
+                print(f"  {var_name} - {var.description}{example} {req_str}")
+
+        # Flag explanations
+        if cmd.flag_explanations:
+            print(f"\n{self.theme.primary('Flag Explanations:')}")
+            for flag, explanation in cmd.flag_explanations.items():
+                print(f"  {self.theme.secondary(flag)}: {explanation}")
+
+        # Success indicators
+        if cmd.success_indicators:
+            print(f"\n{self.theme.success('✓ Success Indicators:')}")
+            for indicator in cmd.success_indicators:
+                print(f"  {self.theme.hint('•')} {indicator}")
+
+        # Failure indicators
+        if cmd.failure_indicators:
+            print(f"\n{self.theme.error('✗ Failure Indicators:')}")
+            for indicator in cmd.failure_indicators:
+                print(f"  {self.theme.hint('•')} {indicator}")
+
+        # Troubleshooting
+        if cmd.troubleshooting:
+            print(f"\n{self.theme.primary('Troubleshooting:')}")
+            for error, solution in cmd.troubleshooting.items():
+                solution_filled = self.placeholder_engine.substitute(solution)
+                print(f"  {self.theme.warning('•')} {error}")
+                print(f"    {self.theme.hint('→')} {solution_filled}")
+
+        # Next steps
+        if cmd.next_steps:
+            print(f"\n{self.theme.primary('Next Steps:')}")
+            for i, step in enumerate(cmd.next_steps, 1):
+                print(f"  {self.theme.hint(f'{i}.')} {step}")
+
+        # Alternatives
+        if cmd.alternatives:
+            print(f"\n{self.theme.primary('Alternatives:')}")
+            for i, alt in enumerate(cmd.alternatives, 1):
+                ref = self.registry.get_command(alt)
+                if ref:
+                    print(f"  {self.theme.hint(f'{i}.')} [{self.theme.secondary(alt)}] {ref.name}")
+                else:
+                    print(f"  {self.theme.hint(f'{i}.')} {alt}")
+
+        # Notes
+        if cmd.notes:
+            print(f"\n{self.theme.primary('Notes:')}")
+            print(f"  {cmd.notes}")
+
+        # Footer with usage hints
+        print(f"\n{'─' * 70}")
+        print(f"{self.theme.hint('Use')} {self.theme.secondary(f'crack reference {cmd.id} -i')} {self.theme.hint('to interactively fill and execute')}")
+        print(f"{'═' * 70}\n")
+
+    def fill_command_with_execute(self, command_id: str):
+        """Fill command placeholders and offer to execute"""
         cmd = self.registry.get_command(command_id)
         if not cmd:
             # Try searching for partial match
@@ -421,9 +558,75 @@ class ReferenceCLI:
                 print(f"{self.theme.error('Command not found:')} {self.theme.warning(command_id)}")
                 return
 
+        # Fill placeholders interactively
         filled = self.registry.interactive_fill(cmd)
+
+        # Show final command
         print(f"\n{self.theme.primary('Copy this command:')}")
         print(f"  {self.theme.command_name(filled)}")
+
+        # Offer to execute
+        print(f"\n{self.theme.prompt('Run this command? (y/N): ')}", end='')
+        confirm = input().strip().lower()
+
+        if confirm == 'y':
+            print(f"\n{self.theme.primary('Executing:')} {self.theme.command_name(filled)}")
+            import subprocess
+            try:
+                result = subprocess.run(filled, shell=True)
+                return result.returncode
+            except Exception as e:
+                print(f"{self.theme.error('Execution failed:')} {str(e)}")
+                return 1
+        else:
+            print(f"{self.theme.hint('Command not executed. Copy from above to run manually.')}")
+
+    def interactive_select_and_fill(self, commands: List):
+        """Interactive selection from numbered list, fill variables, offer to run"""
+        # Step 1: Display numbered list
+        self.display_commands(commands, format='text', verbose=False)
+
+        # Step 2: Prompt for selection
+        print(f"\n{self.theme.prompt(f'Select command by number (1-{len(commands)}) or q to quit: ')}", end='')
+        choice = input().strip()
+
+        if choice.lower() == 'q':
+            return
+
+        # Step 3: Validate selection
+        try:
+            selection = int(choice) - 1
+            if 0 <= selection < len(commands):
+                cmd = commands[selection]
+            else:
+                print(f"{self.theme.error(f'Invalid selection: {choice}. Please enter a number between 1 and {len(commands)}.')}")
+                return
+        except ValueError:
+            print(f"{self.theme.error('Invalid input. Please enter a number or q to quit.')}")
+            return
+
+        # Step 4: Fill placeholders interactively
+        filled = self.registry.interactive_fill(cmd)
+
+        # Step 5: Show final command
+        print(f"\n{self.theme.primary('Copy this command:')}")
+        print(f"  {self.theme.command_name(filled)}")
+
+        # Step 6: Offer to execute
+        print(f"\n{self.theme.prompt('Run this command? (y/N): ')}", end='')
+        confirm = input().strip().lower()
+
+        if confirm == 'y':
+            print(f"\n{self.theme.primary('Executing:')} {self.theme.command_name(filled)}")
+            import subprocess
+            try:
+                result = subprocess.run(filled, shell=True)
+                return result.returncode
+            except Exception as e:
+                print(f"{self.theme.error('Execution failed:')} {str(e)}")
+                return 1
+        else:
+            print(f"{self.theme.hint('Command not executed. Copy from above to run manually.')}")
 
     def interactive_mode(self):
         """Interactive command browser"""
@@ -459,11 +662,6 @@ class ReferenceCLI:
                     self.search_commands(tags=[tag], verbose=True)
                     continue
 
-                if user_input.startswith('fill '):
-                    cmd_id = user_input.split(' ', 1)[1]
-                    self.fill_command(cmd_id)
-                    continue
-
                 # Default: search
                 if user_input:
                     self.search_commands(query=user_input, verbose=False)
@@ -482,7 +680,6 @@ Interactive Commands:
   <query>           - Search for commands
   cat <category>    - Show commands in category
   tag <tag>         - Show commands with tag
-  fill <command>    - Fill command placeholders
   categories        - List all categories
   tags             - List all tags
   help             - Show this help
@@ -772,7 +969,7 @@ Interactive Commands:
         print(f"Quick Wins: {len(self.registry.get_quick_wins())}")
         print(f"OSCP High Relevance: {len(self.registry.get_oscp_high())}")
         print("\nUse 'crack reference <query>' to search commands")
-        print("Use 'crack reference --fill <command>' to auto-fill placeholders")
+        print("Use 'crack reference <command-id> -i' to fill and execute")
         print("="*60)
 
 
