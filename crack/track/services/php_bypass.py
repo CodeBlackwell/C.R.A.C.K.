@@ -36,27 +36,81 @@ class PHPBypassPlugin(ServicePlugin):
     def service_names(self) -> List[str]:
         return ['http', 'https', 'http-proxy', 'http-alt']
 
-    def detect(self, port_info: Dict[str, Any], profile: 'TargetProfile') -> bool:
+    def detect(self, port_info: Dict[str, Any], profile: 'TargetProfile') -> float:
         """
-        Detect HTTP services running PHP
-        Note: This plugin should be manually triggered when PHP webshell access is obtained
+        Detect PHP-enabled web services with confidence scoring
+
+        This plugin provides PHP-specific bypass techniques and should
+        activate AFTER initial HTTP enumeration confirms PHP is present.
+
+        Returns:
+            Confidence score (0-100):
+            - 95: PHP explicitly detected in headers/version
+            - 90: Finding indicates PHP technology
+            - 0: No PHP evidence (defer to HTTP plugin)
         """
         service = port_info.get('service', '').lower()
         product = port_info.get('product', '').lower()
+        version = port_info.get('version', '').lower()
+        extrainfo = port_info.get('extrainfo', '').lower()
         port = port_info.get('port')
 
-        # Check for HTTP services (PHP context)
-        if any(svc in service for svc in self.service_names):
-            return True
+        # HIGH confidence: PHP explicitly mentioned in service info
+        if 'php' in f"{service} {product} {version} {extrainfo}":
+            return 95
 
-        if port in self.default_ports:
-            return True
+        # Check profile findings for PHP indicators
+        # (Activated via finding-based detection after HTTP enum finds PHP)
+        if profile:
+            for finding in profile.findings:
+                desc = finding.get('description', '').lower()
+                finding_type = finding.get('type', '').lower()
 
-        # Check for PHP in product/version info
-        if 'php' in product:
-            return True
+                # PHP detected by WhatWeb, headers, or files
+                if any(indicator in desc for indicator in
+                       ['php', 'x-powered-by: php', '.php', 'phpinfo']):
+                    return 90
 
-        return False
+                if finding_type == 'tech_php':
+                    return 90
+
+        # NO confidence: Generic HTTP service without PHP evidence
+        # Let HTTP plugin handle initial enumeration
+        return 0
+
+    def detect_from_finding(self, finding: Dict[str, Any], profile=None) -> int:
+        """Activate when findings indicate PHP technology
+
+        Args:
+            finding: Finding dict with type and description
+            profile: Target profile (optional)
+
+        Returns:
+            Confidence score (0-100)
+        """
+        finding_type = finding.get('type', '').lower()
+        description = finding.get('description', '').lower()
+
+        # Perfect match: PHP technology finding
+        if finding_type == 'tech_php':
+            return 100
+
+        # Webshell-related findings (HIGHEST priority when webshell access obtained)
+        # Check this BEFORE general PHP indicators to avoid returning 90 for shell.php
+        if any(term in description for term in ['webshell', 'c99', 'r57', 'b374k', 'wso']):
+            return 95
+
+        # High confidence: PHP indicators in findings
+        php_indicators = [
+            'php', '.php', 'phpinfo', 'index.php',
+            'x-powered-by: php', 'composer.json',
+            'php session', 'phpsessid'
+        ]
+
+        if any(indicator in description for indicator in php_indicators):
+            return 90
+
+        return 0
 
     def get_task_tree(self, target: str, port: int, service_info: Dict[str, Any]) -> Dict[str, Any]:
         """Generate PHP bypass enumeration task tree"""

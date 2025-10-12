@@ -82,6 +82,18 @@ class TUISessionV2(InteractiveSession):
         self.findings_processor = FindingsProcessor(target=target)
         self.debug_logger.log("FindingsProcessor initialized", category=LogCategory.SYSTEM_INIT, level=LogLevel.VERBOSE)
 
+        # Initialize intelligence system (Stage 4: V2.0 Hybrid Intelligence)
+        from ..intelligence.integration import initialize_intelligence_system
+        self.orchestrator = initialize_intelligence_system(target, self.profile)
+        if self.orchestrator:
+            self.debug_logger.log("Intelligence system initialized", category=LogCategory.SYSTEM_INIT, level=LogLevel.NORMAL,
+                                 correlation_enabled=hasattr(self.orchestrator, 'correlation_engine'),
+                                 methodology_enabled=hasattr(self.orchestrator, 'methodology_engine'),
+                                 chains_loaded=len(self.orchestrator.methodology_engine.chain_registry.list_all()) if hasattr(self.orchestrator, 'methodology_engine') else 0)
+        else:
+            self.orchestrator = None
+            self.debug_logger.log("Intelligence system disabled", category=LogCategory.SYSTEM_INIT, level=LogLevel.VERBOSE)
+
         # Initialize theme manager (loads theme from config)
         from .themes import ThemeManager
         self.theme = ThemeManager(debug_logger=self.debug_logger)
@@ -113,6 +125,33 @@ class TUISessionV2(InteractiveSession):
         # Strategic logging: TUI initialization
         self.debug_logger.log("TUI session initialization", category=LogCategory.SYSTEM_INIT, level=LogLevel.NORMAL,
                              target=target, resume=resume, screened=screened, debug=debug)
+
+    def get_intelligence_suggestions(self, max_tasks: int = 5) -> List[Dict[str, Any]]:
+        """
+        Get intelligence-powered task suggestions (Stage 4: Passive Integration)
+
+        Returns prioritized task suggestions from hybrid intelligence system
+        (Method 1: Correlation + Method 2: Methodology + Attack Chains).
+
+        Args:
+            max_tasks: Maximum number of suggestions to return
+
+        Returns:
+            List of task suggestions with priority scores, or empty list if disabled
+        """
+        if not self.orchestrator:
+            return []
+
+        try:
+            suggestions = self.orchestrator.generate_next_tasks(max_tasks=max_tasks)
+            self.debug_logger.log("Intelligence suggestions generated", category=LogCategory.SYSTEM_INIT,
+                                 level=LogLevel.VERBOSE, count=len(suggestions),
+                                 top_priority=suggestions[0]['priority'] if suggestions else 0)
+            return suggestions
+        except Exception as e:
+            self.debug_logger.log("Intelligence suggestions failed", category=LogCategory.SYSTEM_ERROR,
+                                 level=LogLevel.MINIMAL, error=str(e))
+            return []
 
     def run(self):
         """Main TUI loop - Phase 1 minimal version"""

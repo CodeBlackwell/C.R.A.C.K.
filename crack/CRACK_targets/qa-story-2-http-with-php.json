@@ -1,0 +1,137 @@
+{
+  "target": "qa-story-2-http-with-php",
+  "created": "2025-10-12T06:07:38.983323",
+  "updated": "2025-10-12T06:07:38.983323",
+  "phase": "discovery",
+  "status": "in-progress",
+  "ports": {
+    "80": {
+      "state": "open",
+      "service": "http",
+      "version": "Apache/2.4.41 (Ubuntu) PHP/7.4.3",
+      "source": "qa-profile-generator",
+      "updated_at": "2025-10-12T06:07:38.983330",
+      "protocol": "tcp",
+      "product": "Apache httpd"
+    }
+  },
+  "findings": [],
+  "credentials": [],
+  "notes": [],
+  "imported_files": [],
+  "metadata": {
+    "environment": "lab",
+    "default_timing": "normal",
+    "preferred_profile": null,
+    "evasion_enabled": false,
+    "confirmation_mode": "smart"
+  },
+  "scan_history": [],
+  "task_tree": {
+    "id": "root",
+    "name": "Enumeration: qa-story-2-http-with-php",
+    "type": "parent",
+    "status": "pending",
+    "metadata": {
+      "command": null,
+      "description": null,
+      "spawned_by": null,
+      "depends_on": [],
+      "tags": [],
+      "created_at": "2025-10-12T06:07:38.983323",
+      "completed_at": null,
+      "notes": [],
+      "alternatives": [],
+      "alternative_ids": [],
+      "alternative_context": {},
+      "wordlist": null,
+      "wordlist_purpose": null,
+      "wordlist_variant": "default",
+      "execution_history": []
+    },
+    "children": [
+      {
+        "id": "ping-check",
+        "name": "Verify host is alive",
+        "type": "command",
+        "status": "failed",
+        "metadata": {
+          "command": "ping -c 3 qa-story-2-http-with-php",
+          "description": "Quick ICMP ping to verify host responds",
+          "spawned_by": null,
+          "depends_on": [],
+          "tags": [
+            "QUICK_WIN",
+            "OSCP:HIGH"
+          ],
+          "created_at": "2025-10-12T06:07:38.983323",
+          "completed_at": null,
+          "notes": [],
+          "alternatives": [],
+          "alternative_ids": [],
+          "alternative_context": {},
+          "wordlist": null,
+          "wordlist_purpose": null,
+          "wordlist_variant": "default",
+          "execution_history": [
+            {
+              "timestamp": "2025-10-12T06:53:02.014502",
+              "command": "ping -c 3 qa-story-2-http-with-php",
+              "output_lines": [
+                "ping: qa-story-2-http-with-php: Name or service not known"
+              ],
+              "exit_code": 2,
+              "duration": 0.09061360359191895,
+              "context_label": "ping-check-065302",
+              "output_line_count": 1
+            }
+          ],
+          "flag_explanations": {
+            "-c 3": "Send 3 ICMP echo requests"
+          },
+          "start_time": "2025-10-12T06:53:01.897165",
+          "end_time": "2025-10-12T06:53:01.998775",
+          "duration_seconds": 0
+        },
+        "children": []
+      },
+      {
+        "id": "port-discovery",
+        "name": "Port Discovery",
+        "type": "scan",
+        "status": "pending",
+        "metadata": {
+          "command": "sudo nmap --top-ports 1000 -T3 -oN qa-story-2-http-with-php/scans/lab-quick_scan.nmap qa-story-2-http-with-php",
+          "description": "Discover open ports on target",
+          "spawned_by": null,
+          "depends_on": [],
+          "tags": [
+            "OSCP:HIGH"
+          ],
+          "created_at": "2025-10-12T06:07:38.983323",
+          "completed_at": null,
+          "notes": [
+            "Choose scan strategy based on environment",
+            "Labs: use lab-quick or lab-full",
+            "Production: use stealth-normal",
+            "Full scan critical for OSCP - finds unusual high ports"
+          ],
+          "alternatives": [],
+          "alternative_ids": [],
+          "alternative_context": {},
+          "wordlist": null,
+          "wordlist_purpose": null,
+          "wordlist_variant": "default",
+          "execution_history": [],
+          "allow_custom": true,
+          "scan_profile_used": "lab-quick",
+          "scan_profile_name": "Quick Scan (Top 1000 Ports)",
+          "scan_profile_strategy": "OSCP labs, CTF - fast initial discovery",
+          "scan_profile_time": "1-2 minutes",
+          "scan_profile_risk": "medium"
+        },
+        "children": []
+      }
+    ]
+  }
+}

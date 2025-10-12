@@ -55,13 +55,48 @@ class TaskListPanel(PanelShortcutMixin):
     }
 
     @classmethod
+    def _generate_hierarchical_id(cls, parent_number: int, depth: int, sibling_index: int) -> str:
+        """
+        Generate hierarchical task ID (1, 1A, 1A1, etc.)
+
+        Args:
+            parent_number: Parent task number (1, 2, 3, etc.)
+            depth: Current depth (0=parent, 1=first level child, etc.)
+            sibling_index: Index among siblings at this depth
+
+        Returns:
+            Hierarchical ID string
+
+        Examples:
+            _generate_hierarchical_id(1, 0, 0) -> "1"
+            _generate_hierarchical_id(1, 1, 0) -> "1A"
+            _generate_hierarchical_id(1, 1, 1) -> "1B"
+            _generate_hierarchical_id(1, 2, 0) -> "1A1"  (child of 1A)
+        """
+        if depth == 0:
+            return str(parent_number)
+
+        # Build hierarchical ID
+        letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+
+        # For depth 1: use letters (A, B, C, ...)
+        if depth == 1:
+            letter_idx = sibling_index % 26
+            return f"{parent_number}{letters[letter_idx]}"
+
+        # For depth >= 2: use numbers (1, 2, 3, ...)
+        # Pattern: 1A1, 1A2, 1B1, etc.
+        # We'll return a simplified version - full path needs parent tracking
+        return f"{parent_number}{letters[sibling_index % 26]}{sibling_index + 1}"
+
+    @classmethod
     def render(
         cls,
         profile,
         filter_state: Optional[Dict[str, Any]] = None,
         sort_by: str = 'priority',
         page: int = 1,
-        page_size: int = 10,
+        page_size: int = 20,
         show_hierarchy: bool = False,
         theme=None
     ) -> Tuple[Panel, List[Dict]]:
@@ -97,11 +132,13 @@ class TaskListPanel(PanelShortcutMixin):
 
         # Get all tasks (with hierarchy info if requested)
         if show_hierarchy:
-            # Get tasks as list of (task, depth) tuples preserving tree order
+            # Tree view: Get tasks as list of (task, depth) tuples preserving tree order
             all_tasks = cls._get_tasks_with_depth(profile.task_tree)
         else:
-            # Flat list (backward compatible)
-            all_tasks = [(task, 0) for task in profile.task_tree.get_all_tasks()]
+            # Flat view: Show all tasks without depth filtering
+            # Get all tasks and normalize depth to 0 (no indentation)
+            all_tasks_full = cls._get_tasks_with_depth(profile.task_tree)
+            all_tasks = [(task, 0) for task, _ in all_tasks_full]
 
         # Apply filters
         filtered_tasks = cls._apply_filters_with_depth(all_tasks, filter_state)
@@ -116,14 +153,23 @@ class TaskListPanel(PanelShortcutMixin):
             tasks_sorted = cls._apply_sort(tasks_only, sort_by)
             sorted_tasks = [(t, 0) for t in tasks_sorted]
 
-        # Paginate
-        total_tasks = len(sorted_tasks)
-        total_pages = max(1, (total_tasks + page_size - 1) // page_size)
-        page = max(1, min(page, total_pages))  # Clamp to valid range
+        # Paginate with smart parent-child grouping
+        if show_hierarchy:
+            # Smart pagination: keep parent-child groups together
+            page_tasks, total_pages, page = cls._paginate_with_hierarchy(
+                sorted_tasks, page, page_size
+            )
+            total_tasks = len(sorted_tasks)
+            start_idx = 0  # Not used for hierarchy view (tasks grouped, not sliced)
+        else:
+            # Simple pagination for flat view
+            total_tasks = len(sorted_tasks)
+            total_pages = max(1, (total_tasks + page_size - 1) // page_size)
+            page = max(1, min(page, total_pages))  # Clamp to valid range
 
-        start_idx = (page - 1) * page_size
-        end_idx = min(start_idx + page_size, total_tasks)
-        page_tasks = sorted_tasks[start_idx:end_idx]
+            start_idx = (page - 1) * page_size
+            end_idx = min(start_idx + page_size, total_tasks)
+            page_tasks = sorted_tasks[start_idx:end_idx]
 
         # Determine panel state
         if total_tasks == 0:
@@ -141,6 +187,82 @@ class TaskListPanel(PanelShortcutMixin):
                 show_hierarchy=show_hierarchy,
                 theme=theme
             )
+
+    @classmethod
+    def _paginate_with_hierarchy(
+        cls,
+        tasks_with_depth: List[Tuple],
+        page: int,
+        page_size: int
+    ) -> Tuple[List[Tuple], int, int]:
+        """
+        Paginate tasks while keeping parent-child groups together
+
+        Args:
+            tasks_with_depth: List of (task, depth) tuples
+            page: Requested page number
+            page_size: Maximum tasks per page
+
+        Returns:
+            Tuple of (page_tasks, total_pages, adjusted_page)
+        """
+        if not tasks_with_depth:
+            return [], 1, 1
+
+        # Determine minimum depth (parent level)
+        min_depth = min(depth for _, depth in tasks_with_depth)
+
+        # Group tasks by parent
+        groups = []
+        current_group = []
+
+        for task, depth in tasks_with_depth:
+            if depth == min_depth:
+                # Start new group (parent task)
+                if current_group:
+                    groups.append(current_group)
+                current_group = [(task, depth)]
+            else:
+                # Add to current group (subtask)
+                current_group.append((task, depth))
+
+        # Don't forget the last group
+        if current_group:
+            groups.append(current_group)
+
+        # Distribute groups across pages
+        pages = []
+        current_page = []
+        current_page_size = 0
+
+        for group in groups:
+            group_size = len(group)
+
+            # If adding this group would exceed page_size and page isn't empty
+            if current_page and current_page_size + group_size > page_size:
+                # Start new page
+                pages.append(current_page)
+                current_page = []
+                current_page_size = 0
+
+            # Add group to current page
+            current_page.extend(group)
+            current_page_size += group_size
+
+        # Don't forget the last page
+        if current_page:
+            pages.append(current_page)
+
+        # Calculate total pages
+        total_pages = max(1, len(pages))
+
+        # Clamp page number
+        page = max(1, min(page, total_pages))
+
+        # Get tasks for requested page
+        page_tasks = pages[page - 1] if pages else []
+
+        return page_tasks, total_pages, page
 
     @classmethod
     def _get_tasks_with_depth(cls, root_node, current_depth: int = 0) -> List[Tuple]:
@@ -337,7 +459,9 @@ class TaskListPanel(PanelShortcutMixin):
         # Define columns
         muted_color = theme.get_color('muted')
         text_color = theme.get_color('text')
-        table.add_column("#", style=muted_color, width=4, justify="right")
+        # Wider column for hierarchical IDs (1, 1A, 1A1)
+        num_col_width = 5 if show_hierarchy else 4
+        table.add_column("#", style=muted_color, width=num_col_width, justify="right")
         table.add_column("St", width=3, justify="center")
         table.add_column("Task Name", style=text_color, min_width=30)
         table.add_column("Port", width=6, justify="right")
@@ -348,6 +472,16 @@ class TaskListPanel(PanelShortcutMixin):
         # Build choices list
         choices = []
 
+        # Track hierarchical numbering state
+        parent_counter = 0  # Count of parent tasks
+        current_parent_id = None
+        depth_counters = {}  # Track sibling indices at each depth level
+        hierarchical_ids = {}  # Map task index to hierarchical ID
+
+        # Determine minimum depth (parent level)
+        # In tree view with root (id='root'), parent tasks are at depth=1
+        min_depth = min((depth for _, depth in tasks), default=0) if tasks else 0
+
         # Add tasks to table
         for idx, task_tuple in enumerate(tasks, 1):
             # Unpack task and depth
@@ -357,23 +491,65 @@ class TaskListPanel(PanelShortcutMixin):
                 # Backward compatibility: if not tuple, assume depth=0
                 task, depth = task_tuple, 0
 
+            # Check if this is a parent task (minimum depth in current page)
+            is_parent = (depth == min_depth)
+
+            # Generate hierarchical ID based on tree view
+            if show_hierarchy:
+                if is_parent:
+                    # Parent task
+                    parent_counter += 1
+                    current_parent_id = str(parent_counter)
+                    hierarchical_id = current_parent_id
+                    depth_counters = {min_depth + 1: 0}  # Reset depth counters for new parent
+                else:
+                    # Subtask - build hierarchical ID
+                    if depth not in depth_counters:
+                        depth_counters[depth] = 0
+
+                    letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+
+                    # Calculate relative depth from parent
+                    relative_depth = depth - min_depth
+
+                    if relative_depth == 1:
+                        # First level: 1A, 1B, etc.
+                        letter = letters[depth_counters[depth] % 26]
+                        hierarchical_id = f"{current_parent_id}{letter}"
+                    else:
+                        # Deeper levels: 1A1, 1A2, etc.
+                        # For simplicity, use numeric sub-indices
+                        hierarchical_id = f"{current_parent_id}{letters[0]}{depth_counters[depth] + 1}"
+
+                    depth_counters[depth] += 1
+
+                hierarchical_ids[idx] = hierarchical_id
+                task_number_display = hierarchical_id
+            else:
+                # Flat view - simple numbering
+                parent_counter += 1
+                task_number_display = str(parent_counter)
+                hierarchical_ids[idx] = task_number_display
+
             # Status icon
             icon = cls.STATUS_ICONS.get(task.status, '?')
             color = theme.task_state_color(task.status)
             status_cell = f"[{color}]{icon}[/]"
 
             # Task name with optional indentation for hierarchy
-            if depth > 0:
-                # Hierarchy mode - apply indentation and truncation
-                indent = "  " * depth
+            if show_hierarchy and not is_parent:
+                # Tree view with subtasks - apply indentation
+                # Use relative depth for indentation
+                relative_depth = depth - min_depth
+                indent = "  " * relative_depth
                 tree_prefix = theme.muted("└─ ")
-                max_length = 60 - (len(indent) + len(tree_prefix))  # Increased limit
+                max_length = 60 - (len(indent) + len(tree_prefix))
                 if len(task.name) > max_length:
                     task_name = f"{indent}{tree_prefix}{task.name[:max_length-3]}..."
                 else:
                     task_name = f"{indent}{tree_prefix}{task.name}"
             else:
-                # Flat mode - show full task name (no truncation)
+                # Flat mode or parent task - show full task name
                 task_name = task.name
 
             # Port
@@ -398,7 +574,7 @@ class TaskListPanel(PanelShortcutMixin):
 
             # Add row
             table.add_row(
-                str(idx),
+                task_number_display,
                 status_cell,
                 task_name,
                 port_str,
@@ -407,13 +583,15 @@ class TaskListPanel(PanelShortcutMixin):
                 stage_info
             )
 
-            # Add to choices
-            choices.append({
-                'id': f'select-{idx}',
-                'label': f'Select task: {task.name}',
-                'action': 'select_task',
-                'task': task
-            })
+            # Only add parent tasks to choices (minimum depth = parents)
+            if is_parent:
+                choices.append({
+                    'id': f'select-{parent_counter}',
+                    'label': f'Select task: {task.name}',
+                    'action': 'select_task',
+                    'task': task,
+                    'task_number': parent_counter
+                })
 
         # Build filter/sort status line
         filter_info = cls._build_filter_status(filter_state, sort_by, total_tasks)
@@ -430,8 +608,12 @@ class TaskListPanel(PanelShortcutMixin):
 
         # Action menu
         from ..themes.helpers import format_menu_number
-        footer_table.add_row(f"{format_menu_number(theme, f'1-{len(tasks)}')} Select task")
-        choices.append({'id': 'select', 'label': 'Select task by number', 'action': 'select'})
+
+        # Calculate selectable count (parent tasks only)
+        parent_count = parent_counter
+        if parent_count > 0:
+            footer_table.add_row(f"{format_menu_number(theme, f'1-{parent_count}')} Select parent task")
+            choices.append({'id': 'select', 'label': 'Select task by number', 'action': 'select'})
 
         footer_table.add_row(f"{format_menu_number(theme, 'f')} Filter tasks")
         choices.append({'id': 'filter', 'label': 'Filter tasks', 'action': 'filter'})
@@ -442,9 +624,12 @@ class TaskListPanel(PanelShortcutMixin):
         footer_table.add_row(f"{format_menu_number(theme, '/')} Search tasks")
         choices.append({'id': 'search', 'label': 'Search tasks', 'action': 'search'})
 
-        # Tree view toggle
-        tree_status = "hierarchical" if show_hierarchy else "flat"
-        footer_table.add_row(f"{format_menu_number(theme, 't')} Toggle tree view ({tree_status})")
+        # Tree view toggle with clear explanation
+        if show_hierarchy:
+            tree_status = "tree (shows nesting)"
+        else:
+            tree_status = "flat (all tasks)"
+        footer_table.add_row(f"{format_menu_number(theme, 't')} Toggle view: {tree_status}")
         choices.append({'id': 'toggle-tree', 'label': f'Toggle tree view (current: {tree_status})', 'action': 'toggle_hierarchy'})
 
         # Pagination

@@ -32,41 +32,92 @@ class TestPHPBypassPlugin:
         assert 'http' in plugin.service_names
         assert 'https' in plugin.service_names
 
-    def test_detect_http_service(self, plugin):
-        """PROVES: Plugin detects HTTP services"""
+    def test_detect_http_service_without_php(self, plugin):
+        """PROVES: Plugin returns 0 for generic HTTP (no PHP indicators)"""
+        from crack.track.core.state import TargetProfile
+        profile = TargetProfile("test.example.com")
+
         port_info = {
             'port': 80,
             'service': 'http',
-            'product': 'Apache httpd'
+            'product': 'Apache httpd',
+            'version': '',
+            'extrainfo': ''
         }
-        assert plugin.detect(port_info) == True
+        # Should return 0 (no PHP evidence) - HTTP plugin should win
+        assert plugin.detect(port_info, profile) == 0
 
-    def test_detect_https_service(self, plugin):
-        """PROVES: Plugin detects HTTPS services"""
+    def test_detect_https_service_with_php(self, plugin):
+        """PROVES: Plugin detects HTTPS services with PHP explicitly in version"""
+        from crack.track.core.state import TargetProfile
+        profile = TargetProfile("test.example.com")
+
         port_info = {
             'port': 443,
             'service': 'https',
-            'product': 'nginx'
+            'product': 'nginx',
+            'version': 'nginx/1.18 with PHP/7.4',
+            'extrainfo': ''
         }
-        assert plugin.detect(port_info) == True
+        # Should return 95 (PHP explicitly detected)
+        assert plugin.detect(port_info, profile) == 95
 
     def test_detect_php_product(self, plugin):
         """PROVES: Plugin detects PHP in product string"""
+        from crack.track.core.state import TargetProfile
+        profile = TargetProfile("test.example.com")
+
         port_info = {
             'port': 8080,
             'service': 'http-proxy',
-            'product': 'PHP 7.4'
+            'product': 'PHP 7.4',
+            'version': '',
+            'extrainfo': ''
         }
-        assert plugin.detect(port_info) == True
+        # Should return 95 (PHP in product)
+        assert plugin.detect(port_info, profile) == 95
 
     def test_detect_negative(self, plugin):
-        """PROVES: Plugin rejects non-HTTP services"""
+        """PROVES: Plugin returns 0 for non-HTTP services"""
+        from crack.track.core.state import TargetProfile
+        profile = TargetProfile("test.example.com")
+
         port_info = {
             'port': 22,
             'service': 'ssh',
-            'product': 'OpenSSH'
+            'product': 'OpenSSH',
+            'version': '',
+            'extrainfo': ''
         }
-        assert plugin.detect(port_info) == False
+        # Should return 0 (not HTTP)
+        assert plugin.detect(port_info, profile) == 0
+
+    def test_detect_from_finding_php_technology(self, plugin):
+        """PROVES: Plugin activates from PHP technology findings"""
+        finding = {
+            'type': 'tech_php',
+            'description': 'PHP/7.4.3 detected'
+        }
+        # Should return 100 (perfect match)
+        assert plugin.detect_from_finding(finding) == 100
+
+    def test_detect_from_finding_webshell(self, plugin):
+        """PROVES: Plugin prioritizes webshell findings"""
+        finding = {
+            'type': 'file',
+            'description': 'webshell uploaded to target'
+        }
+        # Should return 95 (webshell priority)
+        assert plugin.detect_from_finding(finding) == 95
+
+    def test_detect_from_finding_php_indicators(self, plugin):
+        """PROVES: Plugin detects PHP in finding descriptions"""
+        finding = {
+            'type': 'technology',
+            'description': 'X-Powered-By: PHP/8.0'
+        }
+        # Should return 90 (PHP indicator)
+        assert plugin.detect_from_finding(finding) == 90
 
     def test_task_tree_structure(self, plugin):
         """PROVES: Task tree has valid structure"""
