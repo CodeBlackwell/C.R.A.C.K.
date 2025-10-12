@@ -15,14 +15,14 @@
 
 ## Phase 2: Directory Structure Setup
 
-- [ ] Create `crack/reference/data/attack_chains/` base directory
-- [ ] Create category subdirectories (enumeration, privilege_escalation, lateral_movement, persistence)
-- [ ] Add `metadata.json` manifest file at attack_chains root
-- [ ] Create `crack/reference/chains/` module directory
-- [ ] Add `__init__.py` with module exports
-- [ ] Create empty `loader.py`, `validator.py`, `registry.py` files
-- [ ] Set up `crack/reference/data/chain_templates/` for reusable patterns
-- [ ] Update `.gitignore` to exclude compiled/cached chain files
+- [x] Create `crack/reference/data/attack_chains/` base directory
+- [x] Create category subdirectories (enumeration, privilege_escalation, lateral_movement, persistence)
+- [x] Add `metadata.json` manifest file at attack_chains root
+- [x] Create `crack/reference/chains/` module directory
+- [x] Add `__init__.py` with module exports
+- [x] Create empty `loader.py`, `validator.py`, `registry.py` files
+- [x] Set up `crack/reference/data/chain_templates/` for reusable patterns
+- [x] Update `.gitignore` to exclude compiled/cached chain files
 
 ## Phase 3: Core Classes Implementation
 
