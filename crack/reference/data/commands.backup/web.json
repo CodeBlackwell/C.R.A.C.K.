@@ -51,7 +51,7 @@
       "next_steps": [
         "Investigate found directories: curl <URL>/<FOUND_DIR>",
         "Scan subdirectories: gobuster dir -u <URL>/<DIR> -w <WORDLIST>",
-        "Try authenticated scan if 401/403: gobuster dir -u <URL> -w <WORDLIST> -c 'Cookie: session=<SESSION_TOKEN>'",
+        "Try authenticated scan if 401/403: gobuster dir -u <URL> -w <WORDLIST> -c 'Cookie: session=<TOKEN>'",
         "Check for backup files: gobuster dir -u <URL> -w <WORDLIST> -x bak,old,~"
       ],
       "alternatives": ["dirb <URL>", "ffuf -u <URL>/FUZZ -w <WORDLIST>", "wfuzz -u <URL>/FUZZ -w <WORDLIST>"],
@@ -152,7 +152,7 @@
       ],
       "next_steps": [
         "Enumerate databases: sqlmap -u '<URL>' --dbs",
-        "Dump specific database: sqlmap -u '<URL>' -D <DATABASE> --dump",
+        "Dump specific database: sqlmap -u '<URL>' -D <DB> --dump",
         "Get shell: sqlmap -u '<URL>' --os-shell",
         "Try different techniques: sqlmap -u '<URL>' --technique=U"
       ],

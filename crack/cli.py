@@ -115,6 +115,233 @@ def session_command(args):
     cli = UnifiedSessionCLI()
     cli.run(args)
 
+def config_command(args):
+    """Execute configuration management"""
+    from crack.config import ConfigManager
+    from crack.config.variables import get_all_categories, get_by_category
+
+    config = ConfigManager()
+
+    # Parse config-specific arguments
+    if not args:
+        # No args - show help
+        print(f"{Colors.CYAN}CRACK Configuration Management{Colors.END}\n")
+        print(f"{Colors.YELLOW}Usage:{Colors.END}")
+        print("  crack config list [category]      - List configured variables")
+        print("  crack config set VAR VALUE        - Set a variable")
+        print("  crack config get VAR              - Get a variable value")
+        print("  crack config delete VAR           - Delete a variable")
+        print("  crack config clear [--keep-defaults] - Clear all variables")
+        print("  crack config auto                 - Auto-detect network settings")
+        print("  crack config validate             - Validate all configured values")
+        print("  crack config categories           - List all variable categories")
+        print("  crack config setup                - Interactive setup wizard")
+        print("  crack config edit                 - Open config file in editor")
+        print("  crack config export FILE          - Export config to file")
+        print("  crack config import FILE [--merge] - Import config from file")
+        print(f"\n{Colors.YELLOW}Examples:{Colors.END}")
+        print("  crack config auto")
+        print("  crack config set LHOST 10.10.14.5")
+        print("  crack config set TARGET 192.168.45.100")
+        print("  crack config list network")
+        print("  crack config setup")
+        return
+
+    subcommand = args[0]
+
+    if subcommand == 'list':
+        category = args[1] if len(args) > 1 else None
+        variables = config.list_variables(category)
+
+        if category:
+            print(f"\n{Colors.CYAN}Variables in category: {category}{Colors.END}\n")
+        else:
+            print(f"\n{Colors.CYAN}All Configured Variables{Colors.END}\n")
+
+        if not variables:
+            print("No variables configured")
+            if category:
+                print(f"\nUse 'crack config categories' to see all categories")
+        else:
+            for name, var_data in sorted(variables.items()):
+                if isinstance(var_data, dict):
+                    value = var_data.get('value', '')
+                    source = var_data.get('source', 'manual')
+                    description = var_data.get('description', '')
+
+                    if value:
+                        print(f"  {Colors.GREEN}{name:20}{Colors.END} = {Colors.YELLOW}{value:30}{Colors.END} [{source}]")
+                    else:
+                        print(f"  {Colors.GREEN}{name:20}{Colors.END} = \033[2m(not set)\033[0m                   [{source}]")
+
+                    if description:
+                        print(f"  \033[2m{' ':20}   {description}\033[0m")
+                else:
+                    print(f"  {Colors.GREEN}{name:20}{Colors.END} = {Colors.YELLOW}{var_data}{Colors.END}")
+
+        print(f"\n{Colors.CYAN}Config file:{Colors.END} {config.config_path}")
+
+    elif subcommand == 'set':
+        if len(args) < 3:
+            print(f"{Colors.RED}Error:{Colors.END} Usage: crack config set VAR VALUE")
+            return
+
+        var_name = args[1]
+        value = args[2]
+
+        success, error = config.set_variable(var_name, value, validate=True)
+        if success:
+            print(f"{Colors.GREEN}✓{Colors.END} Set {Colors.CYAN}{var_name}{Colors.END} = {Colors.YELLOW}{value}{Colors.END}")
+            print(f"Config saved to: {config.config_path}")
+        else:
+            print(f"{Colors.RED}✗ Error:{Colors.END} {error}")
+
+    elif subcommand == 'get':
+        if len(args) < 2:
+            print(f"{Colors.RED}Error:{Colors.END} Usage: crack config get VAR")
+            return
+
+        var_name = args[1]
+        value = config.get_variable(var_name)
+
+        if value:
+            print(f"{Colors.CYAN}{var_name}{Colors.END} = {Colors.YELLOW}{value}{Colors.END}")
+        else:
+            print(f"{Colors.RED}✗{Colors.END} {var_name} is not set")
+
+    elif subcommand == 'delete':
+        if len(args) < 2:
+            print(f"{Colors.RED}Error:{Colors.END} Usage: crack config delete VAR")
+            return
+
+        var_name = args[1]
+        if config.delete_variable(var_name):
+            print(f"{Colors.GREEN}✓{Colors.END} Deleted {Colors.CYAN}{var_name}{Colors.END}")
+        else:
+            print(f"{Colors.RED}✗{Colors.END} Variable not found: {var_name}")
+
+    elif subcommand == 'clear':
+        keep_defaults = '--keep-defaults' in args
+        confirm = input(f"{Colors.YELLOW}Clear all variables? (y/N):{Colors.END} ").strip().lower()
+
+        if confirm == 'y':
+            if config.clear_variables(keep_defaults=keep_defaults):
+                print(f"{Colors.GREEN}✓{Colors.END} Variables cleared")
+            else:
+                print(f"{Colors.RED}✗{Colors.END} Failed to clear variables")
+
+    elif subcommand == 'auto':
+        print("Auto-detecting network settings...")
+        updates = config.auto_configure()
+
+        if updates:
+            print(f"\n{Colors.GREEN}✓ Auto-configured:{Colors.END}")
+            for var, value in updates.items():
+                print(f"  {Colors.CYAN}{var}{Colors.END} = {Colors.YELLOW}{value}{Colors.END}")
+            print(f"\nConfig saved to: {config.config_path}")
+        else:
+            print(f"{Colors.YELLOW}No values auto-detected{Colors.END}")
+
+    elif subcommand == 'validate':
+        print("Validating all configured variables...")
+        errors = config.validate_all()
+
+        if not errors:
+            print(f"{Colors.GREEN}✓ All variables are valid{Colors.END}")
+        else:
+            print(f"{Colors.RED}✗ Validation errors found:{Colors.END}\n")
+            for var_name, error_list in errors.items():
+                print(f"  {Colors.CYAN}{var_name}{Colors.END}:")
+                for error in error_list:
+                    print(f"    {Colors.RED}•{Colors.END} {error}")
+
+    elif subcommand == 'categories':
+        categories = config.get_all_categories()
+        print(f"\n{Colors.CYAN}Variable Categories{Colors.END}\n")
+
+        for category in categories:
+            vars_in_cat = config.get_variables_by_category(category)
+            print(f"  {Colors.YELLOW}{category:20}{Colors.END} ({len(vars_in_cat)} variables)")
+
+        print(f"\nUse 'crack config list <category>' to see variables in a category")
+
+    elif subcommand == 'setup':
+        print(f"{Colors.CYAN}CRACK Configuration Setup Wizard{Colors.END}\n")
+        print("This wizard will help you configure common variables.\n")
+
+        # Auto-detect first
+        print(f"{Colors.YELLOW}[1/4] Auto-detecting network settings...{Colors.END}")
+        updates = config.auto_configure()
+        if updates:
+            for var, value in updates.items():
+                print(f"  {Colors.GREEN}✓{Colors.END} {var} = {value}")
+
+        # Network variables
+        print(f"\n{Colors.YELLOW}[2/4] Network Configuration{Colors.END}")
+        target = input(f"  TARGET IP address [\033[2m192.168.45.100\033[0m]: ").strip()
+        if target:
+            config.set_variable('TARGET', target, validate=True)
+
+        lport = input(f"  LPORT [\033[2m4444\033[0m]: ").strip()
+        if lport:
+            config.set_variable('LPORT', lport, validate=True)
+
+        # Web variables
+        print(f"\n{Colors.YELLOW}[3/4] Web Testing Configuration{Colors.END}")
+        wordlist = input(f"  WORDLIST path [\033[2m/usr/share/wordlists/dirb/common.txt\033[0m]: ").strip()
+        if wordlist:
+            config.set_variable('WORDLIST', wordlist, validate=False)
+
+        threads = input(f"  THREADS [\033[2m10\033[0m]: ").strip()
+        if threads:
+            config.set_variable('THREADS', threads, validate=True)
+
+        # Optional: API tokens
+        print(f"\n{Colors.YELLOW}[4/4] Optional API Tokens{Colors.END}")
+        wpscan = input(f"  WPSCAN_API_TOKEN [\033[2mskip\033[0m]: ").strip()
+        if wpscan:
+            config.set_variable('WPSCAN_API_TOKEN', wpscan, validate=False)
+
+        print(f"\n{Colors.GREEN}✓ Setup complete!{Colors.END}")
+        print(f"Config saved to: {config.config_path}")
+        print(f"\nUse 'crack config list' to review your configuration")
+
+    elif subcommand == 'edit':
+        print(f"Opening config file: {config.config_path}")
+        if config.open_editor():
+            print("Config reloaded")
+        else:
+            print(f"{Colors.RED}✗{Colors.END} Failed to open editor")
+
+    elif subcommand == 'export':
+        if len(args) < 2:
+            print(f"{Colors.RED}Error:{Colors.END} Usage: crack config export FILE")
+            return
+
+        filepath = args[1]
+        if config.export_config(filepath):
+            print(f"{Colors.GREEN}✓{Colors.END} Config exported to: {filepath}")
+        else:
+            print(f"{Colors.RED}✗{Colors.END} Failed to export config")
+
+    elif subcommand == 'import':
+        if len(args) < 2:
+            print(f"{Colors.RED}Error:{Colors.END} Usage: crack config import FILE [--merge]")
+            return
+
+        filepath = args[1]
+        merge = '--merge' in args
+
+        if config.import_config(filepath, merge=merge):
+            mode = "merged" if merge else "imported"
+            print(f"{Colors.GREEN}✓{Colors.END} Config {mode} from: {filepath}")
+        else:
+            print(f"{Colors.RED}✗{Colors.END} Failed to import config")
+
+    else:
+        print(f"{Colors.RED}Error:{Colors.END} Unknown subcommand: {subcommand}")
+        print("Use 'crack config' to see available commands")
+
 def main():
     """Main CLI entry point"""
     parser = argparse.ArgumentParser(
@@ -141,6 +368,9 @@ def main():
 
 {Colors.YELLOW}▶ Reference System{Colors.END}
   └─ reference       Command lookup with 70+ OSCP commands
+
+{Colors.YELLOW}▶ Configuration Management{Colors.END}
+  └─ config          Shared variable management (77 variables, 8 categories)
 
 {Colors.CYAN}═══════════════════════ REFERENCE CATEGORIES ════════════════════════{Colors.END}
 
@@ -209,12 +439,28 @@ def main():
 
 {Colors.CYAN}══════════════════════════ CONFIGURATION ════════════════════════════{Colors.END}
 
-{Colors.GREEN}Config Variables:{Colors.END} (~/.crack/config.json)
-  LHOST, LPORT, TARGET, WORDLIST, INTERFACE, THREADS
+{Colors.GREEN}Config System:{Colors.END} (~/.crack/config.json)
+  77 variables across 8 categories (network, web, credentials, etc.)
+  Shared across all modules (reference, track, sessions)
 
 {Colors.GREEN}Quick Setup:{Colors.END}
-  crack reference --config auto                # Auto-detect network
-  crack reference --set TARGET 192.168.45.100  # Set target IP
+  crack config setup                           # Interactive wizard (30 seconds)
+  crack config auto                            # Auto-detect network settings
+  crack config set LHOST 10.10.14.5           # Set variables manually
+  crack config set TARGET 192.168.45.100
+  crack config list                            # View all configured variables
+  crack config list network                    # View by category
+  crack config validate                        # Validate all values
+
+{Colors.GREEN}Variable Categories:{Colors.END}
+  network (12)      - LHOST, LPORT, TARGET, INTERFACE, IP, SUBNET, etc.
+  web (11)          - URL, WORDLIST, WPSCAN_API_TOKEN, THREADS, etc.
+  credentials (6)   - USERNAME, PASSWORD, LM_HASH, NTLM_HASH, etc.
+  enumeration (7)   - SNMP_COMMUNITY, SERVICE, VERSION, SHARE, etc.
+  exploitation (4)  - PAYLOAD, CVE_ID, EDB_ID, SEARCH_TERM
+  file-transfer (8) - FILE, LOCAL_PATH, OUTPUT_DIR, MOUNT_POINT, etc.
+  sql-injection (4) - DATABASE, NULL_COLUMNS, MAX_COLS, etc.
+  misc (16)         - OUTPUT, DIR, SCRIPT, THEME, DATE, etc.
 
 {Colors.CYAN}══════════════════════════════════════════════════════════════════════{Colors.END}
         """
@@ -298,6 +544,12 @@ def main():
                                            help='Session Management - Reverse shell handler',
                                            add_help=False)
     session_parser.set_defaults(func=session_command)
+
+    # Configuration Management subcommand
+    config_parser = subparsers.add_parser('config',
+                                         help='Configuration Management - Variable management',
+                                         add_help=False)
+    config_parser.set_defaults(func=config_command)
 
     # Parse known args to allow passing through tool-specific args
     args, remaining = parser.parse_known_args()

@@ -7,7 +7,7 @@
       "name": "WPScan Comprehensive Enumeration",
       "category": "web",
       "subcategory": "wordpress",
-      "command": "wpscan --url <URL> --enumerate u,ap,at,vp,vt,cb,dbe --api-token <API_TOKEN> --disable-tls-checks",
+      "command": "wpscan --url <URL> --enumerate u,ap,at,vp,vt,cb,dbe --api-token <WPSCAN_API_TOKEN> --disable-tls-checks",
       "description": "Enumerate WordPress users, plugins, themes, and vulnerabilities with comprehensive detection",
       "tags": ["OSCP:HIGH", "WEB", "WORDPRESS", "CMS", "ENUMERATION", "QUICK_WIN"],
       "variables": [
@@ -18,7 +18,7 @@
           "required": true
         },
         {
-          "name": "<API_TOKEN>",
+          "name": "<WPSCAN_API_TOKEN>",
           "description": "WPScan API token from wpscan.com (free tier: 25 requests/day, register at https://wpscan.com/register)",
           "example": "YOUR_API_TOKEN_HERE",
           "required": false
@@ -71,7 +71,7 @@
       "name": "WPScan Aggressive Plugin/Theme Detection",
       "category": "web",
       "subcategory": "wordpress",
-      "command": "wpscan --url <URL> --plugins-detection aggressive --themes-detection aggressive --enumerate ap,at --api-token <API_TOKEN>",
+      "command": "wpscan --url <URL> --plugins-detection aggressive --themes-detection aggressive --enumerate ap,at --api-token <WPSCAN_API_TOKEN>",
       "description": "Aggressive WordPress plugin and theme enumeration (more thorough but noisier than passive detection)",
       "tags": ["OSCP:HIGH", "WEB", "WORDPRESS", "CMS", "ENUMERATION", "NOISY"],
       "variables": [
@@ -82,7 +82,7 @@
           "required": true
         },
         {
-          "name": "<API_TOKEN>",
+          "name": "<WPSCAN_API_TOKEN>",
           "description": "WPScan API token (optional but recommended)",
           "example": "YOUR_API_TOKEN_HERE",
           "required": false
