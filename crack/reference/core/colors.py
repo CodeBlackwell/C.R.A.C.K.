@@ -1,5 +1,6 @@
 """
 Simple ANSI color system for reference CLI
+Bridges Rich color names (from ThemeManager) to ANSI escape codes
 """
 
 class Colors:
@@ -30,6 +31,22 @@ class Colors:
     BRIGHT_CYAN = '\033[96m'
     BRIGHT_WHITE = '\033[97m'
 
+    # Rich → ANSI mapping
+    _RICH_MAP = {
+        'black': BLACK, 'red': RED, 'green': GREEN, 'yellow': YELLOW,
+        'blue': BLUE, 'magenta': MAGENTA, 'cyan': CYAN, 'white': WHITE,
+        'bright_black': BRIGHT_BLACK, 'bright_red': BRIGHT_RED,
+        'bright_green': BRIGHT_GREEN, 'bright_yellow': BRIGHT_YELLOW,
+        'bright_blue': BRIGHT_BLUE, 'bright_magenta': BRIGHT_MAGENTA,
+        'bright_cyan': BRIGHT_CYAN, 'bright_white': BRIGHT_WHITE,
+        'dim': DIM, 'bold': BOLD
+    }
+
+    @classmethod
+    def from_rich(cls, rich_color: str) -> str:
+        """Convert Rich color name to ANSI (e.g., 'bold cyan' → '\033[1m\033[36m')"""
+        return ''.join(cls._RICH_MAP.get(part, '') for part in rich_color.split())
+
     @classmethod
     def strip(cls, text: str) -> str:
         """Remove all ANSI color codes from text"""
@@ -39,77 +56,69 @@ class Colors:
 
 
 class ReferenceTheme:
-    """Theme for reference system - OSCP cyan-heavy"""
+    """Theme for reference system using shared ThemeManager"""
 
     def __init__(self, enabled: bool = True):
         self.enabled = enabled
+        try:
+            from crack.track.interactive.themes import ThemeManager
+            self._theme_mgr = ThemeManager()
+        except ImportError:
+            self._theme_mgr = None
 
-    def _color(self, text: str, color: str) -> str:
-        """Wrap text in color if enabled"""
-        if not self.enabled:
-            return text
-        return f"{color}{text}{Colors.RESET}"
+    def _get_ansi(self, role: str) -> str:
+        """Get ANSI code for semantic role from ThemeManager"""
+        if not self.enabled or not self._theme_mgr:
+            return ''
+        rich_color = self._theme_mgr.get_color(role, fallback='white')
+        return Colors.from_rich(rich_color)
+
+    def _color(self, text: str, ansi: str) -> str:
+        """Wrap text in ANSI color"""
+        return f"{ansi}{text}{Colors.RESET}" if ansi else text
 
     # Semantic colors
     def primary(self, text: str) -> str:
-        """Primary color (cyan) - command names, values"""
-        return self._color(text, Colors.CYAN)
+        return self._color(text, self._get_ansi('primary'))
 
     def secondary(self, text: str) -> str:
-        """Secondary color (bright cyan) - highlights"""
-        return self._color(text, Colors.BRIGHT_CYAN)
+        return self._color(text, self._get_ansi('secondary'))
 
     def success(self, text: str) -> str:
-        """Success color (green)"""
-        return self._color(text, Colors.GREEN)
+        return self._color(text, self._get_ansi('success'))
 
     def warning(self, text: str) -> str:
-        """Warning color (yellow)"""
-        return self._color(text, Colors.YELLOW)
+        return self._color(text, self._get_ansi('warning'))
 
     def error(self, text: str) -> str:
-        """Error color (red)"""
-        return self._color(text, Colors.RED)
+        return self._color(text, self._get_ansi('danger'))
 
     def info(self, text: str) -> str:
-        """Info color (blue)"""
-        return self._color(text, Colors.BLUE)
+        return self._color(text, self._get_ansi('info'))
 
     def muted(self, text: str) -> str:
-        """Muted/dim color"""
-        return self._color(text, Colors.DIM)
+        return self._color(text, self._get_ansi('muted'))
 
     def bold(self, text: str) -> str:
-        """Bold text"""
-        if not self.enabled:
-            return text
-        return f"{Colors.BOLD}{text}{Colors.RESET}"
+        return self._color(text, Colors.BOLD) if self.enabled else text
 
     def bold_white(self, text: str) -> str:
-        """Bold bright white"""
-        if not self.enabled:
-            return text
-        return f"{Colors.BOLD}{Colors.BRIGHT_WHITE}{text}{Colors.RESET}"
+        return self._color(text, self._get_ansi('emphasis'))
 
-    # Component-specific helpers
+    # Component helpers
     def command_name(self, text: str) -> str:
-        """Command name styling"""
         return self.bold_white(text)
 
     def placeholder(self, text: str) -> str:
-        """Placeholder styling"""
         return self.primary(text)
 
     def value(self, text: str) -> str:
-        """User value styling"""
         return self.primary(text)
 
     def prompt(self, text: str) -> str:
-        """Prompt text styling"""
         return self.warning(text)
 
     def hint(self, text: str) -> str:
-        """Hint text styling"""
         return self.muted(text)
 
 
