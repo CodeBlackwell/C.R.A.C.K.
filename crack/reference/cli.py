@@ -318,8 +318,8 @@ class ReferenceCLI:
 
         else:  # text format
             for i, cmd in enumerate(commands, 1):
-                print(f"\n{i}. [{cmd.id}] {cmd.name}")
-                print(f"   {cmd.command}")
+                print(f"\n{self.theme.muted(f'{i}.')} [{self.theme.primary(cmd.id)}] {self.theme.command_name(cmd.name)}")
+                print(f"   {self.theme.secondary(cmd.command)}")
 
                 if verbose:
                     print(f"   {'━' * 70}")
