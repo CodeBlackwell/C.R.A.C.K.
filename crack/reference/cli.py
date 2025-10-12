@@ -62,15 +62,15 @@ class ReferenceCLI:
 
         # Tag filters
         parser.add_argument(
-            '-t', '--tag',
-            action='append',
-            help='Filter by tag (can be used multiple times)'
+            '-t', '--tags',
+            nargs='+',
+            help='Filter by tags (space-separated): --tags ENUM LINUX'
         )
 
         parser.add_argument(
-            '--exclude-tag',
-            action='append',
-            help='Exclude commands with tag'
+            '--exclude-tags',
+            nargs='+',
+            help='Exclude commands with tags (space-separated)'
         )
 
         # Output options
@@ -231,13 +231,13 @@ class ReferenceCLI:
                 query = ' '.join(args.args)
 
         # Search/filter commands
-        if query or category or args.tag:
+        if query or category or args.tags:
             return self.search_commands(
                 query=query,
                 category=category,
                 subcategory=subcategory,
-                tags=args.tag,
-                exclude_tags=args.exclude_tag,
+                tags=args.tags,
+                exclude_tags=args.exclude_tags,
                 format=args.format,
                 verbose=args.verbose
             )
@@ -283,6 +283,10 @@ class ReferenceCLI:
             commands = self.registry.search(query)
         else:
             commands = list(self.registry.commands.values())
+
+        # Apply additional query filter if both tags and query provided
+        if query and tags:
+            commands = [cmd for cmd in commands if cmd.matches_search(query)]
 
         if not commands:
             print("No commands found matching criteria")

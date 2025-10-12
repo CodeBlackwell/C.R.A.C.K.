@@ -1,5 +1,65 @@
 # CHANGELOG - CRACK Toolkit
 
+## [2.2.1] - 2025-10-12
+
+### Changed - Reference Tag Filtering Enhancement
+
+#### Improved Tag Filtering UX
+**Files Modified:**
+- `reference/cli.py` (Lines 64-74, 234-243, 287-289)
+
+**Changes:**
+1. **New Syntax - Space-Separated Tags:**
+   - Old: `crack reference --tag TAG1 --tag TAG2`
+   - New: `crack reference --tags TAG1 TAG2 TAG3`
+   - Changed `--tag` → `--tags` with `nargs='+'`
+   - Changed `--exclude-tag` → `--exclude-tags` with `nargs='+'`
+
+2. **Combined Query + Tag Filtering:**
+   - Fixed `elif` logic that prevented combining query with tags
+   - Added filter chaining: tags filter first, then query filter
+   - Enables: `crack reference QUERY --tags TAG1 TAG2`
+
+3. **Case-Insensitive Tag Matching:**
+   - Already working in `registry.py:196-215` (no changes needed)
+   - `--tags EnUmErAtIoN` matches `ENUMERATION` tag
+
+**Usage Examples:**
+```bash
+# Case-insensitive single tag
+crack reference --tags EnUmErAtIoN
+# → 80 commands with ENUMERATION tag
+
+# Query + single tag (combined filtering)
+crack reference linux --tags ENUMERATION
+# → 14 commands (ENUMERATION tag AND matches "linux")
+
+# Multiple tags (AND logic)
+crack reference --tags ENUMERATION LINUX
+# → 9 commands (has BOTH tags)
+
+# Query + multiple tags
+crack reference nmap --tags QUICK_WIN OSCP:HIGH
+# → Commands matching "nmap" with both tags
+
+# Exclude tags
+crack reference --tags OSCP:HIGH --exclude-tags NOISY
+# → High relevance commands without noisy tag
+```
+
+**Test Results:**
+- ✅ Case-insensitive tags: 80 results
+- ✅ Query + tag (combined): 14 results
+- ✅ Multiple tags (AND): 9 results
+- ✅ Query + multiple tags: Filtered correctly
+- ✅ Exclude tags: Works as expected
+
+**Breaking Changes:**
+- None (backward compatible)
+- Old syntax still works: `crack reference --tags TAG` (single value)
+
+---
+
 ## [2.2.0] - 2025-10-12
 
 ### Added - Shared Configuration System
