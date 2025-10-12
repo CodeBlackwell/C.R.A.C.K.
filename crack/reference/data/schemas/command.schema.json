@@ -20,7 +20,7 @@
           },
           "category": {
             "type": "string",
-            "enum": ["recon", "web", "exploitation", "post-exploit", "pivoting", "custom"],
+            "enum": ["recon", "web", "exploitation", "post-exploit", "enumeration", "pivoting", "file-transfer", "custom"],
             "description": "Command category"
           },
           "command": {
@@ -65,11 +65,17 @@
             }
           },
           "success_indicators": {
-            "type": "string",
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
             "description": "What output indicates success"
           },
           "failure_indicators": {
-            "type": "string",
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
             "description": "What output indicates failure"
           },
           "alternatives": {

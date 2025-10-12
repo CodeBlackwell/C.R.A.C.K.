@@ -57,7 +57,7 @@ class CommandValidator:
                 errors.append(f"Invalid ID format: {command['id']}. Use lowercase letters, numbers, underscores, and hyphens only.")
 
         # Validate category
-        valid_categories = ['recon', 'web', 'exploitation', 'post-exploit', 'pivoting', 'custom']
+        valid_categories = ['recon', 'web', 'exploitation', 'post-exploit', 'enumeration', 'pivoting', 'file-transfer', 'custom']
         if 'category' in command and command['category'] not in valid_categories:
             errors.append(f"Invalid category: {command['category']}. Must be one of: {', '.join(valid_categories)}")
 

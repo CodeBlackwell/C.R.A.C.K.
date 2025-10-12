@@ -36,6 +36,8 @@ class Command:
     failure_indicators: List[str] = field(default_factory=list)
     next_steps: List[str] = field(default_factory=list)
     alternatives: List[str] = field(default_factory=list)
+    prerequisites: List[str] = field(default_factory=list)
+    troubleshooting: Dict[str, str] = field(default_factory=dict)
     notes: str = ""
     oscp_relevance: str = "medium"
 
@@ -58,6 +60,8 @@ class Command:
         for var in self.variables:
             if var.name in values:
                 filled = filled.replace(var.name, values[var.name])
+            elif var.example:  # Use example as default if no value provided
+                filled = filled.replace(var.name, var.example)
         return filled
 
     def extract_placeholders(self) -> List[str]:
@@ -78,12 +82,17 @@ class Command:
 class HybridCommandRegistry:
     """Main registry for managing commands from multiple sources"""
 
-    def __init__(self, base_path: str = None, config_manager=None):
+    def __init__(self, base_path: str = None, config_manager=None, theme=None):
         """Initialize registry with base reference path"""
         if base_path is None:
             base_path = Path(__file__).parent.parent
         self.base_path = Path(base_path)
         self.config_manager = config_manager
+        self.theme = theme
+        if self.theme is None:
+            # Import here to avoid circular dependency
+            from .colors import ReferenceTheme
+            self.theme = ReferenceTheme()
         self.commands: Dict[str, Command] = {}
         self.categories = {
             'recon': '01-recon',
@@ -306,8 +315,11 @@ class HybridCommandRegistry:
         values = {}
         placeholders = command.extract_placeholders()
 
-        print(f"\n[*] Filling command: {command.name}")
-        print(f"[*] Command: {command.command}\n")
+        t = self.theme  # Shorthand
+
+        # Header
+        print(f"\n{t.primary('[*] Filling command:')} {t.command_name(command.name)}")
+        print(f"{t.primary('[*] Command:')} {t.hint(command.command)}\n")
 
         # Pre-load config values if available
         config_values = {}
@@ -322,48 +334,52 @@ class HybridCommandRegistry:
             var = next((v for v in command.variables if v.name == placeholder), None)
 
             if var:
-                prompt = f"Enter value for {placeholder}"
+                # Build colorized prompt
+                prompt_parts = [
+                    t.prompt("Enter value for"),
+                    t.placeholder(placeholder)
+                ]
                 if var.description:
-                    prompt += f" ({var.description})"
+                    prompt_parts.append(t.hint(f"({var.description})"))
                 if var.example:
-                    prompt += f" [e.g., {var.example}]"
-
-                # Show configured value if available
+                    prompt_parts.append(t.hint(f"[e.g., {var.example}]"))
                 if config_value:
-                    prompt += f" [config: {config_value}]"
-
+                    prompt_parts.append(t.hint(f"[config: {t.value(config_value)}]"))
                 if not var.required:
-                    prompt += " (optional)"
-                prompt += ": "
+                    prompt_parts.append(t.hint("(optional)"))
 
+                prompt = " ".join(prompt_parts) + t.prompt(": ")
                 value = input(prompt).strip()
 
                 # Use config value if user just pressed enter and we have one
                 if not value and config_value:
                     value = config_value
-                    print(f"  Using configured value: {value}")
+                    print(f"  {t.success('✓')} Using configured value: {t.value(config_value)}")
 
                 if value or var.required:
                     values[placeholder] = value
             else:
                 # Placeholder not defined in variables
-                prompt = f"Enter value for {placeholder}"
+                prompt_parts = [
+                    t.prompt("Enter value for"),
+                    t.placeholder(placeholder)
+                ]
                 if config_value:
-                    prompt += f" [config: {config_value}]"
-                prompt += ": "
+                    prompt_parts.append(t.hint(f"[config: {t.value(config_value)}]"))
 
+                prompt = " ".join(prompt_parts) + t.prompt(": ")
                 value = input(prompt).strip()
 
                 # Use config value if user just pressed enter
                 if not value and config_value:
                     value = config_value
-                    print(f"  Using configured value: {value}")
+                    print(f"  {t.success('✓')} Using configured value: {t.value(config_value)}")
 
                 if value:
                     values[placeholder] = value
 
         filled_command = command.fill_placeholders(values)
-        print(f"\n[+] Final command: {filled_command}")
+        print(f"\n{t.success('[+] Final command:')} {t.command_name(filled_command)}")
         return filled_command
 
 

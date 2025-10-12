@@ -8,13 +8,15 @@ import sys
 import json
 from pathlib import Path
 from typing import List, Optional
+from rich.console import Console
 
 from crack.reference.core import (
     HybridCommandRegistry,
     PlaceholderEngine,
     CommandValidator,
     MarkdownCommandParser,
-    ConfigManager
+    ConfigManager,
+    ReferenceTheme
 )
 
 
@@ -22,8 +24,10 @@ class ReferenceCLI:
     """Command-line interface for reference system"""
 
     def __init__(self):
+        self.console = Console()  # Used only for ASCII banner
+        self.theme = ReferenceTheme()
         self.config = ConfigManager()
-        self.registry = HybridCommandRegistry(config_manager=self.config)
+        self.registry = HybridCommandRegistry(config_manager=self.config, theme=self.theme)
         self.placeholder_engine = PlaceholderEngine(config_manager=self.config)
         self.validator = CommandValidator()
         self.parser = self.create_parser()
@@ -245,12 +249,20 @@ class ReferenceCLI:
                        exclude_tags=None, format='text', verbose=False):
         """Search and display commands"""
         commands = []
+        selection = None
+
+        # Check if query ends with a number (for numbered selection)
+        if query and query.split()[-1].isdigit():
+            parts = query.rsplit(None, 1)
+            actual_query = parts[0] if len(parts) > 1 else None
+            selection = int(parts[-1]) - 1  # Convert to 0-indexed
+            query = actual_query
 
         if category:
             commands = self.registry.filter_by_category(category, subcategory)
 
             # If only category provided and subcategories exist, show them
-            if not subcategory and not query:
+            if not subcategory and not query and selection is None:
                 subcats = self.registry.get_subcategories(category)
                 if subcats and not commands:
                     # Category has subcategories but no root commands
@@ -276,6 +288,14 @@ class ReferenceCLI:
             print("No commands found matching criteria")
             return
 
+        # If selection specified, open interactive fill for that command
+        if selection is not None:
+            if 0 <= selection < len(commands):
+                return self.fill_command(commands[selection].id)
+            else:
+                print(f"Invalid selection: {selection + 1} (only {len(commands)} command(s) found)")
+                return
+
         self.display_commands(commands, format, verbose)
 
     def display_commands(self, commands, format='text', verbose=False):
@@ -297,15 +317,87 @@ class ReferenceCLI:
                     print()
 
         else:  # text format
-            for cmd in commands:
-                print(f"\n[{cmd.id}] {cmd.name}")
-                print(f"  {cmd.command}")
+            for i, cmd in enumerate(commands, 1):
+                print(f"\n{i}. [{cmd.id}] {cmd.name}")
+                print(f"   {cmd.command}")
+
                 if verbose:
-                    print(f"  Description: {cmd.description}")
+                    print(f"   {'━' * 70}")
+                    print(f"   Description: {cmd.description}")
+
+                    # Show autofilled command
+                    filled = self.placeholder_engine.substitute(cmd.command)
+                    if filled != cmd.command:
+                        print(f"\n   Autofilled Example:")
+                        print(f"   {filled}")
+
+                    # Prerequisites
+                    if cmd.prerequisites:
+                        print(f"\n   Prerequisites:")
+                        for j, prereq in enumerate(cmd.prerequisites, 1):
+                            # Auto-fill prerequisites too
+                            prereq_filled = self.placeholder_engine.substitute(prereq)
+                            print(f"     {j}. {prereq_filled}")
+
+                    # Variables
+                    if cmd.variables:
+                        print(f"\n   Variables:")
+                        for var in cmd.variables:
+                            req_str = "(required)" if var.required else "(optional)"
+                            example = f" [e.g., {var.example}]" if var.example else ""
+                            print(f"     <{var.name.strip('<>')}> - {var.description}{example} {req_str}")
+
+                    # Flag explanations
+                    if cmd.flag_explanations:
+                        print(f"\n   Flags:")
+                        for flag, explanation in cmd.flag_explanations.items():
+                            print(f"     {flag}: {explanation}")
+
+                    # Success/Failure indicators
+                    if cmd.success_indicators:
+                        print(f"\n   ✓ Success Indicators:")
+                        for indicator in cmd.success_indicators:
+                            print(f"     • {indicator}")
+
+                    if cmd.failure_indicators:
+                        print(f"\n   ✗ Failure Indicators:")
+                        for indicator in cmd.failure_indicators:
+                            print(f"     • {indicator}")
+
+                    # Troubleshooting
+                    if cmd.troubleshooting:
+                        print(f"\n   Troubleshooting:")
+                        for error, solution in cmd.troubleshooting.items():
+                            # Auto-fill troubleshooting commands
+                            solution_filled = self.placeholder_engine.substitute(solution)
+                            print(f"     • {error}")
+                            print(f"       → {solution_filled}")
+
+                    # Next steps
+                    if cmd.next_steps:
+                        print(f"\n   Next Steps:")
+                        for j, step in enumerate(cmd.next_steps, 1):
+                            print(f"     {j}. {step}")
+
+                    # Alternatives (resolve IDs)
+                    if cmd.alternatives:
+                        print(f"\n   Alternatives:")
+                        for j, alt in enumerate(cmd.alternatives, 1):
+                            ref = self.registry.get_command(alt)
+                            if ref:  # Command ID found
+                                print(f"     {j}. [{alt}] {ref.name}")
+                            else:  # Free text
+                                print(f"     {j}. {alt}")
+
+                    # Tags and OSCP relevance
                     if cmd.tags:
-                        print(f"  Tags: {', '.join(cmd.tags)}")
+                        print(f"\n   Tags: {', '.join(cmd.tags)}")
                     if cmd.oscp_relevance:
-                        print(f"  OSCP: {cmd.oscp_relevance.upper()}")
+                        print(f"   OSCP Relevance: {cmd.oscp_relevance.upper()}")
+
+                    # Notes
+                    if cmd.notes:
+                        print(f"\n   Notes: {cmd.notes}")
 
     def fill_command(self, command_id: str):
         """Interactively fill command placeholders"""
@@ -317,17 +409,17 @@ class ReferenceCLI:
                 if len(matches) == 1:
                     cmd = matches[0]
                 else:
-                    print(f"Multiple matches found for '{command_id}':")
+                    print(f"{self.theme.warning('Multiple matches found for')} '{command_id}':")
                     for match in matches[:5]:
-                        print(f"  - {match.id}: {match.name}")
+                        print(f"  {self.theme.hint('-')} {self.theme.primary(match.id)}: {match.name}")
                     return
             else:
-                print(f"Command not found: {command_id}")
+                print(f"{self.theme.error('Command not found:')} {self.theme.warning(command_id)}")
                 return
 
         filled = self.registry.interactive_fill(cmd)
-        print(f"\nCopy this command:")
-        print(f"  {filled}")
+        print(f"\n{self.theme.primary('Copy this command:')}")
+        print(f"  {self.theme.command_name(filled)}")
 
     def interactive_mode(self):
         """Interactive command browser"""

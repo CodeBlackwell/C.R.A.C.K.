@@ -8,6 +8,108 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Changed - Reference System v2.0 Reorganization (2025-10-12)
+
+**Complete command registry reorganization from mixed structure to clean subdirectory-only organization**
+
+#### Summary
+- 110 commands maintained (zero data loss)
+- 26 validation errors eliminated (9 type errors + 16 category errors + 1 missing variable)
+- File structure migrated from mixed root/subdirectory to subdirectory-only
+- 5 duplicate command IDs removed during migration
+
+#### Schema Validation Fixes
+- **Fixed type mismatch** in `command.schema.json`: `success_indicators` and `failure_indicators` changed from string to array type
+- **Added missing categories**: `enumeration` and `file-transfer` to schema and validator
+- **Added missing variable**: `<DOMAIN>` variable definition to `windows-kerberoasting` command
+- **Result**: Zero schema validation errors (was 26)
+
+#### File Structure Changes
+
+**Before:**
+```
+reference/data/commands/
+├── recon.json (7)
+├── web.json (9)
+├── exploitation.json (10)
+├── file-transfer.json (16) ❌ Root + invalid category
+├── post-exploitation.json (24) ❌ Root + mixed linux/windows
+└── post-exploit/
+    ├── file-transfer.json (14) ❌ Naming conflict
+    ├── linux.json (15)
+    └── windows.json (15)
+```
+
+**After:**
+```
+reference/data/commands/
+├── recon.json (7)
+├── web.json (9)
+├── exploitation.json (10)
+└── post-exploit/
+    ├── general-transfer.json (16) ✅
+    ├── exfiltration.json (14) ✅
+    ├── linux.json (25) ✅
+    └── windows.json (29) ✅
+```
+
+#### Category Distribution Changes
+
+| Category | Before | After |
+|----------|--------|-------|
+| recon | 7 | 7 |
+| web | 9 | 9 |
+| exploitation | 10 | 10 |
+| post-exploit | 68 | 84 |
+| file-transfer | 16 ❌ | 0 ✅ |
+
+**Post-Exploit Subcategories:**
+- `general-transfer`: 16 commands (common file transfer methods)
+- `exfiltration`: 14 commands (data exfiltration techniques)
+- `linux`: 25 commands (15 original + 10 unique migrated)
+- `windows`: 29 commands (15 original + 14 migrated)
+
+#### Files Added
+- `reference/data/commands/post-exploit/general-transfer.json` - 16 general file transfer methods
+- `reference/data/commands/post-exploit/exfiltration.json` - 14 exfiltration techniques (renamed from file-transfer.json)
+- `reference/CLAUDE.md` - LLM reference documentation
+
+#### Files Modified
+- `reference/data/schemas/command.schema.json` - Fixed array types, added missing categories
+- `reference/core/validator.py` - Added `enumeration` and `file-transfer` to valid_categories
+- `reference/data/commands/post-exploit/linux.json` - 15 → 25 commands
+- `reference/data/commands/post-exploit/windows.json` - 15 → 29 commands
+
+#### Files Removed
+- `reference/data/commands/file-transfer.json` - Migrated to post-exploit subdirectory
+- `reference/data/commands/post-exploitation.json` - Split into linux/windows subdirectories
+- `reference/data/commands/post-exploit/file-transfer.json` - Renamed to exfiltration.json
+
+#### Duplicate Removal
+5 duplicate command IDs removed during migration:
+- `linux-suid-find`
+- `linux-capabilities`
+- `linux-docker-escape`
+- `linux-path-hijack`
+- `linux-ld-preload`
+
+#### Validation Results
+```bash
+# Before
+crack reference --validate
+⚠️ 26 validation errors (9 type + 16 category + 1 variable)
+
+# After
+crack reference --validate
+✅ All command files are valid!
+```
+
+#### Technical Details
+- **Backward Compatible**: Dynamic JSON loading (no reinstall required)
+- **Zero Breaking Changes**: All CLI functions operational
+- **Empty Categories**: `enumeration`, `pivoting`, `custom` kept for future expansion
+- **Testing**: All functionality verified (search, filter, category queries, tag filtering)
+
 ---
 
 ## [2.0.0] - 2025-10-12
