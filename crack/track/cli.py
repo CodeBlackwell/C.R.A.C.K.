@@ -238,6 +238,10 @@ Examples:
   # List all tracked targets
   crack track list
 
+  # Migrate profiles from legacy location
+  crack track --migrate                              # Migrate all profiles
+  crack track --migrate --migrate-target 192.168.45.100  # Migrate specific target
+
   # Delete target profile
   crack track delete 192.168.45.100
 
@@ -328,6 +332,10 @@ For full documentation: See track/README.md or https://github.com/CodeBlackwell/
                         help='List all tracked targets')
     parser.add_argument('--reset', action='store_true',
                         help='Reset target (delete profile)')
+    parser.add_argument('--migrate', action='store_true',
+                        help='Migrate profiles from ~/.crack/targets/ to ./CRACK_targets/')
+    parser.add_argument('--migrate-target', metavar='TARGET',
+                        help='Specific target to migrate (default: all)')
     parser.add_argument('--stats', action='store_true',
                         help='Show statistics')
 
@@ -517,6 +525,11 @@ For full documentation: See track/README.md or https://github.com/CodeBlackwell/
     # Handle list command
     if args.list:
         handle_list()
+        return
+
+    # Handle migration command
+    if args.migrate:
+        handle_migrate(args.migrate_target)
         return
 
     # Handle visualization (may not need target)
@@ -808,6 +821,70 @@ def handle_reset(target: str):
         print(f"✓ Deleted profile for {target}")
     else:
         print("Cancelled")
+
+
+def handle_migrate(target: str = None):
+    """Migrate profiles from legacy location to project-local
+
+    Args:
+        target: Specific target to migrate (None = migrate all)
+    """
+    from pathlib import Path
+
+    legacy_dir = Path.home() / ".crack" / "targets"
+    new_dir = Path.cwd() / "CRACK_targets"
+
+    print("=" * 60)
+    print("Profile Migration: ~/.crack/targets/ → ./CRACK_targets/")
+    print("=" * 60)
+    print()
+
+    # Check if legacy directory exists
+    if not legacy_dir.exists():
+        print("✓ No legacy profiles found")
+        print(f"  Legacy directory does not exist: {legacy_dir}")
+        return
+
+    # Count profiles to migrate
+    if target:
+        count = 1 if (legacy_dir / f"{target.replace('/', '_').replace(':', '_')}.json").exists() else 0
+    else:
+        count = len(list(legacy_dir.glob("*.json")))
+
+    if count == 0:
+        print("✓ No profiles to migrate")
+        return
+
+    print(f"Found {count} profile(s) to migrate")
+    print(f"  From: {legacy_dir}")
+    print(f"  To:   {new_dir}")
+    print()
+
+    # Confirm migration
+    if target:
+        confirm = input(f"Migrate profile for {target}? (yes/no): ")
+    else:
+        confirm = input(f"Migrate all {count} profiles? (yes/no): ")
+
+    if confirm.lower() != 'yes':
+        print("Cancelled")
+        return
+
+    # Perform migration
+    stats = Storage.migrate_from_legacy(target)
+
+    print()
+    print("Migration Results:")
+    print(f"  ✓ Migrated: {stats['migrated']}")
+    if stats['skipped'] > 0:
+        print(f"  • Skipped (already exists): {stats['skipped']}")
+    if stats['errors'] > 0:
+        print(f"  ✗ Errors: {stats['errors']}")
+
+    if stats['migrated'] > 0:
+        print()
+        print("Profiles are now stored in ./CRACK_targets/")
+        print("Original files remain in ~/.crack/targets/ (backup)")
 
 
 def handle_visualize(args):

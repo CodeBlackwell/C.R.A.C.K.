@@ -69,3 +69,16 @@ google-gruyere.appspot.com/
 *-quick_scan.nmap
 *-full_scan.*
 *-ping_scan.*
+
+# Target profiles - ignore real work, commit QA profiles
+CRACK_targets/*.json
+!CRACK_targets/qa-*.json
+
+# Legacy directory (if still exists)
+.crack/
+
+# QA profiles (explicitly included)
+!qa_profiles/**/profile.json
+
+# Debug logs
+.debug_logs/

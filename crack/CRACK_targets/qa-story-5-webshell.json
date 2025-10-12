@@ -1,0 +1,116 @@
+{
+  "target": "qa-story-5-webshell",
+  "created": "2025-10-12T06:07:38.983958",
+  "updated": "2025-10-12T06:07:38.983958",
+  "phase": "discovery",
+  "status": "in-progress",
+  "ports": {
+    "80": {
+      "state": "open",
+      "service": "http",
+      "version": null,
+      "source": "qa-profile-generator",
+      "updated_at": "2025-10-12T06:07:38.983963",
+      "protocol": "tcp"
+    }
+  },
+  "findings": [],
+  "credentials": [],
+  "notes": [],
+  "imported_files": [],
+  "metadata": {
+    "environment": "lab",
+    "default_timing": "normal",
+    "preferred_profile": null,
+    "evasion_enabled": false,
+    "confirmation_mode": "smart"
+  },
+  "scan_history": [],
+  "task_tree": {
+    "id": "root",
+    "name": "Enumeration: qa-story-5-webshell",
+    "type": "parent",
+    "status": "pending",
+    "metadata": {
+      "command": null,
+      "description": null,
+      "spawned_by": null,
+      "depends_on": [],
+      "tags": [],
+      "created_at": "2025-10-12T06:07:38.983958",
+      "completed_at": null,
+      "notes": [],
+      "alternatives": [],
+      "alternative_ids": [],
+      "alternative_context": {},
+      "wordlist": null,
+      "wordlist_purpose": null,
+      "wordlist_variant": "default",
+      "execution_history": []
+    },
+    "children": [
+      {
+        "id": "ping-check",
+        "name": "Verify host is alive",
+        "type": "command",
+        "status": "pending",
+        "metadata": {
+          "command": "ping -c 3 qa-story-5-webshell",
+          "description": "Quick ICMP ping to verify host responds",
+          "spawned_by": null,
+          "depends_on": [],
+          "tags": [
+            "QUICK_WIN",
+            "OSCP:HIGH"
+          ],
+          "created_at": "2025-10-12T06:07:38.983958",
+          "completed_at": null,
+          "notes": [],
+          "alternatives": [],
+          "alternative_ids": [],
+          "alternative_context": {},
+          "wordlist": null,
+          "wordlist_purpose": null,
+          "wordlist_variant": "default",
+          "execution_history": [],
+          "flag_explanations": {
+            "-c 3": "Send 3 ICMP echo requests"
+          }
+        },
+        "children": []
+      },
+      {
+        "id": "port-discovery",
+        "name": "Port Discovery",
+        "type": "scan",
+        "status": "pending",
+        "metadata": {
+          "command": null,
+          "description": "Discover open ports on target",
+          "spawned_by": null,
+          "depends_on": [],
+          "tags": [
+            "OSCP:HIGH"
+          ],
+          "created_at": "2025-10-12T06:07:38.983958",
+          "completed_at": null,
+          "notes": [
+            "Choose scan strategy based on environment",
+            "Labs: use lab-quick or lab-full",
+            "Production: use stealth-normal",
+            "Full scan critical for OSCP - finds unusual high ports"
+          ],
+          "alternatives": [],
+          "alternative_ids": [],
+          "alternative_context": {},
+          "wordlist": null,
+          "wordlist_purpose": null,
+          "wordlist_variant": "default",
+          "execution_history": [],
+          "allow_custom": true
+        },
+        "children": []
+      }
+    ]
+  }
+}

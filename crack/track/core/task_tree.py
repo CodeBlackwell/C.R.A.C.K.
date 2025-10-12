@@ -260,10 +260,11 @@ class TaskNode:
         return current
 
     def get_all_pending(self) -> List['TaskNode']:
-        """Get all pending tasks in subtree"""
+        """Get all pending tasks in subtree (excludes root node)"""
         pending = []
 
-        if self.status == 'pending':
+        # Skip root node (id='root') - it's a container, not an actionable task
+        if self.status == 'pending' and self.id != 'root':
             pending.append(self)
 
         for child in self.children:
@@ -276,10 +277,11 @@ class TaskNode:
         return self.get_all_pending()
 
     def get_all_completed(self) -> List['TaskNode']:
-        """Get all completed tasks in subtree"""
+        """Get all completed tasks in subtree (excludes root node)"""
         completed = []
 
-        if self.status == 'completed':
+        # Skip root node (id='root') - it's a container, not an actionable task
+        if self.status == 'completed' and self.id != 'root':
             completed.append(self)
 
         for child in self.children:

@@ -16,7 +16,14 @@ class TestTaskListPanel:
     def mock_profile_empty(self):
         """Mock profile with no tasks"""
         profile = Mock()
-        profile.task_tree.get_all_tasks.return_value = []
+
+        # Create mock root with no children
+        root = Mock()
+        root.id = "root"
+        root.children = []
+        root.get_all_tasks.return_value = []
+
+        profile.task_tree = root
         profile.target = "192.168.45.100"
         return profile
 
@@ -32,6 +39,7 @@ class TestTaskListPanel:
             task.id = f"task-{i}"
             task.name = f"Task {i}: Sample Enumeration"
             task.status = 'pending' if i % 3 == 0 else ('completed' if i % 3 == 1 else 'in-progress')
+            task.children = []  # No subtasks for flat list tests
             task.metadata = {
                 'port': 80 + (i % 5),
                 'service': 'http' if i % 2 == 0 else 'ssh',
@@ -43,7 +51,13 @@ class TestTaskListPanel:
             }
             tasks.append(task)
 
-        profile.task_tree.get_all_tasks.return_value = tasks
+        # Create mock root with tasks as children
+        root = Mock()
+        root.id = "root"
+        root.children = tasks
+        root.get_all_tasks.return_value = tasks
+
+        profile.task_tree = root
         profile.target = "192.168.45.100"
         return profile
 
@@ -270,16 +284,19 @@ class TestTaskListPanel:
 
     def test_get_stage_info(self):
         """Test multi-stage indicator"""
+        from crack.track.interactive.themes import ThemeManager
+        theme = ThemeManager()
+
         # Multi-stage task
         task = Mock()
         task.metadata = {'stages': 3, 'current_stage': 2}
-        result = TaskListPanel._get_stage_info(task)
+        result = TaskListPanel._get_stage_info(task, theme)
         assert '[2/3]' in result
 
         # Single-stage task
         task = Mock()
         task.metadata = {}
-        result = TaskListPanel._get_stage_info(task)
+        result = TaskListPanel._get_stage_info(task, theme)
         assert '-' in result
 
     def test_combined_filters(self, mock_profile_with_tasks):
@@ -341,4 +358,306 @@ class TestTaskListPanel:
 
         choice_ids = [c['id'] for c in choices]
         assert 'prev-page' not in choice_ids
+        assert 'next-page' in choice_ids
+
+
+class TestTaskListHierarchy:
+    """Test suite for hierarchical task list features"""
+
+    @pytest.fixture
+    def mock_profile_with_hierarchy(self):
+        """Mock profile with parent tasks and subtasks"""
+        profile = Mock()
+
+        # Create mock task tree with hierarchy
+        parent1 = Mock()
+        parent1.id = "parent-1"
+        parent1.name = "HTTP Enumeration"
+        parent1.status = "pending"
+        parent1.children = []
+        parent1.metadata = {
+            'port': 80,
+            'service': 'http',
+            'priority': 'HIGH',
+            'tags': ['WEB'],
+            'time_estimate': '5 min'
+        }
+
+        subtask1a = Mock()
+        subtask1a.id = "subtask-1a"
+        subtask1a.name = "Run gobuster"
+        subtask1a.status = "pending"
+        subtask1a.children = []
+        subtask1a.parent = parent1
+        subtask1a.metadata = {
+            'port': 80,
+            'service': 'http',
+            'priority': 'HIGH',
+            'tags': ['WEB'],
+            'time_estimate': '2 min'
+        }
+
+        subtask1b = Mock()
+        subtask1b.id = "subtask-1b"
+        subtask1b.name = "Run nikto"
+        subtask1b.status = "pending"
+        subtask1b.children = []
+        subtask1b.parent = parent1
+        subtask1b.metadata = {
+            'port': 80,
+            'service': 'http',
+            'priority': 'HIGH',
+            'tags': ['WEB'],
+            'time_estimate': '3 min'
+        }
+
+        parent1.children = [subtask1a, subtask1b]
+
+        parent2 = Mock()
+        parent2.id = "parent-2"
+        parent2.name = "SMB Enumeration"
+        parent2.status = "pending"
+        parent2.children = []
+        parent2.metadata = {
+            'port': 445,
+            'service': 'smb',
+            'priority': 'MEDIUM',
+            'tags': ['FILE_SHARE'],
+            'time_estimate': '10 min'
+        }
+
+        subtask2a = Mock()
+        subtask2a.id = "subtask-2a"
+        subtask2a.name = "Run enum4linux"
+        subtask2a.status = "pending"
+        subtask2a.children = []
+        subtask2a.parent = parent2
+        subtask2a.metadata = {
+            'port': 445,
+            'service': 'smb',
+            'priority': 'MEDIUM',
+            'tags': ['FILE_SHARE'],
+            'time_estimate': '5 min'
+        }
+
+        parent2.children = [subtask2a]
+
+        # Setup mock root
+        root = Mock()
+        root.id = "root"
+        root.children = [parent1, parent2]
+
+        # Mock get_all_tasks() to return all tasks (including subtasks)
+        root.get_all_tasks.return_value = [parent1, subtask1a, subtask1b, parent2, subtask2a]
+
+        profile.task_tree = root
+        profile.target = "192.168.45.100"
+
+        return profile, [parent1, subtask1a, subtask1b, parent2, subtask2a]
+
+    def test_flat_view_shows_only_parents(self, mock_profile_with_hierarchy):
+        """Test flat view filters to only parent tasks"""
+        profile, all_tasks = mock_profile_with_hierarchy
+
+        panel, choices = TaskListPanel.render(
+            profile,
+            show_hierarchy=False,
+            page_size=10
+        )
+
+        # In flat view, only parent tasks should be selectable
+        task_choices = [c for c in choices if 'task' in c]
+
+        # Should have exactly 2 parent tasks
+        assert len(task_choices) == 2
+
+        # Check that only parent tasks are in choices
+        task_ids = [c['task'].id for c in task_choices]
+        assert "parent-1" in task_ids
+        assert "parent-2" in task_ids
+        assert "subtask-1a" not in task_ids
+        assert "subtask-1b" not in task_ids
+        assert "subtask-2a" not in task_ids
+
+    def test_tree_view_shows_all_tasks(self, mock_profile_with_hierarchy):
+        """Test tree view displays all tasks including subtasks"""
+        profile, all_tasks = mock_profile_with_hierarchy
+
+        panel, choices = TaskListPanel.render(
+            profile,
+            show_hierarchy=True,
+            page_size=10
+        )
+
+        # Panel should render (contains all tasks visually)
+        assert panel is not None
+
+        # But choices should only contain parent tasks
+        task_choices = [c for c in choices if 'task' in c]
+        assert len(task_choices) == 2
+
+    def test_tree_view_only_parents_selectable(self, mock_profile_with_hierarchy):
+        """Test tree view only allows selecting parent tasks"""
+        profile, all_tasks = mock_profile_with_hierarchy
+
+        panel, choices = TaskListPanel.render(
+            profile,
+            show_hierarchy=True,
+            page_size=10
+        )
+
+        # Only parent tasks should be selectable
+        task_choices = [c for c in choices if 'task' in c]
+
+        # Verify only parents
+        task_ids = [c['task'].id for c in task_choices]
+        assert "parent-1" in task_ids
+        assert "parent-2" in task_ids
+        assert "subtask-1a" not in task_ids
+        assert "subtask-1b" not in task_ids
+
+    def test_toggle_message_explains_views(self, mock_profile_with_hierarchy):
+        """Test toggle message clarifies view differences"""
+        profile, all_tasks = mock_profile_with_hierarchy
+
+        # Flat view
+        panel_flat, choices_flat = TaskListPanel.render(
+            profile,
+            show_hierarchy=False
+        )
+
+        # Tree view
+        panel_tree, choices_tree = TaskListPanel.render(
+            profile,
+            show_hierarchy=True
+        )
+
+        # Both should have toggle choice
+        toggle_flat = [c for c in choices_flat if c['id'] == 'toggle-tree'][0]
+        toggle_tree = [c for c in choices_tree if c['id'] == 'toggle-tree'][0]
+
+        # Messages should be different and descriptive
+        assert 'flat' in toggle_flat['label'].lower()
+        assert 'tree' in toggle_tree['label'].lower()
+        assert toggle_flat['label'] != toggle_tree['label']
+
+    def test_parent_task_numbering(self, mock_profile_with_hierarchy):
+        """Test parent tasks are numbered sequentially in both views"""
+        profile, all_tasks = mock_profile_with_hierarchy
+
+        # Flat view
+        panel_flat, choices_flat = TaskListPanel.render(
+            profile,
+            show_hierarchy=False
+        )
+
+        # Tree view
+        panel_tree, choices_tree = TaskListPanel.render(
+            profile,
+            show_hierarchy=True
+        )
+
+        # Both should have same parent count
+        task_choices_flat = [c for c in choices_flat if 'task' in c]
+        task_choices_tree = [c for c in choices_tree if 'task' in c]
+
+        assert len(task_choices_flat) == len(task_choices_tree) == 2
+
+    def test_hierarchy_pagination_keeps_groups_together(self):
+        """Test that parent-child groups are never split across pages"""
+        profile = Mock()
+
+        # Create 3 parent tasks with varying number of subtasks
+        # Parent 1: 3 subtasks
+        # Parent 2: 5 subtasks
+        # Parent 3: 2 subtasks
+        # Total: 3 parents + 10 subtasks = 13 tasks
+
+        tasks = []
+        for parent_num in range(1, 4):
+            parent = Mock()
+            parent.id = f"parent-{parent_num}"
+            parent.name = f"Parent Task {parent_num}"
+            parent.status = "pending"
+            parent.children = []
+            parent.metadata = {'port': 80, 'priority': 'HIGH', 'tags': []}
+
+            # Varying subtask counts
+            subtask_count = [3, 5, 2][parent_num - 1]
+            for sub_num in range(subtask_count):
+                subtask = Mock()
+                subtask.id = f"parent-{parent_num}-sub-{sub_num}"
+                subtask.name = f"Subtask {sub_num} of Parent {parent_num}"
+                subtask.status = "pending"
+                subtask.children = []
+                subtask.parent = parent
+                subtask.metadata = {'port': 80, 'priority': 'HIGH', 'tags': []}
+                parent.children.append(subtask)
+
+            tasks.append(parent)
+
+        root = Mock()
+        root.id = "root"
+        root.children = tasks
+        root.get_all_tasks.return_value = [p for p in tasks] + [
+            c for p in tasks for c in p.children
+        ]
+
+        profile.task_tree = root
+        profile.target = "192.168.45.100"
+
+        # Render with small page size to force pagination
+        # Page size of 8: Should fit parent1+subtasks (4 tasks), parent2+subtasks (6 tasks) = 10 tasks
+        # But parent2 won't fit on page 1, so page 1 = parent1 only (4 tasks)
+        panel, choices = TaskListPanel.render(
+            profile,
+            show_hierarchy=True,
+            page=1,
+            page_size=8
+        )
+
+        # Page 1 should contain parent-1 and all its subtasks
+        # Should NOT contain any tasks from parent-2
+        task_choices = [c for c in choices if 'task' in c]
+
+        # Should have only 1 parent (parent-1) selectable on page 1
+        assert len(task_choices) == 1
+        assert task_choices[0]['task'].id == "parent-1"
+
+    def test_default_page_size_is_twenty(self):
+        """Test that default page size is 20"""
+        profile = Mock()
+
+        # Create 25 parent tasks (no subtasks)
+        tasks = []
+        for i in range(25):
+            task = Mock()
+            task.id = f"task-{i}"
+            task.name = f"Task {i}"
+            task.status = "pending"
+            task.children = []
+            task.metadata = {'port': 80, 'priority': 'HIGH', 'tags': []}
+            tasks.append(task)
+
+        root = Mock()
+        root.id = "root"
+        root.children = tasks
+        root.get_all_tasks.return_value = tasks
+
+        profile.task_tree = root
+        profile.target = "192.168.45.100"
+
+        # Render without specifying page_size (should default to 20)
+        panel, choices = TaskListPanel.render(
+            profile,
+            show_hierarchy=False,
+            page=1
+        )
+
+        # Should have 20 tasks on page 1
+        task_choices = [c for c in choices if 'task' in c]
+        assert len(task_choices) == 20
+
+        # Should have "next page" option
+        choice_ids = [c['id'] for c in choices]
         assert 'next-page' in choice_ids
