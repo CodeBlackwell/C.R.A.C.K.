@@ -1,5 +1,72 @@
 # CHANGELOG - CRACK Toolkit
 
+## [2.2.2] - 2025-10-12
+
+### Changed - Reference STARTER Tag Expansion
+
+#### Expanded STARTER Tag Coverage (3 → 10 Commands)
+**Files Modified:**
+- `reference/data/commands/recon.json` (nmap-service-scan, whatweb-technology-detection, smb-enum)
+- `reference/data/commands/web/general.json` (gobuster-dir, nikto-scan)
+- `reference/data/commands/exploitation/shells.json` (nc-listener-setup)
+- `reference/data/commands/exploitation/general.json` (searchsploit-service-version)
+
+**Motivation:**
+Analysis of user's documented exploits in `/home/kali/OSCP/capstones` revealed a consistent first-phase command pattern used across all engagements. STARTER tag expanded from 3 commands to 10 commands to match actual OSCP workflow.
+
+**New STARTER Commands (10 Total):**
+1. **nmap-ping-sweep** - Network discovery (existing)
+2. **nmap-quick-scan** - Full port scan (existing)
+3. **nmap-service-scan** - Service version detection (NEW)
+4. **smb-enum** - SMB enumeration (NEW)
+5. **whatweb-technology-detection** - Web fingerprinting (NEW)
+6. **gobuster-dir** - Directory enumeration (NEW)
+7. **nikto-scan** - Web vulnerability scanner (NEW)
+8. **searchsploit-service-version** - Exploit research (NEW)
+9. **nc-listener-setup** - Netcat listener (NEW)
+10. **nmap-os-detection** - OS fingerprinting (existing)
+
+**Usage:**
+```bash
+# Get all starter commands
+crack reference --tags STARTER
+
+# Combined with query
+crack reference nmap --tags STARTER
+# → Returns: nmap-ping-sweep, nmap-quick-scan, nmap-service-scan, nmap-os-detection
+
+# Quick access to first-phase workflow
+crack reference --tags STARTER OSCP:HIGH
+# → Returns high-relevance starter commands (7 results)
+```
+
+**Workflow Alignment:**
+Based on `capstones/chapter_10_capstone_1/enumeration.md`, user's typical first phase:
+1. nmap full port scan → `nmap-quick-scan`
+2. nmap service scan → `nmap-service-scan`
+3. whatweb fingerprinting → `whatweb-technology-detection`
+4. gobuster directory scan → `gobuster-dir`
+5. searchsploit for exploits → `searchsploit-service-version`
+6. nc listener for shells → `nc-listener-setup`
+7. nikto scan (when applicable) → `nikto-scan`
+8. smb enum (when SMB detected) → `smb-enum`
+
+**Test Results:**
+```bash
+crack reference --tags STARTER
+# ✓ Returns 10 commands
+# ✓ All match user's documented first-phase workflow
+# ✓ Covers network, web, exploitation, and enumeration categories
+```
+
+**Benefits:**
+- **Quick Start:** `crack reference --tags STARTER` instantly shows exam-day first steps
+- **Pattern Recognition:** New users learn OSCP methodology from command selection
+- **Time Savings:** No mental overhead deciding "what to run first" during exam stress
+- **Workflow Consistency:** Ensures nothing is missed in initial enumeration
+
+---
+
 ## [2.2.1] - 2025-10-12
 
 ### Changed - Reference Tag Filtering Enhancement

@@ -134,7 +134,8 @@
         "NOISY",
         "OSCP:HIGH",
         "PERSISTENCE",
-        "RECONNAISSANCE"
+        "RECONNAISSANCE",
+        "STARTER"
       ],
       "variables": [
         {
@@ -311,7 +312,8 @@
         "QUICK_WIN",
         "RECONNAISSANCE",
         "SAMBA",
-        "SMB"
+        "SMB",
+        "STARTER"
       ],
       "variables": [
         {
@@ -961,6 +963,7 @@
         "NETWORK",
         "OSCP:HIGH",
         "RECONNAISSANCE",
+        "STARTER",
         "WEB",
         "WHATWEB"
       ],

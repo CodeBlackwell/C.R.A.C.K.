@@ -17,6 +17,7 @@
         "NOISY",
         "OSCP:HIGH",
         "QUICK_WIN",
+        "STARTER",
         "WEB"
       ],
       "variables": [
@@ -84,6 +85,7 @@
         "NIKTO",
         "NOISY",
         "OSCP:MEDIUM",
+        "STARTER",
         "VULN",
         "WEB"
       ],
