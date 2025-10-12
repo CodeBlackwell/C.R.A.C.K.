@@ -9,7 +9,16 @@
       "subcategory": "wordpress",
       "command": "wpscan --url <URL> --enumerate u,ap,at,vp,vt,cb,dbe --api-token <WPSCAN_API_TOKEN> --disable-tls-checks",
       "description": "Enumerate WordPress users, plugins, themes, and vulnerabilities with comprehensive detection",
-      "tags": ["OSCP:HIGH", "WEB", "WORDPRESS", "CMS", "ENUMERATION", "QUICK_WIN"],
+      "tags": [
+        "CMS",
+        "DISCOVERY",
+        "ENUMERATION",
+        "OSCP:HIGH",
+        "QUICK_WIN",
+        "WEB",
+        "WORDPRESS",
+        "WPSCAN"
+      ],
       "variables": [
         {
           "name": "<URL>",
@@ -52,7 +61,11 @@
         "searchsploit <plugin-name>",
         "searchsploit <theme-name>"
       ],
-      "alternatives": ["wordpress-manual-version", "whatweb-enum", "nikto-scan"],
+      "alternatives": [
+        "wordpress-manual-version",
+        "whatweb-enum",
+        "nikto-scan"
+      ],
       "prerequisites": [],
       "troubleshooting": {
         "not_wordpress": "Verify WordPress installation: curl -s <URL> | grep wp-content OR curl -s <URL>/wp-admin/ OR curl -s <URL>/readme.html",
@@ -73,7 +86,17 @@
       "subcategory": "wordpress",
       "command": "wpscan --url <URL> --plugins-detection aggressive --themes-detection aggressive --enumerate ap,at --api-token <WPSCAN_API_TOKEN>",
       "description": "Aggressive WordPress plugin and theme enumeration (more thorough but noisier than passive detection)",
-      "tags": ["OSCP:HIGH", "WEB", "WORDPRESS", "CMS", "ENUMERATION", "NOISY"],
+      "tags": [
+        "CMS",
+        "DISCOVERY",
+        "ENUMERATION",
+        "NOISY",
+        "OSCP:HIGH",
+        "STEALTHY",
+        "WEB",
+        "WORDPRESS",
+        "WPSCAN"
+      ],
       "variables": [
         {
           "name": "<URL>",
@@ -115,8 +138,13 @@
         "wpscan-password-attack",
         "Check plugin paths manually: curl <URL>/wp-content/plugins/<PLUGIN>/readme.txt"
       ],
-      "alternatives": ["wpscan --enumerate vp,vt (vulnerable only)", "wordpress-manual-version"],
-      "prerequisites": ["wpscan-enumerate-all"],
+      "alternatives": [
+        "wpscan --enumerate vp,vt (vulnerable only)",
+        "wordpress-manual-version"
+      ],
+      "prerequisites": [
+        "wpscan-enumerate-all"
+      ],
       "troubleshooting": {
         "too_slow": "Use passive detection first: --plugins-detection passive --themes-detection passive",
         "waf_blocking": "Aggressive mode triggers WAF. Use passive mode OR add delays: --throttle 5000",
@@ -134,7 +162,19 @@
       "subcategory": "wordpress",
       "command": "wpscan --url <URL> --usernames <USERS> --passwords <WORDLIST> --max-threads <THREADS>",
       "description": "WordPress user password brute force attack using discovered usernames and wordlist",
-      "tags": ["OSCP:HIGH", "WEB", "WORDPRESS", "CMS", "BRUTE_FORCE", "NOISY"],
+      "tags": [
+        "BRUTE_FORCE",
+        "CMS",
+        "CREDENTIAL_ACCESS",
+        "DISCOVERY",
+        "ENUMERATION",
+        "EXPLOITATION",
+        "NOISY",
+        "OSCP:HIGH",
+        "WEB",
+        "WORDPRESS",
+        "WPSCAN"
+      ],
       "variables": [
         {
           "name": "<URL>",
@@ -186,8 +226,14 @@
         "Edit theme files: Appearance > Theme Editor > 404.php (add PHP reverse shell)",
         "Search for sensitive data: Posts, Pages, Users, Settings"
       ],
-      "alternatives": ["hydra -l <USER> -P <WORDLIST> <URL> http-post-form '/wp-login.php:log=^USER^&pwd=^PASS^:F=Invalid'", "burp intruder", "wfuzz -z file,<WORDLIST> --hc 200 -d 'log=admin&pwd=FUZZ' <URL>/wp-login.php"],
-      "prerequisites": ["wpscan-enumerate-all (to discover usernames)"],
+      "alternatives": [
+        "hydra -l <USER> -P <WORDLIST> <URL> http-post-form '/wp-login.php:log=^USER^&pwd=^PASS^:F=Invalid'",
+        "burp intruder",
+        "wfuzz -z file,<WORDLIST> --hc 200 -d 'log=admin&pwd=FUZZ' <URL>/wp-login.php"
+      ],
+      "prerequisites": [
+        "wpscan-enumerate-all (to discover usernames)"
+      ],
       "troubleshooting": {
         "too_slow": "Reduce wordlist size: head -n 1000 /usr/share/wordlists/rockyou.txt > small.txt OR increase threads: --max-threads 30",
         "rate_limiting": "Add delay between requests: --throttle 3000 (3 seconds) OR reduce threads: --max-threads 5",
@@ -206,7 +252,16 @@
       "subcategory": "wordpress",
       "command": "curl -X POST -d '<methodCall><methodName>system.listMethods</methodName></methodCall>' <URL>/xmlrpc.php",
       "description": "Enumerate WordPress XML-RPC methods (potential for brute force, pingback attacks, and SSRF)",
-      "tags": ["OSCP:HIGH", "WEB", "WORDPRESS", "CMS", "ENUMERATION", "VULN"],
+      "tags": [
+        "CMS",
+        "CURL",
+        "DISCOVERY",
+        "ENUMERATION",
+        "OSCP:HIGH",
+        "VULN",
+        "WEB",
+        "WORDPRESS"
+      ],
       "variables": [
         {
           "name": "<URL>",
@@ -243,7 +298,10 @@
         "searchsploit xmlrpc",
         "Check for known CVEs: searchsploit wordpress xmlrpc"
       ],
-      "alternatives": ["wpscan --url <URL> --enumerate u --passwords <WORDLIST> (uses xmlrpc if available)", "burp suite XML-RPC plugin"],
+      "alternatives": [
+        "wpscan --url <URL> --enumerate u --passwords <WORDLIST> (uses xmlrpc if available)",
+        "burp suite XML-RPC plugin"
+      ],
       "prerequisites": [],
       "troubleshooting": {
         "xmlrpc_disabled": "XML-RPC disabled (404 or error). This is good security but blocks this attack vector. Try other WordPress attacks",
@@ -262,7 +320,18 @@
       "subcategory": "wordpress",
       "command": "curl -s <URL> | grep 'content=\"WordPress'",
       "description": "Manual WordPress version detection via meta generator tag (fallback when wpscan is blocked or unavailable)",
-      "tags": ["OSCP:HIGH", "WEB", "WORDPRESS", "CMS", "ENUMERATION", "MANUAL", "QUICK_WIN"],
+      "tags": [
+        "CMS",
+        "CURL",
+        "DISCOVERY",
+        "ENUMERATION",
+        "MANUAL",
+        "OSCP:HIGH",
+        "QUICK_WIN",
+        "WEB",
+        "WORDPRESS",
+        "WPSCAN"
+      ],
       "variables": [
         {
           "name": "<URL>",
@@ -295,7 +364,12 @@
         "Search for exploits: searchsploit wordpress <version>",
         "Check plugin versions: curl -s <URL>/wp-content/plugins/<PLUGIN>/readme.txt"
       ],
-      "alternatives": ["curl -s <URL>/readme.html", "curl -s <URL>/feed/ | grep generator", "whatweb-enum", "wpscan-enumerate-all"],
+      "alternatives": [
+        "curl -s <URL>/readme.html",
+        "curl -s <URL>/feed/ | grep generator",
+        "whatweb-enum",
+        "wpscan-enumerate-all"
+      ],
       "prerequisites": [],
       "troubleshooting": {
         "no_version_found": "Meta generator removed (good security). Try alternatives: 1) curl <URL>/readme.html, 2) curl <URL>/feed/, 3) Check theme/plugin versions, 4) Version fingerprinting via js/css file paths",

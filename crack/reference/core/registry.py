@@ -194,15 +194,22 @@ class HybridCommandRegistry:
         return self.subcategories.get(category, [])
 
     def filter_by_tags(self, tags: List[str], exclude_tags: List[str] = None) -> List[Command]:
-        """Filter commands by tags"""
+        """Filter commands by tags (case-insensitive)"""
         exclude_tags = exclude_tags or []
         results = []
 
+        # Convert search tags to uppercase for case-insensitive matching
+        tags_upper = [tag.upper() for tag in tags]
+        exclude_tags_upper = [tag.upper() for tag in exclude_tags]
+
         for cmd in self.commands.values():
-            # Check if command has all required tags
-            if all(tag in cmd.tags for tag in tags):
-                # Check if command has none of the excluded tags
-                if not any(tag in cmd.tags for tag in exclude_tags):
+            # Convert command tags to uppercase for comparison
+            cmd_tags_upper = [tag.upper() for tag in cmd.tags]
+
+            # Check if command has all required tags (case-insensitive)
+            if all(tag in cmd_tags_upper for tag in tags_upper):
+                # Check if command has none of the excluded tags (case-insensitive)
+                if not any(tag in cmd_tags_upper for tag in exclude_tags_upper):
                     results.append(cmd)
 
         return results

