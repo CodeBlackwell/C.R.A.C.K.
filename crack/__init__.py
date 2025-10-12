@@ -15,5 +15,6 @@ from . import exploit
 from . import utils
 from . import reference
 from . import track
+from . import config
 
-__all__ = ["network", "web", "sqli", "exploit", "utils", "reference", "track"]
+__all__ = ["network", "web", "sqli", "exploit", "utils", "reference", "track", "config"]
