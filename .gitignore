@@ -6,3 +6,8 @@ dt_key
 *.pdf
 __pycache__/
 */.references
+
+# Generated attack chain artifacts
+crack/reference/data/attack_chains/**/*.cache.json
+crack/reference/data/attack_chains/**/*.compiled
+crack/reference/data/attack_chains/**/*.compiled.json
