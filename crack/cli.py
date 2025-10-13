@@ -86,6 +86,9 @@ def reference_command(args):
     """Execute the reference system"""
     from crack.reference import cli as ref_cli
     # Pass arguments to the reference CLI
+    # Add --no-banner by default unless --banner is explicitly requested
+    if '--banner' not in args:
+        args = ['--no-banner'] + args
     sys.argv = ['crack-reference'] + args
     ref_cli.main()
 
@@ -555,8 +558,10 @@ def main():
     args, remaining = parser.parse_known_args()
 
     # Show banner unless suppressed
+    # Note: reference command has no banner by default (unless --banner is explicitly in remaining args)
     if not args.no_banner and args.tool:
-        print_banner()
+        if args.tool != 'reference' or '--banner' in remaining:
+            print_banner()
 
     # Execute the selected tool
     if hasattr(args, 'func'):

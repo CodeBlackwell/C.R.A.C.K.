@@ -32,6 +32,12 @@ class ReferenceCLI:
         self.validator = CommandValidator()
         self.parser = self.create_parser()
 
+    def _print_banner(self):
+        """Print CRACK Reference banner"""
+        print(f"\n{self.theme.primary('═' * 60)}")
+        print(f"{self.theme.command_name('CRACK Reference System')} - Command Lookup & Management")
+        print(f"{self.theme.primary('═' * 60)}\n")
+
     def create_parser(self) -> argparse.ArgumentParser:
         """Create argument parser"""
         parser = argparse.ArgumentParser(
@@ -158,11 +164,27 @@ class ReferenceCLI:
             help='Clear all config variables'
         )
 
+        parser.add_argument(
+            '--no-banner',
+            action='store_true',
+            help='Suppress banner output'
+        )
+
+        parser.add_argument(
+            '--banner',
+            action='store_true',
+            help='Show banner output (overrides --no-banner)'
+        )
+
         return parser
 
     def run(self, args=None):
         """Main entry point"""
         args = self.parser.parse_args(args)
+
+        # Show banner unless suppressed (--banner overrides --no-banner)
+        if args.banner or not args.no_banner:
+            self._print_banner()
 
         # Handle config commands first
         if args.config:
@@ -559,7 +581,11 @@ class ReferenceCLI:
                 return
 
         # Fill placeholders interactively
-        filled = self.registry.interactive_fill(cmd)
+        try:
+            filled = self.registry.interactive_fill(cmd)
+        except KeyboardInterrupt:
+            print(f"\n{self.theme.warning('[Cancelled by user]')}")
+            return
 
         # Show final command
         print(f"\n{self.theme.primary('Copy this command:')}")
@@ -567,7 +593,11 @@ class ReferenceCLI:
 
         # Offer to execute
         print(f"\n{self.theme.prompt('Run this command? (y/N): ')}", end='')
-        confirm = input().strip().lower()
+        try:
+            confirm = input().strip().lower()
+        except (KeyboardInterrupt, EOFError):
+            print(f"\n{self.theme.warning('[Cancelled by user]')}")
+            return
 
         if confirm == 'y':
             print(f"\n{self.theme.primary('Executing:')} {self.theme.command_name(filled)}")
@@ -606,7 +636,11 @@ class ReferenceCLI:
             return
 
         # Step 4: Fill placeholders interactively
-        filled = self.registry.interactive_fill(cmd)
+        try:
+            filled = self.registry.interactive_fill(cmd)
+        except KeyboardInterrupt:
+            print(f"\n{self.theme.warning('[Cancelled by user]')}")
+            return
 
         # Step 5: Show final command
         print(f"\n{self.theme.primary('Copy this command:')}")
@@ -614,7 +648,11 @@ class ReferenceCLI:
 
         # Step 6: Offer to execute
         print(f"\n{self.theme.prompt('Run this command? (y/N): ')}", end='')
-        confirm = input().strip().lower()
+        try:
+            confirm = input().strip().lower()
+        except (KeyboardInterrupt, EOFError):
+            print(f"\n{self.theme.warning('[Cancelled by user]')}")
+            return
 
         if confirm == 'y':
             print(f"\n{self.theme.primary('Executing:')} {self.theme.command_name(filled)}")

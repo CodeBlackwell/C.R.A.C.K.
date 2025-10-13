@@ -333,57 +333,62 @@ class HybridCommandRegistry:
         if self.config_manager:
             config_values = self.config_manager.get_placeholder_values()
 
-        for placeholder in placeholders:
-            # Check if we have a config value for this placeholder
-            config_value = config_values.get(placeholder, '')
+        try:
+            for placeholder in placeholders:
+                # Check if we have a config value for this placeholder
+                config_value = config_values.get(placeholder, '')
 
-            # Find variable definition
-            var = next((v for v in command.variables if v.name == placeholder), None)
+                # Find variable definition
+                var = next((v for v in command.variables if v.name == placeholder), None)
 
-            if var:
-                # Build colorized prompt
-                prompt_parts = [
-                    t.prompt("Enter value for"),
-                    t.placeholder(placeholder)
-                ]
-                if var.description:
-                    prompt_parts.append(t.hint(f"({var.description})"))
-                if var.example:
-                    prompt_parts.append(t.hint(f"[e.g., {var.example}]"))
-                if config_value:
-                    prompt_parts.append(t.hint(f"[config: {t.value(config_value)}]"))
-                if not var.required:
-                    prompt_parts.append(t.hint("(optional)"))
+                if var:
+                    # Build colorized prompt
+                    prompt_parts = [
+                        t.prompt("Enter value for"),
+                        t.placeholder(placeholder)
+                    ]
+                    if var.description:
+                        prompt_parts.append(t.hint(f"({var.description})"))
+                    if var.example:
+                        prompt_parts.append(t.hint(f"[e.g., {var.example}]"))
+                    if config_value:
+                        prompt_parts.append(t.hint(f"[config: {t.value(config_value)}]"))
+                    if not var.required:
+                        prompt_parts.append(t.hint("(optional)"))
 
-                prompt = " ".join(prompt_parts) + t.prompt(": ")
-                value = input(prompt).strip()
+                    prompt = " ".join(prompt_parts) + t.prompt(": ")
+                    value = input(prompt).strip()
 
-                # Use config value if user just pressed enter and we have one
-                if not value and config_value:
-                    value = config_value
-                    print(f"  {t.success('✓')} Using configured value: {t.value(config_value)}")
+                    # Use config value if user just pressed enter and we have one
+                    if not value and config_value:
+                        value = config_value
+                        print(f"  {t.success('✓')} Using configured value: {t.value(config_value)}")
 
-                if value or var.required:
-                    values[placeholder] = value
-            else:
-                # Placeholder not defined in variables
-                prompt_parts = [
-                    t.prompt("Enter value for"),
-                    t.placeholder(placeholder)
-                ]
-                if config_value:
-                    prompt_parts.append(t.hint(f"[config: {t.value(config_value)}]"))
+                    if value or var.required:
+                        values[placeholder] = value
+                else:
+                    # Placeholder not defined in variables
+                    prompt_parts = [
+                        t.prompt("Enter value for"),
+                        t.placeholder(placeholder)
+                    ]
+                    if config_value:
+                        prompt_parts.append(t.hint(f"[config: {t.value(config_value)}]"))
 
-                prompt = " ".join(prompt_parts) + t.prompt(": ")
-                value = input(prompt).strip()
+                    prompt = " ".join(prompt_parts) + t.prompt(": ")
+                    value = input(prompt).strip()
 
-                # Use config value if user just pressed enter
-                if not value and config_value:
-                    value = config_value
-                    print(f"  {t.success('✓')} Using configured value: {t.value(config_value)}")
+                    # Use config value if user just pressed enter
+                    if not value and config_value:
+                        value = config_value
+                        print(f"  {t.success('✓')} Using configured value: {t.value(config_value)}")
 
-                if value:
-                    values[placeholder] = value
+                    if value:
+                        values[placeholder] = value
+
+        except KeyboardInterrupt:
+            print(f"\n{t.warning('[Cancelled by user]')}")
+            return ""
 
         filled_command = command.fill_placeholders(values)
         print(f"\n{t.success('[+] Final command:')} {t.command_name(filled_command)}")
