@@ -419,16 +419,19 @@ class ChainsCLI(BaseCLIHandler):
 
                 print(f"\n  {self.theme.command_name(f'{i}. {step_name}')}")
                 print(f"     {self.theme.hint('Objective:')} {objective}")
+                print(f"     {self.theme.hint('Command Ref:')} {self.theme.primary(command_ref)}")
 
-                # Try to resolve command reference
+                # Try to resolve command reference and show raw command
                 try:
                     resolved = self.resolver.resolve_command_ref(command_ref)
                     if resolved:
-                        print(f"     {self.theme.hint('Command:')} [{self.theme.primary(command_ref)}] {resolved.get('command', 'Unknown')}")
+                        # Show raw command with placeholders
+                        raw_command = resolved.command if hasattr(resolved, 'command') else resolved.get('command', 'Unknown')
+                        print(f"     {self.theme.hint('Raw Command:')} {self.theme.secondary(raw_command)}")
                     else:
-                        print(f"     {self.theme.hint('Command Ref:')} {self.theme.warning(command_ref)} {self.theme.error('(not found)')}")
-                except Exception:
-                    print(f"     {self.theme.hint('Command Ref:')} {command_ref}")
+                        print(f"     {self.theme.error('(Command not found in registry)')}")
+                except Exception as e:
+                    print(f"     {self.theme.error(f'(Failed to resolve: {e})')}")
 
                 # Description
                 desc = step.get('description')
