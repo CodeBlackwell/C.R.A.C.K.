@@ -1,9 +1,11 @@
 """Chain session storage for interactive execution progress tracking.
 
-Minimal session management:
+Enhanced session management:
 - Save/load current step index
-- Persist variables across steps
-- Enable resume functionality
+- Persist variables across steps (session-scoped)
+- Store step-scoped variables (from parsing)
+- Store parsed findings for inspection
+- Enable resume functionality with full context
 """
 
 import json
@@ -26,8 +28,10 @@ class ChainSession:
         self.target = target
         self.current_step_index = 0
         self.completed_steps: List[str] = []
-        self.variables: Dict[str, str] = {}  # Persist across steps
-        self.step_outputs: Dict[str, str] = {}  # Store outputs for reference
+        self.variables: Dict[str, str] = {}  # Session-scoped variables
+        self.step_outputs: Dict[str, str] = {}  # Raw command outputs
+        self.step_findings: Dict[str, Dict[str, Any]] = {}  # Parsed findings per step
+        self.step_variables: Dict[str, Dict[str, str]] = {}  # Step-scoped variables
         self.started = datetime.now().isoformat()
         self.updated = self.started
 
@@ -52,13 +56,55 @@ class ChainSession:
         self.updated = datetime.now().isoformat()
 
     def add_variables(self, new_vars: Dict[str, str]):
-        """Add/update variables from current step
+        """Add/update session-scoped variables
 
         Args:
-            new_vars: Variables to persist
+            new_vars: Variables to persist across all steps
         """
         self.variables.update(new_vars)
         self.updated = datetime.now().isoformat()
+
+    def store_step_findings(self, step_id: str, findings: Dict[str, Any]):
+        """Store parsed findings for a step
+
+        Args:
+            step_id: Step identifier
+            findings: Findings dictionary from parser
+        """
+        self.step_findings[step_id] = findings
+        self.updated = datetime.now().isoformat()
+
+    def store_step_variables(self, step_id: str, variables: Dict[str, str]):
+        """Store step-scoped variables (from parsing/selection)
+
+        Args:
+            step_id: Step identifier
+            variables: Variables specific to this step
+        """
+        self.step_variables[step_id] = variables
+        self.updated = datetime.now().isoformat()
+
+    def get_step_findings(self, step_id: str) -> Optional[Dict[str, Any]]:
+        """Retrieve findings for a specific step
+
+        Args:
+            step_id: Step identifier
+
+        Returns:
+            Findings dict or None
+        """
+        return self.step_findings.get(step_id)
+
+    def get_step_variables(self, step_id: str) -> Dict[str, str]:
+        """Retrieve variables for a specific step
+
+        Args:
+            step_id: Step identifier
+
+        Returns:
+            Variables dict (empty if not found)
+        """
+        return self.step_variables.get(step_id, {})
 
     def save(self):
         """Save session to ~/.crack/chain_sessions/{chain_id}-{target}.json"""
@@ -76,6 +122,8 @@ class ChainSession:
             'completed_steps': self.completed_steps,
             'variables': self.variables,
             'step_outputs': self.step_outputs,
+            'step_findings': self.step_findings,
+            'step_variables': self.step_variables,
             'started': self.started,
             'updated': self.updated
         }
@@ -111,6 +159,8 @@ class ChainSession:
             session.completed_steps = data.get('completed_steps', [])
             session.variables = data.get('variables', {})
             session.step_outputs = data.get('step_outputs', {})
+            session.step_findings = data.get('step_findings', {})
+            session.step_variables = data.get('step_variables', {})
             session.started = data.get('started', session.started)
             session.updated = data.get('updated', session.updated)
 

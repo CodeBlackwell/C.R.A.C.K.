@@ -30,7 +30,18 @@ class PortScanner:
 
     def __init__(self, target, output_dir=None, min_rate=5000):
         self.target = target
-        self.output_dir = Path(output_dir) if output_dir else Path.cwd()
+
+        # Default to CRACK_targets structure if not specified
+        if output_dir is None:
+            try:
+                from crack.track.core.output_router import OutputRouter
+                self.output_dir = OutputRouter.get_scans_dir(target)
+            except ImportError:
+                # Fallback if running standalone
+                self.output_dir = Path.cwd()
+        else:
+            self.output_dir = Path(output_dir)
+
         self.min_rate = min_rate
         self.open_ports = []
 

@@ -123,16 +123,23 @@ class SubprocessExecutor(ExecutorStrategy):
     """
 
     def run(self, task: TaskNode, target: str) -> ExecutionResult:
-        """Execute command using subprocess"""
+        """Execute command using subprocess with automatic output routing"""
         command = self._prepare_command(task, target)
-        result = ExecutionResult(task, command)
+
+        # Inject output flags to route outputs to CRACK_targets/<target>/scans/
+        from .output_router import OutputRouter
+        modified_command, output_file = OutputRouter.inject_output_flags(
+            command, target, task.metadata
+        )
+
+        result = ExecutionResult(task, modified_command)
 
         start_time = datetime.now()
 
         try:
-            # Execute command
+            # Execute command (with output routing)
             proc_result = subprocess.run(
-                command,
+                modified_command,
                 shell=True,
                 capture_output=True,
                 text=True,
@@ -144,12 +151,28 @@ class SubprocessExecutor(ExecutorStrategy):
             result.success = (proc_result.returncode == 0)
 
             # Capture output
+            combined_output = ''
             if proc_result.stdout:
                 result.output.extend(proc_result.stdout.strip().split('\n'))
+                combined_output += proc_result.stdout
             if proc_result.stderr:
                 result.output.extend(proc_result.stderr.strip().split('\n'))
+                combined_output += '\n' + proc_result.stderr
 
             result.duration = (datetime.now() - start_time).total_seconds()
+
+            # Save captured output as fallback if no tool-specific output was generated
+            if not output_file and combined_output.strip():
+                output_file = OutputRouter.save_captured_output(
+                    combined_output.strip(),
+                    target,
+                    task.id,
+                    datetime.now().strftime('%Y%m%d_%H%M%S')
+                )
+
+            # Store output file path in task metadata for documentation
+            if output_file:
+                task.metadata['output_file'] = str(output_file)
 
         except subprocess.TimeoutExpired:
             result.success = False

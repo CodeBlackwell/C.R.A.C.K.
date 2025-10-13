@@ -82,10 +82,14 @@ class ExecutionResult:
     return_code: int = 0             # Process return code
     cancelled: bool = False          # User cancelled execution
     variables_used: Dict[str, str] = field(default_factory=dict)
+    output_file: Optional[str] = None  # Path to saved output file (if any)
 
     def __str__(self):
         if self.cancelled:
             return "Execution cancelled by user"
         if self.success:
-            return f"Success: {self.command}"
+            result = f"Success: {self.command}"
+            if self.output_file:
+                result += f"\nOutput saved to: {self.output_file}"
+            return result
         return f"Failed (code {self.return_code}): {self.error[:100]}"

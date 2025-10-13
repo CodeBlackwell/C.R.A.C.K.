@@ -95,29 +95,50 @@ class AlternativeExecutor:
                     variables_used=values
                 )
 
-        # Step 7: Execute command
+        # Step 7: Inject output flags for automatic output routing
+        from ..core.output_router import OutputRouter
+        target = values.get('<TARGET>', context.profile.target if context.profile else 'unknown')
+        modified_command, output_file = OutputRouter.inject_output_flags(
+            final_command,
+            target,
+            {}  # No task metadata for alternative commands
+        )
+
+        # Step 8: Execute command (with output routing)
         try:
+            from datetime import datetime
+
             result = subprocess.run(
-                final_command,
+                modified_command,
                 shell=True,
                 capture_output=True,
                 text=True,
                 timeout=300  # 5 minute timeout
             )
 
+            # Save captured output as fallback if no tool-specific output was generated
+            if not output_file and result.stdout.strip():
+                output_file = OutputRouter.save_captured_output(
+                    result.stdout.strip(),
+                    target,
+                    alt_cmd.id,
+                    datetime.now().strftime('%Y%m%d_%H%M%S')
+                )
+
             return ExecutionResult(
                 success=result.returncode == 0,
-                command=final_command,
+                command=modified_command,
                 output=result.stdout,
                 error=result.stderr,
                 return_code=result.returncode,
-                variables_used=values
+                variables_used=values,
+                output_file=str(output_file) if output_file else None
             )
 
         except subprocess.TimeoutExpired:
             return ExecutionResult(
                 success=False,
-                command=final_command,
+                command=modified_command,
                 error="Command timed out after 5 minutes",
                 return_code=-1,
                 variables_used=values
@@ -126,7 +147,7 @@ class AlternativeExecutor:
         except Exception as e:
             return ExecutionResult(
                 success=False,
-                command=final_command,
+                command=modified_command,
                 error=str(e),
                 return_code=-1,
                 variables_used=values

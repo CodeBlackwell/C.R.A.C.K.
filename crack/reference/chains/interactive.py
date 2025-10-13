@@ -13,9 +13,14 @@ import tty
 import termios
 from typing import Any, Dict, Optional
 
+from pathlib import Path
 from .registry import ChainRegistry
+from .loader import ChainLoader
 from .command_resolver import CommandResolver
 from .session_storage import ChainSession
+from .core.step_processor import StepProcessor
+from .variables.context import VariableContext
+from .filtering.selector import FindingSelector
 from crack.reference.core.registry import HybridCommandRegistry
 from crack.config import ConfigManager
 from crack.reference.core.colors import ReferenceTheme
@@ -34,11 +39,16 @@ class ChainInteractive:
         """
         self.theme = ReferenceTheme()
         self.chain_registry = ChainRegistry()
+        self.chain_loader = ChainLoader()
         self.command_resolver = CommandResolver()
+        self.config_manager = ConfigManager()
         self.command_registry = HybridCommandRegistry(
-            config_manager=ConfigManager(),
+            config_manager=self.config_manager,
             theme=self.theme
         )
+
+        # Load chains from data directory
+        self._ensure_chains_loaded()
 
         # Load chain
         self.chain = self.chain_registry.get_chain(chain_id)
@@ -87,6 +97,48 @@ class ChainInteractive:
         # Add target to session variables (auto-fill for commands)
         self.session.variables['<TARGET>'] = target
 
+        # Initialize new parsing/variable systems
+        self.var_context = VariableContext(self.session, self.config_manager)
+        self.selector = FindingSelector(self.theme)
+        self.step_processor = StepProcessor(self.var_context, self.selector)
+
+    def _ensure_chains_loaded(self):
+        """Load chains from data directory (same pattern as CLI)"""
+        # Check if already loaded (registry is singleton)
+        if self.chain_registry.get_chain('linux-privesc-suid-basic'):
+            return  # Already loaded
+
+        data_dir = Path(__file__).parent.parent / 'data' / 'attack_chains'
+        if not data_dir.exists():
+            print(self.theme.warning(f"Chain data directory not found: {data_dir}"))
+            return
+
+        try:
+            chains = self.chain_loader.load_all_chains([data_dir])
+            loaded_count = 0
+            skipped_count = 0
+
+            for chain_id, chain_data in chains.items():
+                # Check if already registered (registry is singleton)
+                if self.chain_registry.get_chain(chain_id):
+                    print(self.theme.warning(
+                        f"Chain '{chain_id}' already registered - skipping duplicate"
+                    ))
+                    skipped_count += 1
+                else:
+                    self.chain_registry.register_chain(chain_id, chain_data)
+                    loaded_count += 1
+
+            if loaded_count > 0:
+                print(self.theme.hint(f"Loaded {loaded_count} attack chain(s)"))
+            if skipped_count > 0:
+                print(self.theme.hint(f"Skipped {skipped_count} duplicate(s)"))
+
+        except ValueError as e:
+            # Don't silently fail - show the error
+            print(self.theme.error(f"Failed to load chains: {e}"))
+            raise  # Re-raise so user knows something went wrong
+
     def run(self):
         """Main loop: show step → fill → execute → next"""
         total_steps = len(self.chain['steps'])
@@ -116,9 +168,8 @@ class ChainInteractive:
                     self.session.save()
                     return
 
-            # Fill placeholders (reuse existing registry logic)
-            print(f"\n{self.theme.primary('Filling command variables...')}\n")
-            filled = self._fill_command(cmd)
+            # Fill placeholders (with variable context)
+            filled = self._fill_command(cmd, step)
 
             # Show final command
             print(f"\n{self.theme.primary('Final command:')}")
@@ -127,9 +178,35 @@ class ChainInteractive:
             # Execute
             if self._confirm("Run this command?"):
                 output = self._execute(filled, step)
+
+                # Store raw output
                 self.session.step_outputs[step['id']] = output if output else ""
+
+                # Parse output and extract findings/variables
+                parse_result = None
+                if output:
+                    parse_result = self.step_processor.process_output(
+                        step=step,
+                        command=filled,
+                        output=output,
+                        step_id=step['id']
+                    )
+
+                    # Store findings and variables
+                    self.session.store_step_findings(step['id'], parse_result.get('findings', {}))
+                    self.session.store_step_variables(step['id'], parse_result.get('variables', {}))
+
+                    # Show parsing summary
+                    if parse_result.get('parser'):
+                        print(f"\n{self.theme.hint('─' * 70)}")
+                        print(f"{self.theme.primary('Parsing Results:')}")
+                        print(self.step_processor.get_step_summary(step['id'], parse_result))
+
+                # Store parse result for verification
+                self._last_parse_result = parse_result
             else:
                 print("Skipped execution.")
+                self._last_parse_result = None
 
             # Progress
             print()
@@ -279,11 +356,12 @@ class ChainInteractive:
         # Fallback: direct lookup in registry
         return self.command_registry.get_command(command_ref)
 
-    def _fill_command(self, cmd: Any) -> str:
-        """Fill command placeholders with flag explanations
+    def _fill_command(self, cmd: Any, step: Dict[str, Any]) -> str:
+        """Fill command placeholders with variable context and user input
 
         Args:
             cmd: Command object
+            step: Current step metadata
 
         Returns:
             Filled command string
@@ -296,28 +374,74 @@ class ChainInteractive:
 
         # Check if command has placeholders
         placeholders = cmd.extract_placeholders()
-        if not placeholders or not any(p not in ['<TARGET>'] for p in placeholders):
-            print(self.theme.hint("\nNo variables to fill (command ready to execute)\n"))
 
-        # Show flag explanations
-        if cmd.flag_explanations:
-            print(f"\n{self.theme.primary('Flag Explanations:')}")
-            for flag, explanation in cmd.flag_explanations.items():
-                # Format nicely with proper spacing
-                print(f"  {self.theme.primary(flag.ljust(15))} → {self.theme.hint(explanation)}")
+        # Get all available variables from context
+        step_id = step.get('id', '')
 
-        # Use registry's interactive fill (handles config auto-fill)
-        try:
-            print()  # Blank line before prompts
-            filled = self.command_registry.interactive_fill(cmd)
+        # Check which variables we can auto-fill
+        auto_filled = {}
+        needs_input = []
 
-            # Show final command
-            print(f"\n{self.theme.success('[+] Final command:')} {self.theme.command_name(filled)}")
+        for placeholder in placeholders:
+            resolved = self.var_context.resolve(placeholder, step_id)
+            if resolved:
+                auto_filled[placeholder] = resolved
+                source = self.var_context.get_variable_source(placeholder, step_id)
+                print(f"{self.theme.hint(f'[*] Auto-filled {placeholder} from {source.value}:')} {resolved}")
+            else:
+                needs_input.append(placeholder)
 
-            return filled
-        except KeyboardInterrupt:
-            print(self.theme.warning("\nFilling cancelled"))
-            raise
+        if not needs_input:
+            # All variables auto-filled - use them directly
+            print(self.theme.hint("\nAll variables auto-filled (no user input needed)\n"))
+            filled = cmd.fill_placeholders(auto_filled)
+        else:
+            # Some variables need user input - use interactive fill
+            print(f"\n{self.theme.hint(f'Need to fill {len(needs_input)} remaining variables')}\n")
+
+            # Temporarily add auto-filled values to config so interactive_fill uses them
+            if self.config_manager and auto_filled:
+                original_config = {}
+                for placeholder, value in auto_filled.items():
+                    # Save original value
+                    original_config[placeholder] = self.config_manager.get_placeholder(placeholder)
+                    # Set our auto-filled value
+                    self.config_manager.set_placeholder(placeholder, value)
+
+            # Show flag explanations
+            if cmd.flag_explanations:
+                print(f"{self.theme.primary('Flag Explanations:')}")
+                for flag, explanation in cmd.flag_explanations.items():
+                    print(f"  {self.theme.primary(flag.ljust(15))} → {self.theme.hint(explanation)}")
+
+            try:
+                print()  # Blank line before prompts
+                filled = self.command_registry.interactive_fill(cmd)
+
+                # Restore original config values
+                if self.config_manager and auto_filled:
+                    for placeholder, value in original_config.items():
+                        if value is not None:
+                            self.config_manager.set_placeholder(placeholder, value)
+                        else:
+                            # Was not in config before, remove it
+                            self.config_manager.placeholders.pop(placeholder, None)
+
+            except KeyboardInterrupt:
+                # Restore config on cancel
+                if self.config_manager and auto_filled:
+                    for placeholder, value in original_config.items():
+                        if value is not None:
+                            self.config_manager.set_placeholder(placeholder, value)
+                        else:
+                            self.config_manager.placeholders.pop(placeholder, None)
+                print(self.theme.warning("\nFilling cancelled"))
+                raise
+
+        # Show final command
+        print(f"\n{self.theme.success('[+] Final command:')} {self.theme.command_name(filled)}")
+
+        return filled
 
     def _execute(self, command: str, step: Dict[str, Any]) -> Optional[str]:
         """Execute command and show verification checklist
@@ -352,13 +476,8 @@ class ChainInteractive:
             else:
                 print(f"\n{self.theme.warning(f'⚠ Command exited with code {result.returncode}')}")
 
-            # Verification checklist
-            success_criteria = step.get('success_criteria', [])
-            if success_criteria:
-                print(f"\n{self.theme.primary('Verify Your Results:')}")
-                print(self.theme.hint("Review the output above and check:"))
-                for criteria in success_criteria:
-                    print(f"  [{self.theme.success('✓')}] {criteria}")
+            # Verification checklist - intelligent based on parsing results
+            self._show_verification_checklist(step, result)
 
             # Next steps preview
             next_steps = step.get('next_steps', [])
@@ -379,6 +498,83 @@ class ChainInteractive:
         except Exception as e:
             print(self.theme.error(f"⚠ Execution failed: {str(e)}"))
             return None
+
+    def _show_verification_checklist(self, step: Dict[str, Any], execution_result):
+        """Show intelligent verification checklist based on parsing results
+
+        Args:
+            step: Current step metadata
+            execution_result: subprocess.CompletedProcess result
+        """
+        success_criteria = step.get('success_criteria', [])
+        if not success_criteria:
+            return
+
+        print(f"\n{self.theme.primary('Verification Checklist:')}")
+
+        # Get parsed findings if available
+        parse_result = getattr(self, '_last_parse_result', None)
+        findings = parse_result.get('findings', {}) if parse_result else {}
+
+        # Intelligent verification based on parsed data
+        for criteria in success_criteria:
+            criteria_lower = criteria.lower()
+            checked = False
+
+            # Check based on parsing results
+            if 'command executes without errors' in criteria_lower:
+                checked = execution_result.returncode == 0
+            elif 'binaries discovered' in criteria_lower or 'binaries found' in criteria_lower:
+                # Extract number from criteria (e.g., "At least 10-20 SUID binaries")
+                total = findings.get('total_count', 0)
+                checked = total >= 10
+            elif 'exploitable' in criteria_lower or 'interesting' in criteria_lower:
+                exploitable = findings.get('exploitable_count', 0)
+                checked = exploitable > 0
+            elif 'non-standard binaries' in criteria_lower:
+                exploitable = findings.get('exploitable_count', 0)
+                checked = exploitable > 0
+
+            # Show checkbox with status
+            if checked:
+                checkbox = self.theme.success('✓')
+            else:
+                checkbox = self.theme.muted('□')
+
+            print(f"  [{checkbox}] {criteria}")
+
+        # Show parsed evidence summary with exact/fuzzy counts
+        if parse_result and parse_result.get('parser'):
+            print(f"\n{self.theme.hint('Parsed Evidence:')}")
+
+            total = findings.get('total_count', 0)
+            exploitable = findings.get('exploitable_count', 0)
+            standard = findings.get('standard_count', 0)
+            unknown = findings.get('unknown_count', 0)
+
+            print(f"  • Total binaries: {total}")
+
+            if exploitable > 0:
+                # Count exact vs fuzzy matches
+                exploitable_list = findings.get('exploitable_binaries', [])
+                exact = 0
+                fuzzy = 0
+
+                if exploitable_list and isinstance(exploitable_list[0], dict):
+                    exact = sum(1 for b in exploitable_list if b.get('match_type') == 'exact')
+                    fuzzy = sum(1 for b in exploitable_list if b.get('match_type') == 'fuzzy')
+
+                if exact > 0 or fuzzy > 0:
+                    print(f"  • {self.theme.success(f'Exploitable: {exploitable} ({exact} exact, {fuzzy} fuzzy)')}")
+                else:
+                    print(f"  • {self.theme.success(f'Exploitable: {exploitable}')}")
+            else:
+                print(f"  • {self.theme.warning(f'Exploitable: 0')}")
+
+            print(f"  • Standard system: {standard}")
+
+            if unknown > 0:
+                print(f"  • {self.theme.warning(f'Unknown: {unknown} (manual review)')}")
 
     def _mark_complete(self, step: Dict[str, Any]):
         """Mark step as complete"""
