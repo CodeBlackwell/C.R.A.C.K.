@@ -4,19 +4,27 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional, Set
+from typing import Any, Dict, List, Optional, Set
 
 from jsonschema import Draft202012Validator
+
+from .command_resolver import CommandResolver
 
 
 class ChainValidator:
     """Validate the structure and relationships within attack chains."""
 
-    def __init__(self, schema_path: Optional[Path] = None) -> None:
+    def __init__(
+        self,
+        schema_path: Optional[Path] = None,
+        *,
+        command_resolver: Optional[CommandResolver] = None,
+    ) -> None:
         if schema_path is None:
             schema_path = Path(__file__).parent.parent / "schemas" / "attack_chain.schema.json"
         self._schema = self._load_schema(schema_path)
         self._validator = Draft202012Validator(self._schema) if self._schema else None
+        self._command_resolver = command_resolver or CommandResolver()
 
     @staticmethod
     def _load_schema(schema_path: Path) -> Dict[str, Any]:
@@ -45,20 +53,32 @@ class ChainValidator:
             errors.append(f"{location}: {error.message}{context}")
         return errors
 
-    def validate_command_refs(self, chain: Dict[str, Any], known_commands: Iterable[str]) -> List[str]:
-        """Ensure each command reference exists in ``known_commands``."""
+    @property
+    def command_resolver(self) -> CommandResolver:
+        """Return the command resolver used for validation."""
 
-        known = set(known_commands)
+        return self._command_resolver
+
+    def set_command_resolver(self, command_resolver: CommandResolver) -> None:
+        """Replace the command resolver used for reference validation."""
+
+        self._command_resolver = command_resolver
+
+    def validate_command_refs(self, chain: Dict[str, Any]) -> List[str]:
+        """Ensure each step references a command that can be resolved."""
+
+        references = self._command_resolver.extract_command_refs(chain)
+        missing = self._command_resolver.validate_references(references)
         errors: List[str] = []
         for index, step in enumerate(chain.get("steps", [])):
             command_ref = step.get("command_ref")
             if not command_ref:
                 errors.append(f"steps/{index}: missing required command_ref")
                 continue
-            if command_ref not in known:
+            if command_ref in missing:
                 label = step.get("id") or step.get("name") or f"index {index}"
                 errors.append(
-                    f"steps/{index}: command_ref '{command_ref}' referenced by step '{label}' not found in known commands"
+                    f"steps/{index}: {missing[command_ref]} (referenced by step '{label}')"
                 )
         return errors
 

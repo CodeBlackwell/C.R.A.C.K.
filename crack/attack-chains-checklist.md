@@ -45,14 +45,14 @@
 
 ## Phase 4: Command Reference Integration
 
-- [ ] Create `CommandResolver` class
-  - [ ] Add `resolve_command_ref(ref_id)` method
-  - [ ] Implement batch validation of command references
-  - [ ] Add error reporting for missing commands
-  - [ ] Create method to extract all command_refs from a chain
-- [ ] Update ChainValidator to use CommandResolver
-- [ ] Add command existence validation to chain loading process
-- [ ] Create unit tests for command resolution
+- [x] Create `CommandResolver` class
+  - [x] Add `resolve_command_ref(ref_id)` method
+  - [x] Implement batch validation of command references
+  - [x] Add error reporting for missing commands
+  - [x] Create method to extract all command_refs from a chain
+- [x] Update ChainValidator to use CommandResolver
+- [x] Add command existence validation to chain loading process
+- [x] Create unit tests for command resolution
 
 ## Phase 5: Data Models
 

@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 from typing import Any, Dict, Iterable, Optional
 
+from .command_resolver import CommandResolver
 from .validator import ChainValidator
 
 
@@ -16,9 +17,16 @@ class ChainLoader:
         self,
         validator: Optional[ChainValidator] = None,
         *,
+        command_resolver: Optional[CommandResolver] = None,
         encoding: str = "utf-8",
     ) -> None:
-        self._validator = validator or ChainValidator()
+        if validator is None:
+            resolver = command_resolver or CommandResolver()
+            self._validator = ChainValidator(command_resolver=resolver)
+        else:
+            self._validator = validator
+            if command_resolver is not None:
+                self._validator.set_command_resolver(command_resolver)
         self._encoding = encoding
 
     def load_chain(self, filepath: Path) -> Dict[str, Any]:
@@ -66,6 +74,11 @@ class ChainLoader:
         if circular_errors:
             formatted = "\n".join(circular_errors)
             raise ValueError(f"Dependency validation failed for {path}:\n{formatted}")
+
+        command_errors = self._validator.validate_command_refs(chain)
+        if command_errors:
+            formatted = "\n".join(command_errors)
+            raise ValueError(f"Command validation failed for {path}:\n{formatted}")
 
         return chain
 
