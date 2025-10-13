@@ -1,5 +1,5 @@
 {
-  "id": "linux-privesc-capabilities",
+  "id": "linux-privesc-capabilities-enum",
   "name": "Linux Capabilities Privilege Escalation",
   "description": "Enumerate and exploit Linux file capabilities to escalate privileges. Capabilities are a modern alternative to SUID binaries that grant specific elevated permissions. Dangerous capabilities like cap_setuid, cap_dac_override, and cap_dac_read_search enable privilege escalation through various exploitation techniques.",
   "version": "1.0.0",
@@ -35,16 +35,7 @@
     "Linux kernel 2.6.24+ with capabilities support",
     "Target system with binaries that have capabilities set"
   ],
-  "notes": [
-    "Capabilities are less common than SUID but critical to check during enumeration",
-    "Network capabilities (cap_net_raw, cap_net_admin) are non-exploitable for privilege escalation",
-    "cap_setuid provides instant root shell similar to SUID but cleaner",
-    "cap_dac_override allows read/write to any file (edit /etc/passwd for UID 0)",
-    "cap_dac_read_search allows reading sensitive files (shadow, SSH keys)",
-    "Always check GTFOBins capabilities section for exploitation techniques",
-    "Multiple capabilities on single binary may provide multiple exploitation paths",
-    "Capabilities persist after file execution unlike SUID"
-  ],
+  "notes": "Capabilities are less common than SUID but critical to check during enumeration. Network capabilities (cap_net_raw, cap_net_admin) are non-exploitable for privilege escalation. cap_setuid provides instant root shell similar to SUID but cleaner. cap_dac_override allows read/write to any file (edit /etc/passwd for UID 0). cap_dac_read_search allows reading sensitive files (shadow, SSH keys). Always check GTFOBins capabilities section for exploitation techniques. Multiple capabilities on single binary may provide multiple exploitation paths. Capabilities persist after file execution unlike SUID.",
   "steps": [
     {
       "id": "enumerate-capabilities",

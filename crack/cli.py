@@ -118,6 +118,13 @@ def session_command(args):
     cli = UnifiedSessionCLI()
     cli.run(args)
 
+def visualize_command(args):
+    """Execute attack chain visualization"""
+    from crack.visualize.cli import VisualizerCLI
+
+    cli = VisualizerCLI()
+    return cli.run(args)
+
 def config_command(args):
     """Execute configuration management"""
     from crack.config import ConfigManager
@@ -370,7 +377,8 @@ def main():
   └─ session         Reverse shell session management (TCP/HTTP/DNS)
 
 {Colors.YELLOW}▶ Reference System{Colors.END}
-  └─ reference       Command lookup with 70+ OSCP commands
+  ├─ reference       Command lookup with 70+ OSCP commands
+  └─ visualize       Attack chain graph visualization
 
 {Colors.YELLOW}▶ Configuration Management{Colors.END}
   └─ config          Shared variable management (77 variables, 8 categories)
@@ -553,6 +561,12 @@ def main():
                                          help='Configuration Management - Variable management',
                                          add_help=False)
     config_parser.set_defaults(func=config_command)
+
+    # Attack Chain Visualizer subcommand
+    visualize_parser = subparsers.add_parser('visualize',
+                                            help='Attack Chain Visualizer - Dynamic graph visualization',
+                                            add_help=False)
+    visualize_parser.set_defaults(func=visualize_command)
 
     # Parse known args to allow passing through tool-specific args
     args, remaining = parser.parse_known_args()

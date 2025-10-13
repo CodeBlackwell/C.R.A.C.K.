@@ -1,5 +1,5 @@
 {
-  "id": "linux-privesc-sudo",
+  "id": "linux-privesc-sudo-nopasswd",
   "name": "Sudo Privilege Escalation (Quick Win)",
   "description": "Rapid privilege escalation via sudo misconfigurations - NOPASSWD entries and GTFOBins-exploitable commands",
   "version": "1.0.0",
