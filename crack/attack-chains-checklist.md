@@ -26,22 +26,22 @@
 
 ## Phase 3: Core Classes Implementation
 
-- [ ] Implement `ChainLoader` class in `loader.py`
-  - [ ] Add `load_chain(filepath)` method
-  - [ ] Add `load_all_chains()` method
-  - [ ] Implement JSON deserialization with error handling
-  - [ ] Add schema validation on load
-- [ ] Implement `ChainValidator` class in `validator.py`
-  - [ ] Create `validate_schema(chain_dict)` method
-  - [ ] Add `validate_command_refs(chain_dict)` method
-  - [ ] Implement `check_circular_dependencies()` method
-  - [ ] Add detailed error message formatting
-- [ ] Implement `ChainRegistry` class in `registry.py`
-  - [ ] Create singleton pattern for registry
-  - [ ] Add `register_chain(chain)` method
-  - [ ] Implement `get_chain(id)` method
-  - [ ] Add `filter_chains(criteria)` method
-  - [ ] Implement caching mechanism
+- [x] Implement `ChainLoader` class in `loader.py`
+  - [x] Add `load_chain(filepath)` method
+  - [x] Add `load_all_chains()` method
+  - [x] Implement JSON deserialization with error handling
+  - [x] Add schema validation on load
+- [x] Implement `ChainValidator` class in `validator.py`
+  - [x] Create `validate_schema(chain_dict)` method
+  - [x] Add `validate_command_refs(chain_dict)` method
+  - [x] Implement `check_circular_dependencies()` method
+  - [x] Add detailed error message formatting
+- [x] Implement `ChainRegistry` class in `registry.py`
+  - [x] Create singleton pattern for registry
+  - [x] Add `register_chain(chain)` method
+  - [x] Implement `get_chain(id)` method
+  - [x] Add `filter_chains(criteria)` method
+  - [x] Implement caching mechanism
 
 ## Phase 4: Command Reference Integration
 
