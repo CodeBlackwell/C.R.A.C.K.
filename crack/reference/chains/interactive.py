@@ -753,7 +753,15 @@ class ChainInteractive:
         inherited_vars = self.session.variables.copy()
         inherited_vars.update(activation.variables)
 
-        # Record activation
+        # Record activation in session history
+        self.session.add_activation(
+            from_chain=self.chain_id,
+            to_chain=activation.chain_id,
+            reason=activation.reason
+        )
+        self.session.save()  # Persist immediately
+
+        # Record activation in manager (runtime tracking)
         self.activation_manager.record_activation(self.chain_id, activation.chain_id)
         self.activation_manager.push_activation(activation.chain_id)
 
@@ -806,3 +814,26 @@ class ChainInteractive:
 
         print(f"{self.theme.hint('Press any key to continue...')}")
         self._read_single_key()
+
+    def _show_activation_history(self):
+        """Display activation history for debugging/reporting"""
+        if not self.session.activation_history:
+            print(f"{self.theme.muted('No activation history')}")
+            return
+
+        print(f"\n{self.theme.primary('═' * 70)}")
+        print(f"{self.theme.primary('Activation History')}")
+        print(f"{self.theme.primary('═' * 70)}\n")
+
+        activation_path = self.session.get_activation_chain()
+        print(f"Current Path: {self.theme.command_name(' → '.join(activation_path))}\n")
+
+        for i, activation in enumerate(self.session.activation_history, 1):
+            timestamp = activation['timestamp'].split('T')[1].split('.')[0]  # HH:MM:SS
+            print(f"{self.theme.muted(f'[{timestamp}]')} "
+                  f"{self.theme.primary(activation['from_chain'])} → "
+                  f"{self.theme.command_name(activation['to_chain'])}")
+            if activation.get('reason'):
+                print(f"  {self.theme.hint(activation['reason'])}")
+
+        print()
