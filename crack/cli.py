@@ -84,13 +84,13 @@ def scan_analyze_command(args):
 
 def reference_command(args):
     """Execute the reference system"""
-    from crack.reference import cli as ref_cli
+    from crack.reference.cli import main as ref_main
     # Pass arguments to the reference CLI
     # Add --no-banner by default unless --banner is explicitly requested
     if '--banner' not in args:
         args = ['--no-banner'] + args
     sys.argv = ['crack-reference'] + args
-    ref_cli.main()
+    ref_main()
 
 def track_command(args):
     """Execute CRACK Track - enumeration tracking and task management"""

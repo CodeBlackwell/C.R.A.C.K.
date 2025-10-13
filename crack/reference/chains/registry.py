@@ -28,8 +28,12 @@ class ChainRegistry:
         return cls._instance
 
     def __init__(self) -> None:
-        if hasattr(self, "_initialised") and self._initialised:  # pragma: no cover - defensive guard
-            return
+        # Only skip if both flag AND dicts exist (prevents empty registry bug)
+        if hasattr(self, "_initialised") and self._initialised:
+            if hasattr(self, "_chains") and hasattr(self, "_filter_cache"):
+                return  # Already initialized with data structures
+
+        # Initialize (or re-initialize if missing)
         self._chains: Dict[str, Dict[str, Any]] = {}
         self._filter_cache: Dict[_CacheKey, Tuple[str, ...]] = {}
         self._initialised = True

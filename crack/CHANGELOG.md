@@ -2,6 +2,112 @@
 
 ## [Unreleased]
 
+### Changed - Attack Chains UX Unification (2025-10-13)
+
+#### Unified Chains with Commands UX
+**Files Modified:**
+- `reference/cli/main.py` (Lines 150-157, 203-243, 298-314, 409)
+- `reference/cli/chains.py` (Lines 49-83, 418)
+- `reference/chains/registry.py` (Lines 30-39)
+
+**Problem:**
+Attack chains used inconsistent 3-word subcommand syntax (`crack reference chains list`) while regular commands used 2-word syntax (`crack reference web`). This created UX friction and violated the principle of least surprise.
+
+**Solution:**
+Removed subparser architecture and unified chains under `--chains` flag for consistency with regular commands.
+
+**Before (Inconsistent):**
+```bash
+crack reference web                    # Commands: 2 words
+crack reference chains list            # Chains: 3 words (broken)
+crack reference chains show <id>       # Chains: 3 words (broken)
+```
+
+**After (Consistent):**
+```bash
+crack reference web                    # Commands: 2 words
+crack reference --chains               # Chains: 2 words + flag
+crack reference --chains <id>          # Chains: 2 words + flag
+```
+
+**Implementation Changes:**
+
+1. **CLI Argument Parser (main.py:150-157)**
+   - Changed `--chain` to `--chains` for clarity
+   - Updated help text with usage examples
+   - Single flag handles all chain operations
+
+2. **Removed Subcommand Architecture (main.py:203-243)**
+   - Deleted entire subparser block (~40 lines)
+   - Eliminated `chains list`, `chains show`, `chains validate` subcommands
+   - Simplified routing logic (main.py:298-314)
+   - Removed `_handle_chains()` method (main.py:409)
+
+3. **Unified Handler (chains.py:49-83)**
+   - Created `list_or_show(query=None)` method
+   - Logic: No query → list all, chain ID → show details, keyword → search
+   - Reuses existing `list()`, `show()`, `search()` methods
+   - Intelligent dispatch based on query type
+
+4. **Registry Bug Fix (registry.py:30-39)**
+   - Fixed singleton initialization bug causing empty registry
+   - Added check for both `_initialised` flag AND `_chains` dict existence
+   - Prevents early return when data structures are missing
+   - Resolves "no chains found" issue
+
+**New Usage:**
+```bash
+# List all chains (4 total)
+crack reference --chains
+
+# Search by keyword
+crack reference --chains sqli          # 2 SQLi chains
+crack reference --chains privilege     # 3 privilege escalation chains
+
+# Show specific chain
+crack reference --chains linux-privesc-suid-basic
+
+# Format options
+crack reference --chains --format json
+crack reference --chains <id> --format json
+```
+
+**Test Results:**
+- ✅ `crack reference --chains` lists 4 chains
+- ✅ `crack reference --chains sqli` finds 2 SQLi chains
+- ✅ `crack reference --chains linux-privesc-suid-basic` shows full details
+- ✅ JSON format works for all operations
+- ✅ Behavior matches `crack reference web` (commands)
+- ✅ Registry loads chains correctly (bug fixed)
+
+**UX Consistency Achieved:**
+Both commands and chains now use identical patterns:
+- **List all:** `crack reference <category>` or `crack reference --chains`
+- **Search:** `crack reference <query>` or `crack reference --chains <query>`
+- **Show:** `crack reference <id>` or `crack reference --chains <id>`
+
+**Breaking Changes:**
+Old subcommand syntax no longer works:
+- ❌ `crack reference chains list`
+- ❌ `crack reference chains show <id>`
+- ❌ `crack reference chains validate`
+
+New unified syntax:
+- ✅ `crack reference --chains` (list all)
+- ✅ `crack reference --chains <id>` (show specific)
+- ✅ Validation can be added as `--validate-chains` flag if needed
+
+**Benefits:**
+- **Reduced Cognitive Load:** One pattern for both features
+- **Faster Workflow:** 2 words instead of 3 for common operations
+- **Consistency:** Matches established command reference UX
+- **Reliability:** Fixed empty registry bug affecting chain display
+- **Predictability:** Users learn once, apply everywhere
+
+**Time to Implement:** ~50 minutes
+
+---
+
 ### Added - Command ID Direct Lookup & Interactive Mode
 **Files Modified:** `reference/cli.py`
 
