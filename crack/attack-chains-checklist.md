@@ -56,13 +56,13 @@
 
 ## Phase 5: Data Models
 
-- [ ] Create `models/attack_chain.py` with Chain dataclass
-- [ ] Define `models/chain_step.py` with Step dataclass
-- [ ] Add `models/chain_metadata.py` for metadata structure
-- [ ] Implement `from_dict()` and `to_dict()` methods for serialization
-- [ ] Add validation methods to model classes
-- [ ] Create type hints for all model attributes
-- [ ] Document model relationships and constraints
+- [x] Create `models/attack_chain.py` with Chain dataclass
+- [x] Define `models/chain_step.py` with Step dataclass
+- [x] Add `models/chain_metadata.py` for metadata structure
+- [x] Implement `from_dict()` and `to_dict()` methods for serialization
+- [x] Add validation methods to model classes
+- [x] Create type hints for all model attributes
+- [x] Document model relationships and constraints
 
 ## Phase 6: CLI Integration
 
