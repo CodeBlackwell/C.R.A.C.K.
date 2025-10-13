@@ -11,6 +11,34 @@ from typing import Dict, Any, List, Optional
 
 
 @dataclass
+class ChainActivation:
+    """
+    Chain activation metadata from parser.
+
+    Represents a parser's suggestion to activate a related attack chain
+    based on findings in command output. Used for cross-chain linking.
+
+    Attributes:
+        chain_id: Target chain identifier (must exist in ChainRegistry)
+        reason: Human-readable explanation for why this chain is recommended
+        confidence: Confidence level (high|medium|low) for activation suggestion
+        variables: Pre-populated variables to inherit in activated chain
+
+    Example:
+        ChainActivation(
+            chain_id="linux-privesc-sudo",
+            reason="Found 3 GTFOBins-exploitable sudo entries",
+            confidence="high",
+            variables={"<BINARY>": "vim"}
+        )
+    """
+    chain_id: str
+    reason: str
+    confidence: str = "high"  # high|medium|low
+    variables: Dict[str, str] = field(default_factory=dict)
+
+
+@dataclass
 class ParsingResult:
     """Standardized output from all parsers"""
 
@@ -28,6 +56,9 @@ class ParsingResult:
     success: bool = True
     warnings: List[str] = field(default_factory=list)
 
+    # Cross-chain activation (NEW - backward compatible)
+    activates_chains: List[ChainActivation] = field(default_factory=list)
+
     def has_selections(self) -> bool:
         """Check if user selection is required"""
         return bool(self.selection_required)
@@ -35,6 +66,10 @@ class ParsingResult:
     def get_all_variables(self) -> Dict[str, str]:
         """Get all resolved variables (excludes selections)"""
         return self.variables.copy()
+
+    def has_activations(self) -> bool:
+        """Check if parser suggests activating related chains"""
+        return bool(self.activates_chains)
 
 
 class BaseOutputParser(ABC):
