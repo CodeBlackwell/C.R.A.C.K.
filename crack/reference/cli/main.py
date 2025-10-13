@@ -153,13 +153,19 @@ class ReferenceCLI:
             nargs='?',
             const=True,
             metavar='QUERY',
-            help='List/search/show attack chains: --chains (list all), --chains QUERY (search/show)'
+            help='List/search/show attack chains: --chains (list all), --chains QUERY (search/show), --chains CHAIN_ID -i (interactive)'
         )
 
         parser.add_argument(
             '--oscp-relevant',
             action='store_true',
             help='Filter OSCP-relevant items (works with --chain)'
+        )
+
+        parser.add_argument(
+            '--resume',
+            action='store_true',
+            help='Resume chain from saved session (use with --chains -i)'
         )
 
         # Config management
@@ -307,11 +313,36 @@ class ReferenceCLI:
                 query = ' '.join(args.args)
             # else: --chains with no args (list all chains)
 
-            return self.chains_cli.list_or_show(
-                query=query,
-                format=args.format,
-                verbose=args.verbose
-            )
+            # Check if interactive mode requested
+            if args.interactive:
+                # Interactive chain execution
+                if not query:
+                    print(self.theme.error("Specify chain ID for interactive mode: crack reference --chains CHAIN_ID -i"))
+                    return 1
+
+                # Ensure chains are loaded
+                self.chains_cli._ensure_loaded()
+
+                # Try to get chain by ID
+                chain = self.chains_cli.registry.get_chain(query)
+                if not chain:
+                    print(self.theme.error(f"Chain not found: {query}"))
+                    print(self.theme.hint("Use 'crack reference --chains' to list available chains"))
+                    return 1
+
+                # Launch interactive execution
+                return self.chains_cli.execute_interactive(
+                    chain_id=chain['id'],
+                    target=None,  # Will prompt
+                    resume=args.resume if hasattr(args, 'resume') else False
+                )
+            else:
+                # Standard list/show behavior
+                return self.chains_cli.list_or_show(
+                    query=query,
+                    format=args.format,
+                    verbose=args.verbose
+                )
 
         # Handle interactive mode - if -i with no search criteria, open REPL
         if args.interactive and not (args.args or args.category or args.tags):

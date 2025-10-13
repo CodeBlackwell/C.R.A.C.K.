@@ -330,6 +330,34 @@ class ChainsCLI(BaseCLIHandler):
 
         print(f"\n{self.theme.hint(f'Total: {len(chains)} chain(s)')}")
 
+    def execute_interactive(self, chain_id: str, target: Optional[str] = None, resume: bool = False) -> int:
+        """Launch interactive chain execution
+
+        Args:
+            chain_id: Unique chain identifier
+            target: Target IP/hostname (prompts if None)
+            resume: Resume from saved session
+
+        Returns:
+            Exit code (0 for success)
+        """
+        try:
+            from crack.reference.chains.interactive import ChainInteractive
+
+            executor = ChainInteractive(chain_id, target, resume)
+            executor.run()
+            return 0
+
+        except ValueError as e:
+            print(self.format_error(str(e)))
+            return 1
+        except KeyboardInterrupt:
+            print(f"\n{self.theme.warning('Interrupted by user')}")
+            return 1
+        except Exception as e:
+            print(self.format_error(f"Interactive execution failed: {str(e)}"))
+            return 1
+
     def _format_chain_details_text(self, chain: Dict[str, Any]):
         """Format chain details in text format
 
@@ -415,5 +443,6 @@ class ChainsCLI(BaseCLIHandler):
 
         # Footer
         self.print_separator()
+        print(self.theme.hint(f"Use 'crack reference --chains {chain.get('id', 'CHAIN_ID')} -i' for interactive execution"))
         print(self.theme.hint(f"Use 'crack reference --chains {chain.get('id', 'CHAIN_ID')} --format json' for machine-readable output"))
         print()
