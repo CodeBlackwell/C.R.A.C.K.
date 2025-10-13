@@ -8,6 +8,9 @@ MVP implementation:
 """
 
 import subprocess
+import sys
+import tty
+import termios
 from typing import Any, Dict, Optional
 
 from .registry import ChainRegistry
@@ -67,8 +70,11 @@ class ChainInteractive:
                 print(self.theme.warning(
                     f"Existing session found for {chain_id} on {target}"
                 ))
-                resume_confirm = input("Resume from saved progress? (y/N): ").strip().lower()
-                if resume_confirm == 'y':
+                print(self.theme.prompt("Resume from saved progress? (y/N): "), end='', flush=True)
+                resume_key = self._read_single_key()
+                print(resume_key)  # Echo key
+
+                if resume_key == 'y':
                     self.session = ChainSession.load(chain_id, target)
                     print(self.theme.success(
                         f"Resuming from step {self.session.current_step_index + 1}"
@@ -384,8 +390,43 @@ class ChainInteractive:
         """Move to next step"""
         self.session.advance_step()
 
+    def _read_single_key(self) -> str:
+        """Read single keystroke without requiring Enter
+
+        Returns:
+            Single character (lowercase)
+        """
+        if not sys.stdin.isatty():
+            # Fallback for non-TTY (pipes, redirects)
+            return input().strip().lower()
+
+        try:
+            # Save terminal settings
+            original_settings = termios.tcgetattr(sys.stdin)
+
+            try:
+                # Set raw mode (no echo, no line buffering)
+                tty.setraw(sys.stdin.fileno())
+
+                # Read single character
+                key = sys.stdin.read(1).lower()
+
+                # Handle Ctrl+C
+                if key == '\x03':
+                    raise KeyboardInterrupt
+
+                return key
+
+            finally:
+                # Always restore terminal settings
+                termios.tcsetattr(sys.stdin, termios.TCSADRAIN, original_settings)
+
+        except Exception:
+            # Fallback on any error
+            return input().strip().lower()
+
     def _confirm(self, message: str, default: str = 'y') -> bool:
-        """Get user confirmation
+        """Get user confirmation with single keystroke
 
         Args:
             message: Prompt message
@@ -395,9 +436,15 @@ class ChainInteractive:
             True if confirmed
         """
         prompt_suffix = " (Y/n): " if default == 'y' else " (y/N): "
-        response = input(self.theme.prompt(message + prompt_suffix)).strip().lower()
+        print(self.theme.prompt(message + prompt_suffix), end='', flush=True)
 
-        if not response:
+        key = self._read_single_key()
+
+        # Echo the key for user feedback
+        print(key)
+
+        # Empty key (just Enter) = use default
+        if key in ['\r', '\n', '']:
             return default == 'y'
 
-        return response in ['y', 'yes']
+        return key == 'y'

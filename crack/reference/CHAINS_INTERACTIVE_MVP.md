@@ -22,6 +22,7 @@ crack reference --chains linux-privesc-suid-basic -i --resume
 - Shows current step number (e.g., "Step 2 of 8")
 - Displays objective and description for each step
 - Resolves command references to actual commands
+- Single-keystroke confirmations (no Enter key required)
 
 ### ✅ Variable Filling
 - Interactive prompts for command placeholders
@@ -90,7 +91,7 @@ Filling command variables...
 Final command:
   find / -perm -4000 -type f 2>/dev/null
 
-Run this command? (Y/n): y
+Run this command? (Y/n): y    ← Just press 'y' (no Enter needed)
 
 Executing...
 
@@ -106,7 +107,7 @@ Success Indicators:
   • At least 10-20 binaries found on typical system
   • Output excludes permission denied errors
 
-Mark complete and continue? (Y/n): y
+Mark complete and continue? (Y/n): y    ← Single keystroke
 
 Progress saved.
 
@@ -119,7 +120,7 @@ Step 2 of 5: Filter SUID Binaries
 
 # Step 3: Pause mid-chain
 
-Mark complete and continue? (Y/n): n
+Mark complete and continue? (Y/n): n    ← Single keystroke
 
 Paused. Run with --resume to continue from this step.
 
@@ -192,7 +193,7 @@ linux-exploit-cred-reuse           # Credential Reuse Attack Chain
 ### ❌ Advanced Features
 - No output viewer overlay (`o` shortcut)
 - No alternative commands viewer (`:alt`)
-- No keyboard shortcuts (just y/n prompts)
+- Limited keyboard shortcuts (single-key y/n confirmations only)
 - No progress bars (simple "Step X of Y" text)
 
 ## Testing

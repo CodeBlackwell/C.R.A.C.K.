@@ -60,6 +60,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Empty target input now defaults to `.` (local system) instead of error
 - Command references now display resolved commands before variable filling
 - Import path corrected for `ConfigManager` (from `crack.config` not `crack.reference.core.config`)
+- Single-keystroke confirmations (Y/n prompts no longer require Enter key)
 
 ## Usage Examples
 
