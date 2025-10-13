@@ -39,6 +39,17 @@ class VariableExtractor:
         # Vulnerability findings
         'vulnerabilities': '<TARGET_VULN>',
         'cves': '<TARGET_CVE>',
+        # Docker findings
+        'running_containers': '<CONTAINER_NAME>',
+        'available_images': '<IMAGE_NAME>',
+        'docker_socket_path': '<DOCKER_SOCKET>',
+        # Capabilities findings
+        'exploitable_capabilities': '<CAP_BINARY>',
+        'capabilities': '<CAPABILITY>',
+        # Sudo findings
+        'nopasswd_commands': '<NOPASSWD_COMMANDS>',
+        'gtfobins_binaries': '<SUDO_BINARY>',
+        'env_keep_flags': '<ENV_KEEP_FLAGS>',
     }
 
     @classmethod

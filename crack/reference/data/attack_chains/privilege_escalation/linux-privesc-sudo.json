@@ -1,0 +1,167 @@
+{
+  "id": "linux-privesc-sudo",
+  "name": "Sudo Privilege Escalation (Quick Win)",
+  "description": "Rapid privilege escalation via sudo misconfigurations - NOPASSWD entries and GTFOBins-exploitable commands",
+  "version": "1.0.0",
+  "metadata": {
+    "author": "CRACK Development Team",
+    "created": "2025-10-13",
+    "updated": "2025-10-13",
+    "tags": [
+      "OSCP",
+      "LINUX",
+      "PRIVILEGE_ESCALATION",
+      "SUDO",
+      "GTFOBINS",
+      "QUICK_WIN",
+      "NOPASSWD"
+    ],
+    "category": "privilege_escalation",
+    "platform": "linux",
+    "references": [
+      "https://gtfobins.github.io/",
+      "https://book.hacktricks.xyz/linux-unix/privilege-escalation#sudo",
+      "https://github.com/swisskyrepo/PayloadsAllTheThings/blob/master/Methodology%20and%20Resources/Linux%20-%20Privilege%20Escalation.md#sudo"
+    ]
+  },
+  "difficulty": "beginner",
+  "time_estimate": "5 minutes",
+  "oscp_relevant": true,
+  "prerequisites": [
+    "Shell access as low-privilege user (www-data, user, etc.)",
+    "Target system is Linux"
+  ],
+  "notes": "Sudo misconfigurations are the #1 quick win for Linux privilege escalation in OSCP. NOPASSWD entries allow running commands as root without password. Many binaries (find, vim, nmap, less, python) can spawn root shells when run with sudo. This chain should ALWAYS be run first before attempting SUID or other techniques.",
+  "steps": [
+    {
+      "id": "check-sudo-privs",
+      "name": "Check Sudo Privileges",
+      "objective": "Identify what commands current user can run with sudo privileges",
+      "description": "Run 'sudo -l' to list allowed commands. Look for NOPASSWD entries (no password required), GTFOBins-exploitable binaries, and dangerous env_keep settings. Parser extracts exploitable configurations automatically.",
+      "command_ref": "check-sudo-privs",
+      "evidence": [
+        "sudo -l output showing allowed commands",
+        "NOPASSWD entries (commands runnable without password)",
+        "GTFOBins-listed binaries (find, vim, nmap, python, etc.)",
+        "env_keep flags (LD_PRELOAD, LD_LIBRARY_PATH)"
+      ],
+      "success_criteria": [
+        "sudo -l executes without requiring password",
+        "At least one command listed in output",
+        "Output shows specific command paths or wildcards"
+      ],
+      "failure_conditions": [
+        "Password required for sudo -l",
+        "User not allowed to run sudo on this host",
+        "No interesting commands (only standard system tools with no exploitable options)"
+      ]
+    },
+    {
+      "id": "analyze-sudoers",
+      "name": "Analyze Sudoers Configuration",
+      "objective": "Identify exploitable sudo configurations from parser output",
+      "description": "Review parsed findings for: (1) NOPASSWD entries - no password needed, (2) GTFOBins binaries - spawn shells or read files, (3) Wildcards - command injection opportunities, (4) env_keep=LD_PRELOAD - shared library injection. Parser auto-identifies exploitable binaries from GTFOBins database.",
+      "command_ref": "analyze-sudoers",
+      "dependencies": [
+        "check-sudo-privs"
+      ],
+      "evidence": [
+        "List of NOPASSWD commands",
+        "GTFOBins-exploitable binaries identified",
+        "Dangerous environment variable settings",
+        "Wildcard usage in command paths"
+      ],
+      "success_criteria": [
+        "At least one exploitable configuration found",
+        "Binary matches GTFOBins database entry",
+        "Clear exploitation path identified"
+      ],
+      "failure_conditions": [
+        "All commands require password",
+        "No GTFOBins-exploitable binaries",
+        "Strict sudoers configuration with no misconfigurations"
+      ]
+    },
+    {
+      "id": "research-technique",
+      "name": "Research GTFOBins Exploitation Technique",
+      "objective": "Find specific sudo exploitation technique for discovered binary",
+      "description": "Visit https://gtfobins.github.io/ and search for the binary name. Navigate to 'Sudo' section for exploitation commands. Copy exact syntax including flags. Common techniques: (1) Shell spawning (find, vim, less), (2) File reading (base64, xxd), (3) Command execution (python, perl, awk).",
+      "command_ref": "gtfobins-sudo-lookup",
+      "dependencies": [
+        "analyze-sudoers"
+      ],
+      "evidence": [
+        "GTFOBins page for binary loaded",
+        "Sudo section present with exploitation technique",
+        "Command syntax documented with examples"
+      ],
+      "success_criteria": [
+        "Binary has GTFOBins entry with Sudo section",
+        "Exploitation technique clearly documented",
+        "Command syntax is testable and complete"
+      ],
+      "failure_conditions": [
+        "Binary not listed on GTFOBins",
+        "No Sudo section for binary (only SUID/Capabilities)",
+        "Technique requires additional prerequisites not present"
+      ]
+    },
+    {
+      "id": "exploit-sudo",
+      "name": "Execute Sudo Exploitation",
+      "objective": "Run sudo command with GTFOBins technique to escalate privileges",
+      "description": "Execute exploitation command exactly as documented. For shell spawning: sudo <binary> <flags>. For file reading: sudo <binary> /etc/shadow. For command execution: sudo <binary> -c 'import os; os.system(\"/bin/bash\")'. Verify root shell spawned with correct privileges.",
+      "command_ref": "execute-sudo-exploit",
+      "dependencies": [
+        "research-technique"
+      ],
+      "evidence": [
+        "Command executes without errors",
+        "Shell prompt changes to root indicator (#)",
+        "Elevated privileges confirmed via whoami/id"
+      ],
+      "success_criteria": [
+        "Root shell spawned (bash-5.0# or similar prompt)",
+        "whoami returns 'root'",
+        "id shows uid=0(root) gid=0(root)"
+      ],
+      "failure_conditions": [
+        "Permission denied error",
+        "Command not found (wrong path)",
+        "Shell spawns but not privileged (wrong flags)",
+        "sudo requires password (NOPASSWD not set)"
+      ],
+      "next_steps": [
+        "verify-root"
+      ]
+    },
+    {
+      "id": "verify-root",
+      "name": "Verify Root Access",
+      "objective": "Confirm effective UID is 0 and full root privileges obtained",
+      "description": "Run whoami, id, and attempt to read /etc/shadow to confirm root access. Check both real UID and effective UID. Verify filesystem access to root-only files. Test ability to read sensitive files and access /root directory.",
+      "command_ref": "verify-root-access",
+      "dependencies": [
+        "exploit-sudo"
+      ],
+      "evidence": [
+        "whoami output: root",
+        "id output: uid=0(root) gid=0(root)",
+        "Can read /etc/shadow successfully",
+        "Can list /root/ directory contents"
+      ],
+      "success_criteria": [
+        "Effective UID is 0 (root)",
+        "Root filesystem access confirmed",
+        "Can read sensitive root-only files",
+        "Full root shell privileges obtained"
+      ],
+      "failure_conditions": [
+        "UID is not 0 (privilege escalation failed)",
+        "Cannot access root-only files",
+        "Shell is privileged but limited (restricted rbash)"
+      ]
+    }
+  ]
+}
