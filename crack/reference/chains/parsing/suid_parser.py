@@ -6,7 +6,7 @@ Extracts SUID binary paths and classifies exploitability based on GTFOBins datab
 
 import re
 from typing import Dict, Any, List
-from .base import BaseOutputParser, ParsingResult
+from .base import BaseOutputParser, ParsingResult, ChainActivation
 from .registry import ParserRegistry
 
 
@@ -326,5 +326,26 @@ class SUIDParser(BaseOutputParser):
         else:
             # User selection required (pass full dicts for display formatting)
             result.selection_required['<TARGET_BIN>'] = exploitable_binaries
+
+        # Add chain activations for exploitable binaries (limit to top 3)
+        if exploitable_binaries:
+            for binary_info in exploitable_binaries[:3]:
+                # Only activate for high-confidence matches
+                if binary_info.get('match_type') == 'exact':
+                    activation = ChainActivation(
+                        chain_id='linux-privesc-suid-exploit',
+                        reason=f"Exploitable SUID binary found: {binary_info['name']} ({binary_info['path']})",
+                        confidence='high',
+                        variables={'<TARGET_BIN>': binary_info['path']}
+                    )
+                    result.activates_chains.append(activation)
+                elif binary_info.get('match_type') == 'fuzzy':
+                    activation = ChainActivation(
+                        chain_id='linux-privesc-suid-exploit',
+                        reason=f"Potentially exploitable SUID binary: {binary_info['name']} ({binary_info['path']})",
+                        confidence='medium',
+                        variables={'<TARGET_BIN>': binary_info['path']}
+                    )
+                    result.activates_chains.append(activation)
 
         return result

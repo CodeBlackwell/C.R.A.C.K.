@@ -7,7 +7,7 @@ Identifies NOPASSWD entries, GTFOBins-exploitable binaries, and dangerous enviro
 
 import re
 from typing import Dict, Any, List, Tuple, Optional
-from .base import BaseOutputParser, ParsingResult
+from .base import BaseOutputParser, ParsingResult, ChainActivation
 from .registry import ParserRegistry
 
 
@@ -442,5 +442,22 @@ class SudoParser(BaseOutputParser):
         else:
             # User selection required (pass full dicts for display formatting)
             result.selection_required['<SUDO_BINARY>'] = gtfobins_binaries
+
+        # Activate sudo chain if NOPASSWD found
+        if nopasswd_commands:
+            # Single activation summarizing all NOPASSWD entries
+            activation = ChainActivation(
+                chain_id='linux-privesc-sudo',
+                reason=f"NOPASSWD sudo privileges found: {len(nopasswd_commands)} command(s) - {nopasswd_commands[0]}",
+                confidence='high',
+                variables={
+                    '<SUDO_COMMAND>': nopasswd_commands[0],
+                }
+            )
+            # If we have GTFOBins binary info, add it to variables
+            if gtfobins_binaries:
+                activation.variables['<SUDO_BINARY>'] = gtfobins_binaries[0]['binary']
+                activation.variables['<SUDO_USER>'] = gtfobins_binaries[0].get('run_as', 'ALL')
+            result.activates_chains.append(activation)
 
         return result
