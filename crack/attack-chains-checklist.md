@@ -2,67 +2,67 @@
 
 ## Phase 1: Schema Definition and Structure
 
-- [ ] Create `crack/reference/schemas/` directory for schema definitions
-- [ ] Define `attack_chain.schema.json` with minimal required fields (id, name, description, steps)
-- [ ] Establish ID naming convention pattern: `{platform}-{category}-{technique}-{variant}`
-- [ ] Add version field with semantic versioning (start with 1.0.0)
-- [ ] Define metadata object with required fields (author, created, updated, tags, category)
-- [ ] Add difficulty rating enum (beginner, intermediate, advanced, expert)
-- [ ] Include time_estimate and oscp_relevant boolean fields
-- [ ] Define step structure with command_ref as required field
-- [ ] Create JSON Schema validation rules for all field types
-- [ ] Document schema in `crack/reference/schemas/README.md`
+- [x] Create `crack/reference/schemas/` directory for schema definitions
+- [x] Define `attack_chain.schema.json` with minimal required fields (id, name, description, steps)
+- [x] Establish ID naming convention pattern: `{platform}-{category}-{technique}-{variant}`
+- [x] Add version field with semantic versioning (start with 1.0.0)
+- [x] Define metadata object with required fields (author, created, updated, tags, category)
+- [x] Add difficulty rating enum (beginner, intermediate, advanced, expert)
+- [x] Include time_estimate and oscp_relevant boolean fields
+- [x] Define step structure with command_ref as required field
+- [x] Create JSON Schema validation rules for all field types
+- [x] Document schema in `crack/reference/schemas/README.md`
 
 ## Phase 2: Directory Structure Setup
 
-- [ ] Create `crack/reference/data/attack_chains/` base directory
-- [ ] Create category subdirectories (enumeration, privilege_escalation, lateral_movement, persistence)
-- [ ] Add `metadata.json` manifest file at attack_chains root
-- [ ] Create `crack/reference/chains/` module directory
-- [ ] Add `__init__.py` with module exports
-- [ ] Create empty `loader.py`, `validator.py`, `registry.py` files
-- [ ] Set up `crack/reference/data/chain_templates/` for reusable patterns
-- [ ] Update `.gitignore` to exclude compiled/cached chain files
+- [x] Create `crack/reference/data/attack_chains/` base directory
+- [x] Create category subdirectories (enumeration, privilege_escalation, lateral_movement, persistence)
+- [x] Add `metadata.json` manifest file at attack_chains root
+- [x] Create `crack/reference/chains/` module directory
+- [x] Add `__init__.py` with module exports
+- [x] Create empty `loader.py`, `validator.py`, `registry.py` files
+- [x] Set up `crack/reference/data/chain_templates/` for reusable patterns
+- [x] Update `.gitignore` to exclude compiled/cached chain files
 
 ## Phase 3: Core Classes Implementation
 
-- [ ] Implement `ChainLoader` class in `loader.py`
-  - [ ] Add `load_chain(filepath)` method
-  - [ ] Add `load_all_chains()` method
-  - [ ] Implement JSON deserialization with error handling
-  - [ ] Add schema validation on load
-- [ ] Implement `ChainValidator` class in `validator.py`
-  - [ ] Create `validate_schema(chain_dict)` method
-  - [ ] Add `validate_command_refs(chain_dict)` method
-  - [ ] Implement `check_circular_dependencies()` method
-  - [ ] Add detailed error message formatting
-- [ ] Implement `ChainRegistry` class in `registry.py`
-  - [ ] Create singleton pattern for registry
-  - [ ] Add `register_chain(chain)` method
-  - [ ] Implement `get_chain(id)` method
-  - [ ] Add `filter_chains(criteria)` method
-  - [ ] Implement caching mechanism
+- [x] Implement `ChainLoader` class in `loader.py`
+  - [x] Add `load_chain(filepath)` method
+  - [x] Add `load_all_chains()` method
+  - [x] Implement JSON deserialization with error handling
+  - [x] Add schema validation on load
+- [x] Implement `ChainValidator` class in `validator.py`
+  - [x] Create `validate_schema(chain_dict)` method
+  - [x] Add `validate_command_refs(chain_dict)` method
+  - [x] Implement `check_circular_dependencies()` method
+  - [x] Add detailed error message formatting
+- [x] Implement `ChainRegistry` class in `registry.py`
+  - [x] Create singleton pattern for registry
+  - [x] Add `register_chain(chain)` method
+  - [x] Implement `get_chain(id)` method
+  - [x] Add `filter_chains(criteria)` method
+  - [x] Implement caching mechanism
 
 ## Phase 4: Command Reference Integration
 
-- [ ] Create `CommandResolver` class
-  - [ ] Add `resolve_command_ref(ref_id)` method
-  - [ ] Implement batch validation of command references
-  - [ ] Add error reporting for missing commands
-  - [ ] Create method to extract all command_refs from a chain
-- [ ] Update ChainValidator to use CommandResolver
-- [ ] Add command existence validation to chain loading process
-- [ ] Create unit tests for command resolution
+- [x] Create `CommandResolver` class
+  - [x] Add `resolve_command_ref(ref_id)` method
+  - [x] Implement batch validation of command references
+  - [x] Add error reporting for missing commands
+  - [x] Create method to extract all command_refs from a chain
+- [x] Update ChainValidator to use CommandResolver
+- [x] Add command existence validation to chain loading process
+- [x] Create unit tests for command resolution
 
 ## Phase 5: Data Models
 
-- [ ] Create `models/attack_chain.py` with Chain dataclass
-- [ ] Define `models/chain_step.py` with Step dataclass
-- [ ] Add `models/chain_metadata.py` for metadata structure
-- [ ] Implement `from_dict()` and `to_dict()` methods for serialization
-- [ ] Add validation methods to model classes
-- [ ] Create type hints for all model attributes
-- [ ] Document model relationships and constraints
+- [x] Create `models/attack_chain.py` with Chain dataclass
+- [x] Define `models/chain_step.py` with Step dataclass
+- [x] Add `models/chain_metadata.py` for metadata structure
+- [x] Implement `from_dict()` and `to_dict()` methods for serialization
+- [x] Add validation methods to model classes
+- [x] Create type hints for all model attributes
+- [x] Document model relationships and constraints
 
 ## Phase 6: CLI Integration
 
