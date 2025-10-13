@@ -192,5 +192,101 @@ class TestSUIDParser:
         assert '/bin/vi' in paths
 
 
+class TestSUIDParserActivations:
+    """Test SUID parser chain activation logic (Phase 2)"""
+
+    def test_no_exploitable_no_activation(self):
+        """PROVES: No exploitable binaries → no activations"""
+        parser = SUIDParser()
+        result = parser.parse(SUID_OUTPUT_NO_EXPLOIT, {}, 'find / -perm -4000')
+
+        assert len(result.activates_chains) == 0
+        assert not result.has_activations()
+
+    def test_single_exact_match_activation(self):
+        """PROVES: Single exact match → single high-confidence activation"""
+        parser = SUIDParser()
+        result = parser.parse(SUID_OUTPUT_SINGLE_EXPLOIT, {}, 'find / -perm -4000')
+
+        assert len(result.activates_chains) == 1
+        assert result.has_activations()
+
+        activation = result.activates_chains[0]
+        assert activation.chain_id == 'linux-privesc-suid-exploit'
+        assert activation.confidence == 'high'
+        assert '<TARGET_BIN>' in activation.variables
+        assert activation.variables['<TARGET_BIN>'] == '/usr/bin/find'
+        assert 'Exploitable SUID binary found' in activation.reason
+        assert 'find' in activation.reason
+
+    def test_multiple_exact_matches_max_3_activations(self):
+        """PROVES: Multiple exact matches → max 3 activations"""
+        parser = SUIDParser()
+        result = parser.parse(SUID_OUTPUT_SAMPLE, {}, 'find / -perm -4000')
+
+        # Should have 3 exploitable binaries (find, vim, base64), all exact matches
+        assert result.findings['exploitable_count'] == 3
+        assert len(result.activates_chains) == 3  # Limited to 3
+
+        # Verify all activations
+        for activation in result.activates_chains:
+            assert activation.chain_id == 'linux-privesc-suid-exploit'
+            assert activation.confidence == 'high'  # All exact matches
+            assert '<TARGET_BIN>' in activation.variables
+            assert activation.variables['<TARGET_BIN>'].startswith('/usr/bin/')
+
+    def test_fuzzy_match_medium_confidence(self):
+        """PROVES: Fuzzy match → medium-confidence activation"""
+        parser = SUIDParser()
+
+        # Create output with fuzzy match binary (vim.basic → vim)
+        fuzzy_output = """/usr/bin/passwd
+/usr/bin/vim.basic
+"""
+        result = parser.parse(fuzzy_output, {}, 'find / -perm -4000')
+
+        assert len(result.activates_chains) == 1
+        activation = result.activates_chains[0]
+
+        assert activation.confidence == 'medium'
+        assert 'Potentially exploitable' in activation.reason
+        assert '<TARGET_BIN>' in activation.variables
+        assert activation.variables['<TARGET_BIN>'] == '/usr/bin/vim.basic'
+
+    def test_activation_variables_populated(self):
+        """PROVES: Variables correctly populated in activation"""
+        parser = SUIDParser()
+        result = parser.parse(SUID_OUTPUT_SINGLE_EXPLOIT, {}, 'find / -perm -4000')
+
+        activation = result.activates_chains[0]
+
+        assert '<TARGET_BIN>' in activation.variables
+        assert activation.variables['<TARGET_BIN>'] == '/usr/bin/find'
+
+    def test_activation_chain_id_correct(self):
+        """PROVES: Chain ID is correct"""
+        parser = SUIDParser()
+        result = parser.parse(SUID_OUTPUT_SINGLE_EXPLOIT, {}, 'find / -perm -4000')
+
+        activation = result.activates_chains[0]
+        assert activation.chain_id == 'linux-privesc-suid-exploit'
+
+    def test_existing_parser_behavior_unchanged(self):
+        """PROVES: Existing parser behavior unchanged (backward compat)"""
+        parser = SUIDParser()
+        result = parser.parse(SUID_OUTPUT_SAMPLE, {}, 'find / -perm -4000')
+
+        # Original behavior: findings extraction
+        assert 'all_binaries' in result.findings
+        assert 'exploitable_binaries' in result.findings
+        assert 'standard_binaries' in result.findings
+
+        # Original behavior: variable auto-selection (multiple, so selection required)
+        assert '<TARGET_BIN>' in result.selection_required
+
+        # New behavior: activations added without breaking old logic
+        assert len(result.activates_chains) > 0
+
+
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])

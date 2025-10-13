@@ -35,6 +35,10 @@ class ChainSession:
         self.started = datetime.now().isoformat()
         self.updated = self.started
 
+        # Cross-chain linking (v2.0)
+        self.activation_history: List[Dict[str, Any]] = []  # Track chain activations
+        self.format_version: str = "2.0"  # Enable format migration
+
     def mark_step_complete(self, step_id: str, output: Optional[str] = None):
         """Mark step as complete and store output
 
@@ -106,6 +110,43 @@ class ChainSession:
         """
         return self.step_variables.get(step_id, {})
 
+    def add_activation(self, from_chain: str, to_chain: str, reason: str = ""):
+        """Record chain activation event
+
+        Args:
+            from_chain: Source chain identifier
+            to_chain: Target chain identifier
+            reason: Explanation for activation (optional)
+        """
+        self.activation_history.append({
+            'from_chain': from_chain,
+            'to_chain': to_chain,
+            'timestamp': datetime.now().isoformat(),
+            'reason': reason
+        })
+        self.updated = datetime.now().isoformat()
+
+    def get_activation_chain(self) -> List[str]:
+        """Get full activation path for debugging/reporting
+
+        Returns:
+            Ordered list of chain IDs showing activation path
+
+        Example:
+            >>> session = ChainSession("chain-a", "192.168.1.1")
+            >>> session.add_activation("chain-a", "chain-b", "SUID found")
+            >>> session.add_activation("chain-b", "chain-c", "Sudo access")
+            >>> session.get_activation_chain()
+            ['chain-a', 'chain-b', 'chain-c']
+        """
+        if not self.activation_history:
+            return [self.chain_id]
+
+        path = [self.chain_id]
+        for activation in self.activation_history:
+            path.append(activation['to_chain'])
+        return path
+
     def save(self):
         """Save session to ~/.crack/chain_sessions/{chain_id}-{target}.json"""
         session_dir = Path.home() / '.crack' / 'chain_sessions'
@@ -125,7 +166,9 @@ class ChainSession:
             'step_findings': self.step_findings,
             'step_variables': self.step_variables,
             'started': self.started,
-            'updated': self.updated
+            'updated': self.updated,
+            'activation_history': self.activation_history,
+            'format_version': self.format_version
         }
 
         with open(session_file, 'w') as f:
@@ -153,6 +196,11 @@ class ChainSession:
             with open(session_file, 'r') as f:
                 data = json.load(f)
 
+            # Detect format version and migrate if needed
+            version = data.get('format_version', '1.0')
+            if version == '1.0':
+                data = cls._migrate_v1_to_v2(data)
+
             # Reconstruct session from data
             session = cls(data['chain_id'], data['target'])
             session.current_step_index = data.get('current_step_index', 0)
@@ -164,11 +212,30 @@ class ChainSession:
             session.started = data.get('started', session.started)
             session.updated = data.get('updated', session.updated)
 
+            # Load v2.0 fields
+            session.activation_history = data.get('activation_history', [])
+            session.format_version = data.get('format_version', '2.0')
+
             return session
 
         except (json.JSONDecodeError, KeyError) as e:
             # Corrupted session file - return None to start fresh
             return None
+
+    @staticmethod
+    def _migrate_v1_to_v2(data: Dict[str, Any]) -> Dict[str, Any]:
+        """Migrate v1.0 session format to v2.0
+
+        Args:
+            data: Session data dict (v1.0 format)
+
+        Returns:
+            Migrated data dict (v2.0 format)
+        """
+        # Add missing v2.0 fields with defaults
+        data['activation_history'] = []
+        data['format_version'] = '2.0'
+        return data
 
     @classmethod
     def exists(cls, chain_id: str, target: str) -> bool:

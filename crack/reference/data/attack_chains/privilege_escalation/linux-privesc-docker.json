@@ -1,5 +1,5 @@
 {
-  "id": "linux-privesc-docker",
+  "id": "linux-privesc-docker-mount",
   "name": "Docker Group Privilege Escalation",
   "description": "Exploit Docker group membership to escalate privileges from low-privilege user to root via container filesystem mounting",
   "version": "1.0.0",

@@ -11,9 +11,13 @@ import subprocess
 import sys
 import tty
 import termios
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, List, TYPE_CHECKING
 
 from pathlib import Path
+
+if TYPE_CHECKING:
+    from .parsing.base import ChainActivation
+    from .activation_manager import ActivationManager
 from .registry import ChainRegistry
 from .loader import ChainLoader
 from .command_resolver import CommandResolver
@@ -29,14 +33,21 @@ from crack.reference.core.colors import ReferenceTheme
 class ChainInteractive:
     """Main interactive loop for chain execution"""
 
-    def __init__(self, chain_id: str, target: Optional[str] = None, resume: bool = False):
+    def __init__(self, chain_id: str, target: Optional[str] = None, resume: bool = False,
+                 parent_vars: Optional[Dict[str, str]] = None,
+                 activation_manager: Optional['ActivationManager'] = None):
         """Initialize interactive chain executor
 
         Args:
             chain_id: Unique chain identifier
             target: Target IP/hostname (prompts if None)
             resume: Resume from saved session
+            parent_vars: Variables inherited from parent chain (for child chains)
+            activation_manager: Shared activation manager (for circular prevention)
         """
+        # Import activation manager
+        from .activation_manager import ActivationManager
+
         self.theme = ReferenceTheme()
         self.chain_registry = ChainRegistry()
         self.chain_loader = ChainLoader()
@@ -46,6 +57,13 @@ class ChainInteractive:
             config_manager=self.config_manager,
             theme=self.theme
         )
+
+        # Store chain_id for child chain launching
+        self.chain_id = chain_id
+
+        # Store parent variables and activation manager
+        self.parent_vars = parent_vars or {}
+        self.activation_manager = activation_manager or ActivationManager()
 
         # Load chains from data directory
         self._ensure_chains_loaded()
@@ -96,6 +114,11 @@ class ChainInteractive:
 
         # Add target to session variables (auto-fill for commands)
         self.session.variables['<TARGET>'] = target
+
+        # Merge parent variables into session (after session initialization)
+        if self.parent_vars:
+            print(self.theme.hint(f"Inherited {len(self.parent_vars)} variable(s) from parent chain"))
+            self.session.variables.update(self.parent_vars)
 
         # Initialize new parsing/variable systems
         self.var_context = VariableContext(self.session, self.config_manager)
@@ -204,6 +227,10 @@ class ChainInteractive:
 
                 # Store parse result for verification
                 self._last_parse_result = parse_result
+
+                # NEW: Check for chain activations
+                if parse_result and parse_result.get('activates_chains'):
+                    self._handle_chain_activations(parse_result['activates_chains'])
             else:
                 print("Skipped execution.")
                 self._last_parse_result = None
@@ -644,3 +671,169 @@ class ChainInteractive:
             return default == 'y'
 
         return key == 'y'
+
+    def _handle_chain_activations(self, activations: List['ChainActivation']):
+        """Handle chain activation opportunities
+
+        Args:
+            activations: List of ChainActivation objects from parser
+        """
+        if not activations:
+            return
+
+        print(f"\n{self.theme.primary('═' * 70)}")
+        print(f"{self.theme.primary('Chain Activation Opportunities Detected')}")
+        print(f"{self.theme.primary('═' * 70)}\n")
+
+        # Show top 3 activations
+        for i, activation in enumerate(activations[:3], 1):
+            confidence_color = {
+                'high': self.theme.success,
+                'medium': self.theme.warning,
+                'low': self.theme.muted
+            }.get(activation.confidence, self.theme.muted)
+
+            print(f"  {self.theme.primary(f'[{i}]')} {self.theme.command_name(activation.chain_id)}")
+            print(f"      {activation.reason}")
+            print(f"      Confidence: {confidence_color(activation.confidence.upper())}")
+            if activation.variables:
+                vars_str = ", ".join(f"{k}={v}" for k, v in list(activation.variables.items())[:2])
+                print(f"      Variables: {self.theme.hint(vars_str)}")
+            print()
+
+        # Prompt user
+        print(f"{self.theme.prompt('Options:')}")
+        print(f"  [1-{min(len(activations), 3)}] Switch to specific chain")
+        print(f"  [c] Continue current chain")
+        print(f"  [i] Show more info")
+        print()
+
+        print(self.theme.prompt("Select option: "), end='', flush=True)
+        choice = self._read_single_key()
+        print(choice)  # Echo key
+
+        if choice in ['1', '2', '3']:
+            idx = int(choice) - 1
+            if idx < len(activations):
+                activation = activations[idx]
+                # Check circular prevention
+                can_activate, reason = self.activation_manager.can_activate(
+                    self.chain_id, activation.chain_id
+                )
+                if not can_activate:
+                    print(f"\n{self.theme.error(f'✗ Cannot activate: {reason}')}")
+                    return
+
+                # Save current session
+                self.session.save()
+                print(f"\n{self.theme.hint('Current session saved')}")
+
+                # Launch child chain
+                self._launch_child_chain(activation)
+
+        elif choice == 'i':
+            # Show detailed info
+            self._show_activation_details(activations)
+            # Recursive call to show menu again
+            self._handle_chain_activations(activations)
+
+        # 'c' or any other key continues current chain
+
+    def _launch_child_chain(self, activation: 'ChainActivation'):
+        """Launch child chain with inherited context
+
+        Args:
+            activation: ChainActivation object with chain_id and variables
+        """
+        print(f"\n{self.theme.primary('═' * 70)}")
+        print(f"{self.theme.primary(f'Launching Chain: {activation.chain_id}')}")
+        print(f"{self.theme.primary('═' * 70)}\n")
+
+        # Build inherited variables
+        inherited_vars = self.session.variables.copy()
+        inherited_vars.update(activation.variables)
+
+        # Record activation in session history
+        self.session.add_activation(
+            from_chain=self.chain_id,
+            to_chain=activation.chain_id,
+            reason=activation.reason
+        )
+        self.session.save()  # Persist immediately
+
+        # Record activation in manager (runtime tracking)
+        self.activation_manager.record_activation(self.chain_id, activation.chain_id)
+        self.activation_manager.push_activation(activation.chain_id)
+
+        try:
+            # Create child chain instance
+            child = ChainInteractive(
+                chain_id=activation.chain_id,
+                target=self.target,
+                parent_vars=inherited_vars,
+                activation_manager=self.activation_manager
+            )
+
+            # Run child chain
+            child.run()
+
+        except KeyboardInterrupt:
+            print(f"\n{self.theme.warning('Child chain interrupted by user')}")
+        except Exception as e:
+            print(f"\n{self.theme.error(f'Error in child chain: {e}')}")
+        finally:
+            # Pop activation stack
+            self.activation_manager.pop_activation()
+
+            # Reload parent session
+            self.session = ChainSession.load(self.chain_id, self.target)
+
+            print(f"\n{self.theme.primary('═' * 70)}")
+            print(f"{self.theme.success('Returned to Parent Chain')}")
+            print(f"{self.theme.primary('═' * 70)}\n")
+
+    def _show_activation_details(self, activations: List['ChainActivation']):
+        """Show detailed information about activations
+
+        Args:
+            activations: List of ChainActivation objects
+        """
+        print(f"\n{self.theme.primary('═' * 70)}")
+        print(f"{self.theme.primary('Activation Details')}")
+        print(f"{self.theme.primary('═' * 70)}\n")
+
+        for i, activation in enumerate(activations, 1):
+            print(f"{self.theme.command_name(f'[{i}] {activation.chain_id}')}")
+            print(f"    Reason: {activation.reason}")
+            print(f"    Confidence: {activation.confidence}")
+            if activation.variables:
+                print(f"    Variables:")
+                for key, value in activation.variables.items():
+                    print(f"      {key} = {value}")
+            print()
+
+        print(f"{self.theme.hint('Press any key to continue...')}")
+        self._read_single_key()
+
+    def _show_activation_history(self):
+        """Display activation history for debugging/reporting"""
+        if not self.session.activation_history:
+            print(f"{self.theme.muted('No activation history')}")
+            return
+
+        print(f"\n{self.theme.primary('═' * 70)}")
+        print(f"{self.theme.primary('Activation History')}")
+        print(f"{self.theme.primary('═' * 70)}\n")
+
+        activation_path = self.session.get_activation_chain()
+        print(f"Current Path: {self.theme.command_name(' → '.join(activation_path))}\n")
+
+        for i, activation in enumerate(self.session.activation_history, 1):
+            timestamp = activation['timestamp'].split('T')[1].split('.')[0]  # HH:MM:SS
+            print(f"{self.theme.muted(f'[{timestamp}]')} "
+                  f"{self.theme.primary(activation['from_chain'])} → "
+                  f"{self.theme.command_name(activation['to_chain'])}")
+            if activation.get('reason'):
+                print(f"  {self.theme.hint(activation['reason'])}")
+
+        print()

@@ -343,5 +343,126 @@ class TestSudoParser:
         assert result.findings['env_keep_count'] == len(result.findings['env_keep_flags'])
 
 
+class TestSudoParserActivations:
+    """Test Sudo parser chain activation logic (Phase 2)"""
+
+    def test_no_nopasswd_no_activation(self):
+        """PROVES: No NOPASSWD entries → no activation"""
+        parser = SudoParser()
+        result = parser.parse(SUDO_OUTPUT_PASSWORD_REQUIRED, {}, 'sudo -l')
+
+        assert len(result.activates_chains) == 0
+        assert not result.has_activations()
+
+    def test_single_nopasswd_activation(self):
+        """PROVES: Single NOPASSWD → activation with variables"""
+        parser = SudoParser()
+        result = parser.parse(SUDO_OUTPUT_SINGLE, {}, 'sudo -l')
+
+        assert len(result.activates_chains) == 1
+        assert result.has_activations()
+
+        activation = result.activates_chains[0]
+        assert activation.chain_id == 'linux-privesc-sudo'
+        assert activation.confidence == 'high'
+        assert '<SUDO_COMMAND>' in activation.variables
+        assert activation.variables['<SUDO_COMMAND>'] == '/usr/bin/find'
+        assert '<SUDO_BINARY>' in activation.variables
+        assert activation.variables['<SUDO_BINARY>'] == 'find'
+        assert 'NOPASSWD sudo privileges found' in activation.reason
+
+    def test_multiple_nopasswd_single_activation(self):
+        """PROVES: Multiple NOPASSWD → single activation (first command used)"""
+        parser = SudoParser()
+        result = parser.parse(SUDO_OUTPUT_MULTIPLE, {}, 'sudo -l')
+
+        # Multiple NOPASSWD commands
+        assert result.findings['nopasswd_count'] == 2
+
+        # But only single activation (aggregated)
+        assert len(result.activates_chains) == 1
+
+        activation = result.activates_chains[0]
+        assert '2 command(s)' in activation.reason
+        assert activation.variables['<SUDO_COMMAND>'] == '/usr/bin/find'  # First command
+
+    def test_password_required_no_activation(self):
+        """PROVES: Password-required sudo → no activation"""
+        parser = SudoParser()
+        result = parser.parse(SUDO_OUTPUT_PASSWORD_REQUIRED, {}, 'sudo -l')
+
+        # Commands exist but require password
+        assert result.findings['nopasswd_count'] == 0
+        assert len(result.activates_chains) == 0
+
+    def test_activation_includes_command_and_user(self):
+        """PROVES: Variables include command and user"""
+        parser = SudoParser()
+        result = parser.parse(SUDO_OUTPUT_SINGLE, {}, 'sudo -l')
+
+        activation = result.activates_chains[0]
+
+        assert '<SUDO_COMMAND>' in activation.variables
+        assert '<SUDO_BINARY>' in activation.variables
+        assert '<SUDO_USER>' in activation.variables
+        assert activation.variables['<SUDO_USER>'] == 'ALL'
+
+    def test_activation_chain_id_correct(self):
+        """PROVES: Chain ID is correct"""
+        parser = SudoParser()
+        result = parser.parse(SUDO_OUTPUT_SINGLE, {}, 'sudo -l')
+
+        activation = result.activates_chains[0]
+        assert activation.chain_id == 'linux-privesc-sudo'
+
+    def test_confidence_high_for_nopasswd(self):
+        """PROVES: Confidence is high for NOPASSWD"""
+        parser = SudoParser()
+        result = parser.parse(SUDO_OUTPUT_SINGLE, {}, 'sudo -l')
+
+        activation = result.activates_chains[0]
+        assert activation.confidence == 'high'
+
+    def test_existing_parser_behavior_unchanged(self):
+        """PROVES: Existing parser behavior unchanged (backward compat)"""
+        parser = SudoParser()
+        result = parser.parse(SUDO_OUTPUT_MULTIPLE, {}, 'sudo -l')
+
+        # Original behavior: findings extraction
+        assert 'nopasswd_commands' in result.findings
+        assert 'gtfobins_binaries' in result.findings
+        assert 'all_commands' in result.findings
+
+        # Original behavior: variable selection
+        assert '<SUDO_BINARY>' in result.selection_required
+
+        # New behavior: activations added without breaking old logic
+        assert len(result.activates_chains) == 1
+
+    def test_nopasswd_no_gtfobins_still_activates(self):
+        """PROVES: NOPASSWD without GTFOBins still activates (commands exist)"""
+        parser = SudoParser()
+        result = parser.parse(SUDO_OUTPUT_NO_GTFO, {}, 'sudo -l')
+
+        # No GTFOBins binaries
+        assert result.findings['gtfobins_count'] == 0
+
+        # But NOPASSWD commands exist, so activation should happen
+        if result.findings['nopasswd_count'] > 0:
+            assert len(result.activates_chains) == 1
+            activation = result.activates_chains[0]
+            assert '<SUDO_COMMAND>' in activation.variables
+
+    def test_all_wildcard_activates(self):
+        """PROVES: NOPASSWD ALL activates chain"""
+        parser = SudoParser()
+        result = parser.parse(SUDO_OUTPUT_ALL, {}, 'sudo -l')
+
+        # NOPASSWD ALL should activate
+        assert len(result.activates_chains) == 1
+        activation = result.activates_chains[0]
+        assert activation.variables['<SUDO_COMMAND>'] == 'ALL'
+
+
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])
