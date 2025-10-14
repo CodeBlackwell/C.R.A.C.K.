@@ -1,0 +1,1066 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Attack Chain Commands (7 chains)</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            overflow: hidden;
+        }
+
+        svg {
+            width: 100vw;
+            height: 100vh;
+            background: #fafafa;
+        }
+
+        /* Header */
+        .header {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            max-width: 400px;
+            z-index: 1000;
+        }
+
+        .header h1 {
+            margin: 0 0 5px 0;
+            font-size: 18px;
+            color: #2c3e50;
+        }
+
+        .header p {
+            margin: 0;
+            font-size: 12px;
+            color: #7f8c8d;
+        }
+
+        /* Legend */
+        .legend {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            z-index: 1000;
+        }
+
+        .legend-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin: 5px 0;
+            font-size: 12px;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            margin-right: 8px;
+            border: 2px solid #fff;
+        }
+
+        .legend-line {
+            width: 30px;
+            height: 2px;
+            margin-right: 8px;
+        }
+
+        /* Graph elements */
+        .node {
+            stroke: #fff;
+            stroke-width: 2px;
+            cursor: default;
+        }
+
+        .node.oscp {
+            stroke: #2ecc71;
+            stroke-width: 3px;
+        }
+
+        .node.shared {
+            fill: #f39c12;
+        }
+
+        .link {
+            stroke: #95a5a6;
+            stroke-opacity: 0.6;
+            fill: none;
+        }
+
+        .link.activation {
+            stroke: #e67e22;
+            stroke-dasharray: 5,5;
+            stroke-width: 2px;
+        }
+
+        .link.triggers {
+            stroke: #9b59b6;
+            stroke-dasharray: 3,3;
+        }
+
+        .node-label {
+            font-size: 11px;
+            fill: #2c3e50;
+            text-anchor: middle;
+            pointer-events: none;
+            font-weight: 500;
+        }
+
+        .chain-label {
+            font-size: 9px;
+            fill: #7f8c8d;
+            text-anchor: middle;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Attack Chain Commands (7 chains)</h1>
+        <p>Command-level view of multiple chains with dependencies</p>
+    </div>
+
+    <div class="legend">
+        <div class="legend-title">Legend</div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: #3498db;"></div>
+            <span>Normal Chain/Step</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: #2ecc71; border-color: #2ecc71;"></div>
+            <span>OSCP Relevant</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: #f39c12;"></div>
+            <span>Shared Command</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-line" style="background: #95a5a6;"></div>
+            <span>Dependency</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-line" style="background: #e67e22; height: 2px; background-image: repeating-linear-gradient(to right, #e67e22 0, #e67e22 5px, transparent 5px, transparent 10px);"></div>
+            <span>Activation</span>
+        </div>
+    </div>
+
+    <svg></svg>
+
+    <script>
+        // Graph data
+        const nodes = [
+  {
+    "id": "web-sqli-postgres-fileretrieve:detect-sqli",
+    "label": "Detect SQL Injection Vulner...",
+    "chain": "web",
+    "oscp": true,
+    "shared": true,
+    "type": "step"
+  },
+  {
+    "id": "web-sqli-postgres-fileretrieve:enum-columns",
+    "label": "Enumerate Column Count",
+    "chain": "web",
+    "oscp": true,
+    "shared": true,
+    "type": "step"
+  },
+  {
+    "id": "web-sqli-postgres-fileretrieve:test-union",
+    "label": "Test UNION SELECT Injection",
+    "chain": "web",
+    "oscp": true,
+    "shared": true,
+    "type": "step"
+  },
+  {
+    "id": "web-sqli-postgres-fileretrieve:extract-db-info",
+    "label": "Extract PostgreSQL Database...",
+    "chain": "web",
+    "oscp": true,
+    "shared": true,
+    "type": "step"
+  },
+  {
+    "id": "web-sqli-postgres-fileretrieve:extract-credentials",
+    "label": "Extract Database Credential...",
+    "chain": "web",
+    "oscp": true,
+    "shared": true,
+    "type": "step"
+  },
+  {
+    "id": "web-sqli-postgres-fileretrieve:connect-postgres",
+    "label": "Establish Direct PostgreSQL...",
+    "chain": "web",
+    "oscp": true,
+    "shared": false,
+    "type": "step"
+  },
+  {
+    "id": "web-sqli-postgres-fileretrieve:verify-privileges",
+    "label": "Verify Superuser Privileges",
+    "chain": "web",
+    "oscp": true,
+    "shared": false,
+    "type": "step"
+  },
+  {
+    "id": "web-sqli-postgres-fileretrieve:enum-filesystem",
+    "label": "Enumerate Filesystem for Se...",
+    "chain": "web",
+    "oscp": true,
+    "shared": false,
+    "type": "step"
+  },
+  {
+    "id": "web-sqli-postgres-fileretrieve:retrieve-file",
+    "label": "Retrieve Sensitive File Con...",
+    "chain": "web",
+    "oscp": true,
+    "shared": false,
+    "type": "step"
+  },
+  {
+    "id": "web-exploit-sqli-union:detect-sqli",
+    "label": "Detect SQL Injection Vulner...",
+    "chain": "web",
+    "oscp": true,
+    "shared": true,
+    "type": "step"
+  },
+  {
+    "id": "web-exploit-sqli-union:enum-columns",
+    "label": "Enumerate Column Count",
+    "chain": "web",
+    "oscp": true,
+    "shared": true,
+    "type": "step"
+  },
+  {
+    "id": "web-exploit-sqli-union:test-union",
+    "label": "Test UNION SELECT Injection",
+    "chain": "web",
+    "oscp": true,
+    "shared": true,
+    "type": "step"
+  },
+  {
+    "id": "web-exploit-sqli-union:identify-database",
+    "label": "Identify Database Type and ...",
+    "chain": "web",
+    "oscp": true,
+    "shared": true,
+    "type": "step"
+  },
+  {
+    "id": "web-exploit-sqli-union:enum-mysql-tables",
+    "label": "Enumerate MySQL Tables",
+    "chain": "web",
+    "oscp": true,
+    "shared": false,
+    "type": "step"
+  },
+  {
+    "id": "web-exploit-sqli-union:enum-postgres-tables",
+    "label": "Enumerate PostgreSQL Tables",
+    "chain": "web",
+    "oscp": true,
+    "shared": true,
+    "type": "step"
+  },
+  {
+    "id": "web-exploit-sqli-union:enum-mssql-tables",
+    "label": "Enumerate MSSQL Tables",
+    "chain": "web",
+    "oscp": true,
+    "shared": false,
+    "type": "step"
+  },
+  {
+    "id": "web-exploit-sqli-union:extract-mysql-data",
+    "label": "Extract MySQL Credentials",
+    "chain": "web",
+    "oscp": true,
+    "shared": false,
+    "type": "step"
+  },
+  {
+    "id": "web-exploit-sqli-union:extract-postgres-data",
+    "label": "Extract PostgreSQL Credentials",
+    "chain": "web",
+    "oscp": true,
+    "shared": true,
+    "type": "step"
+  },
+  {
+    "id": "web-exploit-sqli-union:extract-mssql-data",
+    "label": "Extract MSSQL Credentials",
+    "chain": "web",
+    "oscp": true,
+    "shared": false,
+    "type": "step"
+  },
+  {
+    "id": "linux-privesc-suid-basic:quick-wins-check",
+    "label": "Quick Wins Check (Sudo Priv...",
+    "chain": "linux",
+    "oscp": true,
+    "shared": true,
+    "type": "step"
+  },
+  {
+    "id": "linux-privesc-suid-basic:find-suid",
+    "label": "Enumerate SUID Binaries",
+    "chain": "linux",
+    "oscp": true,
+    "shared": false,
+    "type": "step"
+  },
+  {
+    "id": "linux-privesc-suid-basic:filter-interesting",
+    "label": "Identify Exploitable SUID B...",
+    "chain": "linux",
+    "oscp": true,
+    "shared": false,
+    "type": "step"
+  },
+  {
+    "id": "linux-privesc-suid-basic:check-gtfobins",
+    "label": "Lookup GTFOBins Exploitatio...",
+    "chain": "linux",
+    "oscp": true,
+    "shared": false,
+    "type": "step"
+  },
+  {
+    "id": "linux-privesc-suid-basic:exploit-suid",
+    "label": "Execute SUID Exploitation",
+    "chain": "linux",
+    "oscp": true,
+    "shared": false,
+    "type": "step"
+  },
+  {
+    "id": "linux-privesc-suid-basic:verify-root",
+    "label": "Verify Root Access",
+    "chain": "linux",
+    "oscp": true,
+    "shared": true,
+    "type": "step"
+  },
+  {
+    "id": "linux-privesc-capabilities-enum:enumerate-capabilities",
+    "label": "Enumerate File Capabilities",
+    "chain": "linux",
+    "oscp": true,
+    "shared": false,
+    "type": "step"
+  },
+  {
+    "id": "linux-privesc-capabilities-enum:identify-exploitable",
+    "label": "Identify Exploitable Capabi...",
+    "chain": "linux",
+    "oscp": true,
+    "shared": false,
+    "type": "step"
+  },
+  {
+    "id": "linux-privesc-capabilities-enum:research-technique",
+    "label": "Research Exploitation Techn...",
+    "chain": "linux",
+    "oscp": true,
+    "shared": false,
+    "type": "step"
+  },
+  {
+    "id": "linux-privesc-capabilities-enum:exploit-capability",
+    "label": "Execute Capability Exploita...",
+    "chain": "linux",
+    "oscp": true,
+    "shared": false,
+    "type": "step"
+  },
+  {
+    "id": "linux-privesc-capabilities-enum:verify-access",
+    "label": "Verify Elevated Access",
+    "chain": "linux",
+    "oscp": true,
+    "shared": false,
+    "type": "step"
+  },
+  {
+    "id": "linux-privesc-sudo-nopasswd:check-sudo-privs",
+    "label": "Check Sudo Privileges",
+    "chain": "linux",
+    "oscp": true,
+    "shared": true,
+    "type": "step"
+  },
+  {
+    "id": "linux-privesc-sudo-nopasswd:analyze-sudoers",
+    "label": "Analyze Sudoers Configuration",
+    "chain": "linux",
+    "oscp": true,
+    "shared": false,
+    "type": "step"
+  },
+  {
+    "id": "linux-privesc-sudo-nopasswd:research-technique",
+    "label": "Research GTFOBins Exploitat...",
+    "chain": "linux",
+    "oscp": true,
+    "shared": false,
+    "type": "step"
+  },
+  {
+    "id": "linux-privesc-sudo-nopasswd:exploit-sudo",
+    "label": "Execute Sudo Exploitation",
+    "chain": "linux",
+    "oscp": true,
+    "shared": false,
+    "type": "step"
+  },
+  {
+    "id": "linux-privesc-sudo-nopasswd:verify-root",
+    "label": "Verify Root Access",
+    "chain": "linux",
+    "oscp": true,
+    "shared": true,
+    "type": "step"
+  },
+  {
+    "id": "linux-privesc-docker-mount:verify-docker-group",
+    "label": "Verify Docker Group Membership",
+    "chain": "linux",
+    "oscp": true,
+    "shared": false,
+    "type": "step"
+  },
+  {
+    "id": "linux-privesc-docker-mount:check-docker-socket",
+    "label": "Check Docker Socket Access",
+    "chain": "linux",
+    "oscp": true,
+    "shared": false,
+    "type": "step"
+  },
+  {
+    "id": "linux-privesc-docker-mount:check-available-images",
+    "label": "List Available Docker Images",
+    "chain": "linux",
+    "oscp": true,
+    "shared": false,
+    "type": "step"
+  },
+  {
+    "id": "linux-privesc-docker-mount:mount-host-escape",
+    "label": "Execute Docker Mount Escape",
+    "chain": "linux",
+    "oscp": true,
+    "shared": false,
+    "type": "step"
+  },
+  {
+    "id": "linux-privesc-docker-mount:verify-root",
+    "label": "Verify Root Access to Host",
+    "chain": "linux",
+    "oscp": true,
+    "shared": false,
+    "type": "step"
+  },
+  {
+    "id": "linux-exploit-cred-reuse:discover-db-creds",
+    "label": "Discover Database Credentials",
+    "chain": "linux",
+    "oscp": true,
+    "shared": false,
+    "type": "step"
+  },
+  {
+    "id": "linux-exploit-cred-reuse:enum-system-users",
+    "label": "Enumerate System Users",
+    "chain": "linux",
+    "oscp": true,
+    "shared": false,
+    "type": "step"
+  },
+  {
+    "id": "linux-exploit-cred-reuse:test-ssh-creds",
+    "label": "Test Credentials on SSH",
+    "chain": "linux",
+    "oscp": true,
+    "shared": false,
+    "type": "step"
+  },
+  {
+    "id": "linux-exploit-cred-reuse:access-mysql",
+    "label": "Access MySQL Database",
+    "chain": "linux",
+    "oscp": true,
+    "shared": false,
+    "type": "step"
+  },
+  {
+    "id": "linux-exploit-cred-reuse:access-postgres",
+    "label": "Access PostgreSQL Database",
+    "chain": "linux",
+    "oscp": true,
+    "shared": false,
+    "type": "step"
+  },
+  {
+    "id": "linux-exploit-cred-reuse:escalate-web-admin",
+    "label": "Escalate to Web Admin",
+    "chain": "linux",
+    "oscp": true,
+    "shared": false,
+    "type": "step"
+  }
+];
+        const links = [
+  {
+    "source": "web-sqli-postgres-fileretrieve:detect-sqli",
+    "target": "web-sqli-postgres-fileretrieve:enum-columns",
+    "type": "dependency",
+    "label": "requires"
+  },
+  {
+    "source": "web-sqli-postgres-fileretrieve:enum-columns",
+    "target": "web-sqli-postgres-fileretrieve:test-union",
+    "type": "dependency",
+    "label": "requires"
+  },
+  {
+    "source": "web-sqli-postgres-fileretrieve:test-union",
+    "target": "web-sqli-postgres-fileretrieve:extract-db-info",
+    "type": "dependency",
+    "label": "requires"
+  },
+  {
+    "source": "web-sqli-postgres-fileretrieve:extract-db-info",
+    "target": "web-sqli-postgres-fileretrieve:extract-credentials",
+    "type": "dependency",
+    "label": "requires"
+  },
+  {
+    "source": "web-sqli-postgres-fileretrieve:extract-credentials",
+    "target": "web-sqli-postgres-fileretrieve:connect-postgres",
+    "type": "success",
+    "label": "on success"
+  },
+  {
+    "source": "web-sqli-postgres-fileretrieve:extract-credentials",
+    "target": "web-sqli-postgres-fileretrieve:connect-postgres",
+    "type": "dependency",
+    "label": "requires"
+  },
+  {
+    "source": "web-sqli-postgres-fileretrieve:connect-postgres",
+    "target": "web-sqli-postgres-fileretrieve:verify-privileges",
+    "type": "success",
+    "label": "on success"
+  },
+  {
+    "source": "web-sqli-postgres-fileretrieve:connect-postgres",
+    "target": "web-sqli-postgres-fileretrieve:enum-filesystem",
+    "type": "success",
+    "label": "on success"
+  },
+  {
+    "source": "web-sqli-postgres-fileretrieve:connect-postgres",
+    "target": "web-sqli-postgres-fileretrieve:verify-privileges",
+    "type": "dependency",
+    "label": "requires"
+  },
+  {
+    "source": "web-sqli-postgres-fileretrieve:verify-privileges",
+    "target": "web-sqli-postgres-fileretrieve:enum-filesystem",
+    "type": "dependency",
+    "label": "requires"
+  },
+  {
+    "source": "web-sqli-postgres-fileretrieve:enum-filesystem",
+    "target": "web-sqli-postgres-fileretrieve:retrieve-file",
+    "type": "success",
+    "label": "on success"
+  },
+  {
+    "source": "web-sqli-postgres-fileretrieve:enum-filesystem",
+    "target": "web-sqli-postgres-fileretrieve:retrieve-file",
+    "type": "dependency",
+    "label": "requires"
+  },
+  {
+    "source": "web-exploit-sqli-union:detect-sqli",
+    "target": "web-exploit-sqli-union:enum-columns",
+    "type": "success",
+    "label": "on success"
+  },
+  {
+    "source": "web-exploit-sqli-union:detect-sqli",
+    "target": "web-exploit-sqli-union:enum-columns",
+    "type": "dependency",
+    "label": "requires"
+  },
+  {
+    "source": "web-exploit-sqli-union:enum-columns",
+    "target": "web-exploit-sqli-union:test-union",
+    "type": "success",
+    "label": "on success"
+  },
+  {
+    "source": "web-exploit-sqli-union:enum-columns",
+    "target": "web-exploit-sqli-union:test-union",
+    "type": "dependency",
+    "label": "requires"
+  },
+  {
+    "source": "web-exploit-sqli-union:test-union",
+    "target": "web-exploit-sqli-union:identify-database",
+    "type": "success",
+    "label": "on success"
+  },
+  {
+    "source": "web-exploit-sqli-union:test-union",
+    "target": "web-exploit-sqli-union:identify-database",
+    "type": "dependency",
+    "label": "requires"
+  },
+  {
+    "source": "web-exploit-sqli-union:identify-database",
+    "target": "web-exploit-sqli-union:enum-mysql-tables",
+    "type": "success",
+    "label": "on success"
+  },
+  {
+    "source": "web-exploit-sqli-union:identify-database",
+    "target": "web-exploit-sqli-union:enum-postgres-tables",
+    "type": "success",
+    "label": "on success"
+  },
+  {
+    "source": "web-exploit-sqli-union:identify-database",
+    "target": "web-exploit-sqli-union:enum-mssql-tables",
+    "type": "success",
+    "label": "on success"
+  },
+  {
+    "source": "web-exploit-sqli-union:identify-database",
+    "target": "web-exploit-sqli-union:enum-mysql-tables",
+    "type": "dependency",
+    "label": "requires"
+  },
+  {
+    "source": "web-exploit-sqli-union:enum-mysql-tables",
+    "target": "web-exploit-sqli-union:extract-mysql-data",
+    "type": "success",
+    "label": "on success"
+  },
+  {
+    "source": "web-exploit-sqli-union:identify-database",
+    "target": "web-exploit-sqli-union:enum-postgres-tables",
+    "type": "dependency",
+    "label": "requires"
+  },
+  {
+    "source": "web-exploit-sqli-union:enum-postgres-tables",
+    "target": "web-exploit-sqli-union:extract-postgres-data",
+    "type": "success",
+    "label": "on success"
+  },
+  {
+    "source": "web-exploit-sqli-union:identify-database",
+    "target": "web-exploit-sqli-union:enum-mssql-tables",
+    "type": "dependency",
+    "label": "requires"
+  },
+  {
+    "source": "web-exploit-sqli-union:enum-mssql-tables",
+    "target": "web-exploit-sqli-union:extract-mssql-data",
+    "type": "success",
+    "label": "on success"
+  },
+  {
+    "source": "web-exploit-sqli-union:enum-mysql-tables",
+    "target": "web-exploit-sqli-union:extract-mysql-data",
+    "type": "dependency",
+    "label": "requires"
+  },
+  {
+    "source": "web-exploit-sqli-union:enum-postgres-tables",
+    "target": "web-exploit-sqli-union:extract-postgres-data",
+    "type": "dependency",
+    "label": "requires"
+  },
+  {
+    "source": "web-exploit-sqli-union:enum-mssql-tables",
+    "target": "web-exploit-sqli-union:extract-mssql-data",
+    "type": "dependency",
+    "label": "requires"
+  },
+  {
+    "source": "linux-privesc-suid-basic:quick-wins-check",
+    "target": "linux-privesc-suid-basic:find-suid",
+    "type": "dependency",
+    "label": "requires"
+  },
+  {
+    "source": "linux-privesc-suid-basic:find-suid",
+    "target": "linux-privesc-suid-basic:filter-interesting",
+    "type": "dependency",
+    "label": "requires"
+  },
+  {
+    "source": "linux-privesc-suid-basic:filter-interesting",
+    "target": "linux-privesc-suid-basic:check-gtfobins",
+    "type": "dependency",
+    "label": "requires"
+  },
+  {
+    "source": "linux-privesc-suid-basic:check-gtfobins",
+    "target": "linux-privesc-suid-basic:exploit-suid",
+    "type": "dependency",
+    "label": "requires"
+  },
+  {
+    "source": "linux-privesc-suid-basic:exploit-suid",
+    "target": "linux-privesc-suid-basic:verify-root",
+    "type": "success",
+    "label": "on success"
+  },
+  {
+    "source": "linux-privesc-suid-basic:exploit-suid",
+    "target": "linux-privesc-suid-basic:verify-root",
+    "type": "dependency",
+    "label": "requires"
+  },
+  {
+    "source": "linux-privesc-capabilities-enum:enumerate-capabilities",
+    "target": "linux-privesc-capabilities-enum:identify-exploitable",
+    "type": "success",
+    "label": "on success"
+  },
+  {
+    "source": "linux-privesc-capabilities-enum:enumerate-capabilities",
+    "target": "linux-privesc-capabilities-enum:identify-exploitable",
+    "type": "dependency",
+    "label": "requires"
+  },
+  {
+    "source": "linux-privesc-capabilities-enum:identify-exploitable",
+    "target": "linux-privesc-capabilities-enum:research-technique",
+    "type": "success",
+    "label": "on success"
+  },
+  {
+    "source": "linux-privesc-capabilities-enum:identify-exploitable",
+    "target": "linux-privesc-capabilities-enum:research-technique",
+    "type": "dependency",
+    "label": "requires"
+  },
+  {
+    "source": "linux-privesc-capabilities-enum:research-technique",
+    "target": "linux-privesc-capabilities-enum:exploit-capability",
+    "type": "success",
+    "label": "on success"
+  },
+  {
+    "source": "linux-privesc-capabilities-enum:research-technique",
+    "target": "linux-privesc-capabilities-enum:exploit-capability",
+    "type": "dependency",
+    "label": "requires"
+  },
+  {
+    "source": "linux-privesc-capabilities-enum:exploit-capability",
+    "target": "linux-privesc-capabilities-enum:verify-access",
+    "type": "success",
+    "label": "on success"
+  },
+  {
+    "source": "linux-privesc-capabilities-enum:exploit-capability",
+    "target": "linux-privesc-capabilities-enum:verify-access",
+    "type": "dependency",
+    "label": "requires"
+  },
+  {
+    "source": "linux-privesc-sudo-nopasswd:check-sudo-privs",
+    "target": "linux-privesc-sudo-nopasswd:analyze-sudoers",
+    "type": "dependency",
+    "label": "requires"
+  },
+  {
+    "source": "linux-privesc-sudo-nopasswd:analyze-sudoers",
+    "target": "linux-privesc-sudo-nopasswd:research-technique",
+    "type": "dependency",
+    "label": "requires"
+  },
+  {
+    "source": "linux-privesc-sudo-nopasswd:research-technique",
+    "target": "linux-privesc-sudo-nopasswd:exploit-sudo",
+    "type": "dependency",
+    "label": "requires"
+  },
+  {
+    "source": "linux-privesc-sudo-nopasswd:exploit-sudo",
+    "target": "linux-privesc-sudo-nopasswd:verify-root",
+    "type": "success",
+    "label": "on success"
+  },
+  {
+    "source": "linux-privesc-sudo-nopasswd:exploit-sudo",
+    "target": "linux-privesc-sudo-nopasswd:verify-root",
+    "type": "dependency",
+    "label": "requires"
+  },
+  {
+    "source": "linux-privesc-docker-mount:verify-docker-group",
+    "target": "linux-privesc-docker-mount:check-docker-socket",
+    "type": "dependency",
+    "label": "requires"
+  },
+  {
+    "source": "linux-privesc-docker-mount:check-docker-socket",
+    "target": "linux-privesc-docker-mount:check-available-images",
+    "type": "dependency",
+    "label": "requires"
+  },
+  {
+    "source": "linux-privesc-docker-mount:check-available-images",
+    "target": "linux-privesc-docker-mount:mount-host-escape",
+    "type": "success",
+    "label": "on success"
+  },
+  {
+    "source": "linux-privesc-docker-mount:check-available-images",
+    "target": "linux-privesc-docker-mount:mount-host-escape",
+    "type": "dependency",
+    "label": "requires"
+  },
+  {
+    "source": "linux-privesc-docker-mount:mount-host-escape",
+    "target": "linux-privesc-docker-mount:verify-root",
+    "type": "success",
+    "label": "on success"
+  },
+  {
+    "source": "linux-privesc-docker-mount:mount-host-escape",
+    "target": "linux-privesc-docker-mount:verify-root",
+    "type": "dependency",
+    "label": "requires"
+  },
+  {
+    "source": "linux-exploit-cred-reuse:discover-db-creds",
+    "target": "linux-exploit-cred-reuse:test-ssh-creds",
+    "type": "dependency",
+    "label": "requires"
+  },
+  {
+    "source": "linux-exploit-cred-reuse:enum-system-users",
+    "target": "linux-exploit-cred-reuse:test-ssh-creds",
+    "type": "dependency",
+    "label": "requires"
+  },
+  {
+    "source": "linux-exploit-cred-reuse:discover-db-creds",
+    "target": "linux-exploit-cred-reuse:access-mysql",
+    "type": "dependency",
+    "label": "requires"
+  },
+  {
+    "source": "linux-exploit-cred-reuse:access-mysql",
+    "target": "linux-exploit-cred-reuse:escalate-web-admin",
+    "type": "success",
+    "label": "on success"
+  },
+  {
+    "source": "linux-exploit-cred-reuse:discover-db-creds",
+    "target": "linux-exploit-cred-reuse:access-postgres",
+    "type": "dependency",
+    "label": "requires"
+  },
+  {
+    "source": "linux-exploit-cred-reuse:access-mysql",
+    "target": "linux-exploit-cred-reuse:escalate-web-admin",
+    "type": "dependency",
+    "label": "requires"
+  },
+  {
+    "source": "web-sqli-postgres-fileretrieve:detect-sqli",
+    "target": "web-exploit-sqli-union:detect-sqli",
+    "type": "triggers",
+    "label": "same command"
+  },
+  {
+    "source": "web-sqli-postgres-fileretrieve:enum-columns",
+    "target": "web-exploit-sqli-union:enum-columns",
+    "type": "triggers",
+    "label": "same command"
+  },
+  {
+    "source": "web-sqli-postgres-fileretrieve:test-union",
+    "target": "web-exploit-sqli-union:test-union",
+    "type": "triggers",
+    "label": "same command"
+  },
+  {
+    "source": "web-sqli-postgres-fileretrieve:test-union",
+    "target": "web-exploit-sqli-union:identify-database",
+    "type": "triggers",
+    "label": "same command"
+  },
+  {
+    "source": "web-sqli-postgres-fileretrieve:extract-db-info",
+    "target": "web-exploit-sqli-union:enum-postgres-tables",
+    "type": "triggers",
+    "label": "same command"
+  },
+  {
+    "source": "web-sqli-postgres-fileretrieve:extract-db-info",
+    "target": "web-exploit-sqli-union:extract-postgres-data",
+    "type": "triggers",
+    "label": "same command"
+  },
+  {
+    "source": "web-sqli-postgres-fileretrieve:extract-credentials",
+    "target": "web-exploit-sqli-union:enum-postgres-tables",
+    "type": "triggers",
+    "label": "same command"
+  },
+  {
+    "source": "web-sqli-postgres-fileretrieve:extract-credentials",
+    "target": "web-exploit-sqli-union:extract-postgres-data",
+    "type": "triggers",
+    "label": "same command"
+  },
+  {
+    "source": "linux-privesc-suid-basic:quick-wins-check",
+    "target": "linux-privesc-sudo-nopasswd:check-sudo-privs",
+    "type": "triggers",
+    "label": "same command"
+  },
+  {
+    "source": "linux-privesc-suid-basic:verify-root",
+    "target": "linux-privesc-sudo-nopasswd:verify-root",
+    "type": "triggers",
+    "label": "same command"
+  }
+];
+
+        // Viewport dimensions
+        const width = window.innerWidth;
+        const height = window.innerHeight;
+
+        // Create SVG
+        const svg = d3.select("svg")
+            .attr("viewBox", [0, 0, width, height]);
+
+        // Initialize nodes with random positions near center (helps with initial render)
+        nodes.forEach(d => {
+            d.x = width / 2 + (Math.random() - 0.5) * 200;
+            d.y = height / 2 + (Math.random() - 0.5) * 200;
+        });
+
+        // Force simulation - positions nodes automatically
+        const simulation = d3.forceSimulation(nodes)
+            .force("link", d3.forceLink(links).id(d => d.id).distance(d => {
+                // Longer distance for cross-chain edges
+                return d.type === 'activation' ? 250 : 150;
+            }))
+            .force("charge", d3.forceManyBody().strength(-400))
+            .force("center", d3.forceCenter(width / 2, height / 2))
+            .force("collision", d3.forceCollide().radius(50));
+
+        // Draw edges
+        const link = svg.append("g")
+            .attr("class", "links")
+            .selectAll("line")
+            .data(links)
+            .join("line")
+            .attr("class", d => "link " + d.type)
+            .attr("stroke-width", d => d.type === 'activation' ? 2 : 1.5);
+
+        // Draw nodes
+        const node = svg.append("g")
+            .attr("class", "nodes")
+            .selectAll("circle")
+            .data(nodes)
+            .join("circle")
+            .attr("class", d => {
+                let classes = "node";
+                if (d.oscp) classes += " oscp";
+                if (d.shared) classes += " shared";
+                return classes;
+            })
+            .attr("r", d => d.shared ? 25 : 20)
+            .attr("fill", d => {
+                if (d.shared) return "#f39c12";
+                if (d.oscp) return "#2ecc71";
+                return "#3498db";
+            });
+
+        // Add main labels
+        const label = svg.append("g")
+            .attr("class", "labels")
+            .selectAll("text")
+            .data(nodes)
+            .join("text")
+            .attr("class", "node-label")
+            .attr("dy", -28)
+            .text(d => d.label);
+
+        // Add chain labels (for commands mode)
+        const chainLabel = svg.append("g")
+            .attr("class", "chain-labels")
+            .selectAll("text")
+            .data(nodes.filter(d => d.chain))
+            .join("text")
+            .attr("class", "chain-label")
+            .attr("dy", 35)
+            .text(d => d.chain);
+
+        // Update positions on each simulation tick
+        simulation.on("tick", () => {
+            link
+                .attr("x1", d => d.source.x)
+                .attr("y1", d => d.source.y)
+                .attr("x2", d => d.target.x)
+                .attr("y2", d => d.target.y);
+
+            node
+                .attr("cx", d => d.x)
+                .attr("cy", d => d.y);
+
+            label
+                .attr("x", d => d.x)
+                .attr("y", d => d.y);
+
+            chainLabel
+                .attr("x", d => d.x)
+                .attr("y", d => d.y);
+        });
+
+        // Stop simulation after stabilization to save CPU
+        simulation.on("end", () => {
+            console.log("Layout stabilized");
+        });
+    </script>
+</body>
+</html>
