@@ -2,6 +2,117 @@
 
 ## [Unreleased]
 
+### Added - Centralized Output Router (2025-10-13)
+
+#### Automatic Output Routing to CRACK_targets
+**Files Created:**
+- `track/core/output_router.py` (350 lines)
+- `tests/track/test_output_router.py` (200 lines)
+
+**Files Modified:**
+- `track/core/command_executor.py` (+30 lines)
+- `track/alternatives/executor.py` (+20 lines)
+- `track/alternatives/models.py` (+3 lines)
+- `network/port_scanner.py` (+10 lines)
+
+**Problem:**
+Tool outputs (nmap, gobuster, hydra, etc.) were scattered across directories with no systematic organization. Outputs saved to CWD with no target-specific structure, making OSCP documentation difficult.
+
+**Solution:**
+Centralized `OutputRouter` class that automatically injects output flags into commands, routing all outputs to `CRACK_targets/<target>/scans/`.
+
+**Implementation:**
+
+1. **OutputRouter Core (track/core/output_router.py)**
+   - 18+ tool-specific detection patterns (nmap, gobuster, nikto, hydra, enum4linux, wpscan, etc.)
+   - Automatic output flag injection at correct command position
+   - Fallback stdout capture for unknown tools
+   - Path sanitization for filesystem safety
+   - Flexible directory resolution (env var > project-local > legacy)
+
+2. **Command Executor Integration**
+   - `SubprocessExecutor.run()` modified to inject output flags before execution
+   - Fallback: saves captured stdout if no tool-specific output generated
+   - Output file path stored in task metadata for documentation
+
+3. **Alternative Commands Integration**
+   - `AlternativeExecutor.execute()` modified to use OutputRouter
+   - `ExecutionResult` model updated with `output_file` field
+   - User sees where output was saved after execution
+
+4. **Port Scanner Integration**
+   - Defaults `output_dir` to CRACK_targets structure
+   - Maintains backward compatibility with explicit parameter
+
+**Tool Support (18+):**
+- **Scanning:** nmap, gobuster, feroxbuster, dirb, wfuzz, nikto, wpscan
+- **Enumeration:** enum4linux, smbclient, smbmap, rpcclient, ldapsearch, snmpwalk
+- **Exploitation:** sqlmap, hydra, crackmapexec
+- **Password Cracking:** john, hashcat
+- **Research:** searchsploit
+
+**Directory Structure Created:**
+```
+CRACK_targets/
+  └── 192.168.45.100/
+      └── scans/
+          ├── nmap_20251013_143000.nmap
+          ├── nmap_20251013_143000.xml
+          ├── nmap_20251013_143000.gnmap
+          ├── gobuster_80_20251013_143530.txt
+          ├── nikto_80_20251013_144000.txt
+          └── fallback_task-id_20251013_145000.stdout
+```
+
+**Key Features:**
+- **Non-Invasive:** Respects existing output flags, no override
+- **Smart Detection:** Regex-based tool detection with 18+ patterns
+- **Fallback Safe:** Unknown tools get stdout capture to fallback files
+- **Flexible:** Environment variable override via `CRACK_OUTPUT_DIR`
+- **Backward Compatible:** Existing scripts with explicit paths continue working
+
+**Usage Examples:**
+
+Before:
+```bash
+gobuster dir -u http://192.168.45.100 -w wordlist.txt -o gobuster_80.txt
+# Saved to: /home/kali/OSCP/crack/gobuster_80.txt (CWD - scattered)
+```
+
+After:
+```bash
+gobuster dir -u http://192.168.45.100 -w wordlist.txt
+# Saved to: CRACK_targets/192.168.45.100/scans/gobuster_80_20251013_143530.txt
+```
+
+Environment override:
+```bash
+export CRACK_OUTPUT_DIR=/mnt/evidence
+# All outputs now go to /mnt/evidence/<target>/scans/
+```
+
+**Testing:**
+- **17/17 tests passing (100%)**
+- Tests cover: directory creation, tool detection, flag injection, existing output respect, fallback saving, edge cases
+
+**OSCP Benefits:**
+- ✅ All outputs systematically organized per target
+- ✅ Timestamped for clear audit trail
+- ✅ Easy to find scan results for report writing
+- ✅ No manual organization needed
+- ✅ No risk of overwriting results from different targets
+- ✅ Works automatically across all modules (track, alternatives, port scanner)
+
+**Backward Compatibility:**
+- No breaking changes
+- Commands with explicit output paths are honored
+- Standalone scripts specifying `output_dir` continue working
+- Only adds output flags when missing (non-invasive)
+
+**Total Lines:** ~610 lines of code
+
+---
+
 ### Changed - Attack Chains UX Unification (2025-10-13)
 
 #### Unified Chains with Commands UX
