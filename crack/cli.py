@@ -118,6 +118,13 @@ def session_command(args):
     cli = UnifiedSessionCLI()
     cli.run(args)
 
+def linpeas_command(args):
+    """Execute LinPEAS helper tool"""
+    from crack.exploit import linpeas_helper
+    # Pass arguments to the original main function
+    sys.argv = ['linpeas_helper'] + args
+    linpeas_helper.main()
+
 def config_command(args):
     """Execute configuration management"""
     from crack.config import ConfigManager
@@ -366,6 +373,9 @@ def main():
   ├─ sqli-scan       Detect SQL injection vulnerabilities
   └─ sqli-fu         SQLi post-exploitation reference
 
+{Colors.YELLOW}▶ Post-Exploitation{Colors.END}
+  └─ linpeas         LinPEAS helper with 7 execution methods + AV bypass
+
 {Colors.YELLOW}▶ Session Management{Colors.END}
   └─ session         Reverse shell session management (TCP/HTTP/DNS)
 
@@ -553,6 +563,12 @@ def main():
                                          help='Configuration Management - Variable management',
                                          add_help=False)
     config_parser.set_defaults(func=config_command)
+
+    # LinPEAS Helper subcommand
+    linpeas_parser = subparsers.add_parser('linpeas',
+                                          help='LinPEAS Helper - Privilege Escalation Enumeration',
+                                          add_help=False)
+    linpeas_parser.set_defaults(func=linpeas_command)
 
     # Parse known args to allow passing through tool-specific args
     args, remaining = parser.parse_known_args()

@@ -1,0 +1,81 @@
+step 1: `id` (what groups do i belong to) 
+uid:1000 - first user created
+gid: 1000- Group user id
+
+step 2: `cat /etc/passwd` or `column -t -s ':' /etc/passwd` 
+- Look for accounts which infer information such as www-data
+- x in second column means the password hash is stored in /etc/shadow
+- Normal User accounts start counting from 1000 (so 1001 is also a 'regular user'
+- /usr/sbin/nologin in final column indicates remote operations cannot be performed
+** www-data - web server / web access is possible.
+** sshh - SSH is running
+
+**/home - The user has been configured with a login
+** /bin/bash - 
+
+step 3: `hostname`
+
+- Hostname often contains domain configuration information.
+
+step 4: Identify the role of the machine
+
+*** ` cat /etc/issue
+
+step 5: enumerate services
+
+*** `ps aux`
+
+
+step 6: enumerate the network interfaces, routes, and open ports
+
+-`ip a` or `ifconfig a` - List network interfaces and connections
+
+- `route` or routel` - view routing tables
+
+- `netstat -anp` or `ss -anp` - view all listening ports and active sessions
+
+Step 7: Firewall rule exploration
+
+-`iptables` -if root privileged
+- `cat /etc/iptables/*` - Read firewall rules
+
+**** footnotes
+-- `iptables-save` - Used to dump Firewall rules to a readable specified location (ROOT only)
+-- `iptables-restore` - Used to restore firewall rules using save command output at boot
+-- search /etc/ or grep filesystem for iptables commands to locate the file.
+
+
+Step 8: Examine cron jobs
+** ` ls -lah /etc/cron*`
+- `crontab -l` - View Current Users active scheduled jobs
+- `sudo crontab -l` - reveals jobs run by root user
+
+
+Step 9: Enumerate applications for Exploit opportunities
+
+** `dpkg -l`
+-- dpkg for linux
+-- rpm for redhat
+
+Step 10: Identify files/dirs with insecure permissions
+
+** `find / -writable -type d 2>/dev/null`
+
+Step 11: Drive enumeration
+** Search for unmounted drives.
+- check mount permissions.
+
+- `cat /etc/fstab` - List all drives that will be mounted at boot time.
+- `mount`
+- `lsblk` -- may reveal partitions which are not mounted.
+
+
+Step 11: Enumerate list of driver and kernel modules
+
+-`ls mod` - list all loaded kernel modules - Investigate interesting findings
+- `/sbin/modinfo <MODULE_NAME>`
+
+
+step 12: Search for SUID pe
+** `find / -perm -u=s -type f 2>/dev/null`
+

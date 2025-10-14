@@ -2,6 +2,152 @@
 
 ## [Unreleased]
 
+### Added - LinPEAS Helper with unix-privesc-check Integration (2025-10-14)
+
+#### Post-Exploitation Privilege Escalation Tool
+**Files Created:**
+- `dependencies/linpeas.sh` (950 KB)
+- `dependencies/linpeas_linux_amd64` (3.3 MB)
+- `dependencies/unix-privesc-check` (49 KB)
+- `exploit/linpeas_helper.py` (600 lines)
+
+**Files Modified:**
+- `exploit/__init__.py` (added linpeas_helper export)
+- `cli.py` (added linpeas command, updated banner)
+
+**Problem:**
+LinPEAS execution on compromised systems requires multiple manual steps: setting up file transfer, choosing appropriate method, handling AV bypass, capturing output. No unified interface for different transfer methods.
+
+**Solution:**
+Interactive LinPEAS helper with 8 execution methods, smart port selection, and automatic command generation with full flag explanations.
+
+**Implementation:**
+
+**1. LinPEAS Helper Core (exploit/linpeas_helper.py)**
+   - 8 execution methods with different use cases
+   - Interactive parameter prompting with defaults from config
+   - Smart port selection with automatic fallback
+   - Full flag explanations for all commands
+   - Integration with CRACK config system (LHOST, LPORT, TARGET)
+
+**2. Execution Methods Available:**
+
+   **Method 1: Direct from GitHub**
+   - Fast execution requiring victim internet access
+   - Use case: Quick wins when victim has internet
+   - Time: ~2 minutes
+
+   **Method 2: HTTP Server (Recommended)**
+   - Most reliable for OSCP environments
+   - Python3 built-in HTTP server
+   - Time: ~3-5 minutes
+
+   **Method 3: Netcat Transfer**
+   - No curl/wget required on victim
+   - Uses /dev/tcp bash built-in
+   - Time: ~3-5 minutes
+
+   **Method 4: Memory Execution + Output Capture**
+   - Stealthiest method (no disk writes)
+   - Executes in RAM, pipes output back to attacker
+   - Time: ~5-7 minutes
+
+   **Method 5: Binary Execution**
+   - Static binary for environments without shell script support
+   - No dependencies required
+   - Time: ~3-5 minutes
+
+   **Method 6: Base64 Encoded**
+   - AV bypass via base64 encoding
+   - Defeats basic signature detection
+   - Time: ~3-5 minutes
+
+   **Method 7: OpenSSL Encrypted**
+   - Strong AV bypass with AES-256-CBC encryption
+   - Most stealthy transfer method
+   - Time: ~3-5 minutes
+
+   **Method 8: unix-privesc-check (Simple)**
+   - Simpler alternative to LinPEAS
+   - Quick SUID, sudo, cron, writable file checks
+   - Less overwhelming output
+   - Time: ~1-2 minutes
+
+**3. Smart Port Selection (exploit/linpeas_helper.py:78-111)**
+   - Tests preferred port availability via socket binding
+   - Auto-fallback sequence: 8000, 8080, 8888, 9000, 9999
+   - OS-assigned random port as final fallback
+   - User notified of port changes with updated commands
+
+**4. CLI Integration (cli.py)**
+   - New command: `crack linpeas`
+   - Added to banner under "Post-Exploitation" section
+   - Routes to LinPEASHelper.main()
+
+**5. Interactive Workflow:**
+   ```bash
+   crack linpeas
+   # 1. Banner display
+   # 2. Method selection (1-8)
+   # 3. Config review (LHOST, LPORT, TARGET, etc.)
+   # 4. Optional parameter editing
+   # 5. Command display with flag explanations
+   # 6. Optional automatic execution
+   ```
+
+**Key Features:**
+- **Educational Focus:** Every flag explained with purpose
+- **OSCP Alignment:** Time estimates for exam planning
+- **Config Integration:** Auto-fills from ~/.crack/config.json
+- **Exam Tips:** Method recommendations for OSCP scenarios
+- **Manual Alternatives:** Teaches methodology, not just tool usage
+- **Zero Dependencies:** Uses Python stdlib + system tools (nc, openssl, curl)
+
+**Usage Examples:**
+
+```bash
+# Launch interactive helper
+crack linpeas
+
+# Method 2: HTTP Server (most common)
+Choice [2]: 2
+Edit values? (y/n) [n]: n
+# Displays commands with full explanations
+# Option to start server automatically
+
+# Method 8: unix-privesc-check (quick verification)
+Choice [2]: 8
+# Smart port selection if 443 is busy
+# Displays both standard and detailed mode commands
+```
+
+**OSCP Benefits:**
+- ✅ All 8 transfer methods in one tool
+- ✅ Automatic command generation with config values
+- ✅ Flag explanations teach methodology
+- ✅ Time estimates for exam planning
+- ✅ Smart port selection prevents failures
+- ✅ Alternative tools (unix-privesc-check) for different scenarios
+- ✅ Output capture strategies included
+- ✅ AV bypass methods documented
+
+**Documentation:**
+- Inline help with `crack linpeas --help`
+- Full flag explanations in every method
+- Exam tips for each transfer method
+- Purpose and use case for each method
+
+**Testing:**
+- ✅ Smart port selection logic verified
+- ✅ unix-privesc-check script download validated
+- ✅ Method 8 display output confirmed
+- ✅ Config integration working
+- ✅ All 8 methods display correctly
+
+**Total Lines:** ~600 lines of code
+
+---
+
 ### Added - Centralized Output Router (2025-10-13)
 
 #### Automatic Output Routing to CRACK_targets
