@@ -1,4 +1,0 @@
-# Nmap 7.95 scan initiated Tue Oct 14 09:41:48 2025 as: /usr/lib/nmap/nmap --privileged -p21,22,80 -sV -sC -oA service_scan 10.10.11.32
-Host: 10.10.11.32 ()	Status: Up
-Host: 10.10.11.32 ()	Ports: 21/open/tcp//ftp///, 22/open/tcp//ssh//OpenSSH 8.9p1 Ubuntu 3ubuntu0.10 (Ubuntu Linux; protocol 2.0)/, 80/open/tcp//http//nginx 1.18.0 (Ubuntu)/
-# Nmap done at Tue Oct 14 09:43:00 2025 -- 1 IP address (1 host up) scanned in 71.91 seconds

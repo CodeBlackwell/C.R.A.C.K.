@@ -21,10 +21,11 @@ Updated: 2025-10-07 (added 5 new task categories, 13 new techniques)
 from typing import Dict, Any, List
 from .base import ServicePlugin
 from .registry import ServiceRegistry
+from .sql_mixin import SQLPluginMixin
 
 
 @ServiceRegistry.register
-class MySQLPlugin(ServicePlugin):
+class MySQLPlugin(ServicePlugin, SQLPluginMixin):
     """MySQL/MariaDB enumeration plugin"""
 
     @property
@@ -46,7 +47,16 @@ class MySQLPlugin(ServicePlugin):
         return any(svc in service for svc in self.service_names) or port in self.default_ports
 
     def get_task_tree(self, target: str, port: int, service_info: Dict[str, Any]) -> Dict[str, Any]:
-        """Generate MySQL enumeration task tree"""
+        """Generate MySQL enumeration task tree (SQL-backed with fallback)"""
+        # Try SQL backend first
+        try:
+            return self.get_task_tree_from_sql(target, port, service_info)
+        except Exception as e:
+            # Fallback to hardcoded task tree
+            return self._get_hardcoded_task_tree(target, port, service_info)
+
+    def _get_hardcoded_task_tree(self, target: str, port: int, service_info: Dict[str, Any]) -> Dict[str, Any]:
+        """Hardcoded MySQL enumeration task tree (fallback)"""
         version = service_info.get('version', '')
 
         tasks = {

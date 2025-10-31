@@ -6,17 +6,61 @@
 reference/
 ├── core/
 │   ├── registry.py         # HybridCommandRegistry, Command dataclass
+│   ├── sql_adapter.py      # SQLCommandRegistryAdapter (SQL backend) ✨ NEW
 │   ├── placeholder.py      # PlaceholderEngine, variable substitution
 │   ├── config.py           # ConfigManager, ~/.crack/config.json
 │   ├── colors.py           # ReferenceTheme, ANSI escape codes
 │   ├── validator.py        # CommandValidator, schema validation
 │   └── parser.py           # MarkdownCommandParser (TODO)
-├── data/commands/          # JSON command definitions
+├── data/commands/          # JSON command definitions (fallback)
 │   ├── *.json              # Flat structure (legacy)
 │   └── category/           # Subdirectory structure
 │       └── subcategory.json
-└── cli.py                  # ReferenceCLI, main entry point
+├── cli/
+│   └── main.py             # ReferenceCLI with auto-detect fallback ✨ UPDATED
+└── ~/.crack/crack.db       # SQL database (preferred backend) ✨ NEW
 ```
+
+## Backend Architecture ✨ NEW
+
+**Dual Backend Support:**
+- **`SQLCommandRegistryAdapter`**: SQL-based (recommended, 10-20x faster)
+- **`HybridCommandRegistry`**: JSON-based (fallback, human-editable)
+
+**CLI Auto-Detection** (`reference/cli/main.py:52-114`):
+1. Tries SQL first (`~/.crack/crack.db` exists + valid)
+2. Falls back to JSON if SQL missing/corrupted/empty
+3. User sees status message for transparency
+
+**Import Pattern:**
+```python
+from crack.reference import SQLCommandRegistryAdapter, HybridCommandRegistry
+
+# Auto-detect (CLI does this internally)
+registry = cli._initialize_registry()  # Returns SQL or JSON
+
+# Explicit SQL
+registry = SQLCommandRegistryAdapter(
+    db_path='~/.crack/crack.db',
+    config_manager=config,
+    theme=theme
+)
+
+# Explicit JSON
+registry = HybridCommandRegistry(
+    config_manager=config,
+    theme=theme
+)
+```
+
+**API Parity:**
+Both backends expose identical methods:
+- `get_command(id)`, `search(query)`, `filter_by_category()`, `filter_by_tags()`
+- `get_quick_wins()`, `get_oscp_high()`, `get_stats()`, `interactive_fill()`
+
+**Limitations (SQL Adapter):**
+- `add_command()`: Not implemented (use migration script)
+- `save_to_json()`: Not implemented (use `sqlite3 .dump`)
 
 ## Core Classes
 

@@ -5,6 +5,7 @@ CLI interface for CRACK Reference System
 
 import argparse
 import sys
+import sqlite3
 from pathlib import Path
 from rich.console import Console
 
@@ -31,7 +32,7 @@ class ReferenceCLI:
         self.console = Console()  # Used only for ASCII banner
         self.theme = ReferenceTheme()
         self.config = ConfigManager()
-        self.registry = HybridCommandRegistry(config_manager=self.config, theme=self.theme)
+        self.registry = self._initialize_registry()
         self.placeholder_engine = PlaceholderEngine(config_manager=self.config)
         self.validator = CommandValidator()
 
@@ -47,6 +48,73 @@ class ReferenceCLI:
         self.search_cli = SearchCLI(registry=self.registry, theme=self.theme)
 
         self.parser = self.create_parser()
+
+    def _initialize_registry(self):
+        """Initialize registry with auto-detect fallback (SQL → JSON)
+
+        Tries SQL backend first for performance. Falls back to JSON if:
+        - Database doesn't exist
+        - Database is corrupted/locked
+        - Database is empty
+        - Import errors occur
+
+        Returns:
+            Registry instance (SQLCommandRegistryAdapter or HybridCommandRegistry)
+        """
+        # Try SQL backend first (recommended) - PostgreSQL
+        try:
+            from crack.reference.core.sql_adapter import SQLCommandRegistryAdapter
+            from db.config import get_db_config
+            import psycopg2
+
+            # Test PostgreSQL connection and integrity
+            try:
+                db_config = get_db_config()
+                test_conn = psycopg2.connect(**db_config)
+                cursor = test_conn.cursor()
+                cursor.execute("SELECT COUNT(*) FROM commands")
+                count = cursor.fetchone()[0]
+                cursor.close()
+                test_conn.close()
+
+                if count > 0:
+                    # PostgreSQL database valid - use SQL adapter
+                    print(self.theme.success(f"✓ Using SQL backend ({count} commands loaded)"))
+                    return SQLCommandRegistryAdapter(
+                        db_config=db_config,
+                        config_manager=self.config,
+                        theme=self.theme
+                    )
+                else:
+                    print(self.theme.warning("⚠ SQL database empty, falling back to JSON"))
+            except psycopg2.Error:
+                # PostgreSQL connection failed
+                print(self.theme.hint("ℹ PostgreSQL connection failed, using JSON backend"))
+
+        except ImportError as e:
+            # SQL adapter not available
+            print(self.theme.hint("ℹ SQL backend not available, using JSON backend"))
+        except Exception as e:
+            # Generic error
+            error_msg = str(e).lower()
+            if 'locked' in error_msg:
+                print(self.theme.warning("⚠ SQL database locked by another process"))
+            elif 'no such table' in error_msg or 'no such column' in error_msg:
+                print(self.theme.warning("⚠ SQL database schema outdated"))
+                print(self.theme.hint("  Run: python3 -m db.migrate commands"))
+            elif 'unable to open' in error_msg:
+                print(self.theme.warning("⚠ Cannot read SQL database (check permissions)"))
+            else:
+                print(self.theme.warning(f"⚠ SQL database error: {e}"))
+            print(self.theme.hint("ℹ Falling back to JSON backend"))
+        except Exception as e:
+            # Unexpected error - fallback gracefully
+            print(self.theme.warning(f"⚠ Unexpected SQL error: {e}"))
+            print(self.theme.hint("ℹ Falling back to JSON backend"))
+
+        # Fallback: Use JSON-based HybridCommandRegistry
+        print(self.theme.hint("✓ Using JSON backend"))
+        return HybridCommandRegistry(config_manager=self.config, theme=self.theme)
 
     def _print_banner(self):
         """Print CRACK Reference banner"""

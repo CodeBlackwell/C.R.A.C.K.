@@ -99,6 +99,49 @@ reference/
 - Alternative approaches for tool failures
 - Manual methods documented
 
+### 6. SQL Backend (Recommended)
+- **High Performance**: 10-20x faster than JSON for queries
+- **Auto-Detection**: Automatically uses SQL if database exists
+- **Fallback Support**: Gracefully falls back to JSON if SQL unavailable
+- **190+ Commands**: Fully migrated command database
+- **Normalized Schema**: Eliminates duplication, enables complex queries
+
+#### Backend Selection
+
+The CLI automatically selects the best backend:
+
+**SQL Backend** (Recommended):
+- Location: `~/.crack/crack.db`
+- Advantages: Faster queries, normalized schema, 244+ commands
+- Migration: `python3 -m db.migrate commands`
+- Auto-detected when database exists
+
+**JSON Backend** (Fallback):
+- Location: `reference/data/commands/*.json`
+- Advantages: Human-readable, easy to edit
+- Use Case: Development, SQL unavailable
+
+**Status Messages:**
+```bash
+# SQL active
+crack reference nmap
+# Output: ✓ Using SQL backend (244 commands loaded)
+
+# SQL missing
+crack reference nmap
+# Output: ℹ SQL database not found, using JSON backend
+```
+
+**Manual Control** (Optional):
+```bash
+# Force JSON backend (for testing)
+mv ~/.crack/crack.db ~/.crack/crack.db.backup
+crack reference nmap
+
+# Restore SQL backend
+mv ~/.crack/crack.db.backup ~/.crack/crack.db
+```
+
 ## Command Categories
 
 ### 01 - Reconnaissance

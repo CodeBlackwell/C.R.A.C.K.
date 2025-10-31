@@ -27,10 +27,11 @@ Expanded: 2025-10-07 (SMTP Smuggling, Email Recon, IMAP integration)
 from typing import Dict, Any, List
 from .base import ServicePlugin
 from .registry import ServiceRegistry
+from .sql_mixin import SQLPluginMixinV2
 
 
 @ServiceRegistry.register
-class SMTPPlugin(ServicePlugin):
+class SMTPPlugin(ServicePlugin, SQLPluginMixinV2):
     """SMTP enumeration plugin"""
 
     @property
@@ -61,6 +62,14 @@ class SMTPPlugin(ServicePlugin):
         return False
 
     def get_task_tree(self, target: str, port: int, service_info: Dict[str, Any]) -> Dict[str, Any]:
+        """Generate SMTP enumeration task tree (SQL-backed with fallback)"""
+        try:
+            return self.get_task_tree_from_sql(target, port, service_info)
+        except Exception as e:
+            # Fallback to hardcoded implementation
+            return self._get_hardcoded_task_tree(target, port, service_info)
+
+    def _get_hardcoded_task_tree(self, target: str, port: int, service_info: Dict[str, Any]) -> Dict[str, Any]:
         """Generate SMTP enumeration task tree"""
         version = service_info.get('version', '')
         product = service_info.get('product', '')

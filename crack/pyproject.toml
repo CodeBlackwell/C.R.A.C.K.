@@ -32,6 +32,7 @@ dependencies = [
     "beautifulsoup4>=4.9.0",
     "urllib3>=1.26.0",
     "rich>=13.0.0",
+    "psycopg2-binary>=2.9.0",
 ]
 
 [project.urls]
@@ -55,7 +56,10 @@ packages = [
     "crack.reference",
     "crack.reference.core",
     "crack.reference.data",
-    "crack.reference.docs"
+    "crack.reference.docs",
+    "db",
+    "db.repositories",
+    "db.migrations"
 ]
 
 [tool.setuptools.package-dir]

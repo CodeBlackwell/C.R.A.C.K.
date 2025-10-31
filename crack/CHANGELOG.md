@@ -2,6 +2,189 @@
 
 ## [Unreleased]
 
+### Added - Airgeddon Helper for WiFi Security Auditing (2025-10-14)
+
+#### WiFi Security Auditing Tool (OSWP/PEN-210)
+**Files Created:**
+- `exploit/airgeddon_helper.py` (800+ lines)
+- `tests/test_airgeddon_helper.py` (200+ lines)
+
+**Files Modified:**
+- `exploit/__init__.py` (added airgeddon_helper export)
+- `cli.py` (added airgeddon command, updated banner)
+
+**WARNING:** Wireless attacks are NOT in OSCP exam scope (relevant for OSWP/PEN-210)
+
+**Problem:**
+Airgeddon has 60+ menu options for WiFi security auditing, creating overwhelming complexity for students. No educational guidance on when to use which attack. No integration with CRACK's config system for parameter management.
+
+**Solution:**
+Interactive airgeddon helper with 10 simplified methods, educational explanations, and automatic configuration from CRACK config system.
+
+**Implementation:**
+
+**1. Airgeddon Helper Core (exploit/airgeddon_helper.py)**
+   - 10 simplified methods vs 60+ in airgeddon menu
+   - Interactive parameter prompting with defaults from config
+   - Educational explanations for each attack method
+   - Integration with CRACK config system (INTERFACE, ESSID, BSSID, WORDLIST)
+   - Auto-detection of wireless interfaces
+   - Legal warnings and OSCP scope clarification
+
+**2. Execution Methods Available:**
+
+   **Method 1: Monitor Mode Setup**
+   - Enable/disable monitor mode on wireless interface
+   - Automatic killing of interfering processes
+   - Detection of current monitor mode status
+   - Time: ~30 seconds
+
+   **Method 2: Network Discovery**
+   - Scan for WiFi networks (2.4GHz and 5GHz)
+   - Educational output interpretation (BSSID, PWR, CH, ENC)
+   - Target selection criteria guidance
+   - Time: 2-5 minutes
+
+   **Method 3: WPS Pixie Dust Attack**
+   - Fast WPS PIN attack (works on ~30% of routers)
+   - No handshake capture needed
+   - Educational explanations of WPS vulnerabilities
+   - Time: 2-10 minutes
+
+   **Method 4: PMKID Capture Attack**
+   - Clientless WPA/WPA2 attack (no handshake needed)
+   - Works on ~70% of modern routers
+   - Hashcat integration for cracking
+   - Time: 1-5 minutes capture + cracking time
+
+   **Method 5: Handshake Capture**
+   - Classic WPA/WPA2 4-way handshake capture
+   - Deauth attack integration
+   - Aircrack-ng/Hashcat cracking workflow
+   - Time: 1-10 minutes capture + cracking time
+
+   **Method 6: Evil Twin Attack**
+   - Fake AP credential harvesting via captive portal
+   - Social engineering approach
+   - Legal warnings emphasized
+   - Time: 10-30 minutes
+
+   **Method 7: KARMA/MANA Attack**
+   - Auto-connect exploitation (trusted networks)
+   - MitM attack automation
+   - Effective against mobile devices
+   - Time: 5-15 minutes
+
+   **Method 8: Hash Cracking**
+   - Aircrack-ng, Hashcat, John the Ripper workflows
+   - Speed comparisons (CPU vs GPU)
+   - Wordlist location guidance
+   - Time: Variable (minutes to hours)
+
+   **Method 9: PCAP Analysis**
+   - Wireshark, Tshark, Pyrit workflows
+   - Handshake verification
+   - Credential extraction
+   - Time: ~2 minutes
+
+   **Method 10: Full Airgeddon Menu**
+   - Launch complete airgeddon interface (60+ options)
+   - Advanced features (BeEF, Enterprise attacks)
+   - Use when methods 1-9 don't cover use case
+   - Time: Variable
+
+**3. CLI Integration (cli.py)**
+   - New command: `crack airgeddon`
+   - Added to banner under "Post-Exploitation" section
+   - Routes to AirgeddonHelper.main()
+   - Support for command-line arguments (--essid, --bssid, --interface, --method)
+
+**4. Interactive Workflow:**
+   ```bash
+   crack airgeddon
+   # 1. Banner display (with OSCP scope warning)
+   # 2. Method selection (1-10)
+   # 3. Config review (INTERFACE, ESSID, BSSID, etc.)
+   # 4. Optional parameter editing
+   # 5. Educational content display with flag explanations
+   # 6. Optional automatic execution (launches airgeddon or executes commands)
+   ```
+
+**Key Features:**
+- **Educational Focus:** Every method includes attack flow, time estimates, success/failure indicators
+- **OSCP Scope Warning:** Clear warnings that wireless is NOT in OSCP exam (relevant for OSWP)
+- **Config Integration:** Auto-fills from ~/.crack/config.json (INTERFACE, ESSID, BSSID, WORDLIST)
+- **Legal Warnings:** Emphasized in banner and attack methods (unauthorized testing is illegal)
+- **OSWP Alignment:** Tailored for PEN-210 certification exam
+- **Manual Alternatives:** Shows manual commands (airodump-ng, reaver, hcxdumptool, etc.)
+- **Tool Installation:** Auto-detects airgeddon installation, provides setup instructions
+- **Zero Dependencies:** Uses system tools (airgeddon, aircrack-ng, reaver, etc.)
+
+**Usage Examples:**
+
+```bash
+# Launch interactive helper
+crack airgeddon
+
+# Pre-configure target
+crack airgeddon --essid "TargetAP" --bssid "00:11:22:33:44:55"
+
+# Direct method execution
+crack airgeddon --method wps-pixie
+crack airgeddon --method pmkid
+crack airgeddon --method handshake
+
+# Auto-detect interface from config
+crack airgeddon --interface wlan0mon
+```
+
+**Method Recommendations:**
+```
+Recommended Order: 1 → 2 → 3/4/5 → 8
+
+1. Enable monitor mode
+2. Discover networks
+3. Try WPS Pixie Dust (fastest)
+4. Try PMKID (no clients needed)
+5. Handshake capture (classic, works on all WPA/WPA2)
+8. Crack captured hashes
+```
+
+**OSWP Benefits:**
+- ✅ Simplifies airgeddon's 60+ options to 10 focused methods
+- ✅ Educational guidance on when to use which attack
+- ✅ Automatic command generation with config values
+- ✅ Flag explanations teach WiFi attack methodology
+- ✅ Time estimates for exam planning
+- ✅ Clear distinction between OSCP (no wireless) and OSWP (wireless focus)
+- ✅ Legal and ethical reminders
+- ✅ Tool-agnostic (teaches concepts, not just airgeddon)
+
+**Documentation:**
+- Inline help with `crack airgeddon --help`
+- Full attack flow explanations in every method
+- OSWP exam tips for each method
+- Purpose and use case for each method
+- Manual command alternatives (airodump-ng, reaver, etc.)
+
+**Testing:**
+- ✅ 30+ unit tests covering all methods
+- ✅ Interface detection logic verified
+- ✅ Monitor mode detection working
+- ✅ Config integration working
+- ✅ Method selection validated
+- ✅ Educational content display confirmed
+
+**Integration with Existing WiFi Plugin:**
+- Complements `track/services/wifi_attack.py` (1000+ lines)
+- WiFi plugin generates tasks for track module
+- Airgeddon helper provides interactive execution
+- No duplication - different purposes (task generation vs execution)
+
+**Total Lines:** ~1000 lines of code (helper + tests)
+
+---
+
 ### Added - LinPEAS Helper with unix-privesc-check Integration (2025-10-14)
 
 #### Post-Exploitation Privilege Escalation Tool

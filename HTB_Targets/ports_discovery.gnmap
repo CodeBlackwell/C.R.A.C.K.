@@ -1,4 +1,0 @@
-# Nmap 7.95 scan initiated Tue Oct 14 09:41:34 2025 as: /usr/lib/nmap/nmap --privileged -p- --min-rate=5000 -oG ports_discovery.gnmap 10.10.11.32
-Host: 10.10.11.32 ()	Status: Up
-Host: 10.10.11.32 ()	Ports: 21/open/tcp//ftp///, 22/open/tcp//ssh///, 80/open/tcp//http///	Ignored State: closed (65532)
-# Nmap done at Tue Oct 14 09:41:48 2025 -- 1 IP address (1 host up) scanned in 14.28 seconds
