@@ -135,19 +135,65 @@ class DatabaseCLI:
         self.print_header("Database Setup")
 
         print(f"{self.colors.DIM}This will:{self.colors.RESET}")
-        self.print_step(1, "Create database schema (17 tables)")
-        self.print_step(2, "Import all commands from JSON files")
-        self.print_step(3, "Create command relationships")
+        self.print_step(1, "Create database and user (if needed)")
+        self.print_step(2, "Create database schema (17 tables)")
+        self.print_step(3, "Import all commands from JSON files")
+        self.print_step(4, "Create command relationships")
         print()
 
-        try:
-            db_config = get_db_config()
-            self.print_info(f"Connecting to PostgreSQL...")
+        db_config = get_db_config()
 
+        # Try to connect - if it fails, attempt auto-setup
+        try:
+            self.print_info(f"Testing connection to PostgreSQL...")
+            test_conn = psycopg2.connect(**db_config)
+            test_conn.close()
+            self.print_success("Connection successful")
+        except psycopg2.OperationalError as e:
+            error_msg = str(e).lower()
+
+            # Check if it's authentication or database doesn't exist
+            if 'password authentication failed' in error_msg or 'does not exist' in error_msg:
+                print(f"  {self.colors.YELLOW}Database or user not found - attempting automatic setup...{self.colors.RESET}")
+
+                # Try to create database and user automatically
+                if not self._auto_setup_database(db_config):
+                    self.print_error("Automatic setup failed")
+                    print(f"\n{self.colors.YELLOW}Manual setup required:{self.colors.RESET}")
+                    print(f"{self.colors.DIM}Run these commands:{self.colors.RESET}")
+                    print(f"""
+sudo -u postgres psql << 'EOF'
+CREATE DATABASE {db_config['dbname']};
+CREATE USER {db_config['user']} WITH PASSWORD '{db_config['password']}';
+GRANT ALL PRIVILEGES ON DATABASE {db_config['dbname']} TO {db_config['user']};
+ALTER DATABASE {db_config['dbname']} OWNER TO {db_config['user']};
+\\c {db_config['dbname']}
+GRANT ALL ON SCHEMA public TO {db_config['user']};
+EOF
+""")
+                    return 1
+
+                # Test connection again after auto-setup
+                try:
+                    test_conn = psycopg2.connect(**db_config)
+                    test_conn.close()
+                    self.print_success("Connection successful after auto-setup")
+                except Exception as e:
+                    self.print_error(f"Still cannot connect: {e}")
+                    return 1
+            else:
+                self.print_error(f"PostgreSQL connection failed: {e}")
+                print(f"\n{self.colors.YELLOW}Troubleshooting:{self.colors.RESET}")
+                self.print_step(1, "Check if PostgreSQL is running: sudo systemctl status postgresql")
+                self.print_step(2, "Start PostgreSQL: sudo systemctl start postgresql")
+                return 1
+
+        # Now proceed with migration
+        try:
+            print()
             migration = CRACKMigration(db_config)
 
             # Create schema
-            print()
             migration.create_schema()
 
             # Import commands
@@ -170,17 +216,86 @@ class DatabaseCLI:
 
             return 0
 
-        except psycopg2.OperationalError as e:
-            self.print_error(f"Cannot connect to PostgreSQL")
-            print(f"  {self.colors.DIM}{str(e)}{self.colors.RESET}")
-            print(f"\n{self.colors.YELLOW}Quick fix:{self.colors.RESET}")
-            self.print_step(1, "Create database: sudo -u postgres createdb crack")
-            self.print_step(2, "Re-run: crack db setup")
-            return 1
-
         except Exception as e:
             self.print_error(f"Setup failed: {e}")
             return 1
+
+    def _auto_setup_database(self, db_config: dict) -> bool:
+        """
+        Automatically create database and user using postgres admin account
+
+        Returns:
+            True if successful, False otherwise
+        """
+        import subprocess
+
+        self.print_info("Attempting automatic database setup...")
+
+        # SQL commands to create database and user
+        setup_sql = f"""
+DO $$
+BEGIN
+    -- Create user if doesn't exist
+    IF NOT EXISTS (SELECT FROM pg_user WHERE usename = '{db_config['user']}') THEN
+        CREATE USER {db_config['user']} WITH PASSWORD '{db_config['password']}';
+    END IF;
+END $$;
+
+-- Create database if doesn't exist
+SELECT 'CREATE DATABASE {db_config['dbname']}'
+WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = '{db_config['dbname']}')\\gexec
+
+-- Grant privileges
+GRANT ALL PRIVILEGES ON DATABASE {db_config['dbname']} TO {db_config['user']};
+ALTER DATABASE {db_config['dbname']} OWNER TO {db_config['user']};
+"""
+
+        schema_sql = f"""
+GRANT ALL ON SCHEMA public TO {db_config['user']};
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO {db_config['user']};
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO {db_config['user']};
+"""
+
+        try:
+            # Execute setup SQL as postgres user
+            result = subprocess.run(
+                ['sudo', '-u', 'postgres', 'psql', '-c', setup_sql],
+                capture_output=True,
+                text=True,
+                timeout=10
+            )
+
+            if result.returncode == 0:
+                self.print_success(f"Created database '{db_config['dbname']}'")
+                self.print_success(f"Created user '{db_config['user']}'")
+
+                # Grant schema permissions
+                result2 = subprocess.run(
+                    ['sudo', '-u', 'postgres', 'psql', '-d', db_config['dbname'], '-c', schema_sql],
+                    capture_output=True,
+                    text=True,
+                    timeout=10
+                )
+
+                if result2.returncode == 0:
+                    self.print_success("Granted permissions")
+                    return True
+                else:
+                    self.print_warning(f"Permission grant had issues: {result2.stderr}")
+                    return True  # Database still created, continue anyway
+            else:
+                self.print_warning(f"Database creation had issues: {result.stderr}")
+                return False
+
+        except subprocess.TimeoutExpired:
+            self.print_error("Database setup timed out")
+            return False
+        except FileNotFoundError:
+            self.print_error("PostgreSQL 'psql' command not found - is PostgreSQL installed?")
+            return False
+        except Exception as e:
+            self.print_error(f"Automatic setup failed: {e}")
+            return False
 
     def reset(self):
         """Reset database (drop and recreate)"""
