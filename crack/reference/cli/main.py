@@ -90,7 +90,7 @@ class ReferenceCLI:
             except psycopg2.Error:
                 # PostgreSQL connection failed
                 print(self.theme.hint("ℹ PostgreSQL connection failed, using JSON backend"))
-                print(self.theme.hint("  To enable faster SQL backend: cd crack && python3 -m db.migrate commands"))
+                print(self.theme.hint("  To enable faster SQL backend: crack db setup"))
 
         except ImportError as e:
             # SQL adapter not available

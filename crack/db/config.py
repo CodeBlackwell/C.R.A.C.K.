@@ -28,9 +28,9 @@ def get_db_config() -> Dict[str, any]:
     return {
         'host': os.getenv('CRACK_DB_HOST', 'localhost'),
         'port': int(os.getenv('CRACK_DB_PORT', '5432')),
-        'database': os.getenv('CRACK_DB_NAME', 'crack'),
+        'dbname': os.getenv('CRACK_DB_NAME', 'crack'),
         'user': os.getenv('CRACK_DB_USER', 'crack_user'),
-        'password': os.getenv('CRACK_DB_PASSWORD', 'crack_password')
+        'password': os.getenv('CRACK_DB_PASSWORD', 'crack_pass')
     }
 
 
@@ -47,7 +47,7 @@ def get_connection_string() -> str:
     """
     config = get_db_config()
     return (f"postgresql://{config['user']}:{config['password']}@"
-            f"{config['host']}:{config['port']}/{config['database']}")
+            f"{config['host']}:{config['port']}/{config['dbname']}")
 
 
 def validate_connection(config: Optional[Dict[str, any]] = None) -> bool:

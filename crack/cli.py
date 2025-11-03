@@ -132,6 +132,13 @@ def airgeddon_command(args):
     sys.argv = ['airgeddon_helper'] + args
     airgeddon_helper.main()
 
+def db_command(args):
+    """Execute database management commands"""
+    from crack.db.cli import main as db_main
+    # Pass arguments to the db CLI
+    sys.argv = ['crack-db'] + args
+    sys.exit(db_main())
+
 def config_command(args):
     """Execute configuration management"""
     from crack.config import ConfigManager
@@ -584,13 +591,19 @@ def main():
                                             add_help=False)
     airgeddon_parser.set_defaults(func=airgeddon_command)
 
+    # Database Management subcommand
+    db_parser = subparsers.add_parser('db',
+                                     help='Database Management - Setup and manage PostgreSQL backend',
+                                     add_help=False)
+    db_parser.set_defaults(func=db_command)
+
     # Parse known args to allow passing through tool-specific args
     args, remaining = parser.parse_known_args()
 
     # Show banner unless suppressed
-    # Note: reference command has no banner by default (unless --banner is explicitly in remaining args)
+    # Note: reference and db commands have no banner by default
     if not args.no_banner and args.tool:
-        if args.tool != 'reference' or '--banner' in remaining:
+        if args.tool not in ['reference', 'db'] or '--banner' in remaining:
             print_banner()
 
     # Execute the selected tool

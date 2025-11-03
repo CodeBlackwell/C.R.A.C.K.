@@ -28,12 +28,26 @@ crack reference netcat
 
 ### 2. Enable PostgreSQL Backend
 
+**Prerequisites:**
 ```bash
-# Navigate to crack directory
+# Create database and user (one-time setup)
+sudo -u postgres psql << EOF
+CREATE DATABASE crack;
+CREATE USER crack_user WITH PASSWORD 'crack_pass';
+GRANT ALL PRIVILEGES ON DATABASE crack TO crack_user;
+ALTER DATABASE crack OWNER TO crack_user;
+\c crack
+GRANT ALL ON SCHEMA public TO crack_user;
+EOF
+```
+
+**Import Commands:**
+```bash
+# Navigate to crack directory (if not already there)
 cd /home/kali/Desktop/OSCP/crack
 
-# Run migration script (auto-creates schema + imports all JSON commands)
-python3 -m db.migrate commands
+# Run setup command (auto-creates schema + imports all JSON commands)
+crack db setup
 ```
 
 **Expected output:**
