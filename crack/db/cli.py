@@ -356,29 +356,28 @@ sudo -u postgres psql -d {db_config['dbname']} -c "GRANT ALL PRIVILEGES ON ALL S
 
     def validate(self):
         """Validate database integrity"""
-        self.print_header("Database Validation")
+        from .validate import DatabaseValidator
 
         try:
             db_config = get_db_config()
-            migration = CRACKMigration(db_config)
+            validator = DatabaseValidator(db_config)
 
-            results = migration.validate()
+            # Run all validations
+            results = validator.run_all_validations()
 
-            if results['valid']:
-                print(f"\n{self.colors.GREEN}✓ Validation passed!{self.colors.RESET}")
-            else:
-                print(f"\n{self.colors.RED}✗ Validation failed{self.colors.RESET}")
-                for error in results['errors']:
-                    self.print_error(error)
+            # Generate and print report
+            report = validator.generate_report(results, format='text')
+            print(report)
 
-            for warning in results['warnings']:
-                self.print_warning(warning)
-
-            migration.close()
-            return 0 if results['valid'] else 1
+            # Return exit code
+            if results['overall_status'] == 'FAILED':
+                return 1
+            return 0
 
         except Exception as e:
             self.print_error(f"Validation failed: {e}")
+            import traceback
+            traceback.print_exc()
             return 1
 
     def _print_colorized_stats(self, stats: dict):
