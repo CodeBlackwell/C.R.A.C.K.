@@ -25,6 +25,8 @@ class InteractiveCLI(BaseCLIHandler):
     def fill_command_with_execute(self, command_id: str) -> Optional[int]:
         """Fill command placeholders and offer to execute
 
+        Shows full command details first, then interactively fills placeholders.
+
         Args:
             command_id: Command ID to fill and execute
 
@@ -47,7 +49,12 @@ class InteractiveCLI(BaseCLIHandler):
                 print(f"{self.theme.error('Command not found:')} {self.theme.warning(command_id)}")
                 return None
 
-        # Fill placeholders interactively
+        # FIRST: Show full command details (same as direct ID lookup)
+        from .display import DisplayCLI
+        display_cli = DisplayCLI(registry=self.registry, theme=self.theme)
+        display_cli.show_command_details(cmd)
+
+        # THEN: Fill placeholders interactively
         try:
             filled = self.registry.interactive_fill(cmd)
         except KeyboardInterrupt:

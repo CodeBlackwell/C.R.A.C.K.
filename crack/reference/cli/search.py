@@ -82,10 +82,10 @@ class SearchCLI(BaseCLIHandler):
             print("No commands found matching criteria")
             return
 
-        # If selection specified, open interactive fill for that command
+        # If selection specified, show details and enter interactive fill
         if selection is not None:
             if 0 <= selection < len(commands):
-                # Import here to avoid circular dependency
+                # Show full details + fill placeholders + offer to execute
                 from .interactive import InteractiveCLI
                 interactive_cli = InteractiveCLI(registry=self.registry, theme=self.theme)
                 return interactive_cli.fill_command_with_execute(commands[selection].id)

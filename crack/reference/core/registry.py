@@ -40,6 +40,11 @@ class Command:
     troubleshooting: Dict[str, str] = field(default_factory=dict)
     notes: str = ""
     oscp_relevance: str = "medium"
+    # Educational fields for technique selection
+    advantages: List[str] = field(default_factory=list)
+    disadvantages: List[str] = field(default_factory=list)
+    use_cases: List[str] = field(default_factory=list)
+    comparison: Dict[str, str] = field(default_factory=dict)
 
     def to_dict(self) -> dict:
         """Convert to dictionary for JSON serialization"""
@@ -69,14 +74,28 @@ class Command:
         return re.findall(r'<[A-Z_]+>', self.command)
 
     def matches_search(self, query: str) -> bool:
-        """Check if command matches search query"""
-        query_lower = query.lower()
-        return (
-            query_lower in self.name.lower() or
-            query_lower in self.description.lower() or
-            query_lower in self.command.lower() or
-            any(query_lower in tag.lower() for tag in self.tags)
-        )
+        """Check if command matches search query
+
+        For multi-term queries (space-separated), ALL terms must match (AND logic).
+        Each term is matched against name, description, command text, and tags.
+
+        Examples:
+            - "firewall" -> matches any command with "firewall" anywhere
+            - "firewall windows" -> matches only commands with BOTH "firewall" AND "windows"
+        """
+        # Split query into terms (space-separated)
+        terms = query.lower().split()
+
+        # Searchable content (all lowercase for case-insensitive matching)
+        searchable_content = ' '.join([
+            self.name.lower(),
+            self.description.lower(),
+            self.command.lower(),
+            ' '.join(self.tags).lower()
+        ])
+
+        # ALL terms must be present (AND logic)
+        return all(term in searchable_content for term in terms)
 
 
 class HybridCommandRegistry:
