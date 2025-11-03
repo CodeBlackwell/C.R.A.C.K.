@@ -17,12 +17,11 @@ CREATE TABLE IF NOT EXISTS commands (
     category VARCHAR(50) NOT NULL,                  -- recon|web|exploitation|post-exploit|file-transfer
     subcategory VARCHAR(50),                        -- shells|enumeration|brute-force
     notes TEXT,
-    oscp_relevance VARCHAR(10) DEFAULT 'medium',    -- low|medium|high
+    oscp_relevance TEXT DEFAULT 'medium',           -- low|medium|high or detailed explanation
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
-    CHECK (category IN ('recon', 'web', 'exploitation', 'post-exploit', 'file-transfer', 'pivoting', 'custom')),
-    CHECK (oscp_relevance IN ('low', 'medium', 'high'))
+    CHECK (category IN ('recon', 'web', 'exploitation', 'post-exploit', 'file-transfer', 'pivoting', 'custom'))
 );
 
 CREATE INDEX IF NOT EXISTS idx_commands_category ON commands(category);
@@ -127,9 +126,9 @@ CREATE INDEX IF NOT EXISTS idx_relations_type ON command_relations(relation_type
 CREATE TABLE IF NOT EXISTS command_indicators (
     id SERIAL PRIMARY KEY,
     command_id VARCHAR(255) NOT NULL REFERENCES commands(id) ON DELETE CASCADE,
-    indicator_type VARCHAR(10) NOT NULL,            -- 'success'|'failure'
+    indicator_type VARCHAR(20) NOT NULL,            -- 'success'|'failure'
     pattern TEXT NOT NULL,                          -- Regex or literal string
-    pattern_type VARCHAR(10) DEFAULT 'literal',     -- 'literal'|'regex'
+    pattern_type VARCHAR(20) DEFAULT 'literal',     -- 'literal'|'regex'
     priority INT DEFAULT 1,
     description TEXT,
 

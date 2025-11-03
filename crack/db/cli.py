@@ -231,60 +231,42 @@ EOF
 
         self.print_info("Attempting automatic database setup...")
 
-        # SQL commands to create database and user
-        setup_sql = f"""
-DO $$
-BEGIN
-    -- Create user if doesn't exist
-    IF NOT EXISTS (SELECT FROM pg_user WHERE usename = '{db_config['user']}') THEN
-        CREATE USER {db_config['user']} WITH PASSWORD '{db_config['password']}';
-    END IF;
-END $$;
+        # Execute commands as bash script for better reliability
+        setup_script = f"""
+# Create user if doesn't exist
+sudo -u postgres psql -tc "SELECT 1 FROM pg_user WHERE usename = '{db_config['user']}'" | grep -q 1 || \\
+sudo -u postgres psql -c "CREATE USER {db_config['user']} WITH PASSWORD '{db_config['password']}';"
 
--- Create database if doesn't exist
-SELECT 'CREATE DATABASE {db_config['dbname']}'
-WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = '{db_config['dbname']}')\\gexec
+# Create database if doesn't exist
+sudo -u postgres psql -tc "SELECT 1 FROM pg_database WHERE datname = '{db_config['dbname']}'" | grep -q 1 || \\
+sudo -u postgres psql -c "CREATE DATABASE {db_config['dbname']};"
 
--- Grant privileges
-GRANT ALL PRIVILEGES ON DATABASE {db_config['dbname']} TO {db_config['user']};
-ALTER DATABASE {db_config['dbname']} OWNER TO {db_config['user']};
-"""
+# Grant privileges
+sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE {db_config['dbname']} TO {db_config['user']};"
+sudo -u postgres psql -c "ALTER DATABASE {db_config['dbname']} OWNER TO {db_config['user']};"
 
-        schema_sql = f"""
-GRANT ALL ON SCHEMA public TO {db_config['user']};
-GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO {db_config['user']};
-GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO {db_config['user']};
+# Grant schema permissions
+sudo -u postgres psql -d {db_config['dbname']} -c "GRANT ALL ON SCHEMA public TO {db_config['user']};"
+sudo -u postgres psql -d {db_config['dbname']} -c "GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO {db_config['user']};"
+sudo -u postgres psql -d {db_config['dbname']} -c "GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO {db_config['user']};"
 """
 
         try:
-            # Execute setup SQL as postgres user
+            # Execute setup script via bash
             result = subprocess.run(
-                ['sudo', '-u', 'postgres', 'psql', '-c', setup_sql],
+                ['bash', '-c', setup_script],
                 capture_output=True,
                 text=True,
-                timeout=10
+                timeout=30
             )
 
             if result.returncode == 0:
                 self.print_success(f"Created database '{db_config['dbname']}'")
                 self.print_success(f"Created user '{db_config['user']}'")
-
-                # Grant schema permissions
-                result2 = subprocess.run(
-                    ['sudo', '-u', 'postgres', 'psql', '-d', db_config['dbname'], '-c', schema_sql],
-                    capture_output=True,
-                    text=True,
-                    timeout=10
-                )
-
-                if result2.returncode == 0:
-                    self.print_success("Granted permissions")
-                    return True
-                else:
-                    self.print_warning(f"Permission grant had issues: {result2.stderr}")
-                    return True  # Database still created, continue anyway
+                self.print_success("Granted permissions")
+                return True
             else:
-                self.print_warning(f"Database creation had issues: {result.stderr}")
+                self.print_warning(f"Setup had issues: {result.stderr}")
                 return False
 
         except subprocess.TimeoutExpired:
