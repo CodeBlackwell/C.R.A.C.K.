@@ -32,21 +32,52 @@ crack reference netcat
 # Navigate to crack directory
 cd /home/kali/Desktop/OSCP/crack
 
-# Run migration script (creates database + imports commands)
+# Run migration script (auto-creates schema + imports all JSON commands)
 python3 -m db.migrate commands
 ```
 
 **Expected output:**
 ```
-✓ PostgreSQL connection successful
-✓ Database schema created
-✓ Importing commands from JSON...
-  - exploitation/general.json: 15 commands
-  - post-exploit/linux.json: 42 commands
-  - web/sql-injection.json: 8 commands
+🚀 Starting command migration...
+
+📋 Creating database schema...
+✓ Database schema created successfully
+🔍 Scanning reference/data/commands for JSON files...
+✓ Found 18 JSON files
+
+📄 Processing: exploitation/general.json
+  ✓ Command: bash-reverse-shell
+  ✓ Command: nc-reverse-shell
   ...
-✓ Migration complete: 150+ commands imported
+📄 Processing: post-exploit/linux.json
+  ✓ Command: linux-ufw-disable
+  ...
+
+🔗 Processing command relationships...
+✓ Created 45 command relationships
+
+============================================================
+📊 MIGRATION STATISTICS
+============================================================
+Commands migrated:      150
+Flags created:          320
+Variables created:      180
+Tags created:           85
+Relations created:      45
+Indicators created:     210
+
+✓ No errors encountered
+============================================================
+
+✅ Migration complete!
 ```
+
+**What it does automatically:**
+1. Creates PostgreSQL database if needed
+2. Creates all tables from schema.sql
+3. Recursively finds all 18 JSON files in reference/data/commands/
+4. Imports commands with metadata (flags, variables, tags, indicators)
+5. Creates command relationships (alternatives, prerequisites, next_steps)
 
 ### 3. Verify Setup
 

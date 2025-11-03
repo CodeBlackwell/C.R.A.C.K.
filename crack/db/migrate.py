@@ -57,6 +57,39 @@ class CRACKMigration:
             'errors': []
         }
 
+    def create_schema(self):
+        """Create database schema from schema.sql if tables don't exist"""
+        # Check if tables already exist
+        self.cursor.execute("""
+            SELECT EXISTS (
+                SELECT FROM information_schema.tables
+                WHERE table_schema = 'public'
+                AND table_name = 'commands'
+            );
+        """)
+
+        if self.cursor.fetchone()[0]:
+            print("✓ Database schema already exists")
+            return
+
+        print("📋 Creating database schema...")
+
+        # Read schema.sql
+        schema_path = Path(__file__).parent / 'schema.sql'
+        if not schema_path.exists():
+            raise FileNotFoundError(f"Schema file not found: {schema_path}")
+
+        schema_sql = schema_path.read_text()
+
+        # Execute schema creation
+        try:
+            self.cursor.execute(schema_sql)
+            self.conn.commit()
+            print("✓ Database schema created successfully")
+        except Exception as e:
+            self.conn.rollback()
+            raise Exception(f"Failed to create schema: {e}")
+
     def migrate_commands(self, json_dir: Path = None):
         """
         Migrate commands from JSON files to SQL
@@ -424,17 +457,20 @@ def main():
     try:
         if action == 'commands':
             print("🚀 Starting command migration...\n")
+            migration.create_schema()
             migration.migrate_commands()
             migration.process_relations()
             migration.print_statistics()
 
         elif action == 'chains':
             print("🚀 Starting attack chain migration...\n")
+            migration.create_schema()
             migration.migrate_attack_chains()
             migration.print_statistics()
 
         elif action == 'all':
             print("🚀 Starting full migration...\n")
+            migration.create_schema()
             migration.migrate_commands()
             migration.process_relations()
             migration.migrate_attack_chains()
