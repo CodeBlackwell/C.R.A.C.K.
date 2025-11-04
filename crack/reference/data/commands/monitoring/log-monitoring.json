@@ -1,0 +1,609 @@
+{
+  "category": "monitoring",
+  "subcategory": "log-monitoring",
+  "description": "Live log monitoring and system message viewing for real-time defense and troubleshooting",
+  "commands": [
+    {
+      "id": "tail-follow-log",
+      "name": "Follow Log File (Real-Time)",
+      "category": "monitoring",
+      "subcategory": "log-monitoring",
+      "command": "tail -f <LOG_FILE>",
+      "description": "Monitor log file in real-time, displaying new lines as they are written",
+      "variables": [
+        {
+          "name": "<LOG_FILE>",
+          "description": "Path to log file",
+          "example": "/var/log/syslog",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "-f": "Follow - output appended data as file grows (real-time monitoring)"
+      },
+      "tags": [
+        "DEFENSE",
+        "LINUX",
+        "LOG_ANALYSIS",
+        "MONITORING",
+        "OSCP:HIGH",
+        "POST_EXPLOITATION",
+        "REAL_TIME"
+      ],
+      "oscp_relevance": "high",
+      "success_indicators": [
+        "Log entries appear in real-time",
+        "Timestamps show current time"
+      ],
+      "failure_indicators": [
+        "No such file or directory",
+        "Permission denied",
+        "tail: command not found"
+      ],
+      "next_steps": [
+        "Watch for authentication attempts: tail -f /var/log/auth.log",
+        "Monitor system messages: tail -f /var/log/syslog",
+        "Watch web server logs: tail -f /var/log/apache2/access.log",
+        "Filter with grep: tail-follow-filter"
+      ],
+      "alternatives": [
+        "tail-follow-multiple",
+        "journalctl-follow"
+      ],
+      "notes": "CRITICAL for OSCP defense monitoring and troubleshooting. Press Ctrl+C to exit. Common logs: /var/log/auth.log (authentication), /var/log/syslog (system), /var/log/apache2/access.log (web). Time estimate: runs continuously until stopped. Manual alternative: while true; do tail -n 1 <FILE>; sleep 1; done"
+    },
+    {
+      "id": "tail-follow-filter",
+      "name": "Follow Log with Grep Filter",
+      "category": "monitoring",
+      "subcategory": "log-monitoring",
+      "command": "tail -f <LOG_FILE> | grep --line-buffered <PATTERN>",
+      "description": "Monitor log file in real-time, showing only lines matching a pattern",
+      "variables": [
+        {
+          "name": "<LOG_FILE>",
+          "description": "Path to log file",
+          "example": "/var/log/auth.log",
+          "required": true
+        },
+        {
+          "name": "<PATTERN>",
+          "description": "Pattern to filter for",
+          "example": "Failed password",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "-f": "Follow log in real-time",
+        "| grep": "Pipe to grep for filtering",
+        "--line-buffered": "Force grep to flush output immediately (required for real-time display)"
+      },
+      "tags": [
+        "DEFENSE",
+        "FILTERING",
+        "LINUX",
+        "LOG_ANALYSIS",
+        "MONITORING",
+        "OSCP:HIGH",
+        "POST_EXPLOITATION",
+        "REAL_TIME"
+      ],
+      "oscp_relevance": "high",
+      "success_indicators": [
+        "Filtered log entries appear",
+        "Only matching lines displayed"
+      ],
+      "failure_indicators": [
+        "No matching entries",
+        "Permission denied"
+      ],
+      "next_steps": [
+        "Monitor failed SSH attempts: tail -f /var/log/auth.log | grep 'Failed password'",
+        "Watch for root logins: tail -f /var/log/auth.log | grep 'session opened.*root'",
+        "Monitor sudo usage: tail -f /var/log/auth.log | grep 'sudo.*COMMAND'",
+        "Track user activity: tail -f /var/log/auth.log | grep <USERNAME>"
+      ],
+      "alternatives": [
+        "journalctl -f | grep <PATTERN>"
+      ],
+      "notes": "--line-buffered is REQUIRED or grep will buffer output and display will be delayed. OSCP defense patterns: 'Failed password' (brute force), 'Invalid user' (enumeration), 'Accepted publickey' (successful login), 'sudo.*COMMAND' (privilege usage). Time estimate: runs continuously."
+    },
+    {
+      "id": "tail-follow-multiple",
+      "name": "Follow Multiple Log Files",
+      "category": "monitoring",
+      "subcategory": "log-monitoring",
+      "command": "tail -f <LOG_FILE1> <LOG_FILE2>",
+      "description": "Monitor multiple log files simultaneously in real-time with file labels",
+      "variables": [
+        {
+          "name": "<LOG_FILE1>",
+          "description": "First log file",
+          "example": "/var/log/syslog",
+          "required": true
+        },
+        {
+          "name": "<LOG_FILE2>",
+          "description": "Second log file",
+          "example": "/var/log/auth.log",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "-f": "Follow mode for multiple files - displays filename headers"
+      },
+      "tags": [
+        "DEFENSE",
+        "LINUX",
+        "LOG_ANALYSIS",
+        "MONITORING",
+        "OSCP:MEDIUM",
+        "POST_EXPLOITATION",
+        "REAL_TIME"
+      ],
+      "oscp_relevance": "medium",
+      "success_indicators": [
+        "==> <FILENAME> <==",
+        "File headers displayed",
+        "Updates from multiple logs"
+      ],
+      "failure_indicators": [
+        "No such file or directory",
+        "Permission denied"
+      ],
+      "next_steps": [
+        "Monitor system and auth logs: tail -f /var/log/syslog /var/log/auth.log",
+        "Watch application logs together",
+        "Use multitail for better multi-log display (if installed)"
+      ],
+      "alternatives": [
+        "multitail <FILE1> <FILE2> (if installed)"
+      ],
+      "notes": "File headers show which file each line comes from: ==> /var/log/syslog <==. Useful for correlating events across logs. Time estimate: runs continuously."
+    },
+    {
+      "id": "journalctl-follow",
+      "name": "Follow systemd Journal (Real-Time)",
+      "category": "monitoring",
+      "subcategory": "log-monitoring",
+      "command": "journalctl -f",
+      "description": "Monitor systemd journal in real-time (unified logging for modern Linux)",
+      "variables": [],
+      "flag_explanations": {
+        "-f": "Follow - display new journal entries as they are added (like tail -f)"
+      },
+      "tags": [
+        "DEFENSE",
+        "LINUX",
+        "LOG_ANALYSIS",
+        "MONITORING",
+        "OSCP:HIGH",
+        "POST_EXPLOITATION",
+        "REAL_TIME",
+        "SYSTEMD"
+      ],
+      "oscp_relevance": "high",
+      "success_indicators": [
+        "Journal entries appear",
+        "Timestamps",
+        "Service names"
+      ],
+      "failure_indicators": [
+        "journalctl: command not found",
+        "Failed to access journal"
+      ],
+      "next_steps": [
+        "Follow specific service: journalctl-service-follow",
+        "Filter by priority: journalctl -f -p err (errors only)",
+        "Filter by time: journalctl --since \"5 minutes ago\"",
+        "Combine filters: journalctl -f -u ssh -p warning"
+      ],
+      "alternatives": [
+        "tail-follow-log /var/log/syslog"
+      ],
+      "notes": "systemd journal is unified log system on modern Linux. Combines all system and service logs. OSCP tip: Great for monitoring service failures, authentication attempts, and system events. Time estimate: runs continuously. For systems without systemd: fall back to tail -f /var/log/syslog"
+    },
+    {
+      "id": "journalctl-service-follow",
+      "name": "Follow Specific Service Logs",
+      "category": "monitoring",
+      "subcategory": "log-monitoring",
+      "command": "journalctl -u <SERVICE> -f",
+      "description": "Monitor logs for a specific systemd service in real-time",
+      "variables": [
+        {
+          "name": "<SERVICE>",
+          "description": "Service name (without .service extension)",
+          "example": "ssh",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "-u": "Unit - filter by systemd unit (service)",
+        "-f": "Follow in real-time"
+      },
+      "tags": [
+        "DEFENSE",
+        "LINUX",
+        "LOG_ANALYSIS",
+        "MONITORING",
+        "OSCP:HIGH",
+        "POST_EXPLOITATION",
+        "REAL_TIME",
+        "SYSTEMD"
+      ],
+      "oscp_relevance": "high",
+      "success_indicators": [
+        "Service log entries",
+        "Filtered to specified service"
+      ],
+      "failure_indicators": [
+        "No entries found",
+        "Unit not found"
+      ],
+      "next_steps": [
+        "Monitor SSH: journalctl -u ssh -f",
+        "Monitor web server: journalctl -u apache2 -f or nginx",
+        "Monitor database: journalctl -u postgresql -f",
+        "Add priority filter: journalctl -u <SERVICE> -f -p err"
+      ],
+      "alternatives": [
+        "tail -f /var/log/<SERVICE>.log (if service has dedicated log)"
+      ],
+      "notes": "Service-specific monitoring helps troubleshoot issues. Common services: ssh, apache2, nginx, mysql, postgresql, cron. Can monitor multiple: journalctl -u ssh -u apache2 -f. Time estimate: runs continuously."
+    },
+    {
+      "id": "journalctl-priority-filter",
+      "name": "Filter Journal by Priority",
+      "category": "monitoring",
+      "subcategory": "log-monitoring",
+      "command": "journalctl -p <PRIORITY>",
+      "description": "Display journal entries at or above specified priority level (emerg, alert, crit, err, warning, notice, info, debug)",
+      "variables": [
+        {
+          "name": "<PRIORITY>",
+          "description": "Priority level",
+          "example": "err",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "-p": "Priority - filter by syslog priority level (0=emerg to 7=debug). Displays specified level and above."
+      },
+      "tags": [
+        "DEFENSE",
+        "FILTERING",
+        "LINUX",
+        "LOG_ANALYSIS",
+        "MONITORING",
+        "OSCP:MEDIUM",
+        "POST_EXPLOITATION",
+        "SYSTEMD"
+      ],
+      "oscp_relevance": "medium",
+      "success_indicators": [
+        "Log entries at specified priority",
+        "Error messages if -p err"
+      ],
+      "failure_indicators": [
+        "No entries found",
+        "Invalid priority"
+      ],
+      "next_steps": [
+        "View errors only: journalctl -p err",
+        "View critical and above: journalctl -p crit",
+        "Combine with follow: journalctl -f -p err",
+        "Combine with service: journalctl -u ssh -p warning"
+      ],
+      "alternatives": [
+        "grep for severity in syslog files"
+      ],
+      "notes": "Priority levels (lowest to highest): 0=emerg, 1=alert, 2=crit, 3=err, 4=warning, 5=notice, 6=info, 7=debug. -p err shows errors, critical, alert, and emergency. For errors only (not above): journalctl PRIORITY=3. Time estimate: 1-5 seconds."
+    },
+    {
+      "id": "journalctl-time-range",
+      "name": "View Journal by Time Range",
+      "category": "monitoring",
+      "subcategory": "log-monitoring",
+      "command": "journalctl --since \"<TIME_SPEC>\" --until \"<TIME_SPEC>\"",
+      "description": "Display journal entries within a specific time range",
+      "variables": [
+        {
+          "name": "<TIME_SPEC>",
+          "description": "Time specification",
+          "example": "2024-01-01 10:00:00",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "--since": "Show entries from this time onward (inclusive)",
+        "--until": "Show entries up to this time (inclusive)"
+      },
+      "tags": [
+        "DEFENSE",
+        "FILTERING",
+        "LINUX",
+        "LOG_ANALYSIS",
+        "MONITORING",
+        "OSCP:MEDIUM",
+        "POST_EXPLOITATION",
+        "SYSTEMD"
+      ],
+      "oscp_relevance": "medium",
+      "success_indicators": [
+        "Log entries in time range",
+        "Timestamps match range"
+      ],
+      "failure_indicators": [
+        "No entries found",
+        "Invalid time format"
+      ],
+      "next_steps": [
+        "Last 10 minutes: journalctl --since \"10 minutes ago\"",
+        "Last hour: journalctl --since \"1 hour ago\"",
+        "Today: journalctl --since today",
+        "Yesterday: journalctl --since yesterday --until today"
+      ],
+      "alternatives": [
+        "grep time range in syslog files (manual)"
+      ],
+      "notes": "Time formats: 'YYYY-MM-DD HH:MM:SS', 'yesterday', 'today', '1 hour ago', '30 minutes ago', '2 days ago'. Supports natural language. For recent events: journalctl --since \"5 minutes ago\". Time estimate: 1-10 seconds."
+    },
+    {
+      "id": "dmesg-kernel-messages",
+      "name": "View Kernel Ring Buffer",
+      "category": "monitoring",
+      "subcategory": "log-monitoring",
+      "command": "dmesg",
+      "description": "Display kernel messages from boot and hardware events (ring buffer)",
+      "variables": [],
+      "flag_explanations": {},
+      "tags": [
+        "DEFENSE",
+        "HARDWARE",
+        "KERNEL",
+        "LINUX",
+        "LOG_ANALYSIS",
+        "MONITORING",
+        "OSCP:MEDIUM",
+        "POST_EXPLOITATION"
+      ],
+      "oscp_relevance": "medium",
+      "success_indicators": [
+        "Kernel messages",
+        "Hardware detection",
+        "Driver loading"
+      ],
+      "failure_indicators": [
+        "dmesg: command not found",
+        "Permission denied"
+      ],
+      "next_steps": [
+        "Follow kernel messages: dmesg-follow",
+        "Filter errors: dmesg | grep -i error",
+        "Check USB devices: dmesg | grep -i usb",
+        "Check disk errors: dmesg | grep -i \"I/O error\""
+      ],
+      "alternatives": [
+        "journalctl -k (kernel messages via journald)"
+      ],
+      "notes": "Kernel ring buffer shows hardware events, driver loading, errors. Useful for hardware troubleshooting and detecting inserted USB devices. Output can be large - pipe to less: dmesg | less. Time estimate: 1-2 seconds."
+    },
+    {
+      "id": "dmesg-follow",
+      "name": "Follow Kernel Messages (Real-Time)",
+      "category": "monitoring",
+      "subcategory": "log-monitoring",
+      "command": "dmesg -w",
+      "description": "Monitor kernel messages in real-time (hardware events, driver issues, errors)",
+      "variables": [],
+      "flag_explanations": {
+        "-w": "Wait for new messages - follow mode (like tail -f)"
+      },
+      "tags": [
+        "DEFENSE",
+        "HARDWARE",
+        "KERNEL",
+        "LINUX",
+        "LOG_ANALYSIS",
+        "MONITORING",
+        "OSCP:LOW",
+        "POST_EXPLOITATION",
+        "REAL_TIME"
+      ],
+      "oscp_relevance": "low",
+      "success_indicators": [
+        "Real-time kernel messages",
+        "New hardware events displayed"
+      ],
+      "failure_indicators": [
+        "dmesg: invalid option -- 'w'",
+        "Permission denied"
+      ],
+      "next_steps": [
+        "Watch for USB insertion events",
+        "Monitor disk errors",
+        "Check for out-of-memory events",
+        "Detect network interface changes"
+      ],
+      "alternatives": [
+        "journalctl -kf (kernel messages via journald)",
+        "watch -n 1 dmesg | tail -20"
+      ],
+      "notes": "-w flag requires dmesg from util-linux 2.21+ (2012+). Older systems: use watch -n 1 'dmesg | tail -20'. Useful for detecting hardware insertion (USB drives). Time estimate: runs continuously."
+    },
+    {
+      "id": "grep-auth-failed",
+      "name": "Search for Failed Authentication",
+      "category": "monitoring",
+      "subcategory": "log-monitoring",
+      "command": "grep -i \"failed\" /var/log/auth.log",
+      "description": "Search authentication log for failed login attempts (brute force detection)",
+      "variables": [],
+      "flag_explanations": {
+        "-i": "Ignore case (match 'failed', 'Failed', 'FAILED')"
+      },
+      "tags": [
+        "AUTHENTICATION",
+        "DEFENSE",
+        "LINUX",
+        "LOG_ANALYSIS",
+        "MONITORING",
+        "OSCP:HIGH",
+        "POST_EXPLOITATION",
+        "SECURITY"
+      ],
+      "oscp_relevance": "high",
+      "success_indicators": [
+        "Failed password",
+        "Failed publickey",
+        "authentication failure"
+      ],
+      "failure_indicators": [
+        "No such file",
+        "Permission denied"
+      ],
+      "next_steps": [
+        "Count failed attempts: grep -c \"Failed password\" /var/log/auth.log",
+        "Extract IPs: grep \"Failed password\" /var/log/auth.log | grep -oP '\\d+\\.\\d+\\.\\d+\\.\\d+' | sort | uniq -c",
+        "Block attacking IPs: iptables -A INPUT -s <IP> -j DROP",
+        "Check for username enumeration: grep \"Invalid user\" /var/log/auth.log"
+      ],
+      "alternatives": [
+        "journalctl -u ssh | grep -i failed",
+        "lastb-failed-logins"
+      ],
+      "notes": "CRITICAL for OSCP defense. Patterns: 'Failed password for <USER>' (wrong password), 'Invalid user <USER>' (enumeration), 'Failed publickey for <USER>' (SSH key failed). Multiple failures from same IP = brute force attack. Time estimate: 1-3 seconds. Log location varies: /var/log/auth.log (Debian/Ubuntu), /var/log/secure (RHEL/CentOS)."
+    },
+    {
+      "id": "grep-sudo-commands",
+      "name": "Search for Sudo Command Usage",
+      "category": "monitoring",
+      "subcategory": "log-monitoring",
+      "command": "grep -i \"sudo.*COMMAND\" /var/log/auth.log",
+      "description": "Extract all sudo command executions from auth log (privilege escalation tracking)",
+      "variables": [],
+      "flag_explanations": {
+        "-i": "Case insensitive",
+        "\"sudo.*COMMAND\"": "Pattern matches sudo entries with COMMAND field"
+      },
+      "tags": [
+        "AUDITING",
+        "DEFENSE",
+        "LINUX",
+        "LOG_ANALYSIS",
+        "MONITORING",
+        "OSCP:HIGH",
+        "POST_EXPLOITATION",
+        "PRIVILEGE_ESCALATION"
+      ],
+      "oscp_relevance": "high",
+      "success_indicators": [
+        "COMMAND=",
+        "USER=",
+        "sudo:"
+      ],
+      "failure_indicators": [
+        "No matches found",
+        "Permission denied"
+      ],
+      "next_steps": [
+        "Identify privilege escalation attempts",
+        "Track which users use sudo: grep \"sudo.*COMMAND\" /var/log/auth.log | grep -oP 'USER=\\w+' | sort | uniq -c",
+        "Find specific command: grep \"sudo.*COMMAND=/usr/bin/bash\" /var/log/auth.log",
+        "Check for sudo failures: grep \"sudo.*incorrect password\" /var/log/auth.log"
+      ],
+      "alternatives": [
+        "journalctl | grep sudo.*COMMAND"
+      ],
+      "notes": "CRITICAL for defense auditing. Each sudo execution is logged with: timestamp, user, command, working directory. OSCP tip: Look for suspicious commands: bash, sh, vi, less, find, python (all can spawn shells). Time estimate: 2-5 seconds depending on log size."
+    },
+    {
+      "id": "lastb-failed-logins",
+      "name": "Failed Login Attempts",
+      "category": "monitoring",
+      "subcategory": "log-monitoring",
+      "command": "lastb -a",
+      "description": "Display all failed login attempts from btmp log (bad login tracking)",
+      "variables": [],
+      "flag_explanations": {
+        "-a": "Display hostname in last column"
+      },
+      "tags": [
+        "AUTHENTICATION",
+        "DEFENSE",
+        "LINUX",
+        "LOG_ANALYSIS",
+        "MONITORING",
+        "OSCP:HIGH",
+        "POST_EXPLOITATION",
+        "SECURITY"
+      ],
+      "oscp_relevance": "high",
+      "success_indicators": [
+        "Username",
+        "Terminal",
+        "IP address",
+        "Date/Time"
+      ],
+      "failure_indicators": [
+        "lastb: command not found",
+        "btmp: No such file",
+        "Permission denied (need root)"
+      ],
+      "next_steps": [
+        "Count attempts per IP: lastb | awk '{print $3}' | sort | uniq -c | sort -rn",
+        "Block attacker IPs: iptables -A INPUT -s <IP> -j DROP",
+        "Check for username patterns (enumeration)",
+        "Clear btmp after review: sudo truncate -s 0 /var/log/btmp"
+      ],
+      "alternatives": [
+        "grep-auth-failed",
+        "journalctl | grep 'Failed password'"
+      ],
+      "notes": "Reads /var/log/btmp (bad login log). MUST run as root. OSCP defense tip: Multiple failures = brute force. Look for: (1) Same IP, multiple users (enumeration), (2) Same user, many attempts (password guessing), (3) Many IPs, same user (distributed attack). Time estimate: 1-5 seconds depending on attack history."
+    },
+    {
+      "id": "journalctl-boot-messages",
+      "name": "View Boot Messages",
+      "category": "monitoring",
+      "subcategory": "log-monitoring",
+      "command": "journalctl -b",
+      "description": "Display all journal entries from current boot",
+      "variables": [],
+      "flag_explanations": {
+        "-b": "Boot - show messages from current boot only (no previous boot messages)"
+      },
+      "tags": [
+        "BOOT",
+        "LINUX",
+        "LOG_ANALYSIS",
+        "MONITORING",
+        "OSCP:LOW",
+        "POST_EXPLOITATION",
+        "SYSTEMD",
+        "TROUBLESHOOTING"
+      ],
+      "oscp_relevance": "low",
+      "success_indicators": [
+        "Kernel boot messages",
+        "Service startup messages",
+        "Boot timestamp"
+      ],
+      "failure_indicators": [
+        "No entries found",
+        "journalctl: command not found"
+      ],
+      "next_steps": [
+        "View previous boot: journalctl -b -1",
+        "List all boots: journalctl --list-boots",
+        "Check for boot errors: journalctl -b -p err",
+        "Check service failures: journalctl -b | grep -i failed"
+      ],
+      "alternatives": [
+        "dmesg-kernel-messages (kernel only)"
+      ],
+      "notes": "Shows everything from current boot: kernel, systemd, services. Previous boot: -b -1, boot before that: -b -2, etc. List boots: journalctl --list-boots. Time estimate: 2-10 seconds depending on boot log size."
+    }
+  ]
+}

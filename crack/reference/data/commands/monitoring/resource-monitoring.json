@@ -1,0 +1,671 @@
+{
+  "category": "monitoring",
+  "subcategory": "resource-monitoring",
+  "description": "System resource monitoring commands for CPU, memory, I/O, and performance analysis",
+  "commands": [
+    {
+      "id": "ps-sort-memory",
+      "name": "Top Memory Consumers",
+      "category": "monitoring",
+      "subcategory": "resource-monitoring",
+      "command": "ps aux --sort=-%mem | head -10",
+      "description": "List top 10 processes by memory usage (identify memory leaks or suspicious high-memory processes)",
+      "variables": [],
+      "flag_explanations": {
+        "aux": "All users, user-oriented format, include processes without TTY",
+        "--sort=-%mem": "Sort by memory percentage descending (highest first, - for descending)",
+        "| head -10": "Pipe to head to show only first 10 results"
+      },
+      "tags": [
+        "DEFENSE",
+        "DISCOVERY",
+        "ENUMERATION",
+        "LINUX",
+        "MONITORING",
+        "OSCP:MEDIUM",
+        "POST_EXPLOITATION",
+        "RESOURCE_MONITORING"
+      ],
+      "oscp_relevance": "medium",
+      "success_indicators": [
+        "%MEM",
+        "USER",
+        "PID",
+        "COMMAND"
+      ],
+      "failure_indicators": [
+        "ps: command not found"
+      ],
+      "next_steps": [
+        "Investigate high-memory processes: ps-pid-details",
+        "Check if process is legitimate or malicious",
+        "Monitor memory over time: free-memory-human",
+        "Kill memory-hogging process if needed: kill <PID>"
+      ],
+      "alternatives": [
+        "top -bn1 -o %MEM | head -20"
+      ],
+      "notes": "OSCP defense tip: Unexpected high-memory processes may indicate cryptominers, memory scrapers, or DoS attacks. For top CPU: ps aux --sort=-%cpu | head -10. Time estimate: 2 seconds."
+    },
+    {
+      "id": "ps-sort-cpu",
+      "name": "Top CPU Consumers",
+      "category": "monitoring",
+      "subcategory": "resource-monitoring",
+      "command": "ps aux --sort=-%cpu | head -10",
+      "description": "List top 10 processes by CPU usage (identify CPU-intensive or suspicious processes)",
+      "variables": [],
+      "flag_explanations": {
+        "aux": "All users, user-oriented format, processes without TTY",
+        "--sort=-%cpu": "Sort by CPU percentage descending (highest CPU usage first)",
+        "| head -10": "Show only top 10 results"
+      },
+      "tags": [
+        "DEFENSE",
+        "DISCOVERY",
+        "ENUMERATION",
+        "LINUX",
+        "MONITORING",
+        "OSCP:MEDIUM",
+        "POST_EXPLOITATION",
+        "RESOURCE_MONITORING"
+      ],
+      "oscp_relevance": "medium",
+      "success_indicators": [
+        "%CPU",
+        "USER",
+        "PID",
+        "COMMAND"
+      ],
+      "failure_indicators": [
+        "ps: command not found"
+      ],
+      "next_steps": [
+        "Investigate high-CPU process: ps-pid-details",
+        "Check process legitimacy",
+        "Monitor CPU over time: vmstat-cpu-monitoring",
+        "Kill rogue process: kill <PID>"
+      ],
+      "alternatives": [
+        "top -bn1 -o %CPU | head -20"
+      ],
+      "notes": "OSCP defense tip: Unexpected 100% CPU usage may indicate cryptominers, brute-force attacks, or fork bombs. Time estimate: 2 seconds."
+    },
+    {
+      "id": "free-memory-human",
+      "name": "Memory Usage (Human Readable)",
+      "category": "monitoring",
+      "subcategory": "resource-monitoring",
+      "command": "free -h",
+      "description": "Display system memory usage in human-readable format (total, used, free, shared, buff/cache, available)",
+      "variables": [],
+      "flag_explanations": {
+        "-h": "Human-readable - display sizes in GB/MB/KB instead of bytes"
+      },
+      "tags": [
+        "DEFENSE",
+        "LINUX",
+        "MONITORING",
+        "OSCP:MEDIUM",
+        "POST_EXPLOITATION",
+        "QUICK_WIN",
+        "RESOURCE_MONITORING"
+      ],
+      "oscp_relevance": "medium",
+      "success_indicators": [
+        "total",
+        "used",
+        "free",
+        "available",
+        "Mem:",
+        "Swap:"
+      ],
+      "failure_indicators": [
+        "free: command not found"
+      ],
+      "next_steps": [
+        "If low memory: identify top consumers with ps-sort-memory",
+        "Check swap usage - high swap = potential performance issue",
+        "Monitor memory over time: free -h -s 5 (every 5 seconds)",
+        "Clear cache if needed: sudo sync && sudo echo 3 > /proc/sys/vm/drop_caches"
+      ],
+      "alternatives": [
+        "cat /proc/meminfo",
+        "vmstat -s"
+      ],
+      "notes": "'available' is key metric - memory available for starting new applications (includes reclaimable cache). Low available memory = system under pressure. Swap usage (high) = memory exhaustion. Time estimate: <1 second."
+    },
+    {
+      "id": "vmstat-cpu-monitoring",
+      "name": "Virtual Memory Statistics",
+      "category": "monitoring",
+      "subcategory": "resource-monitoring",
+      "command": "vmstat 1 5",
+      "description": "Monitor CPU, memory, I/O, and system activity with 5 samples at 1-second intervals",
+      "variables": [],
+      "flag_explanations": {
+        "1": "Delay between samples in seconds",
+        "5": "Number of samples to collect (omit for continuous monitoring)"
+      },
+      "tags": [
+        "DEFENSE",
+        "LINUX",
+        "MONITORING",
+        "OSCP:LOW",
+        "POST_EXPLOITATION",
+        "RESOURCE_MONITORING"
+      ],
+      "oscp_relevance": "low",
+      "success_indicators": [
+        "procs",
+        "memory",
+        "swap",
+        "io",
+        "system",
+        "cpu"
+      ],
+      "failure_indicators": [
+        "vmstat: command not found"
+      ],
+      "next_steps": [
+        "Monitor CPU idle (id column) - low idle = high CPU usage",
+        "Check swap in/out (si/so) - high values = memory pressure",
+        "Monitor blocked processes (b column) - indicates I/O wait",
+        "Use iostat for detailed I/O statistics"
+      ],
+      "alternatives": [
+        "top -bn1",
+        "sar -u 1 5"
+      ],
+      "notes": "Key columns: r (processes waiting for CPU), b (blocked on I/O), si/so (swap in/out), us (user CPU%), sy (system CPU%), id (idle CPU%), wa (I/O wait%). High 'wa' = disk bottleneck. For continuous: vmstat 1. Time estimate: 5 seconds for 5 samples."
+    },
+    {
+      "id": "iostat-disk-stats",
+      "name": "I/O Statistics (Disk Activity)",
+      "category": "monitoring",
+      "subcategory": "resource-monitoring",
+      "command": "iostat -x 1 5",
+      "description": "Monitor disk I/O statistics with extended details (5 samples at 1-second intervals)",
+      "variables": [],
+      "flag_explanations": {
+        "-x": "Extended statistics - display detailed per-disk metrics including utilization, await, svctm",
+        "1": "Interval in seconds between samples",
+        "5": "Number of samples (omit for continuous)"
+      },
+      "tags": [
+        "DEFENSE",
+        "LINUX",
+        "MONITORING",
+        "OSCP:LOW",
+        "POST_EXPLOITATION",
+        "RESOURCE_MONITORING"
+      ],
+      "oscp_relevance": "low",
+      "success_indicators": [
+        "Device:",
+        "r/s",
+        "w/s",
+        "%util",
+        "await"
+      ],
+      "failure_indicators": [
+        "iostat: command not found"
+      ],
+      "next_steps": [
+        "High %util (>80%) = disk bottleneck",
+        "High await = slow disk response time",
+        "Identify I/O-heavy processes: iotop (if installed)",
+        "Check disk health: smartctl -a /dev/sda"
+      ],
+      "alternatives": [
+        "iotop (if installed)",
+        "vmstat 1 5"
+      ],
+      "notes": "Key metrics: r/s (reads/sec), w/s (writes/sec), %util (disk busy %), await (average I/O wait time in ms). %util >80% consistently = disk bottleneck. Time estimate: 5 seconds for 5 samples. Part of sysstat package."
+    },
+    {
+      "id": "uptime-load-average",
+      "name": "System Uptime and Load Average",
+      "category": "monitoring",
+      "subcategory": "resource-monitoring",
+      "command": "uptime",
+      "description": "Display system uptime and load averages (1, 5, 15 minute averages)",
+      "variables": [],
+      "flag_explanations": {},
+      "tags": [
+        "DEFENSE",
+        "LINUX",
+        "MONITORING",
+        "OSCP:LOW",
+        "POST_EXPLOITATION",
+        "QUICK_WIN",
+        "RESOURCE_MONITORING"
+      ],
+      "oscp_relevance": "low",
+      "success_indicators": [
+        "up",
+        "users",
+        "load average:"
+      ],
+      "failure_indicators": [
+        "uptime: command not found"
+      ],
+      "next_steps": [
+        "Interpret load average: <1.0 per CPU core = healthy, >2.0 per core = overloaded",
+        "Check CPU count: nproc or grep -c processor /proc/cpuinfo",
+        "If high load: investigate with top-snapshot or ps-sort-cpu",
+        "Check for runaway processes"
+      ],
+      "alternatives": [
+        "cat /proc/loadavg",
+        "w (includes user info)"
+      ],
+      "notes": "Load average shows average number of processes in run queue. On 4-core system: load of 4.0 = 100% CPU utilization, 8.0 = 200% (overloaded). Three numbers: 1-min, 5-min, 15-min averages. Time estimate: <1 second."
+    },
+    {
+      "id": "df-disk-usage",
+      "name": "Disk Space Usage",
+      "category": "monitoring",
+      "subcategory": "resource-monitoring",
+      "command": "df -h",
+      "description": "Display disk space usage for all filesystems in human-readable format",
+      "variables": [],
+      "flag_explanations": {
+        "-h": "Human-readable - show sizes in GB/MB/KB instead of blocks"
+      },
+      "tags": [
+        "DEFENSE",
+        "LINUX",
+        "MONITORING",
+        "OSCP:MEDIUM",
+        "POST_EXPLOITATION",
+        "QUICK_WIN",
+        "RESOURCE_MONITORING"
+      ],
+      "oscp_relevance": "medium",
+      "success_indicators": [
+        "Filesystem",
+        "Size",
+        "Used",
+        "Avail",
+        "Use%",
+        "Mounted on"
+      ],
+      "failure_indicators": [
+        "df: command not found"
+      ],
+      "next_steps": [
+        "If >90% used: find large files with du-directory-usage",
+        "Check for log file bloat: du -sh /var/log/*",
+        "Find large files: find / -type f -size +100M 2>/dev/null",
+        "Clear space if needed"
+      ],
+      "alternatives": [
+        "df -h -x tmpfs -x devtmpfs (exclude pseudo-filesystems)"
+      ],
+      "notes": "OSCP tip: Full disk can prevent logging, break services, and stop reverse shells. Check Use% column. For specific directory: df -h /var. Time estimate: 1 second."
+    },
+    {
+      "id": "du-directory-usage",
+      "name": "Directory Disk Usage",
+      "category": "monitoring",
+      "subcategory": "resource-monitoring",
+      "command": "du -sh <DIRECTORY>",
+      "description": "Show total disk usage for a directory in human-readable format",
+      "variables": [
+        {
+          "name": "<DIRECTORY>",
+          "description": "Directory to check",
+          "example": "/var/log",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "-s": "Summarize - display only total for directory (not each subdirectory)",
+        "-h": "Human-readable - show size in GB/MB/KB"
+      },
+      "tags": [
+        "DEFENSE",
+        "LINUX",
+        "MONITORING",
+        "OSCP:MEDIUM",
+        "POST_EXPLOITATION",
+        "RESOURCE_MONITORING"
+      ],
+      "oscp_relevance": "medium",
+      "success_indicators": [
+        "Size followed by directory path",
+        "G",
+        "M",
+        "K"
+      ],
+      "failure_indicators": [
+        "du: cannot access",
+        "Permission denied"
+      ],
+      "next_steps": [
+        "Find large subdirectories: du -h <DIR> --max-depth=1 | sort -hr",
+        "Find large files in directory: find <DIR> -type f -size +100M",
+        "Check log rotation: ls -lh /var/log/",
+        "Clear old logs or temporary files"
+      ],
+      "alternatives": [
+        "ncdu <DIRECTORY> (ncurses disk usage analyzer, if installed)"
+      ],
+      "notes": "Useful for finding what's consuming disk space. To see subdirectories: du -h <DIR> --max-depth=1 | sort -hr. Time estimate: 1-10 seconds depending on directory size."
+    },
+    {
+      "id": "lsof-user-files",
+      "name": "Files Opened by User",
+      "category": "monitoring",
+      "subcategory": "resource-monitoring",
+      "command": "lsof -u <USERNAME>",
+      "description": "List all files opened by a specific user (file handles, network connections, devices)",
+      "variables": [
+        {
+          "name": "<USERNAME>",
+          "description": "Username to check",
+          "example": "www-data",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "-u": "User - list files opened by specific user"
+      },
+      "tags": [
+        "DEFENSE",
+        "ENUMERATION",
+        "LINUX",
+        "MONITORING",
+        "OSCP:MEDIUM",
+        "POST_EXPLOITATION",
+        "RESOURCE_MONITORING"
+      ],
+      "oscp_relevance": "medium",
+      "success_indicators": [
+        "COMMAND",
+        "PID",
+        "USER",
+        "FD",
+        "TYPE",
+        "NAME"
+      ],
+      "failure_indicators": [
+        "lsof: command not found",
+        "Permission denied"
+      ],
+      "next_steps": [
+        "Identify active processes for user",
+        "Check network connections: lsof -u <USER> -i",
+        "Look for suspicious file access",
+        "Check deleted files still held open: lsof -u <USER> | grep deleted"
+      ],
+      "alternatives": [
+        "ls -l /proc/*/fd/ (manual check)"
+      ],
+      "notes": "Shows everything a user has open: regular files, directories, network sockets, devices. Useful for investigating compromised accounts. Time estimate: 2-5 seconds."
+    },
+    {
+      "id": "lsof-directory-usage",
+      "name": "Processes Using Directory",
+      "category": "monitoring",
+      "subcategory": "resource-monitoring",
+      "command": "lsof +D <DIRECTORY>",
+      "description": "Find all processes that have files open within a directory (recursively)",
+      "variables": [
+        {
+          "name": "<DIRECTORY>",
+          "description": "Directory to check",
+          "example": "/var/www",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "+D": "Directory - recursively search directory for open files (slower than +d which is non-recursive)"
+      },
+      "tags": [
+        "DEFENSE",
+        "ENUMERATION",
+        "LINUX",
+        "MONITORING",
+        "OSCP:MEDIUM",
+        "POST_EXPLOITATION",
+        "RESOURCE_MONITORING"
+      ],
+      "oscp_relevance": "medium",
+      "success_indicators": [
+        "COMMAND",
+        "PID",
+        "NAME"
+      ],
+      "failure_indicators": [
+        "No output (no processes using directory)",
+        "lsof: command not found"
+      ],
+      "next_steps": [
+        "Identify processes before unmounting filesystem",
+        "Kill processes if needed: kill <PID>",
+        "Use fuser for simpler output: fuser-directory-processes"
+      ],
+      "alternatives": [
+        "fuser-directory-processes",
+        "lsof +d <DIRECTORY> (non-recursive, faster)"
+      ],
+      "notes": "Useful before unmounting filesystems or deleting directories. +D is recursive (slow), +d is non-recursive (fast). Time estimate: 5-30 seconds depending on directory size."
+    },
+    {
+      "id": "fuser-directory-processes",
+      "name": "Processes Using Directory (fuser)",
+      "category": "monitoring",
+      "subcategory": "resource-monitoring",
+      "command": "fuser -v <DIRECTORY>",
+      "description": "Identify processes using files or directories (lighter than lsof)",
+      "variables": [
+        {
+          "name": "<DIRECTORY>",
+          "description": "Directory or file to check",
+          "example": "/mnt/share",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "-v": "Verbose - display USER, PID, ACCESS, COMMAND"
+      },
+      "tags": [
+        "DEFENSE",
+        "LINUX",
+        "MONITORING",
+        "OSCP:LOW",
+        "POST_EXPLOITATION",
+        "RESOURCE_MONITORING"
+      ],
+      "oscp_relevance": "low",
+      "success_indicators": [
+        "USER",
+        "PID",
+        "ACCESS",
+        "COMMAND"
+      ],
+      "failure_indicators": [
+        "No processes found",
+        "fuser: command not found"
+      ],
+      "next_steps": [
+        "Kill processes: fuser -k <DIRECTORY> (kills all processes using dir)",
+        "Unmount filesystem after clearing processes",
+        "Use -m flag for mounted filesystems: fuser -vm <MOUNT_POINT>"
+      ],
+      "alternatives": [
+        "lsof-directory-usage"
+      ],
+      "notes": "Lighter weight than lsof. Useful before unmounting. ACCESS types: c (current directory), e (executable), f (open file), r (root directory). Time estimate: 1 second."
+    },
+    {
+      "id": "w-user-activity",
+      "name": "User Activity (Who is Logged In)",
+      "category": "monitoring",
+      "subcategory": "resource-monitoring",
+      "command": "w",
+      "description": "Show who is logged in and what they are doing, plus system load",
+      "variables": [],
+      "flag_explanations": {},
+      "tags": [
+        "DEFENSE",
+        "ENUMERATION",
+        "LINUX",
+        "MONITORING",
+        "OSCP:MEDIUM",
+        "POST_EXPLOITATION",
+        "QUICK_WIN",
+        "RESOURCE_MONITORING",
+        "USER_ACTIVITY"
+      ],
+      "oscp_relevance": "medium",
+      "success_indicators": [
+        "USER",
+        "TTY",
+        "FROM",
+        "LOGIN@",
+        "IDLE",
+        "WHAT",
+        "load average"
+      ],
+      "failure_indicators": [
+        "w: command not found"
+      ],
+      "next_steps": [
+        "Identify unauthorized users",
+        "Check suspicious commands in WHAT column",
+        "View login history: last-login-history",
+        "Monitor for new logins in real-time"
+      ],
+      "alternatives": [
+        "who -a",
+        "users"
+      ],
+      "notes": "CRITICAL for defense monitoring. Shows active users, their terminal, source IP (FROM), login time, idle time, and current command. OSCP tip: Check FROM column for unexpected IPs, WHAT column for suspicious commands (shells, persistence scripts). Time estimate: <1 second."
+    },
+    {
+      "id": "who-logged-in",
+      "name": "Who is Logged In (Detailed)",
+      "category": "monitoring",
+      "subcategory": "resource-monitoring",
+      "command": "who -a",
+      "description": "Display all information about logged-in users including login time and source",
+      "variables": [],
+      "flag_explanations": {
+        "-a": "All - display all information (equivalent to -b -d --login -p -r -t -T -u)"
+      },
+      "tags": [
+        "DEFENSE",
+        "ENUMERATION",
+        "LINUX",
+        "MONITORING",
+        "OSCP:LOW",
+        "POST_EXPLOITATION",
+        "USER_ACTIVITY"
+      ],
+      "oscp_relevance": "low",
+      "success_indicators": [
+        "system boot",
+        "LOGIN",
+        "pts/"
+      ],
+      "failure_indicators": [
+        "who: command not found"
+      ],
+      "next_steps": [
+        "Check for unauthorized sessions",
+        "View full login history: last-login-history",
+        "Simple user list: users"
+      ],
+      "alternatives": [
+        "w-user-activity",
+        "users"
+      ],
+      "notes": "More detailed than 'users' command but less info than 'w'. Shows boot time, runlevel, login processes. Time estimate: <1 second."
+    },
+    {
+      "id": "last-login-history",
+      "name": "Login History",
+      "category": "monitoring",
+      "subcategory": "resource-monitoring",
+      "command": "last -a",
+      "description": "Display login history from wtmp log (who logged in, when, from where, how long)",
+      "variables": [],
+      "flag_explanations": {
+        "-a": "Display hostname in last column"
+      },
+      "tags": [
+        "DEFENSE",
+        "ENUMERATION",
+        "LINUX",
+        "MONITORING",
+        "OSCP:MEDIUM",
+        "POST_EXPLOITATION",
+        "USER_ACTIVITY"
+      ],
+      "oscp_relevance": "medium",
+      "success_indicators": [
+        "USER",
+        "TTY",
+        "LOGIN TIME",
+        "LOGOUT TIME",
+        "DURATION"
+      ],
+      "failure_indicators": [
+        "last: command not found",
+        "wtmp begins"
+      ],
+      "next_steps": [
+        "Look for logins from unexpected IPs",
+        "Check login times (unusual hours = suspicious)",
+        "View failed login attempts: lastb-failed-logins",
+        "View last login per user: lastlog-user-last"
+      ],
+      "alternatives": [
+        "cat /var/log/wtmp | utmpdump"
+      ],
+      "notes": "Reads /var/log/wtmp. OSCP defense tip: Look for (1) Logins from unexpected IPs, (2) Short-lived sessions (in/out quickly = potential intrusion), (3) Logins at unusual hours. For specific user: last -a <USERNAME>. Time estimate: 1-3 seconds."
+    },
+    {
+      "id": "lastlog-user-last",
+      "name": "Last Login for All Users",
+      "category": "monitoring",
+      "subcategory": "resource-monitoring",
+      "command": "lastlog",
+      "description": "Display last login time for all users on the system",
+      "variables": [],
+      "flag_explanations": {},
+      "tags": [
+        "DEFENSE",
+        "ENUMERATION",
+        "LINUX",
+        "MONITORING",
+        "OSCP:LOW",
+        "POST_EXPLOITATION",
+        "USER_ACTIVITY"
+      ],
+      "oscp_relevance": "low",
+      "success_indicators": [
+        "Username",
+        "Port",
+        "From",
+        "Latest"
+      ],
+      "failure_indicators": [
+        "**Never logged in**",
+        "lastlog: command not found"
+      ],
+      "next_steps": [
+        "Identify dormant accounts (never logged in)",
+        "Check service accounts for unexpected logins",
+        "View specific user: lastlog -u <USERNAME>"
+      ],
+      "alternatives": [
+        "last-login-history"
+      ],
+      "notes": "Shows one entry per user (most recent login). Reads /var/log/lastlog. '**Never logged in**' is normal for service accounts. Time estimate: 1 second."
+    }
+  ]
+}
