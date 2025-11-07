@@ -48,6 +48,7 @@ class DatabaseValidator:
             'variables': 0,
             'tags': 0,
             'relations': 0,
+            'guidance_relations': 0,  # NEW: descriptive text relations
             'indicators': 0,
             'unresolved_relations': 0
         }
@@ -84,7 +85,8 @@ class DatabaseValidator:
 
         required_tables = [
             'commands', 'command_flags', 'variables', 'command_vars',
-            'tags', 'command_tags', 'command_relations', 'command_indicators',
+            'tags', 'command_tags', 'command_relations', 'command_relation_guidance',
+            'command_indicators',
             'services', 'service_ports', 'service_aliases', 'service_commands',
             'attack_chains', 'chain_prerequisites', 'chain_steps', 'step_dependencies',
             'schema_version'
@@ -222,6 +224,64 @@ class DatabaseValidator:
             print(f"  {Colors.GREEN}✓{Colors.RESET} All {self.stats['relations']} relations valid")
         else:
             print(f"  {Colors.RED}✗{Colors.RESET} {len(broken_relations)} broken relations")
+
+        return results
+
+    def validate_guidance_relations(self) -> Dict[str, Any]:
+        """
+        Validate command_relation_guidance table
+
+        Checks:
+        - All source_command_ids exist in commands table
+        - Guidance text is not empty
+        - Relation types are valid
+
+        Returns:
+            Dict with validation results
+        """
+        print(f"{Colors.CYAN}🔍 Validating Guidance Relations...{Colors.RESET}")
+
+        results = {'status': 'PASSED', 'issues': []}
+
+        # Get all guidance relations
+        self.cursor.execute("SELECT * FROM command_relation_guidance")
+        guidance_relations = self.cursor.fetchall()
+        self.stats['guidance_relations'] = len(guidance_relations)
+
+        # Get all command IDs
+        self.cursor.execute("SELECT id FROM commands")
+        valid_ids = {row['id'] for row in self.cursor.fetchall()}
+
+        broken_guidance = []
+        empty_guidance = []
+
+        for guidance in guidance_relations:
+            # Check source exists
+            if guidance['source_command_id'] not in valid_ids:
+                self.errors.append(f"Broken guidance relation: source '{guidance['source_command_id']}' does not exist")
+                broken_guidance.append(guidance)
+                results['status'] = 'FAILED'
+
+            # Check guidance text is not empty
+            if not guidance['guidance_text'] or guidance['guidance_text'].strip() == '':
+                self.warnings.append(f"Empty guidance text for command '{guidance['source_command_id']}'")
+                empty_guidance.append(guidance)
+
+            # Check relation type is valid
+            valid_types = ['prerequisite', 'alternative', 'next_step']
+            if guidance['relation_type'] not in valid_types:
+                self.errors.append(f"Invalid relation type '{guidance['relation_type']}' in guidance relation")
+                results['status'] = 'FAILED'
+
+        results['broken_guidance'] = len(broken_guidance)
+        results['empty_guidance'] = len(empty_guidance)
+
+        if results['status'] == 'PASSED':
+            print(f"  {Colors.GREEN}✓{Colors.RESET} All {self.stats['guidance_relations']} guidance relations valid")
+            if empty_guidance:
+                print(f"  {Colors.YELLOW}⚠{Colors.RESET} {len(empty_guidance)} guidance relations have empty text")
+        else:
+            print(f"  {Colors.RED}✗{Colors.RESET} {len(broken_guidance)} broken guidance relations")
 
         return results
 
@@ -453,6 +513,7 @@ class DatabaseValidator:
             results['schema'] = self.validate_schema()
             results['commands'] = self.validate_commands()
             results['relationships'] = self.validate_relationships()
+            results['guidance_relations'] = self.validate_guidance_relations()  # NEW
             results['normalization'] = self.validate_normalization()
             results['cross_references'] = self.validate_cross_references()
             results['data_quality'] = self.validate_data_quality()

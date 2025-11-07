@@ -1,0 +1,754 @@
+{
+  "category": "post-exploitation",
+  "commands": [
+    {
+      "id": "iptables-list-rules",
+      "name": "IPTables - List All Rules",
+      "description": "Display all iptables firewall rules (Linux)",
+      "command": "sudo iptables -L -v -n",
+      "category": "post-exploitation",
+      "subcategory": "firewall",
+      "variables": [],
+      "flag_explanations": {
+        "-L": "List all rules in selected chain (default: all chains)",
+        "-v": "Verbose output (shows packet/byte counters, interface)",
+        "-n": "Numeric output (don't resolve hostnames/ports)"
+      },
+      "success_indicators": [
+        "Chain INPUT",
+        "Chain FORWARD",
+        "Chain OUTPUT"
+      ],
+      "failure_indicators": [
+        "Permission denied",
+        "command not found"
+      ],
+      "next_steps": [
+        "Identify blocked ports",
+        "Check for DROP/REJECT rules",
+        "Add rules to allow traffic"
+      ],
+      "alternatives": [
+        "ufw-status",
+        "firewalld-list-all"
+      ],
+      "tags": ["linux", "firewall", "enumeration", "iptables", "oscp"],
+      "oscp_relevance": "high",
+      "notes": "Run with sudo. Use -t <table> to specify table (filter, nat, mangle, raw)"
+    },
+    {
+      "id": "iptables-allow-port",
+      "name": "IPTables - Allow Inbound Port",
+      "description": "Add iptables rule to allow inbound traffic on specific port",
+      "command": "sudo iptables -A INPUT -p <PROTOCOL> --dport <PORT> -j ACCEPT",
+      "category": "post-exploitation",
+      "subcategory": "firewall",
+      "variables": [
+        {
+          "name": "<PROTOCOL>",
+          "description": "Protocol (tcp/udp/icmp)",
+          "example": "tcp",
+          "required": true
+        },
+        {
+          "name": "<PORT>",
+          "description": "Port number to allow",
+          "example": "4444",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "-A INPUT": "Append rule to INPUT chain (inbound traffic)",
+        "-p": "Protocol to match",
+        "--dport": "Destination port to match",
+        "-j ACCEPT": "Jump target (ACCEPT allows the packet)"
+      },
+      "success_indicators": [
+        "Rule added successfully",
+        "No error output"
+      ],
+      "failure_indicators": [
+        "Permission denied",
+        "Bad argument"
+      ],
+      "prerequisites": [
+        "sudo iptables -L -v -n"
+      ],
+      "next_steps": [
+        "Verify rule: sudo iptables -L INPUT -v -n",
+        "Test connectivity: nc -lvnp <PORT>",
+        "Make persistent: sudo iptables-save > /etc/iptables/rules.v4"
+      ],
+      "alternatives": [
+        "ufw-allow-port"
+      ],
+      "tags": ["linux", "firewall", "manipulation", "iptables", "oscp"],
+      "oscp_relevance": "high",
+      "notes": "Rule is not persistent by default. Use iptables-save to persist across reboots."
+    },
+    {
+      "id": "iptables-port-forward",
+      "name": "IPTables - Port Forwarding",
+      "description": "Forward traffic from one port to another (port forwarding/redirect)",
+      "command": "sudo iptables -t nat -A PREROUTING -p <PROTOCOL> --dport <SRC_PORT> -j REDIRECT --to-port <DST_PORT>",
+      "category": "post-exploitation",
+      "subcategory": "firewall",
+      "variables": [
+        {
+          "name": "<PROTOCOL>",
+          "description": "Protocol (tcp/udp)",
+          "example": "tcp",
+          "required": true
+        },
+        {
+          "name": "<SRC_PORT>",
+          "description": "Source port (incoming traffic)",
+          "example": "80",
+          "required": true
+        },
+        {
+          "name": "<DST_PORT>",
+          "description": "Destination port (redirect to)",
+          "example": "8080",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "-t nat": "Specify NAT table (for port forwarding)",
+        "-A PREROUTING": "Append to PREROUTING chain (before routing decision)",
+        "-p": "Protocol to match",
+        "--dport": "Destination port (incoming)",
+        "-j REDIRECT": "Redirect packets to different port",
+        "--to-port": "Target port for redirection"
+      },
+      "success_indicators": [
+        "Rule added successfully"
+      ],
+      "failure_indicators": [
+        "Permission denied",
+        "Bad argument"
+      ],
+      "prerequisites": [
+        "sudo iptables -t nat -L -v -n"
+      ],
+      "next_steps": [
+        "Verify rule: sudo iptables -t nat -L PREROUTING -v -n",
+        "Test port forward: nc -lvnp <DST_PORT>",
+        "Connect from remote: nc <TARGET> <SRC_PORT>"
+      ],
+      "tags": ["linux", "firewall", "port-forward", "iptables", "oscp"],
+      "oscp_relevance": "high",
+      "notes": "Useful for bypassing firewall restrictions or redirecting traffic through allowed ports"
+    },
+    {
+      "id": "iptables-delete-rule",
+      "name": "IPTables - Delete Rule by Number",
+      "description": "Delete specific iptables rule by line number",
+      "command": "sudo iptables -D <CHAIN> <RULE_NUMBER>",
+      "category": "post-exploitation",
+      "subcategory": "firewall",
+      "variables": [
+        {
+          "name": "<CHAIN>",
+          "description": "Chain name (INPUT/OUTPUT/FORWARD)",
+          "example": "INPUT",
+          "required": true
+        },
+        {
+          "name": "<RULE_NUMBER>",
+          "description": "Rule line number (from iptables -L --line-numbers)",
+          "example": "3",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "-D": "Delete rule from chain",
+        "<CHAIN>": "Chain containing the rule",
+        "<RULE_NUMBER>": "Position of rule to delete"
+      },
+      "prerequisites": [
+        "sudo iptables -L --line-numbers"
+      ],
+      "next_steps": [
+        "Verify deletion: sudo iptables -L -v -n"
+      ],
+      "tags": ["linux", "firewall", "iptables", "oscp"],
+      "oscp_relevance": "medium",
+      "notes": "Use --line-numbers to see rule numbers before deleting"
+    },
+    {
+      "id": "iptables-flush-all",
+      "name": "IPTables - Flush All Rules",
+      "description": "Remove all iptables rules (WARNING: may lock you out)",
+      "command": "sudo iptables -F",
+      "category": "post-exploitation",
+      "subcategory": "firewall",
+      "variables": [],
+      "flag_explanations": {
+        "-F": "Flush (delete) all rules in selected chain or all chains"
+      },
+      "success_indicators": [
+        "No error output",
+        "iptables -L shows empty chains"
+      ],
+      "failure_indicators": [
+        "Permission denied"
+      ],
+      "next_steps": [
+        "Verify flush: sudo iptables -L -v -n",
+        "Set default policy: sudo iptables -P INPUT ACCEPT"
+      ],
+      "tags": ["linux", "firewall", "iptables", "oscp"],
+      "oscp_relevance": "medium",
+      "notes": "WARNING: May lose SSH access if default policy is DROP. Use with caution."
+    },
+    {
+      "id": "ufw-status",
+      "name": "UFW - Check Firewall Status",
+      "description": "Display UFW (Uncomplicated Firewall) status and rules",
+      "command": "sudo ufw status verbose",
+      "category": "post-exploitation",
+      "subcategory": "firewall",
+      "variables": [],
+      "flag_explanations": {
+        "status": "Show firewall status",
+        "verbose": "Show detailed rule information"
+      },
+      "success_indicators": [
+        "Status: active",
+        "Status: inactive"
+      ],
+      "failure_indicators": [
+        "command not found"
+      ],
+      "next_steps": [
+        "If active, check blocked ports",
+        "Add allow rules if needed"
+      ],
+      "alternatives": [
+        "iptables-list-rules",
+        "firewalld-list-all"
+      ],
+      "tags": ["linux", "firewall", "enumeration", "ufw", "ubuntu", "oscp"],
+      "oscp_relevance": "high",
+      "notes": "UFW is the default firewall on Ubuntu/Debian systems"
+    },
+    {
+      "id": "ufw-allow-port",
+      "name": "UFW - Allow Port",
+      "description": "Allow inbound traffic on specific port",
+      "command": "sudo ufw allow <PORT>/<PROTOCOL>",
+      "category": "post-exploitation",
+      "subcategory": "firewall",
+      "variables": [
+        {
+          "name": "<PORT>",
+          "description": "Port number to allow",
+          "example": "4444",
+          "required": true
+        },
+        {
+          "name": "<PROTOCOL>",
+          "description": "Protocol (tcp/udp)",
+          "example": "tcp",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "allow": "Allow traffic (creates ACCEPT rule)",
+        "<PORT>/<PROTOCOL>": "Port and protocol to allow"
+      },
+      "success_indicators": [
+        "Rule added",
+        "Rule updated"
+      ],
+      "failure_indicators": [
+        "Permission denied"
+      ],
+      "prerequisites": [
+        "sudo ufw status verbose"
+      ],
+      "next_steps": [
+        "Reload UFW: sudo ufw reload",
+        "Verify rule: sudo ufw status verbose",
+        "Test connectivity: nc -lvnp <PORT>"
+      ],
+      "alternatives": [
+        "iptables-allow-port"
+      ],
+      "tags": ["linux", "firewall", "ufw", "ubuntu", "oscp"],
+      "oscp_relevance": "high"
+    },
+    {
+      "id": "ufw-disable",
+      "name": "UFW - Disable Firewall",
+      "description": "Disable UFW firewall (allows all traffic)",
+      "command": "sudo ufw disable",
+      "category": "post-exploitation",
+      "subcategory": "firewall",
+      "variables": [],
+      "flag_explanations": {
+        "disable": "Turn off firewall (does not delete rules)"
+      },
+      "success_indicators": [
+        "Firewall stopped and disabled"
+      ],
+      "failure_indicators": [
+        "Permission denied"
+      ],
+      "next_steps": [
+        "Verify: sudo ufw status",
+        "Test connectivity to previously blocked ports"
+      ],
+      "tags": ["linux", "firewall", "ufw", "oscp"],
+      "oscp_relevance": "high",
+      "notes": "Rules are preserved but not enforced. Use 'sudo ufw enable' to re-enable."
+    },
+    {
+      "id": "firewalld-list-all",
+      "name": "Firewalld - List All Rules",
+      "description": "Display all firewalld rules and zones",
+      "command": "sudo firewall-cmd --list-all",
+      "category": "post-exploitation",
+      "subcategory": "firewall",
+      "variables": [],
+      "flag_explanations": {
+        "--list-all": "List all zones, services, ports, and rules"
+      },
+      "success_indicators": [
+        "public",
+        "target:",
+        "services:"
+      ],
+      "failure_indicators": [
+        "command not found",
+        "FirewallD is not running"
+      ],
+      "next_steps": [
+        "Identify active zone",
+        "Check blocked ports",
+        "Add port rules if needed"
+      ],
+      "alternatives": [
+        "iptables-list-rules",
+        "ufw-status"
+      ],
+      "tags": ["linux", "firewall", "enumeration", "firewalld", "rhel", "centos", "oscp"],
+      "oscp_relevance": "medium",
+      "notes": "Firewalld is default on RHEL/CentOS/Fedora systems"
+    },
+    {
+      "id": "firewalld-add-port",
+      "name": "Firewalld - Add Port Rule",
+      "description": "Allow inbound traffic on specific port",
+      "command": "sudo firewall-cmd --zone=public --add-port=<PORT>/<PROTOCOL> --permanent",
+      "category": "post-exploitation",
+      "subcategory": "firewall",
+      "variables": [
+        {
+          "name": "<PORT>",
+          "description": "Port number to allow",
+          "example": "4444",
+          "required": true
+        },
+        {
+          "name": "<PROTOCOL>",
+          "description": "Protocol (tcp/udp)",
+          "example": "tcp",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "--zone=public": "Target zone (usually 'public' for Internet-facing)",
+        "--add-port": "Add port to allowed list",
+        "--permanent": "Make rule persistent across reboots"
+      },
+      "success_indicators": [
+        "success"
+      ],
+      "failure_indicators": [
+        "Error",
+        "INVALID_PORT"
+      ],
+      "prerequisites": [
+        "sudo firewall-cmd --list-all"
+      ],
+      "next_steps": [
+        "Reload firewall: sudo firewall-cmd --reload",
+        "Verify rule: sudo firewall-cmd --list-ports",
+        "Test connectivity: nc -lvnp <PORT>"
+      ],
+      "tags": ["linux", "firewall", "firewalld", "rhel", "oscp"],
+      "oscp_relevance": "medium"
+    },
+    {
+      "id": "firewalld-port-forward",
+      "name": "Firewalld - Port Forwarding",
+      "description": "Forward traffic from one port to another",
+      "command": "sudo firewall-cmd --zone=public --add-forward-port=port=<SRC_PORT>:proto=<PROTOCOL>:toport=<DST_PORT> --permanent",
+      "category": "post-exploitation",
+      "subcategory": "firewall",
+      "variables": [
+        {
+          "name": "<SRC_PORT>",
+          "description": "Source port (incoming)",
+          "example": "80",
+          "required": true
+        },
+        {
+          "name": "<PROTOCOL>",
+          "description": "Protocol (tcp/udp)",
+          "example": "tcp",
+          "required": true
+        },
+        {
+          "name": "<DST_PORT>",
+          "description": "Destination port (redirect to)",
+          "example": "8080",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "--add-forward-port": "Add port forwarding rule",
+        "port=": "Source port",
+        "proto=": "Protocol",
+        "toport=": "Destination port",
+        "--permanent": "Persist across reboots"
+      },
+      "success_indicators": [
+        "success"
+      ],
+      "prerequisites": [
+        "sudo firewall-cmd --list-all"
+      ],
+      "next_steps": [
+        "Reload: sudo firewall-cmd --reload",
+        "Test: nc -lvnp <DST_PORT>",
+        "Connect: nc <TARGET> <SRC_PORT>"
+      ],
+      "tags": ["linux", "firewall", "port-forward", "firewalld", "oscp"],
+      "oscp_relevance": "medium"
+    },
+    {
+      "id": "netsh-firewall-show",
+      "name": "Netsh - Show Firewall Status (Windows)",
+      "description": "Display Windows firewall status and configuration",
+      "command": "netsh advfirewall show allprofiles",
+      "category": "post-exploitation",
+      "subcategory": "firewall",
+      "variables": [],
+      "flag_explanations": {
+        "advfirewall": "Advanced firewall configuration",
+        "show": "Display settings",
+        "allprofiles": "All profiles (Domain, Private, Public)"
+      },
+      "success_indicators": [
+        "Domain Profile Settings",
+        "Private Profile Settings",
+        "Public Profile Settings",
+        "State"
+      ],
+      "failure_indicators": [
+        "Access denied"
+      ],
+      "next_steps": [
+        "Check if firewall is ON or OFF",
+        "Identify blocked ports",
+        "Add allow rules if needed"
+      ],
+      "alternatives": [
+        "netsh-firewall-show-state"
+      ],
+      "tags": ["windows", "firewall", "enumeration", "netsh", "oscp"],
+      "oscp_relevance": "high",
+      "notes": "Requires Administrator privileges"
+    },
+    {
+      "id": "netsh-firewall-show-state",
+      "name": "Netsh - Show Firewall State (Legacy)",
+      "description": "Show Windows firewall state (legacy command, works on older Windows)",
+      "command": "netsh firewall show state",
+      "category": "post-exploitation",
+      "subcategory": "firewall",
+      "variables": [],
+      "flag_explanations": {
+        "firewall": "Legacy firewall command",
+        "show state": "Display current firewall state"
+      },
+      "success_indicators": [
+        "Firewall status",
+        "Operational mode"
+      ],
+      "failure_indicators": [
+        "deprecated",
+        "Access denied"
+      ],
+      "alternatives": [
+        "netsh-firewall-show"
+      ],
+      "tags": ["windows", "firewall", "enumeration", "netsh", "legacy", "oscp"],
+      "oscp_relevance": "medium",
+      "notes": "Deprecated but still works on older Windows versions"
+    },
+    {
+      "id": "netsh-firewall-add-rule",
+      "name": "Netsh - Add Firewall Allow Rule",
+      "description": "Add Windows firewall rule to allow inbound traffic",
+      "command": "netsh advfirewall firewall add rule name=\"<RULE_NAME>\" protocol=<PROTOCOL> dir=in localport=<PORT> action=allow",
+      "category": "post-exploitation",
+      "subcategory": "firewall",
+      "variables": [
+        {
+          "name": "<RULE_NAME>",
+          "description": "Descriptive name for the firewall rule",
+          "example": "Allow_ReverseShell",
+          "required": true
+        },
+        {
+          "name": "<PROTOCOL>",
+          "description": "Protocol (TCP/UDP/ANY)",
+          "example": "TCP",
+          "required": true
+        },
+        {
+          "name": "<PORT>",
+          "description": "Port number to allow",
+          "example": "4444",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "add rule": "Create new firewall rule",
+        "name=": "Rule name (must be unique)",
+        "protocol=": "Network protocol",
+        "dir=in": "Direction (in=inbound, out=outbound)",
+        "localport=": "Local port number",
+        "action=allow": "Allow the traffic (vs block)"
+      },
+      "success_indicators": [
+        "Ok."
+      ],
+      "failure_indicators": [
+        "Access denied",
+        "already exists"
+      ],
+      "prerequisites": [
+        "netsh advfirewall show allprofiles"
+      ],
+      "next_steps": [
+        "Verify rule: netsh advfirewall firewall show rule name=\"<RULE_NAME>\"",
+        "Test connectivity: nc.exe -lvnp <PORT>"
+      ],
+      "tags": ["windows", "firewall", "netsh", "oscp"],
+      "oscp_relevance": "high",
+      "notes": "Requires Administrator privileges. Rule persists across reboots."
+    },
+    {
+      "id": "netsh-firewall-port-forward",
+      "name": "Netsh - Port Forwarding (Windows)",
+      "description": "Forward traffic from one port to another on Windows",
+      "command": "netsh advfirewall firewall add rule name=\"<RULE_NAME>\" protocol=<PROTOCOL> dir=in localip=<LOCAL_IP> localport=<SRC_PORT> action=allow",
+      "category": "post-exploitation",
+      "subcategory": "firewall",
+      "variables": [
+        {
+          "name": "<RULE_NAME>",
+          "description": "Descriptive rule name",
+          "example": "port_forward_ssh_2222",
+          "required": true
+        },
+        {
+          "name": "<PROTOCOL>",
+          "description": "Protocol (TCP/UDP)",
+          "example": "TCP",
+          "required": true
+        },
+        {
+          "name": "<LOCAL_IP>",
+          "description": "Local IP address to bind",
+          "example": "192.168.50.64",
+          "required": true
+        },
+        {
+          "name": "<SRC_PORT>",
+          "description": "Source port (incoming traffic)",
+          "example": "2222",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "name=": "Unique rule name",
+        "protocol=": "Network protocol",
+        "dir=in": "Inbound traffic",
+        "localip=": "Bind to specific local IP",
+        "localport=": "Port to allow",
+        "action=allow": "Allow the traffic"
+      },
+      "success_indicators": [
+        "Ok."
+      ],
+      "failure_indicators": [
+        "Access denied"
+      ],
+      "prerequisites": [
+        "ipconfig /all"
+      ],
+      "next_steps": [
+        "Add actual port forward: netsh interface portproxy add v4tov4 listenport=<SRC_PORT> listenaddress=<LOCAL_IP> connectport=<DST_PORT> connectaddress=<DST_IP>",
+        "Verify: netsh interface portproxy show all"
+      ],
+      "tags": ["windows", "firewall", "port-forward", "netsh", "oscp"],
+      "oscp_relevance": "high",
+      "notes": "This allows firewall rule. Use 'netsh interface portproxy' for actual port forwarding."
+    },
+    {
+      "id": "netsh-portproxy-add",
+      "name": "Netsh - Add Port Proxy (Port Forward)",
+      "description": "Create actual port forwarding/proxy rule on Windows",
+      "command": "netsh interface portproxy add v4tov4 listenport=<SRC_PORT> listenaddress=<LISTEN_IP> connectport=<DST_PORT> connectaddress=<DST_IP>",
+      "category": "post-exploitation",
+      "subcategory": "firewall",
+      "variables": [
+        {
+          "name": "<SRC_PORT>",
+          "description": "Port to listen on (incoming)",
+          "example": "2222",
+          "required": true
+        },
+        {
+          "name": "<LISTEN_IP>",
+          "description": "IP to listen on (0.0.0.0 for all)",
+          "example": "0.0.0.0",
+          "required": true
+        },
+        {
+          "name": "<DST_PORT>",
+          "description": "Port to forward to",
+          "example": "22",
+          "required": true
+        },
+        {
+          "name": "<DST_IP>",
+          "description": "IP to forward to",
+          "example": "127.0.0.1",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "portproxy": "Port proxy/forwarding configuration",
+        "add v4tov4": "Add IPv4 to IPv4 forwarding rule",
+        "listenport=": "Port to accept connections on",
+        "listenaddress=": "IP to bind listener (0.0.0.0 = all interfaces)",
+        "connectport=": "Destination port",
+        "connectaddress=": "Destination IP"
+      },
+      "success_indicators": [
+        "Ok.",
+        "No error output"
+      ],
+      "failure_indicators": [
+        "Access denied",
+        "parameter is incorrect"
+      ],
+      "prerequisites": [
+        "netsh advfirewall firewall add rule name=\"Allow_<SRC_PORT>\" protocol=TCP dir=in localport=<SRC_PORT> action=allow"
+      ],
+      "next_steps": [
+        "Verify: netsh interface portproxy show all",
+        "Test connectivity: nc <LISTEN_IP> <SRC_PORT>",
+        "Delete if needed: netsh interface portproxy delete v4tov4 listenport=<SRC_PORT> listenaddress=<LISTEN_IP>"
+      ],
+      "tags": ["windows", "firewall", "port-forward", "netsh", "pivoting", "oscp"],
+      "oscp_relevance": "high",
+      "notes": "Useful for pivoting through compromised Windows hosts. Firewall rule must be added separately."
+    },
+    {
+      "id": "netsh-portproxy-show",
+      "name": "Netsh - Show Port Proxy Rules",
+      "description": "List all active port forwarding/proxy rules",
+      "command": "netsh interface portproxy show all",
+      "category": "post-exploitation",
+      "subcategory": "firewall",
+      "variables": [],
+      "flag_explanations": {
+        "portproxy": "Port proxy/forwarding",
+        "show all": "Display all forwarding rules"
+      },
+      "success_indicators": [
+        "Listen on",
+        "Connect to"
+      ],
+      "failure_indicators": [
+        "Access denied"
+      ],
+      "next_steps": [
+        "Test each forwarding rule",
+        "Delete unwanted rules"
+      ],
+      "tags": ["windows", "firewall", "enumeration", "netsh", "oscp"],
+      "oscp_relevance": "high"
+    },
+    {
+      "id": "netsh-firewall-disable",
+      "name": "Netsh - Disable Windows Firewall",
+      "description": "Turn off Windows firewall for all profiles",
+      "command": "netsh advfirewall set allprofiles state off",
+      "category": "post-exploitation",
+      "subcategory": "firewall",
+      "variables": [],
+      "flag_explanations": {
+        "set allprofiles": "Configure all profiles (Domain/Private/Public)",
+        "state off": "Disable firewall"
+      },
+      "success_indicators": [
+        "Ok."
+      ],
+      "failure_indicators": [
+        "Access denied"
+      ],
+      "next_steps": [
+        "Verify: netsh advfirewall show allprofiles",
+        "Test previously blocked connections"
+      ],
+      "tags": ["windows", "firewall", "netsh", "oscp"],
+      "oscp_relevance": "high",
+      "notes": "Requires Administrator privileges. Very obvious IoC - use with caution."
+    },
+    {
+      "id": "netsh-firewall-delete-rule",
+      "name": "Netsh - Delete Firewall Rule",
+      "description": "Remove specific firewall rule by name",
+      "command": "netsh advfirewall firewall delete rule name=\"<RULE_NAME>\"",
+      "category": "post-exploitation",
+      "subcategory": "firewall",
+      "variables": [
+        {
+          "name": "<RULE_NAME>",
+          "description": "Name of rule to delete",
+          "example": "Allow_ReverseShell",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "delete rule": "Remove firewall rule",
+        "name=": "Rule name to delete"
+      },
+      "success_indicators": [
+        "Ok.",
+        "Deleted"
+      ],
+      "failure_indicators": [
+        "No rules match"
+      ],
+      "prerequisites": [
+        "netsh advfirewall firewall show rule name=all"
+      ],
+      "next_steps": [
+        "Verify deletion: netsh advfirewall firewall show rule name=\"<RULE_NAME>\""
+      ],
+      "tags": ["windows", "firewall", "netsh", "oscp"],
+      "oscp_relevance": "medium",
+      "notes": "Use to clean up custom rules after exploitation"
+    }
+  ]
+}

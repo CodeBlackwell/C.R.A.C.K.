@@ -121,6 +121,10 @@ class ReferenceTheme:
     def hint(self, text: str) -> str:
         return self.muted(text)
 
+    def match_metadata(self, text: str) -> str:
+        """Color for match reason metadata (e.g., '→ matched in: tags')"""
+        return self._color(text, Colors.BRIGHT_BLUE)  # Subtle blue for metadata
+
 
 # Global theme instance
 _theme = ReferenceTheme()

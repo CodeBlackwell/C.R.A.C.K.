@@ -92,6 +92,82 @@ def reference_command(args):
     sys.argv = ['crack-reference'] + args
     ref_main()
 
+def cheatsheets_command(args):
+    """Execute the cheatsheets system"""
+    from crack.reference.core import HybridCommandRegistry, ConfigManager, ReferenceTheme
+    from crack.reference.core.cheatsheet_registry import CheatsheetRegistry
+    from crack.reference.cli.cheatsheet import CheatsheetCLI
+
+    # Initialize registries
+    theme = ReferenceTheme()
+    config = ConfigManager()
+    command_registry = HybridCommandRegistry(config_manager=config, theme=theme)
+    cheatsheet_registry = CheatsheetRegistry(command_registry=command_registry, theme=theme)
+    cli = CheatsheetCLI(
+        cheatsheet_registry=cheatsheet_registry,
+        command_registry=command_registry,
+        theme=theme
+    )
+
+    # Parse arguments
+    if not args:
+        # No args - list all cheatsheets
+        cli.list_cheatsheets()
+        return
+
+    # Join args for pattern matching (e.g., "metasploit 2" → "metasploit 2")
+    cheatsheet_query = ' '.join(args) if args else ''
+
+    # Check for flags
+    if '--fill-all' in args:
+        # Fill all commands sequentially
+        cheatsheet_id = args[0]
+        cli.fill_all_commands(cheatsheet_id)
+    elif len(args) >= 2 and args[1].isdigit():
+        # Could be either:
+        # 1. "metasploit 2" = Select cheatsheet #2 from "metasploit" search
+        # 2. "log-poisoning 3" = Fill command #3 from exact cheatsheet ID
+        # Determine by checking if first arg is exact cheatsheet ID
+        exact_sheet = cli.cheatsheet_registry.get_cheatsheet(args[0])
+        if exact_sheet:
+            # Exact ID + number = fill command
+            command_number = int(args[1])
+            cli.fill_command(args[0], command_number)
+        else:
+            # Search query + number = select cheatsheet
+            cli.show_cheatsheet(cheatsheet_query)
+    else:
+        # Show cheatsheet
+        cli.show_cheatsheet(cheatsheet_query)
+
+def chain_builder_command(args):
+    """Execute the chain builder wizard"""
+    from crack.reference.cli.chain_builder import ChainBuilderCLI
+
+    # Parse action
+    if not args or args[0] not in ['create', 'clone']:
+        print(f"{Colors.CYAN}CRACK Chain Builder{Colors.END}\n")
+        print(f"{Colors.YELLOW}Usage:{Colors.END}")
+        print("  crack chain-builder create           - Create new chain from scratch")
+        print("  crack chain-builder clone <chain-id> - Clone existing chain")
+        print(f"\n{Colors.YELLOW}Examples:{Colors.END}")
+        print("  crack chain-builder create")
+        print("  crack chain-builder clone linux-privesc-suid-basic")
+        return
+
+    action = args[0]
+    cli = ChainBuilderCLI()
+
+    if action == 'create':
+        sys.exit(cli.create())
+    elif action == 'clone':
+        if len(args) < 2:
+            print(f"{Colors.RED}Error: clone requires a chain ID{Colors.END}")
+            print("Usage: crack chain-builder clone <chain-id>")
+            sys.exit(1)
+        chain_id = args[1]
+        sys.exit(cli.clone(chain_id))
+
 def track_command(args):
     """Execute CRACK Track - enumeration tracking and task management"""
     from crack.track import cli as track_cli
@@ -554,6 +630,18 @@ def main():
                                             help='Reference System - Command lookup and management',
                                             add_help=False)
     reference_parser.set_defaults(func=reference_command)
+
+    # Cheatsheets subcommand
+    cheatsheets_parser = subparsers.add_parser('cheatsheets',
+                                               help='Cheatsheets - Educational command collections',
+                                               add_help=False)
+    cheatsheets_parser.set_defaults(func=cheatsheets_command)
+
+    # Chain Builder subcommand
+    chain_builder_parser = subparsers.add_parser('chain-builder',
+                                                 help='Chain Builder - Create attack chains',
+                                                 add_help=False)
+    chain_builder_parser.set_defaults(func=chain_builder_command)
 
     # CRACK Track subcommand (primary)
     track_parser = subparsers.add_parser('track',

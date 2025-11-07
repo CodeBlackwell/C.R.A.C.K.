@@ -1,0 +1,203 @@
+{
+  "commands": [
+    {
+      "id": "suid-find",
+      "name": "SUID - Find Binaries",
+      "description": "Find SUID/SGID binaries for privilege escalation",
+      "command": "find / -perm -u=s -type f 2>/dev/null",
+      "category": "privilege-escalation",
+      "subcategory": "linux",
+      "tags": [
+        "oscp",
+        "suid",
+        "linux",
+        "privesc",
+        "find"
+      ],
+      "alternatives": [
+        "find / -perm -4000 2>/dev/null (octal notation)"
+      ],
+      "next_steps": [
+        "Check unusual binaries",
+        "Search GTFOBins",
+        "Test exploits"
+      ],
+      "flag_explanations": {
+        "-perm -u=s": "Find SUID bit set",
+        "-type f": "Files only",
+        "2>/dev/null": "Suppress errors"
+      }
+    },
+    {
+      "id": "suid-exploit",
+      "name": "SUID - Exploit Binary",
+      "description": "Exploit SUID binary for privilege escalation",
+      "command": "<SUID_BINARY>",
+      "category": "privilege-escalation",
+      "subcategory": "linux",
+      "variables": [
+        {
+          "name": "<SUID_BINARY>",
+          "description": "SUID binary to exploit",
+          "example": "/usr/bin/find",
+          "required": true
+        }
+      ],
+      "tags": [
+        "oscp",
+        "suid",
+        "linux",
+        "privesc",
+        "gtfobins"
+      ],
+      "prerequisites": [
+        "SUID binary identified",
+        "GTFOBins entry exists"
+      ],
+      "next_steps": [
+        "Execute exploitation steps",
+        "Verify root access"
+      ]
+    },
+    {
+      "id": "cap-find",
+      "name": "Capabilities - Find Binaries",
+      "description": "Find binaries with Linux capabilities",
+      "command": "getcap -r / 2>/dev/null",
+      "category": "privilege-escalation",
+      "subcategory": "linux",
+      "tags": [
+        "oscp",
+        "capabilities",
+        "linux",
+        "privesc"
+      ],
+      "next_steps": [
+        "Check for cap_setuid",
+        "Search GTFOBins",
+        "Test exploits"
+      ],
+      "flag_explanations": {
+        "-r": "Recursive search",
+        "2>/dev/null": "Suppress errors"
+      }
+    },
+    {
+      "id": "cap-exploit",
+      "name": "Capabilities - Exploit Binary",
+      "description": "Exploit capability-enabled binary for privesc",
+      "command": "<CAP_BINARY>",
+      "category": "privilege-escalation",
+      "subcategory": "linux",
+      "variables": [
+        {
+          "name": "<CAP_BINARY>",
+          "description": "Capability binary",
+          "example": "/usr/bin/python3.8",
+          "required": true
+        }
+      ],
+      "tags": [
+        "oscp",
+        "capabilities",
+        "linux",
+        "privesc",
+        "gtfobins"
+      ],
+      "prerequisites": [
+        "Binary with cap_setuid+ep found"
+      ],
+      "next_steps": [
+        "Use capability to escalate",
+        "Get root shell"
+      ]
+    },
+    {
+      "id": "cron-enum",
+      "name": "Cronjobs - Enumerate",
+      "description": "Find scheduled cronjobs for privilege escalation",
+      "command": "cat /etc/crontab",
+      "category": "privilege-escalation",
+      "subcategory": "linux",
+      "tags": [
+        "oscp",
+        "cronjobs",
+        "linux",
+        "privesc",
+        "enumeration"
+      ],
+      "alternatives": [
+        "ls -la /etc/cron.* (check cron directories)",
+        "pspy64 (monitor without root)",
+        "grep -r CRON /var/log/ (check logs)"
+      ],
+      "next_steps": [
+        "Check script permissions",
+        "Test path hijacking",
+        "Monitor with pspy"
+      ]
+    },
+    {
+      "id": "kernel-exploit-search",
+      "name": "Kernel Exploit - Search",
+      "description": "Search for kernel exploits",
+      "command": "uname -a",
+      "category": "privilege-escalation",
+      "subcategory": "linux",
+      "tags": [
+        "oscp",
+        "kernel",
+        "linux",
+        "privesc"
+      ],
+      "next_steps": [
+        "Run linux-exploit-suggester",
+        "Search exploit-db",
+        "Compile exploit"
+      ],
+      "flag_explanations": {
+        "-a": "All system information"
+      }
+    },
+    {
+      "id": "gtfobins-lookup",
+      "name": "GTFOBins - Lookup",
+      "description": "Lookup binary exploitation on GTFOBins",
+      "command": "# Visit https://gtfobins.github.io/",
+      "category": "privilege-escalation",
+      "subcategory": "linux",
+      "tags": [
+        "oscp",
+        "gtfobins",
+        "linux",
+        "privesc",
+        "reference"
+      ],
+      "next_steps": [
+        "Search for binary",
+        "Follow exploitation steps",
+        "Test on target"
+      ]
+    },
+    {
+      "id": "lolbas-lookup",
+      "name": "LOLBAS - Lookup",
+      "description": "Lookup Windows binary exploitation on LOLBAS",
+      "command": "# Visit https://lolbas-project.github.io/",
+      "category": "privilege-escalation",
+      "subcategory": "windows",
+      "tags": [
+        "oscp",
+        "lolbas",
+        "windows",
+        "privesc",
+        "reference"
+      ],
+      "next_steps": [
+        "Search for binary",
+        "Follow exploitation steps",
+        "Test on target"
+      ]
+    }
+  ]
+}

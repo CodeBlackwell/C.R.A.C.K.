@@ -250,3 +250,298 @@ cat ~/.crack/chain_sessions/linux-privesc-suid-basic-192_168_45_100.json
 **Enhanced**:
 - `session_storage.py` - Added findings/variables storage
 - `interactive.py` - Integrated parsing/selection
+
+---
+
+## Chain Builder
+
+### Overview
+
+The chain builder provides an interactive CLI wizard for creating new attack chains or cloning existing ones. It integrates with the existing validation system to ensure all chains meet schema requirements.
+
+### Quick Start
+
+**Create a new chain from scratch:**
+```bash
+crack chain-builder create
+```
+
+**Clone an existing chain:**
+```bash
+crack chain-builder clone linux-privesc-suid-basic
+```
+
+### Features
+
+1. **Interactive Wizard** - Guided prompts for metadata and steps
+2. **Template Cloning** - Start from existing chains
+3. **Command Browsing** - Search available commands while building
+4. **Real-Time Validation** - Schema, circular dependencies, command references
+5. **Auto-Save** - Saves to correct directory based on category
+
+### Workflow
+
+#### Create Mode
+
+```
+crack chain-builder create
+
+1. Chain Metadata Prompts:
+   - Chain ID (e.g., linux-privesc-suid-basic)
+   - Name
+   - Description
+   - Category (privilege_escalation, enumeration, etc.)
+   - Platform (linux, windows, web, etc.)
+   - Difficulty (beginner, intermediate, advanced, expert)
+   - Time estimate
+   - OSCP relevance
+   - Author (auto-detected from git config)
+   - Tags
+
+2. Step Creation:
+   - Name
+   - Objective
+   - Command reference (enter ID or browse)
+   - Step ID (optional, for dependencies)
+   - Dependencies (select from previous step IDs)
+   - Success criteria
+
+3. Validation:
+   - JSON Schema compliance
+   - Circular dependency detection
+   - Command reference validation
+   - Option to save with warnings
+
+4. Save:
+   - Auto-generates filepath: reference/data/attack_chains/{category}/{chain-id}.json
+   - Pretty-printed JSON with 2-space indent
+```
+
+#### Clone Mode
+
+```
+crack chain-builder clone linux-privesc-suid-basic
+
+1. Load template chain
+2. Prompt for new chain ID
+3. Optionally modify steps:
+   - Add new steps
+   - Delete existing steps
+4. Optionally update metadata
+5. Validate and save
+```
+
+### Command Browsing
+
+When adding a step, you can browse available commands:
+
+```
+Command reference options:
+  1. Enter command ID directly
+  2. Browse available commands
+
+Choice [1/2]: 2
+
+=== BROWSE COMMANDS ===
+Search term (or Enter to list all): suid
+
+1. Find SUID Binaries [linux-suid-find]
+   Locate files with SUID bit set for privilege escalation
+
+2. Check GTFOBins [linux-gtfobins-lookup]
+   Search GTFOBins for SUID binary exploits
+
+Select number (or 'q' to cancel): 1
+✓ Selected: Find SUID Binaries
+```
+
+### Validation
+
+All chains are validated before saving:
+
+**Schema Validation:**
+- Chain ID format: `platform-category-technique-variant`
+- Version format: `1.0.0`
+- Time estimate format: `10 minutes`
+- Difficulty enum: beginner|intermediate|advanced|expert
+
+**Dependency Validation:**
+- No circular dependencies in step graph
+- All referenced step IDs exist
+
+**Command Reference Validation:**
+- All `command_ref` IDs resolve to real commands
+- Uses CommandResolver for lookup
+
+**Error Example:**
+```
+⚠️  Validation failed:
+  • Invalid chain ID format. Expected: platform-category-technique-variant
+  • Step 'exploit-suid' has circular dependency: exploit-suid → verify-root → exploit-suid
+  • Command reference 'invalid-cmd' could not be resolved
+
+Save anyway (not recommended)? [y/N]:
+```
+
+### File Structure
+
+**Saved chains:**
+```
+reference/data/attack_chains/
+├── privilege_escalation/
+│   ├── linux-privesc-suid-basic.json
+│   └── windows-privesc-unquoted-basic.json
+├── enumeration/
+│   └── web-exploit-sqli-union.json
+└── lateral_movement/
+    └── windows-lateral-psexec-basic.json
+```
+
+**Auto-loaded by ChainRegistry** - No manual registration needed.
+
+### Architecture
+
+**Core Classes:**
+
+- `ChainBuilder` (`reference/builders/chain_builder.py`) - Chain creation/modification logic
+- `ChainBuilderCLI` (`reference/cli/chain_builder.py`) - Interactive wizard
+- `ChainValidator` (`reference/chains/validator.py`) - Validation (reused)
+- `CommandResolver` (`reference/chains/command_resolver.py`) - Command lookup (reused)
+
+**Integration:**
+```python
+# Leverages existing systems
+from crack.reference.builders.chain_builder import ChainBuilder
+from crack.reference.chains.validator import ChainValidator
+from crack.reference.chains.command_resolver import CommandResolver
+
+builder = ChainBuilder.from_scratch()
+builder.set_metadata(id='test-chain', category='privilege_escalation')
+builder.add_step({'name': 'Step 1', 'objective': 'Test', 'command_ref': 'test-cmd'})
+
+errors = builder.validate()  # Uses ChainValidator + CommandResolver
+if not errors:
+    filepath = builder.save()  # Auto-generates path
+```
+
+### Examples
+
+**Minimal Chain:**
+```bash
+crack chain-builder create
+
+Chain ID: linux-test-minimal-basic
+Chain name: Minimal Test Chain
+Description: Test chain for examples
+Category: privilege_escalation
+Platform: linux
+Difficulty: beginner
+Time estimate: 5 minutes
+OSCP relevant? [Y/n]: y
+Author name: (auto-detected)
+Tags: OSCP, TEST
+
+=== ADD STEPS ===
+
+--- Step 1 ---
+Step name: Find SUID
+Objective: Locate SUID binaries
+Command reference: 2 (browse)
+  → Search: suid
+  → Select: 1 (linux-suid-find)
+Step ID: find-suid
+Dependencies: (none)
+Success criteria: Binaries found
+
+Add another step? [Y/n]: n
+
+=== VALIDATION ===
+✓ All validations passed!
+
+=== SAVE ===
+✓ Chain saved to: reference/data/attack_chains/privilege_escalation/linux-test-minimal-basic.json
+```
+
+**Clone and Modify:**
+```bash
+crack chain-builder clone linux-privesc-suid-basic
+
+✓ Loaded template: SUID Binary Privilege Escalation
+Steps: 6
+
+New chain ID: linux-privesc-suid-advanced
+
+Modify steps? [y/N]: y
+
+Current steps:
+  1. Check sudo privileges [check-sudo-privs]
+  2. Find SUID binaries [linux-suid-find]
+  3. Filter interesting binaries [grep]
+  4. Check GTFOBins [linux-gtfobins-lookup]
+  5. Exploit SUID binary [manual]
+  6. Verify root access [id]
+
+Options:
+  a - Add step
+  d - Delete step
+  q - Done
+
+Choice: a
+
+--- Step 7 ---
+Step name: Cleanup
+Objective: Remove artifacts
+Command reference: cleanup-logs
+...
+
+✓ Chain saved to: reference/data/attack_chains/privilege_escalation/linux-privesc-suid-advanced.json
+```
+
+### Testing
+
+**Run tests:**
+```bash
+pytest tests/reference/test_chain_builder.py -v
+```
+
+**Test coverage:**
+- ChainBuilder core methods (from_scratch, from_template, add_step, validate, save)
+- ChainBuilderCLI validation logic
+- Error handling (missing required fields, invalid IDs, etc.)
+- Template cloning (no mutation of original)
+- Dependency management
+
+### Design Decisions
+
+**Why standalone CLI?**
+- Faster than TUI for quick chain creation
+- Scriptable (future: accept JSON input)
+- Lower complexity (no state management)
+- Exam-safe (no mouse, no complex UI)
+
+**Why template cloning?**
+- Reduces duplicate effort
+- Ensures consistency with existing chains
+- Easy to create variants (basic → advanced)
+
+**Why auto-save to `reference/data/attack_chains/`?**
+- Same location as built-in chains
+- Auto-discovered by ChainLoader
+- Simpler user experience (no path prompts)
+- Easier to contribute back to project
+
+**Why validate before save?**
+- Prevents corrupted chains from breaking registry
+- Provides immediate feedback
+- Allows override for power users (with warning)
+
+### Future Enhancements
+
+- [ ] JSON/YAML import (bulk chain creation)
+- [ ] Step reordering (move steps up/down)
+- [ ] Dependency visualization (ASCII graph)
+- [ ] Export to other formats (Markdown, HTML)
+- [ ] TUI integration (`crack track --tui` chain builder panel)
+- [ ] Database storage option (PostgreSQL backend)
+- [ ] Chain diff/merge (collaborative editing)
+- [ ] Validation pre-commit hook (CI/CD integration)

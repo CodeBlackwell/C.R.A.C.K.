@@ -53,6 +53,7 @@ class CRACKMigration:
             'variables': 0,
             'tags': 0,
             'relations': 0,
+            'guidance_relations': 0,  # NEW: descriptive text relations
             'indicators': 0,
             'errors': []
         }
@@ -317,7 +318,7 @@ class CRACKMigration:
             target_row = self.cursor.fetchone()
 
             if target_row:
-                # Valid command ID
+                # Valid command ID - store in command_relations
                 try:
                     self.cursor.execute("""
                         INSERT INTO command_relations
@@ -329,11 +330,21 @@ class CRACKMigration:
                 except Exception as e:
                     print(f"  ⚠️  Relation error: {e}")
             else:
-                # Not a command ID - store as text note
-                print(f"  ⚠️  Unresolved relation: {rel['source']} → {rel['target']}")
+                # Not a command ID - store as descriptive guidance in command_relation_guidance
+                try:
+                    self.cursor.execute("""
+                        INSERT INTO command_relation_guidance
+                        (source_command_id, relation_type, guidance_text, display_order)
+                        VALUES (%s, %s, %s, %s)
+                        ON CONFLICT DO NOTHING
+                    """, (rel['source'], rel['type'], rel['target'], rel['priority']))
+                    self.stats['guidance_relations'] += 1
+                except Exception as e:
+                    print(f"  ⚠️  Guidance relation error: {e}")
 
         self.conn.commit()
         print(f"✓ Created {self.stats['relations']} command relationships")
+        print(f"✓ Created {self.stats['guidance_relations']} guidance relations")
 
     def migrate_attack_chains(self, json_dir: Path = None):
         """
@@ -424,7 +435,8 @@ class CRACKMigration:
         print(f"Flags created:          {self.stats['flags']}")
         print(f"Variables created:      {self.stats['variables']}")
         print(f"Tags created:           {self.stats['tags']}")
-        print(f"Relations created:      {self.stats['relations']}")
+        print(f"Relations created:      {self.stats['relations']} (command ID → command ID)")
+        print(f"Guidance relations:     {self.stats['guidance_relations']} (descriptive text)")
         print(f"Indicators created:     {self.stats['indicators']}")
 
         if self.stats['errors']:

@@ -11,3 +11,7 @@ __pycache__/
 crack/reference/data/attack_chains/**/*.cache.json
 crack/reference/data/attack_chains/**/*.compiled
 crack/reference/data/attack_chains/**/*.compiled.json
+
+OSMR
+
+*/*.ovpn

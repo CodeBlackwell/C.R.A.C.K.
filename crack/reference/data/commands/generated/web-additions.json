@@ -1,0 +1,505 @@
+{
+  "commands": [
+    {
+      "id": "ffuf-dir-fuzz",
+      "name": "Ffuf - Directory Fuzzing",
+      "description": "Fast web fuzzer for directory discovery",
+      "command": "ffuf -u http://<TARGET>/FUZZ -w <WORDLIST>",
+      "category": "web",
+      "subcategory": "fuzzing",
+      "variables": [
+        {
+          "name": "<TARGET>",
+          "description": "Target IP/domain",
+          "example": "192.168.1.1",
+          "required": true
+        },
+        {
+          "name": "<WORDLIST>",
+          "description": "Directory wordlist",
+          "example": "/usr/share/wordlists/dirb/common.txt",
+          "required": true
+        }
+      ],
+      "tags": [
+        "oscp",
+        "web",
+        "fuzzing",
+        "directory"
+      ],
+      "alternatives": [
+        "gobuster-dir-basic",
+        "wfuzz-dir"
+      ],
+      "next_steps": [
+        "Inspect discovered directories",
+        "Check for upload functionality"
+      ],
+      "flag_explanations": {
+        "-u": "Target URL (FUZZ keyword for injection point)",
+        "-w": "Wordlist file",
+        "-fc": "Filter HTTP status codes",
+        "-fs": "Filter response size"
+      }
+    },
+    {
+      "id": "ffuf-vhost-fuzz",
+      "name": "Ffuf - Virtual Host Discovery",
+      "description": "Fuzz for virtual hosts on a target",
+      "command": "ffuf -u http://<TARGET> -H 'Host: FUZZ.<DOMAIN>' -w <WORDLIST>",
+      "category": "web",
+      "subcategory": "fuzzing",
+      "variables": [
+        {
+          "name": "<TARGET>",
+          "description": "Target IP",
+          "example": "192.168.1.1",
+          "required": true
+        },
+        {
+          "name": "<DOMAIN>",
+          "description": "Base domain",
+          "example": "example.com",
+          "required": true
+        },
+        {
+          "name": "<WORDLIST>",
+          "description": "Subdomain wordlist",
+          "example": "/usr/share/seclists/Discovery/DNS/subdomains-top1million-5000.txt",
+          "required": true
+        }
+      ],
+      "tags": [
+        "oscp",
+        "web",
+        "vhost",
+        "fuzzing"
+      ],
+      "next_steps": [
+        "Add discovered vhosts to /etc/hosts",
+        "Enumerate each vhost"
+      ],
+      "flag_explanations": {
+        "-H": "Custom header (Host header here)",
+        "-fs": "Filter by response size"
+      }
+    },
+    {
+      "id": "ffuf-param-fuzz",
+      "name": "Ffuf - Parameter Fuzzing",
+      "description": "Discover hidden GET/POST parameters",
+      "command": "ffuf -u 'http://<TARGET>/<PATH>?FUZZ=test' -w <WORDLIST>",
+      "category": "web",
+      "subcategory": "fuzzing",
+      "variables": [
+        {
+          "name": "<TARGET>",
+          "description": "Target domain",
+          "example": "target.com",
+          "required": true
+        },
+        {
+          "name": "<PATH>",
+          "description": "Target path",
+          "example": "index.php",
+          "required": true
+        },
+        {
+          "name": "<WORDLIST>",
+          "description": "Parameter wordlist",
+          "example": "/usr/share/seclists/Discovery/Web-Content/burp-parameter-names.txt",
+          "required": true
+        }
+      ],
+      "tags": [
+        "oscp",
+        "web",
+        "parameters",
+        "fuzzing"
+      ],
+      "next_steps": [
+        "Test discovered parameters for injection"
+      ],
+      "flag_explanations": {
+        "-X": "HTTP method (POST for POST params)",
+        "-d": "POST data (use with -X POST)"
+      }
+    },
+    {
+      "id": "curl-get",
+      "name": "Curl - HTTP GET Request",
+      "description": "Make HTTP GET request to URL",
+      "command": "curl <URL>",
+      "category": "web",
+      "subcategory": "http-client",
+      "variables": [
+        {
+          "name": "<URL>",
+          "description": "Target URL",
+          "example": "http://target.com",
+          "required": true
+        }
+      ],
+      "tags": [
+        "oscp",
+        "web",
+        "http"
+      ],
+      "next_steps": [
+        "Inspect response",
+        "Check headers"
+      ],
+      "flag_explanations": {
+        "-v": "Verbose output",
+        "-i": "Include response headers",
+        "-L": "Follow redirects"
+      }
+    },
+    {
+      "id": "curl-headers",
+      "name": "Curl - View HTTP Headers",
+      "description": "Display only HTTP response headers",
+      "command": "curl -I <URL>",
+      "category": "web",
+      "subcategory": "http-client",
+      "variables": [
+        {
+          "name": "<URL>",
+          "description": "Target URL",
+          "example": "http://target.com",
+          "required": true
+        }
+      ],
+      "tags": [
+        "oscp",
+        "web",
+        "http",
+        "headers"
+      ],
+      "next_steps": [
+        "Check server version",
+        "Look for security headers"
+      ],
+      "flag_explanations": {
+        "-I": "Fetch headers only (HEAD request)"
+      }
+    },
+    {
+      "id": "gobuster-dir-basic",
+      "name": "Gobuster - Directory Enumeration",
+      "description": "Fast directory/file brute-forcing tool",
+      "command": "gobuster dir -u http://<TARGET> -w <WORDLIST>",
+      "category": "web",
+      "subcategory": "directory-enumeration",
+      "variables": [
+        {
+          "name": "<TARGET>",
+          "description": "Target URL",
+          "example": "192.168.1.1",
+          "required": true
+        },
+        {
+          "name": "<WORDLIST>",
+          "description": "Directory wordlist",
+          "example": "/usr/share/wordlists/dirb/common.txt",
+          "required": true
+        }
+      ],
+      "tags": [
+        "oscp",
+        "gobuster",
+        "web",
+        "directory-enumeration"
+      ],
+      "alternatives": [
+        "ffuf-dir-fuzz",
+        "wfuzz-dir"
+      ],
+      "next_steps": [
+        "Inspect discovered directories",
+        "Check for sensitive files"
+      ],
+      "flag_explanations": {
+        "dir": "Directory/file enumeration mode",
+        "-u": "Target URL",
+        "-w": "Wordlist",
+        "-x": "File extensions to search (php,txt,html)",
+        "-t": "Number of threads (default 10)"
+      }
+    },
+    {
+      "id": "wfuzz-dir",
+      "name": "Wfuzz - Directory Fuzzing",
+      "description": "Web application fuzzer for directories",
+      "command": "wfuzz -w <WORDLIST> --hc 404 http://<TARGET>/FUZZ",
+      "category": "web",
+      "subcategory": "fuzzing",
+      "variables": [
+        {
+          "name": "<WORDLIST>",
+          "description": "Directory wordlist",
+          "example": "/usr/share/wordlists/dirb/common.txt",
+          "required": true
+        },
+        {
+          "name": "<TARGET>",
+          "description": "Target IP/domain",
+          "example": "192.168.1.1",
+          "required": true
+        }
+      ],
+      "tags": [
+        "oscp",
+        "wfuzz",
+        "web",
+        "fuzzing"
+      ],
+      "alternatives": [
+        "gobuster-dir-basic",
+        "ffuf-dir-fuzz"
+      ],
+      "next_steps": [
+        "Enumerate discovered paths"
+      ],
+      "flag_explanations": {
+        "-w": "Wordlist",
+        "--hc": "Hide HTTP status codes",
+        "--hl": "Hide by line count",
+        "--hw": "Hide by word count"
+      }
+    },
+    {
+      "id": "wfuzz-param",
+      "name": "Wfuzz - Parameter Fuzzing",
+      "description": "Fuzz for hidden parameters",
+      "command": "wfuzz -w <WORDLIST> --hh 0 http://<TARGET>/?FUZZ=test",
+      "category": "web",
+      "subcategory": "fuzzing",
+      "variables": [
+        {
+          "name": "<WORDLIST>",
+          "description": "Parameter wordlist",
+          "example": "/usr/share/seclists/Discovery/Web-Content/burp-parameter-names.txt",
+          "required": true
+        },
+        {
+          "name": "<TARGET>",
+          "description": "Target URL",
+          "example": "target.com/index.php",
+          "required": true
+        }
+      ],
+      "tags": [
+        "oscp",
+        "wfuzz",
+        "web",
+        "parameters"
+      ],
+      "next_steps": [
+        "Test parameters for injection"
+      ]
+    },
+    {
+      "id": "nikto-web-scan",
+      "name": "Nikto - Web Vulnerability Scanner",
+      "description": "Scan web server for vulnerabilities",
+      "command": "nikto -h http://<TARGET>",
+      "category": "web",
+      "subcategory": "vulnerability-scanning",
+      "variables": [
+        {
+          "name": "<TARGET>",
+          "description": "Target IP/domain",
+          "example": "192.168.1.1",
+          "required": true
+        }
+      ],
+      "tags": [
+        "oscp",
+        "nikto",
+        "web",
+        "vulnerability-scan"
+      ],
+      "next_steps": [
+        "Review findings",
+        "Test identified vulnerabilities"
+      ],
+      "flag_explanations": {
+        "-h": "Target host",
+        "-p": "Port (default 80)",
+        "-ssl": "Force SSL mode",
+        "-o": "Output file"
+      }
+    },
+    {
+      "id": "wpscan-enumerate",
+      "name": "WPScan - WordPress Scanner",
+      "description": "Enumerate WordPress installation",
+      "command": "wpscan --url http://<TARGET> --enumerate u,p,t",
+      "category": "web",
+      "subcategory": "cms-enumeration",
+      "variables": [
+        {
+          "name": "<TARGET>",
+          "description": "WordPress site URL",
+          "example": "target.com",
+          "required": true
+        }
+      ],
+      "tags": [
+        "oscp",
+        "wpscan",
+        "wordpress",
+        "cms"
+      ],
+      "next_steps": [
+        "Brute force found users",
+        "Check for vulnerable plugins"
+      ],
+      "flag_explanations": {
+        "--url": "Target WordPress site",
+        "--enumerate": "Enumerate users(u), plugins(p), themes(t)",
+        "--api-token": "WPVulnDB API token for vulnerability data"
+      }
+    },
+    {
+      "id": "joomscan-enumerate",
+      "name": "Joomscan - Joomla Scanner",
+      "description": "Enumerate Joomla installation",
+      "command": "joomscan -u http://<TARGET>",
+      "category": "web",
+      "subcategory": "cms-enumeration",
+      "variables": [
+        {
+          "name": "<TARGET>",
+          "description": "Joomla site URL",
+          "example": "target.com",
+          "required": true
+        }
+      ],
+      "tags": [
+        "oscp",
+        "joomscan",
+        "joomla",
+        "cms"
+      ],
+      "next_steps": [
+        "Check for vulnerable components",
+        "Test admin panel"
+      ],
+      "flag_explanations": {
+        "-u": "Target URL",
+        "-ec": "Enumerate components"
+      }
+    },
+    {
+      "id": "droopescan-enumerate",
+      "name": "Droopescan - CMS Scanner",
+      "description": "Scanner for Drupal, Joomla, Wordpress, Silverstripe",
+      "command": "droopescan scan <CMS> -u http://<TARGET>",
+      "category": "web",
+      "subcategory": "cms-enumeration",
+      "variables": [
+        {
+          "name": "<CMS>",
+          "description": "CMS type (drupal, joomla, wordpress)",
+          "example": "drupal",
+          "required": true
+        },
+        {
+          "name": "<TARGET>",
+          "description": "Target URL",
+          "example": "target.com",
+          "required": true
+        }
+      ],
+      "tags": [
+        "oscp",
+        "droopescan",
+        "cms",
+        "drupal"
+      ],
+      "next_steps": [
+        "Check version for exploits",
+        "Enumerate plugins/modules"
+      ],
+      "flag_explanations": {
+        "scan": "CMS to scan",
+        "-u": "Target URL",
+        "-t": "Number of threads"
+      }
+    },
+    {
+      "id": "wget-recursive",
+      "name": "Wget - Recursive Download",
+      "description": "Recursively download website",
+      "command": "wget -r -np -nH --cut-dirs=1 http://<TARGET>/",
+      "category": "web",
+      "subcategory": "web-scraping",
+      "variables": [
+        {
+          "name": "<TARGET>",
+          "description": "Target URL",
+          "example": "target.com",
+          "required": true
+        }
+      ],
+      "tags": [
+        "oscp",
+        "wget",
+        "web",
+        "download"
+      ],
+      "next_steps": [
+        "Analyze downloaded files",
+        "Search for credentials/comments"
+      ],
+      "flag_explanations": {
+        "-r": "Recursive download",
+        "-np": "No parent (don't ascend to parent directory)",
+        "-nH": "No host directories",
+        "--cut-dirs": "Ignore N directory levels"
+      }
+    },
+    {
+      "id": "sqlmap-advanced",
+      "name": "SQLMap - SQL Injection Testing",
+      "description": "Automated SQL injection detection and exploitation",
+      "command": "sqlmap -u '<URL>' -p <PARAM> --batch",
+      "category": "web",
+      "subcategory": "sql-injection",
+      "variables": [
+        {
+          "name": "<URL>",
+          "description": "Target URL with parameter",
+          "example": "http://target.com/index.php?id=1",
+          "required": true
+        },
+        {
+          "name": "<PARAM>",
+          "description": "Parameter to test",
+          "example": "id",
+          "required": true
+        }
+      ],
+      "tags": [
+        "oscp",
+        "sqlmap",
+        "sql-injection",
+        "web"
+      ],
+      "next_steps": [
+        "Enumerate databases",
+        "Dump credentials",
+        "OS command execution"
+      ],
+      "flag_explanations": {
+        "-u": "Target URL",
+        "-p": "Testable parameter",
+        "--batch": "Non-interactive mode",
+        "--dbs": "Enumerate databases",
+        "--dump": "Dump table data"
+      }
+    }
+  ]
+}

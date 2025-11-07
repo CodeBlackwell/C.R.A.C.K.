@@ -1,0 +1,370 @@
+{
+  "total_oscp_commands": 132,
+  "existing_commands": 196,
+  "missing_commands": 123,
+  "coverage_percentage": 6.8,
+  "missing_by_category": {
+    "Reconnaissance & Enumeration": {
+      "nmap": [
+        "nmap-full-scan",
+        "nmap-udp-scan"
+      ],
+      "rustscan": [
+        "rustscan-fast-scan"
+      ],
+      "masscan": [
+        "masscan-fast-scan"
+      ],
+      "autorecon": [
+        "autorecon-full"
+      ],
+      "enum4linux": [
+        "enum4linux-smb",
+        "enum4linux-ng"
+      ],
+      "ldapsearch": [
+        "ldapsearch-basic",
+        "ldapsearch-dump"
+      ],
+      "dig": [
+        "dig-domain-enum",
+        "dig-zone-transfer"
+      ],
+      "dnsenum": [
+        "dnsenum-domain"
+      ],
+      "dnsrecon": [
+        "dnsrecon-domain"
+      ],
+      "whatweb": [
+        "whatweb-scan"
+      ],
+      "wappalyzer": [
+        "wappalyzer-tech-detect"
+      ]
+    },
+    "Web Application Testing": {
+      "gobuster": [
+        "gobuster-dir-basic"
+      ],
+      "ffuf": [
+        "ffuf-dir-fuzz",
+        "ffuf-vhost-fuzz",
+        "ffuf-param-fuzz"
+      ],
+      "wfuzz": [
+        "wfuzz-dir",
+        "wfuzz-param"
+      ],
+      "nikto": [
+        "nikto-web-scan"
+      ],
+      "burpsuite": [
+        "burp-proxy",
+        "burp-intruder",
+        "burp-scanner"
+      ],
+      "zaproxy": [
+        "zap-baseline-scan"
+      ],
+      "sqlmap": [
+        "sqlmap-advanced"
+      ],
+      "wpscan": [
+        "wpscan-enumerate"
+      ],
+      "joomscan": [
+        "joomscan-enumerate"
+      ],
+      "droopescan": [
+        "droopescan-enumerate"
+      ],
+      "curl": [
+        "curl-get",
+        "curl-headers"
+      ],
+      "wget": [
+        "wget-recursive"
+      ]
+    },
+    "Exploitation Tools": {
+      "metasploit": [
+        "msfconsole-search",
+        "msfconsole-exploit"
+      ],
+      "msfvenom": [
+        "msfvenom-linux-shell",
+        "msfvenom-windows-shell",
+        "msfvenom-staged"
+      ],
+      "searchsploit": [
+        "searchsploit-search",
+        "searchsploit-update"
+      ],
+      "exploit-db": [
+        "exploit-db-search"
+      ],
+      "nc": [
+        "nc-listener",
+        "nc-bind-shell"
+      ],
+      "socat": [
+        "socat-listener",
+        "socat-file-transfer"
+      ],
+      "powercat": [
+        "powercat-listener"
+      ],
+      "chisel": [
+        "chisel-server",
+        "chisel-client"
+      ]
+    },
+    "Post-Exploitation": {
+      "linpeas": [
+        "linpeas-run"
+      ],
+      "linenum": [
+        "linenum-run"
+      ],
+      "linux-exploit-suggester": [
+        "les-run"
+      ],
+      "pspy": [
+        "pspy-monitor"
+      ],
+      "winpeas": [
+        "winpeas-run"
+      ],
+      "windows-exploit-suggester": [
+        "wes-run"
+      ],
+      "powerup": [
+        "powerup-run"
+      ],
+      "privesccheck": [
+        "privesccheck-run"
+      ],
+      "seatbelt": [
+        "seatbelt-run"
+      ],
+      "sharphound": [
+        "sharphound-collect"
+      ],
+      "bloodhound": [
+        "bloodhound-analyze"
+      ]
+    },
+    "Privilege Escalation": {
+      "sudo": [
+        "sudo-check",
+        "sudo-exploit"
+      ],
+      "suid": [
+        "suid-find",
+        "suid-exploit"
+      ],
+      "capabilities": [
+        "cap-find",
+        "cap-exploit"
+      ],
+      "cronjobs": [
+        "cron-enum"
+      ],
+      "kernel-exploits": [
+        "kernel-exploit-search"
+      ],
+      "gtfobins": [
+        "gtfobins-lookup"
+      ],
+      "lolbas": [
+        "lolbas-lookup"
+      ]
+    },
+    "Tunneling & Pivoting": {
+      "chisel": [
+        "chisel-socks",
+        "chisel-reverse"
+      ],
+      "ligolo-ng": [
+        "ligolo-server",
+        "ligolo-agent"
+      ],
+      "sshuttle": [
+        "sshuttle-vpn"
+      ],
+      "ssh": [
+        "ssh-local-forward",
+        "ssh-remote-forward",
+        "ssh-dynamic-forward"
+      ],
+      "proxychains": [
+        "proxychains-config"
+      ],
+      "proxytunnel": [
+        "proxytunnel-connect"
+      ],
+      "socat": [
+        "socat-port-forward"
+      ]
+    },
+    "Password Attacks": {
+      "hydra": [
+        "hydra-ftp",
+        "hydra-http"
+      ],
+      "medusa": [
+        "medusa-ssh",
+        "medusa-smb"
+      ],
+      "crackmapexec": [
+        "cme-smb",
+        "cme-winrm",
+        "cme-ssh"
+      ],
+      "john": [
+        "john-crack",
+        "john-format"
+      ],
+      "hashcat": [
+        "hashcat-crack",
+        "hashcat-modes"
+      ],
+      "hashid": [
+        "hashid-identify"
+      ],
+      "hash-identifier": [
+        "hash-identifier-run"
+      ],
+      "kerbrute": [
+        "kerbrute-userenum",
+        "kerbrute-bruteuser"
+      ],
+      "rubeus": [
+        "rubeus-asreproast",
+        "rubeus-kerberoast"
+      ]
+    },
+    "Active Directory": {
+      "bloodhound": [
+        "bloodhound-ingest",
+        "bloodhound-query"
+      ],
+      "sharphound": [
+        "sharphound-collect"
+      ],
+      "crackmapexec": [
+        "cme-smb-shares",
+        "cme-smb-users"
+      ],
+      "impacket-psexec": [
+        "psexec-shell"
+      ],
+      "impacket-smbexec": [
+        "smbexec-shell"
+      ],
+      "impacket-wmiexec": [
+        "wmiexec-shell"
+      ],
+      "impacket-secretsdump": [
+        "secretsdump-hashes"
+      ],
+      "impacket-GetNPUsers": [
+        "getnpusers-asreproast"
+      ],
+      "impacket-GetUserSPNs": [
+        "getuserspns-kerberoast"
+      ],
+      "evil-winrm": [
+        "evil-winrm-shell"
+      ],
+      "rpcclient": [
+        "rpcclient-enum"
+      ],
+      "smbclient": [
+        "smbclient-connect"
+      ],
+      "smbmap": [
+        "smbmap-shares"
+      ],
+      "ldapsearch": [
+        "ldapsearch-ad"
+      ]
+    },
+    "File Transfer": {
+      "php-http-server": [
+        "php-http-server"
+      ],
+      "ruby-http-server": [
+        "ruby-http-server"
+      ],
+      "scp": [
+        "scp-upload",
+        "scp-download"
+      ],
+      "ftp": [
+        "ftp-connect"
+      ],
+      "tftp": [
+        "tftp-upload"
+      ],
+      "smb-server": [
+        "impacket-smbserver"
+      ],
+      "bitsadmin": [
+        "bitsadmin-download"
+      ],
+      "powershell-download": [
+        "powershell-wget",
+        "powershell-invoke-webrequest"
+      ]
+    }
+  },
+  "priority_recommendations": [
+    {
+      "category": "Reconnaissance & Enumeration",
+      "priority": "Critical - needed for initial foothold",
+      "missing_count": 15
+    },
+    {
+      "category": "Web Application Testing",
+      "priority": "High - primary attack vector",
+      "missing_count": 18
+    },
+    {
+      "category": "Exploitation Tools",
+      "priority": "High - needed for initial access",
+      "missing_count": 15
+    },
+    {
+      "category": "Password Attacks",
+      "priority": "Medium - common attack vector",
+      "missing_count": 17
+    },
+    {
+      "category": "Post-Exploitation",
+      "priority": "Medium - needed after initial access",
+      "missing_count": 11
+    },
+    {
+      "category": "Privilege Escalation",
+      "priority": "High - required for root/system",
+      "missing_count": 10
+    },
+    {
+      "category": "Tunneling & Pivoting",
+      "priority": "Medium - needed for multi-host networks",
+      "missing_count": 11
+    },
+    {
+      "category": "Active Directory",
+      "priority": "High - common in OSCP labs",
+      "missing_count": 16
+    },
+    {
+      "category": "File Transfer",
+      "priority": "Critical - needed for all stages",
+      "missing_count": 10
+    }
+  ]
+}
