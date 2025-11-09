@@ -1,0 +1,230 @@
+{
+  "id": "windows-lateral-wmi-full",
+  "name": "WMI Lateral Movement - Full Attack Chain",
+  "description": "Complete WMI lateral movement from Kali to Windows: verify admin access, encode payload, execute WMI, obtain reverse shell",
+  "version": "1.0.0",
+  "metadata": {
+    "author": "CRACK Development Team",
+    "created": "2025-11-08",
+    "updated": "2025-11-08",
+    "tags": [
+      "OSCP",
+      "WINDOWS",
+      "ACTIVE_DIRECTORY",
+      "LATERAL_MOVEMENT",
+      "WMI",
+      "IMPACKET",
+      "OSCP:HIGH"
+    ],
+    "category": "lateral_movement",
+    "platform": "windows",
+    "references": [
+      "https://attack.mitre.org/techniques/T1047/",
+      "https://www.cybereason.com/blog/wmi-lateral-movement-win32"
+    ]
+  },
+  "difficulty": "intermediate",
+  "time_estimate": "15 minutes",
+  "oscp_relevant": true,
+  "prerequisites": [
+    "Valid domain credentials or NTLM hash",
+    "Target IP/hostname identified",
+    "User has local administrator rights on target",
+    "Network access to target (RPC port 135 + high ports)",
+    "Kali machine with Impacket installed"
+  ],
+  "notes": "WMI (Windows Management Instrumentation) provides remote execution via DCOM over RPC. This chain demonstrates lateral movement from Kali using impacket-wmiexec for fileless remote code execution. ADVANTAGES: Fileless (no binary written to disk), uses legitimate Windows service, supports pass-the-hash. DISADVANTAGES: Creates WMI event logs, slower than PSExec for interactive use. OSCP RELEVANCE: High - frequently available when WinRM blocked, pass-the-hash compatible.",
+  "steps": [
+    {
+      "id": "verify-admin-access",
+      "name": "Verify Admin Access with CrackMapExec",
+      "objective": "Confirm credentials grant local administrator access before attempting lateral movement",
+      "description": "Use CrackMapExec to test SMB authentication and verify admin rights (Pwn3d! indicator). This prevents wasting time on failed exploitation attempts.",
+      "command_ref": "cme-smb-shares",
+      "dependencies": [],
+      "evidence": [
+        "CrackMapExec output showing authentication result",
+        "[+] Pwn3d! indicator if admin access confirmed",
+        "Share enumeration successful"
+      ],
+      "success_criteria": [
+        "CrackMapExec shows [+] DOMAIN\\user:password (Pwn3d!)",
+        "Authentication successful",
+        "No STATUS_LOGON_FAILURE error"
+      ],
+      "failure_conditions": [
+        "[-] Authentication failed",
+        "STATUS_LOGON_FAILURE",
+        "+ without Pwn3d (authenticated but not admin)"
+      ],
+      "next_steps": [
+        "check-wmi-port"
+      ]
+    },
+    {
+      "id": "check-wmi-port",
+      "name": "Verify WMI/RPC Port Accessibility",
+      "objective": "Ensure RPC port 135 is accessible for WMI communication",
+      "description": "WMI requires RPC port 135 + dynamic high ports (49152-65535). Quick nmap check saves time before attempting full exploitation.",
+      "command_ref": "lateral-movement-port-check",
+      "dependencies": [
+        "verify-admin-access"
+      ],
+      "evidence": [
+        "Nmap output showing 135/tcp open msrpc",
+        "Port 445 also open (SMB for WMI output retrieval)",
+        "Service version detected"
+      ],
+      "success_criteria": [
+        "Port 135 open",
+        "Port 445 open",
+        "Services responding to scan"
+      ],
+      "failure_conditions": [
+        "Port 135 filtered/closed",
+        "Firewall blocking RPC",
+        "Host unreachable"
+      ],
+      "next_steps": [
+        "generate-payload"
+      ]
+    },
+    {
+      "id": "generate-payload",
+      "name": "Generate Base64 PowerShell Reverse Shell",
+      "objective": "Create encoded PowerShell payload for reverse shell callback to Kali",
+      "description": "Generate base64-encoded PowerShell reverse shell using helper script. Encoding avoids command-line escaping issues and provides basic evasion.",
+      "command_ref": "revshell-ps-generator",
+      "dependencies": [
+        "check-wmi-port"
+      ],
+      "evidence": [
+        "Base64-encoded payload string",
+        "Payload includes correct LHOST (Kali IP)",
+        "Payload includes correct LPORT (listener port)"
+      ],
+      "success_criteria": [
+        "Python script executes successfully",
+        "Base64 string generated",
+        "Command starts with: powershell -nop -w hidden -e"
+      ],
+      "failure_conditions": [
+        "Python script error",
+        "Invalid base64 encoding",
+        "LHOST/LPORT not substituted"
+      ],
+      "next_steps": [
+        "setup-listener"
+      ]
+    },
+    {
+      "id": "setup-listener",
+      "name": "Start Netcat Listener",
+      "objective": "Set up listener on Kali to catch reverse shell connection",
+      "description": "Start Netcat listener on specified port (commonly 443 or 4444) before executing payload to catch incoming shell.",
+      "command_ref": "nc-listener-tcp",
+      "dependencies": [
+        "generate-payload"
+      ],
+      "evidence": [
+        "Netcat listener running",
+        "Listening on specified port",
+        "Ready to accept connection"
+      ],
+      "success_criteria": [
+        "Netcat shows: listening on [any] <PORT>",
+        "No 'Address already in use' error",
+        "Listener in background or separate terminal"
+      ],
+      "failure_conditions": [
+        "Port already in use",
+        "Permission denied (ports <1024 need sudo)",
+        "Listener not started"
+      ],
+      "next_steps": [
+        "execute-wmi"
+      ]
+    },
+    {
+      "id": "execute-wmi",
+      "name": "Execute WMI Lateral Movement",
+      "objective": "Use impacket-wmiexec to execute encoded payload on target via WMI",
+      "description": "Execute base64-encoded PowerShell reverse shell on target using WMI. Impacket-wmiexec provides semi-interactive shell or can run single commands.",
+      "command_ref": "wmi-impacket-exec",
+      "dependencies": [
+        "setup-listener"
+      ],
+      "evidence": [
+        "Impacket shows: [*] SMBv3.0 dialect used",
+        "Command execution initiated",
+        "WMI connection established"
+      ],
+      "success_criteria": [
+        "Impacket connects successfully",
+        "Payload executes without error",
+        "Netcat listener receives connection"
+      ],
+      "failure_conditions": [
+        "[-] SMB SessionError: STATUS_LOGON_FAILURE",
+        "RPC server unavailable",
+        "Connection timeout"
+      ],
+      "next_steps": [
+        "verify-shell"
+      ]
+    },
+    {
+      "id": "verify-shell",
+      "name": "Verify Reverse Shell Access",
+      "objective": "Confirm reverse shell connection and identify compromised system context",
+      "description": "Run whoami and hostname commands to verify shell access and confirm target system. Check user context (should be authenticated user, not SYSTEM).",
+      "command_ref": "verify-root-access-ad",
+      "dependencies": [
+        "execute-wmi"
+      ],
+      "evidence": [
+        "PowerShell prompt on Kali terminal",
+        "whoami shows DOMAIN\\user",
+        "hostname shows target system name"
+      ],
+      "success_criteria": [
+        "Interactive shell obtained",
+        "Commands execute and return output",
+        "Correct target confirmed"
+      ],
+      "failure_conditions": [
+        "Shell immediately disconnects",
+        "No command output",
+        "Wrong target system"
+      ],
+      "next_steps": [
+        "post-exploit-enum"
+      ]
+    },
+    {
+      "id": "post-exploit-enum",
+      "name": "Post-Exploitation Enumeration",
+      "objective": "Enumerate target system for privilege escalation opportunities and sensitive data",
+      "description": "Begin basic enumeration: check privileges (whoami /priv), group membership (whoami /groups), running processes, installed software, network connections.",
+      "command_ref": "check-sudo-privs",
+      "dependencies": [
+        "verify-shell"
+      ],
+      "evidence": [
+        "User privileges enumerated",
+        "Group memberships identified",
+        "System information collected"
+      ],
+      "success_criteria": [
+        "Enumeration commands execute successfully",
+        "Useful information gathered",
+        "Next steps identified"
+      ],
+      "failure_conditions": [
+        "Commands fail to execute",
+        "Shell unstable",
+        "Antivirus blocks enumeration"
+      ]
+    }
+  ]
+}

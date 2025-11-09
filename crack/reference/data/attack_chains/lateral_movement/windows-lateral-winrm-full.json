@@ -1,0 +1,232 @@
+{
+  "id": "windows-lateral-winrm-full",
+  "name": "WinRM Lateral Movement - Full Attack Chain",
+  "description": "Complete WinRM/PowerShell remoting attack: verify WinRM enabled, authenticate with Evil-WinRM, obtain interactive PowerShell shell",
+  "version": "1.0.0",
+  "metadata": {
+    "author": "CRACK Development Team",
+    "created": "2025-11-08",
+    "updated": "2025-11-08",
+    "tags": [
+      "OSCP",
+      "WINDOWS",
+      "ACTIVE_DIRECTORY",
+      "LATERAL_MOVEMENT",
+      "WINRM",
+      "EVIL-WINRM",
+      "POWERSHELL",
+      "OSCP:HIGH"
+    ],
+    "category": "lateral_movement",
+    "platform": "windows",
+    "references": [
+      "https://attack.mitre.org/techniques/T1021/006/",
+      "https://github.com/Hackplayers/evil-winrm"
+    ]
+  },
+  "difficulty": "beginner",
+  "time_estimate": "10 minutes",
+  "oscp_relevant": true,
+  "prerequisites": [
+    "Valid domain credentials or NTLM hash",
+    "Target has WinRM enabled (default on Windows Server 2012+)",
+    "User in Remote Management Users or Administrators group",
+    "Network access to port 5985 (HTTP) or 5986 (HTTPS)",
+    "Evil-WinRM installed on Kali (default in OSCP lab)"
+  ],
+  "notes": "WinRM (Windows Remote Management) is Microsoft's official remote administration protocol based on WS-Management. Evil-WinRM provides robust PowerShell remoting from Kali with file upload/download capabilities. ADVANTAGES: Interactive PowerShell, file transfer built-in, cleaner than WMI, supports pass-the-hash. DISADVANTAGES: Creates WinRM event logs, requires WinRM enabled. OSCP RELEVANCE: Very high - preferred method for Windows lateral movement from Kali.",
+  "steps": [
+    {
+      "id": "verify-winrm-port",
+      "name": "Verify WinRM Port Open",
+      "objective": "Check if WinRM ports (5985 HTTP or 5986 HTTPS) are accessible",
+      "description": "Quick nmap scan to verify WinRM service availability. Port 5985 is HTTP (default), 5986 is HTTPS. Most Windows Server environments have 5985 open by default.",
+      "command_ref": "lateral-movement-port-check",
+      "dependencies": [],
+      "evidence": [
+        "Nmap output showing 5985/tcp or 5986/tcp open",
+        "Service identified as 'http' (WinRM uses HTTP protocol)",
+        "May show 'Microsoft HTTPAPI httpd'"
+      ],
+      "success_criteria": [
+        "Port 5985 or 5986 open",
+        "HTTP/HTTPS service responding",
+        "No firewall blocking"
+      ],
+      "failure_conditions": [
+        "Both ports closed/filtered",
+        "Connection timeout",
+        "Firewall blocking WinRM"
+      ],
+      "next_steps": [
+        "test-winrm-auth"
+      ]
+    },
+    {
+      "id": "test-winrm-auth",
+      "name": "Test WinRM Authentication",
+      "objective": "Verify credentials work with WinRM before attempting full shell",
+      "description": "Use CrackMapExec winrm module to test authentication. This is faster than attempting full Evil-WinRM connection and provides clear success/failure indication.",
+      "command_ref": "cme-winrm",
+      "dependencies": [
+        "verify-winrm-port"
+      ],
+      "evidence": [
+        "CrackMapExec winrm output",
+        "[+] Pwn3d! if admin access",
+        "Authentication result shown"
+      ],
+      "success_criteria": [
+        "Authentication successful",
+        "Pwn3d! indicator for admin access",
+        "No STATUS_LOGON_FAILURE"
+      ],
+      "failure_conditions": [
+        "Authentication failed",
+        "User not in Remote Management Users group",
+        "Invalid credentials"
+      ],
+      "next_steps": [
+        "connect-evil-winrm"
+      ]
+    },
+    {
+      "id": "connect-evil-winrm",
+      "name": "Connect with Evil-WinRM",
+      "objective": "Establish interactive PowerShell remoting session using Evil-WinRM",
+      "description": "Launch Evil-WinRM with credentials (password or hash). Connection provides full interactive PowerShell with tab completion, command history, and file transfer capabilities.",
+      "command_ref": "evil-winrm-creds",
+      "dependencies": [
+        "test-winrm-auth"
+      ],
+      "evidence": [
+        "Evil-WinRM banner displayed",
+        "*Evil-WinRM* PS prompt",
+        "Connection established message"
+      ],
+      "success_criteria": [
+        "Interactive PowerShell prompt obtained",
+        "Prompt shows: *Evil-WinRM* PS C:\\Users\\<user>",
+        "Commands can be executed"
+      ],
+      "failure_conditions": [
+        "Authorization error",
+        "Network unreachable",
+        "SSL handshake failed"
+      ],
+      "next_steps": [
+        "verify-access"
+      ]
+    },
+    {
+      "id": "verify-access",
+      "name": "Verify Shell Access and Context",
+      "objective": "Confirm shell functionality and identify user context",
+      "description": "Run basic commands to verify: whoami (user context), hostname (correct target), Get-ComputerInfo (system details), net user <username> /domain (group memberships).",
+      "command_ref": "verify-root-access-ad",
+      "dependencies": [
+        "connect-evil-winrm"
+      ],
+      "evidence": [
+        "whoami output showing DOMAIN\\user",
+        "hostname matching target",
+        "System information displayed",
+        "Group memberships visible"
+      ],
+      "success_criteria": [
+        "Commands execute successfully",
+        "Correct target system confirmed",
+        "User context identified"
+      ],
+      "failure_conditions": [
+        "Commands fail to execute",
+        "Wrong target system",
+        "Insufficient permissions"
+      ],
+      "next_steps": [
+        "upload-tools"
+      ]
+    },
+    {
+      "id": "upload-tools",
+      "name": "Upload Enumeration Tools",
+      "objective": "Transfer enumeration tools (PowerUp, Sherlock, winPEAS) to target using Evil-WinRM",
+      "description": "Use Evil-WinRM's built-in upload command to transfer PowerShell enumeration scripts. Syntax: upload /path/to/local/file C:\\path\\to\\remote\\file",
+      "command_ref": "evil-winrm-shell",
+      "dependencies": [
+        "verify-access"
+      ],
+      "evidence": [
+        "Upload successful message",
+        "File appears in target directory",
+        "File size matches original"
+      ],
+      "success_criteria": [
+        "Files uploaded without error",
+        "Scripts can be executed on target",
+        "No antivirus blocks"
+      ],
+      "failure_conditions": [
+        "Upload fails",
+        "Antivirus deletes uploaded files",
+        "Insufficient disk space"
+      ],
+      "next_steps": [
+        "enumerate-target"
+      ]
+    },
+    {
+      "id": "enumerate-target",
+      "name": "Enumerate for Privilege Escalation",
+      "objective": "Run enumeration scripts to identify privilege escalation paths",
+      "description": "Execute PowerUp.ps1 (Invoke-AllChecks), Sherlock.ps1, or winPEAS to identify misconfigurations, unquoted service paths, weak permissions, credentials in registry, etc.",
+      "command_ref": "check-sudo-privs",
+      "dependencies": [
+        "upload-tools"
+      ],
+      "evidence": [
+        "Enumeration script output",
+        "Vulnerabilities identified",
+        "Privilege escalation paths discovered"
+      ],
+      "success_criteria": [
+        "Scripts execute successfully",
+        "At least one escalation vector identified",
+        "Actionable findings documented"
+      ],
+      "failure_conditions": [
+        "Scripts blocked by antivirus",
+        "PowerShell execution policy restrictions",
+        "No vulnerabilities found"
+      ],
+      "next_steps": [
+        "download-loot"
+      ]
+    },
+    {
+      "id": "download-loot",
+      "name": "Download Sensitive Files",
+      "objective": "Exfiltrate credentials, configuration files, and sensitive data using Evil-WinRM",
+      "description": "Use Evil-WinRM's download command to retrieve files: download C:\\path\\to\\remote\\file /local/path. Common targets: SAM/SYSTEM hives, NTDS.dit, web.config, database configs.",
+      "command_ref": "evil-winrm-shell",
+      "dependencies": [
+        "enumerate-target"
+      ],
+      "evidence": [
+        "Files downloaded successfully",
+        "Local copies of sensitive data",
+        "Download successful messages"
+      ],
+      "success_criteria": [
+        "Target files downloaded",
+        "File integrity maintained",
+        "Credentials/secrets extracted"
+      ],
+      "failure_conditions": [
+        "Download fails",
+        "Access denied to target files",
+        "Files corrupted during transfer"
+      ]
+    }
+  ]
+}
