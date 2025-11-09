@@ -10,7 +10,8 @@ import os
 import sys
 import hashlib
 from pathlib import Path
-from typing import Dict, List, Any, Tuple, Set
+from typing import Dict, List, Any, Tuple, Set, Callable
+from dataclasses import dataclass
 import argparse
 from load_existing_json import load_command_jsons, load_attack_chain_jsons, load_cheatsheet_jsons
 
@@ -302,43 +303,46 @@ def generate_id(text: str) -> str:
     return hashlib.md5(text.encode()).hexdigest()[:16]
 
 
-def transform_all_to_neo4j(commands: List[Dict], chains: List[Dict], cheatsheets: List[Dict], output_dir: str):
-    """Orchestrate all transformation and CSV generation"""
+@dataclass
+class NodeExtractionSpec:
+    """Node CSV extraction specification"""
+    name: str
+    csv_filename: str
+    fieldnames: List[str]
+    extractor: Callable[[List[Dict], List[Dict], List[Dict]], List[Dict]]
+    description: str = ""
 
-    output_path = Path(output_dir)
-    output_path.mkdir(parents=True, exist_ok=True)
 
-    print("Transforming data to Neo4j CSV format...")
-    print()
+@dataclass
+class RelationshipExtractionSpec:
+    """Relationship CSV extraction specification"""
+    name: str
+    csv_filename: str
+    fieldnames: List[str]
+    extractor: Callable[[List[Dict], List[Dict], List[Dict]], List[Dict]]
+    description: str = ""
 
-    # 1. Commands CSV
-    print("Generating commands.csv...")
-    commands_csv = []
-    for cmd in commands:
-        commands_csv.append({
-            'id': cmd.get('id', ''),
-            'name': cmd.get('name', ''),
-            'category': cmd.get('category', ''),
-            'command': cmd.get('command', ''),
-            'description': cmd.get('description', ''),
-            'subcategory': cmd.get('subcategory', ''),
-            'notes': cmd.get('notes', ''),
-            'oscp_relevance': cmd.get('oscp_relevance', 'medium')
-        })
 
-    write_csv_file(
-        str(output_path / 'commands.csv'),
-        commands_csv,
-        ['id', 'name', 'category', 'command', 'description', 'subcategory', 'notes', 'oscp_relevance']
-    )
-    print(f"  Written {len(commands_csv)} commands")
+def _extract_commands_csv(commands: List[Dict], chains: List[Dict], cheatsheets: List[Dict]) -> List[Dict]:
+    """Extract commands for CSV"""
+    return [{
+        'id': cmd.get('id', ''),
+        'name': cmd.get('name', ''),
+        'category': cmd.get('category', ''),
+        'command': cmd.get('command', ''),
+        'description': cmd.get('description', ''),
+        'subcategory': cmd.get('subcategory', ''),
+        'notes': cmd.get('notes', ''),
+        'oscp_relevance': cmd.get('oscp_relevance', 'medium')
+    } for cmd in commands]
 
-    # 2. Attack Chains CSV
-    print("Generating attack_chains.csv...")
-    chains_csv = []
+
+def _extract_attack_chains_csv(commands: List[Dict], chains: List[Dict], cheatsheets: List[Dict]) -> List[Dict]:
+    """Extract attack chains for CSV"""
+    result = []
     for chain in chains:
         metadata = chain.get('metadata', {})
-        chains_csv.append({
+        result.append({
             'id': chain.get('id', ''),
             'name': chain.get('name', ''),
             'description': chain.get('description', ''),
@@ -350,171 +354,171 @@ def transform_all_to_neo4j(commands: List[Dict], chains: List[Dict], cheatsheets
             'oscp_relevant': str(chain.get('oscp_relevant', False)),
             'notes': chain.get('notes', '')
         })
+    return result
 
-    write_csv_file(
-        str(output_path / 'attack_chains.csv'),
-        chains_csv,
-        ['id', 'name', 'description', 'version', 'category', 'platform', 'difficulty', 'time_estimate', 'oscp_relevant', 'notes']
-    )
-    print(f"  Written {len(chains_csv)} attack chains")
 
-    # 3. Tags CSV
-    print("Generating tags.csv...")
-    tags = extract_unique_tags(commands, chains)
-    write_csv_file(
-        str(output_path / 'tags.csv'),
-        tags,
-        ['name', 'category']
-    )
-    print(f"  Written {len(tags)} unique tags")
-
-    # 4. Variables CSV
-    print("Generating variables.csv...")
-    variables, var_rels = extract_variables(commands)
-    write_csv_file(
-        str(output_path / 'variables.csv'),
-        variables,
-        ['id', 'name', 'description', 'example', 'required']
-    )
-    print(f"  Written {len(variables)} unique variables")
-
-    # 5. Flags CSV
-    print("Generating flags.csv...")
-    flags, flag_rels = extract_flags(commands)
-    write_csv_file(
-        str(output_path / 'flags.csv'),
-        flags,
-        ['id', 'flag', 'explanation']
-    )
-    print(f"  Written {len(flags)} unique flags")
-
-    # 6. Indicators CSV
-    print("Generating indicators.csv...")
-    indicators, indicator_rels = extract_indicators(commands)
-    write_csv_file(
-        str(output_path / 'indicators.csv'),
-        indicators,
-        ['id', 'indicator', 'type']
-    )
-    print(f"  Written {len(indicators)} indicators")
-
-    # 7. Chain Steps CSV
-    print("Generating chain_steps.csv...")
-    steps, chain_step_rels, step_command_rels = extract_chain_steps(chains)
-    write_csv_file(
-        str(output_path / 'chain_steps.csv'),
-        steps,
-        ['id', 'name', 'step_order', 'objective', 'description', 'evidence', 'success_criteria', 'failure_conditions']
-    )
-    print(f"  Written {len(steps)} chain steps")
-
-    # 8. References CSV
-    print("Generating references.csv...")
-    references = extract_references(chains)
-    write_csv_file(
-        str(output_path / 'references.csv'),
-        references,
-        ['id', 'chain_id', 'url']
-    )
-    print(f"  Written {len(references)} references")
-
-    print()
-    print("Generating relationship CSVs...")
-
-    # 9. Command -> Variable
-    write_csv_file(
-        str(output_path / 'command_has_variable.csv'),
-        var_rels,
-        ['command_id', 'variable_id', 'position', 'example', 'required']
-    )
-    print(f"  Written {len(var_rels)} command->variable relationships")
-
-    # 10. Command -> Flag
-    write_csv_file(
-        str(output_path / 'command_has_flag.csv'),
-        flag_rels,
-        ['command_id', 'flag_id', 'position']
-    )
-    print(f"  Written {len(flag_rels)} command->flag relationships")
-
-    # 11. Command -> Indicator
-    write_csv_file(
-        str(output_path / 'command_has_indicator.csv'),
-        indicator_rels,
-        ['command_id', 'indicator_id', 'type']
-    )
-    print(f"  Written {len(indicator_rels)} command->indicator relationships")
-
-    # 12. Command -> Tag
-    tag_rels = []
+def _extract_command_tag_rels(commands: List[Dict], chains: List[Dict], cheatsheets: List[Dict]) -> List[Dict]:
+    """Extract command->tag relationships"""
+    result = []
     for cmd in commands:
         cmd_id = cmd.get('id')
         if not cmd_id:
             continue
         for tag in cmd.get('tags', []):
-            tag_rels.append({
+            result.append({
                 'command_id': cmd_id,
                 'tag_name': tag
             })
+    return result
 
-    write_csv_file(
-        str(output_path / 'command_tagged_with.csv'),
-        tag_rels,
-        ['command_id', 'tag_name']
-    )
-    print(f"  Written {len(tag_rels)} command->tag relationships")
 
-    # 13. Command relationships (alternatives, prerequisites)
-    cmd_rels = extract_command_relationships(commands)
-
-    write_csv_file(
-        str(output_path / 'command_alternative_for.csv'),
-        cmd_rels['alternatives'],
-        ['command_id', 'alternative_command_id']
-    )
-    print(f"  Written {len(cmd_rels['alternatives'])} alternative relationships")
-
-    write_csv_file(
-        str(output_path / 'command_requires.csv'),
-        cmd_rels['prerequisites'],
-        ['command_id', 'prerequisite_command_id']
-    )
-    print(f"  Written {len(cmd_rels['prerequisites'])} prerequisite relationships")
-
-    # 14. Chain -> Step
-    write_csv_file(
-        str(output_path / 'chain_contains_step.csv'),
-        chain_step_rels,
-        ['chain_id', 'step_id', 'order']
-    )
-    print(f"  Written {len(chain_step_rels)} chain->step relationships")
-
-    # 15. Step -> Command
-    write_csv_file(
-        str(output_path / 'step_uses_command.csv'),
-        step_command_rels,
-        ['step_id', 'command_id']
-    )
-    print(f"  Written {len(step_command_rels)} step->command relationships")
-
-    # 16. Chain -> Tag
-    chain_tag_rels = []
+def _extract_chain_tag_rels(commands: List[Dict], chains: List[Dict], cheatsheets: List[Dict]) -> List[Dict]:
+    """Extract chain->tag relationships"""
+    result = []
     for chain in chains:
         chain_id = chain.get('id')
         if not chain_id:
             continue
         for tag in chain.get('metadata', {}).get('tags', []):
-            chain_tag_rels.append({
+            result.append({
                 'chain_id': chain_id,
                 'tag_name': tag
             })
+    return result
 
-    write_csv_file(
-        str(output_path / 'chain_tagged_with.csv'),
-        chain_tag_rels,
-        ['chain_id', 'tag_name']
-    )
-    print(f"  Written {len(chain_tag_rels)} chain->tag relationships")
+
+NODE_EXTRACTION_SPECS: List[NodeExtractionSpec] = [
+    NodeExtractionSpec(
+        'commands', 'commands.csv',
+        ['id', 'name', 'category', 'command', 'description', 'subcategory', 'notes', 'oscp_relevance'],
+        _extract_commands_csv,
+        'Command definitions'
+    ),
+    NodeExtractionSpec(
+        'attack_chains', 'attack_chains.csv',
+        ['id', 'name', 'description', 'version', 'category', 'platform', 'difficulty', 'time_estimate', 'oscp_relevant', 'notes'],
+        _extract_attack_chains_csv,
+        'Attack chain metadata'
+    ),
+    NodeExtractionSpec(
+        'tags', 'tags.csv',
+        ['name', 'category'],
+        lambda c, ch, s: extract_unique_tags(c, ch),
+        'Unique tags'
+    ),
+    NodeExtractionSpec(
+        'variables', 'variables.csv',
+        ['id', 'name', 'description', 'example', 'required'],
+        lambda c, ch, s: extract_variables(c)[0],
+        'Command variables'
+    ),
+    NodeExtractionSpec(
+        'flags', 'flags.csv',
+        ['id', 'flag', 'explanation'],
+        lambda c, ch, s: extract_flags(c)[0],
+        'Command flags'
+    ),
+    NodeExtractionSpec(
+        'indicators', 'indicators.csv',
+        ['id', 'indicator', 'type'],
+        lambda c, ch, s: extract_indicators(c)[0],
+        'Success/failure indicators'
+    ),
+    NodeExtractionSpec(
+        'chain_steps', 'chain_steps.csv',
+        ['id', 'name', 'step_order', 'objective', 'description', 'evidence', 'success_criteria', 'failure_conditions'],
+        lambda c, ch, s: extract_chain_steps(ch)[0],
+        'Attack chain steps'
+    ),
+    NodeExtractionSpec(
+        'references', 'references.csv',
+        ['id', 'chain_id', 'url'],
+        lambda c, ch, s: extract_references(ch),
+        'External references'
+    ),
+]
+
+RELATIONSHIP_EXTRACTION_SPECS: List[RelationshipExtractionSpec] = [
+    RelationshipExtractionSpec(
+        'command_has_variable', 'command_has_variable.csv',
+        ['command_id', 'variable_id', 'position', 'example', 'required'],
+        lambda c, ch, s: extract_variables(c)[1],
+        'Command->Variable relationships'
+    ),
+    RelationshipExtractionSpec(
+        'command_has_flag', 'command_has_flag.csv',
+        ['command_id', 'flag_id', 'position'],
+        lambda c, ch, s: extract_flags(c)[1],
+        'Command->Flag relationships'
+    ),
+    RelationshipExtractionSpec(
+        'command_has_indicator', 'command_has_indicator.csv',
+        ['command_id', 'indicator_id', 'type'],
+        lambda c, ch, s: extract_indicators(c)[1],
+        'Command->Indicator relationships'
+    ),
+    RelationshipExtractionSpec(
+        'command_tagged_with', 'command_tagged_with.csv',
+        ['command_id', 'tag_name'],
+        _extract_command_tag_rels,
+        'Command->Tag relationships'
+    ),
+    RelationshipExtractionSpec(
+        'command_alternative_for', 'command_alternative_for.csv',
+        ['command_id', 'alternative_command_id'],
+        lambda c, ch, s: extract_command_relationships(c)['alternatives'],
+        'Alternative command relationships'
+    ),
+    RelationshipExtractionSpec(
+        'command_requires', 'command_requires.csv',
+        ['command_id', 'prerequisite_command_id'],
+        lambda c, ch, s: extract_command_relationships(c)['prerequisites'],
+        'Prerequisite relationships'
+    ),
+    RelationshipExtractionSpec(
+        'chain_contains_step', 'chain_contains_step.csv',
+        ['chain_id', 'step_id', 'order'],
+        lambda c, ch, s: extract_chain_steps(ch)[1],
+        'Chain->Step relationships'
+    ),
+    RelationshipExtractionSpec(
+        'step_uses_command', 'step_uses_command.csv',
+        ['step_id', 'command_id'],
+        lambda c, ch, s: extract_chain_steps(ch)[2],
+        'Step->Command relationships'
+    ),
+    RelationshipExtractionSpec(
+        'chain_tagged_with', 'chain_tagged_with.csv',
+        ['chain_id', 'tag_name'],
+        _extract_chain_tag_rels,
+        'Chain->Tag relationships'
+    ),
+]
+
+
+def transform_all_to_neo4j(commands: List[Dict], chains: List[Dict], cheatsheets: List[Dict], output_dir: str):
+    """Data-driven transformation using extraction specs"""
+
+    output_path = Path(output_dir)
+    output_path.mkdir(parents=True, exist_ok=True)
+
+    print("Transforming data to Neo4j CSV format...")
+    print()
+
+    print("Generating node CSVs...")
+    for spec in NODE_EXTRACTION_SPECS:
+        print(f"  {spec.csv_filename}... ({spec.description})")
+        data = spec.extractor(commands, chains, cheatsheets)
+        write_csv_file(str(output_path / spec.csv_filename), data, spec.fieldnames)
+        print(f"    Written {len(data)} {spec.name}")
+
+    print()
+    print("Generating relationship CSVs...")
+    for spec in RELATIONSHIP_EXTRACTION_SPECS:
+        print(f"  {spec.csv_filename}... ({spec.description})")
+        data = spec.extractor(commands, chains, cheatsheets)
+        write_csv_file(str(output_path / spec.csv_filename), data, spec.fieldnames)
+        print(f"    Written {len(data)} {spec.name}")
 
     print()
     print(f"CSV generation complete! Output directory: {output_dir}")
