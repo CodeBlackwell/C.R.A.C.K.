@@ -1,0 +1,147 @@
+{
+  "cheatsheets": [
+    {
+      "id": "ad-session-enumeration",
+      "name": "Active Directory Session Enumeration and OS Version Analysis",
+      "description": "Enumerate active user sessions, identify where privileged accounts are logged in, and understand operating system differences that affect enumeration success rates",
+      "educational_header": {
+        "how_to_recognize": [
+          "You have domain credentials and need to find where Domain Admins are currently logged in",
+          "Session enumeration commands (Get-NetSession) are failing with access denied errors",
+          "Need to understand why enumeration works on some systems but not others",
+          "Looking for systems where you can dump cached credentials from memory (Mimikatz, lsass)"
+        ],
+        "when_to_look_for": [
+          "After initial domain reconnaissance - before attempting lateral movement",
+          "When planning credential theft attacks (need to know where admin sessions exist)",
+          "When Get-NetSession fails - understand OS version limitations",
+          "OSCP exam: Session enumeration success depends on target OS version (older = better success rate)"
+        ]
+      },
+      "scenarios": [
+        {
+          "title": "Scenario 1: Understanding NetSessionEnum API Restrictions",
+          "context": "You have domain user credentials (corp\\user) and run Get-NetSession to find where Domain Admins are logged in. On Windows Server 2016 systems you get session data, but on Windows Server 2019+ and Windows 11 systems you get 'Access Denied'. You need to understand WHY this happens and what alternatives exist.",
+          "approach": "NetSessionEnum API queries the SrvsvcSessionInfo registry key (HKLM\\SYSTEM\\CurrentControlSet\\Services\\LanmanServer\\DefaultSecurity). Windows 10 build 1709, Server 2019 build 1809, and all newer versions changed permissions on this key - now only SYSTEM and Administrators can read it. Before these builds, any authenticated user could query sessions. Use OS enumeration to identify which targets will work.",
+          "commands": [
+            "powerview-get-netcomputer-os",
+            "powerview-get-netcomputer-os-filter",
+            "powerview-get-netsession",
+            "check-netsessionenum-registry"
+          ],
+          "expected_outcome": "Get-NetComputer with operatingsystem/operatingsystemversion reveals target OS builds. Windows Server 2012 R2, 2016, Windows 7, Windows 10 (pre-1709) will allow NetSessionEnum from non-admin users. Windows Server 2019+, Windows 10 1709+, Windows 11 will deny access unless you have local admin or are SYSTEM. Focus session enumeration on older systems where it still works.",
+          "why_this_works": "NetSessionEnum API was designed for administrators to see active SMB sessions (file shares, mapped drives). Microsoft considered this information too sensitive and restricted access via registry permissions in newer OS versions. The API still exists and functions identically, but access control changed. This is security by permission, not by removing functionality. Old systems retain old permissions for compatibility - exploit this by targeting legacy systems first."
+        },
+        {
+          "title": "Scenario 2: Remote Registry Session Enumeration Alternative",
+          "context": "NetSessionEnum failed on all Windows 11 workstations. You have local admin access on several systems (found via Find-LocalAdminAccess). You need an alternative method to enumerate who's logged in - without NetSessionEnum API. Remote Registry is your option.",
+          "approach": "Use PsLoggedOn (SysInternals) or Get-NetLoggedon (PowerView). Both tools query the Remote Registry service on the target, specifically HKEY_USERS hive. Each loaded user profile = logged-on user. Remote Registry service must be running (disabled by default on Windows 8+ workstations, enabled by default on Server 2012+). If you have local admin, you can start the service remotely.",
+          "commands": [
+            "sysinternals-psloggedon",
+            "powerview-get-netloggedon",
+            "check-remote-registry-service",
+            "enable-remote-registry",
+            "query-hkey-users-remote"
+          ],
+          "expected_outcome": "PsLoggedOn \\\\TARGET returns two types of results: (1) Users logged on locally (via Remote Registry - requires local admin or service enabled), (2) Users logged on via resource shares (via NetSessionEnum - may fail on modern Windows). If Remote Registry service is disabled, start it: sc \\\\TARGET config RemoteRegistry start= demand && sc \\\\TARGET start RemoteRegistry. After service starts, PsLoggedOn succeeds and shows logged-on users: CORP\\admin (console), CORP\\user (RDP session).",
+          "why_this_works": "Windows loads user registry hives (NTUSER.DAT) into HKEY_USERS when users log in (interactive, RDP, or RunAs). Each SID under HKEY_USERS represents an active session. Remote Registry service allows remote access to registry hives via RPC. By enumerating SIDs in HKEY_USERS, you determine who's logged in. This method bypasses NetSessionEnum restrictions but requires either local admin OR Remote Registry service explicitly enabled. Service auto-starts on connection if set to 'Manual' (default on servers)."
+        },
+        {
+          "title": "Scenario 3: Chained Compromise - From Session Discovery to Credential Theft",
+          "context": "You compromised 'corp\\helpdesk' and have local admin on WORKSTATION05 (via Find-LocalAdminAccess). You enumerate sessions with Get-NetLoggedon and discover 'CORP\\DA-ADMIN' (Domain Admin) is logged in via RDP. This is your golden opportunity - compromise this machine and you get Domain Admin credentials cached in memory. But you need to maintain operational security - don't immediately pivot.",
+          "approach": "Don't immediately attack WORKSTATION05 - you'll trigger alerts. Instead: (1) Document the finding, (2) Check if DA-ADMIN session is still active (sessions expire), (3) Verify your local admin access is still valid, (4) Prepare credential dumping tools (Mimikatz, procdump + pypykatz), (5) Execute at optimal time (off-hours). The session discovery is reconnaissance - actual exploitation is a separate phase.",
+          "commands": [
+            "powerview-find-localadminaccess",
+            "powerview-get-netloggedon",
+            "test-admin-share-access",
+            "invoke-mimikatz-remote",
+            "procdump-lsass"
+          ],
+          "expected_outcome": "Find-LocalAdminAccess identifies WORKSTATION05 where you have admin rights. Get-NetLoggedon -ComputerName WORKSTATION05 reveals CORP\\DA-ADMIN logged in. You confirm access: dir \\\\WORKSTATION05\\C$ succeeds. You prepare attack: upload Mimikatz or use PsExec to run procdump.exe -accepteula -ma lsass.exe lsass.dmp. Transfer lsass.dmp to Kali, run pypykatz to extract DA-ADMIN's password/hash. You now have Domain Admin credentials - full domain compromise achieved.",
+          "why_this_works": "When users log into Windows (console, RDP, RunAs), their credentials are cached in LSASS memory for single sign-on (SSO). Domain credentials stored as: (1) plaintext passwords (WDigest - disabled by default on Win10+/2016+), (2) NTLM hashes (always present), (3) Kerberos tickets (TGT/TGS). If you have local admin on a machine where a privileged user is logged in, you can dump LSASS memory and extract these credentials. The user doesn't need to be actively using the system - as long as session exists, credentials are cached. This is by design for SSO functionality."
+        },
+        {
+          "title": "Scenario 4: Operating System Enumeration for Targeted Session Hunting",
+          "context": "Domain has 200+ computers. Running Get-NetSession against all targets would take hours and mostly fail (modern OS restrictions). You need to pre-filter targets to only attempt session enumeration on systems where it's likely to succeed - older operating systems with unrestricted NetSessionEnum.",
+          "approach": "Use Get-NetComputer with operatingsystem and operatingsystemversion filters to identify legacy systems. Target: Windows Server 2012 R2, Server 2016, Windows 7, Windows 10 versions below build 1709 (10.0.16299). Exclude: Server 2019+ (build 1809+), Windows 10 1709+, Windows 11. Build target list, then enumerate sessions only on those systems. This optimizes your time and reduces failed attempts.",
+          "commands": [
+            "powerview-get-netcomputer-os",
+            "powerview-get-netcomputer-os-filter",
+            "powerview-get-netsession"
+          ],
+          "expected_outcome": "Get-NetComputer -FullData | Select-Object dnshostname,operatingsystem,operatingsystemversion returns full computer list with OS details. Filter for operatingsystem like '*Server 2012*' or '*Server 2016*' or operatingsystemversion matching '10.0.14393' (Win10 1607), '10.0.15063' (Win10 1703) - pre-1709 builds. You identify 15 legacy systems. Run Get-NetSession against only these 15 targets - success rate is 80-90% vs 10-20% if you target all systems. You find 3 Domain Admin sessions across these legacy servers.",
+          "why_this_works": "Operating system version directly determines NetSessionEnum behavior. Microsoft's security update (MS KB4103727) changed SrvsvcSessionInfo registry permissions starting with Windows 10 1709 (build 16299) and Server 2019 (build 1809). Earlier versions retain the old permissive behavior. By querying operatingsystemversion from computer objects in AD, you identify targets that still allow unauthenticated NetSessionEnum queries. This is reconnaissance optimization - focus effort where success is likely."
+        },
+        {
+          "title": "Scenario 5: Service Account Lateral Movement via Session Discovery",
+          "context": "You have credentials for 'corp\\sqlservice' (Kerberoasted and cracked the password). This account has SeImpersonate privilege on SQL servers but you haven't found where it's a local admin. Session enumeration reveals sqlservice has active sessions on multiple file servers - these are your lateral movement targets. Rather than trying random PsExec, you now know WHERE sqlservice is actually used.",
+          "approach": "Run Get-NetSession or Get-NetLoggedon to find where sqlservice has active sessions. These systems are likely places where: (1) sqlservice is local admin, (2) sqlservice has scheduled tasks running, (3) sqlservice-owned processes are executing. Test local admin access on these systems first - if you have admin, you can PSExec/WinRM and get interactive access. If sqlservice isn't admin, check for running processes under this account - you can inject into those processes.",
+          "commands": [
+            "powerview-get-netsession",
+            "powerview-find-localadminaccess",
+            "test-admin-share-access",
+            "ps-get-process-owner"
+          ],
+          "expected_outcome": "Get-NetSession shows sqlservice has sessions on FILESERVER01, FILESERVER02, DATABASE03. Test admin access: dir \\\\FILESERVER01\\C$ - success! You have local admin. Use PsExec: psexec.py corp/sqlservice:Password123@FILESERVER01 cmd. You get SYSTEM shell on FILESERVER01. Check logged-on users: query user reveals CORP\\DA-BACKUP logged in. Dump LSASS, extract DA-BACKUP credentials. You've chained from service account → lateral movement → privileged account compromise.",
+          "why_this_works": "Service accounts are designed to run services/tasks across multiple systems. Where these accounts have active sessions = where they're actually used = where they likely have elevated privileges. By correlating session data with admin access testing, you identify systems where the service account gives you foothold. This is intelligent targeting vs brute-force PSExec attempts against random systems. Sessions indicate legitimate use - you're following the same paths administrators configured."
+        }
+      ],
+      "sections": [
+        {
+          "title": "Phase 1: Operating System Enumeration",
+          "notes": "Identify target OS versions to understand which session enumeration methods will work. Windows Server 2019+, Windows 10 1709+, and Windows 11 restrict NetSessionEnum to admins. Target older systems for unauthenticated session enumeration.",
+          "commands": [
+            "powerview-get-netcomputer-os",
+            "powerview-get-netcomputer-os-filter"
+          ]
+        },
+        {
+          "title": "Phase 2: NetSessionEnum-Based Session Discovery (Legacy Systems)",
+          "notes": "Use NetSessionEnum API via Get-NetSession (PowerView) to enumerate active SMB sessions. Works on Windows Server 2016 and earlier, Windows 10 pre-1709. Returns users who have active file share connections or mapped drives. Focus on privileged accounts (Domain Admins, service accounts).",
+          "commands": [
+            "powerview-get-netsession",
+            "check-netsessionenum-registry"
+          ]
+        },
+        {
+          "title": "Phase 3: Remote Registry Session Discovery (Modern Systems)",
+          "notes": "When NetSessionEnum fails (modern OS), use Remote Registry method via PsLoggedOn or Get-NetLoggedon. Requires local admin access OR Remote Registry service enabled. Queries HKEY_USERS hive to identify loaded user profiles (active sessions). More reliable than NetSessionEnum on modern Windows.",
+          "commands": [
+            "sysinternals-psloggedon",
+            "powerview-get-netloggedon",
+            "check-remote-registry-service",
+            "enable-remote-registry",
+            "query-hkey-users-remote"
+          ]
+        },
+        {
+          "title": "Phase 4: Admin Access Validation",
+          "notes": "Verify local admin access on targets where privileged sessions were discovered. Test C$ share access or use Find-LocalAdminAccess. Systems where you have admin + privileged user session = credential theft opportunity.",
+          "commands": [
+            "powerview-find-localadminaccess",
+            "test-admin-share-access"
+          ]
+        },
+        {
+          "title": "Phase 5: Credential Theft Preparation",
+          "notes": "Once target system identified (admin access + privileged session), prepare credential dumping. Use Mimikatz, procdump + pypykatz, or direct LSASS access. Don't rush - maintain operational security. Dump credentials during off-hours to avoid detection.",
+          "commands": [
+            "invoke-mimikatz-remote",
+            "procdump-lsass",
+            "pypykatz-parse"
+          ]
+        }
+      ],
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "SESSION_ENUMERATION",
+        "NETSESSIONENUM",
+        "REMOTE_REGISTRY",
+        "OS_VERSION",
+        "LATERAL_MOVEMENT",
+        "CREDENTIAL_THEFT",
+        "OSCP:HIGH"
+      ]
+    }
+  ]
+}
