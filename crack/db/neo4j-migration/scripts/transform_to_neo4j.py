@@ -11,9 +11,14 @@ import sys
 import hashlib
 from pathlib import Path
 from typing import Dict, List, Any, Tuple, Set, Callable
-from dataclasses import dataclass
 import argparse
 from load_existing_json import load_command_jsons, load_attack_chain_jsons, load_cheatsheet_jsons
+
+# Add parent directory to path to import schema module
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+# Import unified schema definitions
+from schema import SchemaRegistry, SchemaLoadError
 
 
 def extract_unique_tags(commands: List[Dict], chains: List[Dict]) -> List[Dict]:
@@ -303,25 +308,11 @@ def generate_id(text: str) -> str:
     return hashlib.md5(text.encode()).hexdigest()[:16]
 
 
-@dataclass
-class NodeExtractionSpec:
-    """Node CSV extraction specification"""
-    name: str
-    csv_filename: str
-    fieldnames: List[str]
-    extractor: Callable[[List[Dict], List[Dict], List[Dict]], List[Dict]]
-    description: str = ""
-
-
-@dataclass
-class RelationshipExtractionSpec:
-    """Relationship CSV extraction specification"""
-    name: str
-    csv_filename: str
-    fieldnames: List[str]
-    extractor: Callable[[List[Dict], List[Dict], List[Dict]], List[Dict]]
-    description: str = ""
-
+# =============================================================================
+# Extractor Functions
+# =============================================================================
+# These functions extract data from source JSON and format for CSV output.
+# All extractors must match signature: (commands, chains, cheatsheets) -> List[Dict]
 
 def _extract_commands_csv(commands: List[Dict], chains: List[Dict], cheatsheets: List[Dict]) -> List[Dict]:
     """Extract commands for CSV"""
@@ -387,135 +378,120 @@ def _extract_chain_tag_rels(commands: List[Dict], chains: List[Dict], cheatsheet
     return result
 
 
-NODE_EXTRACTION_SPECS: List[NodeExtractionSpec] = [
-    NodeExtractionSpec(
-        'commands', 'commands.csv',
-        ['id', 'name', 'category', 'command', 'description', 'subcategory', 'notes', 'oscp_relevance'],
-        _extract_commands_csv,
-        'Command definitions'
-    ),
-    NodeExtractionSpec(
-        'attack_chains', 'attack_chains.csv',
-        ['id', 'name', 'description', 'version', 'category', 'platform', 'difficulty', 'time_estimate', 'oscp_relevant', 'notes'],
-        _extract_attack_chains_csv,
-        'Attack chain metadata'
-    ),
-    NodeExtractionSpec(
-        'tags', 'tags.csv',
-        ['name', 'category'],
-        lambda c, ch, s: extract_unique_tags(c, ch),
-        'Unique tags'
-    ),
-    NodeExtractionSpec(
-        'variables', 'variables.csv',
-        ['id', 'name', 'description', 'example', 'required'],
-        lambda c, ch, s: extract_variables(c)[0],
-        'Command variables'
-    ),
-    NodeExtractionSpec(
-        'flags', 'flags.csv',
-        ['id', 'flag', 'explanation'],
-        lambda c, ch, s: extract_flags(c)[0],
-        'Command flags'
-    ),
-    NodeExtractionSpec(
-        'indicators', 'indicators.csv',
-        ['id', 'indicator', 'type'],
-        lambda c, ch, s: extract_indicators(c)[0],
-        'Success/failure indicators'
-    ),
-    NodeExtractionSpec(
-        'chain_steps', 'chain_steps.csv',
-        ['id', 'name', 'step_order', 'objective', 'description', 'evidence', 'success_criteria', 'failure_conditions'],
-        lambda c, ch, s: extract_chain_steps(ch)[0],
-        'Attack chain steps'
-    ),
-    NodeExtractionSpec(
-        'references', 'references.csv',
-        ['id', 'chain_id', 'url'],
-        lambda c, ch, s: extract_references(ch),
-        'External references'
-    ),
-]
+# Wrapper functions for schema extractors
+# These adapt existing extraction functions to match the standard 3-parameter signature
+# Original functions use different signatures, so we need adapters
 
-RELATIONSHIP_EXTRACTION_SPECS: List[RelationshipExtractionSpec] = [
-    RelationshipExtractionSpec(
-        'command_has_variable', 'command_has_variable.csv',
-        ['command_id', 'variable_id', 'position', 'example', 'required'],
-        lambda c, ch, s: extract_variables(c)[1],
-        'Command->Variable relationships'
-    ),
-    RelationshipExtractionSpec(
-        'command_has_flag', 'command_has_flag.csv',
-        ['command_id', 'flag_id', 'position'],
-        lambda c, ch, s: extract_flags(c)[1],
-        'Command->Flag relationships'
-    ),
-    RelationshipExtractionSpec(
-        'command_has_indicator', 'command_has_indicator.csv',
-        ['command_id', 'indicator_id', 'type'],
-        lambda c, ch, s: extract_indicators(c)[1],
-        'Command->Indicator relationships'
-    ),
-    RelationshipExtractionSpec(
-        'command_tagged_with', 'command_tagged_with.csv',
-        ['command_id', 'tag_name'],
-        _extract_command_tag_rels,
-        'Command->Tag relationships'
-    ),
-    RelationshipExtractionSpec(
-        'command_alternative_for', 'command_alternative_for.csv',
-        ['command_id', 'alternative_command_id'],
-        lambda c, ch, s: extract_command_relationships(c)['alternatives'],
-        'Alternative command relationships'
-    ),
-    RelationshipExtractionSpec(
-        'command_requires', 'command_requires.csv',
-        ['command_id', 'prerequisite_command_id'],
-        lambda c, ch, s: extract_command_relationships(c)['prerequisites'],
-        'Prerequisite relationships'
-    ),
-    RelationshipExtractionSpec(
-        'chain_contains_step', 'chain_contains_step.csv',
-        ['chain_id', 'step_id', 'order'],
-        lambda c, ch, s: extract_chain_steps(ch)[1],
-        'Chain->Step relationships'
-    ),
-    RelationshipExtractionSpec(
-        'step_uses_command', 'step_uses_command.csv',
-        ['step_id', 'command_id'],
-        lambda c, ch, s: extract_chain_steps(ch)[2],
-        'Step->Command relationships'
-    ),
-    RelationshipExtractionSpec(
-        'chain_tagged_with', 'chain_tagged_with.csv',
-        ['chain_id', 'tag_name'],
-        _extract_chain_tag_rels,
-        'Chain->Tag relationships'
-    ),
-]
+def _extract_variables_nodes(commands: List[Dict], chains: List[Dict], cheatsheets: List[Dict]) -> List[Dict]:
+    """Extract variables only (nodes) - adapted for schema"""
+    return extract_variables(commands)[0]
+
+
+def _extract_command_variables_rels(commands: List[Dict], chains: List[Dict], cheatsheets: List[Dict]) -> List[Dict]:
+    """Extract command->variable relationships - adapted for schema"""
+    return extract_variables(commands)[1]
+
+
+def _extract_flags_nodes(commands: List[Dict], chains: List[Dict], cheatsheets: List[Dict]) -> List[Dict]:
+    """Extract flags only (nodes) - adapted for schema"""
+    return extract_flags(commands)[0]
+
+
+def _extract_command_flags_rels(commands: List[Dict], chains: List[Dict], cheatsheets: List[Dict]) -> List[Dict]:
+    """Extract command->flag relationships - adapted for schema"""
+    return extract_flags(commands)[1]
+
+
+def _extract_indicators_nodes(commands: List[Dict], chains: List[Dict], cheatsheets: List[Dict]) -> List[Dict]:
+    """Extract indicators only (nodes) - adapted for schema"""
+    return extract_indicators(commands)[0]
+
+
+def _extract_command_indicators_rels(commands: List[Dict], chains: List[Dict], cheatsheets: List[Dict]) -> List[Dict]:
+    """Extract command->indicator relationships - adapted for schema"""
+    return extract_indicators(commands)[1]
+
+
+def _extract_chain_steps_nodes(commands: List[Dict], chains: List[Dict], cheatsheets: List[Dict]) -> List[Dict]:
+    """Extract chain steps only (nodes) - adapted for schema"""
+    return extract_chain_steps(chains)[0]
+
+
+def _extract_chain_steps_rels(commands: List[Dict], chains: List[Dict], cheatsheets: List[Dict]) -> List[Dict]:
+    """Extract chain->step relationships - adapted for schema"""
+    return extract_chain_steps(chains)[1]
+
+
+def _extract_step_commands_rels(commands: List[Dict], chains: List[Dict], cheatsheets: List[Dict]) -> List[Dict]:
+    """Extract step->command relationships - adapted for schema"""
+    return extract_chain_steps(chains)[2]
+
+
+def _extract_command_alternatives_rels(commands: List[Dict], chains: List[Dict], cheatsheets: List[Dict]) -> List[Dict]:
+    """Extract alternative command relationships - adapted for schema"""
+    return extract_command_relationships(commands)['alternatives']
+
+
+def _extract_command_prerequisites_rels(commands: List[Dict], chains: List[Dict], cheatsheets: List[Dict]) -> List[Dict]:
+    """Extract prerequisite command relationships - adapted for schema"""
+    return extract_command_relationships(commands)['prerequisites']
+
+
+def _extract_references_nodes(commands: List[Dict], chains: List[Dict], cheatsheets: List[Dict]) -> List[Dict]:
+    """Extract references - adapted for schema"""
+    return extract_references(chains)
+
+
+def _extract_unique_tags_adapted(commands: List[Dict], chains: List[Dict], cheatsheets: List[Dict]) -> List[Dict]:
+    """Extract unique tags - adapted for schema (already has correct signature but needs consistency)"""
+    return extract_unique_tags(commands, chains)
 
 
 def transform_all_to_neo4j(commands: List[Dict], chains: List[Dict], cheatsheets: List[Dict], output_dir: str):
-    """Data-driven transformation using extraction specs"""
+    """Data-driven transformation using schema-loaded extraction specs"""
 
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
 
+    # Load schema from YAML
+    schema_path = Path(__file__).parent.parent / 'schema' / 'neo4j_schema.yaml'
+    print(f"Loading schema from {schema_path}...")
+    try:
+        registry = SchemaRegistry(str(schema_path))
+
+        # Register extractor functions from this module
+        registry.register_extractors(sys.modules[__name__])
+
+        # Validate schema
+        registry.validate(strict=False)  # Non-strict to allow missing extractors
+
+        schema = registry.get_schema()
+        print(f"  Loaded {len(schema.nodes)} node types, {len(schema.relationships)} relationship types")
+    except SchemaLoadError as e:
+        print(f"ERROR loading schema: {e}")
+        raise
+
+    print()
     print("Transforming data to Neo4j CSV format...")
     print()
 
     print("Generating node CSVs...")
-    for spec in NODE_EXTRACTION_SPECS:
+    for spec in schema.nodes:
         print(f"  {spec.csv_filename}... ({spec.description})")
+        if not spec.extractor:
+            print(f"    WARNING: No extractor for {spec.name}, skipping")
+            continue
         data = spec.extractor(commands, chains, cheatsheets)
         write_csv_file(str(output_path / spec.csv_filename), data, spec.fieldnames)
         print(f"    Written {len(data)} {spec.name}")
 
     print()
     print("Generating relationship CSVs...")
-    for spec in RELATIONSHIP_EXTRACTION_SPECS:
+    for spec in schema.relationships:
         print(f"  {spec.csv_filename}... ({spec.description})")
+        if not spec.extractor:
+            print(f"    WARNING: No extractor for {spec.name}, skipping")
+            continue
         data = spec.extractor(commands, chains, cheatsheets)
         write_csv_file(str(output_path / spec.csv_filename), data, spec.fieldnames)
         print(f"    Written {len(data)} {spec.name}")

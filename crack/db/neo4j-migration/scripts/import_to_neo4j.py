@@ -12,8 +12,10 @@ import csv
 import time
 from pathlib import Path
 from typing import Dict, Any, List
-from dataclasses import dataclass
 import argparse
+
+# Add parent directory to path to import schema module
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 try:
     from neo4j import GraphDatabase
@@ -21,72 +23,8 @@ try:
 except ImportError:
     NEO4J_AVAILABLE = False
 
-
-@dataclass
-class NodeImportSpec:
-    """Node import specification"""
-    label: str
-    csv_filename: str
-    id_field: str
-    description: str = ""
-
-
-@dataclass
-class RelationshipImportSpec:
-    """Relationship import specification"""
-    rel_type: str
-    csv_filename: str
-    start_label: str
-    end_label: str
-    start_id_col: str
-    end_id_col: str
-    start_id_field: str = 'id'
-    end_id_field: str = 'id'
-    description: str = ""
-
-
-NODE_IMPORT_SCHEMA: List[NodeImportSpec] = [
-    NodeImportSpec('Command', 'commands.csv', 'id', 'Command definitions'),
-    NodeImportSpec('Tag', 'tags.csv', 'name', 'Tag metadata'),
-    NodeImportSpec('Variable', 'variables.csv', 'name', 'Command variables'),
-    NodeImportSpec('Flag', 'flags.csv', 'id', 'Command flags'),
-    NodeImportSpec('Indicator', 'indicators.csv', 'id', 'Success/failure indicators'),
-    NodeImportSpec('AttackChain', 'attack_chains.csv', 'id', 'Attack chains'),
-    NodeImportSpec('ChainStep', 'chain_steps.csv', 'id', 'Chain steps'),
-]
-
-RELATIONSHIP_IMPORT_SCHEMA: List[RelationshipImportSpec] = [
-    RelationshipImportSpec('USES_VARIABLE', 'command_has_variable.csv',
-                          'Command', 'Variable', 'command_id', 'variable_id',
-                          start_id_field='id', end_id_field='name',
-                          description='Command uses variable'),
-    RelationshipImportSpec('HAS_FLAG', 'command_has_flag.csv',
-                          'Command', 'Flag', 'command_id', 'flag_id',
-                          description='Command has flag'),
-    RelationshipImportSpec('HAS_INDICATOR', 'command_has_indicator.csv',
-                          'Command', 'Indicator', 'command_id', 'indicator_id',
-                          description='Command has indicator'),
-    RelationshipImportSpec('TAGGED', 'command_tagged_with.csv',
-                          'Command', 'Tag', 'command_id', 'tag_name',
-                          start_id_field='id', end_id_field='name',
-                          description='Command tagged with tag'),
-    RelationshipImportSpec('ALTERNATIVE', 'command_alternative_for.csv',
-                          'Command', 'Command', 'command_id', 'alternative_command_id',
-                          description='Command alternative for command'),
-    RelationshipImportSpec('PREREQUISITE', 'command_requires.csv',
-                          'Command', 'Command', 'command_id', 'prerequisite_command_id',
-                          description='Command requires prerequisite'),
-    RelationshipImportSpec('HAS_STEP', 'chain_contains_step.csv',
-                          'AttackChain', 'ChainStep', 'chain_id', 'step_id',
-                          description='Chain has step'),
-    RelationshipImportSpec('EXECUTES', 'step_uses_command.csv',
-                          'ChainStep', 'Command', 'step_id', 'command_id',
-                          description='Step executes command'),
-    RelationshipImportSpec('TAGGED', 'chain_tagged_with.csv',
-                          'AttackChain', 'Tag', 'chain_id', 'tag_name',
-                          start_id_field='id', end_id_field='name',
-                          description='Chain tagged with tag'),
-]
+# Import unified schema definitions
+from schema import SchemaRegistry, SchemaLoadError
 
 
 def get_neo4j_config() -> Dict[str, str]:
@@ -328,6 +266,18 @@ def import_all_to_neo4j(csv_dir: str, neo4j_config: Dict, batch_size: int = 1000
         print(f"ERROR: CSV directory not found: {csv_dir}")
         return False
 
+    # Load schema from YAML
+    schema_path = Path(__file__).parent.parent / 'schema' / 'neo4j_schema.yaml'
+    print(f"Loading schema from {schema_path}...")
+    try:
+        registry = SchemaRegistry(str(schema_path))
+        # No extractors needed for import (only for transformation)
+        schema = registry.get_schema()
+        print(f"  Loaded {len(schema.nodes)} node types, {len(schema.relationships)} relationship types")
+    except SchemaLoadError as e:
+        print(f"ERROR loading schema: {e}")
+        return False
+
     print()
     print("Connecting to Neo4j...")
     try:
@@ -351,14 +301,14 @@ def import_all_to_neo4j(csv_dir: str, neo4j_config: Dict, batch_size: int = 1000
 
     try:
         print("Importing nodes...")
-        for spec in NODE_IMPORT_SCHEMA:
+        for spec in schema.nodes:
             print(f"  {spec.label}... ({spec.description})")
             import_nodes(driver, spec.label, str(csv_path / spec.csv_filename),
                         id_field=spec.id_field, batch_size=batch_size)
 
         print()
         print("Importing relationships...")
-        for spec in RELATIONSHIP_IMPORT_SCHEMA:
+        for spec in schema.relationships:
             print(f"  {spec.start_label} -[{spec.rel_type}]-> {spec.end_label}")
             import_relationships(driver, spec.rel_type, str(csv_path / spec.csv_filename),
                                spec.start_label, spec.end_label,

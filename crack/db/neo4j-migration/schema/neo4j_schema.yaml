@@ -1,0 +1,292 @@
+# Neo4j Data Pipeline Schema Definition
+#
+# This YAML file defines the complete schema for:
+# 1. Data extraction (transform_to_neo4j.py)
+# 2. Neo4j import (import_to_neo4j.py)
+#
+# To add a new entity type:
+# 1. Add node definition under 'nodes'
+# 2. Add relationship definitions under 'relationships' (if applicable)
+# 3. Implement extractor function matching the signature
+#
+# All specs are automatically validated on load.
+
+# =============================================================================
+# Node Definitions
+# =============================================================================
+nodes:
+  command:
+    name: commands
+    label: Command
+    csv_filename: commands.csv
+    id_field: id
+    description: Command definitions
+    fields:
+      - id
+      - name
+      - category
+      - command
+      - description
+      - subcategory
+      - notes
+      - oscp_relevance
+    extractor: _extract_commands_csv
+
+  attack_chain:
+    name: attack_chains
+    label: AttackChain
+    csv_filename: attack_chains.csv
+    id_field: id
+    description: Attack chain metadata
+    fields:
+      - id
+      - name
+      - description
+      - version
+      - category
+      - platform
+      - difficulty
+      - time_estimate
+      - oscp_relevant
+      - notes
+    extractor: _extract_attack_chains_csv
+
+  tag:
+    name: tags
+    label: Tag
+    csv_filename: tags.csv
+    id_field: name
+    description: Unique tags
+    fields:
+      - name
+      - category
+    extractor: _extract_unique_tags_adapted
+
+  variable:
+    name: variables
+    label: Variable
+    csv_filename: variables.csv
+    id_field: name
+    description: Command variables
+    fields:
+      - id
+      - name
+      - description
+      - example
+      - required
+    extractor: _extract_variables_nodes
+
+  flag:
+    name: flags
+    label: Flag
+    csv_filename: flags.csv
+    id_field: id
+    description: Command flags
+    fields:
+      - id
+      - flag
+      - explanation
+    extractor: _extract_flags_nodes
+
+  indicator:
+    name: indicators
+    label: Indicator
+    csv_filename: indicators.csv
+    id_field: id
+    description: Success/failure indicators
+    fields:
+      - id
+      - pattern
+      - indicator_type
+    extractor: _extract_indicators_nodes
+
+  chain_step:
+    name: chain_steps
+    label: ChainStep
+    csv_filename: chain_steps.csv
+    id_field: id
+    description: Chain steps
+    fields:
+      - id
+      - description
+      - expected_output
+      - notes
+    extractor: _extract_chain_steps_nodes
+
+# =============================================================================
+# Relationship Definitions
+# =============================================================================
+relationships:
+  command_has_variable:
+    name: command_has_variable
+    rel_type: USES_VARIABLE
+    csv_filename: command_has_variable.csv
+    start_label: Command
+    end_label: Variable
+    start_id_col: command_id
+    end_id_col: variable_id
+    start_id_field: id
+    end_id_field: name
+    description: Command uses variable
+    fields:
+      - command_id
+      - variable_id
+      - position
+      - example
+      - required
+    extractor: _extract_command_variables_rels
+
+  command_has_flag:
+    name: command_has_flag
+    rel_type: HAS_FLAG
+    csv_filename: command_has_flag.csv
+    start_label: Command
+    end_label: Flag
+    start_id_col: command_id
+    end_id_col: flag_id
+    start_id_field: id
+    end_id_field: id
+    description: Command has flag option
+    fields:
+      - command_id
+      - flag_id
+      - position
+    extractor: _extract_command_flags_rels
+
+  command_has_indicator:
+    name: command_has_indicator
+    rel_type: HAS_INDICATOR
+    csv_filename: command_has_indicator.csv
+    start_label: Command
+    end_label: Indicator
+    start_id_col: command_id
+    end_id_col: indicator_id
+    start_id_field: id
+    end_id_field: id
+    description: Command has output indicator
+    fields:
+      - command_id
+      - indicator_id
+      - indicator_type
+    extractor: _extract_command_indicators_rels
+
+  command_tagged_with:
+    name: command_tagged_with
+    rel_type: TAGGED
+    csv_filename: command_tagged_with.csv
+    start_label: Command
+    end_label: Tag
+    start_id_col: command_id
+    end_id_col: tag_name
+    start_id_field: id
+    end_id_field: name
+    description: Command tagged with tag
+    fields:
+      - command_id
+      - tag_name
+    extractor: _extract_command_tag_rels
+
+  command_alternative_for:
+    name: command_alternative_for
+    rel_type: ALTERNATIVE
+    csv_filename: command_alternative_for.csv
+    start_label: Command
+    end_label: Command
+    start_id_col: command_id
+    end_id_col: alternative_command_id
+    start_id_field: id
+    end_id_field: id
+    description: Command is alternative to another
+    fields:
+      - command_id
+      - alternative_command_id
+    extractor: _extract_command_alternatives_rels
+
+  command_requires:
+    name: command_requires
+    rel_type: PREREQUISITE
+    csv_filename: command_requires.csv
+    start_label: Command
+    end_label: Command
+    start_id_col: command_id
+    end_id_col: prerequisite_command_id
+    start_id_field: id
+    end_id_field: id
+    description: Command requires prerequisite command
+    fields:
+      - command_id
+      - prerequisite_command_id
+    extractor: _extract_command_prerequisites_rels
+
+  chain_contains_step:
+    name: chain_contains_step
+    rel_type: HAS_STEP
+    csv_filename: chain_contains_step.csv
+    start_label: AttackChain
+    end_label: ChainStep
+    start_id_col: chain_id
+    end_id_col: step_id
+    start_id_field: id
+    end_id_field: id
+    description: Attack chain contains step
+    fields:
+      - chain_id
+      - step_id
+      - order
+    extractor: _extract_chain_steps_rels
+
+  step_uses_command:
+    name: step_uses_command
+    rel_type: EXECUTES
+    csv_filename: step_uses_command.csv
+    start_label: ChainStep
+    end_label: Command
+    start_id_col: step_id
+    end_id_col: command_id
+    start_id_field: id
+    end_id_field: id
+    description: Chain step executes command
+    fields:
+      - step_id
+      - command_id
+    extractor: _extract_step_commands_rels
+
+  chain_tagged_with:
+    name: chain_tagged_with
+    rel_type: TAGGED
+    csv_filename: chain_tagged_with.csv
+    start_label: AttackChain
+    end_label: Tag
+    start_id_col: chain_id
+    end_id_col: tag_name
+    start_id_field: id
+    end_id_field: name
+    description: Attack chain tagged with tag
+    fields:
+      - chain_id
+      - tag_name
+    extractor: _extract_chain_tag_rels
+
+# =============================================================================
+# Configuration Notes
+# =============================================================================
+#
+# Extractor Function Signature:
+#   def extractor_name(commands: List[Dict], chains: List[Dict],
+#                      cheatsheets: List[Dict]) -> List[Dict]
+#
+# Node Extractors:
+#   - Must return List[Dict] with keys matching 'fields'
+#   - Must include 'id_field' in returned dictionaries
+#
+# Relationship Extractors:
+#   - Must return List[Dict] with keys matching 'fields'
+#   - Must include 'start_id_col' and 'end_id_col' in returned dictionaries
+#
+# ID Fields:
+#   - 'id_field' in nodes: Field used as primary key
+#   - 'start_id_field'/'end_id_field' in relationships: Which field to match on
+#
+# Example:
+#   If variable.id_field = 'name', then command->variable relationships
+#   use variable.name instead of variable.id for matching
