@@ -20,6 +20,19 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 # Import unified schema definitions
 from schema import SchemaRegistry, SchemaLoadError
 
+# Import extraction framework and extractors
+from extraction import (
+    VariablesExtractor,
+    FlagsExtractor,
+    IndicatorsExtractor,
+    CommandRelationshipsExtractor,
+    ChainStepsExtractor,
+    TagRelationshipsExtractor,
+    CommandsExtractor,
+    AttackChainsExtractor,
+    TagExtractor
+)
+
 
 def extract_unique_tags(commands: List[Dict], chains: List[Dict]) -> List[Dict]:
     """Extract unique tags from all commands and chains"""
@@ -63,230 +76,6 @@ def infer_tag_category(tag_name: str) -> str:
         return 'general'
 
 
-def extract_variables(commands: List[Dict]) -> Tuple[List[Dict], List[Dict]]:
-    """Extract variables and command->variable relationships"""
-    variables = []
-    relationships = []
-    seen_vars = set()
-
-    for cmd in commands:
-        cmd_id = cmd.get('id')
-        if not cmd_id:
-            continue
-
-        for idx, var in enumerate(cmd.get('variables', [])):
-            var_name = var.get('name')
-            if not var_name:
-                continue
-
-            # Create unique variable node (if not seen)
-            if var_name not in seen_vars:
-                var_id = generate_id(f"var_{var_name}")
-                variables.append({
-                    'id': var_id,
-                    'name': var_name,
-                    'description': var.get('description', ''),
-                    'example': var.get('example', ''),
-                    'required': str(var.get('required', True))
-                })
-                seen_vars.add(var_name)
-
-            # Create relationship
-            var_id = generate_id(f"var_{var_name}")
-            relationships.append({
-                'command_id': cmd_id,
-                'variable_id': var_id,
-                'position': str(idx),
-                'example': var.get('example', ''),
-                'required': str(var.get('required', True))
-            })
-
-    return variables, relationships
-
-
-def extract_flags(commands: List[Dict]) -> Tuple[List[Dict], List[Dict]]:
-    """Extract flag explanations and relationships"""
-    flags = []
-    relationships = []
-    seen_flags = set()
-
-    for cmd in commands:
-        cmd_id = cmd.get('id')
-        if not cmd_id:
-            continue
-
-        flag_explanations = cmd.get('flag_explanations', {})
-        for idx, (flag, explanation) in enumerate(flag_explanations.items()):
-            flag_id = generate_id(f"flag_{flag}")
-
-            # Create unique flag node
-            if flag_id not in seen_flags:
-                flags.append({
-                    'id': flag_id,
-                    'flag': flag,
-                    'explanation': explanation
-                })
-                seen_flags.add(flag_id)
-
-            # Create relationship
-            relationships.append({
-                'command_id': cmd_id,
-                'flag_id': flag_id,
-                'position': str(idx)
-            })
-
-    return flags, relationships
-
-
-def extract_indicators(commands: List[Dict]) -> Tuple[List[Dict], List[Dict]]:
-    """Extract success/failure indicators and relationships"""
-    indicators = []
-    relationships = []
-    indicator_id_counter = 0
-
-    for cmd in commands:
-        cmd_id = cmd.get('id')
-        if not cmd_id:
-            continue
-
-        # Success indicators
-        for indicator_text in cmd.get('success_indicators', []):
-            indicator_id_counter += 1
-            ind_id = f"indicator_{indicator_id_counter}"
-
-            indicators.append({
-                'id': ind_id,
-                'indicator': indicator_text,
-                'type': 'success'
-            })
-
-            relationships.append({
-                'command_id': cmd_id,
-                'indicator_id': ind_id,
-                'type': 'success'
-            })
-
-        # Failure indicators
-        for indicator_text in cmd.get('failure_indicators', []):
-            indicator_id_counter += 1
-            ind_id = f"indicator_{indicator_id_counter}"
-
-            indicators.append({
-                'id': ind_id,
-                'indicator': indicator_text,
-                'type': 'failure'
-            })
-
-            relationships.append({
-                'command_id': cmd_id,
-                'indicator_id': ind_id,
-                'type': 'failure'
-            })
-
-    return indicators, relationships
-
-
-def extract_command_relationships(commands: List[Dict]) -> Dict[str, List[Dict]]:
-    """Extract alternatives and prerequisites relationships"""
-    relationships = {
-        'alternatives': [],
-        'prerequisites': []
-    }
-
-    for cmd in commands:
-        cmd_id = cmd.get('id')
-        if not cmd_id:
-            continue
-
-        # Alternatives
-        for alt in cmd.get('alternatives', []):
-            relationships['alternatives'].append({
-                'command_id': cmd_id,
-                'alternative_command_id': alt
-            })
-
-        # Prerequisites
-        for prereq in cmd.get('prerequisites', []):
-            relationships['prerequisites'].append({
-                'command_id': cmd_id,
-                'prerequisite_command_id': prereq
-            })
-
-    return relationships
-
-
-def extract_chain_steps(chains: List[Dict]) -> Tuple[List[Dict], List[Dict], List[Dict]]:
-    """Extract steps, chain->step relationships, step->command relationships"""
-    steps = []
-    chain_step_rels = []
-    step_command_rels = []
-    step_dependency_rels = []
-
-    for chain in chains:
-        chain_id = chain.get('id')
-        if not chain_id:
-            continue
-
-        for idx, step in enumerate(chain.get('steps', [])):
-            step_id = step.get('id')
-            if not step_id:
-                continue
-
-            # Create step node
-            steps.append({
-                'id': step_id,
-                'name': step.get('name', ''),
-                'step_order': str(step.get('step_order', idx)),
-                'objective': step.get('objective', ''),
-                'description': step.get('description', ''),
-                'evidence': '|'.join(step.get('evidence', [])),
-                'success_criteria': '|'.join(step.get('success_criteria', [])),
-                'failure_conditions': '|'.join(step.get('failure_conditions', []))
-            })
-
-            # Chain -> Step relationship
-            chain_step_rels.append({
-                'chain_id': chain_id,
-                'step_id': step_id,
-                'order': str(step.get('step_order', idx))
-            })
-
-            # Step -> Command relationship
-            cmd_ref = step.get('command_ref')
-            if cmd_ref:
-                step_command_rels.append({
-                    'step_id': step_id,
-                    'command_id': cmd_ref
-                })
-
-            # Step dependencies
-            for dep_step_id in step.get('dependencies', []):
-                step_dependency_rels.append({
-                    'step_id': step_id,
-                    'depends_on_step_id': dep_step_id
-                })
-
-    return steps, chain_step_rels, step_command_rels
-
-
-def extract_references(chains: List[Dict]) -> List[Dict]:
-    """Extract external references from chains"""
-    references = []
-    ref_id_counter = 0
-
-    for chain in chains:
-        chain_id = chain.get('id')
-        refs = chain.get('metadata', {}).get('references', [])
-
-        for url in refs:
-            ref_id_counter += 1
-            references.append({
-                'id': f"ref_{ref_id_counter}",
-                'chain_id': chain_id,
-                'url': url
-            })
-
-    return references
 
 
 def write_csv_file(filepath: str, data: List[Dict], fieldnames: List[str]):
@@ -314,137 +103,106 @@ def generate_id(text: str) -> str:
 # These functions extract data from source JSON and format for CSV output.
 # All extractors must match signature: (commands, chains, cheatsheets) -> List[Dict]
 
+# =============================================================================
+# Extraction Wrapper Functions
+# =============================================================================
+# These functions use the extraction framework to reduce repetitive code.
+# All extractors match signature: (commands, chains, cheatsheets) -> List[Dict]
+
 def _extract_commands_csv(commands: List[Dict], chains: List[Dict], cheatsheets: List[Dict]) -> List[Dict]:
-    """Extract commands for CSV"""
-    return [{
-        'id': cmd.get('id', ''),
-        'name': cmd.get('name', ''),
-        'category': cmd.get('category', ''),
-        'command': cmd.get('command', ''),
-        'description': cmd.get('description', ''),
-        'subcategory': cmd.get('subcategory', ''),
-        'notes': cmd.get('notes', ''),
-        'oscp_relevance': cmd.get('oscp_relevance', 'medium')
-    } for cmd in commands]
+    """Extract commands for CSV using CommandsExtractor"""
+    extractor = CommandsExtractor()
+    return extractor.extract_nodes(commands)
 
 
 def _extract_attack_chains_csv(commands: List[Dict], chains: List[Dict], cheatsheets: List[Dict]) -> List[Dict]:
-    """Extract attack chains for CSV"""
-    result = []
-    for chain in chains:
-        metadata = chain.get('metadata', {})
-        result.append({
-            'id': chain.get('id', ''),
-            'name': chain.get('name', ''),
-            'description': chain.get('description', ''),
-            'version': chain.get('version', '1.0.0'),
-            'category': metadata.get('category', ''),
-            'platform': metadata.get('platform', ''),
-            'difficulty': chain.get('difficulty', 'intermediate'),
-            'time_estimate': chain.get('time_estimate', ''),
-            'oscp_relevant': str(chain.get('oscp_relevant', False)),
-            'notes': chain.get('notes', '')
-        })
-    return result
+    """Extract attack chains for CSV using AttackChainsExtractor"""
+    extractor = AttackChainsExtractor()
+    return extractor.extract_nodes(chains)
 
-
-def _extract_command_tag_rels(commands: List[Dict], chains: List[Dict], cheatsheets: List[Dict]) -> List[Dict]:
-    """Extract command->tag relationships"""
-    result = []
-    for cmd in commands:
-        cmd_id = cmd.get('id')
-        if not cmd_id:
-            continue
-        for tag in cmd.get('tags', []):
-            result.append({
-                'command_id': cmd_id,
-                'tag_name': tag
-            })
-    return result
-
-
-def _extract_chain_tag_rels(commands: List[Dict], chains: List[Dict], cheatsheets: List[Dict]) -> List[Dict]:
-    """Extract chain->tag relationships"""
-    result = []
-    for chain in chains:
-        chain_id = chain.get('id')
-        if not chain_id:
-            continue
-        for tag in chain.get('metadata', {}).get('tags', []):
-            result.append({
-                'chain_id': chain_id,
-                'tag_name': tag
-            })
-    return result
-
-
-# Wrapper functions for schema extractors
-# These adapt existing extraction functions to match the standard 3-parameter signature
-# Original functions use different signatures, so we need adapters
 
 def _extract_variables_nodes(commands: List[Dict], chains: List[Dict], cheatsheets: List[Dict]) -> List[Dict]:
-    """Extract variables only (nodes) - adapted for schema"""
-    return extract_variables(commands)[0]
+    """Extract variables only (nodes) using VariablesExtractor"""
+    extractor = VariablesExtractor()
+    return extractor.extract_nodes(commands)
 
 
 def _extract_command_variables_rels(commands: List[Dict], chains: List[Dict], cheatsheets: List[Dict]) -> List[Dict]:
-    """Extract command->variable relationships - adapted for schema"""
-    return extract_variables(commands)[1]
+    """Extract command->variable relationships using VariablesExtractor"""
+    extractor = VariablesExtractor()
+    return extractor.extract_relationships(commands)
 
 
 def _extract_flags_nodes(commands: List[Dict], chains: List[Dict], cheatsheets: List[Dict]) -> List[Dict]:
-    """Extract flags only (nodes) - adapted for schema"""
-    return extract_flags(commands)[0]
+    """Extract flags only (nodes) using FlagsExtractor"""
+    extractor = FlagsExtractor()
+    return extractor.extract_nodes(commands)
 
 
 def _extract_command_flags_rels(commands: List[Dict], chains: List[Dict], cheatsheets: List[Dict]) -> List[Dict]:
-    """Extract command->flag relationships - adapted for schema"""
-    return extract_flags(commands)[1]
+    """Extract command->flag relationships using FlagsExtractor"""
+    extractor = FlagsExtractor()
+    return extractor.extract_relationships(commands)
 
 
 def _extract_indicators_nodes(commands: List[Dict], chains: List[Dict], cheatsheets: List[Dict]) -> List[Dict]:
-    """Extract indicators only (nodes) - adapted for schema"""
-    return extract_indicators(commands)[0]
+    """Extract indicators only (nodes) using IndicatorsExtractor"""
+    extractor = IndicatorsExtractor()
+    return extractor.extract_nodes(commands)
 
 
 def _extract_command_indicators_rels(commands: List[Dict], chains: List[Dict], cheatsheets: List[Dict]) -> List[Dict]:
-    """Extract command->indicator relationships - adapted for schema"""
-    return extract_indicators(commands)[1]
+    """Extract command->indicator relationships using IndicatorsExtractor"""
+    extractor = IndicatorsExtractor()
+    return extractor.extract_relationships(commands)
 
 
 def _extract_chain_steps_nodes(commands: List[Dict], chains: List[Dict], cheatsheets: List[Dict]) -> List[Dict]:
-    """Extract chain steps only (nodes) - adapted for schema"""
-    return extract_chain_steps(chains)[0]
+    """Extract chain steps only (nodes) using ChainStepsExtractor"""
+    extractor = ChainStepsExtractor()
+    return extractor.extract(chains)[0]
 
 
 def _extract_chain_steps_rels(commands: List[Dict], chains: List[Dict], cheatsheets: List[Dict]) -> List[Dict]:
-    """Extract chain->step relationships - adapted for schema"""
-    return extract_chain_steps(chains)[1]
+    """Extract chain->step relationships using ChainStepsExtractor"""
+    extractor = ChainStepsExtractor()
+    return extractor.extract(chains)[1]
 
 
 def _extract_step_commands_rels(commands: List[Dict], chains: List[Dict], cheatsheets: List[Dict]) -> List[Dict]:
-    """Extract step->command relationships - adapted for schema"""
-    return extract_chain_steps(chains)[2]
+    """Extract step->command relationships using ChainStepsExtractor"""
+    extractor = ChainStepsExtractor()
+    return extractor.extract(chains)[2]
+
+
+def _extract_command_tag_rels(commands: List[Dict], chains: List[Dict], cheatsheets: List[Dict]) -> List[Dict]:
+    """Extract command->tag relationships using TagRelationshipsExtractor"""
+    extractor = TagRelationshipsExtractor()
+    return extractor.extract_command_tags(commands)
+
+
+def _extract_chain_tag_rels(commands: List[Dict], chains: List[Dict], cheatsheets: List[Dict]) -> List[Dict]:
+    """Extract chain->tag relationships using TagRelationshipsExtractor"""
+    extractor = TagRelationshipsExtractor()
+    return extractor.extract_chain_tags(chains)
 
 
 def _extract_command_alternatives_rels(commands: List[Dict], chains: List[Dict], cheatsheets: List[Dict]) -> List[Dict]:
-    """Extract alternative command relationships - adapted for schema"""
-    return extract_command_relationships(commands)['alternatives']
+    """Extract alternative command relationships using CommandRelationshipsExtractor"""
+    extractor = CommandRelationshipsExtractor()
+    return extractor.extract_alternatives(commands)
 
 
 def _extract_command_prerequisites_rels(commands: List[Dict], chains: List[Dict], cheatsheets: List[Dict]) -> List[Dict]:
-    """Extract prerequisite command relationships - adapted for schema"""
-    return extract_command_relationships(commands)['prerequisites']
-
-
-def _extract_references_nodes(commands: List[Dict], chains: List[Dict], cheatsheets: List[Dict]) -> List[Dict]:
-    """Extract references - adapted for schema"""
-    return extract_references(chains)
+    """Extract prerequisite command relationships using CommandRelationshipsExtractor"""
+    extractor = CommandRelationshipsExtractor()
+    return extractor.extract_prerequisites(commands)
 
 
 def _extract_unique_tags_adapted(commands: List[Dict], chains: List[Dict], cheatsheets: List[Dict]) -> List[Dict]:
-    """Extract unique tags - adapted for schema (already has correct signature but needs consistency)"""
-    return extract_unique_tags(commands, chains)
+    """Extract unique tags using TagExtractor"""
+    extractor = TagExtractor()
+    return extractor.extract_unique_tags(commands, chains)
 
 
 def transform_all_to_neo4j(commands: List[Dict], chains: List[Dict], cheatsheets: List[Dict], output_dir: str):
