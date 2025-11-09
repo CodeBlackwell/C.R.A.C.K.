@@ -162,12 +162,21 @@ class SQLCommandRegistryAdapter:
         sql_result = self.repo.find_by_id(command_id)
         return self._to_command_dataclass(sql_result)
 
-    def search(self, query: str) -> List[Command]:
+    def search(
+        self,
+        query: str,
+        category: Optional[str] = None,
+        tags: Optional[List[str]] = None,
+        oscp_only: bool = False
+    ) -> List[Command]:
         """
         Search commands by query (API-compatible with HybridCommandRegistry)
 
         Args:
             query: Search query string
+            category: Optional category filter
+            tags: Optional tag filter
+            oscp_only: Filter to high OSCP relevance only
 
         Returns:
             List of Command dataclasses matching query
@@ -182,7 +191,23 @@ class SQLCommandRegistryAdapter:
         for cmd_dict in all_commands:
             # Convert to Command dataclass
             cmd = self._to_command_dataclass(cmd_dict)
-            if cmd and cmd.matches_search(query):
+            if not cmd:
+                continue
+
+            # Apply filters
+            if category and cmd.category != category:
+                continue
+
+            if oscp_only and cmd.oscp_relevance != 'high':
+                continue
+
+            if tags:
+                # Check if command has all tags
+                cmd_tags_upper = [t.upper() for t in cmd.tags]
+                if not all(tag.upper() in cmd_tags_upper for tag in tags):
+                    continue
+
+            if cmd.matches_search(query):
                 results.append(cmd)
 
         # Sort by OSCP relevance (high first)
@@ -228,19 +253,25 @@ class SQLCommandRegistryAdapter:
                 subcats.add(cmd.subcategory)
         return sorted(list(subcats))
 
-    def filter_by_tags(self, tags: List[str], exclude_tags: List[str] = None) -> List[Command]:
+    def filter_by_tags(
+        self,
+        tags: List[str],
+        match_all: bool = True,
+        exclude_tags: List[str] = None
+    ) -> List[Command]:
         """
         Filter commands by tags (API-compatible with HybridCommandRegistry)
 
         Args:
             tags: List of tags to match (case-insensitive)
+            match_all: If True, command must have ALL tags (AND), else ANY tag (OR)
             exclude_tags: Optional list of tags to exclude
 
         Returns:
             List of Command dataclasses with matching tags
         """
-        # Use SQL repository's tag search (match_all=True for AND logic)
-        sql_results = self.repo.search_by_tags(tags, match_all=True)
+        # Use SQL repository's tag search
+        sql_results = self.repo.search_by_tags(tags, match_all=match_all)
         commands = [
             self._to_command_dataclass(cmd_dict)
             for cmd_dict in sql_results
@@ -438,6 +469,34 @@ class SQLCommandRegistryAdapter:
             "Use: sqlite3 ~/.crack/crack.db .dump"
         )
 
+    def health_check(self) -> bool:
+        """
+        Test database connectivity
+
+        Returns:
+            True if connection successful, False otherwise
+        """
+        try:
+            with self.repo.get_connection() as conn:
+                with conn.cursor() as cur:
+                    cur.execute("SELECT 1")
+                    return cur.fetchone()[0] == 1
+        except:
+            return False
+
+    def get_all_commands(self) -> List[Command]:
+        """
+        Get all commands in registry
+
+        Returns:
+            List of all Command objects
+        """
+        all_commands = self.repo.get_all_commands()
+        return [
+            self._to_command_dataclass(cmd_dict)
+            for cmd_dict in all_commands
+        ]
+
     def validate_schema(self) -> List[str]:
         """
         Validate all commands against schema
@@ -472,6 +531,236 @@ class SQLCommandRegistryAdapter:
                     )
 
         return errors
+
+    def find_alternatives(self, command_id: str, max_depth: int = 1) -> List[Command]:
+        """
+        Find alternative commands up to N hops using recursive CTE
+
+        Args:
+            command_id: Source command ID
+            max_depth: Maximum traversal depth (default 1)
+
+        Returns:
+            List of alternative Command objects ordered by depth and name
+        """
+        if max_depth == 1:
+            # Simple case: direct alternatives
+            sql_results = self.repo.find_related_commands(command_id, 'alternative')
+            return [self._to_command_dataclass(cmd_dict) for cmd_dict in sql_results]
+
+        # Recursive CTE for multi-hop traversal
+        query = """
+        WITH RECURSIVE alternatives(command_id, alternative_id, depth) AS (
+            SELECT source_command_id, target_command_id, 1
+            FROM command_relations
+            WHERE source_command_id = %s AND relation_type = 'alternative'
+
+            UNION ALL
+
+            SELECT a.command_id, cr.target_command_id, a.depth + 1
+            FROM alternatives a
+            JOIN command_relations cr ON a.alternative_id = cr.source_command_id
+            WHERE cr.relation_type = 'alternative' AND a.depth < %s
+        )
+        SELECT DISTINCT c.* FROM commands c
+        JOIN alternatives a ON c.id = a.alternative_id
+        ORDER BY a.depth, c.name
+        """
+
+        try:
+            with self.repo.get_connection() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(query, (command_id, max_depth))
+                    rows = cur.fetchall()
+
+                    commands = []
+                    for row in rows:
+                        # Convert row to dict matching command structure
+                        cmd_dict = {
+                            'id': row[0],
+                            'name': row[1],
+                            'command_template': row[2],
+                            'description': row[3],
+                            'category': row[4],
+                            'subcategory': row[5],
+                            'notes': row[6],
+                            'oscp_relevance': row[7]
+                        }
+                        # Fetch full command details with relationships
+                        full_cmd = self.repo.find_by_id(cmd_dict['id'])
+                        if full_cmd:
+                            commands.append(self._to_command_dataclass(full_cmd))
+
+                    return commands
+        except Exception as e:
+            print(f"Error in find_alternatives: {e}")
+            return []
+
+    def find_prerequisites(self, command_id: str, depth: int = 1) -> List[Command]:
+        """
+        Find prerequisite commands up to N hops using recursive CTE
+
+        Args:
+            command_id: Target command ID
+            depth: Maximum traversal depth (default 1)
+
+        Returns:
+            List of prerequisite Command objects ordered by depth (deepest first)
+        """
+        if depth == 1:
+            # Simple case: direct prerequisites
+            sql_results = self.repo.find_related_commands(command_id, 'prerequisite')
+            return [self._to_command_dataclass(cmd_dict) for cmd_dict in sql_results]
+
+        # Recursive CTE for multi-hop traversal (reverse direction)
+        query = """
+        WITH RECURSIVE prerequisites(command_id, prerequisite_id, depth) AS (
+            SELECT target_command_id, source_command_id, 1
+            FROM command_relations
+            WHERE target_command_id = %s AND relation_type = 'prerequisite'
+
+            UNION ALL
+
+            SELECT p.command_id, cr.source_command_id, p.depth + 1
+            FROM prerequisites p
+            JOIN command_relations cr ON p.prerequisite_id = cr.target_command_id
+            WHERE cr.relation_type = 'prerequisite' AND p.depth < %s
+        )
+        SELECT DISTINCT c.*, p.depth FROM commands c
+        JOIN prerequisites p ON c.id = p.prerequisite_id
+        ORDER BY p.depth DESC, c.name
+        """
+
+        try:
+            with self.repo.get_connection() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(query, (command_id, depth))
+                    rows = cur.fetchall()
+
+                    commands = []
+                    for row in rows:
+                        # Convert row to dict matching command structure
+                        cmd_dict = {
+                            'id': row[0],
+                            'name': row[1],
+                            'command_template': row[2],
+                            'description': row[3],
+                            'category': row[4],
+                            'subcategory': row[5],
+                            'notes': row[6],
+                            'oscp_relevance': row[7]
+                        }
+                        # Fetch full command details with relationships
+                        full_cmd = self.repo.find_by_id(cmd_dict['id'])
+                        if full_cmd:
+                            commands.append(self._to_command_dataclass(full_cmd))
+
+                    return commands
+        except Exception as e:
+            print(f"Error in find_prerequisites: {e}")
+            return []
+
+    def get_attack_chain_path(self, chain_id: str) -> Dict[str, Any]:
+        """
+        Get attack chain with ordered steps and command details
+
+        Args:
+            chain_id: Attack chain ID
+
+        Returns:
+            Dict with chain info, steps, and execution order
+        """
+        query_chain = """
+        SELECT id, name, description, category, platform, difficulty,
+               time_estimate, oscp_relevant, author, version
+        FROM attack_chains
+        WHERE id = %s
+        """
+
+        query_steps = """
+        SELECT cs.id, cs.name, cs.step_order, cs.objective, cs.description,
+               cs.evidence, cs.success_criteria, cs.failure_conditions,
+               cs.command_id
+        FROM chain_steps cs
+        WHERE cs.chain_id = %s
+        ORDER BY cs.step_order
+        """
+
+        query_dependencies = """
+        SELECT source_step_id, target_step_id
+        FROM step_dependencies
+        WHERE source_step_id IN (
+            SELECT id FROM chain_steps WHERE chain_id = %s
+        )
+        """
+
+        try:
+            with self.repo.get_connection() as conn:
+                with conn.cursor() as cur:
+                    # Get chain metadata
+                    cur.execute(query_chain, (chain_id,))
+                    chain_row = cur.fetchone()
+                    if not chain_row:
+                        return None
+
+                    # Get steps
+                    cur.execute(query_steps, (chain_id,))
+                    step_rows = cur.fetchall()
+
+                    # Get dependencies
+                    cur.execute(query_dependencies, (chain_id,))
+                    dep_rows = cur.fetchall()
+
+                    # Build dependency map
+                    dependencies = {}
+                    for source_id, target_id in dep_rows:
+                        if source_id not in dependencies:
+                            dependencies[source_id] = []
+                        dependencies[source_id].append(target_id)
+
+                    # Build steps list
+                    steps = []
+                    for row in step_rows:
+                        step_id, name, order, objective, description, evidence, success_criteria, failure_conditions, command_id = row
+
+                        # Get command if specified
+                        command = None
+                        if command_id:
+                            cmd_dict = self.repo.find_by_id(command_id)
+                            if cmd_dict:
+                                command = self._to_command_dataclass(cmd_dict)
+
+                        steps.append({
+                            'id': step_id,
+                            'name': name,
+                            'order': order,
+                            'objective': objective,
+                            'description': description,
+                            'evidence': evidence,
+                            'success_criteria': success_criteria,
+                            'failure_conditions': failure_conditions,
+                            'command': command,
+                            'dependencies': dependencies.get(step_id, [])
+                        })
+
+                    return {
+                        'id': chain_row[0],
+                        'name': chain_row[1],
+                        'description': chain_row[2],
+                        'category': chain_row[3],
+                        'platform': chain_row[4],
+                        'difficulty': chain_row[5],
+                        'time_estimate': chain_row[6],
+                        'oscp_relevant': chain_row[7],
+                        'author': chain_row[8],
+                        'version': chain_row[9],
+                        'steps': steps,
+                        'execution_order': [s['id'] for s in sorted(steps, key=lambda x: x['order'])]
+                    }
+
+        except Exception as e:
+            print(f"Error in get_attack_chain_path: {e}")
+            return None
 
 
 # Convenience functions for module-level access

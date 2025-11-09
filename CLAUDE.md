@@ -119,8 +119,6 @@ DOCUMENT: investigation_checklist.md
 
 ## When Flag Captured
 ```
-1. Screenshot flag
-2. Note exact location
 3. Document full chain
 4. Create EDUCATIONAL_WRITEUP.md
    - Learning objectives

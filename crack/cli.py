@@ -97,6 +97,7 @@ def cheatsheets_command(args):
     from crack.reference.core import HybridCommandRegistry, ConfigManager, ReferenceTheme
     from crack.reference.core.cheatsheet_registry import CheatsheetRegistry
     from crack.reference.cli.cheatsheet import CheatsheetCLI
+    from crack.utils.colors import Colors
 
     # Initialize registries
     theme = ReferenceTheme()
@@ -109,36 +110,182 @@ def cheatsheets_command(args):
         theme=theme
     )
 
-    # Parse arguments
-    if not args:
+    # Parse --list-subjects flag
+    if args and args[0] == '--list-subjects':
+        _list_subjects(cheatsheet_registry)
+        return
+
+    # Parse --subject/-s flag
+    subject_filter = None
+    filtered_args = []
+    i = 0
+    while i < len(args):
+        if args[i] in ['--subject', '-s']:
+            if i + 1 < len(args):
+                subject_filter = args[i + 1]
+                i += 2  # Skip flag and value
+            else:
+                print(f"{Colors.RED}Error: --subject requires a category name{Colors.END}")
+                print(f"\nUsage: crack cheatsheets --subject <category>")
+                print(f"   or: crack cheatsheets -s <category>")
+                print(f"\nTo see available subjects: crack cheatsheets --list-subjects")
+                return
+        else:
+            filtered_args.append(args[i])
+            i += 1
+
+    # Handle subject filtering
+    if subject_filter:
+        _filter_by_subject(cli, cheatsheet_registry, subject_filter, filtered_args)
+        return
+
+    # Parse arguments (original logic)
+    if not filtered_args:
         # No args - list all cheatsheets
         cli.list_cheatsheets()
         return
 
     # Join args for pattern matching (e.g., "metasploit 2" → "metasploit 2")
-    cheatsheet_query = ' '.join(args) if args else ''
+    cheatsheet_query = ' '.join(filtered_args) if filtered_args else ''
 
     # Check for flags
-    if '--fill-all' in args:
+    if '--fill-all' in filtered_args:
         # Fill all commands sequentially
-        cheatsheet_id = args[0]
+        cheatsheet_id = filtered_args[0]
         cli.fill_all_commands(cheatsheet_id)
-    elif len(args) >= 2 and args[1].isdigit():
+    elif len(filtered_args) >= 2 and filtered_args[1].isdigit():
         # Could be either:
         # 1. "metasploit 2" = Select cheatsheet #2 from "metasploit" search
         # 2. "log-poisoning 3" = Fill command #3 from exact cheatsheet ID
         # Determine by checking if first arg is exact cheatsheet ID
-        exact_sheet = cli.cheatsheet_registry.get_cheatsheet(args[0])
+        exact_sheet = cli.cheatsheet_registry.get_cheatsheet(filtered_args[0])
         if exact_sheet:
             # Exact ID + number = fill command
-            command_number = int(args[1])
-            cli.fill_command(args[0], command_number)
+            command_number = int(filtered_args[1])
+            cli.fill_command(filtered_args[0], command_number)
         else:
             # Search query + number = select cheatsheet
             cli.show_cheatsheet(cheatsheet_query)
     else:
         # Show cheatsheet
         cli.show_cheatsheet(cheatsheet_query)
+
+
+def _list_subjects(cheatsheet_registry):
+    """List all available cheatsheet subjects/categories"""
+    from crack.utils.colors import Colors
+    from pathlib import Path
+
+    # Get cheatsheet base directory
+    cheatsheet_path = Path(cheatsheet_registry.base_path) / 'data' / 'cheatsheets'
+
+    # Find all subdirectories (categories)
+    categories = {}
+    for subdir in sorted(cheatsheet_path.iterdir()):
+        if subdir.is_dir() and not subdir.name.startswith('.'):
+            # Count JSON files in each category
+            count = len(list(subdir.glob('*.json')))
+            if count > 0:
+                categories[subdir.name] = count
+
+    print(f"\n{Colors.CYAN}{'=' * 70}{Colors.END}")
+    print(f"{Colors.BOLD}{Colors.BRIGHT_WHITE}AVAILABLE CHEATSHEET CATEGORIES{Colors.END}")
+    print(f"{Colors.CYAN}{'=' * 70}{Colors.END}\n")
+
+    # Display usage
+    print(f"{Colors.BRIGHT_BLACK}Use with: crack cheatsheets --subject <category>{Colors.END}")
+    print(f"{Colors.BRIGHT_BLACK}      or: crack cheatsheets -s <category>{Colors.END}\n")
+
+    # Sort by name alphabetically
+    for category, count in sorted(categories.items()):
+        # Format category name for display (replace dashes with spaces, title case)
+        display_name = category.replace('-', ' ').replace('_', ' ').title()
+        print(f"  {Colors.CYAN}•{Colors.END} {Colors.BOLD}{category}{Colors.END} "
+              f"{Colors.BRIGHT_BLACK}({count} cheatsheet{'s' if count > 1 else ''}){Colors.END} "
+              f"{Colors.BRIGHT_BLACK}- {display_name}{Colors.END}")
+
+    print(f"\n{Colors.BRIGHT_BLACK}Total: {len(categories)} categories, "
+          f"{sum(categories.values())} cheatsheets{Colors.END}\n")
+
+
+def _filter_by_subject(cli, cheatsheet_registry, subject, remaining_args):
+    """Filter cheatsheets by subject (directory) and optionally select by number"""
+    from pathlib import Path
+
+    theme = cheatsheet_registry.theme
+
+    # Get cheatsheets from specific subdirectory
+    base_path = Path(cheatsheet_registry.base_path) / 'data' / 'cheatsheets'
+    cheatsheet_path = base_path / subject
+
+    # Check if category directory exists
+    if not cheatsheet_path.exists() or not cheatsheet_path.is_dir():
+        print(f"\n{theme.error('No category found:')} {theme.primary(subject)}\n")
+        print(f"{theme.hint('To see available categories:')}")
+        print(f"  crack cheatsheets --list-subjects\n")
+        return
+
+    # Load cheatsheets from this category directory
+    matching_sheets = []
+    for json_file in sorted(cheatsheet_path.glob('*.json')):
+        try:
+            with open(json_file, 'r') as f:
+                import json
+                data = json.load(f)
+                from crack.reference.core.cheatsheet_registry import Cheatsheet
+                sheet = Cheatsheet.from_dict(data)
+                matching_sheets.append(sheet)
+        except Exception as e:
+            # Skip invalid files
+            pass
+
+    if not matching_sheets:
+        print(f"\n{theme.error('No cheatsheets found in category:')} {theme.primary(subject)}\n")
+        return
+
+    # Check if numeric selection provided
+    selection_num = None
+    if remaining_args and remaining_args[0].isdigit():
+        selection_num = int(remaining_args[0]) - 1  # Convert to 0-indexed
+
+    # If selection provided, show that specific cheatsheet
+    if selection_num is not None:
+        if 0 <= selection_num < len(matching_sheets):
+            cli.show_cheatsheet(matching_sheets[selection_num].id)
+        else:
+            print(f"\n{theme.error(f'Invalid selection: {selection_num + 1}')}")
+            print(f"Only {len(matching_sheets)} cheatsheet(s) available for subject '{subject}'\n")
+            _display_subject_results(matching_sheets, subject, theme)
+        return
+
+    # No selection - display numbered list
+    _display_subject_results(matching_sheets, subject, theme)
+
+
+def _display_subject_results(sheets, subject, theme):
+    """Display numbered list of cheatsheets for a subject"""
+    # Format category name for display
+    display_name = subject.replace('-', ' ').replace('_', ' ').title()
+
+    print(f"{theme.hint(f'Found {len(sheets)} match(es) for:')} {theme.primary(display_name)}\n")
+
+    print(f"{theme.command_name('ID Matches:')}")
+    for i, sheet in enumerate(sheets, 1):
+        # Display numbered result (matching search format from cheatsheet.py:356-360)
+        print(f"  {theme.bold_white(f'{i}.')} {theme.primary(sheet.id)}")
+        print(f"     {theme.hint(sheet.name)}")
+
+        # Truncate description
+        if sheet.description:
+            desc = sheet.description[:80] + "..." if len(sheet.description) > 80 else sheet.description
+            print(f"     {theme.muted(desc)}")
+
+    print()
+    print(f"{theme.hint('To view full cheatsheet:')}")
+    print(f"  {theme.secondary('crack cheatsheets <id>')}")
+    print(f"  {theme.secondary(f'crack cheatsheets {subject} <number>')}")
+    print(f"\n{theme.hint('Example:')} {theme.primary(f'crack cheatsheets {subject} 1')}")
+    print()
 
 def chain_builder_command(args):
     """Execute the chain builder wizard"""

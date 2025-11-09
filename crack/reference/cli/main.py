@@ -6,6 +6,7 @@ CLI interface for CRACK Reference System
 import argparse
 import sys
 import sqlite3
+import logging
 from pathlib import Path
 from rich.console import Console
 
@@ -23,6 +24,8 @@ from crack.reference.cli import (
     ConfigCLI,
     SearchCLI
 )
+
+logger = logging.getLogger(__name__)
 
 
 class ReferenceCLI:
@@ -50,18 +53,50 @@ class ReferenceCLI:
         self.parser = self.create_parser()
 
     def _initialize_registry(self):
-        """Initialize registry with auto-detect fallback (SQL → JSON)
+        """Initialize registry with auto-detect fallback (Router → SQL → JSON)
 
-        Tries SQL backend first for performance. Falls back to JSON if:
-        - Database doesn't exist
-        - Database is corrupted/locked
-        - Database is empty
-        - Import errors occur
+        Auto-detection priority:
+        1. CommandRegistryRouter (PostgreSQL + Neo4j) - best performance
+        2. SQLCommandRegistryAdapter (PostgreSQL only) - reliable fallback
+        3. HybridCommandRegistry (JSON) - last resort
 
         Returns:
-            Registry instance (SQLCommandRegistryAdapter or HybridCommandRegistry)
+            Registry instance (Router, SQLCommandRegistryAdapter, or HybridCommandRegistry)
         """
-        # Try SQL backend first (recommended) - PostgreSQL
+        # Try Router first (dual backend: PostgreSQL + Neo4j)
+        try:
+            from crack.reference.core.router import CommandRegistryRouter
+
+            router = CommandRegistryRouter(
+                config_manager=self.config,
+                theme=self.theme,
+                enable_fallback=True
+            )
+
+            # Check which backends are available
+            health = router.health_check()
+            backends_available = []
+
+            if health['neo4j']['available'] and health['neo4j']['healthy']:
+                backends_available.append('Neo4j')
+            if health['sql']['available'] and health['sql']['healthy']:
+                backends_available.append('PostgreSQL')
+            if health['json']['available']:
+                backends_available.append('JSON')
+
+            if backends_available:
+                backend_str = ' + '.join(backends_available)
+                print(self.theme.success(f"✓ Using Router ({backend_str})"))
+                return router
+            else:
+                print(self.theme.warning("⚠ Router has no healthy backends"))
+
+        except Exception as e:
+            # Router initialization failed
+            logger.debug(f"Router initialization failed: {e}")
+            print(self.theme.hint(f"ℹ Router unavailable: {e}"))
+
+        # Try SQL backend (PostgreSQL only)
         try:
             from crack.reference.core.sql_adapter import SQLCommandRegistryAdapter
             from db.config import get_db_config
@@ -79,7 +114,7 @@ class ReferenceCLI:
 
                 if count > 0:
                     # PostgreSQL database valid - use SQL adapter
-                    print(self.theme.success(f"✓ Using SQL backend ({count} commands loaded)"))
+                    print(self.theme.success(f"✓ Using PostgreSQL backend ({count} commands loaded)"))
                     return SQLCommandRegistryAdapter(
                         db_config=db_config,
                         config_manager=self.config,
@@ -263,6 +298,13 @@ class ReferenceCLI:
             help='Clear all config variables'
         )
 
+        # Backend status
+        parser.add_argument(
+            '--status',
+            action='store_true',
+            help='Show backend status and statistics'
+        )
+
         parser.add_argument(
             '--no-banner',
             action='store_true',
@@ -352,6 +394,9 @@ class ReferenceCLI:
             return self.config_cli.clear_config()
 
         # Handle special actions
+        if args.status:
+            return self.show_status()
+
         if args.stats:
             return self.search_cli.show_stats()
 
@@ -505,6 +550,97 @@ class ReferenceCLI:
                 for error in errors:
                     print(f"  - {error}")
             return 1
+
+    def show_status(self) -> int:
+        """Show backend status and statistics
+
+        Returns:
+            Exit code (0 for success)
+        """
+        from crack.reference.core.router import CommandRegistryRouter
+
+        # Check if using router
+        if not isinstance(self.registry, CommandRegistryRouter):
+            print(f"\n{self.theme.bold_white('CRACK Reference Backend Status')}\n")
+            print("=" * 60)
+            print(f"\nBackend: {type(self.registry).__name__}")
+            print(f"Status: {self.theme.success('✓ Active')}")
+
+            # Try to get stats
+            if hasattr(self.registry, 'get_stats'):
+                try:
+                    stats = self.registry.get_stats()
+                    if stats:
+                        print(f"\nStatistics:")
+                        for key, value in stats.items():
+                            print(f"  {key}: {value}")
+                except Exception as e:
+                    print(f"  (Statistics unavailable: {e})")
+
+            print("\n" + "=" * 60 + "\n")
+            return 0
+
+        # Router status
+        health = self.registry.health_check()
+        stats = self.registry.get_stats()
+
+        print(f"\n{self.theme.bold_white('CRACK Reference Backend Status')}\n")
+        print("=" * 60)
+
+        # Neo4j Status
+        print(f"\n{self.theme.primary('Neo4j Graph Database:')}")
+        if health['neo4j']['available']:
+            status_str = "✓ Connected" if health['neo4j']['healthy'] else "✗ Unavailable"
+            if health['neo4j']['healthy']:
+                print(f"  Status: {self.theme.success(status_str)}")
+            else:
+                print(f"  Status: {self.theme.error(status_str)}")
+
+            # Show Neo4j stats
+            if health['neo4j']['healthy'] and stats['backends']['neo4j']['stats']:
+                neo4j_stats = stats['backends']['neo4j']['stats']
+                print(f"  Commands: {neo4j_stats.get('command_count', 0):,}")
+                print(f"  Tags: {neo4j_stats.get('tag_count', 0):,}")
+                print(f"  Relationships: {neo4j_stats.get('relationship_count', 0):,}")
+                print(f"  Attack Chains: {neo4j_stats.get('chain_count', 0):,}")
+        else:
+            print(f"  Status: {self.theme.hint('Not configured')}")
+
+        # PostgreSQL Status
+        print(f"\n{self.theme.primary('PostgreSQL Database:')}")
+        if health['sql']['available']:
+            status_str = "✓ Connected" if health['sql']['healthy'] else "✗ Unavailable"
+            if health['sql']['healthy']:
+                print(f"  Status: {self.theme.success(status_str)}")
+            else:
+                print(f"  Status: {self.theme.error(status_str)}")
+
+            # Show PostgreSQL stats
+            if health['sql']['healthy'] and stats['backends']['postgresql']['stats']:
+                pg_stats = stats['backends']['postgresql']['stats']
+                print(f"  Commands: {pg_stats.get('command_count', 0):,}")
+                print(f"  Services: {pg_stats.get('service_count', 0):,}")
+                print(f"  Attack Chains: {pg_stats.get('chain_count', 0):,}")
+        else:
+            print(f"  Status: {self.theme.hint('Not configured')}")
+
+        # JSON Status
+        print(f"\n{self.theme.primary('JSON Fallback:')}")
+        if health['json']['available']:
+            print(f"  Status: {self.theme.success('✓ Available')}")
+        else:
+            print(f"  Status: {self.theme.hint('Not needed')}")
+
+        # Active Backend
+        print(f"\n{self.theme.bold_white('Active Backend:')}")
+        print(f"  {stats['active_backend']}")
+
+        # Routing Mode
+        print(f"\n{self.theme.bold_white('Routing Mode:')}")
+        print(f"  {stats['routing_mode']}")
+
+        print("\n" + "=" * 60 + "\n")
+        return 0
 
 def main():
     """Main entry point for CLI"""

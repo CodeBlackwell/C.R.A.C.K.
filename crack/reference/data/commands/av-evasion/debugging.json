@@ -1,0 +1,264 @@
+{
+  "category": "Debugging & Reverse Engineering",
+  "description": "WinDbg and Frida commands for analyzing AV/AMSI internals, debugging evasion techniques, and understanding Windows security mechanisms at assembly level.",
+  "commands": [
+    {
+      "id": "windbg-attach-process",
+      "name": "WinDbg Attach to Process",
+      "description": "Attach WinDbg debugger to running process for live analysis. Essential for analyzing AMSI.DLL loading, function hooking, and runtime behavior.",
+      "category": "debugging",
+      "tags": [
+        "anti-virus",
+        "AV",
+        "evasion",
+        "debugging",
+        "windbg",
+        "reverse-engineering",
+        "windows"
+      ],
+      "command": "# Launch WinDbg (x64) and attach:\n# File -> Attach to Process -> Select process -> OK\n\n# Or via command line:\nwindbg.exe -p <PID>\n\n# Common processes to debug:\n# - powershell.exe (AMSI analysis)\n# - cscript.exe / wscript.exe (JScript AMSI)\n# - WINWORD.EXE (VBA analysis)",
+      "variables": [
+        {
+          "name": "<PID>",
+          "description": "Process ID to attach to",
+          "example": "1234",
+          "required": true
+        }
+      ],
+      "notes": "Syntax: Launch WinDbg, attach to target process WinDbg essential for understanding AMSI internals. Attach to PowerShell to analyze AmsiScanBuffer. Use sparingly in OSCP (time-consuming). Good for lab research before exam. ~5 min setup time. Time estimate: 5 minutes (first-time setup) References: docs/av-evasion/debugging.md#windbg-basics, PEN-300 Chapter 7.1.1 Manual alternative: Use x64dbg, OllyDbg (32-bit), or Visual Studio debugger",
+      "success_indicators": [
+        "WinDbg attaches to process, breaks at entry point or continues execution. Debugger command prompt ready."
+      ],
+      "failure_indicators": [
+        "Access denied - Run WinDbg as Administrator",
+        "Process crashes on attach - Normal for some processes, try non-invasive attach",
+        "Wrong architecture - Use WinDbg x64 for 64-bit processes, x86 for 32-bit",
+        "Anti-debug detected - Process may have IsDebuggerPresent checks"
+      ]
+    },
+    {
+      "id": "windbg-breakpoint-commands",
+      "name": "WinDbg Breakpoint Commands",
+      "description": "Set breakpoints on functions to intercept execution. Critical for analyzing AMSI function flow (AmsiInitialize, AmsiScanBuffer, etc.).",
+      "category": "debugging",
+      "tags": [
+        "anti-virus",
+        "AV",
+        "evasion",
+        "debugging",
+        "windbg",
+        "breakpoints",
+        "amsi"
+      ],
+      "command": "# Set breakpoint on function\nbp <MODULE>!<FUNCTION>\n\n# Common AMSI breakpoints:\nbp amsi!AmsiInitialize\nbp amsi!AmsiOpenSession\nbp amsi!AmsiScanBuffer\nbp amsi!AmsiCloseSession\n\n# Continue execution\ng\n\n# Step execution\np  # Step over\nt  # Step into\n\n# List breakpoints\nbl\n\n# Clear breakpoint\nbc <BREAKPOINT_NUMBER>",
+      "variables": [
+        {
+          "name": "<MODULE>",
+          "description": "DLL module name (amsi, kernel32, ntdll, etc.)",
+          "example": "amsi",
+          "required": true
+        },
+        {
+          "name": "<FUNCTION>",
+          "description": "Function name within module",
+          "example": "AmsiScanBuffer",
+          "required": true
+        },
+        {
+          "name": "<BREAKPOINT_NUMBER>",
+          "description": "Breakpoint ID from 'bl' command",
+          "example": "0",
+          "required": false
+        }
+      ],
+      "notes": "Syntax: Execute in WinDbg command window Breakpoints critical for AMSI research. AmsiScanBuffer most important (called on every script scan). Practice setting bp before exam. Takes 1-2 min per breakpoint. Time estimate: 2 minutes per breakpoint References: docs/av-evasion/debugging.md#breakpoints, PEN-300 Chapter 7.1.1 Manual alternative: Use x64dbg GUI, hardware breakpoints (ba command), or memory breakpoints",
+      "success_indicators": [
+        "Breakpoint set. Execution continues until breakpoint hit, then breaks to debugger prompt."
+      ],
+      "failure_indicators": [
+        "Module not loaded - Use 'lm' to list modules, 'sxe ld:amsi' to break on module load",
+        "Function not found - Check spelling, use 'x amsi!*' to list exports",
+        "Breakpoint never hits - Function not called, check code path"
+      ]
+    },
+    {
+      "id": "windbg-memory-inspection",
+      "name": "WinDbg Memory Inspection",
+      "description": "Inspect memory contents at specific addresses. Essential for viewing AMSI context structures, shellcode buffers, and function parameters.",
+      "category": "debugging",
+      "tags": [
+        "anti-virus",
+        "AV",
+        "evasion",
+        "debugging",
+        "windbg",
+        "memory",
+        "analysis"
+      ],
+      "command": "# Display memory as DWORD (32-bit values)\ndd <ADDRESS>\n\n# Display memory as QWORD (64-bit values)\ndq <ADDRESS>\n\n# Display memory as ASCII string\ndc <ADDRESS>\n\n# Display memory as Unicode string\ndu <ADDRESS>\n\n# Display memory as bytes\ndb <ADDRESS>\n\n# Display specific number of values\ndd <ADDRESS> L<COUNT>",
+      "variables": [
+        {
+          "name": "<ADDRESS>",
+          "description": "Memory address or register name (rsp, rcx, rip, etc.)",
+          "example": "rsp",
+          "required": true
+        },
+        {
+          "name": "<COUNT>",
+          "description": "Number of values to display (hex)",
+          "example": "10",
+          "required": false
+        }
+      ],
+      "notes": "Syntax: Execute in WinDbg after breaking at function Memory inspection reveals AMSI context structure (first 4 bytes: \"AMSI\"). Critical for understanding context corruption bypass. Use 'du' for PowerShell strings (Unicode). ~1 min per inspection. Time estimate: 1 minute References: docs/av-evasion/debugging.md#memory-inspection, PEN-300 Chapter 7.2 Manual alternative: Use Process Explorer memory viewer, x64dbg memory map, or CheatEngine",
+      "success_indicators": [
+        "Memory contents displayed in specified format (hex, ASCII, Unicode, etc.)."
+      ],
+      "failure_indicators": [
+        "Access violation - Address not valid or not readable",
+        "Wrong format - Use du for Unicode strings, da for ASCII",
+        "Address not found - Use registers (rsp, rcx) instead of hard-coded addresses"
+      ]
+    },
+    {
+      "id": "windbg-disassemble",
+      "name": "WinDbg Disassembly View",
+      "description": "Disassemble machine code to assembly instructions. Shows function internals, allows understanding of AMSI validation logic and bypass opportunities.",
+      "category": "debugging",
+      "tags": [
+        "anti-virus",
+        "AV",
+        "evasion",
+        "debugging",
+        "windbg",
+        "assembly",
+        "disassembly"
+      ],
+      "command": "# Unassemble at current instruction pointer\nu\n\n# Unassemble specific address or function\nu <ADDRESS>\nu <MODULE>!<FUNCTION>\n\n# Unassemble with length\nu <ADDRESS> L<COUNT>\n\n# Unassemble current function\nuf .\n\n# Unassemble specific function (full)\nuf <MODULE>!<FUNCTION>",
+      "variables": [
+        {
+          "name": "<ADDRESS>",
+          "description": "Memory address or register (rip, etc.)",
+          "example": "rip",
+          "required": false
+        },
+        {
+          "name": "<MODULE>",
+          "description": "DLL module name",
+          "example": "amsi",
+          "required": false
+        },
+        {
+          "name": "<FUNCTION>",
+          "description": "Function name",
+          "example": "AmsiScanBuffer",
+          "required": false
+        },
+        {
+          "name": "<COUNT>",
+          "description": "Number of instructions to display",
+          "example": "20",
+          "required": false
+        }
+      ],
+      "notes": "Syntax: Execute in WinDbg Understanding AmsiScanBuffer disassembly shows WHERE to patch for memory bypass. Look for 'test', 'cmp', 'je' instructions (validation logic). 'xor rax, rax; ret' = clean return. ~10 min to analyze function. Time estimate: 10 minutes (function analysis) References: docs/av-evasion/debugging.md#disassembly, PEN-300 Chapter 7.4.1 Manual alternative: Use IDA Pro, Ghidra, Binary Ninja, or x64dbg for static analysis",
+      "success_indicators": [
+        "Assembly instructions with addresses, opcodes, and mnemonics. Shows function logic flow."
+      ],
+      "failure_indicators": [
+        "Address not executable - Pointing to data section",
+        "Symbols not loaded - Use '.reload /f' to force symbol load",
+        "Too complex to follow - Use flow graph in IDA/Ghidra"
+      ]
+    },
+    {
+      "id": "frida-trace-amsi",
+      "name": "Frida Trace AMSI Functions",
+      "description": "Use Frida dynamic instrumentation to trace AMSI API calls. Non-invasive alternative to WinDbg for analyzing AMSI behavior without debugging.",
+      "category": "debugging",
+      "tags": [
+        "anti-virus",
+        "AV",
+        "evasion",
+        "debugging",
+        "frida",
+        "amsi",
+        "instrumentation"
+      ],
+      "command": "# List running processes\nfrida-ps\n\n# Trace AMSI functions in PowerShell process\nfrida-trace -p <PID> -x amsi.dll -i Amsi*\n\n# Trace with detailed logging\nfrida-trace -p <PID> -x amsi.dll -i AmsiScanBuffer -i AmsiInitialize",
+      "variables": [
+        {
+          "name": "<PID>",
+          "description": "Process ID to trace",
+          "example": "5432",
+          "required": true
+        }
+      ],
+      "prerequisites": [
+        "# Install Frida\npip install frida frida-tools\n\n# Or on Windows:\npython -m pip install frida frida-tools"
+      ],
+      "notes": "Syntax: Execute from Kali or Windows with Frida installed Frida is powerful but may be blocked by AV/EDR. Good for lab analysis before exam. Shows WHAT PowerShell sends to AMSI for scanning. Custom handlers reveal buffer contents. ~15 min setup first time. Time estimate: 15 minutes (first-time setup) References: docs/av-evasion/debugging.md#frida, PEN-300 Chapter 7.2.2 Manual alternative: Use API Monitor, Process Monitor, or WinDbg for function tracing",
+      "success_indicators": [
+        "Real-time log of AMSI function calls with timestamps. Handler scripts can log arguments and return values."
+      ],
+      "failure_indicators": [
+        "Process crashes - Frida conflict with AV/EDR, disable or use WinDbg",
+        "No output - Functions not called, execute AMSI-flagged command",
+        "Permission denied - Run with appropriate privileges",
+        "Frida not found - Install with pip"
+      ]
+    },
+    {
+      "id": "windbg-edit-memory",
+      "name": "WinDbg Edit Memory (Live Patching)",
+      "description": "Modify memory at runtime to test patches. Allows live testing of AMSI bypass patches without recompiling code.",
+      "category": "debugging",
+      "tags": [
+        "anti-virus",
+        "AV",
+        "evasion",
+        "debugging",
+        "windbg",
+        "memory-patching",
+        "amsi"
+      ],
+      "command": "# Edit memory (DWORD)\ned <ADDRESS> <NEW_VALUE>\n\n# Edit memory (byte)\neb <ADDRESS> <BYTE1> <BYTE2> <BYTE3> ...\n\n# Example: Patch AmsiScanBuffer to return clean\n# Find function address:\nx amsi!AmsiScanBuffer\n\n# Patch with: xor rax,rax (48 31 C0); ret (C3)\neb <ADDRESS> 48 31 C0 C3",
+      "variables": [
+        {
+          "name": "<ADDRESS>",
+          "description": "Memory address to modify",
+          "example": "7ffa12345678",
+          "required": true
+        },
+        {
+          "name": "<NEW_VALUE>",
+          "description": "New value to write (hex)",
+          "example": "90909090",
+          "required": true
+        },
+        {
+          "name": "<BYTE1>",
+          "description": "Byte values to write",
+          "example": "48",
+          "required": true
+        }
+      ],
+      "notes": "Syntax: Execute in WinDbg after breaking Live patching validates bypass techniques before implementing in code. Patch AmsiScanBuffer with 'xor rax,rax; ret' to test if bypass works. Reversible (just restart process). ~5 min to test patch. Time estimate: 5 minutes References: docs/av-evasion/debugging.md#live-patching, PEN-300 Chapter 7.4.2 Manual alternative: Use x64dbg patches, Cheat Engine, or process memory writers",
+      "success_indicators": [
+        "Memory modified. Function behavior changes according to patch. Live testing of bypass techniques."
+      ],
+      "failure_indicators": [
+        "Access violation - Memory not writable, use !vprot to check/change permissions",
+        "Patch doesn't work - Wrong address or wrong bytes",
+        "Process crashes - Patched critical code path incorrectly"
+      ]
+    }
+  ],
+  "oscp_relevance": "Debugging skills critical for understanding bypass techniques at low level. Essential for researching new bypasses. WinDbg and Frida both valuable but time-consuming - prioritize for lab research, not exam day.",
+  "attack_chain_position": "Research, Development, Pre-Engagement Preparation",
+  "related_categories": [
+    "amsi-bypass",
+    "reverse-engineering",
+    "windows-internals"
+  ]
+}

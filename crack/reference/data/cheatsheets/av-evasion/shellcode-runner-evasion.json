@@ -1,0 +1,125 @@
+{
+  "id": "shellcode-runner-evasion",
+  "name": "Shellcode Runner Evasion - Building Custom Loaders",
+  "description": "Step-by-step guide for creating AV-evading shellcode runners in C#. Covers basic execution, encryption layers, sandbox detection, and compilation workflows.",
+  "category": "av-evasion",
+  "oscp_relevance": "high",
+  "educational_header": {
+    "how_to_recognize": [
+      "Msfvenom payloads immediately flagged by Windows Defender",
+      "Meterpreter executables quarantined on disk write",
+      "Standard reverse shells detected by AV during staging"
+    ],
+    "when_to_look_for": [
+      "When msfvenom encoding alone fails to evade detection",
+      "Need custom payload delivery after initial access",
+      "Building client-side attacks (HTA, Office macros) requiring embedded shellcode"
+    ]
+  },
+  "scenarios": [
+    {
+      "title": "Scenario 1: Msfvenom Payload Caught by Defender (Basic Runner)",
+      "context": "Standard msfvenom reverse shell (windows/x64/meterpreter/reverse_https) detected immediately when written to disk. Need custom C# runner to evade signature-based detection.",
+      "approach": "Phase 1: Shellcode Generation (2 minutes)\n- Generate raw shellcode with msfvenom-csharp-payload\n- Save output as byte array\n\nPhase 2: Basic Runner Creation (5 minutes)\n- Use csharp-shellcode-runner-basic template\n- Embed shellcode byte array into C# code\n- Replace placeholder with actual shellcode\n\nPhase 3: Compilation & Testing (3 minutes)\n- Compile with compile-csharp-runner (using csc.exe)\n- Test locally with Defender enabled\n- Expect detection at this stage (baseline)\n\nPhase 4: Add Encryption Layer (5 minutes)\n- Apply csharp-xor-encrypt to shellcode\n- Update runner to decrypt at runtime\n- Recompile and test—should evade basic signatures",
+      "commands": [
+        "msfvenom-csharp-payload",
+        "csharp-shellcode-runner-basic",
+        "csharp-xor-encrypt",
+        "compile-csharp-runner"
+      ],
+      "expected_outcome": "Basic runner detected, encrypted runner evades Defender in 10-15 minutes total. Custom loader bypasses signature-based detection.",
+      "why_this_works": "AV signatures match msfvenom's default byte sequences. XOR encryption changes byte pattern while preserving functionality. Runtime decryption happens in memory, avoiding disk-based scans."
+    },
+    {
+      "title": "Scenario 2: Advanced Evasion (Multi-Layer Encryption)",
+      "context": "Single XOR encryption caught by heuristic analysis. Target has updated Defender definitions. Need multiple obfuscation layers to evade behavioral detection.",
+      "approach": "Phase 1: Layer 1 - Caesar Cipher (3 minutes)\n- Apply csharp-caesar-encrypt to original shellcode\n- Embed decryption routine in runner\n\nPhase 2: Layer 2 - XOR Encryption (3 minutes)\n- Apply csharp-xor-encrypt to Caesar-encrypted shellcode\n- Add second decryption routine (decrypt XOR, then Caesar)\n\nPhase 3: Compilation & Validation (4 minutes)\n- Compile with compile-csharp-runner\n- Test execution with local listener\n- Verify Meterpreter session establishes\n\nPhase 4: Heuristic Evasion Check (optional, 5 minutes)\n- Add csharp-sleep-timer to delay execution\n- Prevents sandbox timeout-based detection",
+      "commands": [
+        "csharp-caesar-encrypt",
+        "csharp-xor-encrypt",
+        "csharp-shellcode-runner-basic",
+        "csharp-sleep-timer",
+        "compile-csharp-runner"
+      ],
+      "expected_outcome": "Multi-layer encryption evades both signature and basic heuristic detection in 15-20 minutes. Sleep timer bypasses sandbox analysis.",
+      "why_this_works": "Layered encryption exponentially increases signature space. Each layer requires separate decryption routine AV must analyze. Sleep timers exceed typical sandbox analysis timeout (2-5 minutes)."
+    },
+    {
+      "title": "Scenario 3: Sandbox Detection (NUMA API & Resource Checks)",
+      "context": "Payload executes locally but fails on target system. Likely caught in sandbox/VM environment. Need environment validation before shellcode execution.",
+      "approach": "Phase 1: Environment Checks (5 minutes)\n- Add csharp-non-emulated-api to runner (NUMA node check)\n- Query system resources with implied checks\n- Abort execution if in sandbox\n\nPhase 2: Timing Validation (3 minutes)\n- Integrate csharp-sleep-timer with actual timing check\n- Measure sleep duration accuracy (sandboxes fast-forward)\n\nPhase 3: Combined Validation (4 minutes)\n- Require BOTH checks to pass before shellcode execution\n- Compile and test in VM vs physical machine\n\nPhase 4: Production Deployment (3 minutes)\n- Combine with encryption from Scenario 2\n- Final compilation with all evasion techniques",
+      "commands": [
+        "csharp-non-emulated-api",
+        "csharp-sleep-timer",
+        "csharp-shellcode-runner-basic",
+        "compile-csharp-runner"
+      ],
+      "expected_outcome": "Sandbox evasion successful in 12-15 minutes. Payload executes on real systems, aborts in analysis environments.",
+      "why_this_works": "NUMA API (VirtualAllocExNuma) not emulated in most sandboxes—call fails, indicating VM. Sleep measurement detects time acceleration. Dual checks increase confidence."
+    },
+    {
+      "title": "Scenario 4: Production Compilation (End-to-End Workflow)",
+      "context": "Final payload ready for deployment. Need proper compilation with optimization flags and anti-analysis measures for client-side attack.",
+      "approach": "Phase 1: Code Preparation (2 minutes)\n- Finalize C# runner with all evasion techniques\n- Verify shellcode encrypted with csharp-xor-encrypt\n- Confirm sandbox checks with csharp-non-emulated-api\n\nPhase 2: Compilation (3 minutes)\n- Use compile-csharp-runner with release flags\n- Enable optimizations (/optimize+)\n- Strip debug symbols\n\nPhase 3: Testing Matrix (5 minutes)\n- Test on clean Windows 10 VM (Defender enabled)\n- Verify execution without alerts\n- Confirm Meterpreter callback\n\nPhase 4: Delivery Preparation (5 minutes)\n- Rename executable to benign name (e.g., 'update.exe')\n- Optional: Sign with self-signed certificate\n- Stage on attack infrastructure",
+      "commands": [
+        "msfvenom-csharp-payload",
+        "csharp-xor-encrypt",
+        "csharp-non-emulated-api",
+        "csharp-shellcode-runner-basic",
+        "compile-csharp-runner"
+      ],
+      "expected_outcome": "Production-ready payload in 15-20 minutes. Evades Defender, executes in real environments, bypasses basic sandboxes.",
+      "why_this_works": "Compilation optimizations remove debugging artifacts AV uses for detection. Release builds have different binary structure than debug. Combined with encryption and sandbox checks, signature space becomes too large to maintain."
+    }
+  ],
+  "sections": [
+    {
+      "title": "Phase 1: Shellcode Generation",
+      "notes": "Start with raw shellcode in C# byte array format. Avoid executable formats at this stage—focus on getting raw bytes ready for embedding.",
+      "commands": [
+        "msfvenom-csharp-payload"
+      ]
+    },
+    {
+      "title": "Phase 2: Basic Runner Framework",
+      "notes": "Create minimal C# runner that allocates memory and executes shellcode. This WILL be detected—it's your baseline for testing encryption effectiveness.",
+      "commands": [
+        "csharp-shellcode-runner-basic",
+        "compile-csharp-runner"
+      ]
+    },
+    {
+      "title": "Phase 3: Encryption Layers",
+      "notes": "Apply multiple encryption algorithms sequentially. Order matters: Encrypt with Caesar, then XOR. Decrypt in reverse order at runtime. Test after each layer to find minimum required.",
+      "commands": [
+        "csharp-caesar-encrypt",
+        "csharp-xor-encrypt"
+      ]
+    },
+    {
+      "title": "Phase 4: Sandbox Evasion",
+      "notes": "Add environment validation checks. NUMA API check is most reliable (API not emulated). Sleep timers useful but can be bypassed. Combine multiple checks for higher confidence.",
+      "commands": [
+        "csharp-non-emulated-api",
+        "csharp-sleep-timer"
+      ]
+    },
+    {
+      "title": "Phase 5: Final Compilation",
+      "notes": "Always compile with release flags (/optimize+) for production. Debug builds leak metadata and have different signatures. Test final binary on fresh VM with Defender enabled.",
+      "commands": [
+        "compile-csharp-runner"
+      ]
+    }
+  ],
+  "tags": [
+    "shellcode",
+    "csharp",
+    "evasion",
+    "encryption",
+    "sandbox",
+    "compilation",
+    "msfvenom",
+    "custom-loader"
+  ]
+}
