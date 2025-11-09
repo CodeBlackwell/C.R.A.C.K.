@@ -1,0 +1,777 @@
+{
+  "summary": {
+    "total_files": 21,
+    "total_updates": 64,
+    "high_confidence": 39,
+    "medium_confidence": 13,
+    "low_confidence": 12
+  },
+  "files": [
+    {
+      "file": "data/commands/enumeration/ad-powerview-core.json",
+      "update_count": 14,
+      "updates": [
+        {
+          "command_id": "powerview-get-netdomaincontroller",
+          "field": "prerequisites",
+          "old_text": "Import PowerView",
+          "new_id": "import-powerview",
+          "confidence": "high",
+          "score": 1.0,
+          "category": "A",
+          "reason": "Command exists in index (score: 1.00)"
+        },
+        {
+          "command_id": "powerview-get-netuser",
+          "field": "prerequisites",
+          "old_text": "Import PowerView",
+          "new_id": "import-powerview",
+          "confidence": "high",
+          "score": 1.0,
+          "category": "A",
+          "reason": "Command exists in index (score: 1.00)"
+        },
+        {
+          "command_id": "powerview-get-netuser-filter",
+          "field": "prerequisites",
+          "old_text": "Import PowerView",
+          "new_id": "import-powerview",
+          "confidence": "high",
+          "score": 1.0,
+          "category": "A",
+          "reason": "Command exists in index (score: 1.00)"
+        },
+        {
+          "command_id": "powerview-get-netuser-spn",
+          "field": "prerequisites",
+          "old_text": "Import PowerView",
+          "new_id": "import-powerview",
+          "confidence": "high",
+          "score": 1.0,
+          "category": "A",
+          "reason": "Command exists in index (score: 1.00)"
+        },
+        {
+          "command_id": "powerview-get-netgroup",
+          "field": "prerequisites",
+          "old_text": "Import PowerView",
+          "new_id": "import-powerview",
+          "confidence": "high",
+          "score": 1.0,
+          "category": "A",
+          "reason": "Command exists in index (score: 1.00)"
+        },
+        {
+          "command_id": "powerview-get-netgroup-specific",
+          "field": "prerequisites",
+          "old_text": "Import PowerView",
+          "new_id": "import-powerview",
+          "confidence": "high",
+          "score": 1.0,
+          "category": "A",
+          "reason": "Command exists in index (score: 1.00)"
+        },
+        {
+          "command_id": "powerview-get-netgroupmember",
+          "field": "prerequisites",
+          "old_text": "Import PowerView",
+          "new_id": "import-powerview",
+          "confidence": "high",
+          "score": 1.0,
+          "category": "A",
+          "reason": "Command exists in index (score: 1.00)"
+        },
+        {
+          "command_id": "powerview-get-netcomputer",
+          "field": "prerequisites",
+          "old_text": "Import PowerView",
+          "new_id": "import-powerview",
+          "confidence": "high",
+          "score": 1.0,
+          "category": "A",
+          "reason": "Command exists in index (score: 1.00)"
+        },
+        {
+          "command_id": "powerview-get-netou",
+          "field": "prerequisites",
+          "old_text": "Import PowerView",
+          "new_id": "import-powerview",
+          "confidence": "high",
+          "score": 1.0,
+          "category": "A",
+          "reason": "Command exists in index (score: 1.00)"
+        },
+        {
+          "command_id": "powerview-get-netgpo",
+          "field": "prerequisites",
+          "old_text": "Import PowerView",
+          "new_id": "import-powerview",
+          "confidence": "high",
+          "score": 1.0,
+          "category": "A",
+          "reason": "Command exists in index (score: 1.00)"
+        },
+        {
+          "command_id": "powerview-get-netforest",
+          "field": "prerequisites",
+          "old_text": "Import PowerView",
+          "new_id": "import-powerview",
+          "confidence": "high",
+          "score": 1.0,
+          "category": "A",
+          "reason": "Command exists in index (score: 1.00)"
+        },
+        {
+          "command_id": "powerview-get-netcomputer-all",
+          "field": "prerequisites",
+          "old_text": "Import PowerView",
+          "new_id": "import-powerview",
+          "confidence": "high",
+          "score": 1.0,
+          "category": "A",
+          "reason": "Command exists in index (score: 1.00)"
+        },
+        {
+          "command_id": "powerview-get-netcomputer-ping",
+          "field": "prerequisites",
+          "old_text": "Import PowerView",
+          "new_id": "import-powerview",
+          "confidence": "high",
+          "score": 1.0,
+          "category": "A",
+          "reason": "Command exists in index (score: 1.00)"
+        },
+        {
+          "command_id": "powerview-get-netgroup-recursive",
+          "field": "prerequisites",
+          "old_text": "Import PowerView",
+          "new_id": "import-powerview",
+          "confidence": "high",
+          "score": 1.0,
+          "category": "A",
+          "reason": "Command exists in index (score: 1.00)"
+        }
+      ]
+    },
+    {
+      "file": "data/commands/enumeration/ad-powerview-permissions.json",
+      "update_count": 10,
+      "updates": [
+        {
+          "command_id": "powerview-get-objectacl",
+          "field": "prerequisites",
+          "old_text": "Import PowerView",
+          "new_id": "import-powerview",
+          "confidence": "high",
+          "score": 1.0,
+          "category": "A",
+          "reason": "Command exists in index (score: 1.00)"
+        },
+        {
+          "command_id": "powerview-get-objectacl-genericall",
+          "field": "prerequisites",
+          "old_text": "Import PowerView",
+          "new_id": "import-powerview",
+          "confidence": "high",
+          "score": 1.0,
+          "category": "A",
+          "reason": "Command exists in index (score: 1.00)"
+        },
+        {
+          "command_id": "powerview-convert-sidtoname",
+          "field": "prerequisites",
+          "old_text": "Import PowerView",
+          "new_id": "import-powerview",
+          "confidence": "high",
+          "score": 1.0,
+          "category": "A",
+          "reason": "Command exists in index (score: 1.00)"
+        },
+        {
+          "command_id": "powerview-get-objectacl-writedacl",
+          "field": "prerequisites",
+          "old_text": "Import PowerView",
+          "new_id": "import-powerview",
+          "confidence": "high",
+          "score": 1.0,
+          "category": "A",
+          "reason": "Command exists in index (score: 1.00)"
+        },
+        {
+          "command_id": "powerview-get-objectacl-forcechangepassword",
+          "field": "prerequisites",
+          "old_text": "Import PowerView",
+          "new_id": "import-powerview",
+          "confidence": "high",
+          "score": 1.0,
+          "category": "A",
+          "reason": "Command exists in index (score: 1.00)"
+        },
+        {
+          "command_id": "powerview-get-objectacl-writeowner",
+          "field": "prerequisites",
+          "old_text": "Import PowerView",
+          "new_id": "import-powerview",
+          "confidence": "high",
+          "score": 1.0,
+          "category": "A",
+          "reason": "Command exists in index (score: 1.00)"
+        },
+        {
+          "command_id": "powerview-find-interestingdomainacl",
+          "field": "prerequisites",
+          "old_text": "Import PowerView",
+          "new_id": "import-powerview",
+          "confidence": "high",
+          "score": 1.0,
+          "category": "A",
+          "reason": "Command exists in index (score: 1.00)"
+        },
+        {
+          "command_id": "powerview-get-pathacl",
+          "field": "prerequisites",
+          "old_text": "Import PowerView",
+          "new_id": "import-powerview",
+          "confidence": "high",
+          "score": 1.0,
+          "category": "A",
+          "reason": "Command exists in index (score: 1.00)"
+        },
+        {
+          "command_id": "powerview-get-objectacl-user",
+          "field": "prerequisites",
+          "old_text": "Import PowerView",
+          "new_id": "import-powerview",
+          "confidence": "high",
+          "score": 1.0,
+          "category": "A",
+          "reason": "Command exists in index (score: 1.00)"
+        },
+        {
+          "command_id": "powerview-get-objectacl-group",
+          "field": "prerequisites",
+          "old_text": "Import PowerView",
+          "new_id": "import-powerview",
+          "confidence": "high",
+          "score": 1.0,
+          "category": "A",
+          "reason": "Command exists in index (score: 1.00)"
+        }
+      ]
+    },
+    {
+      "file": "data/commands/enumeration/ad-session-share-enum.json",
+      "update_count": 7,
+      "updates": [
+        {
+          "command_id": "powerview-get-netsession",
+          "field": "prerequisites",
+          "old_text": "Import PowerView",
+          "new_id": "import-powerview",
+          "confidence": "high",
+          "score": 1.0,
+          "category": "A",
+          "reason": "Command exists in index (score: 1.00)"
+        },
+        {
+          "command_id": "powerview-get-netloggedon",
+          "field": "prerequisites",
+          "old_text": "Import PowerView",
+          "new_id": "import-powerview",
+          "confidence": "high",
+          "score": 1.0,
+          "category": "A",
+          "reason": "Command exists in index (score: 1.00)"
+        },
+        {
+          "command_id": "powerview-find-localadminaccess",
+          "field": "prerequisites",
+          "old_text": "Import PowerView",
+          "new_id": "import-powerview",
+          "confidence": "high",
+          "score": 1.0,
+          "category": "A",
+          "reason": "Command exists in index (score: 1.00)"
+        },
+        {
+          "command_id": "powerview-find-domainshare",
+          "field": "prerequisites",
+          "old_text": "Import PowerView",
+          "new_id": "import-powerview",
+          "confidence": "high",
+          "score": 1.0,
+          "category": "A",
+          "reason": "Command exists in index (score: 1.00)"
+        },
+        {
+          "command_id": "powerview-find-domainshare-accessible",
+          "field": "prerequisites",
+          "old_text": "Import PowerView",
+          "new_id": "import-powerview",
+          "confidence": "high",
+          "score": 1.0,
+          "category": "A",
+          "reason": "Command exists in index (score: 1.00)"
+        },
+        {
+          "command_id": "powerview-find-domainshare-exclude",
+          "field": "prerequisites",
+          "old_text": "Import PowerView",
+          "new_id": "import-powerview",
+          "confidence": "high",
+          "score": 1.0,
+          "category": "A",
+          "reason": "Command exists in index (score: 1.00)"
+        },
+        {
+          "command_id": "gpp-password-files",
+          "field": "alternatives",
+          "old_text": "Get-GPPPassword (PowerSploit)",
+          "new_id": "get-gpppassword",
+          "confidence": "medium",
+          "score": 0.6666666666666666,
+          "category": "D",
+          "reason": "Fuzzy match to existing command (score: 0.67)"
+        }
+      ]
+    },
+    {
+      "file": "data/commands/pivoting/linux-utilities.json",
+      "update_count": 4,
+      "updates": [
+        {
+          "command_id": "nmap-port-check",
+          "field": "alternatives",
+          "old_text": "curl http://<TARGET>:<PORT> - HTTP service verification",
+          "new_id": "curl-http-service-verification",
+          "confidence": "medium",
+          "score": 0.8,
+          "category": "A",
+          "reason": "Command exists in index (score: 0.80)"
+        },
+        {
+          "command_id": "systemctl-start-ssh",
+          "field": "alternatives",
+          "old_text": "service ssh start - SysVinit alternative (older systems)",
+          "new_id": "service-ssh-start-sysvinit",
+          "confidence": "low",
+          "score": 0.5714285714285714,
+          "category": "D",
+          "reason": "Fuzzy match to existing command (score: 0.57)"
+        },
+        {
+          "command_id": "ss-listening-ports",
+          "field": "alternatives",
+          "old_text": "nmap localhost - External port scan verification",
+          "new_id": "nmap-localhost-verification",
+          "confidence": "low",
+          "score": 0.5,
+          "category": "D",
+          "reason": "Fuzzy match to existing command (score: 0.50)"
+        },
+        {
+          "command_id": "ip-route",
+          "field": "alternatives",
+          "old_text": "netstat -rn - Netstat routing table view",
+          "new_id": "netstat-routing-table",
+          "confidence": "medium",
+          "score": 0.6,
+          "category": "D",
+          "reason": "Fuzzy match to existing command (score: 0.60)"
+        }
+      ]
+    },
+    {
+      "file": "data/commands/exploitation/general.json",
+      "update_count": 3,
+      "updates": [
+        {
+          "command_id": "msfvenom-windows-exe",
+          "field": "alternatives",
+          "old_text": "msfvenom -p windows/meterpreter/reverse_tcp",
+          "new_id": "windows/meterpreter/reverse_tcp",
+          "confidence": "high",
+          "score": 0.9,
+          "category": "A",
+          "reason": "Command exists in index (score: 0.90)"
+        },
+        {
+          "command_id": "msfvenom-linux-elf",
+          "field": "alternatives",
+          "old_text": "msfvenom -p linux/x86/shell_reverse_tcp",
+          "new_id": "msfvenom-linux-reverse-tcp",
+          "confidence": "low",
+          "score": 0.5,
+          "category": "D",
+          "reason": "Fuzzy match to existing command (score: 0.50)"
+        },
+        {
+          "command_id": "msfvenom-windows-exe",
+          "field": "alternatives",
+          "old_text": "msfvenom -p windows/shell_reverse_tcp",
+          "new_id": "msfvenom-linux-reverse-tcp",
+          "confidence": "low",
+          "score": 0.5,
+          "category": "D",
+          "reason": "Fuzzy match to existing command (score: 0.50)"
+        }
+      ]
+    },
+    {
+      "file": "data/commands/exploitation/database-access.json",
+      "update_count": 3,
+      "updates": [
+        {
+          "command_id": "mysql-connect-basic",
+          "field": "alternatives",
+          "old_text": "sqli-union-mysql-info (if SQL injection available)",
+          "new_id": "sqli-union-mysql-info",
+          "confidence": "low",
+          "score": 0.5,
+          "category": "D",
+          "reason": "Fuzzy match to existing command (score: 0.50)"
+        },
+        {
+          "command_id": "postgres-connect-basic",
+          "field": "alternatives",
+          "old_text": "postgres-direct-connect (with password inline)",
+          "new_id": "postgres-direct-connect",
+          "confidence": "low",
+          "score": 0.5,
+          "category": "D",
+          "reason": "Fuzzy match to existing command (score: 0.50)"
+        },
+        {
+          "command_id": "postgres-connect-basic",
+          "field": "alternatives",
+          "old_text": "sqli-union-postgresql-info (if SQL injection available)",
+          "new_id": "sqli-union-postgresql-info",
+          "confidence": "low",
+          "score": 0.5,
+          "category": "D",
+          "reason": "Fuzzy match to existing command (score: 0.50)"
+        }
+      ]
+    },
+    {
+      "file": "data/commands/web/wordpress.json",
+      "update_count": 2,
+      "updates": [
+        {
+          "command_id": "wpscan-password-attack",
+          "field": "alternatives",
+          "old_text": "burp intruder",
+          "new_id": "burp-intruder",
+          "confidence": "high",
+          "score": 1.0,
+          "category": "A",
+          "reason": "Command exists in index (score: 1.00)"
+        },
+        {
+          "command_id": "wpscan-password-attack",
+          "field": "prerequisites",
+          "old_text": "wpscan-enumerate-all (to discover usernames)",
+          "new_id": "wpscan-enumerate-all",
+          "confidence": "low",
+          "score": 0.5,
+          "category": "D",
+          "reason": "Fuzzy match to existing command (score: 0.50)"
+        }
+      ]
+    },
+    {
+      "file": "data/commands/monitoring/log-monitoring.json",
+      "update_count": 2,
+      "updates": [
+        {
+          "command_id": "journalctl-follow",
+          "field": "alternatives",
+          "old_text": "tail-follow-log /var/log/syslog",
+          "new_id": "tail-follow-log",
+          "confidence": "medium",
+          "score": 0.75,
+          "category": "A",
+          "reason": "Command exists in index (score: 0.75)"
+        },
+        {
+          "command_id": "journalctl-boot-messages",
+          "field": "alternatives",
+          "old_text": "dmesg-kernel-messages (kernel only)",
+          "new_id": "dmesg-kernel-messages",
+          "confidence": "medium",
+          "score": 0.6,
+          "category": "D",
+          "reason": "Fuzzy match to existing command (score: 0.60)"
+        }
+      ]
+    },
+    {
+      "file": "data/commands/post-exploit/linux-docker-commands.json",
+      "update_count": 2,
+      "updates": [
+        {
+          "command_id": "docker-socket-mount",
+          "field": "alternatives",
+          "old_text": "docker-mount-escape (simpler)",
+          "new_id": "docker-mount-escape",
+          "confidence": "medium",
+          "score": 0.75,
+          "category": "A",
+          "reason": "Command exists in index (score: 0.75)"
+        },
+        {
+          "command_id": "docker-privileged-escape",
+          "field": "alternatives",
+          "old_text": "docker-mount-escape (preferred method)",
+          "new_id": "docker-mount-escape",
+          "confidence": "medium",
+          "score": 0.6,
+          "category": "D",
+          "reason": "Fuzzy match to existing command (score: 0.60)"
+        }
+      ]
+    },
+    {
+      "file": "data/commands/post-exploit/windows.json",
+      "update_count": 2,
+      "updates": [
+        {
+          "command_id": "win-weak-service-perms",
+          "field": "alternatives",
+          "old_text": "PowerUp's Get-ModifiableServiceFile",
+          "new_id": "get-modifiableservicefile",
+          "confidence": "high",
+          "score": 0.9,
+          "category": "A",
+          "reason": "Command exists in index (score: 0.90)"
+        },
+        {
+          "command_id": "win-unquoted-service-paths",
+          "field": "alternatives",
+          "old_text": "PowerUp's Get-UnquotedService",
+          "new_id": "get-unquotedservice",
+          "confidence": "medium",
+          "score": 0.6666666666666666,
+          "category": "D",
+          "reason": "Fuzzy match to existing command (score: 0.67)"
+        }
+      ]
+    },
+    {
+      "file": "data/commands/enumeration/ad-powershell-nested-groups.json",
+      "update_count": 2,
+      "updates": [
+        {
+          "command_id": "ps-powerview-get-user-details",
+          "field": "prerequisites",
+          "old_text": "PowerView imported",
+          "new_id": "verify-powerview-imported",
+          "confidence": "high",
+          "score": 0.9,
+          "category": "A",
+          "reason": "Command exists in index (score: 0.90)"
+        },
+        {
+          "command_id": "ps-powerview-find-service-accounts",
+          "field": "prerequisites",
+          "old_text": "PowerView imported",
+          "new_id": "verify-powerview-imported",
+          "confidence": "high",
+          "score": 0.9,
+          "category": "A",
+          "reason": "Command exists in index (score: 0.90)"
+        }
+      ]
+    },
+    {
+      "file": "data/commands/exploitation/ad-lateral-movement-dcom.json",
+      "update_count": 2,
+      "updates": [
+        {
+          "command_id": "dcom-mmc20-revshell",
+          "field": "alternatives",
+          "old_text": "psexec-impacket-shell for direct SYSTEM shell",
+          "new_id": "psexec-impacket-shell",
+          "confidence": "low",
+          "score": 0.5,
+          "category": "D",
+          "reason": "Fuzzy match to existing command (score: 0.50)"
+        },
+        {
+          "command_id": "dcom-shellbrowserwindow",
+          "field": "alternatives",
+          "old_text": "dcom-shellwindows (similar technique)",
+          "new_id": "dcom-shellwindows",
+          "confidence": "low",
+          "score": 0.5,
+          "category": "D",
+          "reason": "Fuzzy match to existing command (score: 0.50)"
+        }
+      ]
+    },
+    {
+      "file": "data/commands/exploitation/ad-lateral-movement-kerberos.json",
+      "update_count": 2,
+      "updates": [
+        {
+          "command_id": "overpass-net-use-trigger",
+          "field": "prerequisites",
+          "old_text": "overpass-mimikatz-pth already executed",
+          "new_id": "overpass-mimikatz-pth",
+          "confidence": "medium",
+          "score": 0.6,
+          "category": "D",
+          "reason": "Fuzzy match to existing command (score: 0.60)"
+        },
+        {
+          "command_id": "passticket-mimikatz-inject",
+          "field": "alternatives",
+          "old_text": "Rubeus ptt /ticket:<FILE>",
+          "new_id": "rubeus-ptt",
+          "confidence": "medium",
+          "score": 0.6666666666666666,
+          "category": "D",
+          "reason": "Fuzzy match to existing command (score: 0.67)"
+        }
+      ]
+    },
+    {
+      "file": "data/commands/pivoting/pivot-utilities.json",
+      "update_count": 2,
+      "updates": [
+        {
+          "command_id": "plink-remote-forward",
+          "field": "alternatives",
+          "old_text": "chisel - HTTP tunneling if SSH blocked",
+          "new_id": "chisel-http-tunneling",
+          "confidence": "low",
+          "score": 0.5,
+          "category": "D",
+          "reason": "Fuzzy match to existing command (score: 0.50)"
+        },
+        {
+          "command_id": "ssh-connect",
+          "field": "alternatives",
+          "old_text": "plink-remote-forward - Windows SSH client alternative",
+          "new_id": "plink-remote-forward-windows",
+          "confidence": "low",
+          "score": 0.5714285714285714,
+          "category": "D",
+          "reason": "Fuzzy match to existing command (score: 0.57)"
+        }
+      ]
+    },
+    {
+      "file": "data/commands/recon.json",
+      "update_count": 1,
+      "updates": [
+        {
+          "command_id": "nmap-vuln-scan",
+          "field": "alternatives",
+          "old_text": "nessus scan",
+          "new_id": "nessus-scan",
+          "confidence": "high",
+          "score": 1.0,
+          "category": "A",
+          "reason": "Command exists in index (score: 1.00)"
+        }
+      ]
+    },
+    {
+      "file": "data/commands/web/general.json",
+      "update_count": 1,
+      "updates": [
+        {
+          "command_id": "wfuzz-params",
+          "field": "alternatives",
+          "old_text": "burp intruder",
+          "new_id": "burp-intruder",
+          "confidence": "high",
+          "score": 1.0,
+          "category": "A",
+          "reason": "Command exists in index (score: 1.00)"
+        }
+      ]
+    },
+    {
+      "file": "data/commands/generated/post-exploitation-additions.json",
+      "update_count": 1,
+      "updates": [
+        {
+          "command_id": "bloodhound-analyze",
+          "field": "prerequisites",
+          "old_text": "Import SharpHound data",
+          "new_id": "import-sharphound",
+          "confidence": "high",
+          "score": 0.9,
+          "category": "A",
+          "reason": "Command exists in index (score: 0.90)"
+        }
+      ]
+    },
+    {
+      "file": "data/commands/post-exploit/exfiltration.json",
+      "update_count": 1,
+      "updates": [
+        {
+          "command_id": "file-transfer-certutil",
+          "field": "alternatives",
+          "old_text": "bitsadmin download",
+          "new_id": "bitsadmin-download",
+          "confidence": "high",
+          "score": 1.0,
+          "category": "A",
+          "reason": "Command exists in index (score: 1.00)"
+        }
+      ]
+    },
+    {
+      "file": "data/commands/exploitation/auto-generated-full-syntax-exploitation.json",
+      "update_count": 1,
+      "updates": [
+        {
+          "command_id": "ls-metasploit-auxiliary",
+          "field": "alternatives",
+          "old_text": "msfconsole search scanner/<SERVICE>",
+          "new_id": "msfconsole-search",
+          "confidence": "medium",
+          "score": 0.6666666666666666,
+          "category": "D",
+          "reason": "Fuzzy match to existing command (score: 0.67)"
+        }
+      ]
+    },
+    {
+      "file": "data/commands/exploitation/ad-lateral-movement-pth.json",
+      "update_count": 1,
+      "updates": [
+        {
+          "command_id": "pth-cme-spray",
+          "field": "alternatives",
+          "old_text": "pth-impacket-psexec per target",
+          "new_id": "pth-impacket-psexec",
+          "confidence": "medium",
+          "score": 0.6,
+          "category": "D",
+          "reason": "Fuzzy match to existing command (score: 0.60)"
+        }
+      ]
+    },
+    {
+      "file": "data/commands/exploitation/ad-lateral-movement-winrm.json",
+      "update_count": 1,
+      "updates": [
+        {
+          "command_id": "evil-winrm-hash",
+          "field": "alternatives",
+          "old_text": "psexec-impacket-shell with -hashes",
+          "new_id": "psexec-impacket-shell",
+          "confidence": "medium",
+          "score": 0.6,
+          "category": "D",
+          "reason": "Fuzzy match to existing command (score: 0.60)"
+        }
+      ]
+    }
+  ]
+}

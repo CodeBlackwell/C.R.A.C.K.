@@ -1,0 +1,187 @@
+{
+  "mapping_version": "1.0",
+  "generated_date": "2025-11-09",
+  "phase": "2B.3",
+  "description": "Quick lookup table: Old state condition text → New verification command ID",
+  "total_mappings": 26,
+  "mappings": [
+    {
+      "old_text": "NTLM hash obtained",
+      "new_id": "verify-ntlm-hash",
+      "references": 5,
+      "priority": "high"
+    },
+    {
+      "old_text": "CrackMapExec installed",
+      "new_id": "verify-crackmapexec-installed",
+      "references": 4,
+      "priority": "high"
+    },
+    {
+      "old_text": "Neo4j running",
+      "new_id": "verify-neo4j-running",
+      "references": 2,
+      "priority": "medium"
+    },
+    {
+      "old_text": "PowerView imported",
+      "new_id": "verify-powerview-imported",
+      "references": 2,
+      "priority": "high"
+    },
+    {
+      "old_text": "Verify web server is up",
+      "new_id": "verify-web-server-up",
+      "references": 2,
+      "priority": "high"
+    },
+    {
+      "old_text": "Impacket installed on Kali",
+      "new_id": "verify-impacket-installed",
+      "references": 1,
+      "priority": "high"
+    },
+    {
+      "old_text": "nmap installed",
+      "new_id": "verify-nmap-installed",
+      "references": 1,
+      "priority": "high"
+    },
+    {
+      "old_text": "Evil-WinRM installed on Kali",
+      "new_id": "verify-evil-winrm-installed",
+      "references": 1,
+      "priority": "high"
+    },
+    {
+      "old_text": "Mimikatz available",
+      "new_id": "verify-mimikatz-available",
+      "references": 1,
+      "priority": "high"
+    },
+    {
+      "old_text": "Rubeus.exe available",
+      "new_id": "verify-rubeus-available",
+      "references": 1,
+      "priority": "high"
+    },
+    {
+      "old_text": "getcap utility installed",
+      "new_id": "verify-getcap-installed",
+      "references": 1,
+      "priority": "medium"
+    },
+    {
+      "old_text": "docker pull alpine",
+      "new_id": "verify-docker-images-available",
+      "references": 1,
+      "priority": "medium"
+    },
+    {
+      "old_text": "wget if curl unavailable",
+      "new_id": "verify-curl-available",
+      "references": 1,
+      "priority": "high"
+    },
+    {
+      "old_text": "Socat installed on pivot host",
+      "new_id": "verify-socat-installed",
+      "references": 1,
+      "priority": "medium"
+    },
+    {
+      "old_text": "RDP service running on target",
+      "new_id": "verify-rdp-service-running",
+      "references": 1,
+      "priority": "high"
+    },
+    {
+      "old_text": "Python available on pivot host",
+      "new_id": "verify-python-available",
+      "references": 1,
+      "priority": "high"
+    },
+    {
+      "old_text": "SOCKS proxy running",
+      "new_id": "verify-socks-proxy-running",
+      "references": 1,
+      "priority": "high"
+    },
+    {
+      "old_text": "Valid credentials",
+      "new_id": "verify-credentials",
+      "references": 0,
+      "priority": "high",
+      "note": "Inferred from context, common prerequisite"
+    },
+    {
+      "old_text": "PowerShell access",
+      "new_id": "verify-powershell-access",
+      "references": 0,
+      "priority": "high",
+      "note": "Inferred from context, Windows enumeration"
+    },
+    {
+      "old_text": "Network connectivity",
+      "new_id": "verify-network-connectivity",
+      "references": 0,
+      "priority": "high",
+      "note": "Generic prerequisite for remote access"
+    },
+    {
+      "old_text": "Root access",
+      "new_id": "verify-root-access",
+      "references": 0,
+      "priority": "high",
+      "note": "Privilege requirement for exploitation"
+    },
+    {
+      "old_text": "File exists",
+      "new_id": "verify-file-exists",
+      "references": 0,
+      "priority": "medium",
+      "note": "Generic file system check"
+    },
+    {
+      "old_text": "Port open",
+      "new_id": "verify-port-open",
+      "references": 0,
+      "priority": "high",
+      "note": "Generic network check"
+    },
+    {
+      "old_text": "SQL injection available",
+      "new_id": "verify-sql-injection-vulnerable",
+      "references": 0,
+      "priority": "high",
+      "note": "Vulnerability verification"
+    },
+    {
+      "old_text": "SMB null session allowed",
+      "new_id": "verify-smb-null-session",
+      "references": 0,
+      "priority": "high",
+      "note": "Anonymous access check"
+    },
+    {
+      "old_text": "LDAP anonymous bind allowed",
+      "new_id": "verify-ldap-anonymous-bind",
+      "references": 0,
+      "priority": "high",
+      "note": "Active Directory enumeration"
+    }
+  ],
+  "usage_example": {
+    "before": {
+      "prerequisites": ["Valid credentials", "NTLM hash obtained"]
+    },
+    "after": {
+      "prerequisites": ["verify-credentials", "verify-ntlm-hash"]
+    }
+  },
+  "next_steps": [
+    "Update command JSON files to replace removed state conditions with verification IDs",
+    "Run json_stats.py --verbose to verify zero violations",
+    "Update Neo4j migration scripts to create REQUIRES relationships"
+  ]
+}
