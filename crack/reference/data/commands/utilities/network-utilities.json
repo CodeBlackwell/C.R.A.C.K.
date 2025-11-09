@@ -1,0 +1,448 @@
+{
+  "commands": [
+    {
+      "id": "ping-host",
+      "name": "Ping Host",
+      "category": "recon",
+      "command": "ping -c <COUNT> <TARGET>",
+      "description": "Test network connectivity using ICMP echo requests",
+      "tags": ["utility", "network", "recon", "OSCP:HIGH"],
+      "variables": [
+        {
+          "name": "<COUNT>",
+          "description": "Number of ping packets to send",
+          "example": "4",
+          "required": false
+        },
+        {
+          "name": "<TARGET>",
+          "description": "Target IP or hostname",
+          "example": "192.168.1.1",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "-c": "Count - number of packets to send (default: infinite on Linux)",
+        "-i": "Interval between packets in seconds",
+        "-W": "Timeout in seconds"
+      },
+      "success_indicators": ["bytes from", "time="],
+      "failure_indicators": ["100% packet loss", "Destination Host Unreachable"],
+      "oscp_relevance": "high",
+      "notes": "First test for connectivity - note Windows uses -n instead of -c"
+    },
+    {
+      "id": "traceroute-host",
+      "name": "Trace Route to Host",
+      "category": "recon",
+      "command": "traceroute <TARGET>",
+      "description": "Trace network path to target showing all hops",
+      "tags": ["utility", "network", "recon", "OSCP:MEDIUM"],
+      "variables": [
+        {
+          "name": "<TARGET>",
+          "description": "Target IP or hostname",
+          "example": "192.168.1.1",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "-n": "No DNS resolution (faster)",
+        "-m": "Maximum TTL hops",
+        "-p": "Base port number"
+      },
+      "alternatives": ["tracert-windows"],
+      "oscp_relevance": "medium",
+      "notes": "Useful for understanding network topology and firewall positions"
+    },
+    {
+      "id": "tracert-windows",
+      "name": "Trace Route (Windows)",
+      "category": "recon",
+      "command": "tracert <TARGET>",
+      "description": "Windows traceroute implementation",
+      "tags": ["utility", "network", "windows", "recon", "OSCP:MEDIUM"],
+      "variables": [
+        {
+          "name": "<TARGET>",
+          "description": "Target IP or hostname",
+          "example": "192.168.1.1",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "-d": "No DNS resolution",
+        "-h": "Maximum hops"
+      },
+      "alternatives": ["traceroute-host"],
+      "oscp_relevance": "medium"
+    },
+    {
+      "id": "dig-dns",
+      "name": "DNS Lookup with Dig",
+      "category": "recon",
+      "command": "dig <DOMAIN> <TYPE>",
+      "description": "Perform DNS query using dig",
+      "tags": ["utility", "network", "dns", "recon", "OSCP:HIGH"],
+      "variables": [
+        {
+          "name": "<DOMAIN>",
+          "description": "Domain name to query",
+          "example": "example.com",
+          "required": true
+        },
+        {
+          "name": "<TYPE>",
+          "description": "Record type (A, AAAA, MX, NS, TXT, ANY)",
+          "example": "A",
+          "required": false
+        }
+      ],
+      "flag_explanations": {
+        "+short": "Short output - just the answer",
+        "+noall +answer": "Clean output with only answer section",
+        "@<server>": "Query specific DNS server",
+        "axfr": "Zone transfer attempt"
+      },
+      "alternatives": ["nslookup-dns", "host-dns"],
+      "oscp_relevance": "high",
+      "notes": "Essential for DNS enumeration and zone transfer attempts"
+    },
+    {
+      "id": "nslookup-dns",
+      "name": "DNS Query with Nslookup",
+      "category": "recon",
+      "command": "nslookup <DOMAIN>",
+      "description": "Query DNS records using nslookup",
+      "tags": ["utility", "network", "dns", "recon", "OSCP:HIGH"],
+      "variables": [
+        {
+          "name": "<DOMAIN>",
+          "description": "Domain name to query",
+          "example": "example.com",
+          "required": true
+        }
+      ],
+      "alternatives": ["dig-dns", "host-dns"],
+      "oscp_relevance": "high",
+      "notes": "Cross-platform DNS tool - works on Windows and Linux"
+    },
+    {
+      "id": "host-dns",
+      "name": "DNS Lookup with Host",
+      "category": "recon",
+      "command": "host <DOMAIN>",
+      "description": "Simple DNS lookup utility",
+      "tags": ["utility", "network", "dns", "recon", "OSCP:HIGH"],
+      "variables": [
+        {
+          "name": "<DOMAIN>",
+          "description": "Domain name or IP to query",
+          "example": "example.com",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "-t": "Query specific record type",
+        "-a": "All records (equivalent to ANY)"
+      },
+      "alternatives": ["dig-dns", "nslookup-dns"],
+      "oscp_relevance": "high",
+      "notes": "Simpler than dig - good for quick lookups"
+    },
+    {
+      "id": "whois-domain",
+      "name": "WHOIS Lookup",
+      "category": "recon",
+      "command": "whois <DOMAIN>",
+      "description": "Query WHOIS information for domain or IP",
+      "tags": ["utility", "network", "recon", "OSCP:MEDIUM"],
+      "variables": [
+        {
+          "name": "<DOMAIN>",
+          "description": "Domain name or IP address",
+          "example": "example.com",
+          "required": true
+        }
+      ],
+      "oscp_relevance": "medium",
+      "notes": "Useful for identifying domain registrar, nameservers, contact info"
+    },
+    {
+      "id": "curl-url",
+      "name": "Fetch URL with Curl",
+      "category": "web",
+      "command": "curl <URL>",
+      "description": "Transfer data from or to a server using various protocols",
+      "tags": ["utility", "network", "web", "OSCP:HIGH"],
+      "variables": [
+        {
+          "name": "<URL>",
+          "description": "URL to fetch",
+          "example": "http://example.com",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "-o": "Save output to file",
+        "-O": "Save with remote filename",
+        "-s": "Silent mode",
+        "-v": "Verbose output with headers",
+        "-I": "Fetch headers only",
+        "-X": "Specify HTTP method (GET, POST, PUT, etc.)",
+        "-d": "Send POST data",
+        "-H": "Add custom header",
+        "-u": "Specify username:password for auth",
+        "-k": "Ignore SSL certificate errors",
+        "-L": "Follow redirects"
+      },
+      "alternatives": ["wget-url"],
+      "oscp_relevance": "high",
+      "notes": "Essential for web enumeration, API testing, and file downloads"
+    },
+    {
+      "id": "wget-url",
+      "name": "Download with Wget",
+      "category": "web",
+      "command": "wget <URL>",
+      "description": "Download files from web servers",
+      "tags": ["utility", "network", "web", "OSCP:HIGH"],
+      "variables": [
+        {
+          "name": "<URL>",
+          "description": "URL to download",
+          "example": "http://example.com/file.txt",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "-O": "Save as specific filename",
+        "-r": "Recursive download",
+        "-np": "No parent - don't ascend to parent directory",
+        "-nc": "No clobber - don't overwrite existing files",
+        "--no-check-certificate": "Ignore SSL errors",
+        "-q": "Quiet mode",
+        "-P": "Save to specific directory"
+      },
+      "alternatives": ["curl-url"],
+      "oscp_relevance": "high",
+      "notes": "Simpler than curl for basic downloads - great for transferring files to targets"
+    },
+    {
+      "id": "nc-listener",
+      "name": "Netcat Listener",
+      "category": "exploitation",
+      "command": "nc -lvnp <PORT>",
+      "description": "Start netcat listener for reverse shells",
+      "tags": ["utility", "network", "listener", "OSCP:HIGH"],
+      "variables": [
+        {
+          "name": "<PORT>",
+          "description": "Port to listen on",
+          "example": "4444",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "-l": "Listen mode",
+        "-v": "Verbose output",
+        "-n": "No DNS resolution",
+        "-p": "Specify port"
+      },
+      "oscp_relevance": "high",
+      "notes": "Essential for catching reverse shells - run before triggering exploit"
+    },
+    {
+      "id": "nc-connect",
+      "name": "Netcat Connection",
+      "category": "exploitation",
+      "command": "nc <TARGET> <PORT>",
+      "description": "Connect to remote host using netcat",
+      "tags": ["utility", "network", "OSCP:HIGH"],
+      "variables": [
+        {
+          "name": "<TARGET>",
+          "description": "Target IP or hostname",
+          "example": "192.168.1.1",
+          "required": true
+        },
+        {
+          "name": "<PORT>",
+          "description": "Port to connect to",
+          "example": "80",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "-v": "Verbose output",
+        "-n": "No DNS resolution",
+        "-z": "Zero-I/O mode (port scanning)"
+      },
+      "oscp_relevance": "high",
+      "notes": "Useful for manual service interaction and banner grabbing"
+    },
+    {
+      "id": "ssh-connect",
+      "name": "SSH Connection",
+      "category": "exploitation",
+      "command": "ssh <USER>@<TARGET>",
+      "description": "Connect to remote host via SSH",
+      "tags": ["utility", "network", "ssh", "OSCP:HIGH"],
+      "variables": [
+        {
+          "name": "<USER>",
+          "description": "Username for authentication",
+          "example": "root",
+          "required": true
+        },
+        {
+          "name": "<TARGET>",
+          "description": "Target IP or hostname",
+          "example": "192.168.1.1",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "-p": "Specify port (default 22)",
+        "-i": "Specify private key file",
+        "-L": "Local port forwarding",
+        "-R": "Remote port forwarding",
+        "-D": "Dynamic port forwarding (SOCKS proxy)",
+        "-N": "No command execution (forwarding only)",
+        "-f": "Background mode",
+        "-o": "Set options (e.g., -o StrictHostKeyChecking=no)"
+      },
+      "oscp_relevance": "high",
+      "notes": "Essential for accessing compromised hosts and port forwarding"
+    },
+    {
+      "id": "scp-file",
+      "name": "Secure Copy",
+      "category": "file-transfer",
+      "command": "scp <SOURCE> <USER>@<TARGET>:<DEST>",
+      "description": "Securely copy files between hosts using SSH",
+      "tags": ["utility", "network", "file-transfer", "OSCP:HIGH"],
+      "variables": [
+        {
+          "name": "<SOURCE>",
+          "description": "Source file path",
+          "example": "exploit.sh",
+          "required": true
+        },
+        {
+          "name": "<USER>",
+          "description": "Remote username",
+          "example": "root",
+          "required": true
+        },
+        {
+          "name": "<TARGET>",
+          "description": "Target IP or hostname",
+          "example": "192.168.1.1",
+          "required": true
+        },
+        {
+          "name": "<DEST>",
+          "description": "Destination path on remote host",
+          "example": "/tmp/exploit.sh",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "-P": "Specify port",
+        "-i": "Specify private key file",
+        "-r": "Recursive copy for directories"
+      },
+      "alternatives": ["rsync-files"],
+      "oscp_relevance": "high",
+      "notes": "Fast file transfer when SSH access is available"
+    },
+    {
+      "id": "rsync-files",
+      "name": "Rsync Files",
+      "category": "file-transfer",
+      "command": "rsync -avz <SOURCE> <USER>@<TARGET>:<DEST>",
+      "description": "Synchronize files between systems efficiently",
+      "tags": ["utility", "network", "file-transfer", "OSCP:MEDIUM"],
+      "variables": [
+        {
+          "name": "<SOURCE>",
+          "description": "Source directory or file",
+          "example": "/tmp/loot/",
+          "required": true
+        },
+        {
+          "name": "<USER>",
+          "description": "Remote username",
+          "example": "kali",
+          "required": true
+        },
+        {
+          "name": "<TARGET>",
+          "description": "Target IP or hostname",
+          "example": "192.168.45.xxx",
+          "required": true
+        },
+        {
+          "name": "<DEST>",
+          "description": "Destination path",
+          "example": "/home/kali/exfil/",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "-a": "Archive mode (preserves permissions, timestamps, etc.)",
+        "-v": "Verbose output",
+        "-z": "Compress during transfer",
+        "-P": "Show progress and keep partial transfers",
+        "--delete": "Delete files in destination not in source"
+      },
+      "alternatives": ["scp-file"],
+      "oscp_relevance": "medium",
+      "notes": "More efficient than scp for large transfers or syncing directories"
+    },
+    {
+      "id": "telnet-connect",
+      "name": "Telnet Connection",
+      "category": "enumeration",
+      "command": "telnet <TARGET> <PORT>",
+      "description": "Connect to remote host using telnet protocol",
+      "tags": ["utility", "network", "enumeration", "OSCP:MEDIUM"],
+      "variables": [
+        {
+          "name": "<TARGET>",
+          "description": "Target IP or hostname",
+          "example": "192.168.1.1",
+          "required": true
+        },
+        {
+          "name": "<PORT>",
+          "description": "Port to connect to",
+          "example": "23",
+          "required": true
+        }
+      ],
+      "alternatives": ["nc-connect"],
+      "oscp_relevance": "medium",
+      "notes": "Useful for banner grabbing and manual service interaction"
+    },
+    {
+      "id": "ftp-connect",
+      "name": "FTP Connection",
+      "category": "enumeration",
+      "command": "ftp <TARGET>",
+      "description": "Connect to FTP server",
+      "tags": ["utility", "network", "ftp", "OSCP:MEDIUM"],
+      "variables": [
+        {
+          "name": "<TARGET>",
+          "description": "Target IP or hostname",
+          "example": "192.168.1.1",
+          "required": true
+        }
+      ],
+      "oscp_relevance": "medium",
+      "notes": "Try anonymous login (user: anonymous, pass: anonymous@example.com)"
+    }
+  ]
+}
