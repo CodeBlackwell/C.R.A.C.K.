@@ -10,6 +10,7 @@ from .display import DisplayCLI
 from .interactive import InteractiveCLI
 from .config import ConfigCLI
 from .search import SearchCLI
+from .graph import GraphCLI
 from .main import ReferenceCLI, main
 
 __all__ = [
@@ -19,6 +20,7 @@ __all__ = [
     'InteractiveCLI',
     'ConfigCLI',
     'SearchCLI',
+    'GraphCLI',
     'ReferenceCLI',
     'main'
 ]

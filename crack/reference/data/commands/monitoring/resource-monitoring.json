@@ -42,9 +42,7 @@
         "Monitor memory over time: free-memory-human",
         "Kill memory-hogging process if needed: kill <PID>"
       ],
-      "alternatives": [
-        "top -bn1 -o %MEM | head -20"
-      ],
+      "alternatives": [],
       "notes": "OSCP defense tip: Unexpected high-memory processes may indicate cryptominers, memory scrapers, or DoS attacks. For top CPU: ps aux --sort=-%cpu | head -10. Time estimate: 2 seconds."
     },
     {
@@ -86,9 +84,7 @@
         "Monitor CPU over time: vmstat-cpu-monitoring",
         "Kill rogue process: kill <PID>"
       ],
-      "alternatives": [
-        "top -bn1 -o %CPU | head -20"
-      ],
+      "alternatives": [],
       "notes": "OSCP defense tip: Unexpected 100% CPU usage may indicate cryptominers, brute-force attacks, or fork bombs. Time estimate: 2 seconds."
     },
     {
@@ -130,8 +126,7 @@
         "Clear cache if needed: sudo sync && sudo echo 3 > /proc/sys/vm/drop_caches"
       ],
       "alternatives": [
-        "cat /proc/meminfo",
-        "vmstat -s"
+        "cat-proc-meminfo"
       ],
       "notes": "'available' is key metric - memory available for starting new applications (includes reclaimable cache). Low available memory = system under pressure. Swap usage (high) = memory exhaustion. Time estimate: <1 second."
     },
@@ -173,10 +168,7 @@
         "Monitor blocked processes (b column) - indicates I/O wait",
         "Use iostat for detailed I/O statistics"
       ],
-      "alternatives": [
-        "top -bn1",
-        "sar -u 1 5"
-      ],
+      "alternatives": [],
       "notes": "Key columns: r (processes waiting for CPU), b (blocked on I/O), si/so (swap in/out), us (user CPU%), sy (system CPU%), id (idle CPU%), wa (I/O wait%). High 'wa' = disk bottleneck. For continuous: vmstat 1. Time estimate: 5 seconds for 5 samples."
     },
     {
@@ -217,10 +209,7 @@
         "Identify I/O-heavy processes: iotop (if installed)",
         "Check disk health: smartctl -a /dev/sda"
       ],
-      "alternatives": [
-        "iotop (if installed)",
-        "vmstat 1 5"
-      ],
+      "alternatives": [],
       "notes": "Key metrics: r/s (reads/sec), w/s (writes/sec), %util (disk busy %), await (average I/O wait time in ms). %util >80% consistently = disk bottleneck. Time estimate: 5 seconds for 5 samples. Part of sysstat package."
     },
     {
@@ -257,8 +246,7 @@
         "Check for runaway processes"
       ],
       "alternatives": [
-        "cat /proc/loadavg",
-        "w (includes user info)"
+        "cat-proc-loadavg"
       ],
       "notes": "Load average shows average number of processes in run queue. On 4-core system: load of 4.0 = 100% CPU utilization, 8.0 = 200% (overloaded). Three numbers: 1-min, 5-min, 15-min averages. Time estimate: <1 second."
     },
@@ -300,9 +288,7 @@
         "Find large files: find / -type f -size +100M 2>/dev/null",
         "Clear space if needed"
       ],
-      "alternatives": [
-        "df -h -x tmpfs -x devtmpfs (exclude pseudo-filesystems)"
-      ],
+      "alternatives": [],
       "notes": "OSCP tip: Full disk can prevent logging, break services, and stop reverse shells. Check Use% column. For specific directory: df -h /var. Time estimate: 1 second."
     },
     {
@@ -349,9 +335,7 @@
         "Check log rotation: ls -lh /var/log/",
         "Clear old logs or temporary files"
       ],
-      "alternatives": [
-        "ncdu <DIRECTORY> (ncurses disk usage analyzer, if installed)"
-      ],
+      "alternatives": [],
       "notes": "Useful for finding what's consuming disk space. To see subdirectories: du -h <DIR> --max-depth=1 | sort -hr. Time estimate: 1-10 seconds depending on directory size."
     },
     {
@@ -400,9 +384,7 @@
         "Look for suspicious file access",
         "Check deleted files still held open: lsof -u <USER> | grep deleted"
       ],
-      "alternatives": [
-        "ls -l /proc/*/fd/ (manual check)"
-      ],
+      "alternatives": [],
       "notes": "Shows everything a user has open: regular files, directories, network sockets, devices. Useful for investigating compromised accounts. Time estimate: 2-5 seconds."
     },
     {
@@ -448,8 +430,7 @@
         "Use fuser for simpler output: fuser-directory-processes"
       ],
       "alternatives": [
-        "fuser-directory-processes",
-        "lsof +d <DIRECTORY> (non-recursive, faster)"
+        "fuser-directory-processes"
       ],
       "notes": "Useful before unmounting filesystems or deleting directories. +D is recursive (slow), +d is non-recursive (fast). Time estimate: 5-30 seconds depending on directory size."
     },
@@ -540,8 +521,7 @@
         "Monitor for new logins in real-time"
       ],
       "alternatives": [
-        "who -a",
-        "users"
+        "user"
       ],
       "notes": "CRITICAL for defense monitoring. Shows active users, their terminal, source IP (FROM), login time, idle time, and current command. OSCP tip: Check FROM column for unexpected IPs, WHAT column for suspicious commands (shells, persistence scripts). Time estimate: <1 second."
     },
@@ -581,7 +561,7 @@
       ],
       "alternatives": [
         "w-user-activity",
-        "users"
+        "user"
       ],
       "notes": "More detailed than 'users' command but less info than 'w'. Shows boot time, runlevel, login processes. Time estimate: <1 second."
     },
@@ -623,9 +603,7 @@
         "View failed login attempts: lastb-failed-logins",
         "View last login per user: lastlog-user-last"
       ],
-      "alternatives": [
-        "cat /var/log/wtmp | utmpdump"
-      ],
+      "alternatives": [],
       "notes": "Reads /var/log/wtmp. OSCP defense tip: Look for (1) Logins from unexpected IPs, (2) Short-lived sessions (in/out quickly = potential intrusion), (3) Logins at unusual hours. For specific user: last -a <USERNAME>. Time estimate: 1-3 seconds."
     },
     {

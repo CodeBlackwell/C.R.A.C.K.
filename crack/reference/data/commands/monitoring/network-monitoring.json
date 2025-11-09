@@ -96,7 +96,7 @@
       ],
       "alternatives": [
         "netstat-listening-tcp",
-        "ss-listening-tcp"
+        "ss-listening-ports"
       ],
       "notes": "Filters to only show listening ports (attack surface). OSCP tip: Compare internal listening ports (127.0.0.1:*) vs external (0.0.0.0:* or specific IP). Internal-only ports often have weaker authentication. For UDP listeners: lsof -i -P -n -sUDP:Idle. Time estimate: 2 seconds."
     },
@@ -147,8 +147,7 @@
         "Check service configuration files"
       ],
       "alternatives": [
-        "fuser-port-tcp",
-        "netstat -tulpn | grep :<PORT>"
+        "fuser-port-tcp"
       ],
       "notes": "Essential for troubleshooting 'port already in use' errors or identifying what service is bound to a discovered port. For TCP only: lsof -i TCP:<PORT>. For UDP only: lsof -i UDP:<PORT>. Time estimate: <1 second."
     },
@@ -197,8 +196,7 @@
         "Restart service with correct configuration"
       ],
       "alternatives": [
-        "lsof-port-specific",
-        "ss -tulpn | grep :<PORT>"
+        "lsof-port-specific"
       ],
       "notes": "Lighter weight than lsof. Good for quick port checks. For UDP: fuser -v <PORT>/udp. Time estimate: <1 second."
     },
@@ -343,10 +341,7 @@
         "Verify legitimate connections",
         "Block malicious IPs: iptables -A OUTPUT -d <IP> -j DROP"
       ],
-      "alternatives": [
-        "netstat -tupn | grep ESTABLISHED",
-        "lsof -i -n | grep ESTABLISHED"
-      ],
+      "alternatives": [],
       "notes": "Useful for detecting active attacks or data exfiltration. OSCP defense tip: Unexpected ESTABLISHED connections to external IPs may indicate compromise. Time estimate: <1 second."
     },
     {
@@ -389,8 +384,7 @@
         "Identify listening services: netstat -ano | findstr LISTENING"
       ],
       "alternatives": [
-        "win-ps-netstat-process",
-        "win-tcpview"
+        "win-ps-netstat-process"
       ],
       "notes": "Essential for Windows network monitoring. Combine with tasklist to map PIDs to names: netstat -ano | findstr LISTENING, then tasklist /fi \"PID eq <PID>\". OSCP tip: Look for (1) LISTENING on 0.0.0.0 (externally accessible), (2) ESTABLISHED to unexpected IPs (C2 traffic), (3) Unusual ports (backdoors). Time estimate: 2 seconds."
     },
@@ -484,9 +478,9 @@
       ],
       "alternatives": [
         "win-wmic-process-pid",
-        "win-ps-get-process-by-id"
+        "win-ps-get-process"
       ],
-      "notes": "Quick way to map netstat PIDs to process names. Common workflow: netstat -ano | findstr :443 (get PID) → tasklist /fi \"PID eq 1234\" (get name). Time estimate: <1 second."
+      "notes": "Quick way to map netstat PIDs to process names. Common workflow: netstat -ano | findstr :443 (get PID) \u2192 tasklist /fi \"PID eq 1234\" (get name). Time estimate: <1 second."
     },
     {
       "id": "win-wmic-process-pid",
@@ -536,8 +530,7 @@
         "Check if executable is signed: Get-AuthenticodeSignature <PATH>"
       ],
       "alternatives": [
-        "win-tasklist-pid",
-        "Get-Process -Id <PID> | Select *"
+        "win-tasklist-pid"
       ],
       "notes": "More detailed than tasklist. CommandLine often reveals sensitive data. Time estimate: 1 second."
     }

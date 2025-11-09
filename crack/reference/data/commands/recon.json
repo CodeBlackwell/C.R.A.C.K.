@@ -47,8 +47,7 @@
         "Check for specific services (SMB, HTTP, SSH)"
       ],
       "alternatives": [
-        "fping -a -g <TARGET_SUBNET>",
-        "arp-scan -l"
+        "arp-scan-list"
       ],
       "notes": "Use -sn for host discovery only, no port scan",
       "oscp_relevance": "high"
@@ -112,10 +111,7 @@
         "UDP scan if needed: nmap -sU --top-ports 20 <TARGET>",
         "Vulnerability scripts: nmap --script vuln -p <PORTS> <TARGET>"
       ],
-      "alternatives": [
-        "masscan -p1-65535 <TARGET>",
-        "rustscan -a <TARGET>"
-      ],
+      "alternatives": [],
       "notes": "Adjust --min-rate based on network stability",
       "oscp_relevance": "high"
     },
@@ -180,10 +176,7 @@
         "SMB enumeration if 445 open: enum4linux -a <IP>",
         "SSH brute if 22 open: hydra -L users -P pass ssh://<IP>"
       ],
-      "alternatives": [
-        "nmap -A <TARGET>",
-        "unicornscan -mS <TARGET>"
-      ],
+      "alternatives": [],
       "notes": "Use after quick scan to investigate open ports",
       "oscp_relevance": "high"
     },
@@ -238,9 +231,7 @@
         "Try specific vuln scripts: --script smb-vuln-ms17-010"
       ],
       "alternatives": [
-        "nmap --script smb-vuln* <TARGET>",
-        "nessus scan",
-        "openvas"
+        "nessus-scan"
       ],
       "notes": "Can be slow, use specific scripts for better performance",
       "oscp_relevance": "medium"
@@ -289,9 +280,7 @@
         "Reverse DNS on IP ranges: dnsrecon -r <RANGE>"
       ],
       "alternatives": [
-        "dnsenum <DOMAIN>",
-        "fierce --domain <DOMAIN>",
-        "host -t axfr <DOMAIN> <NS>"
+        "dnsenum-domain"
       ],
       "notes": "Try zone transfer with -t axfr if allowed",
       "oscp_relevance": "medium"
@@ -345,11 +334,7 @@
         "Check write access: smbmap -H <IP> -u guest",
         "Brute force: hydra -L users -P pass smb://<IP>"
       ],
-      "alternatives": [
-        "smbclient -L //<TARGET> -N",
-        "smbmap -H <TARGET>",
-        "crackmapexec smb <TARGET>"
-      ],
+      "alternatives": [],
       "notes": "Check for null sessions and guest access",
       "oscp_relevance": "high"
     },
@@ -402,11 +387,7 @@
         "Try snmp-check for formatted output: snmp-check <IP>",
         "Brute community strings: onesixtyone -c wordlist <IP>"
       ],
-      "alternatives": [
-        "onesixtyone -c <WORDLIST> <TARGET>",
-        "snmp-check <TARGET>",
-        "snmpbulkwalk -c <SNMP_COMMUNITY> <TARGET>"
-      ],
+      "alternatives": [],
       "notes": "Try 'public' and 'private' as default community strings",
       "oscp_relevance": "medium"
     },
@@ -854,9 +835,7 @@
         "smb-smbclient-connect",
         "smb-smbmap-recursive"
       ],
-      "prerequisites": [
-        "sudo mkdir -p <MOUNT_POINT>"
-      ],
+      "prerequisites": [],
       "troubleshooting": {
         "Permission denied": "Invalid credentials or share not accessible. Verify access first: smbmap -H <TARGET> -u <USER> -p <PASS>",
         "No such file or directory (mount point)": "Create mount point first: sudo mkdir -p <MOUNT_POINT>",
@@ -1083,9 +1062,7 @@
         "Run technology detection: whatweb http://vhost.example.com",
         "Directory enumeration on new vhosts: gobuster dir -u http://vhost.example.com -w <WORDLIST>"
       ],
-      "alternatives": [
-        "ffuf -w <WORDLIST> -u http://<TARGET> -H 'Host: FUZZ.<DOMAIN>'"
-      ],
+      "alternatives": [],
       "prerequisites": [],
       "troubleshooting": {
         "All entries return same size": "Server returns same response for all hosts. Filter by size: --exclude-length <SIZE> or try different status codes",
@@ -1150,10 +1127,7 @@
         "Add subdomains to /etc/hosts for further testing",
         "If failed: Try subdomain brute force: gobuster dns -d <DOMAIN> -w <WORDLIST>"
       ],
-      "alternatives": [
-        "host -t axfr <DOMAIN> <NAMESERVER>",
-        "dnsrecon -d <DOMAIN> -t axfr"
-      ],
+      "alternatives": [],
       "prerequisites": [],
       "troubleshooting": {
         "Transfer failed": "Zone transfers disabled (proper security). Use subdomain enumeration instead: gobuster dns -d <DOMAIN> -w /usr/share/seclists/Discovery/DNS/subdomains-top1million-5000.txt",

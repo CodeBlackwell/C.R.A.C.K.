@@ -94,8 +94,7 @@
         "Document sensitive information in enumeration.md"
       ],
       "alternatives": [
-        "ps-ef-full",
-        "cat /proc/*/cmdline | tr '\\0' ' '"
+        "ps-ef-full"
       ],
       "notes": "CRITICAL for OSCP: Passwords often passed as command-line arguments (mysql -u root -pPASSWORD, ssh user@host -i /path/key). The 'ww' flag prevents truncation that would hide these. Manual alternative: for pid in /proc/[0-9]*; do cat $pid/cmdline 2>/dev/null | tr '\\0' ' '; echo; done. Time estimate: 5 seconds."
     },
@@ -179,8 +178,7 @@
         "Examine specific branch: ps -p <PID> -o cmd="
       ],
       "alternatives": [
-        "ps-ef-full",
-        "ps f (forest view)"
+        "ps-ef-full"
       ],
       "notes": "Excellent for spotting reverse shells or unauthorized processes. For example, www-data -> bash -> nc indicates a web shell spawned netcat. Manual alternative: ps auxf (forest mode shows hierarchy with ASCII art). Time estimate: 5 seconds."
     },
@@ -224,8 +222,7 @@
         "Sort by CPU: ps-sort-cpu"
       ],
       "alternatives": [
-        "ps-sort-cpu",
-        "htop (if installed)"
+        "ps-sort-cpu"
       ],
       "notes": "Batch mode (-b) makes output suitable for documentation or log files. Without -b, top is interactive and not useful in scripts. For real-time monitoring, omit these flags and use: top. Time estimate: 5 seconds."
     },
@@ -273,10 +270,7 @@
         "Examine process files: lsof -p <PID>",
         "Kill process if needed: kill <PID>"
       ],
-      "alternatives": [
-        "ps aux | grep <PATTERN>",
-        "pidof <EXACT_NAME>"
-      ],
+      "alternatives": [],
       "notes": "Much faster than 'ps aux | grep' and doesn't show the grep process itself. Use -i for case-insensitive: pgrep -afi <PATTERN>. Time estimate: 1 second. OSCP tip: Search for common services: pgrep -af 'mysql|postgresql|apache|nginx|ssh|vsftpd' to identify attack vectors."
     },
     {
@@ -317,10 +311,7 @@
         "Check open files: lsof -p <PID>",
         "View process environment: cat /proc/<PID>/environ | tr '\\0' '\\n'"
       ],
-      "alternatives": [
-        "pgrep -x <PROCESS_NAME>",
-        "ps aux | grep <PROCESS_NAME> | awk '{print $2}'"
-      ],
+      "alternatives": [],
       "notes": "Returns ALL PIDs if multiple instances running. For single PID: pidof <NAME> | head -1. Time estimate: <1 second."
     },
     {
@@ -365,10 +356,7 @@
         "Look for writable binaries: find / -user <USERNAME> -perm -w -type f 2>/dev/null",
         "Check user's cronjobs: crontab -u <USERNAME> -l"
       ],
-      "alternatives": [
-        "ps aux | grep ^<USERNAME>",
-        "top -u <USERNAME>"
-      ],
+      "alternatives": [],
       "notes": "OSCP tip: Check www-data processes for web vulnerabilities, mysql processes for database attack vectors, root processes for privilege escalation opportunities. Time estimate: 2 seconds."
     },
     {
@@ -412,10 +400,7 @@
         "View process environment variables: cat /proc/<PID>/environ | tr '\\0' '\\n'",
         "Check process working directory: readlink /proc/<PID>/cwd"
       ],
-      "alternatives": [
-        "cat /proc/<PID>/cmdline | tr '\\0' ' '",
-        "ps -p <PID> -f"
-      ],
+      "alternatives": [],
       "notes": "The '=' after 'cmd' removes the header for cleaner parsing in scripts. For multiple fields: ps -p <PID> -o pid=,cmd=,user=. Time estimate: <1 second."
     },
     {
@@ -646,8 +631,7 @@
         "Document findings in enumeration.md"
       ],
       "alternatives": [
-        "win-wmic-process-full",
-        "Get-CimInstance win32_process"
+        "win-wmic-process-full"
       ],
       "notes": "CRITICAL for credential discovery. CommandLine field shows full arguments including passwords, API keys, database strings. Time estimate: 10 seconds. OSCP tip: Common patterns to grep: '-p ', 'password=', 'token=', 'key=', 'api_key='. Modern alternative: Get-CimInstance win32_process (replaces Get-WmiObject in PowerShell 3.0+)."
     }

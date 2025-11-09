@@ -25,9 +25,7 @@
           "required": true
         }
       ],
-      "prerequisites": [
-        "# Check current integrity level:\nwhoami /groups | findstr /i \"Mandatory Label\"\n\n# Medium = standard user (UAC bypass needed)\n# High = already admin (bypass not needed)"
-      ],
+      "prerequisites": [],
       "notes": "Syntax: Execute in PowerShell with medium integrity (standard user) FodHelper is classic UAC bypass for Windows 10. Works on unpatched systems. Quick to execute (~10 sec). Always clean up registry key for stealth. Test integrity with 'whoami /groups' before and after. Useful after initial access to escalate without credentials. Time estimate: 2 minutes References: docs/av-evasion/uac-bypass.md#fodhelper, PEN-300 Chapter 7.5 Manual alternative: Use alternate UAC bypasses (eventvwr, sdclt, computerdefaults), exploit vulnerabilities, or request legitimate admin credentials",
       "success_indicators": [
         "Payload executes with high integrity (admin) without UAC prompt. No console window appears if configured properly."

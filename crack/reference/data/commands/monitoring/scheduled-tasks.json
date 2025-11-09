@@ -42,9 +42,7 @@
         "Look for writable cron scripts: find /etc/cron* -type f -writable",
         "Check cron script permissions for privesc"
       ],
-      "alternatives": [
-        "cat /var/spool/cron/crontabs/<USERNAME>"
-      ],
+      "alternatives": [],
       "notes": "Cron format: minute hour day month weekday command. OSCP tip: Check if cron scripts are writable - modify to run reverse shell as cron user. Time estimate: <1 second. Special strings: @reboot (run at startup), @daily, @hourly, @weekly, @monthly."
     },
     {
@@ -94,9 +92,7 @@
         "Replace script with malicious version if writable",
         "Wait for cron to execute for privilege escalation"
       ],
-      "alternatives": [
-        "sudo cat /var/spool/cron/crontabs/<USERNAME>"
-      ],
+      "alternatives": [],
       "notes": "Root's crontab is high-value target. If root cron runs writable script, instant privesc. Crontab location varies: /var/spool/cron/crontabs/ (Debian/Ubuntu), /var/spool/cron/ (RHEL/CentOS). Time estimate: <1 second."
     },
     {
@@ -137,7 +133,7 @@
         "Examine script permissions: ls -la <SCRIPT_PATH>"
       ],
       "alternatives": [
-        "less /etc/crontab"
+        "less-etc-crontab"
       ],
       "notes": "/etc/crontab differs from user crontabs - includes username field. Format: minute hour day month weekday user command. OSCP tip: Check if PATH includes writable dirs like /tmp - allows command hijacking. Time estimate: <1 second."
     },
@@ -181,9 +177,7 @@
         "Examine script contents: cat /etc/cron.daily/<SCRIPT>",
         "Modify writable script to add reverse shell"
       ],
-      "alternatives": [
-        "find /etc/cron* -type f"
-      ],
+      "alternatives": [],
       "notes": "Scripts in these directories run automatically: cron.hourly (every hour), cron.daily (daily), cron.weekly (weekly), cron.monthly (monthly). All run as root by default. CRITICAL privesc vector if writable. Time estimate: 2 seconds. Command to find writable: find /etc/cron* -type f -writable 2>/dev/null"
     },
     {
@@ -226,10 +220,7 @@
         "Look for failed cron jobs (potential misconfigurations)",
         "Monitor for new cron activity"
       ],
-      "alternatives": [
-        "grep CRON /var/log/messages",
-        "journalctl -u cron"
-      ],
+      "alternatives": [],
       "notes": "Logs show when cron jobs execute and as which user. Useful for timing privilege escalation attempts. On systemd systems: journalctl -u cron. Time estimate: 3-5 seconds."
     },
     {
@@ -277,7 +268,7 @@
       ],
       "alternatives": [
         "win-ps-scheduled-tasks",
-        "Get-ScheduledTask"
+        "get-scheduledtask"
       ],
       "notes": "CRITICAL for Windows privesc and persistence detection. Output is verbose (20+ properties per task). OSCP tips: (1) Look for tasks with writable executables, (2) Tasks running as SYSTEM with Enabled status, (3) Custom tasks (non-Microsoft) in \\Task Scheduler Library\\. Time estimate: 10-30 seconds depending on task count."
     },
@@ -325,8 +316,7 @@
         "Look for tasks with writable executables"
       ],
       "alternatives": [
-        "win-schtasks-list-all",
-        "schtasks /query"
+        "win-schtasks-list-all"
       ],
       "notes": "Modern PowerShell approach - faster and easier to parse than schtasks. To see all tasks: Get-ScheduledTask (no filter). Time estimate: 5 seconds. One-liner for custom tasks: Get-ScheduledTask | Where-Object {$_.TaskPath -notlike '\\Microsoft\\*' -and $_.State -eq 'Ready'}"
     },
@@ -378,9 +368,7 @@
         "Export task XML: Export-ScheduledTask -TaskName <TASK_NAME>",
         "Modify task if writable: Set-ScheduledTask"
       ],
-      "alternatives": [
-        "schtasks /query /tn <TASK_NAME> /v"
-      ],
+      "alternatives": [],
       "notes": "Useful for verifying task execution status. LastTaskResult 0x0 = success, other values indicate errors. Time estimate: 1 second."
     },
     {
@@ -431,9 +419,7 @@
         "Verify <UserId> to see which account runs task",
         "Check <Arguments> for command-line parameters"
       ],
-      "alternatives": [
-        "Export-ScheduledTask -TaskName <TASK_NAME>"
-      ],
+      "alternatives": [],
       "notes": "XML may contain Base64-encoded credentials or sensitive command arguments. Time estimate: 1 second. Save to file: schtasks /query /tn <TASK> /xml > task.xml"
     },
     {
@@ -473,9 +459,7 @@
         "Check command path permissions if jobs found",
         "Modern alternative: use schtasks or Get-ScheduledTask"
       ],
-      "alternatives": [
-        "at (command-line AT utility)"
-      ],
+      "alternatives": [],
       "notes": "AT jobs are legacy (Windows NT/2000 era), rarely used in modern systems. Included for completeness in older OSCP labs. Time estimate: 1 second."
     },
     {
@@ -512,9 +496,7 @@
         "Remove job: atrm <JOB_ID>",
         "Check /var/spool/at/ for job files"
       ],
-      "alternatives": [
-        "ls -la /var/spool/at/"
-      ],
+      "alternatives": [],
       "notes": "AT is for one-time scheduled tasks (unlike cron for recurring). Less common than cron. View job: at -c <JOB_ID>. Time estimate: <1 second."
     },
     {
@@ -559,9 +541,7 @@
         "Look for writable timer or service files: ls -la /etc/systemd/system/*.timer",
         "Check service executable permissions"
       ],
-      "alternatives": [
-        "systemctl list-unit-files --type=timer"
-      ],
+      "alternatives": [],
       "notes": "systemd timers are modern replacement for cron on systemd-based Linux. Timers trigger .service units. OSCP tip: Check /etc/systemd/system/ for custom timers. Time estimate: 2 seconds. To see active only: systemctl list-timers (no --all)"
     }
   ]

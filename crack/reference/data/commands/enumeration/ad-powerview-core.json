@@ -34,18 +34,14 @@
         "powerview-get-netgroup"
       ],
       "alternatives": [
-        "ps-get-current-domain",
-        "$env:USERDNSDOMAIN",
-        "systeminfo | findstr /B /C:\"Domain\""
+        "ps-get-current-domain"
       ],
-      "prerequisites": [
-        "Import-Module PowerView.ps1 or . .\\PowerView.ps1"
-      ],
+      "prerequisites": [],
       "troubleshooting": {
         "Get-NetDomain not recognized": "PowerView not imported. Import: Import-Module .\\PowerView.ps1 or dot-source: . .\\PowerView.ps1",
         "Access Denied": "Not logged in as domain user. Verify: whoami /fqdn"
       },
-      "notes": "PowerView simplifies .NET LDAP queries into easy-to-use cmdlets. Get-NetDomain is equivalent to [System.DirectoryServices.ActiveDirectory.Domain]::GetCurrentDomain() but with cleaner output. Returns critical properties: PdcRoleOwner (target for enumeration), DomainMode (functional level), Forest (multi-domain environments). OSCP: Import PowerView at the start of AD enumeration for speed and convenience.",
+      "notes": "PowerView simplifies .NET LDAP queries into easy-to-use cmdlets. Get-NetDomain is equivalent to [System.DirectoryServices.ActiveDirectory.Domain]::GetCurrentDomain() but with cleaner output. Returns critical properties: PdcRoleOwner (target for enumeration), DomainMode (functional level), Forest (multi-domain environments). OSCP: Import PowerView at the start of AD enumeration for speed and convenience.\n\nAlternative Techniques:\n- $env:userdnsdomain",
       "oscp_relevance": "high"
     },
     {
@@ -79,12 +75,10 @@
         "Identify forest root DC"
       ],
       "alternatives": [
-        "nltest /dclist:<DOMAIN>",
-        "nslookup -type=SRV _ldap._tcp.dc._msdcs.<DOMAIN>",
         "ps-get-pdc"
       ],
       "prerequisites": [
-        "Import PowerView"
+        "import-powerview"
       ],
       "troubleshooting": {
         "Module not imported": "Import-Module .\\PowerView.ps1",
@@ -129,7 +123,7 @@
         "ps-directorysearcher-users"
       ],
       "prerequisites": [
-        "Import PowerView"
+        "import-powerview"
       ],
       "troubleshooting": {
         "Module not imported": "Import-Module .\\PowerView.ps1",
@@ -177,11 +171,10 @@
         "Check serviceprincipalname for Kerberoastable accounts"
       ],
       "alternatives": [
-        "net-user-domain-detail",
-        "Get-NetUser | ? {$_.samaccountname -eq '<USERNAME>'}"
+        "net-user-domain-detail"
       ],
       "prerequisites": [
-        "Import PowerView",
+        "import-powerview",
         "powerview-get-netuser"
       ],
       "troubleshooting": {
@@ -225,11 +218,10 @@
         "Identify service type from SPN (HTTP, MSSQLSvc, etc.)"
       ],
       "alternatives": [
-        "setspn-query-all",
-        "Get-NetUser | ? {$_.serviceprincipalname} | select samaccountname,serviceprincipalname"
+        "setspn-query-all"
       ],
       "prerequisites": [
-        "Import PowerView"
+        "import-powerview"
       ],
       "troubleshooting": {
         "krbtgt showing in results": "krbtgt has SPNs but is not Kerberoastable. Filter out: Get-NetUser -SPN | ? {$_.samaccountname -ne 'krbtgt'}"
@@ -274,7 +266,7 @@
         "ps-directorysearcher-groups"
       ],
       "prerequisites": [
-        "Import PowerView"
+        "import-powerview"
       ],
       "troubleshooting": {
         "Module not imported": "Import-Module .\\PowerView.ps1"
@@ -322,11 +314,10 @@
         "Enumerate each member: Get-NetUser -Identity <USERNAME>"
       ],
       "alternatives": [
-        "net-group-domain-members",
-        "Get-NetGroupMember -Identity \"<GROUPNAME>\""
+        "net-group-domain-members"
       ],
       "prerequisites": [
-        "Import PowerView",
+        "import-powerview",
         "powerview-get-netgroup"
       ],
       "troubleshooting": {
@@ -380,7 +371,7 @@
         "net-group-domain-members"
       ],
       "prerequisites": [
-        "Import PowerView",
+        "import-powerview",
         "powerview-get-netgroup"
       ],
       "troubleshooting": {
@@ -424,11 +415,10 @@
       ],
       "alternatives": [
         "ps-directorysearcher-computers",
-        "dsquery-computer",
-        "nmap -sn <SUBNET>"
+        "dsquery-computer"
       ],
       "prerequisites": [
-        "Import PowerView"
+        "import-powerview"
       ],
       "troubleshooting": {
         "Module not imported": "Import-Module .\\PowerView.ps1",
@@ -469,11 +459,10 @@
         "Check OU GPO links: Get-NetGPO"
       ],
       "alternatives": [
-        "Get-ADOrganizationalUnit -Filter *",
-        "dsquery ou"
+        "get-adorganizationalunit"
       ],
       "prerequisites": [
-        "Import PowerView"
+        "import-powerview"
       ],
       "troubleshooting": {
         "Module not imported": "Import-Module .\\PowerView.ps1"
@@ -513,12 +502,9 @@
         "Find vulnerable GPPs: Get-NetGPOGroup (looks for cpassword)",
         "Check GPO application: Get-NetOU | Get-NetGPOLink"
       ],
-      "alternatives": [
-        "Get-GPO -All",
-        "Search SYSVOL for GPP passwords"
-      ],
+      "alternatives": [],
       "prerequisites": [
-        "Import PowerView"
+        "import-powerview"
       ],
       "troubleshooting": {
         "Module not imported": "Import-Module .\\PowerView.ps1"
@@ -557,16 +543,15 @@
         "Target root domain for Enterprise Admins"
       ],
       "alternatives": [
-        "Get-ADForest",
-        "[System.DirectoryServices.ActiveDirectory.Forest]::GetCurrentForest()"
+        "get-adforest"
       ],
       "prerequisites": [
-        "Import PowerView"
+        "import-powerview"
       ],
       "troubleshooting": {
         "Module not imported": "Import-Module .\\PowerView.ps1"
       },
-      "notes": "AD forests contain one or more domains in a trust relationship. Single domain environments: forest = domain (this command adds little value). Multi-domain environments: forest reveals domain structure and trust relationships. RootDomainSid identifies the forest root domain. Enterprise Admins group exists only in root domain and has admin rights across ALL domains in forest. OSCP: Most exam environments are single-domain, making this less relevant than Get-NetDomain. Use in multi-domain scenarios to map attack paths across domain boundaries.",
+      "notes": "AD forests contain one or more domains in a trust relationship. Single domain environments: forest = domain (this command adds little value). Multi-domain environments: forest reveals domain structure and trust relationships. RootDomainSid identifies the forest root domain. Enterprise Admins group exists only in root domain and has admin rights across ALL domains in forest. OSCP: Most exam environments are single-domain, making this less relevant than Get-NetDomain. Use in multi-domain scenarios to map attack paths across domain boundaries.\n\nAlternative Techniques:\n- [system.directoryservices.activedirectory.forest]::getcurrentforest()",
       "oscp_relevance": "medium"
     },
     {
@@ -600,13 +585,8 @@
       "next_steps": [
         "Filter for interesting users: | ? {$_.description -match 'password|pwd|pw'}"
       ],
-      "alternatives": [
-        "net user /domain",
-        "LDAPSearch -LDAPQuery \"(objectClass=user)\""
-      ],
-      "prerequisites": [
-        "Import PowerView: . .\\PowerView.ps1"
-      ],
+      "alternatives": [],
+      "prerequisites": [],
       "troubleshooting": {
         "Get-NetUser not recognized": "Import PowerView first: . .\\PowerView.ps1 or Import-Module PowerView.psd1"
       },
@@ -642,11 +622,9 @@
       "next_steps": [
         "Find vulnerable OS: | ? {$_.operatingsystem -match 'Server 2008|XP|Vista'}"
       ],
-      "alternatives": [
-        "net group \"Domain Computers\" /domain"
-      ],
+      "alternatives": [],
       "prerequisites": [
-        "Import PowerView"
+        "import-powerview"
       ],
       "troubleshooting": {},
       "notes": "Target older OS versions (Server 2008, 2012) - likely unpatched. Check lastlogon to identify active machines.",
@@ -680,11 +658,9 @@
       "next_steps": [
         "Test admin access: Find-LocalAdminAccess"
       ],
-      "alternatives": [
-        "nmap -sn <SUBNET>"
-      ],
+      "alternatives": [],
       "prerequisites": [
-        "Import PowerView"
+        "import-powerview"
       ],
       "troubleshooting": {
         "No pingable hosts": "ICMP may be blocked. Try without -Ping flag to get all computers."
@@ -722,11 +698,9 @@
       "next_steps": [
         "Check each member's privileges on other systems"
       ],
-      "alternatives": [
-        "net group \"Domain Admins\" /domain"
-      ],
+      "alternatives": [],
       "prerequisites": [
-        "Import PowerView"
+        "import-powerview"
       ],
       "troubleshooting": {
         "Group not found": "Verify group name: Get-NetGroup | select name"

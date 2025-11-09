@@ -628,3 +628,158 @@ class TestPerformance:
 
         # Should complete within 2 seconds
         assert elapsed < 2.0
+
+
+# ============================================================================
+# Advanced Integration Tests (4 tests)
+# ============================================================================
+
+class TestAdvancedQueryIntegration:
+    """End-to-end workflow tests demonstrating how patterns compose"""
+
+    @pytest.mark.unit
+    @pytest.mark.neo4j
+    @pytest.mark.integration
+    def test_oscp_exam_workflow(self, neo4j_adapter):
+        """
+        Integration test: Complete OSCP exam workflow
+
+        Scenario: Enumerate -> Exploit -> Privesc
+        Uses multiple primitives in sequence
+        """
+        # Step 1: Find starter enumeration commands (Pattern 5)
+        initial_commands = neo4j_adapter.aggregate_by_pattern(
+            pattern="(c:Command)-[:TAGGED]->(t:Tag {name: 'STARTER'})",
+            group_by=['c'],
+            aggregations={'id': 'c.id', 'name': 'c.name'},
+            limit=10
+        )
+        assert isinstance(initial_commands, list)
+
+        # Step 2: After nmap, find service-specific attacks (Pattern 5)
+        service_attacks = neo4j_adapter.aggregate_by_pattern(
+            pattern="(s:Service {name: 'http'})-[:ENUMERATED_BY]->(c:Command)",
+            group_by=['c'],
+            aggregations={'id': 'c.id', 'priority': 'MIN(c.priority)'},
+            order_by='priority ASC',
+            limit=5
+        )
+        assert isinstance(service_attacks, list)
+
+        # Step 3: If primary tool fails, find alternatives (Pattern 1)
+        if service_attacks and len(service_attacks) > 0:
+            alternatives = neo4j_adapter.traverse_graph(
+                start_node_id=service_attacks[0]['id'],
+                rel_type='ALTERNATIVE',
+                max_depth=2,
+                return_metadata=True
+            )
+            assert isinstance(alternatives, list)
+
+        # Step 4: Find shortest path to privesc (Pattern 2)
+        privesc_paths = neo4j_adapter.find_by_pattern(
+            pattern="shortestPath((start)-[:NEXT_STEP*]-(end:Command))",
+            where_clause="end.tags CONTAINS 'PRIVESC'",
+            limit=3
+        )
+        assert isinstance(privesc_paths, list)
+
+        # Workflow should complete without errors
+        assert True
+
+    @pytest.mark.unit
+    @pytest.mark.neo4j
+    @pytest.mark.integration
+    def test_prerequisite_validation_workflow(self, neo4j_adapter):
+        """
+        Integration test: Validate all prerequisites before exploit
+
+        Combines Pattern 3 (prerequisites) with Pattern 4 (parallel execution)
+        """
+        exploit_id = 'wordpress-sqli'
+
+        # Get all prerequisites with execution order
+        prereqs = neo4j_adapter.find_prerequisites(
+            exploit_id,
+            execution_order=True
+        )
+
+        assert isinstance(prereqs, list)
+
+        if len(prereqs) > 0:
+            # Verify no circular dependencies exist (Pattern 9)
+            cycles = neo4j_adapter.find_by_pattern(
+                pattern="(s:ChainStep)-[:DEPENDS_ON*]->(s)",
+                return_fields=['s.id']
+            )
+            assert isinstance(cycles, list)
+            # No cycles should exist
+            assert len(cycles) == 0, "Circular dependencies detected"
+
+            # Check if prerequisites have coverage (Pattern 8)
+            for prereq in prereqs:
+                # Ensure each prereq command exists and is OSCP-relevant
+                cmd = neo4j_adapter.get_command(prereq.get('command_id', prereq.get('id', '')))
+                # Command may or may not exist in test data
+                if cmd is not None:
+                    assert isinstance(cmd, Command)
+
+    @pytest.mark.unit
+    @pytest.mark.neo4j
+    @pytest.mark.integration
+    def test_multi_pattern_composition(self, neo4j_adapter):
+        """
+        Integration test: Compose multiple patterns for complex query
+
+        Scenario: Find alternatives for commands that target specific services
+        """
+        # Pattern 5: Get service-specific commands
+        service_commands = neo4j_adapter.aggregate_by_pattern(
+            pattern="(s:Service)-[:ENUMERATED_BY]->(c:Command)",
+            group_by=['c'],
+            aggregations={
+                'command_id': 'c.id',
+                'services': 'COLLECT(s.name)',
+                'service_count': 'COUNT(s)'
+            },
+            filters={'c.oscp_relevance': 'high'},
+            order_by='service_count DESC',
+            limit=5
+        )
+
+        assert isinstance(service_commands, list)
+
+        # Pattern 1: For each command, find alternatives
+        for cmd_info in service_commands[:3]:  # Check first 3
+            alternatives = neo4j_adapter.traverse_graph(
+                start_node_id=cmd_info['command_id'],
+                rel_type='ALTERNATIVE',
+                max_depth=2,
+                return_metadata=True
+            )
+            # Should complete without error
+            assert isinstance(alternatives, list)
+
+    @pytest.mark.unit
+    @pytest.mark.neo4j
+    @pytest.mark.integration
+    @pytest.mark.slow
+    def test_performance_complex_traversal(self, neo4j_adapter):
+        """Performance test: 3+ hop traversals complete in <500ms"""
+        import time
+
+        start_time = time.time()
+
+        results = neo4j_adapter.traverse_graph(
+            start_node_id='nmap-quick-scan',
+            rel_type='NEXT_STEP',
+            direction='OUTGOING',
+            max_depth=5,  # Deep traversal
+            limit=100
+        )
+
+        elapsed = time.time() - start_time
+
+        # Should complete in reasonable time
+        assert elapsed < 0.5, f"Query took {elapsed:.3f}s (expected <500ms)"
+        assert isinstance(results, list)

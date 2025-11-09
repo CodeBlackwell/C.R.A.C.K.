@@ -163,7 +163,7 @@
       "name": "Verify Root Access",
       "objective": "Confirm effective UID is 0 and full root privileges obtained",
       "description": "Run whoami and id commands to verify root access. Check if you can read /etc/shadow or /root/ directory.",
-      "command_ref": "verify-root-access",
+      "command_ref": "verify-root-access-suid",
       "dependencies": [
         "exploit-suid"
       ],

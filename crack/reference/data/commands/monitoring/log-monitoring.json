@@ -103,9 +103,7 @@
         "Monitor sudo usage: tail -f /var/log/auth.log | grep 'sudo.*COMMAND'",
         "Track user activity: tail -f /var/log/auth.log | grep <USERNAME>"
       ],
-      "alternatives": [
-        "journalctl -f | grep <PATTERN>"
-      ],
+      "alternatives": [],
       "notes": "--line-buffered is REQUIRED or grep will buffer output and display will be delayed. OSCP defense patterns: 'Failed password' (brute force), 'Invalid user' (enumeration), 'Accepted publickey' (successful login), 'sudo.*COMMAND' (privilege usage). Time estimate: runs continuously."
     },
     {
@@ -156,9 +154,7 @@
         "Watch application logs together",
         "Use multitail for better multi-log display (if installed)"
       ],
-      "alternatives": [
-        "multitail <FILE1> <FILE2> (if installed)"
-      ],
+      "alternatives": [],
       "notes": "File headers show which file each line comes from: ==> /var/log/syslog <==. Useful for correlating events across logs. Time estimate: runs continuously."
     },
     {
@@ -199,7 +195,7 @@
         "Combine filters: journalctl -f -u ssh -p warning"
       ],
       "alternatives": [
-        "tail-follow-log /var/log/syslog"
+        "tail-follow-log"
       ],
       "notes": "systemd journal is unified log system on modern Linux. Combines all system and service logs. OSCP tip: Great for monitoring service failures, authentication attempts, and system events. Time estimate: runs continuously. For systems without systemd: fall back to tail -f /var/log/syslog"
     },
@@ -247,9 +243,7 @@
         "Monitor database: journalctl -u postgresql -f",
         "Add priority filter: journalctl -u <SERVICE> -f -p err"
       ],
-      "alternatives": [
-        "tail -f /var/log/<SERVICE>.log (if service has dedicated log)"
-      ],
+      "alternatives": [],
       "notes": "Service-specific monitoring helps troubleshoot issues. Common services: ssh, apache2, nginx, mysql, postgresql, cron. Can monitor multiple: journalctl -u ssh -u apache2 -f. Time estimate: runs continuously."
     },
     {
@@ -295,9 +289,7 @@
         "Combine with follow: journalctl -f -p err",
         "Combine with service: journalctl -u ssh -p warning"
       ],
-      "alternatives": [
-        "grep for severity in syslog files"
-      ],
+      "alternatives": [],
       "notes": "Priority levels (lowest to highest): 0=emerg, 1=alert, 2=crit, 3=err, 4=warning, 5=notice, 6=info, 7=debug. -p err shows errors, critical, alert, and emergency. For errors only (not above): journalctl PRIORITY=3. Time estimate: 1-5 seconds."
     },
     {
@@ -344,9 +336,7 @@
         "Today: journalctl --since today",
         "Yesterday: journalctl --since yesterday --until today"
       ],
-      "alternatives": [
-        "grep time range in syslog files (manual)"
-      ],
+      "alternatives": [],
       "notes": "Time formats: 'YYYY-MM-DD HH:MM:SS', 'yesterday', 'today', '1 hour ago', '30 minutes ago', '2 days ago'. Supports natural language. For recent events: journalctl --since \"5 minutes ago\". Time estimate: 1-10 seconds."
     },
     {
@@ -384,9 +374,7 @@
         "Check USB devices: dmesg | grep -i usb",
         "Check disk errors: dmesg | grep -i \"I/O error\""
       ],
-      "alternatives": [
-        "journalctl -k (kernel messages via journald)"
-      ],
+      "alternatives": [],
       "notes": "Kernel ring buffer shows hardware events, driver loading, errors. Useful for hardware troubleshooting and detecting inserted USB devices. Output can be large - pipe to less: dmesg | less. Time estimate: 1-2 seconds."
     },
     {
@@ -426,10 +414,7 @@
         "Check for out-of-memory events",
         "Detect network interface changes"
       ],
-      "alternatives": [
-        "journalctl -kf (kernel messages via journald)",
-        "watch -n 1 dmesg | tail -20"
-      ],
+      "alternatives": [],
       "notes": "-w flag requires dmesg from util-linux 2.21+ (2012+). Older systems: use watch -n 1 'dmesg | tail -20'. Useful for detecting hardware insertion (USB drives). Time estimate: runs continuously."
     },
     {
@@ -470,7 +455,6 @@
         "Check for username enumeration: grep \"Invalid user\" /var/log/auth.log"
       ],
       "alternatives": [
-        "journalctl -u ssh | grep -i failed",
         "lastb-failed-logins"
       ],
       "notes": "CRITICAL for OSCP defense. Patterns: 'Failed password for <USER>' (wrong password), 'Invalid user <USER>' (enumeration), 'Failed publickey for <USER>' (SSH key failed). Multiple failures from same IP = brute force attack. Time estimate: 1-3 seconds. Log location varies: /var/log/auth.log (Debian/Ubuntu), /var/log/secure (RHEL/CentOS)."
@@ -513,9 +497,7 @@
         "Find specific command: grep \"sudo.*COMMAND=/usr/bin/bash\" /var/log/auth.log",
         "Check for sudo failures: grep \"sudo.*incorrect password\" /var/log/auth.log"
       ],
-      "alternatives": [
-        "journalctl | grep sudo.*COMMAND"
-      ],
+      "alternatives": [],
       "notes": "CRITICAL for defense auditing. Each sudo execution is logged with: timestamp, user, command, working directory. OSCP tip: Look for suspicious commands: bash, sh, vi, less, find, python (all can spawn shells). Time estimate: 2-5 seconds depending on log size."
     },
     {
@@ -558,8 +540,7 @@
         "Clear btmp after review: sudo truncate -s 0 /var/log/btmp"
       ],
       "alternatives": [
-        "grep-auth-failed",
-        "journalctl | grep 'Failed password'"
+        "grep-auth-failed"
       ],
       "notes": "Reads /var/log/btmp (bad login log). MUST run as root. OSCP defense tip: Multiple failures = brute force. Look for: (1) Same IP, multiple users (enumeration), (2) Same user, many attempts (password guessing), (3) Many IPs, same user (distributed attack). Time estimate: 1-5 seconds depending on attack history."
     },
@@ -601,7 +582,7 @@
         "Check service failures: journalctl -b | grep -i failed"
       ],
       "alternatives": [
-        "dmesg-kernel-messages (kernel only)"
+        "dmesg-kernel-messages"
       ],
       "notes": "Shows everything from current boot: kernel, systemd, services. Previous boot: -b -1, boot before that: -b -2, etc. List boots: journalctl --list-boots. Time estimate: 2-10 seconds depending on boot log size."
     }

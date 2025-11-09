@@ -5,7 +5,7 @@
     {
       "id": "vba-shellcode-runner-basic",
       "name": "VBA Shellcode Runner (Basic)",
-      "description": "Basic VBA macro for executing shellcode in memory. Uses VirtualAlloc → RtlMoveMemory → CreateThread pattern. Foundation for Office-based payloads.",
+      "description": "Basic VBA macro for executing shellcode in memory. Uses VirtualAlloc \u2192 RtlMoveMemory \u2192 CreateThread pattern. Foundation for Office-based payloads.",
       "category": "vba-evasion",
       "tags": [
         "anti-virus",
@@ -81,7 +81,7 @@
     {
       "id": "vba-wmi-dechain",
       "name": "VBA WMI Process Dechaining",
-      "description": "Execute payload via WMI to break parent-child process chain. Office doc → WMI → powershell breaks typical macro detection. Payload runs outside Office sandbox.",
+      "description": "Execute payload via WMI to break parent-child process chain. Office doc \u2192 WMI \u2192 powershell breaks typical macro detection. Payload runs outside Office sandbox.",
       "category": "vba-evasion",
       "tags": [
         "anti-virus",
@@ -169,9 +169,7 @@
           "required": true
         }
       ],
-      "prerequisites": [
-        "# Document must be .doc (legacy format), not .docx\n# VBA macro must be functional before stomping\n# Test macro executes before and after stomping"
-      ],
+      "prerequisites": [],
       "notes": "Syntax: Use EvilClippy tool or manual hex editing Advanced technique, requires EvilClippy tool. Extremely effective against static analysis and sandboxes. Only works on .doc (not .docx). Test macro BEFORE stomping - can't debug after. Save original. Practice on lab before exam. Time estimate: 15 minutes (with EvilClippy) References: docs/av-evasion/vba-evasion.md#vba-stomping, https://github.com/outflanknl/EvilClippy, PEN-300 Chapter 6.7.2 Manual alternative: Use OfficeMalScanner, olevba, or manual p-code analysis/manipulation",
       "success_indicators": [
         "Stomped document opens normally, macro executes. VBA editor shows empty/garbage code. Static analysis tools fail to extract meaningful source."

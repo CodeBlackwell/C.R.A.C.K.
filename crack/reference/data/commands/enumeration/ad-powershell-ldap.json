@@ -38,16 +38,14 @@
         "Extract PDC from PdcRoleOwner property"
       ],
       "alternatives": [
-        "Get-NetDomain",
-        "$env:USERDNSDOMAIN",
-        "systeminfo | findstr /B /C:\"Domain\""
+        "get-netdomain"
       ],
       "prerequisites": [],
       "troubleshooting": {
         "Cannot find type": "PowerShell version too old. Use PowerShell 3.0+. Check version: $PSVersionTable",
         "Access is denied": "Not logged in with domain account. Verify: whoami /fqdn"
       },
-      "notes": "Uses .NET System.DirectoryServices.ActiveDirectory namespace - available in PowerShell by default without imports. Returns domain object with critical properties: PdcRoleOwner (primary DC for enumeration), DomainControllers (all DCs in domain), Forest (multi-domain environments), Name (domain DNS name). OSCP: This is exam-safe - no PowerView or special tools required, works on any domain-joined Windows machine with PowerShell.",
+      "notes": "Uses .NET System.DirectoryServices.ActiveDirectory namespace - available in PowerShell by default without imports. Returns domain object with critical properties: PdcRoleOwner (primary DC for enumeration), DomainControllers (all DCs in domain), Forest (multi-domain environments), Name (domain DNS name). OSCP: This is exam-safe - no PowerView or special tools required, works on any domain-joined Windows machine with PowerShell.\n\nAlternative Techniques:\n- $env:userdnsdomain",
       "oscp_relevance": "high"
     },
     {
@@ -83,9 +81,7 @@
         "Store in variable: $PDC = [System.DirectoryServices.ActiveDirectory.Domain]::GetCurrentDomain().PdcRoleOwner.Name"
       ],
       "alternatives": [
-        "Get-NetDomainController",
-        "nltest /dclist:<DOMAIN>",
-        "nslookup -type=SRV _ldap._tcp.dc._msdcs.<DOMAIN>"
+        "net-domain-controllers"
       ],
       "prerequisites": [
         "ps-get-current-domain"
@@ -128,10 +124,7 @@
         "Store in variable: $DN = ([adsi]'').distinguishedName",
         "Use in LDAP path: LDAP://<PDC>/$DN"
       ],
-      "alternatives": [
-        "$env:USERDNSDOMAIN | ForEach-Object { 'DC=' + ($_ -replace '\\.',',DC=') }",
-        "Get-ADDomain | select DistinguishedName"
-      ],
+      "alternatives": [],
       "prerequisites": [],
       "troubleshooting": {
         "Unable to contact the server": "Not logged in to domain or DC unreachable. Verify: whoami /fqdn"
@@ -168,9 +161,7 @@
         "Use in DirectoryEntry: New-Object System.DirectoryServices.DirectoryEntry($LDAP)",
         "Use in DirectorySearcher queries"
       ],
-      "alternatives": [
-        "Hardcode if known: $LDAP = 'LDAP://DC1.corp.com/DC=corp,DC=com'"
-      ],
+      "alternatives": [],
       "prerequisites": [
         "ps-get-pdc",
         "ps-get-distinguished-name"
@@ -221,8 +212,7 @@
         "Extract specific users: $dirsearcher.filter=\"name=administrator\""
       ],
       "alternatives": [
-        "Get-NetUser",
-        "net user /domain"
+        "get-netuser"
       ],
       "prerequisites": [
         "ps-build-ldap-path"
@@ -272,8 +262,7 @@
         "Enumerate nested groups recursively"
       ],
       "alternatives": [
-        "Get-NetGroup",
-        "net group /domain"
+        "get-netgroup"
       ],
       "prerequisites": [
         "ps-build-ldap-path"
@@ -324,9 +313,8 @@
         "Ping reachable hosts: foreach($computer in $result){Test-Connection -ComputerName $computer.properties.dnshostname -Count 1 -Quiet}"
       ],
       "alternatives": [
-        "Get-NetComputer",
-        "dsquery computer",
-        "nmap -sn <SUBNET>"
+        "get-netcomputer",
+        "dsquery-computer"
       ],
       "prerequisites": [
         "ps-build-ldap-path"
@@ -374,10 +362,7 @@
         "Filter users: LDAPSearch -LDAPQuery \"(&(objectCategory=user)(adminCount=1))\"",
         "Filter groups: LDAPSearch -LDAPQuery \"(objectCategory=group)\" | select -ExpandProperty Properties | select cn,member"
       ],
-      "alternatives": [
-        "Save as script and dot-source: . .\\LDAPSearch.ps1",
-        "Add to PowerShell profile for persistence"
-      ],
+      "alternatives": [],
       "prerequisites": [
         "ps-build-ldap-path",
         "ps-directorysearcher-users"
@@ -422,8 +407,7 @@
         "Filter results: LDAPSearch -LDAPQuery \"(&(objectClass=user)(!(objectClass=computer)))\""
       ],
       "alternatives": [
-        "Get-NetUser",
-        "net user /domain"
+        "get-netuser"
       ],
       "prerequisites": [
         "ps-ldapsearch-function"
@@ -464,7 +448,7 @@
         "Check OS versions: | select -ExpandProperty Properties | select dnshostname,operatingsystem"
       ],
       "alternatives": [
-        "Get-NetComputer"
+        "get-netcomputer"
       ],
       "prerequisites": [
         "ps-ldapsearch-function"
@@ -502,7 +486,7 @@
         "Get group members: $group.Properties.member"
       ],
       "alternatives": [
-        "Get-NetGroup"
+        "get-netgroup"
       ],
       "prerequisites": [
         "ps-ldapsearch-function"
@@ -542,8 +526,7 @@
         "Request TGS tickets for discovered accounts"
       ],
       "alternatives": [
-        "Get-NetUser -SPN",
-        "setspn -T <DOMAIN> -Q */*"
+        "get-netuser"
       ],
       "prerequisites": [
         "ps-ldapsearch-function"
@@ -582,9 +565,7 @@
       "next_steps": [
         "Check group membership for discovered accounts"
       ],
-      "alternatives": [
-        "Get-NetUser -AdminCount"
-      ],
+      "alternatives": [],
       "prerequisites": [
         "ps-ldapsearch-function"
       ],

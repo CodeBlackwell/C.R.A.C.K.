@@ -46,8 +46,7 @@
         "Identify services running as root: systemctl status <SERVICE>"
       ],
       "alternatives": [
-        "service --status-all",
-        "systemctl list-units --type=service --all"
+        "service-status-all-sysv"
       ],
       "notes": "systemd is the init system for most modern Linux distributions (RHEL 7+, Ubuntu 16.04+, Debian 8+). OSCP tip: Focus on custom services (not part of base OS) - often have misconfigurations. Time estimate: 2 seconds. To see ALL services (including failed): systemctl list-units --type=service --all"
     },
@@ -90,9 +89,7 @@
         "Disable suspicious services: sudo systemctl disable <SERVICE>",
         "Check service executable permissions"
       ],
-      "alternatives": [
-        "chkconfig --list (older systems)"
-      ],
+      "alternatives": [],
       "notes": "Enabled services persist across reboots - key for persistence/backdoor detection. OSCP tip: Custom services in /etc/systemd/system are often exploit targets. Time estimate: 3 seconds."
     },
     {
@@ -134,9 +131,7 @@
         "Check if service binary is writable: ls -la <EXEC_PATH>",
         "Restart service to trigger payload: sudo systemctl restart <SERVICE>"
       ],
-      "alternatives": [
-        "find /etc/systemd -writable -type f 2>/dev/null"
-      ],
+      "alternatives": [],
       "notes": "CRITICAL for OSCP privilege escalation. Writable service files = instant root if service runs as root. Also check /lib/systemd/system/ (system services). Time estimate: 2 seconds. Exploit pattern: (1) Find writable .service file, (2) Modify ExecStart=/path/to/reverse_shell, (3) sudo systemctl restart <SERVICE>."
     },
     {
@@ -175,8 +170,7 @@
         "Look for writable init scripts for privilege escalation"
       ],
       "alternatives": [
-        "systemctl-running-services",
-        "ls /etc/init.d/"
+        "systemctl-running-services"
       ],
       "notes": "SysV init used on older Linux (pre-systemd). Still found in OSCP labs. [+] = running, [-] = stopped, [?] = status unknown. Time estimate: 3 seconds. Service scripts in /etc/init.d/ - check permissions for privesc."
     },
@@ -214,9 +208,7 @@
         "Disable malicious service: sudo chkconfig <SERVICE> off",
         "Check service script permissions for privesc"
       ],
-      "alternatives": [
-        "systemctl list-unit-files (systemd equivalent)"
-      ],
+      "alternatives": [],
       "notes": "RHEL/CentOS specific. Runlevels: 0=halt, 1=single-user, 3=multi-user, 5=graphical, 6=reboot. Time estimate: 2 seconds."
     },
     {
@@ -300,7 +292,7 @@
       ],
       "alternatives": [
         "win-wmic-service-full",
-        "Get-Service"
+        "get-service"
       ],
       "notes": "Space after '=' is REQUIRED: 'state= all' not 'state=all'. Shows stopped services which may have weak permissions or unquoted paths. Time estimate: 10 seconds."
     },
@@ -350,10 +342,9 @@
         "Modify service binary if writable: win-sc-config-binpath"
       ],
       "alternatives": [
-        "win-wmic-service-path",
-        "Get-WmiObject win32_service -Filter \"Name='<SERVICE>'\""
+        "win-wmic-service-path"
       ],
-      "notes": "CRITICAL for Windows privilege escalation. Check for: (1) Unquoted service paths with spaces, (2) Writable service binaries, (3) Services running as LocalSystem/SYSTEM. Time estimate: 1 second. Common privesc: Unquoted path 'C:\\Program Files\\My Service\\service.exe' → Place malicious 'C:\\Program.exe'."
+      "notes": "CRITICAL for Windows privilege escalation. Check for: (1) Unquoted service paths with spaces, (2) Writable service binaries, (3) Services running as LocalSystem/SYSTEM. Time estimate: 1 second. Common privesc: Unquoted path 'C:\\Program Files\\My Service\\service.exe' \u2192 Place malicious 'C:\\Program.exe'."
     },
     {
       "id": "win-wmic-service-full",
@@ -446,7 +437,7 @@
       ],
       "alternatives": [
         "win-sc-query-config",
-        "win-ps-unquoted-service-path"
+        "win-unquoted-service-paths"
       ],
       "notes": "CRITICAL Windows privesc technique. Unquoted path 'C:\\Program Files\\My App\\service.exe' allows placing 'C:\\Program.exe' or 'C:\\Program Files\\My.exe'. Time estimate: 5 seconds. Filter for unquoted: wmic service get Name,PathName | findstr /v /i \"C:\\Windows\" | findstr /i /v '\"'."
     },

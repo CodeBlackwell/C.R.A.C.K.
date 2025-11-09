@@ -139,7 +139,6 @@
         "Check plugin paths manually: curl <URL>/wp-content/plugins/<PLUGIN>/readme.txt"
       ],
       "alternatives": [
-        "wpscan --enumerate vp,vt (vulnerable only)",
         "wordpress-manual-version"
       ],
       "prerequisites": [
@@ -227,12 +226,10 @@
         "Search for sensitive data: Posts, Pages, Users, Settings"
       ],
       "alternatives": [
-        "hydra -l <USER> -P <WORDLIST> <URL> http-post-form '/wp-login.php:log=^USER^&pwd=^PASS^:F=Invalid'",
-        "burp intruder",
-        "wfuzz -z file,<WORDLIST> --hc 200 -d 'log=admin&pwd=FUZZ' <URL>/wp-login.php"
+        "burp-intruder"
       ],
       "prerequisites": [
-        "wpscan-enumerate-all (to discover usernames)"
+        "wpscan-enumerate-all"
       ],
       "troubleshooting": {
         "too_slow": "Reduce wordlist size: head -n 1000 /usr/share/wordlists/rockyou.txt > small.txt OR increase threads: --max-threads 30",
@@ -298,10 +295,7 @@
         "searchsploit xmlrpc",
         "Check for known CVEs: searchsploit wordpress xmlrpc"
       ],
-      "alternatives": [
-        "wpscan --url <URL> --enumerate u --passwords <WORDLIST> (uses xmlrpc if available)",
-        "burp suite XML-RPC plugin"
-      ],
+      "alternatives": [],
       "prerequisites": [],
       "troubleshooting": {
         "xmlrpc_disabled": "XML-RPC disabled (404 or error). This is good security but blocks this attack vector. Try other WordPress attacks",
@@ -365,8 +359,6 @@
         "Check plugin versions: curl -s <URL>/wp-content/plugins/<PLUGIN>/readme.txt"
       ],
       "alternatives": [
-        "curl -s <URL>/readme.html",
-        "curl -s <URL>/feed/ | grep generator",
         "whatweb-enum",
         "wpscan-enumerate-all"
       ],

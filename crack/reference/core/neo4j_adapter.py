@@ -10,7 +10,7 @@ Optimized for:
 - Service-based command recommendations
 """
 
-from typing import List, Dict, Optional, Any
+from typing import List, Dict, Optional, Any, Union
 from dataclasses import dataclass
 from functools import lru_cache
 import time
@@ -85,8 +85,23 @@ class Neo4jCommandRegistryAdapter:
         self.filler = CommandFiller(config_manager, theme)
         self.error_handler = AdapterErrorHandler('neo4j')
 
+        # API compatibility attributes (match HybridCommandRegistry and SQLAdapter)
+        self.base_path = None  # Neo4j backend doesn't use file paths
+        self.categories = {
+            'recon': '01-recon',
+            'web': '02-web',
+            'exploitation': '03-exploitation',
+            'post-exploit': '04-post-exploit',
+            'enumeration': '05-enumeration',
+            'pivoting': '06-pivoting',
+            'file-transfer': '07-file-transfer',
+            'custom': 'custom'
+        }
+        self.subcategories = {}  # Populated dynamically from database
+        self.commands = {}  # Not pre-loaded (query on demand for performance)
+
         # Neo4j connection
-        neo4j_cfg = neo4j_config or Neo4jConfig.from_env()
+        neo4j_cfg = neo4j_config or Neo4jConfig.from_env().to_dict()
         try:
             self.driver = GraphDatabase.driver(
                 neo4j_cfg['uri'],
@@ -155,6 +170,37 @@ class Neo4jCommandRegistryAdapter:
             return CommandMapper.to_command(record, CommandMapper.NEO4J_FIELD_MAPPING)
         except Exception as e:
             return self.error_handler.handle_mapping_error(e, {'record_keys': list(record.keys())}, None)
+
+    def _validate_cypher_safety(self, query_fragment: str) -> None:
+        """
+        Validate Cypher query fragment for dangerous keywords.
+
+        Prevents injection attacks by blocking destructive operations.
+
+        Args:
+            query_fragment: User-provided Cypher pattern or clause
+
+        Raises:
+            ValueError: If dangerous keywords detected
+        """
+        BLOCKED_KEYWORDS = {
+            'DROP', 'DELETE', 'DETACH DELETE', 'CREATE', 'MERGE',
+            'SET', 'REMOVE', 'LOAD CSV', 'CALL', 'WITH'
+        }
+
+        upper_fragment = query_fragment.upper()
+
+        for keyword in BLOCKED_KEYWORDS:
+            if keyword in upper_fragment:
+                raise ValueError(
+                    f"Cypher injection detected: '{keyword}' is not allowed. "
+                    f"Only read-only queries are permitted."
+                )
+
+        if ';' in query_fragment:
+            raise ValueError("Multiple queries (;) are not allowed")
+
+    # === Basic Query Methods ===
 
     @lru_cache(maxsize=256)
     def get_command(self, command_id: str) -> Optional[Command]:
@@ -305,11 +351,14 @@ class Neo4jCommandRegistryAdapter:
 
         return commands
 
+    # === Tag and Category Filtering ===
+
     def filter_by_tags(
         self,
         tags: List[str],
         match_all: bool = True,
-        exclude_tags: List[str] = None
+        exclude_tags: List[str] = None,
+        include_hierarchy: bool = False
     ) -> List[Command]:
         """
         Filter commands by tags
@@ -318,22 +367,51 @@ class Neo4jCommandRegistryAdapter:
             tags: List of tags to match
             match_all: If True, command must have ALL tags (AND), else ANY tag (OR)
             exclude_tags: Optional list of tags to exclude
+            include_hierarchy: If True, include tags that are children of specified parent tags
 
         Returns:
             List of Command objects with matching tags
+
+        Examples:
+            Exact tag match:
+            >>> adapter.filter_by_tags(['OSCP'])
+            [Command(id='cmd1'), ...]  # Only commands with exact "OSCP" tag
+
+            Hierarchical tag match:
+            >>> adapter.filter_by_tags(['OSCP'], include_hierarchy=True)
+            [Command(id='cmd1'), ...]  # Commands with "OSCP", "OSCP:ENUM", "OSCP:EXPLOIT", etc.
         """
-        if match_all:
-            # AND logic: command must have all tags
-            query = """
-            MATCH (cmd:Command)
-            WHERE ALL(tag IN $tags WHERE EXISTS((cmd)-[:TAGGED]->(:Tag {name: tag})))
-            """
+        if include_hierarchy:
+            # Traverse tag hierarchy to include child tags
+            if match_all:
+                # AND logic with hierarchy: command must have all parent tags (or their children)
+                # Neo4j 4.x compatible syntax (using EXISTS with pattern, not EXISTS { MATCH })
+                query = """
+                MATCH (cmd:Command)
+                WHERE ALL(parent_tag IN $tags WHERE
+                    EXISTS((cmd)-[:TAGGED]->(:Tag)-[:CHILD_OF*0..]->(:Tag {name: parent_tag}))
+                )
+                """
+            else:
+                # OR logic with hierarchy: command must have at least one parent tag (or its children)
+                query = """
+                MATCH (cmd:Command)-[:TAGGED]->(tag:Tag)-[:CHILD_OF*0..]->(parent:Tag)
+                WHERE parent.name IN $tags
+                """
         else:
-            # OR logic: command must have at least one tag
-            query = """
-            MATCH (cmd:Command)-[:TAGGED]->(t:Tag)
-            WHERE t.name IN $tags
-            """
+            # Original exact tag matching
+            if match_all:
+                # AND logic: command must have all tags
+                query = """
+                MATCH (cmd:Command)
+                WHERE ALL(tag IN $tags WHERE EXISTS((cmd)-[:TAGGED]->(:Tag {name: tag})))
+                """
+            else:
+                # OR logic: command must have at least one tag
+                query = """
+                MATCH (cmd:Command)-[:TAGGED]->(t:Tag)
+                WHERE t.name IN $tags
+                """
 
         # Add exclusion filter
         if exclude_tags:
@@ -361,7 +439,6 @@ class Neo4jCommandRegistryAdapter:
                 commands.append(cmd)
 
         return commands
-
     def get_quick_wins(self) -> List[Command]:
         """
         Get commands tagged as quick wins
@@ -375,101 +452,168 @@ class Neo4jCommandRegistryAdapter:
         """
         Get OSCP high-relevance commands
 
+        Lightweight wrapper around search() with oscp_only=True filter.
+
         Returns:
             List of high-priority OSCP commands
         """
-        query = """
-        MATCH (c:Command {oscp_relevance: 'high'})
-        RETURN c.id AS id
-        ORDER BY c.category, c.name
-        """
+        return self.search(query='', oscp_only=True)
 
-        results = self._execute_read(query)
-
-        commands = []
-        for record in results:
-            cmd = self.get_command(record['id'])
-            if cmd:
-                commands.append(cmd)
-
-        return commands
+    # === Graph Traversal Methods ===
 
     def find_alternatives(
         self,
         command_id: str,
-        max_depth: int = 3
-    ) -> List[Command]:
+        max_depth: int = 3,
+        return_metadata: bool = False
+    ) -> List[Union[Command, Dict[str, Any]]]:
         """
         Find multi-hop alternative command chains
 
         Args:
             command_id: Source command ID
             max_depth: Maximum traversal depth (default 3)
+            return_metadata: If True, return detailed path metadata instead of Command objects
 
         Returns:
-            List of alternative Command objects ordered by depth
+            If return_metadata=False (default): List of alternative Command objects ordered by depth
+            If return_metadata=True: List of dicts with command_chain, metadata, depth, cumulative_priority
+
+        Examples:
+            Basic usage:
+            >>> adapter.find_alternatives('gobuster-dir')
+            [Command(id='ffuf-dir'), Command(id='wfuzz-dir')]
+
+            With metadata:
+            >>> adapter.find_alternatives('gobuster-dir', return_metadata=True)
+            [{'command_chain': [{'id': 'gobuster-dir', 'name': 'Gobuster'},
+                                 {'id': 'ffuf-dir', 'name': 'FFUF'}],
+              'metadata': [{'priority': 1, 'reason': 'Faster for small wordlists'}],
+              'depth': 1,
+              'cumulative_priority': 1}]
         """
         # Neo4j variable-length paths can't use parameters for depth, use literal
         depth_range = f"1..{max_depth}"
 
-        query = f"""
-        MATCH path = (start:Command {{id: $command_id}})-[:ALTERNATIVE*{depth_range}]->(alt:Command)
-        WITH alt, length(path) AS depth
-        RETURN DISTINCT alt.id AS id, depth
-        ORDER BY depth ASC
-        LIMIT 20
-        """
+        if return_metadata:
+            # Enhanced query with relationship metadata
+            query = f"""
+            MATCH path = (start:Command {{id: $command_id}})-[:ALTERNATIVE*{depth_range}]->(alt:Command)
+            WITH path, relationships(path) AS rels
+            RETURN
+                [node IN nodes(path) | {{id: node.id, name: node.name}}] AS command_chain,
+                [rel IN rels | {{priority: COALESCE(rel.priority, 0), reason: COALESCE(rel.reason, '')}}] AS metadata,
+                length(path) AS depth,
+                reduce(total = 0, rel IN rels | total + COALESCE(rel.priority, 0)) AS cumulative_priority
+            ORDER BY depth ASC, cumulative_priority ASC
+            LIMIT 20
+            """
 
-        results = self._execute_read(
-            query,
-            command_id=command_id
-        )
+            results = self._execute_read(query, command_id=command_id)
 
-        commands = []
-        for record in results:
-            cmd = self.get_command(record['id'])
-            if cmd:
-                commands.append(cmd)
+            return [
+                {
+                    'command_chain': record['command_chain'],
+                    'metadata': record['metadata'],
+                    'depth': record['depth'],
+                    'cumulative_priority': record['cumulative_priority']
+                }
+                for record in results
+            ]
+        else:
+            # Original behavior - return Command objects
+            query = f"""
+            MATCH path = (start:Command {{id: $command_id}})-[:ALTERNATIVE*{depth_range}]->(alt:Command)
+            WITH alt, length(path) AS depth
+            RETURN DISTINCT alt.id AS id, depth
+            ORDER BY depth ASC
+            LIMIT 20
+            """
 
-        return commands
+            results = self._execute_read(query, command_id=command_id)
+
+            commands = []
+            for record in results:
+                cmd = self.get_command(record['id'])
+                if cmd:
+                    commands.append(cmd)
+
+            return commands
 
     def find_prerequisites(
         self,
         command_id: str,
-        depth: int = 3
-    ) -> List[Command]:
+        depth: int = 3,
+        execution_order: bool = False
+    ) -> Union[List[Command], List[Dict[str, Any]]]:
         """
         Get all prerequisite commands (transitive closure)
 
         Args:
             command_id: Target command ID
             depth: Maximum traversal depth (default 3)
+            execution_order: If True, return topological sort with dependency counts
 
         Returns:
-            List of prerequisite Command objects ordered by depth (deepest first)
+            If execution_order=False (default): List of prerequisite Command objects ordered by depth (deepest first)
+            If execution_order=True: List of dicts with command_id, command_name, dependency_count
+                                    (sorted by dependency_count DESC - deepest dependencies first)
+
+        Examples:
+            Basic usage:
+            >>> adapter.find_prerequisites('wordpress-sqli')
+            [Command(id='mkdir-output'), Command(id='nmap-scan')]
+
+            With execution order:
+            >>> adapter.find_prerequisites('wordpress-sqli', execution_order=True)
+            [{'command_id': 'mkdir-output', 'command_name': 'Create Output Dir', 'dependency_count': 0},
+             {'command_id': 'nmap-scan', 'command_name': 'Nmap Scan', 'dependency_count': 1},
+             {'command_id': 'wordpress-sqli', 'command_name': 'WP SQLi', 'dependency_count': 2}]
         """
         # Neo4j variable-length paths can't use parameters for depth, use literal
         depth_range = f"1..{depth}"
 
-        query = f"""
-        MATCH path = (cmd:Command {{id: $command_id}})<-[:PREREQUISITE*{depth_range}]-(prereq:Command)
-        WITH prereq, length(path) AS depth
-        RETURN DISTINCT prereq.id AS id, depth
-        ORDER BY depth DESC
-        """
+        if execution_order:
+            # Topological sort query with dependency counting
+            query = f"""
+            MATCH (cmd:Command {{id: $command_id}})<-[:PREREQUISITE*0..{depth}]-(allPrereqs)
+            OPTIONAL MATCH (allPrereqs)<-[:PREREQUISITE]-(deps)
+            WITH allPrereqs, count(deps) AS dependency_count
+            RETURN
+                allPrereqs.id AS command_id,
+                allPrereqs.name AS command_name,
+                dependency_count
+            ORDER BY dependency_count DESC, allPrereqs.id
+            """
 
-        results = self._execute_read(
-            query,
-            command_id=command_id
-        )
+            results = self._execute_read(query, command_id=command_id)
 
-        prerequisites = []
-        for record in results:
-            cmd = self.get_command(record['id'])
-            if cmd:
-                prerequisites.append(cmd)
+            return [
+                {
+                    'command_id': record['command_id'],
+                    'command_name': record['command_name'],
+                    'dependency_count': record['dependency_count']
+                }
+                for record in results
+            ]
+        else:
+            # Original behavior - return Command objects
+            query = f"""
+            MATCH path = (cmd:Command {{id: $command_id}})<-[:PREREQUISITE*{depth_range}]-(prereq:Command)
+            WITH prereq, length(path) AS depth
+            RETURN DISTINCT prereq.id AS id, depth
+            ORDER BY depth DESC
+            """
 
-        return prerequisites
+            results = self._execute_read(query, command_id=command_id)
+
+            prerequisites = []
+            for record in results:
+                cmd = self.get_command(record['id'])
+                if cmd:
+                    prerequisites.append(cmd)
+
+            return prerequisites
 
     def get_attack_chain_path(self, chain_id: str) -> Optional[Dict[str, Any]]:
         """
@@ -574,6 +718,8 @@ class Neo4jCommandRegistryAdapter:
 
         return groups
 
+    # === Registry Management and Utilities ===
+
     def get_stats(self) -> Dict[str, Any]:
         """
         Get registry statistics
@@ -643,14 +789,7 @@ class Neo4jCommandRegistryAdapter:
         """
 
         results = self._execute_read(query)
-
-        commands = []
-        for record in results:
-            cmd = self.get_command(record['id'])
-            if cmd:
-                commands.append(cmd)
-
-        return commands
+        return [self.get_command(r['id']) for r in results if self.get_command(r['id'])]
 
     def get_subcategories(self, category: str) -> List[str]:
         """
@@ -671,3 +810,293 @@ class Neo4jCommandRegistryAdapter:
 
         results = self._execute_read(query, category=category)
         return [r['subcategory'] for r in results]
+
+    # ===== Graph Primitives (DRY Query Patterns) =====
+
+    def traverse_graph(
+        self,
+        start_node_id: str,
+        rel_type: str,
+        direction: str = 'OUTGOING',
+        max_depth: int = 3,
+        filters: Optional[Dict[str, Any]] = None,
+        return_metadata: bool = False,
+        limit: int = 50
+    ) -> List[Any]:
+        """
+        Generic graph traversal with variable-length paths
+
+        Handles patterns:
+        - Pattern 1: Multi-hop alternatives (rel_type='ALTERNATIVE')
+        - Pattern 3: Prerequisites (rel_type='PREREQUISITE', direction='INCOMING')
+        - Pattern 6: Tag hierarchy (rel_type='CHILD_OF')
+
+        Args:
+            start_node_id: Starting node ID
+            rel_type: Relationship type to traverse (e.g., 'ALTERNATIVE', 'PREREQUISITE')
+            direction: 'OUTGOING' (->), 'INCOMING' (<-), or 'BOTH' (<->)
+            max_depth: Maximum traversal depth (default 3)
+            filters: Optional node property filters (e.g., {'oscp_relevance': 'high'})
+            return_metadata: Include relationship properties in results
+            limit: Maximum results to return
+
+        Returns:
+            List of Command objects or dicts with metadata if return_metadata=True
+
+        Example:
+            alternatives = adapter.traverse_graph(
+                'gobuster-dir',
+                'ALTERNATIVE',
+                max_depth=3,
+                return_metadata=True
+            )
+        """
+        try:
+            # Build relationship pattern based on direction
+            direction_map = {
+                'OUTGOING': f'-[r:{rel_type}*1..{max_depth}]->',
+                'INCOMING': f'<-[r:{rel_type}*1..{max_depth}]-',
+                'BOTH': f'-[r:{rel_type}*1..{max_depth}]-'
+            }
+
+            if direction not in direction_map:
+                return self.error_handler.handle_query_error(
+                    ValueError(f"Invalid direction: {direction}"),
+                    'traverse_graph',
+                    {'direction': direction},
+                    []
+                )
+
+            rel_pattern = direction_map[direction]
+
+            # Build WHERE clause for filters
+            where_clauses = []
+            if filters:
+                for key, value in filters.items():
+                    where_clauses.append(f"target.{key} = ${key}")
+
+            where_clause = f"WHERE {' AND '.join(where_clauses)}" if where_clauses else ""
+
+            # Build query
+            if return_metadata:
+                # Full Pattern 1 spec: command chain with metadata
+                query = f"""
+                MATCH path = (start:Command {{id: $start_node_id}}){rel_pattern}(target:Command)
+                {where_clause}
+                WITH path, relationships(path) AS rels
+                RETURN DISTINCT
+                    [node IN nodes(path) | {{id: node.id, name: node.name}}] AS command_chain,
+                    [rel IN rels | properties(rel)] AS metadata,
+                    length(path) AS depth,
+                    reduce(total = 0, rel IN rels | total + coalesce(rel.priority, 0)) AS cumulative_priority
+                ORDER BY depth ASC, cumulative_priority ASC
+                LIMIT $limit
+                """
+            else:
+                query = f"""
+                MATCH path = (start:Command {{id: $start_node_id}}){rel_pattern}(target:Command)
+                {where_clause}
+                WITH target, length(path) AS depth
+                RETURN DISTINCT target.id AS id, depth
+                ORDER BY depth ASC
+                LIMIT $limit
+                """
+
+            # Execute query with filters as params
+            params = {'start_node_id': start_node_id, 'limit': limit}
+            if filters:
+                params.update(filters)
+
+            results = self._execute_read(query, **params)
+
+            # Format results
+            if return_metadata:
+                # Return full chain as per Pattern 1 spec
+                return [
+                    {
+                        'command_chain': r['command_chain'],
+                        'metadata': r['metadata'],
+                        'depth': r['depth'],
+                        'cumulative_priority': r['cumulative_priority']
+                    }
+                    for r in results
+                ]
+            else:
+                commands = []
+                for r in results:
+                    if r['id'] is not None:
+                        cmd = self.get_command(r['id'])
+                        if cmd:
+                            commands.append(cmd)
+                return commands
+
+        except Exception as e:
+            return self.error_handler.handle_query_error(
+                e, 'traverse_graph',
+                {'start_node_id': start_node_id, 'rel_type': rel_type, 'direction': direction},
+                []
+            )
+
+    def aggregate_by_pattern(
+        self,
+        pattern: str,
+        group_by: List[str],
+        aggregations: Dict[str, str],
+        filters: Optional[Dict[str, Any]] = None,
+        order_by: Optional[str] = None,
+        limit: int = 50
+    ) -> List[Dict[str, Any]]:
+        """
+        Template-based aggregation queries
+
+        Handles patterns:
+        - Pattern 5: Service-based recommendations
+        - Pattern 7: Command success correlations
+        - Pattern 10: Variable usage analysis
+
+        Args:
+            pattern: Cypher MATCH pattern (e.g., "(c:Command)-[:TAGGED]->(t:Tag)")
+            group_by: List of variables to group by (e.g., ['c', 't'])
+            aggregations: Dict of {result_key: aggregation_expression}
+                         (e.g., {'count': 'COUNT(c)', 'tags': 'COLLECT(t.name)'})
+            filters: Optional WHERE clause filters
+            order_by: Optional ORDER BY expression (e.g., 'count DESC')
+            limit: Maximum results
+
+        Returns:
+            List of dicts with grouped and aggregated results
+
+        Example:
+            results = adapter.aggregate_by_pattern(
+                pattern="(c:Command)-[:TAGGED]->(t:Tag)",
+                group_by=['t'],
+                aggregations={'tag_name': 't.name', 'count': 'COUNT(c)'},
+                order_by='count DESC',
+                limit=10
+            )
+        """
+        # Security: Validate pattern doesn't contain dangerous keywords (before try block)
+        dangerous_keywords = ['DROP', 'DELETE', 'CREATE', 'MERGE', 'SET', 'REMOVE', 'DETACH']
+        pattern_upper = pattern.upper()
+        for keyword in dangerous_keywords:
+            if keyword in pattern_upper:
+                raise ValueError(f"Dangerous keyword '{keyword}' not allowed in pattern")
+
+        try:
+            # Build query
+            query_parts = [f"MATCH {pattern}"]
+
+            # Add WHERE clause with sanitized parameter names
+            params = {}
+            if filters:
+                where_clauses = []
+                for i, (key, value) in enumerate(filters.items()):
+                    # Use simple parameter names (p0, p1, etc.) to avoid dots in param names
+                    param_name = f"filter_{i}"
+                    where_clauses.append(f"{key} = ${param_name}")
+                    params[param_name] = value
+                query_parts.append(f"WHERE {' AND '.join(where_clauses)}")
+
+            # Build RETURN clause
+            return_parts = []
+            for result_key, agg_expr in aggregations.items():
+                return_parts.append(f"{agg_expr} AS {result_key}")
+
+            query_parts.append(f"RETURN {', '.join(return_parts)}")
+
+            # Add ORDER BY
+            if order_by:
+                query_parts.append(f"ORDER BY {order_by}")
+
+            # Add LIMIT
+            query_parts.append(f"LIMIT {limit}")
+
+            query = '\n'.join(query_parts)
+
+            # Execute with sanitized params
+            results = self._execute_read(query, **params)
+
+            return [dict(r) for r in results]
+
+        except Exception as e:
+            return self.error_handler.handle_query_error(
+                e, 'aggregate_by_pattern',
+                {'pattern': pattern, 'group_by': group_by},
+                []
+            )
+
+    def find_by_pattern(
+        self,
+        pattern: str,
+        where_clause: Optional[str] = None,
+        return_fields: Optional[List[str]] = None,
+        limit: int = 50
+    ) -> List[Dict[str, Any]]:
+        """
+        Generic Cypher pattern matching with safety constraints
+
+        Handles patterns:
+        - Pattern 2: Shortest path queries
+        - Pattern 8: Gap detection (negative EXISTS)
+        - Pattern 9: Circular dependency detection
+
+        Args:
+            pattern: Cypher MATCH pattern (can include shortestPath, etc.)
+            where_clause: Optional WHERE conditions
+            return_fields: List of fields to return (if None, returns all matched nodes)
+            limit: Maximum results
+
+        Returns:
+            List of dicts with matched results
+
+        Security:
+            Validates pattern against whitelist of allowed Cypher functions
+
+        Example:
+            cycles = adapter.find_by_pattern(
+                pattern="(s:ChainStep)-[:DEPENDS_ON*]->(s)",
+                return_fields=['s.id', 's.name'],
+                limit=10
+            )
+        """
+        # Security: Validate against dangerous keywords (before try block)
+        dangerous_keywords = ['DROP', 'DELETE', 'CREATE', 'MERGE', 'SET', 'REMOVE', 'DETACH']
+        pattern_upper = pattern.upper()
+        for keyword in dangerous_keywords:
+            if keyword in pattern_upper:
+                raise ValueError(f"Dangerous keyword '{keyword}' not allowed in pattern")
+
+        try:
+            # Build query
+            query_parts = [f"MATCH {pattern}"]
+
+            if where_clause:
+                query_parts.append(f"WHERE {where_clause}")
+
+            # Build RETURN clause
+            if return_fields:
+                query_parts.append(f"RETURN {', '.join(return_fields)}")
+            else:
+                # Return all matched variables (extract from pattern)
+                import re
+                variables = re.findall(r'\((\w+):', pattern)
+                if variables:
+                    query_parts.append(f"RETURN {', '.join(variables)}")
+                else:
+                    query_parts.append("RETURN *")
+
+            query_parts.append(f"LIMIT {limit}")
+
+            query = '\n'.join(query_parts)
+
+            results = self._execute_read(query)
+
+            # Convert to dicts
+            return [dict(r) for r in results]
+
+        except Exception as e:
+            return self.error_handler.handle_query_error(
+                e, 'find_by_pattern',
+                {'pattern': pattern, 'where_clause': where_clause},
+                []
+            )

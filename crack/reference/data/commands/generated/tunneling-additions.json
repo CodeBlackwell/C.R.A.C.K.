@@ -109,9 +109,7 @@
         "socks",
         "proxy"
       ],
-      "prerequisites": [
-        "chisel server --reverse --socks5 running on attacker"
-      ],
+      "prerequisites": [],
       "next_steps": [
         "Configure proxychains",
         "Scan internal network"
@@ -265,121 +263,6 @@
       }
     },
     {
-      "id": "proxychains-config",
-      "name": "Proxychains - Configure",
-      "description": "Configure proxychains for SOCKS proxy",
-      "command": "echo 'socks5 127.0.0.1 <PORT>' >> /etc/proxychains.conf",
-      "category": "tunneling",
-      "subcategory": "proxy-configuration",
-      "variables": [
-        {
-          "name": "<PORT>",
-          "description": "SOCKS proxy port",
-          "example": "1080",
-          "required": true
-        }
-      ],
-      "tags": [
-        "oscp",
-        "proxychains",
-        "socks",
-        "configuration"
-      ],
-      "prerequisites": [
-        "SOCKS proxy running (SSH -D, chisel, etc.)"
-      ],
-      "next_steps": [
-        "proxychains <COMMAND> (route traffic through proxy)"
-      ]
-    },
-    {
-      "id": "sshuttle-vpn",
-      "name": "SSHuttle - VPN over SSH",
-      "description": "Create VPN tunnel over SSH connection",
-      "command": "sshuttle -r <USER>@<SSH_HOST> <NETWORK>",
-      "category": "tunneling",
-      "subcategory": "vpn",
-      "variables": [
-        {
-          "name": "<USER>",
-          "description": "SSH username",
-          "example": "user",
-          "required": true
-        },
-        {
-          "name": "<SSH_HOST>",
-          "description": "SSH server IP",
-          "example": "192.168.1.1",
-          "required": true
-        },
-        {
-          "name": "<NETWORK>",
-          "description": "Network to tunnel",
-          "example": "172.16.1.0/24",
-          "required": true
-        }
-      ],
-      "tags": [
-        "oscp",
-        "sshuttle",
-        "vpn",
-        "tunneling"
-      ],
-      "prerequisites": [
-        "SSH access to pivot host",
-        "Python on target"
-      ],
-      "next_steps": [
-        "Directly access internal network services"
-      ],
-      "flag_explanations": {
-        "-r": "SSH connection string",
-        "-x": "Exclude specific subnets",
-        "-v": "Verbose output"
-      }
-    },
-    {
-      "id": "socat-port-forward",
-      "name": "Socat - Port Forwarding",
-      "description": "Forward ports using socat",
-      "command": "socat TCP-LISTEN:<LPORT>,fork TCP:<TARGET>:<RPORT>",
-      "category": "tunneling",
-      "subcategory": "port-forwarding",
-      "variables": [
-        {
-          "name": "<LPORT>",
-          "description": "Local listening port",
-          "example": "8080",
-          "required": true
-        },
-        {
-          "name": "<TARGET>",
-          "description": "Target IP",
-          "example": "172.16.1.10",
-          "required": true
-        },
-        {
-          "name": "<RPORT>",
-          "description": "Remote port",
-          "example": "80",
-          "required": true
-        }
-      ],
-      "tags": [
-        "oscp",
-        "socat",
-        "port-forwarding"
-      ],
-      "next_steps": [
-        "Access service at localhost:<LPORT>"
-      ],
-      "flag_explanations": {
-        "TCP-LISTEN": "Listen on TCP port",
-        "fork": "Handle multiple connections",
-        "TCP": "Connect to TCP port"
-      }
-    },
-    {
       "id": "ligolo-server",
       "name": "Ligolo-ng - Server",
       "description": "Start Ligolo-ng server for pivoting",
@@ -392,9 +275,7 @@
         "pivoting",
         "server"
       ],
-      "prerequisites": [
-        "Create TUN interface: sudo ip tuntap add user $(whoami) mode tun ligolo"
-      ],
+      "prerequisites": [],
       "next_steps": [
         "Run ligolo agent on target",
         "Add routes"

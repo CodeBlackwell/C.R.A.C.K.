@@ -141,7 +141,7 @@
       "name": "Verify Root Access",
       "objective": "Confirm effective UID is 0 and full root privileges obtained",
       "description": "Run whoami, id, and attempt to read /etc/shadow to confirm root access. Check both real UID and effective UID. Verify filesystem access to root-only files. Test ability to read sensitive files and access /root directory.",
-      "command_ref": "verify-root-access",
+      "command_ref": "verify-root-access-sudo",
       "dependencies": [
         "exploit-sudo"
       ],

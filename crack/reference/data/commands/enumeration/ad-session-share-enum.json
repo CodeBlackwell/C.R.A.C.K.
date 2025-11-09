@@ -44,12 +44,11 @@
         "Use Get-NetLoggedon for alternative enumeration method"
       ],
       "alternatives": [
-        "Get-NetLoggedon",
-        "PsLoggedOn.exe",
-        "qwinsta /server:<TARGET>"
+        "get-netloggedon",
+        "psloggedon"
       ],
       "prerequisites": [
-        "Import PowerView"
+        "import-powerview"
       ],
       "troubleshooting": {
         "Access is denied": "NetSessionEnum requires SrvsvcSessionInfo registry read access. This is blocked on Windows 11/Server 2022+ by default. Use Get-NetLoggedon or PsLoggedOn instead.",
@@ -100,13 +99,11 @@
         "Attempt credential theft if admin access available"
       ],
       "alternatives": [
-        "PsLoggedOn.exe",
-        "Get-NetSession",
-        "quser /server:<TARGET>"
+        "psloggedon",
+        "get-netsession"
       ],
       "prerequisites": [
-        "Import PowerView",
-        "Remote Registry service running on target (or local admin access)"
+        "import-powerview"
       ],
       "troubleshooting": {
         "Access Denied": "Requires local admin on target OR Remote Registry service enabled. Check permissions: Test-AdminAccess -ComputerName <TARGET>",
@@ -146,12 +143,9 @@
         "Enumerate logged-on users: Get-NetLoggedon -ComputerName <FOUND_COMPUTER>",
         "Search for credentials: Invoke-Mimikatz, lsass dumps"
       ],
-      "alternatives": [
-        "crackmapexec smb <SUBNET> -u <USER> -p <PASS> --local-auth",
-        "Manual testing: Test-AdminAccess -ComputerName <TARGET>"
-      ],
+      "alternatives": [],
       "prerequisites": [
-        "Import PowerView"
+        "import-powerview"
       ],
       "troubleshooting": {
         "Module not imported": "Import-Module .\\PowerView.ps1",
@@ -197,12 +191,9 @@
         "Search for sensitive files: Invoke-ShareFinder -ShareList <LIST> -Terms passwords,config,backup",
         "Check SYSVOL for GPP passwords: ls \\\\<DC>\\SYSVOL\\<DOMAIN>\\Policies\\ -Recurse"
       ],
-      "alternatives": [
-        "net view \\\\<TARGET> /all",
-        "crackmapexec smb <SUBNET> -u <USER> -p <PASS> --shares"
-      ],
+      "alternatives": [],
       "prerequisites": [
-        "Import PowerView"
+        "import-powerview"
       ],
       "troubleshooting": {
         "Module not imported": "Import-Module .\\PowerView.ps1",
@@ -243,12 +234,9 @@
         "Search for sensitive files: findstr /S /I password *.txt *.xml *.config",
         "Check for writable shares: test write access with New-Item"
       ],
-      "alternatives": [
-        "crackmapexec smb <SUBNET> -u <USER> -p <PASS> --shares",
-        "net use \\\\<TARGET>\\<SHARE>"
-      ],
+      "alternatives": [],
       "prerequisites": [
-        "Import PowerView"
+        "import-powerview"
       ],
       "troubleshooting": {
         "Module not imported": "Import-Module .\\PowerView.ps1",
@@ -297,14 +285,9 @@
         "Check other systems: loop through computer list"
       ],
       "alternatives": [
-        "powerview-get-netloggedon",
-        "quser /server:<TARGET>",
-        "qwinsta /server:<TARGET>"
+        "powerview-get-netloggedon"
       ],
-      "prerequisites": [
-        "PsLoggedOn.exe downloaded from Sysinternals Suite",
-        "Remote Registry service enabled on target (auto-starts on connection) OR local admin access"
-      ],
+      "prerequisites": [],
       "troubleshooting": {
         "Access Denied": "Remote Registry service disabled or insufficient permissions. Need local admin OR service enabled.",
         "Unable to query resource logons": "NetSessionEnum API blocked (normal on Windows 11/Server 2022+). Local logon enumeration still works.",
@@ -353,8 +336,7 @@
         "Mount share: net use Z: \\\\<TARGET>\\<SHARE>"
       ],
       "alternatives": [
-        "powerview-find-domainshare",
-        "crackmapexec smb <TARGET> --shares"
+        "powerview-find-domainshare"
       ],
       "prerequisites": [],
       "troubleshooting": {
@@ -406,10 +388,7 @@
         "Search for sensitive patterns: findstr /S /I password *.txt *.config *.xml",
         "Download interesting files: copy \\\\<TARGET>\\<SHARE>\\<FILE> ."
       ],
-      "alternatives": [
-        "ls \\\\<TARGET>\\<SHARE>",
-        "Get-ChildItem \\\\<TARGET>\\<SHARE>"
-      ],
+      "alternatives": [],
       "prerequisites": [],
       "troubleshooting": {
         "Access is denied": "No read permissions. Try other shares or authenticate with different credentials.",
@@ -471,12 +450,8 @@
         "Download for offline analysis: copy \\\\<TARGET>\\<SHARE>\\<FOUND_FILE> .",
         "Search for multiple patterns: findstr /S /I /M \"password config backup credential\" *.*"
       ],
-      "alternatives": [
-        "Select-String -Path \\\\<TARGET>\\<SHARE>\\* -Pattern <PATTERN> -Recurse"
-      ],
-      "prerequisites": [
-        "Read access to share"
-      ],
+      "alternatives": [],
+      "prerequisites": [],
       "troubleshooting": {
         "Access is denied": "No read permissions on some files. Results may be incomplete.",
         "Long execution time": "Large share or slow network. Limit scope to specific file types: findstr /S /I \"password\" *.txt *.xml *.config",
@@ -520,14 +495,8 @@
         "Try password against local admin accounts",
         "Check password age and reuse across systems"
       ],
-      "alternatives": [
-        "Get-DecryptedCpassword (PowerSploit)",
-        "python scripts: gpp-decrypt.py"
-      ],
-      "prerequisites": [
-        "gpp-decrypt installed (Kali Linux default)",
-        "cpassword value from SYSVOL"
-      ],
+      "alternatives": [],
+      "prerequisites": [],
       "troubleshooting": {
         "Command not found": "Not on Kali. Use online decoder or PowerShell: $key = [byte[]](0x4e,0x99,0x06,0xe8,...); [System.Text.Encoding]::Unicode.GetString([System.Security.Cryptography.AES]::Create().CreateDecryptor($key,$null).TransformFinalBlock([Convert]::FromBase64String('<CPASSWORD>'),0,[Convert]::FromBase64String('<CPASSWORD>').Length))",
         "Invalid cpassword": "Corrupted value. Re-extract from XML: cat \\\\<DC>\\SYSVOL\\<DOMAIN>\\Policies\\<GUID>\\*.xml | findstr cpassword"
@@ -566,11 +535,9 @@
       "next_steps": [
         "Mount accessible shares: net use Z: \\\\<COMPUTER>\\<SHARE>"
       ],
-      "alternatives": [
-        "net view \\\\<COMPUTER>"
-      ],
+      "alternatives": [],
       "prerequisites": [
-        "Import PowerView"
+        "import-powerview"
       ],
       "troubleshooting": {
         "No shares found": "Remove -CheckShareAccess to see all shares (including non-accessible)"
@@ -616,12 +583,9 @@
         "If Domain Admin logged on, target that machine for credential dumping"
       ],
       "alternatives": [
-        "Get-NetLoggedon",
-        "query user /server:<COMPUTER>"
+        "get-netloggedon"
       ],
-      "prerequisites": [
-        "Download PsLoggedOn.exe from Sysinternals"
-      ],
+      "prerequisites": [],
       "troubleshooting": {
         "Access denied": "Requires local admin on target. Try alternative: Get-NetLoggedon",
         "RPC server unavailable": "Remote Registry service disabled. Common on modern Windows."
@@ -671,11 +635,9 @@
         "Decrypt found passwords: gpp-decrypt <CPASSWORD>"
       ],
       "alternatives": [
-        "Get-GPPPassword (PowerSploit)"
+        "get-gpppassword"
       ],
-      "prerequisites": [
-        "Access to SYSVOL share (all authenticated users have read access)"
-      ],
+      "prerequisites": [],
       "troubleshooting": {
         "No matches": "No GPP passwords in SYSVOL. Try other credential sources (KeePass, web.config, etc.)"
       },

@@ -36,7 +36,7 @@
           "required": true
         }
       ],
-      "notes": "Syntax: Run on Windows with PowerShell, requires Find-AVSignature.ps1 script Time-consuming but precise. Typical workflow: 10000→1000→100→10→1 byte intervals. Takes 15-30 minutes per signature. Practice on known-flagged payloads before exam. Time estimate: 15-30 minutes per signature References: docs/av-evasion/signature-evasion.md#find-av-signature, PEN-300 Chapter 6.3 Manual alternative: Manual binary editing with hex editor (HxD, 010 Editor), or automated tools like ThreatCheck, DefenderCheck",
+      "notes": "Syntax: Run on Windows with PowerShell, requires Find-AVSignature.ps1 script Time-consuming but precise. Typical workflow: 10000\u21921000\u2192100\u219210\u21921 byte intervals. Takes 15-30 minutes per signature. Practice on known-flagged payloads before exam. Time estimate: 15-30 minutes per signature References: docs/av-evasion/signature-evasion.md#find-av-signature, PEN-300 Chapter 6.3 Manual alternative: Manual binary editing with hex editor (HxD, 010 Editor), or automated tools like ThreatCheck, DefenderCheck",
       "success_indicators": [
         "Creates test files in output directory. Scan each with AV - undetected file shows safe range. Detected file shows signature range."
       ],
@@ -340,9 +340,7 @@
           "required": true
         }
       ],
-      "prerequisites": [
-        "# Install ClamAV on Windows test system:\n# Download from: https://www.clamav.net/downloads"
-      ],
+      "prerequisites": [],
       "notes": "Syntax: Run on Windows with ClamAV installed ClamAV is free baseline test. Not comprehensive (misses many commercial signatures) but useful for rapid iteration. Don't rely solely on ClamAV - test with Defender or Avira too. Time estimate: 30 seconds per scan References: docs/av-evasion/signature-evasion.md#testing, PEN-300 Chapter 6.2 Manual alternative: Use online scanners (AntiScan.Me - doesn't distribute), VirusTotal (distributes to vendors), or Windows Defender locally",
       "success_indicators": [
         "Clean: 'OK' or '0 infected'\nDetected: Signature name and threat level"

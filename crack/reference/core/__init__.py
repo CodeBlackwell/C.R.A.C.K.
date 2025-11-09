@@ -4,6 +4,7 @@ Core functionality for the CRACK Reference System
 
 from .registry import HybridCommandRegistry, Command, CommandVariable
 from .sql_adapter import SQLCommandRegistryAdapter
+from .neo4j_adapter import Neo4jCommandRegistryAdapter
 from .router import CommandRegistryRouter
 from .parser import MarkdownCommandParser
 from .placeholder import PlaceholderEngine
@@ -32,6 +33,7 @@ __all__ = [
     'Command',
     'CommandVariable',
     'SQLCommandRegistryAdapter',
+    'Neo4jCommandRegistryAdapter',
     'CommandRegistryRouter',
     'MarkdownCommandParser',
     'PlaceholderEngine',

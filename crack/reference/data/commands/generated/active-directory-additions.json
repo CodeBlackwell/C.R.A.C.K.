@@ -13,11 +13,7 @@
         "active-directory",
         "gui"
       ],
-      "prerequisites": [
-        "SharpHound.zip collected",
-        "Neo4j running",
-        "BloodHound running"
-      ],
+      "prerequisites": [],
       "next_steps": [
         "Run pre-built queries",
         "Find attack paths"
@@ -40,49 +36,6 @@
         "Follow path steps",
         "Test exploits"
       ]
-    },
-    {
-      "id": "cme-smb-shares",
-      "name": "CrackMapExec - Enumerate Shares",
-      "description": "Enumerate SMB shares with credentials",
-      "command": "crackmapexec smb <TARGET> -u <USER> -p <PASS> --shares",
-      "category": "active-directory",
-      "subcategory": "enumeration",
-      "variables": [
-        {
-          "name": "<TARGET>",
-          "description": "Target IP/range",
-          "example": "192.168.1.0/24",
-          "required": true
-        },
-        {
-          "name": "<USER>",
-          "description": "Username",
-          "example": "user",
-          "required": true
-        },
-        {
-          "name": "<PASS>",
-          "description": "Password",
-          "example": "Password123",
-          "required": true
-        }
-      ],
-      "tags": [
-        "oscp",
-        "crackmapexec",
-        "smb",
-        "active-directory",
-        "shares"
-      ],
-      "next_steps": [
-        "Mount interesting shares",
-        "Download sensitive files"
-      ],
-      "flag_explanations": {
-        "--shares": "Enumerate shares",
-        "--disks": "Enumerate disks"
-      }
     },
     {
       "id": "cme-smb-users",
@@ -166,10 +119,7 @@
         "active-directory",
         "lateral-movement"
       ],
-      "prerequisites": [
-        "Valid credentials",
-        "Admin privileges on target"
-      ],
+      "prerequisites": [],
       "next_steps": [
         "Execute commands as SYSTEM"
       ]
@@ -306,9 +256,7 @@
         "active-directory",
         "credentials"
       ],
-      "prerequisites": [
-        "Domain Admin or equivalent privileges"
-      ],
+      "prerequisites": [],
       "next_steps": [
         "Crack hashes",
         "Pass-the-hash attacks"
@@ -401,9 +349,7 @@
         "kerberos",
         "active-directory"
       ],
-      "prerequisites": [
-        "Valid domain user credentials"
-      ],
+      "prerequisites": [],
       "next_steps": [
         "Crack TGS hashes with hashcat mode 13100"
       ],
@@ -447,10 +393,7 @@
         "active-directory",
         "powershell"
       ],
-      "prerequisites": [
-        "WinRM enabled on target",
-        "Valid credentials"
-      ],
+      "prerequisites": [],
       "next_steps": [
         "Upload files",
         "Execute PowerShell commands"
@@ -659,10 +602,7 @@
         "active-directory",
         "windows"
       ],
-      "prerequisites": [
-        "Domain user access",
-        "Rubeus.exe on target"
-      ],
+      "prerequisites": [],
       "next_steps": [
         "Transfer hashes to attacker",
         "Crack with hashcat"
@@ -688,10 +628,7 @@
         "active-directory",
         "windows"
       ],
-      "prerequisites": [
-        "Domain user access",
-        "Rubeus.exe on target"
-      ],
+      "prerequisites": [],
       "next_steps": [
         "Crack TGS hashes with hashcat mode 13100"
       ],

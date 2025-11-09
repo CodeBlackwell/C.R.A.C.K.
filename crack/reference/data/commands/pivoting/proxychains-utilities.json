@@ -8,7 +8,13 @@
       "subcategory": "proxychains",
       "command": "echo 'socks5 <BIND_ADDRESS> <SOCKS_PORT>' >> /etc/proxychains4.conf",
       "description": "Configure proxychains4.conf to route traffic through SOCKS proxy - required before using proxychains",
-      "tags": ["PROXYCHAINS", "SOCKS", "PIVOTING", "OSCP:HIGH", "CONFIGURATION"],
+      "tags": [
+        "PROXYCHAINS",
+        "SOCKS",
+        "PIVOTING",
+        "OSCP:HIGH",
+        "CONFIGURATION"
+      ],
       "variables": [
         {
           "name": "<BIND_ADDRESS>",
@@ -41,15 +47,8 @@
         "Enable proxy_dns: Uncomment 'proxy_dns' line to prevent DNS leaks",
         "Test configuration: proxychains curl -I http://internal-ip"
       ],
-      "alternatives": [
-        "sshuttle-vpn - Transparent VPN without proxychains prefix",
-        "ssh-local-port-forward - Single service forward without proxychains"
-      ],
-      "prerequisites": [
-        "Proxychains installed: sudo apt install proxychains4",
-        "SOCKS proxy running: ssh -D <SOCKS_PORT> or ssh -R <SOCKS_PORT> (remote dynamic)",
-        "Sudo access to edit /etc/proxychains4.conf or use ~/.proxychains/proxychains.conf"
-      ],
+      "alternatives": [],
+      "prerequisites": [],
       "troubleshooting": {
         "Permission denied editing /etc/proxychains4.conf": "Use sudo: sudo bash -c 'echo \"socks5 <IP> <PORT>\" >> /etc/proxychains4.conf', or create user config: mkdir ~/.proxychains && cp /etc/proxychains4.conf ~/.proxychains/",
         "proxychains shows old configuration": "Clear existing [ProxyList] entries: sudo sed -i '/^socks/d' /etc/proxychains4.conf before adding new one",
@@ -66,7 +65,14 @@
       "subcategory": "proxychains",
       "command": "proxychains -q nmap -sT -Pn --top-ports=<TOP_PORTS> -v <TARGET>",
       "description": "Port scan through SOCKS proxy using proxychains - enumerate internal networks via pivot",
-      "tags": ["PROXYCHAINS", "NMAP", "PIVOTING", "ENUMERATION", "OSCP:HIGH", "SOCKS"],
+      "tags": [
+        "PROXYCHAINS",
+        "NMAP",
+        "PIVOTING",
+        "ENUMERATION",
+        "OSCP:HIGH",
+        "SOCKS"
+      ],
       "variables": [
         {
           "name": "<TOP_PORTS>",
@@ -108,16 +114,8 @@
         "Run vulnerability scan: proxychains nmap -sT -Pn --script=vuln -p <PORT> <TARGET>",
         "Access discovered services: proxychains psql -h <TARGET>, proxychains smbclient -L //<TARGET>"
       ],
-      "alternatives": [
-        "sshuttle-vpn - Transparent proxy, nmap works without proxychains prefix",
-        "ssh-local-port-forward - Forward specific ports for targeted enumeration",
-        "static nmap binary - Compile statically to avoid LD_PRELOAD issues"
-      ],
-      "prerequisites": [
-        "Proxychains configured: /etc/proxychains4.conf has correct SOCKS proxy",
-        "SOCKS proxy running: ssh -D <PORT> or ssh -R <PORT>",
-        "Dynamic nmap binary: file $(which nmap) shows 'dynamically linked' (required for LD_PRELOAD)"
-      ],
+      "alternatives": [],
+      "prerequisites": [],
       "troubleshooting": {
         "Socket error or timeout": "Verify SOCKS proxy: ss -ntplu | grep <SOCKS_PORT>, test with proxychains curl http://<TARGET>",
         "Very slow scan (5+ minutes)": "Reduce timeouts in /etc/proxychains4.conf: tcp_read_time_out=1000, tcp_connect_time_out=1000, use -T2 timing: proxychains nmap -sT -T2 -Pn",
@@ -134,7 +132,14 @@
       "subcategory": "proxychains",
       "command": "proxychains -q psql -h <TARGET> -p <PORT> -U <USERNAME> -d <DATABASE>",
       "description": "Connect to internal PostgreSQL database through SOCKS proxy using proxychains",
-      "tags": ["PROXYCHAINS", "POSTGRESQL", "DATABASE", "PIVOTING", "OSCP:MEDIUM", "SOCKS"],
+      "tags": [
+        "PROXYCHAINS",
+        "POSTGRESQL",
+        "DATABASE",
+        "PIVOTING",
+        "OSCP:MEDIUM",
+        "SOCKS"
+      ],
       "variables": [
         {
           "name": "<TARGET>",
@@ -187,17 +192,8 @@
         "Extract credentials: SELECT username, password_hash FROM users;",
         "Check database version: SELECT version();"
       ],
-      "alternatives": [
-        "ssh-local-port-forward - Forward PostgreSQL port directly (psql -h 127.0.0.1 -p <LOCAL_PORT>)",
-        "socat-port-forward - Set up relay on pivot host",
-        "sshuttle-vpn - Transparent proxy, psql works without proxychains prefix"
-      ],
-      "prerequisites": [
-        "Proxychains configured with correct SOCKS proxy",
-        "SOCKS proxy running: ssh -D or ssh -R (remote dynamic)",
-        "PostgreSQL credentials obtained from config files or vulnerability",
-        "psql client installed: sudo apt install postgresql-client"
-      ],
+      "alternatives": [],
+      "prerequisites": [],
       "troubleshooting": {
         "Connection timeout": "Verify PostgreSQL reachable: proxychains nc -zv <TARGET> 5432, check SOCKS proxy running",
         "Authentication failed": "Verify credentials, try default: postgres:postgres, admin:admin, check case sensitivity",

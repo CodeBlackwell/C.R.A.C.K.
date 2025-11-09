@@ -8,7 +8,14 @@
       "subcategory": "ssh_tunneling",
       "command": "ssh -N -L <BIND_ADDRESS>:<LOCAL_PORT>:<DEST_IP>:<DEST_PORT> <SSH_USER>@<SSH_HOST>",
       "description": "Create SSH local port forward - listening port on SSH client forwards through tunnel to destination",
-      "tags": ["SSH", "TUNNELING", "PORT_FORWARD", "PIVOTING", "OSCP:HIGH", "LOCAL_FORWARD"],
+      "tags": [
+        "SSH",
+        "TUNNELING",
+        "PORT_FORWARD",
+        "PIVOTING",
+        "OSCP:HIGH",
+        "LOCAL_FORWARD"
+      ],
       "variables": [
         {
           "name": "<BIND_ADDRESS>",
@@ -71,16 +78,8 @@
         "Connect to service through tunnel (e.g., psql -h <BIND_ADDRESS> -p <LOCAL_PORT>)",
         "For multiple ports, add more -L flags: ssh -N -L port1:dest1:dport1 -L port2:dest2:dport2 user@host"
       ],
-      "alternatives": [
-        "ssh-dynamic-port-forward - SOCKS proxy for multiple destinations through single tunnel",
-        "socat-port-forward - Simple relay without SSH encryption, no authentication required",
-        "ssh-remote-port-forward - Reverse tunnel when inbound connections blocked by firewall"
-      ],
-      "prerequisites": [
-        "SSH access to pivot host with valid credentials or SSH key",
-        "Pivot host can route to destination IP (verify with ip route on pivot)",
-        "Destination service listening and accessible from pivot host"
-      ],
+      "alternatives": [],
+      "prerequisites": [],
       "troubleshooting": {
         "Port already in use": "Check listening ports: ss -ntplu, choose different port or kill conflicting process",
         "Permission denied for port <1024": "Use port >1024 (e.g., 4455, 8080) or run with sudo (not recommended)",
@@ -97,7 +96,15 @@
       "subcategory": "ssh_tunneling",
       "command": "ssh -N -D <BIND_ADDRESS>:<SOCKS_PORT> <SSH_USER>@<SSH_HOST>",
       "description": "Create SSH dynamic port forward - SOCKS proxy on SSH client for flexible multi-destination tunneling",
-      "tags": ["SSH", "TUNNELING", "SOCKS", "PIVOTING", "OSCP:HIGH", "DYNAMIC_FORWARD", "PROXYCHAINS"],
+      "tags": [
+        "SSH",
+        "TUNNELING",
+        "SOCKS",
+        "PIVOTING",
+        "OSCP:HIGH",
+        "DYNAMIC_FORWARD",
+        "PROXYCHAINS"
+      ],
       "variables": [
         {
           "name": "<BIND_ADDRESS>",
@@ -149,16 +156,8 @@
         "Port scan internal network: sudo proxychains nmap -sT --top-ports=20 -Pn <SUBNET>",
         "Access SMB shares: proxychains smbclient -L //<INTERNAL_IP>/ -U <USER>"
       ],
-      "alternatives": [
-        "ssh-remote-dynamic-port-forward - Reverse SOCKS proxy when inbound firewall blocks access",
-        "sshuttle-vpn - VPN-like transparent routing without Proxychains configuration",
-        "ssh-local-port-forward - Single-destination forward when SOCKS unnecessary"
-      ],
-      "prerequisites": [
-        "SSH access to pivot host with credentials or key",
-        "Proxychains installed on client: sudo apt install proxychains4",
-        "/etc/proxychains4.conf configured with correct SOCKS server"
-      ],
+      "alternatives": [],
+      "prerequisites": [],
       "troubleshooting": {
         "Proxychains 'can't read configuration file'": "Check file exists: ls -la /etc/proxychains4.conf, verify readable",
         "Static binary incompatible with proxychains": "Proxychains uses LD_PRELOAD (dynamic linking only) - use tools with native SOCKS or recompile dynamically",
@@ -175,7 +174,14 @@
       "subcategory": "ssh_tunneling",
       "command": "ssh -N -R <BIND_ADDRESS>:<REMOTE_PORT>:<DEST_IP>:<DEST_PORT> <SSH_USER>@<SSH_SERVER>",
       "description": "Create SSH remote port forward - reverse tunnel binding port on SSH server, forwarding from compromised client",
-      "tags": ["SSH", "TUNNELING", "REVERSE_TUNNEL", "PIVOTING", "OSCP:HIGH", "FIREWALL_BYPASS"],
+      "tags": [
+        "SSH",
+        "TUNNELING",
+        "REVERSE_TUNNEL",
+        "PIVOTING",
+        "OSCP:HIGH",
+        "FIREWALL_BYPASS"
+      ],
       "variables": [
         {
           "name": "<BIND_ADDRESS>",
@@ -238,17 +244,8 @@
         "Connect to service: psql -h 127.0.0.1 -p <REMOTE_PORT> (example for PostgreSQL)",
         "For all-interfaces binding: Edit /etc/ssh/sshd_config on SSH server, add 'GatewayPorts yes', restart sshd"
       ],
-      "alternatives": [
-        "ssh-remote-dynamic-port-forward - Reverse SOCKS proxy for multiple destinations",
-        "ssh-local-port-forward - Forward direction (requires no inbound firewall restrictions)",
-        "plink-remote-forward - Windows alternative using Plink when OpenSSH unavailable"
-      ],
-      "prerequisites": [
-        "SSH server running on attacker machine: sudo systemctl start ssh",
-        "Strong password set on attacker SSH account: passwd kali",
-        "Password authentication enabled: PasswordAuthentication yes in /etc/ssh/sshd_config",
-        "Outbound SSH (port 22) allowed from compromised client (firewall permits)"
-      ],
+      "alternatives": [],
+      "prerequisites": [],
       "troubleshooting": {
         "Connection to SSH server times out": "Check outbound firewall on client, verify SSH server listening: sudo ss -ntplu | grep :22",
         "Permission denied (publickey)": "Password auth disabled - edit /etc/ssh/sshd_config, set PasswordAuthentication yes, restart sshd",
@@ -265,7 +262,14 @@
       "subcategory": "ssh_tunneling",
       "command": "ssh -N -R <SOCKS_PORT> <SSH_USER>@<SSH_SERVER>",
       "description": "Create SSH remote dynamic port forward - reverse SOCKS proxy on SSH server for firewall bypass with multi-destination flexibility",
-      "tags": ["SSH", "TUNNELING", "REVERSE_SOCKS", "PIVOTING", "OSCP:HIGH", "FIREWALL_BYPASS"],
+      "tags": [
+        "SSH",
+        "TUNNELING",
+        "REVERSE_SOCKS",
+        "PIVOTING",
+        "OSCP:HIGH",
+        "FIREWALL_BYPASS"
+      ],
       "variables": [
         {
           "name": "<SOCKS_PORT>",
@@ -299,7 +303,7 @@
       ],
       "failure_indicators": [
         "Connection refused - SSH server not reachable from client",
-        "OpenSSH version too old - requires ≥7.6 (released October 2017)",
+        "OpenSSH version too old - requires \u22657.6 (released October 2017)",
         "Permission denied - SSH authentication failed",
         "Proxychains socket error - check /etc/proxychains4.conf points to correct port"
       ],
@@ -310,24 +314,15 @@
         "Test with nmap: sudo proxychains nmap -sT --top-ports=20 -Pn <INTERNAL_IP>",
         "Access services: proxychains psql -h <INTERNAL_IP>, proxychains smbclient -L //<INTERNAL_IP>/"
       ],
-      "alternatives": [
-        "ssh-remote-port-forward - Single-destination reverse tunnel when SOCKS unnecessary",
-        "ssh-dynamic-port-forward - Forward SOCKS (requires no inbound firewall)",
-        "plink-remote-forward + microsocks - Workaround for OpenSSH <7.6"
-      ],
-      "prerequisites": [
-        "OpenSSH client ≥7.6 on compromised host: ssh -V (check version)",
-        "SSH server running on attacker machine: sudo systemctl start ssh",
-        "Password authentication enabled on SSH server: PasswordAuthentication yes in sshd_config",
-        "Proxychains installed on attacker machine: sudo apt install proxychains4"
-      ],
+      "alternatives": [],
+      "prerequisites": [],
       "troubleshooting": {
         "OpenSSH version too old": "Upgrade OpenSSH on client, or use alternative: ssh -R port:localhost:socks_port + standalone SOCKS server (microsocks)",
-        "SOCKS port not listening on SSH server": "Verify OpenSSH server version ≥7.6: ssh -V on server, check sshd_config allows tunneling (PermitTunnel yes)",
+        "SOCKS port not listening on SSH server": "Verify OpenSSH server version \u22657.6: ssh -V on server, check sshd_config allows tunneling (PermitTunnel yes)",
         "Proxychains DLL init but no traffic": "Check proxychains4.conf syntax: [ProxyList] section correct, socks5 127.0.0.1 <SOCKS_PORT>",
         "Very slow performance": "Reduce timeouts in proxychains4.conf to 1000ms, use -T2 timing with nmap"
       },
-      "notes": "Remote dynamic forward combines reverse tunnel (firewall bypass) with SOCKS proxy (multi-destination flexibility). Requires OpenSSH ≥7.6 on compromised client (Windows 1803+ has version 8.1+, most modern Linux has ≥7.6). Syntax difference: Normal remote forward includes destination (-R port:host:hostport), remote dynamic only has port (-R port). Critical OSCP technique for enumeration through firewalled pivot points.",
+      "notes": "Remote dynamic forward combines reverse tunnel (firewall bypass) with SOCKS proxy (multi-destination flexibility). Requires OpenSSH \u22657.6 on compromised client (Windows 1803+ has version 8.1+, most modern Linux has \u22657.6). Syntax difference: Normal remote forward includes destination (-R port:host:hostport), remote dynamic only has port (-R port). Critical OSCP technique for enumeration through firewalled pivot points.",
       "oscp_relevance": "high"
     },
     {
@@ -337,7 +332,13 @@
       "subcategory": "port_forwarding",
       "command": "socat -ddd TCP-LISTEN:<LOCAL_PORT>,fork TCP:<DEST_IP>:<DEST_PORT>",
       "description": "Create simple TCP port forward using Socat - no encryption, no authentication, single command relay",
-      "tags": ["SOCAT", "PORT_FORWARD", "PIVOTING", "OSCP:MEDIUM", "TCP_RELAY"],
+      "tags": [
+        "SOCAT",
+        "PORT_FORWARD",
+        "PIVOTING",
+        "OSCP:MEDIUM",
+        "TCP_RELAY"
+      ],
       "variables": [
         {
           "name": "<LOCAL_PORT>",
@@ -382,16 +383,8 @@
         "Connect from client: psql -h <PIVOT_IP> -p <LOCAL_PORT> (example for PostgreSQL)",
         "For multiple ports: Run separate Socat process for each port forward"
       ],
-      "alternatives": [
-        "ssh-local-port-forward - Encrypted tunnel with authentication",
-        "netcat-relay - Alternative using nc and FIFO pipes: mkfifo /tmp/pipe; nc -l -p <PORT> < /tmp/pipe | nc <DEST_IP> <DEST_PORT> > /tmp/pipe",
-        "iptables-forward - Kernel-level forwarding (requires root): iptables -t nat -A PREROUTING -p tcp --dport <LOCAL_PORT> -j DNAT --to-destination <DEST_IP>:<DEST_PORT>"
-      ],
-      "prerequisites": [
-        "Socat installed on pivot host: which socat (if not found: sudo apt install socat)",
-        "Pivot host can route to destination: ip route, ping <DEST_IP>",
-        "Destination service listening and accessible from pivot"
-      ],
+      "alternatives": [],
+      "prerequisites": [],
       "troubleshooting": {
         "Socat not found": "Install Socat: sudo apt install socat, or download static binary: wget https://github.com/andrew-d/static-binaries/raw/master/binaries/linux/x86_64/socat",
         "Address already in use": "Check listening ports: ss -ntplu, kill conflicting process: kill <PID>, or choose different port",
