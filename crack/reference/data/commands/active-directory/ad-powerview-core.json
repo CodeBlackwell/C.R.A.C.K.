@@ -1,0 +1,685 @@
+{
+  "metadata": {
+    "category": "active-directory",
+    "subcategory": "powerview-enumeration",
+    "description": "Core PowerView commands for Active Directory enumeration",
+    "author": "OSCP Reference",
+    "version": "1.0",
+    "last_updated": "2025-11-09"
+  },
+  "commands": [
+    {
+      "id": "import-powerview",
+      "name": "Import PowerView Module",
+      "category": "enumeration",
+      "command": "Import-Module <PATH>\\PowerView.ps1",
+      "description": "Load PowerView module into PowerShell session to enable Active Directory enumeration cmdlets. PowerView is a PowerShell tool for gaining network situational awareness on Windows domains. This must be run before any PowerView cmdlets can be used.",
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "POWERVIEW",
+        "POWERSHELL",
+        "OSCP:HIGH"
+      ],
+      "variables": [
+        {
+          "name": "<PATH>",
+          "description": "Directory path where PowerView.ps1 is located",
+          "example": "C:\\Tools",
+          "required": true
+        }
+      ],
+      "output_analysis": [
+        "No output on success (silent load)",
+        "Error messages indicate missing file or execution policy restrictions",
+        "Use 'Get-Command -Module PowerView' to verify loaded cmdlets"
+      ],
+      "common_uses": [
+        "Initial setup for AD enumeration session",
+        "Loading PowerView after gaining PowerShell access on domain-joined Windows host",
+        "First step in domain reconnaissance from compromised system"
+      ],
+      "prerequisites": [],
+      "next_steps": [
+        "get-netdomain",
+        "get-netuser",
+        "get-netgroup",
+        "get-netcomputer"
+      ],
+      "alternatives": [
+        "import-sharphound",
+        "ldapsearch"
+      ],
+      "success_indicators": [
+        "No error messages displayed",
+        "Get-Command shows PowerView cmdlets available"
+      ],
+      "failure_indicators": [
+        "File not found error",
+        "Execution policy restriction",
+        "Cannot be loaded because running scripts is disabled"
+      ],
+      "flag_explanations": {},
+      "troubleshooting": {
+        "execution policy blocked": "Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy Bypass",
+        "file not found": "Verify PowerView.ps1 path and use full absolute path",
+        "access denied": "Ensure current user has read permissions on file"
+      },
+      "notes": "PowerView.ps1 may trigger AV detection. Consider using obfuscated versions or AMSI bypass techniques. For OSCP, usually safe on target machines. Alternative: Use native AD cmdlets if PowerView unavailable.",
+      "oscp_relevance": "high",
+      "references": [
+        {
+          "title": "PowerView Documentation",
+          "url": "https://powersploit.readthedocs.io/en/latest/Recon/"
+        },
+        {
+          "title": "PowerView GitHub",
+          "url": "https://github.com/PowerShellMafia/PowerSploit/tree/master/Recon"
+        }
+      ]
+    },
+    {
+      "id": "get-netdomain",
+      "name": "Get Domain Information",
+      "category": "enumeration",
+      "command": "Get-NetDomain",
+      "description": "Retrieve detailed information about the current domain or specified domain. Returns domain name, domain controllers, forest name, and other critical AD infrastructure details. Essential for understanding the target AD environment structure.",
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "POWERVIEW",
+        "DOMAIN_ENUM",
+        "OSCP:HIGH"
+      ],
+      "variables": [],
+      "output_analysis": [
+        "Forest: Parent forest name",
+        "DomainControllers: List of DC hostnames",
+        "Name: NetBIOS domain name",
+        "DomainSID: Domain Security Identifier (critical for Golden Ticket attacks)"
+      ],
+      "common_uses": [
+        "First enumeration step after importing PowerView",
+        "Identify domain controllers for targeted enumeration",
+        "Obtain domain SID for advanced attacks",
+        "Map out multi-domain forest structure"
+      ],
+      "prerequisites": [
+        "import-powerview"
+      ],
+      "next_steps": [
+        "get-netuser",
+        "get-netgroup",
+        "get-netcomputer"
+      ],
+      "alternatives": [
+        "get-addomain-add",
+        "ldapsearch-dump"
+      ],
+      "success_indicators": [
+        "Returns domain object with multiple properties",
+        "Forest and Name fields populated",
+        "DomainControllers array contains hostnames"
+      ],
+      "failure_indicators": [
+        "Empty output or null result",
+        "Access denied errors",
+        "Cannot contact domain controller"
+      ],
+      "flag_explanations": {},
+      "troubleshooting": {
+        "no output": "Verify host is domain-joined: systeminfo | findstr /B /C:\"Domain\"",
+        "access denied": "Current user may lack domain query permissions",
+        "cannot contact DC": "Check network connectivity: ping <DC_NAME>"
+      },
+      "notes": "The DomainSID is particularly valuable - save it for potential Golden/Silver Ticket attacks. For OSCP, focus on identifying Domain Controllers and understanding domain structure. Manual alternative: 'nltest /dclist:<domain>'",
+      "oscp_relevance": "high",
+      "references": [
+        {
+          "title": "PowerView Get-NetDomain",
+          "url": "https://powersploit.readthedocs.io/en/latest/Recon/Get-NetDomain/"
+        }
+      ]
+    },
+    {
+      "id": "get-netuser",
+      "name": "Enumerate Domain Users",
+      "category": "enumeration",
+      "command": "Get-NetUser -SamAccountName <USERNAME>",
+      "description": "Query Active Directory for user account details including account properties, group memberships, login times, and password policies. Can enumerate all users or target specific accounts. Critical for identifying privileged accounts and attack targets.",
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "POWERVIEW",
+        "USER_ENUM",
+        "OSCP:HIGH"
+      ],
+      "variables": [
+        {
+          "name": "<USERNAME>",
+          "description": "Specific user SamAccountName to query (omit to enumerate all users)",
+          "example": "Administrator",
+          "required": false
+        }
+      ],
+      "output_analysis": [
+        "samaccountname: Username",
+        "memberof: Group memberships (look for Domain Admins, Enterprise Admins)",
+        "description: Often contains passwords or useful info",
+        "pwdlastset: Password age (old passwords = potential weak passwords)",
+        "lastlogon: Active vs inactive accounts",
+        "serviceprincipalname: Service accounts (Kerberoastable)",
+        "useraccountcontrol: Account flags (disabled, password not required, etc.)"
+      ],
+      "common_uses": [
+        "Enumerate all domain users for targeting",
+        "Identify privileged accounts (Domain Admins)",
+        "Find service accounts for Kerberoasting",
+        "Check user descriptions for embedded passwords",
+        "Identify accounts with old passwords for password spraying"
+      ],
+      "prerequisites": [
+        "import-powerview"
+      ],
+      "next_steps": [
+        "get-netgroup",
+        "invoke-kerberoast"
+      ],
+      "alternatives": [
+        "net-user-domain-list",
+        "ps-ldapsearch-users",
+        "get-aduser"
+      ],
+      "success_indicators": [
+        "Returns user object(s) with populated properties",
+        "Multiple fields displayed per user",
+        "No access denied errors"
+      ],
+      "failure_indicators": [
+        "Access denied",
+        "No users returned when domain has users",
+        "LDAP query errors"
+      ],
+      "flag_explanations": {
+        "-SamAccountName": "Filter to specific user account by username",
+        "-AdminCount": "Find users with adminCount=1 (privileged accounts)",
+        "-SPN": "Find users with Service Principal Names (Kerberoastable)",
+        "-UACFilter": "Filter by User Account Control flags"
+      },
+      "troubleshooting": {
+        "too much output": "Use -SamAccountName filter or pipe to Select-Object",
+        "access denied": "User may lack read permissions on user objects",
+        "no results": "Try Get-NetUser without parameters to enumerate all"
+      },
+      "notes": "OSCP Tip: Always check user 'description' field - admins often store passwords there. Use '-AdminCount 1' to quickly find privileged accounts. For Kerberoasting, look for serviceprincipalname field. Manual alternative: 'net user /domain' or 'net user <username> /domain'",
+      "oscp_relevance": "high",
+      "references": [
+        {
+          "title": "PowerView Get-NetUser",
+          "url": "https://powersploit.readthedocs.io/en/latest/Recon/Get-NetUser/"
+        }
+      ]
+    },
+    {
+      "id": "get-netgroup",
+      "name": "Enumerate Domain Groups",
+      "category": "enumeration",
+      "command": "Get-NetGroup -GroupName \"<GROUP>\"",
+      "description": "Query Active Directory for group information and group memberships. Identifies privileged groups like Domain Admins, Enterprise Admins, and custom administrative groups. Essential for privilege escalation path mapping.",
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "POWERVIEW",
+        "GROUP_ENUM",
+        "OSCP:HIGH"
+      ],
+      "variables": [
+        {
+          "name": "<GROUP>",
+          "description": "Specific group name to query (omit to enumerate all groups)",
+          "example": "Domain Admins",
+          "required": false
+        }
+      ],
+      "output_analysis": [
+        "samaccountname: Group name",
+        "member: Direct group members (users and nested groups)",
+        "description: Purpose of group",
+        "admincount: If 1, indicates privileged group"
+      ],
+      "common_uses": [
+        "Enumerate all domain groups",
+        "Identify privileged groups and their members",
+        "Find custom administrative groups",
+        "Map group hierarchy and nested memberships",
+        "Target high-value groups for attack paths"
+      ],
+      "prerequisites": [
+        "import-powerview"
+      ],
+      "next_steps": [
+        "get-netuser",
+        "find-localadminaccess"
+      ],
+      "alternatives": [
+        "net-group-domain-list",
+        "ps-ldapsearch-groups",
+        "get-adgroup"
+      ],
+      "success_indicators": [
+        "Returns group object(s) with properties",
+        "Member field shows DNs of members",
+        "No access denied errors"
+      ],
+      "failure_indicators": [
+        "Access denied",
+        "Group not found errors",
+        "Empty member lists for known populated groups"
+      ],
+      "flag_explanations": {
+        "-GroupName": "Filter to specific group by name",
+        "-AdminCount": "Find privileged groups (adminCount=1)",
+        "-Domain": "Query different domain in forest"
+      },
+      "troubleshooting": {
+        "group not found": "Use wildcard: Get-NetGroup -GroupName \"*Admin*\"",
+        "access denied": "User may lack read permissions on group objects",
+        "incomplete members": "Use Get-NetGroupMember for recursive enumeration"
+      },
+      "notes": "OSCP Focus Groups: 'Domain Admins', 'Enterprise Admins', 'Backup Operators', 'Account Operators', 'Server Operators'. These groups have elevated privileges. Use Get-NetGroupMember to see full membership recursively. Manual alternative: 'net group \"<group>\" /domain'",
+      "oscp_relevance": "high",
+      "references": [
+        {
+          "title": "PowerView Get-NetGroup",
+          "url": "https://powersploit.readthedocs.io/en/latest/Recon/Get-NetGroup/"
+        }
+      ]
+    },
+    {
+      "id": "get-netcomputer",
+      "name": "Enumerate Domain Computers",
+      "category": "enumeration",
+      "command": "Get-NetComputer -FullData",
+      "description": "Query Active Directory for computer objects including workstations, servers, and domain controllers. Returns detailed information about each computer including OS version, last logon, and DNS hostname. Critical for identifying high-value targets and lateral movement candidates.",
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "POWERVIEW",
+        "COMPUTER_ENUM",
+        "OSCP:HIGH"
+      ],
+      "variables": [],
+      "output_analysis": [
+        "dnshostname: Fully qualified domain name",
+        "operatingsystem: OS version (identifies servers vs workstations)",
+        "operatingsystemversion: Build number",
+        "lastlogontimestamp: Activity indicator",
+        "serviceprincipalname: Services running on computer",
+        "useraccountcontrol: Computer account flags"
+      ],
+      "common_uses": [
+        "Enumerate all domain-joined computers",
+        "Identify servers for targeted attacks",
+        "Find Domain Controllers",
+        "Locate high-value targets (SQL servers, Exchange, etc.)",
+        "Build target list for lateral movement"
+      ],
+      "prerequisites": [
+        "import-powerview"
+      ],
+      "next_steps": [
+        "find-localadminaccess",
+        "invoke-sharefinder"
+      ],
+      "alternatives": [
+        "get-adcomputer",
+        "ps-ldapsearch-computers"
+      ],
+      "success_indicators": [
+        "Returns computer objects with multiple properties",
+        "DNSHostName and OperatingSystem fields populated",
+        "List includes workstations and servers"
+      ],
+      "failure_indicators": [
+        "Access denied",
+        "No computers returned",
+        "LDAP query errors"
+      ],
+      "flag_explanations": {
+        "-FullData": "Return all computer object properties (recommended)",
+        "-OperatingSystem": "Filter by OS (e.g., 'Windows Server*')",
+        "-Ping": "Only return computers that respond to ping",
+        "-Unconstrained": "Find computers with unconstrained delegation"
+      },
+      "troubleshooting": {
+        "too much output": "Filter by OS: Get-NetComputer -OperatingSystem '*Server*'",
+        "access denied": "User lacks read permissions on computer objects",
+        "no results": "Verify domain connectivity and PowerView import"
+      },
+      "notes": "OSCP Strategy: Focus on servers (OperatingSystem like '*Server*') as they often have more privileges. Look for SQL servers, Exchange, domain controllers. Use -Unconstrained flag to find computers vulnerable to delegation attacks. Manual alternative: 'net view' for basic computer list.",
+      "oscp_relevance": "high",
+      "references": [
+        {
+          "title": "PowerView Get-NetComputer",
+          "url": "https://powersploit.readthedocs.io/en/latest/Recon/Get-NetComputer/"
+        }
+      ]
+    },
+    {
+      "id": "find-localadminaccess",
+      "name": "Find Local Admin Access",
+      "category": "enumeration",
+      "command": "Find-LocalAdminAccess",
+      "description": "Test current user's local administrator access on all domain computers by attempting to access admin shares (C$). Identifies systems where current user has local admin rights, critical for lateral movement and privilege escalation path discovery.",
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "POWERVIEW",
+        "PRIVILEGE_MAPPING",
+        "OSCP:HIGH"
+      ],
+      "variables": [],
+      "output_analysis": [
+        "Returns list of computer hostnames where access succeeded",
+        "Empty result means no local admin access found",
+        "Each returned hostname is a potential lateral movement target"
+      ],
+      "common_uses": [
+        "Identify lateral movement targets from compromised user account",
+        "Find systems where current user is local admin",
+        "Map privilege escalation paths",
+        "Discover admin access inheritance patterns"
+      ],
+      "prerequisites": [
+        "import-powerview"
+      ],
+      "next_steps": [],
+      "alternatives": [
+        "crackmapexec-check"
+      ],
+      "success_indicators": [
+        "Returns one or more computer hostnames",
+        "No access denied errors",
+        "Completes scan without crashes"
+      ],
+      "failure_indicators": [
+        "All attempts return access denied",
+        "Network connectivity errors",
+        "Timeout on all hosts"
+      ],
+      "flag_explanations": {
+        "-ComputerName": "Test specific computer instead of all domain computers",
+        "-Delay": "Add delay between checks (stealth)",
+        "-Jitter": "Randomize delay (stealth)"
+      },
+      "troubleshooting": {
+        "no results": "Current user may not have local admin on any systems",
+        "network errors": "Check firewall rules and SMB connectivity",
+        "very slow": "Use -ComputerName to test subset of computers"
+      },
+      "notes": "OSCP Critical: This identifies WHERE you can move laterally. Results show systems where PSExec, WMI, or PowerShell Remoting will work. Can be slow on large domains - use -ComputerName with high-value targets list. Generates SMB traffic that may be logged. Manual alternative: Test C$ access manually with 'dir \\\\<computer>\\C$'",
+      "oscp_relevance": "high",
+      "references": [
+        {
+          "title": "PowerView Find-LocalAdminAccess",
+          "url": "https://powersploit.readthedocs.io/en/latest/Recon/Find-LocalAdminAccess/"
+        }
+      ]
+    },
+    {
+      "id": "invoke-sharefinder",
+      "name": "Find Network Shares",
+      "category": "enumeration",
+      "command": "Invoke-ShareFinder",
+      "description": "Enumerate all accessible network shares across domain computers. Identifies potential data repositories, file servers, and misconfigurations. Critical for finding sensitive files, configuration files, and credentials stored in shares.",
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "POWERVIEW",
+        "SHARE_ENUM",
+        "OSCP:MEDIUM"
+      ],
+      "variables": [],
+      "output_analysis": [
+        "Returns list of UNC paths (\\\\computer\\share)",
+        "Shows share name and computer hosting it",
+        "Accessible shares are those current user can read"
+      ],
+      "common_uses": [
+        "Find accessible file shares for data exfiltration",
+        "Locate configuration files and scripts",
+        "Discover credentials in share contents",
+        "Identify SYSVOL for Group Policy extraction",
+        "Find backup shares and sensitive data"
+      ],
+      "prerequisites": [
+        "import-powerview"
+      ],
+      "next_steps": [],
+      "alternatives": [
+        "smb-crackmapexec-shares",
+        "smb-enum",
+        "net-view-shares"
+      ],
+      "success_indicators": [
+        "Returns list of share paths",
+        "Includes common shares (SYSVOL, NETLOGON, etc.)",
+        "Shows both default and custom shares"
+      ],
+      "failure_indicators": [
+        "No shares returned (unlikely in domain)",
+        "All shares return access denied",
+        "Network connectivity errors"
+      ],
+      "flag_explanations": {
+        "-CheckShareAccess": "Verify read access on each share (more thorough)",
+        "-ExcludeStandard": "Exclude default shares (C$, ADMIN$, IPC$)",
+        "-ComputerName": "Target specific computers"
+      },
+      "troubleshooting": {
+        "too much output": "Use -ExcludeStandard to filter default shares",
+        "access denied on all": "User may lack domain user minimum rights",
+        "slow enumeration": "Use -ComputerName with specific target list"
+      },
+      "notes": "OSCP Priority Shares: SYSVOL (Group Policy files often contain credentials), NETLOGON (logon scripts), custom shares (user data). Look for passwords in files like Groups.xml (Group Policy Preferences), scripts, config files. Manual alternative: 'net view \\\\<computer>' to list shares.",
+      "oscp_relevance": "medium",
+      "references": [
+        {
+          "title": "PowerView Invoke-ShareFinder",
+          "url": "https://powersploit.readthedocs.io/en/latest/Recon/Invoke-ShareFinder/"
+        }
+      ]
+    },
+    {
+      "id": "get-netgpo",
+      "name": "Enumerate Group Policy Objects",
+      "category": "enumeration",
+      "command": "Get-NetGPO",
+      "description": "Query Active Directory for Group Policy Objects (GPOs) and their configurations. GPOs often contain credentials, scheduled tasks, registry settings, and other useful information for privilege escalation and lateral movement.",
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "POWERVIEW",
+        "GPO_ENUM",
+        "OSCP:MEDIUM"
+      ],
+      "variables": [],
+      "output_analysis": [
+        "displayname: Human-readable GPO name",
+        "gpcfilesyspath: UNC path to GPO files (\\\\domain\\SYSVOL\\...)",
+        "whenchanged: Last modification time",
+        "Properties contain XML paths for detailed settings"
+      ],
+      "common_uses": [
+        "Enumerate all GPOs in domain",
+        "Find GPO file paths for manual inspection",
+        "Identify custom GPOs with potential credentials",
+        "Locate scheduled tasks and startup scripts in GPOs",
+        "Discover Group Policy Preferences with passwords (Groups.xml)"
+      ],
+      "prerequisites": [
+        "import-powerview"
+      ],
+      "next_steps": [],
+      "alternatives": [
+        "get-gpo"
+      ],
+      "success_indicators": [
+        "Returns GPO objects with properties",
+        "DisplayName and gpcFileSysPath populated",
+        "Shows both default and custom GPOs"
+      ],
+      "failure_indicators": [
+        "No GPOs returned",
+        "Access denied to SYSVOL",
+        "LDAP query errors"
+      ],
+      "flag_explanations": {
+        "-GPOname": "Filter to specific GPO by name",
+        "-ComputerName": "GPOs applied to specific computer",
+        "-Domain": "Query different domain"
+      },
+      "troubleshooting": {
+        "no results": "User may lack read access to GPO container",
+        "cannot access files": "Navigate to gpcFileSysPath manually via UNC",
+        "too many GPOs": "Focus on custom GPOs (non-default names)"
+      },
+      "notes": "OSCP Gold Mine: Look for Groups.xml in GPO SYSVOL paths - contains cpassword (encrypted passwords). Use gpp-decrypt to decrypt. Also check Scripts folder for logon/startup scripts that may contain credentials. Manual path: \\\\domain\\SYSVOL\\domain\\Policies\\{GUID}\\",
+      "oscp_relevance": "medium",
+      "references": [
+        {
+          "title": "PowerView Get-NetGPO",
+          "url": "https://powersploit.readthedocs.io/en/latest/Recon/Get-NetGPO/"
+        },
+        {
+          "title": "Group Policy Preferences Exploitation",
+          "url": "https://adsecurity.org/?p=2288"
+        }
+      ]
+    },
+    {
+      "id": "get-domainsid",
+      "name": "Get Domain Security Identifier",
+      "category": "enumeration",
+      "command": "Get-DomainSID",
+      "description": "Retrieve the Security Identifier (SID) for the current or specified domain. Domain SID is required for advanced attacks like Golden Ticket and Silver Ticket attacks. Essential component for Kerberos ticket forgery.",
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "POWERVIEW",
+        "KERBEROS",
+        "OSCP:MEDIUM"
+      ],
+      "variables": [],
+      "output_analysis": [
+        "Returns SID string format: S-1-5-21-xxxxxxxxxx-xxxxxxxxxx-xxxxxxxxxx",
+        "This is the base domain SID",
+        "User/group SIDs append RID (last number) to this base"
+      ],
+      "common_uses": [
+        "Obtain domain SID for Golden Ticket attacks",
+        "Required parameter for Mimikatz ticket creation",
+        "Identify domain in multi-domain forest",
+        "Build complete SIDs for specific users/groups"
+      ],
+      "prerequisites": [
+        "import-powerview"
+      ],
+      "next_steps": [],
+      "alternatives": [
+        "get-domainsid"
+      ],
+      "success_indicators": [
+        "Returns SID in S-1-5-21-X-X-X format",
+        "SID matches domain structure",
+        "No errors"
+      ],
+      "failure_indicators": [
+        "Empty or null result",
+        "Access denied",
+        "Not domain-joined error"
+      ],
+      "flag_explanations": {
+        "-Domain": "Get SID for different domain in forest"
+      },
+      "troubleshooting": {
+        "no output": "Verify domain membership: systeminfo | findstr Domain",
+        "access denied": "Should work for any domain user - check PowerView import",
+        "wrong SID": "Ensure querying correct domain with -Domain flag"
+      },
+      "notes": "OSCP Critical for Golden Tickets: Combine Domain SID + krbtgt hash + domain name to create Golden Ticket. For user SID, append RID (500 for Administrator, 512 for Domain Admins group). Manual alternative: 'whoami /user' shows current user's SID, remove last segment for domain SID. Or 'wmic useraccount get name,sid'",
+      "oscp_relevance": "medium",
+      "references": [
+        {
+          "title": "PowerView Get-DomainSID",
+          "url": "https://powersploit.readthedocs.io/en/latest/Recon/Get-DomainSID/"
+        },
+        {
+          "title": "Golden Ticket Attack",
+          "url": "https://attack.mitre.org/techniques/T1558/001/"
+        }
+      ]
+    },
+    {
+      "id": "invoke-bloodhound",
+      "name": "Run BloodHound Collector",
+      "category": "enumeration",
+      "command": "Invoke-BloodHound -CollectionMethod All",
+      "description": "Execute BloodHound data collector (SharpHound) to gather comprehensive Active Directory relationship data. Collects user sessions, group memberships, ACLs, trusts, and other relationships for graph analysis. Outputs JSON files for import into BloodHound GUI.",
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "BLOODHOUND",
+        "ENUMERATION",
+        "OSCP:HIGH"
+      ],
+      "variables": [],
+      "output_analysis": [
+        "Creates ZIP file with timestamp in current directory",
+        "JSON files contain: computers, users, groups, sessions, trusts, ACLs",
+        "Progress output shows collection status per category",
+        "Completion message shows output file location"
+      ],
+      "common_uses": [
+        "Comprehensive AD enumeration for attack path analysis",
+        "Map privilege escalation paths to Domain Admin",
+        "Identify shortest path to high-value targets",
+        "Find Kerberoastable accounts and delegation issues",
+        "Visualize trust relationships and ACL misconfigurations"
+      ],
+      "prerequisites": [
+        "import-sharphound"
+      ],
+      "next_steps": [],
+      "alternatives": [],
+      "success_indicators": [
+        "ZIP file created with timestamp",
+        "No collection errors",
+        "File size > 0 bytes (contains data)",
+        "All collection methods completed"
+      ],
+      "failure_indicators": [
+        "Access denied on multiple queries",
+        "Empty or tiny output file",
+        "LDAP connection errors",
+        "Session enumeration failures"
+      ],
+      "flag_explanations": {
+        "-CollectionMethod All": "Collect all data types (default, recommended for OSCP)",
+        "-CollectionMethod Session": "Only collect user sessions (faster, less noisy)",
+        "-CollectionMethod LoggedOn": "Collect logged-on users via registry",
+        "-Stealth": "Use stealth collection (avoid admin share enumeration)",
+        "-Domain": "Target specific domain",
+        "-OutputDirectory": "Specify output location for ZIP file"
+      },
+      "troubleshooting": {
+        "access denied": "User may lack permissions for session enumeration",
+        "very slow": "Use -CollectionMethod Session or -Stealth for faster collection",
+        "no output file": "Check current directory permissions and disk space",
+        "incomplete data": "Some access denied errors are normal, check ZIP contents"
+      },
+      "notes": "OSCP Essential: BloodHound visualizes attack paths you'd have to manually map otherwise. Focus on 'Shortest Paths to Domain Admins' and 'Kerberoastable Accounts' queries. Session collection is noisy (touches every computer). Can run from Linux with bloodhound-python. Transfer ZIP to attacker machine with BloodHound GUI for analysis.",
+      "oscp_relevance": "high",
+      "references": [
+        {
+          "title": "BloodHound Documentation",
+          "url": "https://bloodhound.readthedocs.io/"
+        },
+        {
+          "title": "SharpHound Collection Methods",
+          "url": "https://bloodhound.readthedocs.io/en/latest/data-collection/sharphound.html"
+        }
+      ]
+    }
+  ]
+}
