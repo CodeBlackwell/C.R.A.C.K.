@@ -192,7 +192,7 @@ class Neo4jConfig:
     encrypted: bool = False
 
     # Development default (logged with warning)
-    DEV_DEFAULT_PASSWORD: str = field(default='Afrodeeziak21', repr=False, init=False)
+    DEV_DEFAULT_PASSWORD: str = field(default='crack_password', repr=False, init=False)
 
     @classmethod
     def from_env(cls, require_password: bool = False) -> 'Neo4jConfig':
