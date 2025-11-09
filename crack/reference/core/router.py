@@ -8,7 +8,7 @@ Routes queries to PostgreSQL or Neo4j based on query type:
 """
 
 import logging
-from typing import List, Dict, Optional, Any
+from typing import List, Dict, Optional, Any, TypeVar
 from enum import Enum
 
 from .registry import Command, CommandVariable
@@ -302,27 +302,78 @@ class CommandRegistryRouter:
 
         return None
 
+    def _route_with_fallback(
+        self,
+        operation_name: str,
+        method_name: str,
+        default_return: Any,
+        **params
+    ) -> Any:
+        """
+        Generic routing with automatic fallback
+
+        Eliminates 270+ lines of duplicate fallback code by providing
+        a single implementation that all public methods delegate to.
+
+        Args:
+            operation_name: Name for backend selection (e.g., 'get_command')
+            method_name: Method to call on backend (usually same as operation_name)
+            default_return: Value to return on error (None, [], {}, etc.)
+            **params: Parameters to pass to the backend method
+
+        Returns:
+            Result from backend or default_return on error
+
+        Example:
+            >>> # Old way (15 lines):
+            >>> def get_command(self, command_id):
+            ...     backend = self._select_backend('get_command', command_id=command_id)
+            ...     try:
+            ...         return backend.get_command(command_id)
+            ...     except Exception as e:
+            ...         logger.error(f"Error: {e}")
+            ...         if self.enable_fallback:
+            ...             fallback = self._get_fallback_backend(backend)
+            ...             if fallback:
+            ...                 return fallback.get_command(command_id)
+            ...         return None
+
+            >>> # New way (1 line):
+            >>> def get_command(self, command_id):
+            ...     return self._route_with_fallback('get_command', 'get_command', None, command_id=command_id)
+        """
+        # Select optimal backend for this operation
+        backend = self._select_backend(operation_name, **params)
+
+        try:
+            # Get method from backend
+            method = getattr(backend, method_name)
+            return method(**params)
+
+        except Exception as e:
+            logger.error(f"Error in {operation_name}: {e}", exc_info=True)
+
+            # Try fallback if enabled
+            if not self.enable_fallback:
+                return default_return
+
+            fallback = self._get_fallback_backend(backend)
+            if fallback and hasattr(fallback, method_name):
+                try:
+                    method = getattr(fallback, method_name)
+                    return method(**params)
+                except Exception as e2:
+                    logger.error(f"Fallback also failed for {operation_name}: {e2}", exc_info=True)
+
+            return default_return
+
     # ========================================================================
     # Simple Queries (PostgreSQL Preferred)
     # ========================================================================
 
     def get_command(self, command_id: str) -> Optional[Command]:
-        """
-        Get single command by ID
-
-        Backend: PostgreSQL (indexed lookup, O(1))
-        Fallback: Neo4j or JSON
-        """
-        backend = self._select_backend('get_command', command_id=command_id)
-        try:
-            return backend.get_command(command_id)
-        except Exception as e:
-            logger.error(f"Error in get_command: {e}")
-            if self.enable_fallback:
-                fallback = self._get_fallback_backend(backend)
-                if fallback:
-                    return fallback.get_command(command_id)
-            return None
+        """Get single command by ID with fallback"""
+        return self._route_with_fallback('get_command', 'get_command', None, command_id=command_id)
 
     def search(
         self,
@@ -331,97 +382,37 @@ class CommandRegistryRouter:
         tags: Optional[List[str]] = None,
         oscp_only: bool = False
     ) -> List[Command]:
-        """
-        Full-text search
-
-        Backend: PostgreSQL (mature full-text search)
-        Fallback: Neo4j or JSON
-        """
-        backend = self._select_backend('search', query=query)
-        try:
-            return backend.search(query, category, tags, oscp_only)
-        except Exception as e:
-            logger.error(f"Error in search: {e}")
-            if self.enable_fallback:
-                fallback = self._get_fallback_backend(backend)
-                if fallback:
-                    return fallback.search(query, category, tags, oscp_only)
-            return []
+        """Search commands with fallback"""
+        return self._route_with_fallback(
+            'search', 'search', [],
+            query=query, category=category, tags=tags, oscp_only=oscp_only
+        )
 
     def filter_by_category(self, category: str, subcategory: str = None) -> List[Command]:
-        """
-        Filter by category
-
-        Backend: PostgreSQL (simple WHERE clause)
-        Fallback: Neo4j or JSON
-        """
-        backend = self._select_backend('filter_by_category', category=category)
-        try:
-            return backend.filter_by_category(category, subcategory)
-        except Exception as e:
-            logger.error(f"Error in filter_by_category: {e}")
-            if self.enable_fallback:
-                fallback = self._get_fallback_backend(backend)
-                if fallback:
-                    return fallback.filter_by_category(category, subcategory)
-            return []
+        """Filter by category with fallback"""
+        return self._route_with_fallback(
+            'filter_by_category', 'filter_by_category', [],
+            category=category, subcategory=subcategory
+        )
 
     def filter_by_tags(
         self,
         tags: List[str],
         match_all: bool = True
     ) -> List[Command]:
-        """
-        Filter by tags
-
-        Backend: PostgreSQL for 1-2 tags, Neo4j for complex tag hierarchies
-        """
-        backend = self._select_backend('filter_by_tags', tags=tags)
-        try:
-            return backend.filter_by_tags(tags, match_all)
-        except Exception as e:
-            logger.error(f"Error in filter_by_tags: {e}")
-            if self.enable_fallback:
-                fallback = self._get_fallback_backend(backend)
-                if fallback:
-                    return fallback.filter_by_tags(tags, match_all)
-            return []
+        """Filter by tags with fallback"""
+        return self._route_with_fallback(
+            'filter_by_tags', 'filter_by_tags', [],
+            tags=tags, match_all=match_all
+        )
 
     def get_quick_wins(self) -> List[Command]:
-        """
-        Get quick win commands
-
-        Backend: PostgreSQL (simple filter)
-        Fallback: Neo4j or JSON
-        """
-        backend = self._select_backend('get_quick_wins')
-        try:
-            return backend.get_quick_wins()
-        except Exception as e:
-            logger.error(f"Error in get_quick_wins: {e}")
-            if self.enable_fallback:
-                fallback = self._get_fallback_backend(backend)
-                if fallback:
-                    return fallback.get_quick_wins()
-            return []
+        """Get quick wins with fallback"""
+        return self._route_with_fallback('get_quick_wins', 'get_quick_wins', [])
 
     def get_oscp_high(self) -> List[Command]:
-        """
-        Get OSCP high-relevance commands
-
-        Backend: PostgreSQL (simple filter)
-        Fallback: Neo4j or JSON
-        """
-        backend = self._select_backend('get_oscp_high')
-        try:
-            return backend.get_oscp_high()
-        except Exception as e:
-            logger.error(f"Error in get_oscp_high: {e}")
-            if self.enable_fallback:
-                fallback = self._get_fallback_backend(backend)
-                if fallback:
-                    return fallback.get_oscp_high()
-            return []
+        """Get OSCP high priority commands with fallback"""
+        return self._route_with_fallback('get_oscp_high', 'get_oscp_high', [])
 
     # ========================================================================
     # Graph Queries (Neo4j Preferred)
@@ -432,63 +423,22 @@ class CommandRegistryRouter:
         command_id: str,
         max_depth: int = 3
     ) -> List:
-        """
-        Find alternative command chains
-
-        Backend:
-        - depth=1: PostgreSQL (single JOIN)
-        - depth≥2: Neo4j (graph traversal 10x+ faster)
-
-        Fallback: PostgreSQL with recursive CTE (slow)
-        """
-        backend = self._select_backend('find_alternatives', max_depth=max_depth)
-        try:
-            return backend.find_alternatives(command_id, max_depth)
-        except Exception as e:
-            logger.warning(f"Error in find_alternatives: {e}")
-            if self.enable_fallback:
-                fallback = self._get_fallback_backend(backend)
-                if fallback:
-                    # Limit depth on fallback to avoid performance issues
-                    limited_depth = min(max_depth, 1) if fallback == self.pg_adapter else max_depth
-                    logger.info(f"Using fallback with depth={limited_depth}")
-                    return fallback.find_alternatives(command_id, limited_depth)
-            return []
+        """Find alternative commands with fallback"""
+        return self._route_with_fallback(
+            'find_alternatives', 'find_alternatives', [],
+            command_id=command_id, max_depth=max_depth
+        )
 
     def find_prerequisites(self, command_id: str) -> List[Command]:
-        """
-        Get all prerequisites (transitive closure)
-
-        Backend: Neo4j (native graph traversal)
-        Fallback: PostgreSQL or JSON
-        """
-        backend = self._select_backend('find_prerequisites', command_id=command_id)
-        try:
-            return backend.find_prerequisites(command_id)
-        except Exception as e:
-            logger.warning(f"Error in find_prerequisites: {e}")
-            if self.enable_fallback:
-                fallback = self._get_fallback_backend(backend)
-                if fallback:
-                    return fallback.find_prerequisites(command_id)
-            return []
+        """Find prerequisite commands with fallback"""
+        return self._route_with_fallback(
+            'find_prerequisites', 'find_prerequisites', [],
+            command_id=command_id
+        )
 
     def get_attack_chain_path(self, chain_id: str) -> Optional[Dict[str, Any]]:
-        """
-        Get attack chain execution plan
-
-        Backend: Neo4j ONLY (complex dependency resolution)
-        Fallback: Raise error (not implemented in PostgreSQL)
-        """
-        if self.neo4j_available:
-            try:
-                return self.neo4j_adapter.get_attack_chain_path(chain_id)
-            except Exception as e:
-                logger.error(f"Error in get_attack_chain_path: {e}")
-                return None
-        else:
-            logger.warning("Attack chain path planning requires Neo4j backend")
-            return None
+        """Get attack chain path with fallback"""
+        return self._route_with_fallback('get_attack_chain_path', 'get_attack_chain_path', None, chain_id=chain_id)
 
     # ========================================================================
     # Utility Methods
@@ -535,50 +485,16 @@ class CommandRegistryRouter:
         }
 
     def interactive_fill(self, command: Command) -> str:
-        """
-        Interactive placeholder filling
-
-        Uses first available backend
-        """
-        backend = self._get_primary_backend()
-        if backend:
-            try:
-                return backend.interactive_fill(command)
-            except Exception as e:
-                logger.error(f"Error in interactive_fill: {e}")
-                # Try fallback
-                fallback = self._get_fallback_backend(backend)
-                if fallback:
-                    return fallback.interactive_fill(command)
-                raise
-        else:
-            raise RuntimeError("No backend available for interactive_fill")
+        """Interactively fill command with fallback"""
+        return self._route_with_fallback('interactive_fill', 'interactive_fill', '', command=command)
 
     def get_all_commands(self) -> List[Command]:
-        """Get all commands from primary backend"""
-        backend = self._get_primary_backend()
-        try:
-            return backend.get_all_commands()
-        except Exception as e:
-            logger.error(f"Error in get_all_commands: {e}")
-            if self.enable_fallback:
-                fallback = self._get_fallback_backend(backend)
-                if fallback:
-                    return fallback.get_all_commands()
-            return []
+        """Get all commands with fallback"""
+        return self._route_with_fallback('get_all_commands', 'get_all_commands', [])
 
     def get_subcategories(self, category: str) -> List[str]:
-        """Get subcategories for a category"""
-        backend = self._get_primary_backend()
-        try:
-            return backend.get_subcategories(category)
-        except Exception as e:
-            logger.error(f"Error in get_subcategories: {e}")
-            if self.enable_fallback:
-                fallback = self._get_fallback_backend(backend)
-                if fallback:
-                    return fallback.get_subcategories(category)
-            return []
+        """Get subcategories with fallback"""
+        return self._route_with_fallback('get_subcategories', 'get_subcategories', [], category=category)
 
     @property
     def categories(self):

@@ -112,6 +112,11 @@ class HybridCommandRegistry:
             # Import here to avoid circular dependency
             from .colors import ReferenceTheme
             self.theme = ReferenceTheme()
+
+        # Initialize shared components (lazy import to avoid circular dependency)
+        from .command_filler import CommandFiller
+        self.filler = CommandFiller(config_manager, theme)
+
         self.commands: Dict[str, Command] = {}
         self.categories = {
             'recon': '01-recon',
@@ -337,81 +342,16 @@ class HybridCommandRegistry:
         }
 
     def interactive_fill(self, command: Command) -> str:
-        """Interactively fill command placeholders"""
-        values = {}
-        placeholders = command.extract_placeholders()
+        """
+        Interactively fill command placeholders - DELEGATES to CommandFiller
 
-        t = self.theme  # Shorthand
+        Args:
+            command: Command dataclass to fill
 
-        # Header
-        print(f"\n{t.primary('[*] Filling command:')} {t.command_name(command.name)}")
-        print(f"{t.primary('[*] Command:')} {t.hint(command.command)}\n")
-
-        # Pre-load config values if available
-        config_values = {}
-        if self.config_manager:
-            config_values = self.config_manager.get_placeholder_values()
-
-        try:
-            for placeholder in placeholders:
-                # Check if we have a config value for this placeholder
-                config_value = config_values.get(placeholder, '')
-
-                # Find variable definition
-                var = next((v for v in command.variables if v.name == placeholder), None)
-
-                if var:
-                    # Build colorized prompt
-                    prompt_parts = [
-                        t.prompt("Enter value for"),
-                        t.placeholder(placeholder)
-                    ]
-                    if var.description:
-                        prompt_parts.append(t.hint(f"({var.description})"))
-                    if var.example:
-                        prompt_parts.append(t.hint(f"[e.g., {var.example}]"))
-                    if config_value:
-                        prompt_parts.append(t.hint(f"[config: {t.value(config_value)}]"))
-                    if not var.required:
-                        prompt_parts.append(t.hint("(optional)"))
-
-                    prompt = " ".join(prompt_parts) + t.prompt(": ")
-                    value = input(prompt).strip()
-
-                    # Use config value if user just pressed enter and we have one
-                    if not value and config_value:
-                        value = config_value
-                        print(f"  {t.success('✓')} Using configured value: {t.value(config_value)}")
-
-                    if value or var.required:
-                        values[placeholder] = value
-                else:
-                    # Placeholder not defined in variables
-                    prompt_parts = [
-                        t.prompt("Enter value for"),
-                        t.placeholder(placeholder)
-                    ]
-                    if config_value:
-                        prompt_parts.append(t.hint(f"[config: {t.value(config_value)}]"))
-
-                    prompt = " ".join(prompt_parts) + t.prompt(": ")
-                    value = input(prompt).strip()
-
-                    # Use config value if user just pressed enter
-                    if not value and config_value:
-                        value = config_value
-                        print(f"  {t.success('✓')} Using configured value: {t.value(config_value)}")
-
-                    if value:
-                        values[placeholder] = value
-
-        except KeyboardInterrupt:
-            print(f"\n{t.warning('[Cancelled by user]')}")
-            return ""
-
-        filled_command = command.fill_placeholders(values)
-        print(f"\n{t.success('[+] Final command:')} {t.command_name(filled_command)}")
-        return filled_command
+        Returns:
+            Filled command string
+        """
+        return self.filler.fill_command(command)
 
 
 # Convenience functions for module-level access

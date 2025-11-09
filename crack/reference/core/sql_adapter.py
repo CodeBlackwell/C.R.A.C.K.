@@ -21,6 +21,10 @@ from pathlib import Path
 
 # Import the Command and CommandVariable dataclasses
 from .registry import Command, CommandVariable
+from .command_filler import CommandFiller
+from .command_mapper import CommandMapper
+from .exceptions import AdapterErrorHandler
+from .adapter_interface import CommandRegistryAdapter
 
 
 class SQLCommandRegistryAdapter:
@@ -54,6 +58,10 @@ class SQLCommandRegistryAdapter:
             from .colors import ReferenceTheme
             self.theme = ReferenceTheme()
 
+        # Initialize shared components
+        self.filler = CommandFiller(config_manager, theme)
+        self.error_handler = AdapterErrorHandler('sql')
+
         # API compatibility attributes (match HybridCommandRegistry)
         self.base_path = None  # SQL backend doesn't use file paths
         self.categories = {
@@ -75,7 +83,7 @@ class SQLCommandRegistryAdapter:
 
     def _to_command_dataclass(self, sql_result: Dict[str, Any]) -> Optional[Command]:
         """
-        Convert SQL repository result to Command dataclass
+        Convert SQL repository result to Command dataclass - REFACTORED to use CommandMapper
 
         Args:
             sql_result: Dict returned from CommandRepository
@@ -83,71 +91,10 @@ class SQLCommandRegistryAdapter:
         Returns:
             Command dataclass instance or None if input is None
         """
-        if sql_result is None:
-            return None
-
-        # Convert variables from SQL format to CommandVariable dataclasses
-        variables = []
-        for var in sql_result.get('variables', []):
-            variables.append(CommandVariable(
-                name=var.get('name', ''),
-                description=var.get('description', ''),
-                example=var.get('example_value', ''),
-                required=var.get('is_required', True)
-            ))
-
-        # Extract tag names from SQL tag objects
-        tags = [tag.get('name', '') for tag in sql_result.get('tags', [])]
-
-        # Convert flag_explanations from list format to dict
-        flag_explanations = {}
-        for flag in sql_result.get('flags', []):
-            flag_explanations[flag.get('flag', '')] = flag.get('explanation', '')
-
-        # Extract success/failure indicator patterns
-        success_indicators = [
-            ind.get('pattern', '')
-            for ind in sql_result.get('success_indicators', [])
-        ]
-        failure_indicators = [
-            ind.get('pattern', '')
-            for ind in sql_result.get('failure_indicators', [])
-        ]
-
-        # Get relationship command IDs
-        alternatives = [
-            rel.get('target_command_id', '')
-            for rel in sql_result.get('alternatives', [])
-        ]
-        prerequisites = [
-            rel.get('source_command_id', '')
-            for rel in sql_result.get('prerequisites', [])
-        ]
-        next_steps = [
-            rel.get('target_command_id', '')
-            for rel in sql_result.get('next_steps', [])
-        ]
-
-        # Build Command dataclass
-        return Command(
-            id=sql_result.get('id', ''),
-            name=sql_result.get('name', ''),
-            category=sql_result.get('category', 'custom'),
-            command=sql_result.get('command_template', ''),
-            description=sql_result.get('description', ''),
-            subcategory=sql_result.get('subcategory', ''),
-            tags=tags,
-            variables=variables,
-            flag_explanations=flag_explanations,
-            success_indicators=success_indicators,
-            failure_indicators=failure_indicators,
-            next_steps=next_steps,
-            alternatives=alternatives,
-            prerequisites=prerequisites,
-            troubleshooting={},  # SQL schema doesn't have this yet
-            notes=sql_result.get('notes', ''),
-            oscp_relevance=sql_result.get('oscp_relevance', 'medium')
-        )
+        try:
+            return CommandMapper.to_command(sql_result, CommandMapper.SQL_FIELD_MAPPING)
+        except Exception as e:
+            return self.error_handler.handle_mapping_error(e, sql_result, None)
 
     def get_command(self, command_id: str) -> Optional[Command]:
         """
@@ -356,7 +303,7 @@ class SQLCommandRegistryAdapter:
 
     def interactive_fill(self, command: Command) -> str:
         """
-        Interactively fill command placeholders (API-compatible with HybridCommandRegistry)
+        Interactively fill command placeholders - DELEGATES to CommandFiller
 
         Args:
             command: Command dataclass to fill
@@ -364,80 +311,7 @@ class SQLCommandRegistryAdapter:
         Returns:
             Filled command string
         """
-        values = {}
-        placeholders = command.extract_placeholders()
-
-        t = self.theme  # Shorthand
-
-        # Header
-        print(f"\n{t.primary('[*] Filling command:')} {t.command_name(command.name)}")
-        print(f"{t.primary('[*] Command:')} {t.hint(command.command)}\n")
-
-        # Pre-load config values if available
-        config_values = {}
-        if self.config_manager:
-            config_values = self.config_manager.get_placeholder_values()
-
-        try:
-            for placeholder in placeholders:
-                # Check if we have a config value for this placeholder
-                config_value = config_values.get(placeholder, '')
-
-                # Find variable definition
-                var = next((v for v in command.variables if v.name == placeholder), None)
-
-                if var:
-                    # Build colorized prompt
-                    prompt_parts = [
-                        t.prompt("Enter value for"),
-                        t.placeholder(placeholder)
-                    ]
-                    if var.description:
-                        prompt_parts.append(t.hint(f"({var.description})"))
-                    if var.example:
-                        prompt_parts.append(t.hint(f"[e.g., {var.example}]"))
-                    if config_value:
-                        prompt_parts.append(t.hint(f"[config: {t.value(config_value)}]"))
-                    if not var.required:
-                        prompt_parts.append(t.hint("(optional)"))
-
-                    prompt = " ".join(prompt_parts) + t.prompt(": ")
-                    value = input(prompt).strip()
-
-                    # Use config value if user just pressed enter and we have one
-                    if not value and config_value:
-                        value = config_value
-                        print(f"  {t.success('✓')} Using configured value: {t.value(config_value)}")
-
-                    if value or var.required:
-                        values[placeholder] = value
-                else:
-                    # Placeholder not defined in variables
-                    prompt_parts = [
-                        t.prompt("Enter value for"),
-                        t.placeholder(placeholder)
-                    ]
-                    if config_value:
-                        prompt_parts.append(t.hint(f"[config: {t.value(config_value)}]"))
-
-                    prompt = " ".join(prompt_parts) + t.prompt(": ")
-                    value = input(prompt).strip()
-
-                    # Use config value if user just pressed enter
-                    if not value and config_value:
-                        value = config_value
-                        print(f"  {t.success('✓')} Using configured value: {t.value(config_value)}")
-
-                    if value:
-                        values[placeholder] = value
-
-        except KeyboardInterrupt:
-            print(f"\n{t.warning('[Cancelled by user]')}")
-            return ""
-
-        filled_command = command.fill_placeholders(values)
-        print(f"\n{t.success('[+] Final command:')} {t.command_name(filled_command)}")
-        return filled_command
+        return self.filler.fill_command(command)
 
     def add_command(self, command: Command):
         """
@@ -593,8 +467,9 @@ class SQLCommandRegistryAdapter:
 
                     return commands
         except Exception as e:
-            print(f"Error in find_alternatives: {e}")
-            return []
+            return self.error_handler.handle_query_error(
+                e, 'find_alternatives', {'command_id': command_id, 'max_depth': max_depth}, []
+            )
 
     def find_prerequisites(self, command_id: str, depth: int = 1) -> List[Command]:
         """
@@ -657,8 +532,9 @@ class SQLCommandRegistryAdapter:
 
                     return commands
         except Exception as e:
-            print(f"Error in find_prerequisites: {e}")
-            return []
+            return self.error_handler.handle_query_error(
+                e, 'find_prerequisites', {'command_id': command_id, 'depth': depth}, []
+            )
 
     def get_attack_chain_path(self, chain_id: str) -> Dict[str, Any]:
         """
@@ -759,8 +635,9 @@ class SQLCommandRegistryAdapter:
                     }
 
         except Exception as e:
-            print(f"Error in get_attack_chain_path: {e}")
-            return None
+            return self.error_handler.handle_query_error(
+                e, 'get_attack_chain_path', {'chain_id': chain_id}, None
+            )
 
 
 # Convenience functions for module-level access

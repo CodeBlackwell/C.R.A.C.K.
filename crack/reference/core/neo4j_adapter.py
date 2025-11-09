@@ -23,6 +23,10 @@ except ImportError:
     NEO4J_AVAILABLE = False
 
 from .registry import Command, CommandVariable
+from .command_filler import CommandFiller
+from .command_mapper import CommandMapper
+from .exceptions import AdapterErrorHandler
+from .adapter_interface import CommandRegistryAdapter
 
 
 class Neo4jConnectionError(Exception):
@@ -68,7 +72,7 @@ class Neo4jCommandRegistryAdapter:
         if not NEO4J_AVAILABLE:
             raise Neo4jConnectionError("neo4j package not installed")
 
-        from db.config import get_neo4j_config
+        from db.config import Neo4jConfig
 
         self.config_manager = config_manager
         self.theme = theme
@@ -77,8 +81,12 @@ class Neo4jCommandRegistryAdapter:
             from .colors import ReferenceTheme
             self.theme = ReferenceTheme()
 
+        # Initialize shared components
+        self.filler = CommandFiller(config_manager, theme)
+        self.error_handler = AdapterErrorHandler('neo4j')
+
         # Neo4j connection
-        neo4j_cfg = neo4j_config or get_neo4j_config()
+        neo4j_cfg = neo4j_config or Neo4jConfig.from_env()
         try:
             self.driver = GraphDatabase.driver(
                 neo4j_cfg['uri'],
@@ -93,6 +101,7 @@ class Neo4jCommandRegistryAdapter:
                 session.run("RETURN 1")
 
         except Exception as e:
+            self.error_handler.handle_connection_error(e, {'uri': neo4j_cfg.get('uri', 'unknown')})
             raise Neo4jConnectionError(f"Failed to connect to Neo4j: {e}")
 
     def __del__(self):
@@ -120,19 +129,21 @@ class Neo4jCommandRegistryAdapter:
 
             except (ServiceUnavailable, SessionExpired) as e:
                 if attempt == max_retries - 1:
-                    print(f"Neo4j unavailable after {max_retries} retries: {e}")
-                    return []
+                    return self.error_handler.handle_query_error(
+                        e, 'execute_read', {'query': query[:100], **params}, []
+                    )
                 time.sleep(2 ** attempt)
 
             except Exception as e:
-                print(f"Neo4j query error: {e}")
-                return []
+                return self.error_handler.handle_query_error(
+                    e, 'execute_read', {'query': query[:100], **params}, []
+                )
 
         return []
 
     def _record_to_command(self, record) -> Optional[Command]:
         """
-        Convert Neo4j record to Command dataclass
+        Convert Neo4j record to Command dataclass - REFACTORED to use CommandMapper
 
         Args:
             record: Neo4j record with command node and relationships
@@ -141,62 +152,9 @@ class Neo4jCommandRegistryAdapter:
             Command dataclass instance or None
         """
         try:
-            if 'cmd' not in record:
-                return None
-
-            cmd_node = record['cmd']
-
-            # Extract variables
-            variables = []
-            if 'variables' in record:
-                for v in record['variables']:
-                    if v and 'name' in v:
-                        variables.append(CommandVariable(
-                            name=v['name'],
-                            description=v.get('description', ''),
-                            example=v.get('example', ''),
-                            required=v.get('required', True)
-                        ))
-
-            # Extract tags
-            tags = []
-            if 'tags' in record:
-                tags = [t for t in record['tags'] if t]
-
-            # Extract flag explanations
-            flag_explanations = {}
-            if 'flags' in record:
-                for f in record['flags']:
-                    if f and 'flag' in f:
-                        flag_explanations[f['flag']] = f.get('explanation', '')
-
-            # Extract indicators
-            success_indicators = []
-            failure_indicators = []
-            if 'success_indicators' in record:
-                success_indicators = [s for s in record['success_indicators'] if s]
-            if 'failure_indicators' in record:
-                failure_indicators = [f for f in record['failure_indicators'] if f]
-
-            return Command(
-                id=cmd_node['id'],
-                name=cmd_node['name'],
-                command=cmd_node.get('command', ''),
-                description=cmd_node['description'],
-                category=cmd_node['category'],
-                subcategory=cmd_node.get('subcategory', ''),
-                tags=tags,
-                variables=variables,
-                flag_explanations=flag_explanations,
-                success_indicators=success_indicators,
-                failure_indicators=failure_indicators,
-                oscp_relevance=cmd_node.get('oscp_relevance', 'medium'),
-                notes=cmd_node.get('notes', '')
-            )
-
+            return CommandMapper.to_command(record, CommandMapper.NEO4J_FIELD_MAPPING)
         except Exception as e:
-            print(f"Error converting record to command: {e}")
-            return None
+            return self.error_handler.handle_mapping_error(e, {'record_keys': list(record.keys())}, None)
 
     @lru_cache(maxsize=256)
     def get_command(self, command_id: str) -> Optional[Command]:
@@ -661,7 +619,7 @@ class Neo4jCommandRegistryAdapter:
 
     def interactive_fill(self, command: Command) -> str:
         """
-        Interactively fill command placeholders
+        Interactively fill command placeholders - DELEGATES to CommandFiller
 
         Args:
             command: Command dataclass to fill
@@ -669,80 +627,7 @@ class Neo4jCommandRegistryAdapter:
         Returns:
             Filled command string
         """
-        values = {}
-        placeholders = command.extract_placeholders()
-
-        t = self.theme
-
-        # Header
-        print(f"\n{t.primary('[*] Filling command:')} {t.command_name(command.name)}")
-        print(f"{t.primary('[*] Command:')} {t.hint(command.command)}\n")
-
-        # Pre-load config values if available
-        config_values = {}
-        if self.config_manager:
-            config_values = self.config_manager.get_placeholder_values()
-
-        try:
-            for placeholder in placeholders:
-                # Check if we have a config value for this placeholder
-                config_value = config_values.get(placeholder, '')
-
-                # Find variable definition
-                var = next((v for v in command.variables if v.name == placeholder), None)
-
-                if var:
-                    # Build colorized prompt
-                    prompt_parts = [
-                        t.prompt("Enter value for"),
-                        t.placeholder(placeholder)
-                    ]
-                    if var.description:
-                        prompt_parts.append(t.hint(f"({var.description})"))
-                    if var.example:
-                        prompt_parts.append(t.hint(f"[e.g., {var.example}]"))
-                    if config_value:
-                        prompt_parts.append(t.hint(f"[config: {t.value(config_value)}]"))
-                    if not var.required:
-                        prompt_parts.append(t.hint("(optional)"))
-
-                    prompt = " ".join(prompt_parts) + t.prompt(": ")
-                    value = input(prompt).strip()
-
-                    # Use config value if user just pressed enter and we have one
-                    if not value and config_value:
-                        value = config_value
-                        print(f"  {t.success('✓')} Using configured value: {t.value(config_value)}")
-
-                    if value or var.required:
-                        values[placeholder] = value
-                else:
-                    # Placeholder not defined in variables
-                    prompt_parts = [
-                        t.prompt("Enter value for"),
-                        t.placeholder(placeholder)
-                    ]
-                    if config_value:
-                        prompt_parts.append(t.hint(f"[config: {t.value(config_value)}]"))
-
-                    prompt = " ".join(prompt_parts) + t.prompt(": ")
-                    value = input(prompt).strip()
-
-                    # Use config value if user just pressed enter
-                    if not value and config_value:
-                        value = config_value
-                        print(f"  {t.success('✓')} Using configured value: {t.value(config_value)}")
-
-                    if value:
-                        values[placeholder] = value
-
-        except KeyboardInterrupt:
-            print(f"\n{t.warning('[Cancelled by user]')}")
-            return ""
-
-        filled_command = command.fill_placeholders(values)
-        print(f"\n{t.success('[+] Final command:')} {t.command_name(filled_command)}")
-        return filled_command
+        return self.filler.fill_command(command)
 
     def get_all_commands(self) -> List[Command]:
         """
