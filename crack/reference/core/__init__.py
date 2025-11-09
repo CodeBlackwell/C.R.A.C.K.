@@ -2,7 +2,7 @@
 Core functionality for the CRACK Reference System
 """
 
-from .registry import HybridCommandRegistry
+from .registry import HybridCommandRegistry, Command, CommandVariable
 from .sql_adapter import SQLCommandRegistryAdapter
 from .router import CommandRegistryRouter
 from .parser import MarkdownCommandParser
@@ -29,6 +29,8 @@ from crack.config import ConfigManager
 
 __all__ = [
     'HybridCommandRegistry',
+    'Command',
+    'CommandVariable',
     'SQLCommandRegistryAdapter',
     'CommandRegistryRouter',
     'MarkdownCommandParser',
