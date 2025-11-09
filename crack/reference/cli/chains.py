@@ -51,14 +51,15 @@ class ChainsCLI(BaseCLIHandler):
         """Unified handler for chain listing/searching/showing
 
         Args:
-            query: None (list all), keyword (search), or chain ID (show specific)
+            query: None (list all), keyword (search), chain ID (show), or keyword + number (select)
             format: Output format (text, json, yaml)
             verbose: Show detailed info
 
         Behavior:
             - No query: List all chains
-            - Keyword: Search chains by name/tags/description
+            - Query ends with number: Search/list + auto-select by number
             - Valid ID: Show specific chain details
+            - Keyword: Search chains by name/tags/description
 
         Returns:
             Exit code (0 for success)
@@ -66,12 +67,25 @@ class ChainsCLI(BaseCLIHandler):
         Examples:
             chains.list_or_show()  # List all
             chains.list_or_show('sqli')  # Search
+            chains.list_or_show('sqli 1')  # Search + select first result
             chains.list_or_show('linux-privesc-suid-basic')  # Show specific
         """
         self._ensure_loaded()
 
+        selection = None
+
+        # Check if query ends with a number (for numbered selection)
+        if query and query.split()[-1].isdigit():
+            parts = query.rsplit(None, 1)
+            actual_query = parts[0] if len(parts) > 1 else None
+            selection = int(parts[-1]) - 1  # Convert to 0-indexed
+            query = actual_query
+
         # No query - list all
         if not query:
+            chains = list(self.registry.filter_chains())
+            if selection is not None:
+                return self._handle_selection(chains, selection)
             return self.list(format=format)
 
         # Check if query matches a chain ID (exact match)
@@ -80,7 +94,43 @@ class ChainsCLI(BaseCLIHandler):
             return self.show(query, format=format)
 
         # Otherwise treat as search keyword
-        return self.search(query, format=format, verbose=verbose)
+        chains = self._search_chains(query)
+
+        if selection is not None:
+            # User wants to select by number from search results
+            if not chains:
+                print("No attack chains found matching criteria")
+                return 1
+            return self._handle_selection(chains, selection)
+
+        # Display search results
+        if not chains:
+            print("No attack chains found matching criteria")
+            return 0
+
+        # Format output
+        if format == 'json':
+            import json
+            print(json.dumps(chains, indent=2))
+        elif format == 'yaml':
+            try:
+                import yaml
+                print(yaml.dump(chains, default_flow_style=False))
+            except ImportError:
+                print(self.format_error("PyYAML not installed. Use 'pip install pyyaml'"))
+                return 1
+        else:  # text format
+            if verbose:
+                # Show detailed view for each chain
+                for i, chain in enumerate(chains):
+                    if i > 0:
+                        print('\n' + '─' * 80 + '\n')
+                    self._format_chain_details_text(chain)
+            else:
+                # Show summary list
+                self._format_chain_list_text(chains)
+
+        return 0
 
     def search(self, query: Optional[str] = None,
                oscp_relevant: Optional[bool] = None,
@@ -300,35 +350,101 @@ class ChainsCLI(BaseCLIHandler):
             print(f"\n{error_msg}\n")
             return 1
 
+    def _search_chains(self, query: Optional[str] = None,
+                      oscp_relevant: Optional[bool] = None) -> List[Dict[str, Any]]:
+        """Search and filter chains (extracted helper method)
+
+        Args:
+            query: Search term to filter chains
+            oscp_relevant: Filter by OSCP relevance
+
+        Returns:
+            List of matching chain dictionaries
+        """
+        # Build filter criteria
+        criteria = {}
+        if oscp_relevant is not None:
+            criteria['oscp_relevant'] = oscp_relevant
+
+        # Get all chains matching criteria
+        chains = list(self.registry.filter_chains(**criteria))
+
+        # Apply keyword search if query provided
+        if query:
+            query_lower = query.lower()
+            filtered_chains = []
+
+            for chain in chains:
+                # Search in multiple fields
+                searchable_text = ' '.join([
+                    chain.get('id', ''),
+                    chain.get('name', ''),
+                    chain.get('description', ''),
+                    ' '.join(chain.get('metadata', {}).get('tags', [])),
+                    chain.get('metadata', {}).get('category', ''),
+                    chain.get('metadata', {}).get('platform', ''),
+                    # Also search step names and descriptions
+                    ' '.join([step.get('name', '') + ' ' + step.get('description', '')
+                             for step in chain.get('steps', [])])
+                ]).lower()
+
+                if query_lower in searchable_text:
+                    filtered_chains.append(chain)
+
+            chains = filtered_chains
+
+        return chains
+
+    def _handle_selection(self, chains: List[Dict[str, Any]], selection: int) -> int:
+        """Handle numeric selection from chain list
+
+        Args:
+            chains: List of chain dictionaries
+            selection: 0-indexed selection number
+
+        Returns:
+            Exit code (0 for success, 1 for error)
+        """
+        if 0 <= selection < len(chains):
+            chain = chains[selection]
+            chain_id = chain.get('id', 'Unknown')
+            # Show full details for selected chain
+            return self.show(chain_id, format='text')
+        else:
+            print(self.format_error(f"Invalid selection: {selection + 1} (only {len(chains)} chain(s) found)"))
+            return 1
+
     def _format_chain_list_text(self, chains: List[Dict[str, Any]]):
-        """Format chain list in text format
+        """Format chain list in text format (numbered for selection)
 
         Args:
             chains: List of chain dictionaries
         """
         self.print_banner("ATTACK CHAINS")
 
-        # Define column widths
-        widths = [40, 30, 20, 15, 12, 8]
-        headers = ['ID', 'Name', 'Category', 'Difficulty', 'Time', 'OSCP']
+        # Numbered list format (like normal commands)
+        for i, chain in enumerate(chains, 1):
+            chain_id = chain.get('id', 'Unknown')
+            name = chain.get('name', 'Unknown')
+            category = chain.get('metadata', {}).get('category', 'Unknown')
+            difficulty = chain.get('difficulty', 'Unknown')
+            time_est = chain.get('time_estimate', 'Unknown')
+            oscp = 'OSCP' if chain.get('oscp_relevant', False) else ''
 
-        # Print header
-        print(self.theme.primary(self.format_table_row(headers, widths)))
-        self.print_separator('─', sum(widths) + len(widths) * 2)
+            # Number + ID + Name (color-coded)
+            print(f"\n{self.theme.muted(f'{i}.')} [{self.theme.primary(chain_id)}] {self.theme.command_name(name)}")
 
-        # Print rows
-        for chain in chains:
-            chain_id = chain.get('id', 'Unknown')[:38]
-            name = chain.get('name', 'Unknown')[:28]
-            category = chain.get('metadata', {}).get('category', 'Unknown')[:18]
-            difficulty = chain.get('difficulty', 'Unknown')[:13]
-            time_est = chain.get('time_estimate', 'Unknown')[:10]
-            oscp = 'Yes' if chain.get('oscp_relevant', False) else 'No'
-
-            row = [chain_id, name, category, difficulty, time_est, oscp]
-            print(self.format_table_row(row, widths))
+            # Metadata line
+            tags = f"{self.theme.secondary(category)} • {difficulty}"
+            if time_est and time_est != 'Unknown':
+                tags += f" • {time_est}"
+            if oscp:
+                tags += f" • {self.theme.success(oscp)}"
+            print(f"   {tags}")
 
         print(f"\n{self.theme.hint(f'Total: {len(chains)} chain(s)')}")
+        print(f"{self.theme.hint('Use: crack reference --chains <id> to view details')}")
+        print(f"{self.theme.hint('Use: crack reference --chains <query> <number> to select')}")
 
     def execute_interactive(self, chain_id: str, target: Optional[str] = None, resume: bool = False) -> int:
         """Launch interactive chain execution

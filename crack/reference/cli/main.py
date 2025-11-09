@@ -22,7 +22,8 @@ from crack.reference.cli import (
     DisplayCLI,
     InteractiveCLI,
     ConfigCLI,
-    SearchCLI
+    SearchCLI,
+    GraphCLI
 )
 
 logger = logging.getLogger(__name__)
@@ -49,106 +50,44 @@ class ReferenceCLI:
         self.interactive_cli = InteractiveCLI(registry=self.registry, theme=self.theme)
         self.config_cli = ConfigCLI(config_manager=self.config, theme=self.theme)
         self.search_cli = SearchCLI(registry=self.registry, theme=self.theme)
+        self.graph_cli = GraphCLI(registry=self.registry, theme=self.theme)
 
         self.parser = self.create_parser()
 
     def _initialize_registry(self):
-        """Initialize registry with auto-detect fallback (Router → SQL → JSON)
+        """Initialize registry: Neo4j → JSON fallback (minimalist)
 
-        Auto-detection priority:
-        1. CommandRegistryRouter (PostgreSQL + Neo4j) - best performance
-        2. SQLCommandRegistryAdapter (PostgreSQL only) - reliable fallback
-        3. HybridCommandRegistry (JSON) - last resort
+        Auto-detection:
+        1. Neo4jCommandRegistryAdapter (graph database - best for complex queries)
+        2. HybridCommandRegistry (JSON - always available fallback)
 
         Returns:
-            Registry instance (Router, SQLCommandRegistryAdapter, or HybridCommandRegistry)
+            Registry instance (Neo4jCommandRegistryAdapter or HybridCommandRegistry)
         """
-        # Try Router first (dual backend: PostgreSQL + Neo4j)
+        # Try Neo4j first
         try:
-            from crack.reference.core.router import CommandRegistryRouter
+            from crack.reference.core import Neo4jCommandRegistryAdapter
 
-            router = CommandRegistryRouter(
+            adapter = Neo4jCommandRegistryAdapter(
                 config_manager=self.config,
-                theme=self.theme,
-                enable_fallback=True
+                theme=self.theme
             )
 
-            # Check which backends are available
-            health = router.health_check()
-            backends_available = []
-
-            if health['neo4j']['available'] and health['neo4j']['healthy']:
-                backends_available.append('Neo4j')
-            if health['sql']['available'] and health['sql']['healthy']:
-                backends_available.append('PostgreSQL')
-            if health['json']['available']:
-                backends_available.append('JSON')
-
-            if backends_available:
-                backend_str = ' + '.join(backends_available)
-                print(self.theme.success(f"✓ Using Router ({backend_str})"))
-                return router
+            # Test connection
+            if adapter.health_check():
+                stats = adapter.get_stats()
+                cmd_count = stats.get('total_commands', 0)
+                print(self.theme.success(f"✓ Using Neo4j backend ({cmd_count} commands)"))
+                return adapter
             else:
-                print(self.theme.warning("⚠ Router has no healthy backends"))
+                logger.debug("Neo4j health check failed")
+                print(self.theme.hint("ℹ Neo4j unhealthy, using JSON fallback"))
 
         except Exception as e:
-            # Router initialization failed
-            logger.debug(f"Router initialization failed: {e}")
-            print(self.theme.hint(f"ℹ Router unavailable: {e}"))
+            logger.debug(f"Neo4j unavailable: {e}")
+            print(self.theme.hint("ℹ Neo4j unavailable, using JSON fallback"))
 
-        # Try SQL backend (PostgreSQL only)
-        try:
-            from crack.reference.core.sql_adapter import SQLCommandRegistryAdapter
-            from db.config import get_db_config
-            import psycopg2
-
-            # Test PostgreSQL connection and integrity
-            try:
-                db_config = get_db_config()
-                test_conn = psycopg2.connect(**db_config)
-                cursor = test_conn.cursor()
-                cursor.execute("SELECT COUNT(*) FROM commands")
-                count = cursor.fetchone()[0]
-                cursor.close()
-                test_conn.close()
-
-                if count > 0:
-                    # PostgreSQL database valid - use SQL adapter
-                    print(self.theme.success(f"✓ Using PostgreSQL backend ({count} commands loaded)"))
-                    return SQLCommandRegistryAdapter(
-                        db_config=db_config,
-                        config_manager=self.config,
-                        theme=self.theme
-                    )
-                else:
-                    print(self.theme.warning("⚠ SQL database empty, falling back to JSON"))
-            except psycopg2.Error:
-                # PostgreSQL connection failed
-                print(self.theme.hint("ℹ PostgreSQL connection failed, using JSON backend"))
-                print(self.theme.hint("  To enable faster SQL backend: crack db setup"))
-
-        except ImportError as e:
-            # SQL adapter not available
-            print(self.theme.hint("ℹ SQL backend not available, using JSON backend"))
-        except Exception as e:
-            # Generic error
-            error_msg = str(e).lower()
-            if 'locked' in error_msg:
-                print(self.theme.warning("⚠ SQL database locked by another process"))
-            elif 'no such table' in error_msg or 'no such column' in error_msg:
-                print(self.theme.warning("⚠ SQL database schema outdated"))
-                print(self.theme.hint("  Run: python3 -m db.migrate commands"))
-            elif 'unable to open' in error_msg:
-                print(self.theme.warning("⚠ Cannot read SQL database (check permissions)"))
-            else:
-                print(self.theme.warning(f"⚠ SQL database error: {e}"))
-            print(self.theme.hint("ℹ Falling back to JSON backend"))
-        except Exception as e:
-            # Unexpected error - fallback gracefully
-            print(self.theme.warning(f"⚠ Unexpected SQL error: {e}"))
-            print(self.theme.hint("ℹ Falling back to JSON backend"))
-
-        # Fallback: Use JSON-based HybridCommandRegistry
+        # Fallback: JSON
         print(self.theme.hint("✓ Using JSON backend"))
         return HybridCommandRegistry(config_manager=self.config, theme=self.theme)
 
@@ -317,6 +256,17 @@ class ReferenceCLI:
             help='Show banner output (overrides --no-banner)'
         )
 
+        # Graph pattern operations (Neo4j)
+        parser.add_argument(
+            '--graph',
+            choices=[
+                'multi-hop', 'shortest-path', 'prereqs', 'parallel',
+                'service-rec', 'tag-hierarchy', 'success-corr',
+                'coverage-gaps', 'circular-deps', 'var-usage'
+            ],
+            help='Execute Neo4j graph pattern (requires Neo4j backend)'
+        )
+
         # Positional arguments
         parser.add_argument(
             'args',
@@ -342,7 +292,7 @@ class ReferenceCLI:
                 flags.append(arg)
                 # Check if this flag takes a value
                 if arg in ['--set', '--get', '--category', '-c', '--subcategory', '-s',
-                          '--tags', '-t', '--exclude-tags', '--format', '-f', '--config', '--chains']:
+                          '--tags', '-t', '--exclude-tags', '--format', '-f', '--config', '--chains', '--graph']:
                     # These flags take values - include next arg
                     i += 1
                     if i < len(args):
@@ -415,13 +365,21 @@ class ReferenceCLI:
         if args.tree:
             return self.display_cli.show_command_tree(self.registry)
 
+        # Handle graph pattern flag
+        if hasattr(args, 'graph') and args.graph:
+            return self.graph_cli.execute_pattern(args.graph, args)
+
         # Handle chains flag
         if hasattr(args, 'chains') and args.chains is not None:
             # --chains flag present
             query = None
             if isinstance(args.chains, str):
                 # --chains QUERY syntax (e.g., --chains sqli)
-                query = args.chains
+                # Also append any additional positional args (for "lateral 3" syntax)
+                query_parts = [args.chains]
+                if args.args:
+                    query_parts.extend(args.args)
+                query = ' '.join(query_parts)
             elif args.args:
                 # --chains with positional args: crack reference --chains sqli
                 query = ' '.join(args.args)
@@ -552,92 +510,33 @@ class ReferenceCLI:
             return 1
 
     def show_status(self) -> int:
-        """Show backend status and statistics
+        """Show backend status and statistics (minimalist)
 
         Returns:
             Exit code (0 for success)
         """
-        from crack.reference.core.router import CommandRegistryRouter
-
-        # Check if using router
-        if not isinstance(self.registry, CommandRegistryRouter):
-            print(f"\n{self.theme.bold_white('CRACK Reference Backend Status')}\n")
-            print("=" * 60)
-            print(f"\nBackend: {type(self.registry).__name__}")
-            print(f"Status: {self.theme.success('✓ Active')}")
-
-            # Try to get stats
-            if hasattr(self.registry, 'get_stats'):
-                try:
-                    stats = self.registry.get_stats()
-                    if stats:
-                        print(f"\nStatistics:")
-                        for key, value in stats.items():
-                            print(f"  {key}: {value}")
-                except Exception as e:
-                    print(f"  (Statistics unavailable: {e})")
-
-            print("\n" + "=" * 60 + "\n")
-            return 0
-
-        # Router status
-        health = self.registry.health_check()
-        stats = self.registry.get_stats()
+        from crack.reference.core import Neo4jCommandRegistryAdapter
 
         print(f"\n{self.theme.bold_white('CRACK Reference Backend Status')}\n")
         print("=" * 60)
+        print(f"\nBackend: {type(self.registry).__name__}")
+        print(f"Status: {self.theme.success('✓ Active')}")
 
-        # Neo4j Status
-        print(f"\n{self.theme.primary('Neo4j Graph Database:')}")
-        if health['neo4j']['available']:
-            status_str = "✓ Connected" if health['neo4j']['healthy'] else "✗ Unavailable"
-            if health['neo4j']['healthy']:
-                print(f"  Status: {self.theme.success(status_str)}")
-            else:
-                print(f"  Status: {self.theme.error(status_str)}")
+        # Show stats if available
+        if hasattr(self.registry, 'get_stats'):
+            try:
+                stats = self.registry.get_stats()
+                if stats:
+                    print(f"\nStatistics:")
+                    for key, value in stats.items():
+                        print(f"  {key}: {value}")
+            except Exception as e:
+                print(f"  (Statistics unavailable: {e})")
 
-            # Show Neo4j stats
-            if health['neo4j']['healthy'] and stats['backends']['neo4j']['stats']:
-                neo4j_stats = stats['backends']['neo4j']['stats']
-                print(f"  Commands: {neo4j_stats.get('command_count', 0):,}")
-                print(f"  Tags: {neo4j_stats.get('tag_count', 0):,}")
-                print(f"  Relationships: {neo4j_stats.get('relationship_count', 0):,}")
-                print(f"  Attack Chains: {neo4j_stats.get('chain_count', 0):,}")
-        else:
-            print(f"  Status: {self.theme.hint('Not configured')}")
-
-        # PostgreSQL Status
-        print(f"\n{self.theme.primary('PostgreSQL Database:')}")
-        if health['sql']['available']:
-            status_str = "✓ Connected" if health['sql']['healthy'] else "✗ Unavailable"
-            if health['sql']['healthy']:
-                print(f"  Status: {self.theme.success(status_str)}")
-            else:
-                print(f"  Status: {self.theme.error(status_str)}")
-
-            # Show PostgreSQL stats
-            if health['sql']['healthy'] and stats['backends']['postgresql']['stats']:
-                pg_stats = stats['backends']['postgresql']['stats']
-                print(f"  Commands: {pg_stats.get('command_count', 0):,}")
-                print(f"  Services: {pg_stats.get('service_count', 0):,}")
-                print(f"  Attack Chains: {pg_stats.get('chain_count', 0):,}")
-        else:
-            print(f"  Status: {self.theme.hint('Not configured')}")
-
-        # JSON Status
-        print(f"\n{self.theme.primary('JSON Fallback:')}")
-        if health['json']['available']:
-            print(f"  Status: {self.theme.success('✓ Available')}")
-        else:
-            print(f"  Status: {self.theme.hint('Not needed')}")
-
-        # Active Backend
-        print(f"\n{self.theme.bold_white('Active Backend:')}")
-        print(f"  {stats['active_backend']}")
-
-        # Routing Mode
-        print(f"\n{self.theme.bold_white('Routing Mode:')}")
-        print(f"  {stats['routing_mode']}")
+        # Show health for Neo4j
+        if isinstance(self.registry, Neo4jCommandRegistryAdapter):
+            health = self.registry.health_check()
+            print(f"\nHealth: {self.theme.success('✓ Connected') if health else self.theme.error('✗ Disconnected')}")
 
         print("\n" + "=" * 60 + "\n")
         return 0
