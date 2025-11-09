@@ -1,0 +1,622 @@
+{
+  "timestamp": "2025-11-09T01:55:30.246749",
+  "summary": {
+    "files_validated": 83,
+    "commands_validated": 1300,
+    "valid_commands": 482,
+    "invalid_commands": 818,
+    "warnings": 1380,
+    "success_rate": "37.08%"
+  },
+  "errors": {
+    "total": 746,
+    "by_type": {
+      "invalid_category": 255,
+      "validation_error": 477,
+      "invalid_placeholder": 14
+    }
+  },
+  "details": [
+    {
+      "file": "reference/data/commands/av-evasion/amsi-bypass.json",
+      "command_id": "amsi-context-corruption",
+      "error_type": "invalid_category",
+      "message": "Invalid category: amsi-bypass. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/av-evasion/amsi-bypass.json",
+      "command_id": "amsi-init-failed",
+      "error_type": "invalid_category",
+      "message": "Invalid category: amsi-bypass. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/av-evasion/amsi-bypass.json",
+      "command_id": "amsi-memory-patch",
+      "error_type": "invalid_category",
+      "message": "Invalid category: amsi-bypass. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/av-evasion/amsi-bypass.json",
+      "command_id": "amsi-test-payload",
+      "error_type": "invalid_category",
+      "message": "Invalid category: amsi-bypass. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/av-evasion/amsi-bypass.json",
+      "command_id": "amsi-base64-staging",
+      "error_type": "invalid_category",
+      "message": "Invalid category: amsi-bypass. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/av-evasion/amsi-bypass.json",
+      "command_id": "amsi-jscript-registry",
+      "error_type": "invalid_category",
+      "message": "Invalid category: amsi-bypass. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/av-evasion/debugging.json",
+      "command_id": "windbg-attach-process",
+      "error_type": "invalid_category",
+      "message": "Invalid category: debugging. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/av-evasion/debugging.json",
+      "command_id": "windbg-breakpoint-commands",
+      "error_type": "invalid_category",
+      "message": "Invalid category: debugging. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/av-evasion/debugging.json",
+      "command_id": "windbg-memory-inspection",
+      "error_type": "invalid_category",
+      "message": "Invalid category: debugging. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/av-evasion/debugging.json",
+      "command_id": "windbg-disassemble",
+      "error_type": "invalid_category",
+      "message": "Invalid category: debugging. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/av-evasion/debugging.json",
+      "command_id": "frida-trace-amsi",
+      "error_type": "invalid_category",
+      "message": "Invalid category: debugging. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/av-evasion/debugging.json",
+      "command_id": "windbg-edit-memory",
+      "error_type": "invalid_category",
+      "message": "Invalid category: debugging. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/av-evasion/heuristic-evasion.json",
+      "command_id": "sleep-timer-validation",
+      "error_type": "invalid_category",
+      "message": "Invalid category: heuristic-evasion. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/av-evasion/heuristic-evasion.json",
+      "command_id": "non-emulated-api-numa",
+      "error_type": "invalid_category",
+      "message": "Invalid category: heuristic-evasion. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/av-evasion/heuristic-evasion.json",
+      "command_id": "large-memory-allocation",
+      "error_type": "invalid_category",
+      "message": "Invalid category: heuristic-evasion. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/av-evasion/heuristic-evasion.json",
+      "command_id": "check-processor-count",
+      "error_type": "invalid_category",
+      "message": "Invalid category: heuristic-evasion. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/av-evasion/heuristic-evasion.json",
+      "command_id": "check-username-environment",
+      "error_type": "invalid_category",
+      "message": "Invalid category: heuristic-evasion. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/av-evasion/heuristic-evasion.json",
+      "command_id": "check-recent-files",
+      "error_type": "invalid_category",
+      "message": "Invalid category: heuristic-evasion. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/av-evasion/heuristic-evasion.json",
+      "command_id": "check-uptime",
+      "error_type": "invalid_category",
+      "message": "Invalid category: heuristic-evasion. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/av-evasion/jscript-evasion.json",
+      "command_id": "jscript-amsi-registry-bypass",
+      "error_type": "invalid_category",
+      "message": "Invalid category: jscript-evasion. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/av-evasion/jscript-evasion.json",
+      "command_id": "jscript-self-modifying-exe",
+      "error_type": "invalid_category",
+      "message": "Invalid category: jscript-evasion. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/av-evasion/jscript-evasion.json",
+      "command_id": "jscript-wsh-obfuscation",
+      "error_type": "invalid_category",
+      "message": "Invalid category: jscript-evasion. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/av-evasion/jscript-evasion.json",
+      "command_id": "jscript-com-execution",
+      "error_type": "invalid_category",
+      "message": "Invalid category: jscript-evasion. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/av-evasion/jscript-evasion.json",
+      "command_id": "wscript-cscript-execution",
+      "error_type": "invalid_category",
+      "message": "Invalid category: jscript-evasion. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/av-evasion/shellcode-runners.json",
+      "command_id": "csharp-shellcode-runner-basic",
+      "error_type": "invalid_category",
+      "message": "Invalid category: shellcode-runners. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/av-evasion/shellcode-runners.json",
+      "command_id": "csharp-caesar-encrypt",
+      "error_type": "invalid_category",
+      "message": "Invalid category: shellcode-runners. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/av-evasion/shellcode-runners.json",
+      "command_id": "csharp-xor-encrypt",
+      "error_type": "invalid_category",
+      "message": "Invalid category: shellcode-runners. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/av-evasion/shellcode-runners.json",
+      "command_id": "csharp-sleep-timer",
+      "error_type": "invalid_category",
+      "message": "Invalid category: shellcode-runners. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/av-evasion/shellcode-runners.json",
+      "command_id": "csharp-non-emulated-api",
+      "error_type": "invalid_category",
+      "message": "Invalid category: shellcode-runners. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/av-evasion/shellcode-runners.json",
+      "command_id": "msfvenom-csharp-payload",
+      "error_type": "invalid_category",
+      "message": "Invalid category: shellcode-runners. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/av-evasion/shellcode-runners.json",
+      "command_id": "compile-csharp-runner",
+      "error_type": "invalid_category",
+      "message": "Invalid category: shellcode-runners. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/av-evasion/signature-evasion.json",
+      "command_id": "find-av-signature",
+      "error_type": "invalid_category",
+      "message": "Invalid category: signature-evasion. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/av-evasion/signature-evasion.json",
+      "command_id": "modify-signature-bytes",
+      "error_type": "invalid_category",
+      "message": "Invalid category: signature-evasion. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/av-evasion/signature-evasion.json",
+      "command_id": "msfvenom-encoder-shikata",
+      "error_type": "invalid_category",
+      "message": "Invalid category: signature-evasion. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/av-evasion/signature-evasion.json",
+      "command_id": "msfvenom-encoder-zutto",
+      "error_type": "invalid_category",
+      "message": "Invalid category: signature-evasion. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/av-evasion/signature-evasion.json",
+      "command_id": "msfvenom-encrypt-aes",
+      "error_type": "invalid_category",
+      "message": "Invalid category: signature-evasion. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/av-evasion/signature-evasion.json",
+      "command_id": "msfvenom-template-injection",
+      "error_type": "invalid_category",
+      "message": "Invalid category: signature-evasion. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/av-evasion/signature-evasion.json",
+      "command_id": "clamscan-test",
+      "error_type": "invalid_category",
+      "message": "Invalid category: signature-evasion. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/av-evasion/uac-bypass.json",
+      "command_id": "fodhelper-uac-bypass",
+      "error_type": "invalid_category",
+      "message": "Invalid category: uac-bypass. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/av-evasion/uac-bypass.json",
+      "command_id": "eventvwr-uac-bypass",
+      "error_type": "invalid_category",
+      "message": "Invalid category: uac-bypass. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/av-evasion/uac-bypass.json",
+      "command_id": "check-integrity-level",
+      "error_type": "invalid_category",
+      "message": "Invalid category: uac-bypass. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/av-evasion/uac-bypass.json",
+      "command_id": "uac-bypass-detection",
+      "error_type": "invalid_category",
+      "message": "Invalid category: uac-bypass. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/av-evasion/vba-evasion.json",
+      "command_id": "vba-shellcode-runner-basic",
+      "error_type": "invalid_category",
+      "message": "Invalid category: vba-evasion. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/av-evasion/vba-evasion.json",
+      "command_id": "vba-caesar-cipher",
+      "error_type": "invalid_category",
+      "message": "Invalid category: vba-evasion. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/av-evasion/vba-evasion.json",
+      "command_id": "vba-wmi-dechain",
+      "error_type": "invalid_category",
+      "message": "Invalid category: vba-evasion. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/av-evasion/vba-evasion.json",
+      "command_id": "vba-string-obfuscation",
+      "error_type": "invalid_category",
+      "message": "Invalid category: vba-evasion. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/av-evasion/vba-evasion.json",
+      "command_id": "vba-stomping",
+      "error_type": "invalid_category",
+      "message": "Invalid category: vba-evasion. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/av-evasion/vba-evasion.json",
+      "command_id": "vba-autoopen-variants",
+      "error_type": "invalid_category",
+      "message": "Invalid category: vba-evasion. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/exploitation/ad-lateral-movement-dcom.json",
+      "command_id": "dcom-verify-rpc-port",
+      "error_type": "invalid_category",
+      "message": "Invalid category: active-directory. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/exploitation/ad-lateral-movement-dcom.json",
+      "command_id": "dcom-mmc20-calc-poc",
+      "error_type": "invalid_category",
+      "message": "Invalid category: active-directory. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/exploitation/ad-lateral-movement-dcom.json",
+      "command_id": "dcom-mmc20-revshell",
+      "error_type": "invalid_category",
+      "message": "Invalid category: active-directory. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/exploitation/ad-lateral-movement-dcom.json",
+      "command_id": "dcom-shellwindows",
+      "error_type": "invalid_category",
+      "message": "Invalid category: active-directory. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/exploitation/ad-lateral-movement-dcom.json",
+      "command_id": "dcom-shellbrowserwindow",
+      "error_type": "invalid_category",
+      "message": "Invalid category: active-directory. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/exploitation/ad-lateral-movement-helpers.json",
+      "command_id": "wmi-creds-pscredential",
+      "error_type": "invalid_category",
+      "message": "Invalid category: active-directory. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/exploitation/ad-lateral-movement-helpers.json",
+      "command_id": "revshell-ps-generator",
+      "error_type": "invalid_category",
+      "message": "Invalid category: active-directory. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/exploitation/ad-lateral-movement-helpers.json",
+      "command_id": "nc-listener-tcp",
+      "error_type": "invalid_category",
+      "message": "Invalid category: active-directory. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/exploitation/ad-lateral-movement-helpers.json",
+      "command_id": "verify-root-access-ad",
+      "error_type": "invalid_category",
+      "message": "Invalid category: active-directory. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/exploitation/ad-lateral-movement-helpers.json",
+      "command_id": "lateral-movement-port-check",
+      "error_type": "invalid_category",
+      "message": "Invalid category: active-directory. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/exploitation/ad-lateral-movement-helpers.json",
+      "command_id": "lateral-movement-troubleshooting",
+      "error_type": "invalid_category",
+      "message": "Invalid category: active-directory. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/exploitation/ad-lateral-movement-kerberos.json",
+      "command_id": "overpass-mimikatz-pth",
+      "error_type": "invalid_category",
+      "message": "Invalid category: active-directory. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/exploitation/ad-lateral-movement-kerberos.json",
+      "command_id": "overpass-net-use-trigger",
+      "error_type": "invalid_category",
+      "message": "Invalid category: active-directory. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/exploitation/ad-lateral-movement-kerberos.json",
+      "command_id": "kerberos-klist-verify",
+      "error_type": "invalid_category",
+      "message": "Invalid category: active-directory. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/exploitation/ad-lateral-movement-kerberos.json",
+      "command_id": "passticket-mimikatz-export",
+      "error_type": "invalid_category",
+      "message": "Invalid category: active-directory. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/exploitation/ad-lateral-movement-kerberos.json",
+      "command_id": "passticket-mimikatz-inject",
+      "error_type": "invalid_category",
+      "message": "Invalid category: active-directory. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/exploitation/ad-lateral-movement-kerberos.json",
+      "command_id": "passticket-rubeus-ptt",
+      "error_type": "invalid_category",
+      "message": "Invalid category: active-directory. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/exploitation/ad-lateral-movement-kerberos.json",
+      "command_id": "overpass-rubeus-asktgt",
+      "error_type": "invalid_category",
+      "message": "Invalid category: active-directory. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/exploitation/ad-lateral-movement-kerberos.json",
+      "command_id": "kerberos-purge-tickets",
+      "error_type": "invalid_category",
+      "message": "Invalid category: active-directory. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/exploitation/ad-lateral-movement-kerberos.json",
+      "command_id": "kerberos-troubleshoot-time",
+      "error_type": "invalid_category",
+      "message": "Invalid category: active-directory. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/exploitation/ad-lateral-movement-psexec.json",
+      "command_id": "psexec-impacket-shell",
+      "error_type": "invalid_category",
+      "message": "Invalid category: active-directory. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/exploitation/ad-lateral-movement-psexec.json",
+      "command_id": "psexec-sysinternals",
+      "error_type": "invalid_category",
+      "message": "Invalid category: active-directory. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/exploitation/ad-lateral-movement-psexec.json",
+      "command_id": "psexec-sysinternals-interactive",
+      "error_type": "invalid_category",
+      "message": "Invalid category: active-directory. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/exploitation/ad-lateral-movement-psexec.json",
+      "command_id": "smbexec-impacket-fileless",
+      "error_type": "invalid_category",
+      "message": "Invalid category: active-directory. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/exploitation/ad-lateral-movement-psexec.json",
+      "command_id": "psexec-verify-firewall",
+      "error_type": "invalid_category",
+      "message": "Invalid category: active-directory. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/exploitation/ad-lateral-movement-psexec.json",
+      "command_id": "cme-smb-shares",
+      "error_type": "invalid_category",
+      "message": "Invalid category: active-directory. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/exploitation/ad-lateral-movement-pth.json",
+      "command_id": "pth-mimikatz-sekurlsa",
+      "error_type": "invalid_category",
+      "message": "Invalid category: active-directory. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/exploitation/ad-lateral-movement-pth.json",
+      "command_id": "pth-impacket-psexec",
+      "error_type": "invalid_category",
+      "message": "Invalid category: active-directory. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/exploitation/ad-lateral-movement-pth.json",
+      "command_id": "pth-impacket-wmiexec",
+      "error_type": "invalid_category",
+      "message": "Invalid category: active-directory. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/exploitation/ad-lateral-movement-pth.json",
+      "command_id": "pth-impacket-smbexec",
+      "error_type": "invalid_category",
+      "message": "Invalid category: active-directory. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/exploitation/ad-lateral-movement-pth.json",
+      "command_id": "pth-evil-winrm",
+      "error_type": "invalid_category",
+      "message": "Invalid category: active-directory. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/exploitation/ad-lateral-movement-pth.json",
+      "command_id": "pth-cme-spray",
+      "error_type": "invalid_category",
+      "message": "Invalid category: active-directory. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/exploitation/ad-lateral-movement-pth.json",
+      "command_id": "pth-cme-exec",
+      "error_type": "invalid_category",
+      "message": "Invalid category: active-directory. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/exploitation/ad-lateral-movement-pth.json",
+      "command_id": "pth-verify-hash-format",
+      "error_type": "invalid_category",
+      "message": "Invalid category: active-directory. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/exploitation/ad-lateral-movement-winrm.json",
+      "command_id": "winrm-enter-pssession",
+      "error_type": "invalid_category",
+      "message": "Invalid category: active-directory. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/exploitation/ad-lateral-movement-winrm.json",
+      "command_id": "winrm-new-pssession",
+      "error_type": "invalid_category",
+      "message": "Invalid category: active-directory. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/exploitation/ad-lateral-movement-winrm.json",
+      "command_id": "winrm-invoke-command",
+      "error_type": "invalid_category",
+      "message": "Invalid category: active-directory. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/exploitation/ad-lateral-movement-winrm.json",
+      "command_id": "winrm-winrs",
+      "error_type": "invalid_category",
+      "message": "Invalid category: active-directory. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/exploitation/ad-lateral-movement-winrm.json",
+      "command_id": "evil-winrm-creds",
+      "error_type": "invalid_category",
+      "message": "Invalid category: active-directory. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/exploitation/ad-lateral-movement-winrm.json",
+      "command_id": "evil-winrm-hash",
+      "error_type": "invalid_category",
+      "message": "Invalid category: active-directory. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/exploitation/ad-lateral-movement-winrm.json",
+      "command_id": "test-wsman",
+      "error_type": "invalid_category",
+      "message": "Invalid category: active-directory. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/exploitation/ad-lateral-movement-winrm.json",
+      "command_id": "winrm-revshell-invoke",
+      "error_type": "invalid_category",
+      "message": "Invalid category: active-directory. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/exploitation/ad-lateral-movement-wmi.json",
+      "command_id": "wmi-legacy-wmic",
+      "error_type": "invalid_category",
+      "message": "Invalid category: active-directory. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/exploitation/ad-lateral-movement-wmi.json",
+      "command_id": "wmi-invoke-method",
+      "error_type": "invalid_category",
+      "message": "Invalid category: active-directory. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/exploitation/ad-lateral-movement-wmi.json",
+      "command_id": "wmi-new-cimsession",
+      "error_type": "invalid_category",
+      "message": "Invalid category: active-directory. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/exploitation/ad-lateral-movement-wmi.json",
+      "command_id": "wmi-impacket-exec",
+      "error_type": "invalid_category",
+      "message": "Invalid category: active-directory. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/exploitation/ad-lateral-movement-wmi.json",
+      "command_id": "wmi-cme-exec",
+      "error_type": "invalid_category",
+      "message": "Invalid category: active-directory. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/exploitation/ad-lateral-movement-wmi.json",
+      "command_id": "wmi-powershell-revshell",
+      "error_type": "invalid_category",
+      "message": "Invalid category: active-directory. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/exploitation/ad-lateral-movement-wmi.json",
+      "command_id": "wmi-verify-enabled",
+      "error_type": "invalid_category",
+      "message": "Invalid category: active-directory. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/firewall.json",
+      "command_id": "iptables-list-rules",
+      "error_type": "invalid_category",
+      "message": "Invalid category: post-exploitation. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/firewall.json",
+      "command_id": "iptables-allow-port",
+      "error_type": "invalid_category",
+      "message": "Invalid category: post-exploitation. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    },
+    {
+      "file": "reference/data/commands/firewall.json",
+      "command_id": "iptables-port-forward",
+      "error_type": "invalid_category",
+      "message": "Invalid category: post-exploitation. Must be one of: recon, web, exploitation, post-exploit, enumeration, pivoting, file-transfer, custom"
+    }
+  ],
+  "details_truncated": "Showing first 100 of 746 errors"
+}
