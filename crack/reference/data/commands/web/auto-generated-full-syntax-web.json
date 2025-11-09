@@ -1,0 +1,43 @@
+{
+  "metadata": {
+    "version": "1.0",
+    "description": "Full-syntax web commands extracted from preservation plan Phase 2C.1c",
+    "category": "web",
+    "date_created": "2025-11-09",
+    "source": "preservation_plan.json CREATE_FULL_CMD action"
+  },
+  "commands": [
+    {
+      "id": "curl-wordpress-version-feed",
+      "name": "WordPress Version Detection via Feed",
+      "category": "web",
+      "subcategory": "cms-enumeration",
+      "command": "curl -s <URL>/feed/ | grep generator",
+      "description": "Detect WordPress version by parsing RSS feed generator tag",
+      "variables": [
+        {
+          "name": "<URL>",
+          "description": "WordPress site base URL",
+          "example": "http://example.com",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "-s": "Silent mode (suppress progress bar)",
+        "| grep generator": "Filter for generator meta tag containing version"
+      },
+      "alternatives": [
+        "wpscan-enumerate-all"
+      ],
+      "notes": "RSS feed at /feed/ contains <generator> tag with WordPress version. Example: <generator>https://wordpress.org/?v=5.8.1</generator>. More comprehensive: wpscan --url <URL> --enumerate vp,vt,u",
+      "oscp_relevance": "high",
+      "tags": [
+        "WEB",
+        "WORDPRESS",
+        "CMS_ENUM",
+        "VERSION_DETECTION",
+        "CURL"
+      ]
+    }
+  ]
+}
