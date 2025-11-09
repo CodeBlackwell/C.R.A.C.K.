@@ -1,0 +1,656 @@
+#!/usr/bin/env python3
+"""
+Transform loaded JSON into Neo4j CSV format
+
+Generates CSV files for Neo4j LOAD CSV import with proper escaping and structure.
+"""
+
+import csv
+import os
+import sys
+import hashlib
+from pathlib import Path
+from typing import Dict, List, Any, Tuple, Set, Callable
+import argparse
+from load_existing_json import load_command_jsons, load_attack_chain_jsons, load_cheatsheet_jsons
+
+# Add parent directory to path to import schema module
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+# Import unified schema definitions
+from schema import SchemaRegistry, SchemaLoadError
+
+
+def extract_unique_tags(commands: List[Dict], chains: List[Dict]) -> List[Dict]:
+    """Extract unique tags from all commands and chains"""
+    tag_set = set()
+
+    # Tags from commands
+    for cmd in commands:
+        tags = cmd.get('tags', [])
+        tag_set.update(tags)
+
+    # Tags from chains
+    for chain in chains:
+        tags = chain.get('metadata', {}).get('tags', [])
+        tag_set.update(tags)
+
+    # Infer tag categories
+    tags_list = []
+    for tag_name in sorted(tag_set):
+        category = infer_tag_category(tag_name)
+        tags_list.append({
+            'name': tag_name,
+            'category': category
+        })
+
+    return tags_list
+
+
+def infer_tag_category(tag_name: str) -> str:
+    """Infer tag category from tag name"""
+    tag_upper = tag_name.upper()
+
+    if 'OSCP' in tag_upper or 'PRIORITY' in tag_upper or 'QUICK_WIN' in tag_upper:
+        return 'priority'
+    elif any(x in tag_upper for x in ['ENUM', 'RECON', 'EXPLOIT', 'PRIVESC', 'POST_EXPLOIT']):
+        return 'phase'
+    elif any(x in tag_upper for x in ['NMAP', 'METASPLOIT', 'BURP', 'FFUF', 'GOBUSTER']):
+        return 'tool'
+    elif any(x in tag_upper for x in ['LINUX', 'WINDOWS', 'WEB', 'NETWORK', 'AD']):
+        return 'platform'
+    else:
+        return 'general'
+
+
+def extract_variables(commands: List[Dict]) -> Tuple[List[Dict], List[Dict]]:
+    """Extract variables and command->variable relationships"""
+    variables = []
+    relationships = []
+    seen_vars = set()
+
+    for cmd in commands:
+        cmd_id = cmd.get('id')
+        if not cmd_id:
+            continue
+
+        for idx, var in enumerate(cmd.get('variables', [])):
+            var_name = var.get('name')
+            if not var_name:
+                continue
+
+            # Create unique variable node (if not seen)
+            if var_name not in seen_vars:
+                var_id = generate_id(f"var_{var_name}")
+                variables.append({
+                    'id': var_id,
+                    'name': var_name,
+                    'description': var.get('description', ''),
+                    'example': var.get('example', ''),
+                    'required': str(var.get('required', True))
+                })
+                seen_vars.add(var_name)
+
+            # Create relationship
+            var_id = generate_id(f"var_{var_name}")
+            relationships.append({
+                'command_id': cmd_id,
+                'variable_id': var_id,
+                'position': str(idx),
+                'example': var.get('example', ''),
+                'required': str(var.get('required', True))
+            })
+
+    return variables, relationships
+
+
+def extract_flags(commands: List[Dict]) -> Tuple[List[Dict], List[Dict]]:
+    """Extract flag explanations and relationships"""
+    flags = []
+    relationships = []
+    seen_flags = set()
+
+    for cmd in commands:
+        cmd_id = cmd.get('id')
+        if not cmd_id:
+            continue
+
+        flag_explanations = cmd.get('flag_explanations', {})
+        for idx, (flag, explanation) in enumerate(flag_explanations.items()):
+            flag_id = generate_id(f"flag_{flag}")
+
+            # Create unique flag node
+            if flag_id not in seen_flags:
+                flags.append({
+                    'id': flag_id,
+                    'flag': flag,
+                    'explanation': explanation
+                })
+                seen_flags.add(flag_id)
+
+            # Create relationship
+            relationships.append({
+                'command_id': cmd_id,
+                'flag_id': flag_id,
+                'position': str(idx)
+            })
+
+    return flags, relationships
+
+
+def extract_indicators(commands: List[Dict]) -> Tuple[List[Dict], List[Dict]]:
+    """Extract success/failure indicators and relationships"""
+    indicators = []
+    relationships = []
+    indicator_id_counter = 0
+
+    for cmd in commands:
+        cmd_id = cmd.get('id')
+        if not cmd_id:
+            continue
+
+        # Success indicators
+        for indicator_text in cmd.get('success_indicators', []):
+            indicator_id_counter += 1
+            ind_id = f"indicator_{indicator_id_counter}"
+
+            indicators.append({
+                'id': ind_id,
+                'indicator': indicator_text,
+                'type': 'success'
+            })
+
+            relationships.append({
+                'command_id': cmd_id,
+                'indicator_id': ind_id,
+                'type': 'success'
+            })
+
+        # Failure indicators
+        for indicator_text in cmd.get('failure_indicators', []):
+            indicator_id_counter += 1
+            ind_id = f"indicator_{indicator_id_counter}"
+
+            indicators.append({
+                'id': ind_id,
+                'indicator': indicator_text,
+                'type': 'failure'
+            })
+
+            relationships.append({
+                'command_id': cmd_id,
+                'indicator_id': ind_id,
+                'type': 'failure'
+            })
+
+    return indicators, relationships
+
+
+def extract_command_relationships(commands: List[Dict]) -> Dict[str, List[Dict]]:
+    """Extract alternatives and prerequisites relationships"""
+    relationships = {
+        'alternatives': [],
+        'prerequisites': []
+    }
+
+    for cmd in commands:
+        cmd_id = cmd.get('id')
+        if not cmd_id:
+            continue
+
+        # Alternatives
+        for alt in cmd.get('alternatives', []):
+            relationships['alternatives'].append({
+                'command_id': cmd_id,
+                'alternative_command_id': alt
+            })
+
+        # Prerequisites
+        for prereq in cmd.get('prerequisites', []):
+            relationships['prerequisites'].append({
+                'command_id': cmd_id,
+                'prerequisite_command_id': prereq
+            })
+
+    return relationships
+
+
+def extract_chain_steps(chains: List[Dict]) -> Tuple[List[Dict], List[Dict], List[Dict]]:
+    """Extract steps, chain->step relationships, step->command relationships"""
+    steps = []
+    chain_step_rels = []
+    step_command_rels = []
+    step_dependency_rels = []
+
+    for chain in chains:
+        chain_id = chain.get('id')
+        if not chain_id:
+            continue
+
+        for idx, step in enumerate(chain.get('steps', [])):
+            step_id = step.get('id')
+            if not step_id:
+                continue
+
+            # Create step node
+            steps.append({
+                'id': step_id,
+                'name': step.get('name', ''),
+                'step_order': str(step.get('step_order', idx)),
+                'objective': step.get('objective', ''),
+                'description': step.get('description', ''),
+                'evidence': '|'.join(step.get('evidence', [])),
+                'success_criteria': '|'.join(step.get('success_criteria', [])),
+                'failure_conditions': '|'.join(step.get('failure_conditions', []))
+            })
+
+            # Chain -> Step relationship
+            chain_step_rels.append({
+                'chain_id': chain_id,
+                'step_id': step_id,
+                'order': str(step.get('step_order', idx))
+            })
+
+            # Step -> Command relationship
+            cmd_ref = step.get('command_ref')
+            if cmd_ref:
+                step_command_rels.append({
+                    'step_id': step_id,
+                    'command_id': cmd_ref
+                })
+
+            # Step dependencies
+            for dep_step_id in step.get('dependencies', []):
+                step_dependency_rels.append({
+                    'step_id': step_id,
+                    'depends_on_step_id': dep_step_id
+                })
+
+    return steps, chain_step_rels, step_command_rels
+
+
+def extract_references(chains: List[Dict]) -> List[Dict]:
+    """Extract external references from chains"""
+    references = []
+    ref_id_counter = 0
+
+    for chain in chains:
+        chain_id = chain.get('id')
+        refs = chain.get('metadata', {}).get('references', [])
+
+        for url in refs:
+            ref_id_counter += 1
+            references.append({
+                'id': f"ref_{ref_id_counter}",
+                'chain_id': chain_id,
+                'url': url
+            })
+
+    return references
+
+
+def write_csv_file(filepath: str, data: List[Dict], fieldnames: List[str]):
+    """Write data to CSV with proper escaping"""
+    os.makedirs(os.path.dirname(filepath), exist_ok=True)
+
+    with open(filepath, 'w', newline='', encoding='utf-8') as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames, quoting=csv.QUOTE_ALL)
+        writer.writeheader()
+
+        for row in data:
+            # Convert None to empty string
+            clean_row = {k: (v if v is not None else '') for k, v in row.items()}
+            writer.writerow(clean_row)
+
+
+def generate_id(text: str) -> str:
+    """Generate consistent ID from text"""
+    return hashlib.md5(text.encode()).hexdigest()[:16]
+
+
+# =============================================================================
+# Extractor Functions
+# =============================================================================
+# These functions extract data from source JSON and format for CSV output.
+# All extractors must match signature: (commands, chains, cheatsheets) -> List[Dict]
+
+def _extract_commands_csv(commands: List[Dict], chains: List[Dict], cheatsheets: List[Dict]) -> List[Dict]:
+    """Extract commands for CSV"""
+    return [{
+        'id': cmd.get('id', ''),
+        'name': cmd.get('name', ''),
+        'category': cmd.get('category', ''),
+        'command': cmd.get('command', ''),
+        'description': cmd.get('description', ''),
+        'subcategory': cmd.get('subcategory', ''),
+        'notes': cmd.get('notes', ''),
+        'oscp_relevance': cmd.get('oscp_relevance', 'medium')
+    } for cmd in commands]
+
+
+def _extract_attack_chains_csv(commands: List[Dict], chains: List[Dict], cheatsheets: List[Dict]) -> List[Dict]:
+    """Extract attack chains for CSV"""
+    result = []
+    for chain in chains:
+        metadata = chain.get('metadata', {})
+        result.append({
+            'id': chain.get('id', ''),
+            'name': chain.get('name', ''),
+            'description': chain.get('description', ''),
+            'version': chain.get('version', '1.0.0'),
+            'category': metadata.get('category', ''),
+            'platform': metadata.get('platform', ''),
+            'difficulty': chain.get('difficulty', 'intermediate'),
+            'time_estimate': chain.get('time_estimate', ''),
+            'oscp_relevant': str(chain.get('oscp_relevant', False)),
+            'notes': chain.get('notes', '')
+        })
+    return result
+
+
+def _extract_command_tag_rels(commands: List[Dict], chains: List[Dict], cheatsheets: List[Dict]) -> List[Dict]:
+    """Extract command->tag relationships"""
+    result = []
+    for cmd in commands:
+        cmd_id = cmd.get('id')
+        if not cmd_id:
+            continue
+        for tag in cmd.get('tags', []):
+            result.append({
+                'command_id': cmd_id,
+                'tag_name': tag
+            })
+    return result
+
+
+def _extract_chain_tag_rels(commands: List[Dict], chains: List[Dict], cheatsheets: List[Dict]) -> List[Dict]:
+    """Extract chain->tag relationships"""
+    result = []
+    for chain in chains:
+        chain_id = chain.get('id')
+        if not chain_id:
+            continue
+        for tag in chain.get('metadata', {}).get('tags', []):
+            result.append({
+                'chain_id': chain_id,
+                'tag_name': tag
+            })
+    return result
+
+
+# Wrapper functions for schema extractors
+# These adapt existing extraction functions to match the standard 3-parameter signature
+# Original functions use different signatures, so we need adapters
+
+def _extract_variables_nodes(commands: List[Dict], chains: List[Dict], cheatsheets: List[Dict]) -> List[Dict]:
+    """Extract variables only (nodes) - adapted for schema"""
+    return extract_variables(commands)[0]
+
+
+def _extract_command_variables_rels(commands: List[Dict], chains: List[Dict], cheatsheets: List[Dict]) -> List[Dict]:
+    """Extract command->variable relationships - adapted for schema"""
+    return extract_variables(commands)[1]
+
+
+def _extract_flags_nodes(commands: List[Dict], chains: List[Dict], cheatsheets: List[Dict]) -> List[Dict]:
+    """Extract flags only (nodes) - adapted for schema"""
+    return extract_flags(commands)[0]
+
+
+def _extract_command_flags_rels(commands: List[Dict], chains: List[Dict], cheatsheets: List[Dict]) -> List[Dict]:
+    """Extract command->flag relationships - adapted for schema"""
+    return extract_flags(commands)[1]
+
+
+def _extract_indicators_nodes(commands: List[Dict], chains: List[Dict], cheatsheets: List[Dict]) -> List[Dict]:
+    """Extract indicators only (nodes) - adapted for schema"""
+    return extract_indicators(commands)[0]
+
+
+def _extract_command_indicators_rels(commands: List[Dict], chains: List[Dict], cheatsheets: List[Dict]) -> List[Dict]:
+    """Extract command->indicator relationships - adapted for schema"""
+    return extract_indicators(commands)[1]
+
+
+def _extract_chain_steps_nodes(commands: List[Dict], chains: List[Dict], cheatsheets: List[Dict]) -> List[Dict]:
+    """Extract chain steps only (nodes) - adapted for schema"""
+    return extract_chain_steps(chains)[0]
+
+
+def _extract_chain_steps_rels(commands: List[Dict], chains: List[Dict], cheatsheets: List[Dict]) -> List[Dict]:
+    """Extract chain->step relationships - adapted for schema"""
+    return extract_chain_steps(chains)[1]
+
+
+def _extract_step_commands_rels(commands: List[Dict], chains: List[Dict], cheatsheets: List[Dict]) -> List[Dict]:
+    """Extract step->command relationships - adapted for schema"""
+    return extract_chain_steps(chains)[2]
+
+
+def _extract_command_alternatives_rels(commands: List[Dict], chains: List[Dict], cheatsheets: List[Dict]) -> List[Dict]:
+    """Extract alternative command relationships - adapted for schema"""
+    return extract_command_relationships(commands)['alternatives']
+
+
+def _extract_command_prerequisites_rels(commands: List[Dict], chains: List[Dict], cheatsheets: List[Dict]) -> List[Dict]:
+    """Extract prerequisite command relationships - adapted for schema"""
+    return extract_command_relationships(commands)['prerequisites']
+
+
+def _extract_references_nodes(commands: List[Dict], chains: List[Dict], cheatsheets: List[Dict]) -> List[Dict]:
+    """Extract references - adapted for schema"""
+    return extract_references(chains)
+
+
+def _extract_unique_tags_adapted(commands: List[Dict], chains: List[Dict], cheatsheets: List[Dict]) -> List[Dict]:
+    """Extract unique tags - adapted for schema (already has correct signature but needs consistency)"""
+    return extract_unique_tags(commands, chains)
+    NodeExtractionSpec(
+        'commands', 'commands.csv',
+        ['id', 'name', 'category', 'command', 'description', 'subcategory', 'notes', 'oscp_relevance'],
+        _extract_commands_csv,
+        'Command definitions'
+    ),
+    NodeExtractionSpec(
+        'attack_chains', 'attack_chains.csv',
+        ['id', 'name', 'description', 'version', 'category', 'platform', 'difficulty', 'time_estimate', 'oscp_relevant', 'notes'],
+        _extract_attack_chains_csv,
+        'Attack chain metadata'
+    ),
+    NodeExtractionSpec(
+        'tags', 'tags.csv',
+        ['name', 'category'],
+        lambda c, ch, s: extract_unique_tags(c, ch),
+        'Unique tags'
+    ),
+    NodeExtractionSpec(
+        'variables', 'variables.csv',
+        ['id', 'name', 'description', 'example', 'required'],
+        lambda c, ch, s: extract_variables(c)[0],
+        'Command variables'
+    ),
+    NodeExtractionSpec(
+        'flags', 'flags.csv',
+        ['id', 'flag', 'explanation'],
+        lambda c, ch, s: extract_flags(c)[0],
+        'Command flags'
+    ),
+    NodeExtractionSpec(
+        'indicators', 'indicators.csv',
+        ['id', 'indicator', 'type'],
+        lambda c, ch, s: extract_indicators(c)[0],
+        'Success/failure indicators'
+    ),
+    NodeExtractionSpec(
+        'chain_steps', 'chain_steps.csv',
+        ['id', 'name', 'step_order', 'objective', 'description', 'evidence', 'success_criteria', 'failure_conditions'],
+        lambda c, ch, s: extract_chain_steps(ch)[0],
+        'Attack chain steps'
+    ),
+    NodeExtractionSpec(
+        'references', 'references.csv',
+        ['id', 'chain_id', 'url'],
+        lambda c, ch, s: extract_references(ch),
+        'External references'
+    ),
+]
+
+RELATIONSHIP_EXTRACTION_SPECS: List[RelationshipExtractionSpec] = [
+    RelationshipExtractionSpec(
+        'command_has_variable', 'command_has_variable.csv',
+        ['command_id', 'variable_id', 'position', 'example', 'required'],
+        lambda c, ch, s: extract_variables(c)[1],
+        'Command->Variable relationships'
+    ),
+    RelationshipExtractionSpec(
+        'command_has_flag', 'command_has_flag.csv',
+        ['command_id', 'flag_id', 'position'],
+        lambda c, ch, s: extract_flags(c)[1],
+        'Command->Flag relationships'
+    ),
+    RelationshipExtractionSpec(
+        'command_has_indicator', 'command_has_indicator.csv',
+        ['command_id', 'indicator_id', 'type'],
+        lambda c, ch, s: extract_indicators(c)[1],
+        'Command->Indicator relationships'
+    ),
+    RelationshipExtractionSpec(
+        'command_tagged_with', 'command_tagged_with.csv',
+        ['command_id', 'tag_name'],
+        _extract_command_tag_rels,
+        'Command->Tag relationships'
+    ),
+    RelationshipExtractionSpec(
+        'command_alternative_for', 'command_alternative_for.csv',
+        ['command_id', 'alternative_command_id'],
+        lambda c, ch, s: extract_command_relationships(c)['alternatives'],
+        'Alternative command relationships'
+    ),
+    RelationshipExtractionSpec(
+        'command_requires', 'command_requires.csv',
+        ['command_id', 'prerequisite_command_id'],
+        lambda c, ch, s: extract_command_relationships(c)['prerequisites'],
+        'Prerequisite relationships'
+    ),
+    RelationshipExtractionSpec(
+        'chain_contains_step', 'chain_contains_step.csv',
+        ['chain_id', 'step_id', 'order'],
+        lambda c, ch, s: extract_chain_steps(ch)[1],
+        'Chain->Step relationships'
+    ),
+    RelationshipExtractionSpec(
+        'step_uses_command', 'step_uses_command.csv',
+        ['step_id', 'command_id'],
+        lambda c, ch, s: extract_chain_steps(ch)[2],
+        'Step->Command relationships'
+    ),
+    RelationshipExtractionSpec(
+        'chain_tagged_with', 'chain_tagged_with.csv',
+        ['chain_id', 'tag_name'],
+        _extract_chain_tag_rels,
+        'Chain->Tag relationships'
+    ),
+]
+
+
+def transform_all_to_neo4j(commands: List[Dict], chains: List[Dict], cheatsheets: List[Dict], output_dir: str):
+    """Data-driven transformation using extraction specs"""
+
+    output_path = Path(output_dir)
+    output_path.mkdir(parents=True, exist_ok=True)
+
+    print("Transforming data to Neo4j CSV format...")
+    print()
+
+    print("Generating node CSVs...")
+    for spec in NODE_EXTRACTION_SPECS:
+        print(f"  {spec.csv_filename}... ({spec.description})")
+        data = spec.extractor(commands, chains, cheatsheets)
+        write_csv_file(str(output_path / spec.csv_filename), data, spec.fieldnames)
+        print(f"    Written {len(data)} {spec.name}")
+
+    print()
+    print("Generating relationship CSVs...")
+    for spec in RELATIONSHIP_EXTRACTION_SPECS:
+        print(f"  {spec.csv_filename}... ({spec.description})")
+        data = spec.extractor(commands, chains, cheatsheets)
+        write_csv_file(str(output_path / spec.csv_filename), data, spec.fieldnames)
+        print(f"    Written {len(data)} {spec.name}")
+
+    print()
+    print(f"CSV generation complete! Output directory: {output_dir}")
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Transform JSON to Neo4j CSV format"
+    )
+    parser.add_argument(
+        '--input-dir',
+        default='reference/data',
+        help='Input directory (default: reference/data/)'
+    )
+    parser.add_argument(
+        '--output-dir',
+        default='db/neo4j-migration/data/neo4j',
+        help='Output directory (default: db/neo4j-migration/data/neo4j/)'
+    )
+    parser.add_argument(
+        '--validate',
+        action='store_true',
+        help='Run validation after transformation'
+    )
+    parser.add_argument(
+        '--verbose',
+        action='store_true',
+        help='Detailed logging'
+    )
+
+    args = parser.parse_args()
+
+    # Determine directories
+    if os.path.isabs(args.input_dir):
+        input_dir = Path(args.input_dir)
+    else:
+        input_dir = Path.cwd() / args.input_dir
+
+    if os.path.isabs(args.output_dir):
+        output_dir = Path(args.output_dir)
+    else:
+        output_dir = Path.cwd() / args.output_dir
+
+    # Load JSON data
+    print(f"Loading JSON from: {input_dir}")
+    commands, cmd_errors = load_command_jsons(str(input_dir / "commands"))
+    chains, chain_errors = load_attack_chain_jsons(str(input_dir / "attack_chains"))
+    cheatsheets, sheet_errors = load_cheatsheet_jsons(str(input_dir / "cheatsheets"))
+
+    if cmd_errors or chain_errors or sheet_errors:
+        print("Errors loading JSON files:")
+        for err in cmd_errors + chain_errors + sheet_errors:
+            print(f"  ERROR: {err}")
+        return 1
+
+    print(f"Loaded {len(commands)} commands, {len(chains)} chains, {len(cheatsheets)} cheatsheet entries")
+    print()
+
+    # Transform to CSV
+    transform_all_to_neo4j(commands, chains, cheatsheets, str(output_dir))
+
+    # Show file sizes
+    print()
+    print("Generated CSV files:")
+    csv_files = sorted(output_dir.glob('*.csv'))
+    total_size = 0
+    for csv_file in csv_files:
+        size = csv_file.stat().st_size
+        total_size += size
+        print(f"  {csv_file.name}: {size:,} bytes")
+
+    print(f"\nTotal size: {total_size:,} bytes ({total_size / 1024:.1f} KB)")
+
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())
