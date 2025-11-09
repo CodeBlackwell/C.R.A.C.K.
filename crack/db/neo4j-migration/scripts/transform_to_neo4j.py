@@ -33,6 +33,9 @@ from extraction import (
     TagExtractor
 )
 
+# Import validation framework
+from validation import FieldValidator, ValidationResult
+
 
 def extract_unique_tags(commands: List[Dict], chains: List[Dict]) -> List[Dict]:
     """Extract unique tags from all commands and chains"""
@@ -205,7 +208,8 @@ def _extract_unique_tags_adapted(commands: List[Dict], chains: List[Dict], cheat
     return extractor.extract_unique_tags(commands, chains)
 
 
-def transform_all_to_neo4j(commands: List[Dict], chains: List[Dict], cheatsheets: List[Dict], output_dir: str):
+def transform_all_to_neo4j(commands: List[Dict], chains: List[Dict], cheatsheets: List[Dict],
+                           output_dir: str, validate: bool = False):
     """Data-driven transformation using schema-loaded extraction specs"""
 
     output_path = Path(output_dir)
@@ -229,6 +233,10 @@ def transform_all_to_neo4j(commands: List[Dict], chains: List[Dict], cheatsheets
         print(f"ERROR loading schema: {e}")
         raise
 
+    # Initialize validator if requested
+    validator = FieldValidator() if validate else None
+    validation_results = []
+
     print()
     print("Transforming data to Neo4j CSV format...")
     print()
@@ -240,6 +248,17 @@ def transform_all_to_neo4j(commands: List[Dict], chains: List[Dict], cheatsheets
             print(f"    WARNING: No extractor for {spec.name}, skipping")
             continue
         data = spec.extractor(commands, chains, cheatsheets)
+
+        # Validate extracted data if requested
+        if validator:
+            result = validator.validate_node_extraction(
+                spec.label,
+                spec.fieldnames,
+                spec.id_field,
+                data
+            )
+            validation_results.append(result)
+
         write_csv_file(str(output_path / spec.csv_filename), data, spec.fieldnames)
         print(f"    Written {len(data)} {spec.name}")
 
@@ -251,11 +270,27 @@ def transform_all_to_neo4j(commands: List[Dict], chains: List[Dict], cheatsheets
             print(f"    WARNING: No extractor for {spec.name}, skipping")
             continue
         data = spec.extractor(commands, chains, cheatsheets)
+
+        # Validate extracted data if requested
+        if validator:
+            result = validator.validate_relationship_extraction(
+                spec.rel_type,
+                spec.fieldnames,
+                spec.start_id_col,
+                spec.end_id_col,
+                data
+            )
+            validation_results.append(result)
+
         write_csv_file(str(output_path / spec.csv_filename), data, spec.fieldnames)
         print(f"    Written {len(data)} {spec.name}")
 
     print()
     print(f"CSV generation complete! Output directory: {output_dir}")
+
+    # Print validation report if requested
+    if validator and validation_results:
+        validator.print_validation_report(validation_results)
 
 
 def main():
@@ -312,7 +347,7 @@ def main():
     print()
 
     # Transform to CSV
-    transform_all_to_neo4j(commands, chains, cheatsheets, str(output_dir))
+    transform_all_to_neo4j(commands, chains, cheatsheets, str(output_dir), validate=args.validate)
 
     # Show file sizes
     print()
