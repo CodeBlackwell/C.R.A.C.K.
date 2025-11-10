@@ -239,6 +239,34 @@ class Neo4jCommandRegistryAdapter:
         success_indicators = [s for s in record['success_indicators'] if s]
         failure_indicators = [f for f in record['failure_indicators'] if f]
 
+        # Helper to parse JSON fields
+        def parse_json_field(field_name, default=None):
+            """Parse JSON field from cmd_node, return default if missing/invalid"""
+            import json
+            if field_name not in cmd_node:
+                return default if default is not None else ({} if isinstance(default, dict) else [])
+
+            raw_value = cmd_node[field_name]
+            if isinstance(raw_value, str):
+                try:
+                    return json.loads(raw_value)
+                except json.JSONDecodeError:
+                    return default if default is not None else ({} if '{}' in raw_value else [])
+            return raw_value if raw_value else (default if default is not None else ({} if isinstance(default, dict) else []))
+
+        # Load JSON fields
+        flag_explanations = parse_json_field('flag_explanations', {})
+        advantages = parse_json_field('advantages', [])
+        disadvantages = parse_json_field('disadvantages', [])
+        use_cases = parse_json_field('use_cases', [])
+        output_analysis = parse_json_field('output_analysis', [])
+        common_uses = parse_json_field('common_uses', [])
+        references = parse_json_field('references', [])
+        alternatives = parse_json_field('alternatives', [])
+        prerequisites = parse_json_field('prerequisites', [])
+        next_steps = parse_json_field('next_steps', [])
+        troubleshooting = parse_json_field('troubleshooting', {})
+
         return Command(
             id=cmd_node['id'],
             name=cmd_node['name'],
@@ -248,11 +276,21 @@ class Neo4jCommandRegistryAdapter:
             subcategory=cmd_node.get('subcategory', ''),
             tags=tags,
             variables=[],  # Variables not linked in current schema
-            flag_explanations={},  # Flags not linked in current schema
+            flag_explanations=flag_explanations,
             success_indicators=success_indicators,
             failure_indicators=failure_indicators,
+            next_steps=next_steps,
+            alternatives=alternatives,
+            prerequisites=prerequisites,
+            troubleshooting=troubleshooting,
             oscp_relevance=cmd_node.get('oscp_relevance', 'medium'),
-            notes=cmd_node.get('notes', '')
+            notes=cmd_node.get('notes', ''),
+            advantages=advantages,
+            disadvantages=disadvantages,
+            use_cases=use_cases,
+            output_analysis=output_analysis,
+            common_uses=common_uses,
+            references=references
         )
 
     def search(
@@ -265,8 +303,11 @@ class Neo4jCommandRegistryAdapter:
         """
         Full-text search with optional filters
 
+        Multi-term queries (space-separated) use AND logic - all terms must match.
+        Each term is matched against name, description, command text, and notes.
+
         Args:
-            query: Search query string
+            query: Search query string (space-separated for multi-term)
             category: Optional category filter
             tags: Optional tag filter (AND logic)
             oscp_only: Filter to high OSCP relevance only
@@ -274,15 +315,17 @@ class Neo4jCommandRegistryAdapter:
         Returns:
             List of matching Command objects
         """
-        # Use CONTAINS for simple text search (fallback if no fulltext index)
-        query_lower = query.lower()
+        # Split query into terms for multi-term AND search
+        search_terms = [term.lower() for term in query.split()]
 
         cypher = """
         MATCH (cmd:Command)
-        WHERE (toLower(cmd.name) CONTAINS $search_query
-           OR toLower(cmd.description) CONTAINS $search_query
-           OR toLower(cmd.command) CONTAINS $search_query
-           OR toLower(cmd.notes) CONTAINS $search_query)
+        WHERE ALL(term IN $search_terms WHERE (
+            toLower(cmd.name) CONTAINS term
+            OR toLower(cmd.description) CONTAINS term
+            OR toLower(cmd.command) CONTAINS term
+            OR toLower(cmd.notes) CONTAINS term
+        ))
           AND ($category IS NULL OR cmd.category = $category)
           AND ($oscp_only = false OR cmd.oscp_relevance = 'high')
         """
@@ -301,7 +344,7 @@ class Neo4jCommandRegistryAdapter:
 
         results = self._execute_read(
             cypher,
-            search_query=query_lower,
+            search_terms=search_terms,
             category=category,
             oscp_only=oscp_only,
             tags=tags or []

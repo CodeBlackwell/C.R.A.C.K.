@@ -465,7 +465,8 @@ class ReferenceCLI:
         if query and not category and not args.tags:
             # Try direct command ID lookup first
             cmd = self.registry.get_command(query)
-            if cmd:
+            # Skip auto-generated stubs - prefer full search results
+            if cmd and 'auto-generated' not in cmd.tags:
                 if args.interactive:
                     # Enter fill mode
                     return self.interactive_cli.fill_command_with_execute(cmd.id)

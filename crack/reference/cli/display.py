@@ -249,6 +249,50 @@ class DisplayCLI(BaseCLIHandler):
                 else:
                     print(f"  {self.theme.hint(f'{i}.')} {alt}")
 
+        # Use Cases
+        if cmd.use_cases:
+            print(f"\n{self.theme.primary('Use Cases:')}")
+            for i, use_case in enumerate(cmd.use_cases, 1):
+                print(f"  {self.theme.hint(f'{i}.')} {use_case}")
+
+        # Advantages
+        if cmd.advantages:
+            print(f"\n{self.theme.success('✓ Advantages:')}")
+            for advantage in cmd.advantages:
+                print(f"  {self.theme.hint('•')} {advantage}")
+
+        # Disadvantages
+        if cmd.disadvantages:
+            print(f"\n{self.theme.warning('⚠ Disadvantages:')}")
+            for disadvantage in cmd.disadvantages:
+                print(f"  {self.theme.hint('•')} {disadvantage}")
+
+        # Output Analysis
+        if cmd.output_analysis:
+            print(f"\n{self.theme.primary('Output Analysis:')}")
+            for i, analysis in enumerate(cmd.output_analysis, 1):
+                print(f"  {self.theme.hint(f'{i}.')} {analysis}")
+
+        # Common Uses
+        if cmd.common_uses:
+            print(f"\n{self.theme.primary('Common Uses:')}")
+            for i, common_use in enumerate(cmd.common_uses, 1):
+                print(f"  {self.theme.hint(f'{i}.')} {common_use}")
+
+        # References
+        if cmd.references:
+            print(f"\n{self.theme.primary('References:')}")
+            for i, ref in enumerate(cmd.references, 1):
+                if isinstance(ref, dict):
+                    title = ref.get('title', ref.get('name', 'Reference'))
+                    url = ref.get('url', ref.get('link', ''))
+                    if url:
+                        print(f"  {self.theme.hint(f'{i}.')} {title}: {self.theme.secondary(url)}")
+                    else:
+                        print(f"  {self.theme.hint(f'{i}.')} {title}")
+                else:
+                    print(f"  {self.theme.hint(f'{i}.')} {ref}")
+
         # Notes
         if cmd.notes:
             print(f"\n{self.theme.primary('Notes:')}")

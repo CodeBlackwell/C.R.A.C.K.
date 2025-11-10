@@ -44,7 +44,6 @@ class Command:
     advantages: List[str] = field(default_factory=list)
     disadvantages: List[str] = field(default_factory=list)
     use_cases: List[str] = field(default_factory=list)
-    comparison: Dict[str, str] = field(default_factory=dict)
     # Additional metadata fields for auto-generated commands
     output_analysis: List[str] = field(default_factory=list)
     common_uses: List[str] = field(default_factory=list)
