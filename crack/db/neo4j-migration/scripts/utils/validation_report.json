@@ -1,0 +1,16 @@
+{
+  "timestamp": "2025-11-10T16:22:08.219978",
+  "summary": {
+    "files_validated": 0,
+    "commands_validated": 0,
+    "valid_commands": 0,
+    "invalid_commands": 0,
+    "warnings": 0,
+    "success_rate": "0.00%"
+  },
+  "errors": {
+    "total": 0,
+    "by_type": {}
+  },
+  "details": []
+}

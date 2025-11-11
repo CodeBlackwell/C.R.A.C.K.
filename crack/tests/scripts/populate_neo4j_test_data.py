@@ -15,7 +15,7 @@ import sys
 
 
 class Neo4jTestDataPopulator:
-    def __init__(self, uri="bolt://localhost:7687", user="neo4j", password="Afrodeeziak21"):
+    def __init__(self, uri="bolt://localhost:7687", user="neo4j", password="Neo4j123"):
         self.driver = GraphDatabase.driver(uri, auth=(user, password))
 
     def close(self):

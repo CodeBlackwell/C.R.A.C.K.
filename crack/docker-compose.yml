@@ -1,26 +1,6 @@
 version: '3.8'
 
 services:
-  postgresql:
-    image: postgres:15-alpine
-    container_name: crack-postgresql
-    ports:
-      - "5432:5432"
-    environment:
-      - POSTGRES_DB=crack
-      - POSTGRES_USER=crack_user
-      - POSTGRES_PASSWORD=crack_pass
-    volumes:
-      - pg_data:/var/lib/postgresql/data
-      - ./db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
-    networks:
-      - crack_network
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U crack_user -d crack"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
   neo4j:
     image: neo4j:5.15-community
     container_name: crack-neo4j
@@ -28,7 +8,7 @@ services:
       - "7474:7474"  # HTTP (Browser UI)
       - "7687:7687"  # Bolt (Python driver)
     environment:
-      - NEO4J_AUTH=neo4j/crack_password
+      - NEO4J_AUTH=neo4j/Neo4j123
       - NEO4J_PLUGINS=["apoc"]
       - NEO4J_dbms_memory_heap_initial__size=512m
       - NEO4J_dbms_memory_heap_max__size=2g
@@ -49,8 +29,6 @@ services:
       retries: 5
 
 volumes:
-  pg_data:
-    driver: local
   neo4j_data:
     driver: local
   neo4j_logs:

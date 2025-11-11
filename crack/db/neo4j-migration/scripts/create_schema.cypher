@@ -1,6 +1,6 @@
 // Neo4j Schema Creation Script for CRACK Toolkit
 // Creates constraints and indexes for the dual-backend graph database
-// Execute with: cypher-shell -u neo4j -p crack_password < create_schema.cypher
+// Execute with: cypher-shell -u neo4j -p Neo4j123 < create_schema.cypher
 
 // ============================================================
 // CONSTRAINTS (UNIQUE NODE IDENTIFIERS)

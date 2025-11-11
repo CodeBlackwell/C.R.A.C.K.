@@ -205,11 +205,12 @@ class SchemaRegistry:
             registry.register_extractors(extractors)
         """
         # Build extractor registry from module
+        # Include both public AND private extract functions (e.g., _extract_commands_csv)
         for attr_name in dir(extractor_module):
-            if not attr_name.startswith('_'):
-                attr = getattr(extractor_module, attr_name)
-                if callable(attr):
-                    self.extractor_registry[attr_name] = attr
+            attr = getattr(extractor_module, attr_name, None)
+            if callable(attr):
+                # Register all callables (including _extract_* private functions)
+                self.extractor_registry[attr_name] = attr
 
         # Link extractors to specs
         missing_extractors = []

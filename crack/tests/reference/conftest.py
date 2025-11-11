@@ -129,7 +129,7 @@ def neo4j_test_config():
         return {
             'uri': 'bolt://localhost:7687',
             'user': 'neo4j',
-            'password': 'crack_password',
+            'password': 'Neo4j123',
             'database': 'neo4j'
         }
 

@@ -32,7 +32,7 @@ def get_neo4j_config() -> Dict[str, str]:
     return {
         'uri': os.getenv('NEO4J_URI', 'bolt://localhost:7687'),
         'user': os.getenv('NEO4J_USER', 'neo4j'),
-        'password': os.getenv('NEO4J_PASSWORD', 'crack_password')
+        'password': os.getenv('NEO4J_PASSWORD', 'Neo4j123')
     }
 
 

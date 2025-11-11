@@ -13,7 +13,7 @@ python3 db/neo4j-migration/scripts/transform_to_neo4j.py --validate --verbose
 
 echo ""
 echo "Step 2: Import CSVs to Neo4j"
-python3 db/neo4j-migration/scripts/import_to_neo4j.py --verbose
+python3 db/neo4j-migration/scripts/import_to_neo4j.py
 
 echo ""
 echo "=== Migration Complete ==="

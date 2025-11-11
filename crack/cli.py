@@ -10,28 +10,48 @@ import argparse
 import sys
 import subprocess
 import os
+import random
 from pathlib import Path
+
+try:
+    import pyfiglet
+    PYFIGLET_AVAILABLE = True
+except ImportError:
+    PYFIGLET_AVAILABLE = False
 
 from crack.utils.colors import Colors
 
 def print_banner():
-    """Display the C.R.A.C.K. banner"""
-    banner = f"""
-{Colors.BOLD}{Colors.RED}
- ░▒▓██████▓▒░       ░▒▓███████▓▒░        ░▒▓██████▓▒░        ░▒▓██████▓▒░       ░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░▒▓████████▓▒░ 
-░▒▓█▓▒░░▒▓█▓▒░      ░▒▓█▓▒░░▒▓█▓▒░      ░▒▓█▓▒░░▒▓█▓▒░      ░▒▓█▓▒░░▒▓█▓▒░      ░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░  ░▒▓█▓▒░     
-░▒▓█▓▒░             ░▒▓█▓▒░░▒▓█▓▒░      ░▒▓█▓▒░░▒▓█▓▒░      ░▒▓█▓▒░             ░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░  ░▒▓█▓▒░     
-░▒▓█▓▒░             ░▒▓███████▓▒░       ░▒▓████████▓▒░      ░▒▓█▓▒░             ░▒▓███████▓▒░░▒▓█▓▒░  ░▒▓█▓▒░     
-░▒▓█▓▒░             ░▒▓█▓▒░░▒▓█▓▒░      ░▒▓█▓▒░░▒▓█▓▒░      ░▒▓█▓▒░             ░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░  ░▒▓█▓▒░     
-░▒▓█▓▒░░▒▓█▓▒░▒▓██▓▒░▒▓█▓▒░░▒▓█▓▒░▒▓██▓▒░▒▓█▓▒░░▒▓█▓▒░▒▓██▓▒░▒▓█▓▒░░▒▓█▓▒░▒▓██▓▒░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░  ░▒▓█▓▒░     
- ░▒▓██████▓▒░░▒▓██▓▒░▒▓█▓▒░░▒▓█▓▒░▒▓██▓▒░▒▓█▓▒░░▒▓█▓▒░▒▓██▓▒░░▒▓██████▓▒░░▒▓██▓▒░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░  ░▒▓█▓▒░     
-                                                                                                                  
+    """Display the C.R.A.C.K. banner with random font selection"""
+    if PYFIGLET_AVAILABLE:
+        # Curated list of fonts that work well for "CRACK"
+        fonts = [
+            'slant', 'banner3', 'big', 'doom', 'speed',
+            'starwars', 'colossal', 'standard', 'epic', 'isometric1',
+            'larry3d', 'cyberlarge', 'graffiti', 'block', 'shadow'
+        ]
 
-{Colors.END}
-{Colors.CYAN}  (C)omprehensive (R)econ & (A)ttack (C)reation (K)it{Colors.END}
-{Colors.YELLOW}  Professional OSCP Pentesting Toolkit{Colors.END}
-    """
-    print(banner)
+        # Randomly select a font
+        selected_font = random.choice(fonts)
+
+        try:
+            # Generate ASCII art with pyfiglet
+            ascii_art = pyfiglet.figlet_format("CRACK", font=selected_font)
+
+            # Display with colors
+            print(f"{Colors.BOLD}{Colors.RED}{ascii_art}{Colors.END}")
+            print(f"{Colors.CYAN}  (C)omprehensive (R)econ & (A)ttack (C)reation (K)it{Colors.END}")
+            print(f"{Colors.YELLOW}  Professional OSCP Pentesting Toolkit{Colors.END}\n")
+        except pyfiglet.FontNotFound:
+            # Fallback to standard if selected font not found
+            ascii_art = pyfiglet.figlet_format("CRACK", font="standard")
+            print(f"{Colors.BOLD}{Colors.RED}{ascii_art}{Colors.END}")
+            print(f"{Colors.CYAN}  (C)omprehensive (R)econ & (A)ttack (C)reation (K)it{Colors.END}")
+            print(f"{Colors.YELLOW}  Professional OSCP Pentesting Toolkit{Colors.END}\n")
+    else:
+        # Simple text fallback if pyfiglet not available
+        print(f"\n{Colors.BOLD}{Colors.RED}C.R.A.C.K.{Colors.END}")
+        print(f"{Colors.CYAN}  (C)omprehensive (R)econ & (A)ttack (C)reation (K)it{Colors.END}")
 
 def html_enum_command(args):
     """Execute the HTML enumeration tool"""
