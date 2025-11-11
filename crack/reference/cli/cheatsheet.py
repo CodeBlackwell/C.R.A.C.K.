@@ -398,7 +398,7 @@ class CheatsheetCLI(BaseCLIHandler):
         print(f"\n{self.theme.command_name(border)}")
         print(f"{self.theme.command_name(sheet.name.center(70))}")
         print(f"{self.theme.command_name(border)}")
-        print(f"\n{sheet.description}\n")
+        print(f"\n{self.theme.info(sheet.description)}\n")
 
     def _render_educational_header(self, sheet: Cheatsheet):
         """Render educational context section"""
@@ -406,11 +406,11 @@ class CheatsheetCLI(BaseCLIHandler):
 
         print(f"{self.theme.primary('═══ HOW TO RECOGNIZE ═══')}\n")
         for item in header.how_to_recognize:
-            print(f"  {self.theme.success('✓')} {item}")
+            print(f"  {self.theme.success('✓')} {self.theme.info(item)}")
 
         print(f"\n{self.theme.primary('═══ WHEN TO LOOK FOR ═══')}\n")
         for item in header.when_to_look_for:
-            print(f"  {self.theme.prompt('→')} {item}")
+            print(f"  {self.theme.prompt('→')} {self.theme.info(item)}")
 
         print()
 
@@ -457,7 +457,7 @@ class CheatsheetCLI(BaseCLIHandler):
         for section in sheet.sections:
             # Section header
             print(f"{self.theme.primary(f'═══ {section.title.upper()} ═══')}\n")
-            print(f"{section.notes}\n")
+            print(f"{self.theme.info(section.notes)}\n")
 
             # Commands in this section
             for cmd_id in section.commands:
@@ -478,11 +478,11 @@ class CheatsheetCLI(BaseCLIHandler):
                 # Success/failure indicators (brief)
                 if cmd.success_indicators:
                     success_str = ', '.join(cmd.success_indicators[:2])
-                    print(f"     {self.theme.success('✓ Success:')} {success_str}")
+                    print(f"     {self.theme.success('✓ Success:')} {self.theme.info(success_str)}")
 
                 if cmd.failure_indicators:
                     failure_str = ', '.join(cmd.failure_indicators[:2])
-                    print(f"     {self.theme.error('✗ Failure:')} {failure_str}")
+                    print(f"     {self.theme.error('✗ Failure:')} {self.theme.info(failure_str)}")
 
                 print()
                 command_counter += 1
@@ -552,7 +552,7 @@ class CheatsheetCLI(BaseCLIHandler):
                 marker_match = re.match(r'^([A-Z]+:)(.*)$', content)
                 if marker_match:
                     label = self.theme.notes_warning(marker_match.group(1))
-                    rest = marker_match.group(2)
+                    rest = self.theme.info(marker_match.group(2)) if marker_match.group(2).strip() else ''
                     colored_content = label + rest
 
             # TIP/EXAM TIP markers - Use notes_tip for helpful info
@@ -560,7 +560,7 @@ class CheatsheetCLI(BaseCLIHandler):
                 tip_match = re.match(r'^([^:]+:)(.*)$', content)
                 if tip_match:
                     label = self.theme.notes_tip(tip_match.group(1))
-                    rest = tip_match.group(2)
+                    rest = self.theme.info(tip_match.group(2)) if tip_match.group(2).strip() else ''
                     colored_content = label + rest
 
             # SUCCESS/EXPECTED OUTPUT markers - Use notes_success
@@ -568,7 +568,7 @@ class CheatsheetCLI(BaseCLIHandler):
                 success_match = re.match(r'^([^:]+:)(.*)$', content)
                 if success_match:
                     label = self.theme.notes_success(success_match.group(1))
-                    rest = success_match.group(2)
+                    rest = self.theme.info(success_match.group(2)) if success_match.group(2).strip() else ''
                     colored_content = label + rest
 
             # FAILURE/ERROR markers - Use notes_failure
@@ -576,7 +576,7 @@ class CheatsheetCLI(BaseCLIHandler):
                 failure_match = re.match(r'^([^:]+:)(.*)$', content)
                 if failure_match:
                     label = self.theme.notes_failure(failure_match.group(1))
-                    rest = failure_match.group(2)
+                    rest = self.theme.info(failure_match.group(2)) if failure_match.group(2).strip() else ''
                     colored_content = label + rest
 
             # Section headers (all caps words followed by colon) - Use notes_section
@@ -584,7 +584,7 @@ class CheatsheetCLI(BaseCLIHandler):
                 section_match = re.match(r'^([A-Z][A-Z\s]+:)(.*)$', content)
                 if section_match:
                     label = self.theme.notes_section(section_match.group(1))
-                    rest = section_match.group(2)
+                    rest = self.theme.info(section_match.group(2)) if section_match.group(2).strip() else ''
                     colored_content = label + rest
 
             # Step labels: "Step N:" or "Step (N):" - Use notes_step for prominence
@@ -592,7 +592,7 @@ class CheatsheetCLI(BaseCLIHandler):
                 step_match = re.match(r'^(Step (?:\d+|\(\d+\)):)(.*)$', content)
                 if step_match:
                     label = self.theme.notes_step(step_match.group(1))
-                    rest = step_match.group(2)
+                    rest = self.theme.info(step_match.group(2)) if step_match.group(2).strip() else ''
                     colored_content = label + rest
 
             # Numbered steps: "(1)", "(2)", "1.", "2." at start of line - Use notes_step
@@ -600,7 +600,7 @@ class CheatsheetCLI(BaseCLIHandler):
                 num_match = re.match(r'^((?:\(\d+\)|\d+\.))\s(.*)$', content)
                 if num_match:
                     label = self.theme.notes_step(num_match.group(1))
-                    rest = num_match.group(2)
+                    rest = self.theme.info(num_match.group(2)) if num_match.group(2).strip() else ''
                     colored_content = label + ' ' + rest
 
             # Traffic flow summary - Use info/muted for less emphasis
@@ -608,7 +608,7 @@ class CheatsheetCLI(BaseCLIHandler):
                 traffic_match = re.match(r'^(Traffic:)(.*)$', content)
                 if traffic_match:
                     label = self.theme.info('Traffic:')
-                    rest = traffic_match.group(2)
+                    rest = self.theme.info(traffic_match.group(2)) if traffic_match.group(2).strip() else ''
                     colored_content = label + rest
 
             # Indented lines (commands) - Use notes_code for code-like appearance
@@ -620,7 +620,7 @@ class CheatsheetCLI(BaseCLIHandler):
                 marker_match = re.match(r'^(Limitation:|Alternative:)(.*)$', content)
                 if marker_match:
                     label = self.theme.warning(marker_match.group(1))
-                    rest = marker_match.group(2)
+                    rest = self.theme.info(marker_match.group(2)) if marker_match.group(2).strip() else ''
                     colored_content = label + rest
 
             # Timing markers - Use hint for muted emphasis
@@ -628,15 +628,28 @@ class CheatsheetCLI(BaseCLIHandler):
                 time_match = re.match(r'^(Time:)(.*)$', content)
                 if time_match:
                     label = self.theme.hint('Time:')
-                    rest = time_match.group(2)
+                    rest = self.theme.info(time_match.group(2)) if time_match.group(2).strip() else ''
                     colored_content = label + rest
 
-            # Word wrap the colored content
+            # Default: regular paragraph text - Use info color for theme consistency
+            else:
+                # Don't color here - will be done after word wrap
+                pass  # Keep colored_content as plain content
+
+            # Word wrap the content (may already have colors from pattern matching)
             wrapped = self._word_wrap(colored_content, effective_width)
 
-            # Re-apply indentation to each wrapped line
+            # Apply theme color to each wrapped line (for non-patterned text)
+            # Check if content was already colored by pattern matching
+            has_ansi = '\033[' in colored_content or colored_content != content
+
             for line in wrapped:
-                result_lines.append(indent + line)
+                # If no pattern matched and this is regular text, color it now
+                if not has_ansi and content.strip():
+                    colored_line = self.theme.info(line)
+                else:
+                    colored_line = line
+                result_lines.append(indent + colored_line)
 
         return result_lines if result_lines else ['']
 
