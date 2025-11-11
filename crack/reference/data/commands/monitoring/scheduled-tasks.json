@@ -43,7 +43,7 @@
         "Check cron script permissions for privesc"
       ],
       "alternatives": [],
-      "notes": "Cron format: minute hour day month weekday command. OSCP tip: Check if cron scripts are writable - modify to run reverse shell as cron user. Time estimate: <1 second. Special strings: @reboot (run at startup), @daily, @hourly, @weekly, @monthly."
+      "notes": "Cron format:\nminute hour day month weekday command.\n\nOSCP tip:\nCheck if cron scripts are writable - modify to run reverse shell as cron user.\n\nTime estimate:\n<1 second.\n\nSpecial strings:\n@reboot (run at startup), @daily, @hourly, @weekly, @monthly."
     },
     {
       "id": "crontab-user-specific",
@@ -93,7 +93,7 @@
         "Wait for cron to execute for privilege escalation"
       ],
       "alternatives": [],
-      "notes": "Root's crontab is high-value target. If root cron runs writable script, instant privesc. Crontab location varies: /var/spool/cron/crontabs/ (Debian/Ubuntu), /var/spool/cron/ (RHEL/CentOS). Time estimate: <1 second."
+      "notes": "Root's crontab is high-value target.\n\nIf root cron runs writable script, instant privesc.\n\nCrontab location varies:\n/var/spool/cron/crontabs/ (Debian/Ubuntu), /var/spool/cron/ (RHEL/CentOS).\n\nTime estimate:\n<1 second."
     },
     {
       "id": "crontab-system-wide",
@@ -135,7 +135,7 @@
       "alternatives": [
         "less-etc-crontab"
       ],
-      "notes": "/etc/crontab differs from user crontabs - includes username field. Format: minute hour day month weekday user command. OSCP tip: Check if PATH includes writable dirs like /tmp - allows command hijacking. Time estimate: <1 second."
+      "notes": "/etc/crontab differs from user crontabs - includes username field.\n\nFormat:\nminute hour day month weekday user command.\n\nOSCP tip:\nCheck if PATH includes writable dirs like /tmp - allows command hijacking.\n\nTime estimate:\n<1 second."
     },
     {
       "id": "cron-directories-list",
@@ -178,7 +178,7 @@
         "Modify writable script to add reverse shell"
       ],
       "alternatives": [],
-      "notes": "Scripts in these directories run automatically: cron.hourly (every hour), cron.daily (daily), cron.weekly (weekly), cron.monthly (monthly). All run as root by default. CRITICAL privesc vector if writable. Time estimate: 2 seconds. Command to find writable: find /etc/cron* -type f -writable 2>/dev/null"
+      "notes": "Scripts in these directories run automatically:\ncron.hourly (every hour), cron.daily (daily), cron.weekly (weekly), cron.monthly (monthly).\n\nAll run as root by default.\n\nCRITICAL privesc vector if writable.\n\nTime estimate:\n2 seconds.\n\nCommand to find writable:\nfind /etc/cron* -type f -writable 2>/dev/null"
     },
     {
       "id": "cron-log-recent",
@@ -221,7 +221,7 @@
         "Monitor for new cron activity"
       ],
       "alternatives": [],
-      "notes": "Logs show when cron jobs execute and as which user. Useful for timing privilege escalation attempts. On systemd systems: journalctl -u cron. Time estimate: 3-5 seconds."
+      "notes": "Logs show when cron jobs execute and as which user.\n\nUseful for timing privilege escalation attempts.\n\nOn systemd systems:\njournalctl -u cron.\n\nTime estimate:\n3-5 seconds."
     },
     {
       "id": "win-schtasks-list-all",
@@ -270,7 +270,7 @@
         "win-ps-scheduled-tasks",
         "get-scheduledtask"
       ],
-      "notes": "CRITICAL for Windows privesc and persistence detection. Output is verbose (20+ properties per task). OSCP tips: (1) Look for tasks with writable executables, (2) Tasks running as SYSTEM with Enabled status, (3) Custom tasks (non-Microsoft) in \\Task Scheduler Library\\. Time estimate: 10-30 seconds depending on task count."
+      "notes": "CRITICAL for Windows privesc and persistence detection.\n\nOutput is verbose (20+ properties per task).\n\nOSCP tips:\n(1) Look for tasks with writable executables, (2) Tasks running as SYSTEM with Enabled status, (3) Custom tasks (non-Microsoft) in \\Task Scheduler Library\\.\n\nTime estimate:\n10-30 seconds depending on task count."
     },
     {
       "id": "win-ps-scheduled-tasks",
@@ -318,7 +318,7 @@
       "alternatives": [
         "win-schtasks-list-all"
       ],
-      "notes": "Modern PowerShell approach - faster and easier to parse than schtasks. To see all tasks: Get-ScheduledTask (no filter). Time estimate: 5 seconds. One-liner for custom tasks: Get-ScheduledTask | Where-Object {$_.TaskPath -notlike '\\Microsoft\\*' -and $_.State -eq 'Ready'}"
+      "notes": "Modern PowerShell approach - faster and easier to parse than schtasks.\n\nTo see all tasks:\nGet-ScheduledTask (no filter).\n\nTime estimate:\n5 seconds.\n\nOne-liner for custom tasks:\nGet-ScheduledTask | Where-Object {$_.TaskPath -notlike '\\Microsoft\\*' -and $_.State -eq 'Ready'}"
     },
     {
       "id": "win-ps-scheduled-task-info",
@@ -369,7 +369,7 @@
         "Modify task if writable: Set-ScheduledTask"
       ],
       "alternatives": [],
-      "notes": "Useful for verifying task execution status. LastTaskResult 0x0 = success, other values indicate errors. Time estimate: 1 second."
+      "notes": "Useful for verifying task execution status.\n\nLastTaskResult 0x0 = success, other values indicate errors.\n\nTime estimate:\n1 second."
     },
     {
       "id": "win-schtasks-task-xml",
@@ -420,7 +420,7 @@
         "Check <Arguments> for command-line parameters"
       ],
       "alternatives": [],
-      "notes": "XML may contain Base64-encoded credentials or sensitive command arguments. Time estimate: 1 second. Save to file: schtasks /query /tn <TASK> /xml > task.xml"
+      "notes": "XML may contain Base64-encoded credentials or sensitive command arguments.\n\nTime estimate:\n1 second.\n\nSave to file:\nschtasks /query /tn <TASK> /xml > task.xml"
     },
     {
       "id": "win-wmic-scheduled-job",
@@ -460,7 +460,7 @@
         "Modern alternative: use schtasks or Get-ScheduledTask"
       ],
       "alternatives": [],
-      "notes": "AT jobs are legacy (Windows NT/2000 era), rarely used in modern systems. Included for completeness in older OSCP labs. Time estimate: 1 second."
+      "notes": "AT jobs are legacy (Windows NT/2000 era), rarely used in modern systems.\n\nIncluded for completeness in older OSCP labs.\n\nTime estimate:\n1 second."
     },
     {
       "id": "linux-at-jobs-list",
@@ -497,7 +497,7 @@
         "Check /var/spool/at/ for job files"
       ],
       "alternatives": [],
-      "notes": "AT is for one-time scheduled tasks (unlike cron for recurring). Less common than cron. View job: at -c <JOB_ID>. Time estimate: <1 second."
+      "notes": "AT is for one-time scheduled tasks (unlike cron for recurring).\n\nLess common than cron.\n\nView job:\nat -c <JOB_ID>.\n\nTime estimate:\n<1 second."
     },
     {
       "id": "linux-systemd-timers",
@@ -542,7 +542,7 @@
         "Check service executable permissions"
       ],
       "alternatives": [],
-      "notes": "systemd timers are modern replacement for cron on systemd-based Linux. Timers trigger .service units. OSCP tip: Check /etc/systemd/system/ for custom timers. Time estimate: 2 seconds. To see active only: systemctl list-timers (no --all)"
+      "notes": "systemd timers are modern replacement for cron on systemd-based Linux.\n\nTimers trigger .service units.\n\nOSCP tip:\nCheck /etc/systemd/system/ for custom timers.\n\nTime estimate:\n2 seconds.\n\nTo see active only:\nsystemctl list-timers (no --all)"
     }
   ]
 }

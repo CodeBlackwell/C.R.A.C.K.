@@ -6,7 +6,11 @@
       "category": "custom",
       "command": "sed 's/<PATTERN>/<REPLACEMENT>/g' <FILE>",
       "description": "Find and replace text in files using stream editor",
-      "tags": ["utility", "text-processing", "OSCP:MEDIUM"],
+      "tags": [
+        "utility",
+        "text-processing",
+        "OSCP:MEDIUM"
+      ],
       "variables": [
         {
           "name": "<PATTERN>",
@@ -41,7 +45,11 @@
       "category": "custom",
       "command": "awk '{print $<FIELD>}' <FILE>",
       "description": "Extract and process fields from text",
-      "tags": ["utility", "text-processing", "OSCP:MEDIUM"],
+      "tags": [
+        "utility",
+        "text-processing",
+        "OSCP:MEDIUM"
+      ],
       "variables": [
         {
           "name": "<FIELD>",
@@ -61,7 +69,9 @@
         "NR": "Current line number",
         "NF": "Number of fields in current line"
       },
-      "alternatives": ["cut-fields"],
+      "alternatives": [
+        "cut-fields"
+      ],
       "oscp_relevance": "medium",
       "notes": "Great for extracting specific columns from command output"
     },
@@ -71,7 +81,11 @@
       "category": "custom",
       "command": "cut -d '<DELIM>' -f <FIELDS> <FILE>",
       "description": "Extract specific fields from delimited text",
-      "tags": ["utility", "text-processing", "OSCP:MEDIUM"],
+      "tags": [
+        "utility",
+        "text-processing",
+        "OSCP:MEDIUM"
+      ],
       "variables": [
         {
           "name": "<DELIM>",
@@ -97,9 +111,11 @@
         "-f": "Field numbers",
         "-c": "Cut by character position instead of fields"
       },
-      "alternatives": ["awk-print"],
+      "alternatives": [
+        "awk-print"
+      ],
       "oscp_relevance": "medium",
-      "notes": "Example: cut -d ':' -f 1 /etc/passwd extracts usernames"
+      "notes": "Example:\ncut -d ':' -f 1 /etc/passwd extracts usernames"
     },
     {
       "id": "sort-lines",
@@ -107,7 +123,11 @@
       "category": "custom",
       "command": "sort <FILE>",
       "description": "Sort lines of text alphabetically",
-      "tags": ["utility", "text-processing", "OSCP:LOW"],
+      "tags": [
+        "utility",
+        "text-processing",
+        "OSCP:LOW"
+      ],
       "variables": [
         {
           "name": "<FILE>",
@@ -122,7 +142,9 @@
         "-u": "Unique - remove duplicates",
         "-k": "Sort by specific field"
       },
-      "next_steps": ["uniq-lines"],
+      "next_steps": [
+        "uniq-lines"
+      ],
       "oscp_relevance": "low",
       "notes": "Often combined with uniq to remove duplicates"
     },
@@ -132,7 +154,11 @@
       "category": "custom",
       "command": "uniq <FILE>",
       "description": "Remove adjacent duplicate lines (requires sorted input)",
-      "tags": ["utility", "text-processing", "OSCP:LOW"],
+      "tags": [
+        "utility",
+        "text-processing",
+        "OSCP:LOW"
+      ],
       "variables": [
         {
           "name": "<FILE>",
@@ -146,7 +172,9 @@
         "-d": "Only show duplicates",
         "-u": "Only show unique lines"
       },
-      "prerequisites": ["sort-lines"],
+      "prerequisites": [
+        "sort-lines"
+      ],
       "oscp_relevance": "low",
       "notes": "Must sort first: sort file.txt | uniq"
     },
@@ -156,7 +184,11 @@
       "category": "custom",
       "command": "tr '<SET1>' '<SET2>'",
       "description": "Translate or delete characters from input",
-      "tags": ["utility", "text-processing", "OSCP:MEDIUM"],
+      "tags": [
+        "utility",
+        "text-processing",
+        "OSCP:MEDIUM"
+      ],
       "variables": [
         {
           "name": "<SET1>",
@@ -177,7 +209,7 @@
         "-c": "Complement SET1"
       },
       "oscp_relevance": "medium",
-      "notes": "Example: echo 'hello' | tr 'a-z' 'A-Z' converts to uppercase"
+      "notes": "Example:\necho 'hello' | tr 'a-z' 'A-Z' converts to uppercase"
     },
     {
       "id": "base64-encode",
@@ -185,7 +217,11 @@
       "category": "custom",
       "command": "base64 <FILE>",
       "description": "Encode file or text to Base64",
-      "tags": ["utility", "encoding", "OSCP:HIGH"],
+      "tags": [
+        "utility",
+        "encoding",
+        "OSCP:HIGH"
+      ],
       "variables": [
         {
           "name": "<FILE>",
@@ -197,7 +233,9 @@
       "flag_explanations": {
         "-w 0": "Disable line wrapping (single line output)"
       },
-      "alternatives": ["base64-decode"],
+      "alternatives": [
+        "base64-decode"
+      ],
       "oscp_relevance": "high",
       "notes": "Essential for encoding payloads and bypassing filters"
     },
@@ -207,7 +245,11 @@
       "category": "custom",
       "command": "base64 -d <FILE>",
       "description": "Decode Base64 encoded data",
-      "tags": ["utility", "encoding", "OSCP:HIGH"],
+      "tags": [
+        "utility",
+        "encoding",
+        "OSCP:HIGH"
+      ],
       "variables": [
         {
           "name": "<FILE>",
@@ -219,7 +261,9 @@
       "flag_explanations": {
         "-d": "Decode Base64 data"
       },
-      "alternatives": ["base64-encode"],
+      "alternatives": [
+        "base64-encode"
+      ],
       "oscp_relevance": "high",
       "notes": "Use echo '<base64>' | base64 -d for inline decoding"
     },
@@ -229,7 +273,12 @@
       "category": "custom",
       "command": "xxd <FILE>",
       "description": "Create hex dump of file or reverse hex dump to binary",
-      "tags": ["utility", "encoding", "binary", "OSCP:MEDIUM"],
+      "tags": [
+        "utility",
+        "encoding",
+        "binary",
+        "OSCP:MEDIUM"
+      ],
       "variables": [
         {
           "name": "<FILE>",
@@ -243,7 +292,9 @@
         "-p": "Plain hex dump without addresses",
         "-i": "Output in C include file style"
       },
-      "alternatives": ["hexdump-file"],
+      "alternatives": [
+        "hexdump-file"
+      ],
       "oscp_relevance": "medium",
       "notes": "Useful for analyzing binary files and creating shellcode"
     },
@@ -253,7 +304,12 @@
       "category": "custom",
       "command": "hexdump -C <FILE>",
       "description": "Display file contents in hex and ASCII",
-      "tags": ["utility", "encoding", "binary", "OSCP:MEDIUM"],
+      "tags": [
+        "utility",
+        "encoding",
+        "binary",
+        "OSCP:MEDIUM"
+      ],
       "variables": [
         {
           "name": "<FILE>",
@@ -266,7 +322,9 @@
         "-C": "Canonical hex+ASCII display",
         "-n": "Limit number of bytes to display"
       },
-      "alternatives": ["xxd-hex"],
+      "alternatives": [
+        "xxd-hex"
+      ],
       "oscp_relevance": "medium"
     },
     {
@@ -275,7 +333,12 @@
       "category": "enumeration",
       "command": "strings <FILE>",
       "description": "Extract printable strings from binary files",
-      "tags": ["utility", "binary", "enumeration", "OSCP:HIGH"],
+      "tags": [
+        "utility",
+        "binary",
+        "enumeration",
+        "OSCP:HIGH"
+      ],
       "variables": [
         {
           "name": "<FILE>",
@@ -298,7 +361,12 @@
       "category": "custom",
       "command": "od -A x -t x1z -v <FILE>",
       "description": "Display file in octal/hex format",
-      "tags": ["utility", "encoding", "binary", "OSCP:LOW"],
+      "tags": [
+        "utility",
+        "encoding",
+        "binary",
+        "OSCP:LOW"
+      ],
       "variables": [
         {
           "name": "<FILE>",
@@ -312,7 +380,10 @@
         "-t x1": "Display as hex bytes",
         "-v": "Verbose - don't abbreviate repeated lines"
       },
-      "alternatives": ["xxd-hex", "hexdump-file"],
+      "alternatives": [
+        "xxd-hex",
+        "hexdump-file"
+      ],
       "oscp_relevance": "low"
     }
   ]

@@ -64,7 +64,7 @@
         "file not found": "Verify PowerView.ps1 path and use full absolute path",
         "access denied": "Ensure current user has read permissions on file"
       },
-      "notes": "PowerView.ps1 may trigger AV detection. Consider using obfuscated versions or AMSI bypass techniques. For OSCP, usually safe on target machines. Alternative: Use native AD cmdlets if PowerView unavailable.",
+      "notes": "PowerView.ps1 may trigger AV detection.\n\nConsider using obfuscated versions or AMSI bypass techniques.\n\nFor OSCP, usually safe on target machines.\n\nAlternative:\nUse native AD cmdlets if PowerView unavailable.",
       "oscp_relevance": "high",
       "references": [
         {
@@ -130,7 +130,7 @@
         "access denied": "Current user may lack domain query permissions",
         "cannot contact DC": "Check network connectivity: ping <DC_NAME>"
       },
-      "notes": "The DomainSID is particularly valuable - save it for potential Golden/Silver Ticket attacks. For OSCP, focus on identifying Domain Controllers and understanding domain structure. Manual alternative: 'nltest /dclist:<domain>'",
+      "notes": "The DomainSID is particularly valuable - save it for potential Golden/Silver Ticket attacks.\n\nFor OSCP, focus on identifying Domain Controllers and understanding domain structure.\n\nManual alternative:\n'nltest /dclist:<domain>'",
       "oscp_relevance": "high",
       "references": [
         {
@@ -208,7 +208,7 @@
         "access denied": "User may lack read permissions on user objects",
         "no results": "Try Get-NetUser without parameters to enumerate all"
       },
-      "notes": "OSCP Tip: Always check user 'description' field - admins often store passwords there. Use '-AdminCount 1' to quickly find privileged accounts. For Kerberoasting, look for serviceprincipalname field. Manual alternative: 'net user /domain' or 'net user <username> /domain'",
+      "notes": "OSCP Tip:\nAlways check user 'description' field - admins often store passwords there.\n\nUse '-AdminCount 1' to quickly find privileged accounts.\n\nFor Kerberoasting, look for serviceprincipalname field.\n\nManual alternative:\n'net user /domain' or 'net user <username> /domain'",
       "oscp_relevance": "high",
       "references": [
         {
@@ -282,7 +282,7 @@
         "access denied": "User may lack read permissions on group objects",
         "incomplete members": "Use Get-NetGroupMember for recursive enumeration"
       },
-      "notes": "OSCP Focus Groups: 'Domain Admins', 'Enterprise Admins', 'Backup Operators', 'Account Operators', 'Server Operators'. These groups have elevated privileges. Use Get-NetGroupMember to see full membership recursively. Manual alternative: 'net group \"<group>\" /domain'",
+      "notes": "OSCP Focus Groups:\n'Domain Admins', 'Enterprise Admins', 'Backup Operators', 'Account Operators', 'Server Operators'.\n\nThese groups have elevated privileges.\n\nUse Get-NetGroupMember to see full membership recursively.\n\nManual alternative:\n'net group \"<group>\" /domain'",
       "oscp_relevance": "high",
       "references": [
         {
@@ -351,7 +351,7 @@
         "access denied": "User lacks read permissions on computer objects",
         "no results": "Verify domain connectivity and PowerView import"
       },
-      "notes": "OSCP Strategy: Focus on servers (OperatingSystem like '*Server*') as they often have more privileges. Look for SQL servers, Exchange, domain controllers. Use -Unconstrained flag to find computers vulnerable to delegation attacks. Manual alternative: 'net view' for basic computer list.",
+      "notes": "OSCP Strategy:\nFocus on servers (OperatingSystem like '*Server*') as they often have more privileges.\n\nLook for SQL servers, Exchange, domain controllers.\n\nUse -Unconstrained flag to find computers vulnerable to delegation attacks.\n\nManual alternative:\n'net view' for basic computer list.",
       "oscp_relevance": "high",
       "references": [
         {
@@ -411,7 +411,7 @@
         "network errors": "Check firewall rules and SMB connectivity",
         "very slow": "Use -ComputerName to test subset of computers"
       },
-      "notes": "OSCP Critical: This identifies WHERE you can move laterally. Results show systems where PSExec, WMI, or PowerShell Remoting will work. Can be slow on large domains - use -ComputerName with high-value targets list. Generates SMB traffic that may be logged. Manual alternative: Test C$ access manually with 'dir \\\\<computer>\\C$'",
+      "notes": "OSCP Critical:\nThis identifies WHERE you can move laterally.\n\nResults show systems where PSExec, WMI, or PowerShell Remoting will work.\n\nCan be slow on large domains - use -ComputerName with high-value targets list.\n\nGenerates SMB traffic that may be logged.\n\nManual alternative:\nTest C$ access manually with 'dir \\\\<computer>\\C$'",
       "oscp_relevance": "high",
       "references": [
         {
@@ -474,7 +474,7 @@
         "access denied on all": "User may lack domain user minimum rights",
         "slow enumeration": "Use -ComputerName with specific target list"
       },
-      "notes": "OSCP Priority Shares: SYSVOL (Group Policy files often contain credentials), NETLOGON (logon scripts), custom shares (user data). Look for passwords in files like Groups.xml (Group Policy Preferences), scripts, config files. Manual alternative: 'net view \\\\<computer>' to list shares.",
+      "notes": "OSCP Priority Shares:\nSYSVOL (Group Policy files often contain credentials), NETLOGON (logon scripts), custom shares (user data).\n\nLook for passwords in files like Groups.xml (Group Policy Preferences), scripts, config files.\n\nManual alternative:\n'net view \\\\<computer>' to list shares.",
       "oscp_relevance": "medium",
       "references": [
         {
@@ -536,7 +536,7 @@
         "cannot access files": "Navigate to gpcFileSysPath manually via UNC",
         "too many GPOs": "Focus on custom GPOs (non-default names)"
       },
-      "notes": "OSCP Gold Mine: Look for Groups.xml in GPO SYSVOL paths - contains cpassword (encrypted passwords). Use gpp-decrypt to decrypt. Also check Scripts folder for logon/startup scripts that may contain credentials. Manual path: \\\\domain\\SYSVOL\\domain\\Policies\\{GUID}\\",
+      "notes": "OSCP Gold Mine:\nLook for Groups.xml in GPO SYSVOL paths - contains cpassword (encrypted passwords).\n\nUse gpp-decrypt to decrypt.\n\nAlso check Scripts folder for logon/startup scripts that may contain credentials.\n\nManual path:\n\\\\domain\\SYSVOL\\domain\\Policies\\{GUID}\\",
       "oscp_relevance": "medium",
       "references": [
         {
@@ -598,7 +598,7 @@
         "access denied": "Should work for any domain user - check PowerView import",
         "wrong SID": "Ensure querying correct domain with -Domain flag"
       },
-      "notes": "OSCP Critical for Golden Tickets: Combine Domain SID + krbtgt hash + domain name to create Golden Ticket. For user SID, append RID (500 for Administrator, 512 for Domain Admins group). Manual alternative: 'whoami /user' shows current user's SID, remove last segment for domain SID. Or 'wmic useraccount get name,sid'",
+      "notes": "OSCP Critical for Golden Tickets:\nCombine Domain SID + krbtgt hash + domain name to create Golden Ticket.\n\nFor user SID, append RID (500 for Administrator, 512 for Domain Admins group).\n\nManual alternative:\n'whoami /user' shows current user's SID, remove last segment for domain SID.\n\nOr 'wmic useraccount get name,sid'",
       "oscp_relevance": "medium",
       "references": [
         {
@@ -668,7 +668,7 @@
         "no output file": "Check current directory permissions and disk space",
         "incomplete data": "Some access denied errors are normal, check ZIP contents"
       },
-      "notes": "OSCP Essential: BloodHound visualizes attack paths you'd have to manually map otherwise. Focus on 'Shortest Paths to Domain Admins' and 'Kerberoastable Accounts' queries. Session collection is noisy (touches every computer). Can run from Linux with bloodhound-python. Transfer ZIP to attacker machine with BloodHound GUI for analysis.",
+      "notes": "OSCP Essential:\nBloodHound visualizes attack paths you'd have to manually map otherwise.\n\nFocus on 'Shortest Paths to Domain Admins' and 'Kerberoastable Accounts' queries.\n\nSession collection is noisy (touches every computer).\n\nCan run from Linux with bloodhound-python.\n\nTransfer ZIP to attacker machine with BloodHound GUI for analysis.",
       "oscp_relevance": "high",
       "references": [
         {

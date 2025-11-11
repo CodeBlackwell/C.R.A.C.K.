@@ -48,7 +48,7 @@
       "alternatives": [
         "service-status-all-sysv"
       ],
-      "notes": "systemd is the init system for most modern Linux distributions (RHEL 7+, Ubuntu 16.04+, Debian 8+). OSCP tip: Focus on custom services (not part of base OS) - often have misconfigurations. Time estimate: 2 seconds. To see ALL services (including failed): systemctl list-units --type=service --all"
+      "notes": "systemd is the init system for most modern Linux distributions (RHEL 7+, Ubuntu 16.04+, Debian 8+).\n\nOSCP tip:\nFocus on custom services (not part of base OS) - often have misconfigurations.\n\nTime estimate:\n2 seconds.\n\nTo see ALL services (including failed):\nsystemctl list-units --type=service --all"
     },
     {
       "id": "systemctl-enabled-services",
@@ -90,7 +90,7 @@
         "Check service executable permissions"
       ],
       "alternatives": [],
-      "notes": "Enabled services persist across reboots - key for persistence/backdoor detection. OSCP tip: Custom services in /etc/systemd/system are often exploit targets. Time estimate: 3 seconds."
+      "notes": "Enabled services persist across reboots - key for persistence/backdoor detection.\n\nOSCP tip:\nCustom services in /etc/systemd/system are often exploit targets.\n\nTime estimate:\n3 seconds."
     },
     {
       "id": "systemctl-service-permissions",
@@ -132,7 +132,7 @@
         "Restart service to trigger payload: sudo systemctl restart <SERVICE>"
       ],
       "alternatives": [],
-      "notes": "CRITICAL for OSCP privilege escalation. Writable service files = instant root if service runs as root. Also check /lib/systemd/system/ (system services). Time estimate: 2 seconds. Exploit pattern: (1) Find writable .service file, (2) Modify ExecStart=/path/to/reverse_shell, (3) sudo systemctl restart <SERVICE>."
+      "notes": "CRITICAL for OSCP privilege escalation.\n\nWritable service files = instant root if service runs as root.\n\nAlso check /lib/systemd/system/ (system services).\n\nTime estimate:\n2 seconds.\n\nExploit pattern:\n(1) Find writable .service file, (2) Modify ExecStart=/path/to/reverse_shell, (3) sudo systemctl restart <SERVICE>."
     },
     {
       "id": "service-status-all-sysv",
@@ -172,7 +172,7 @@
       "alternatives": [
         "systemctl-running-services"
       ],
-      "notes": "SysV init used on older Linux (pre-systemd). Still found in OSCP labs. [+] = running, [-] = stopped, [?] = status unknown. Time estimate: 3 seconds. Service scripts in /etc/init.d/ - check permissions for privesc."
+      "notes": "SysV init used on older Linux (pre-systemd).\n\nStill found in OSCP labs.\n\n[+] = running, [-] = stopped, [?] = status unknown.\n\nTime estimate:\n3 seconds.\n\nService scripts in /etc/init.d/ - check permissions for privesc."
     },
     {
       "id": "chkconfig-list-sysv",
@@ -209,7 +209,7 @@
         "Check service script permissions for privesc"
       ],
       "alternatives": [],
-      "notes": "RHEL/CentOS specific. Runlevels: 0=halt, 1=single-user, 3=multi-user, 5=graphical, 6=reboot. Time estimate: 2 seconds."
+      "notes": "RHEL/CentOS specific.\n\nRunlevels:\n0=halt, 1=single-user, 3=multi-user, 5=graphical, 6=reboot.\n\nTime estimate:\n2 seconds."
     },
     {
       "id": "win-sc-query-services",
@@ -252,7 +252,7 @@
         "win-wmic-service-full",
         "win-ps-get-service"
       ],
-      "notes": "Service Control (sc.exe) is built-in Windows service management tool. OSCP tip: Focus on services with STATE=RUNNING and user-created services (non-Microsoft). Time estimate: 5 seconds."
+      "notes": "Service Control (sc.exe) is built-in Windows service management tool.\n\nOSCP tip:\nFocus on services with STATE=RUNNING and user-created services (non-Microsoft).\n\nTime estimate:\n5 seconds."
     },
     {
       "id": "win-sc-query-all",
@@ -294,7 +294,7 @@
         "win-wmic-service-full",
         "get-service"
       ],
-      "notes": "Space after '=' is REQUIRED: 'state= all' not 'state=all'. Shows stopped services which may have weak permissions or unquoted paths. Time estimate: 10 seconds."
+      "notes": "Space after '=' is REQUIRED:\n'state= all' not 'state=all'.\n\nShows stopped services which may have weak permissions or unquoted paths.\n\nTime estimate:\n10 seconds."
     },
     {
       "id": "win-sc-query-config",
@@ -344,7 +344,7 @@
       "alternatives": [
         "win-wmic-service-path"
       ],
-      "notes": "CRITICAL for Windows privilege escalation. Check for: (1) Unquoted service paths with spaces, (2) Writable service binaries, (3) Services running as LocalSystem/SYSTEM. Time estimate: 1 second. Common privesc: Unquoted path 'C:\\Program Files\\My Service\\service.exe' \u2192 Place malicious 'C:\\Program.exe'."
+      "notes": "CRITICAL for Windows privilege escalation.\n\nCheck for:\n(1) Unquoted service paths with spaces, (2) Writable service binaries, (3) Services running as LocalSystem/SYSTEM.\n\nTime estimate:\n1 second.\n\nCommon privesc:\nUnquoted path 'C:\\Program Files\\My Service\\service.exe' → Place malicious 'C:\\Program.exe'."
     },
     {
       "id": "win-wmic-service-full",
@@ -390,7 +390,7 @@
         "win-sc-query-all",
         "win-ps-get-service"
       ],
-      "notes": "WMIC deprecated in Windows 11+ but still in OSCP labs. For specific properties: wmic service get Name,PathName,StartMode,State. Time estimate: 5 seconds."
+      "notes": "WMIC deprecated in Windows 11+ but still in OSCP labs.\n\nFor specific properties:\nwmic service get Name,PathName,StartMode,State.\n\nTime estimate:\n5 seconds."
     },
     {
       "id": "win-wmic-service-path",
@@ -439,7 +439,7 @@
         "win-sc-query-config",
         "win-unquoted-service-paths"
       ],
-      "notes": "CRITICAL Windows privesc technique. Unquoted path 'C:\\Program Files\\My App\\service.exe' allows placing 'C:\\Program.exe' or 'C:\\Program Files\\My.exe'. Time estimate: 5 seconds. Filter for unquoted: wmic service get Name,PathName | findstr /v /i \"C:\\Windows\" | findstr /i /v '\"'."
+      "notes": "CRITICAL Windows privesc technique.\n\nUnquoted path 'C:\\Program Files\\My App\\service.exe' allows placing 'C:\\Program.exe' or 'C:\\Program Files\\My.exe'.\n\nTime estimate:\n5 seconds.\n\nFilter for unquoted:\nwmic service get Name,PathName | findstr /v /i \"C:\\Windows\" | findstr /i /v '\"'."
     },
     {
       "id": "win-ps-get-service",
@@ -484,7 +484,7 @@
         "win-sc-query-services",
         "win-wmic-service-full"
       ],
-      "notes": "Modern PowerShell approach. For all services: Get-Service (no filter). For stopped: Where-Object {$_.Status -eq 'Stopped'}. Time estimate: 3 seconds."
+      "notes": "Modern PowerShell approach.\n\nFor all services:\nGet-Service (no filter).\n\nFor stopped:\nWhere-Object {$_.Status -eq 'Stopped'}.\n\nTime estimate:\n3 seconds."
     },
     {
       "id": "win-ps-get-service-details",
@@ -532,7 +532,7 @@
         "win-wmic-service-path",
         "win-sc-query-config"
       ],
-      "notes": "PowerShell WMI approach (modern). Time estimate: 5 seconds. One-liner for unquoted path detection: Get-WmiObject win32_service | Where-Object {$_.PathName -notlike '\"*' -and $_.PathName -like '* *' -and $_.PathName -like 'C:\\Program*'} | Select Name,PathName"
+      "notes": "PowerShell WMI approach (modern).\n\nTime estimate:\n5 seconds.\n\nOne-liner for unquoted path detection:\nGet-WmiObject win32_service | Where-Object {$_.PathName -notlike '\"*' -and $_.PathName -like '* *' -and $_.PathName -like 'C:\\Program*'} | Select Name,PathName"
     }
   ]
 }

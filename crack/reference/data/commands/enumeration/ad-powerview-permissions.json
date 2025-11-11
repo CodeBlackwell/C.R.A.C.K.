@@ -54,7 +54,7 @@
         "Module not imported": "Import-Module .\\PowerView.ps1",
         "Too much output": "Filter specific fields: Get-ObjectAcl -Identity <OBJECT> | select SecurityIdentifier,ActiveDirectoryRights"
       },
-      "notes": "Returns ACL (Access Control List) - all permissions applied to an object. Each ACE (Access Control Entry) defines: (1) SecurityIdentifier (who has access - as SID), (2) ActiveDirectoryRights (what access they have - GenericAll, WriteDACL, etc.). Output is verbose - use Convert-SidToName to resolve SIDs and filter for dangerous rights. OSCP: Critical for finding privilege escalation paths - look for GenericAll, WriteDACL, WriteOwner on privileged groups/users.",
+      "notes": "Returns ACL (Access Control List) - all permissions applied to an object.\n\nEACH ACE (ACCESS CONTROL ENTRY) DEFINES:\n1.\n\nSecurityIdentifier:\nWho has access (as SID)\n2.\n\nActiveDirectoryRights:\nWhat access they have (GenericAll, WriteDACL, etc.)\n\nOUTPUT ANALYSIS:\nOutput is verbose - use Convert-SidToName to resolve SIDs.\nFilter for dangerous rights.\n\nOSCP PRIVESC:\nLook for GenericAll, WriteDACL, WriteOwner on privileged groups/users.",
       "oscp_relevance": "high"
     },
     {
@@ -107,7 +107,7 @@
       "troubleshooting": {
         "No results": "No GenericAll permissions found. Try other dangerous rights: WriteDACL, WriteOwner, ForceChangePassword"
       },
-      "notes": "GenericAll = Full control over the object. If you have GenericAll on a user, you can: reset their password, modify attributes, read all properties. If you have GenericAll on a group, you can: add/remove members (add yourself to Domain Admins!), modify group attributes. GenericAll on computer objects: modify servicePrincipalName (Kerberoasting), LAPS password, etc. OSCP: Most powerful ACL for privilege escalation - if your user has GenericAll on a privileged group, you can add yourself to that group.",
+      "notes": "GENERICALL = FULL CONTROL\n\nON USER OBJECTS:\n- Reset their password\n- Modify attributes\n- Read all properties\n\nON GROUP OBJECTS:\n- Add/remove members (add yourself to Domain Admins!)\n- Modify group attributes\n\nON COMPUTER OBJECTS:\n- Modify servicePrincipalName (Kerberoasting)\n- Access LAPS password\n\nOSCP:\nMost powerful ACL for privilege escalation.\nIf you have GenericAll on privileged group → add yourself to group.",
       "oscp_relevance": "high"
     },
     {
@@ -152,7 +152,7 @@
         "Module not imported": "Import-Module .\\PowerView.ps1",
         "SID not found": "SID may be from external domain, deleted object, or invalid format"
       },
-      "notes": "SIDs (Security Identifiers) are unique identifiers for AD objects. Format: S-1-5-21-<domain>-<RID>. RID (Relative Identifier) identifies the specific object: 500=Administrator, 512=Domain Admins, 513=Domain Users, etc. Get-ObjectAcl returns SIDs in SecurityIdentifier field - must convert to names for analysis. Batch conversion: Get-ObjectAcl | select -ExpandProperty SecurityIdentifier | Convert-SidToName. OSCP: Essential for ACL enumeration - SIDs are useless until converted to names.\n\nAlternative Techniques:\n- [system.security.principal.securityidentifier]::new('<sid>').translate([system.security.principal.ntaccount]).value",
+      "notes": "SIDs (SECURITY IDENTIFIERS):\nUnique identifiers for AD objects.\n\nFORMAT:\nS-1-5-21-<domain>-<RID>\n\nCOMMON RIDS:\n- 500:\nAdministrator\n- 512:\nDomain Admins\n- 513:\nDomain Users\n\nGet-ObjectAcl returns SIDs in SecurityIdentifier field.\nMust convert to names for analysis.\n\nBATCH CONVERSION:\n  Get-ObjectAcl | select -ExpandProperty SecurityIdentifier | Convert-SidToName\n\nALTERNATIVE:\n  [system.security.principal.securityidentifier]::new('<sid>').translate([system.security.principal.ntaccount]).value\n\nOSCP:\nSIDs are useless until converted to names.",
       "oscp_relevance": "high"
     },
     {
@@ -204,7 +204,7 @@
       "troubleshooting": {
         "No results": "Try WriteOwner instead - allows changing object owner to yourself, then modifying permissions"
       },
-      "notes": "WriteDACL = Ability to modify the ACL (permissions) on an object. Attack path: (1) You have WriteDACL on target object, (2) Grant yourself GenericAll on that object, (3) Now you have full control. Example: WriteDACL on 'Domain Admins' group \u2192 Grant yourself GenericAll \u2192 Add yourself to Domain Admins. Similar powerful rights: WriteOwner (change owner to yourself, then modify ACL), WritePr operty (modify attributes). OSCP: WriteDACL is as powerful as GenericAll for privilege escalation - just requires one extra step.",
+      "notes": "WRITEDACL = MODIFY ACL PERMISSIONS\n\nATTACK PATH:\n1.\n\nYou have WriteDACL on target object\n2.\n\nGrant yourself GenericAll on that object\n3.\n\nNow you have full control\n\nEXAMPLE:\nWriteDACL on 'Domain Admins' → Grant GenericAll → Add yourself to Domain Admins\n\nSIMILAR POWERFUL RIGHTS:\n- WriteOwner:\nChange owner, then modify ACL\n- WriteProperty:\nModify attributes\n\nOSCP:\nWriteDACL is as powerful as GenericAll - just requires one extra step.",
       "oscp_relevance": "high"
     },
     {
@@ -257,7 +257,7 @@
       "troubleshooting": {
         "No results": "User may be protected by AdminSDHolder. Check admincount attribute: Get-NetUser -Identity <USERNAME> | select admincount"
       },
-      "notes": "User-Force-Change-Password = Can reset user's password without knowing current password. Attack path: (1) You have ForceChangePassword on target user, (2) Reset their password, (3) Authenticate as them. No need for current password, no account lockout. Similar rights: AllExtendedRights (includes password reset + other extended rights). Protected accounts (admincount=1) may have this right restricted by AdminSDHolder. OSCP: If you can reset password of a Domain Admin, you've compromised the domain.",
+      "notes": "USER-FORCE-CHANGE-PASSWORD:\nCan reset user's password without knowing current password.\n\nATTACK PATH:\n1.\n\nYou have ForceChangePassword on target user\n2.\n\nReset their password\n3.\n\nAuthenticate as them\n\nNO CURRENT PASSWORD NEEDED.\nNO ACCOUNT LOCKOUT.\n\nSIMILAR RIGHTS:\nAllExtendedRights (includes password reset + other extended rights)\n\nPROTECTED ACCOUNTS:\nadmincount=1 may have this right restricted by AdminSDHolder.\n\nOSCP:\nIf you can reset Domain Admin password → domain compromised.",
       "oscp_relevance": "high"
     },
     {
@@ -308,7 +308,7 @@
       "troubleshooting": {
         "No results": "Try WriteDACL or GenericAll instead"
       },
-      "notes": "WriteOwner = Can change the owner of an AD object. Object owners have implicit rights to modify the object's ACL (permissions). Attack path: (1) You have WriteOwner on target object, (2) Change owner to yourself: Set-DomainObjectOwner, (3) As owner, grant yourself GenericAll, (4) Abuse full control (add to group, reset password, etc.). Similar to WriteDACL but requires two steps instead of one. OSCP: WriteOwner on privileged group = privilege escalation path.",
+      "notes": "WRITEOWNER = CHANGE OBJECT OWNER\nObject owners have implicit rights to modify the object's ACL.\n\nATTACK PATH:\n1.\n\nYou have WriteOwner on target object\n2.\n\nChange owner to yourself:\nSet-DomainObjectOwner\n3.\n\nAs owner, grant yourself GenericAll\n4.\n\nAbuse full control (add to group, reset password, etc.)\n\nCOMPARISON:\nSimilar to WriteDACL but requires two steps instead of one.\n\nOSCP:\nWriteOwner on privileged group = privilege escalation path.",
       "oscp_relevance": "high"
     },
     {
@@ -362,7 +362,7 @@
         "Module not imported": "Import-Module .\\PowerView.ps1",
         "Long execution time": "Command queries entire domain. For faster results, query specific objects with Get-ObjectAcl"
       },
-      "notes": "Find-InterestingDomainAcl automates ACL enumeration by scanning the entire domain for dangerous permissions. Returns interesting rights: GenericAll, WriteDACL, WriteOwner, ForceChangePassword, etc. IdentityReferenceName = who has the permission (filter for your user). ObjectDN = what object they have permission on (look for privileged groups/users). Slow in large domains - consider manual enumeration of specific high-value targets instead. OSCP: Run this early to identify all potential privilege escalation paths via ACL abuse.",
+      "notes": "AUTOMATED ACL ENUMERATION:\nScans entire domain for dangerous permissions.\n\nRETURNS INTERESTING RIGHTS:\n- GenericAll\n- WriteDACL\n- WriteOwner\n- ForceChangePassword\n\nKEY FIELDS:\n- IdentityReferenceName:\nWho has the permission (filter for your user)\n- ObjectDN:\nWhat object they have permission on (look for privileged groups/users)\n\nPERFORMANCE:\nSlow in large domains - consider manual enumeration of specific high-value targets.\n\nOSCP:\nRun this early to identify all potential privilege escalation paths via ACL abuse.",
       "oscp_relevance": "high"
     },
     {
@@ -418,7 +418,7 @@
         "Module not imported": "Import-Module .\\PowerView.ps1",
         "Access Denied": "No read permissions on share. Try other shares: Find-DomainShare -CheckShareAccess"
       },
-      "notes": "Get-PathAcl shows NTFS permissions on network shares. FileSystemRights shows permission level: FullControl (read/write/delete), Modify (read/write), ReadAndExecute (read/execute), etc. IdentityReference shows who has access (users/groups). Common misconfiguration: Everyone or Authenticated Users with Modify/FullControl on sensitive shares. SYSVOL share (domain-wide readable) may contain GPP passwords (cpassword attribute). OSCP: Check all discovered shares for misconfigurations and sensitive data.",
+      "notes": "NTFS PERMISSIONS ON NETWORK SHARES\n\nFILESYSTEMRIGHTS:\n- FullControl:\nread/write/delete\n- Modify:\nread/write\n- ReadAndExecute:\nread/execute\n\nIDENTITYREFERENCE:\nShows who has access (users/groups).\n\nCOMMON MISCONFIGURATION:\nEveryone or Authenticated Users with Modify/FullControl on sensitive shares.\n\nSYSVOL SHARE:\nDomain-wide readable.\nMay contain GPP passwords (cpassword attribute).\n\nOSCP:\nCheck all discovered shares for misconfigurations and sensitive data.",
       "oscp_relevance": "medium"
     },
     {
@@ -464,7 +464,7 @@
       "troubleshooting": {
         "Object not found": "Verify username: Get-NetUser -Identity <USERNAME>"
       },
-      "notes": "Identifies who can modify the user account. Look for: GenericAll (full control), WriteDACL (can change permissions), ForceChangePassword (can reset password).",
+      "notes": "IDENTIFIES WHO CAN MODIFY USER ACCOUNT\n\nLOOK FOR:\n- GenericAll:\nFull control\n- WriteDACL:\nCan change permissions\n- ForceChangePassword:\nCan reset password",
       "oscp_relevance": "high"
     },
     {
@@ -508,7 +508,7 @@
         "import-powerview"
       ],
       "troubleshooting": {},
-      "notes": "Critical for privilege escalation. GenericAll on Domain Admins = you can add yourself to the group. Common misconfiguration.",
+      "notes": "CRITICAL FOR PRIVILEGE ESCALATION\n\nGenericAll on Domain Admins = you can add yourself to the group.\n\nCOMMON MISCONFIGURATION:\nCheck this early in enumeration.",
       "oscp_relevance": "high"
     }
   ]

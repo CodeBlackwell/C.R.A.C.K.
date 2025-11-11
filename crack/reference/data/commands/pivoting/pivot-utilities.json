@@ -94,7 +94,7 @@
         "Remote port forwarding failed for listen port": "Port already in use on SSH server - choose different port or kill conflicting process: lsof -ti:PORT | xargs kill -9",
         "Plink window closes immediately": "Add cmd.exe pause or run interactively to see error messages"
       },
-      "notes": "Plink is PuTTY's command-line interface - ideal for Windows hosts without OpenSSH. Unlike OpenSSH's ssh.exe, Plink supports password on command line with -pw (bad OPSEC but useful for scripts). Critical OSCP technique: Reverse tunnel allows pivot through firewall blocking inbound connections. Alternative authentication: Use -i <keyfile.ppk> for Putty private key (convert from OpenSSH with puttygen). Production: Use SSH keys, not passwords. Time estimate: 3-5 minutes including file transfer.",
+      "notes": "Plink is PuTTY's command-line interface - ideal for Windows hosts without OpenSSH.\n\nUnlike OpenSSH's ssh.exe, Plink supports password on command line with -pw (bad OPSEC but useful for scripts).\n\nCritical OSCP technique:\nReverse tunnel allows pivot through firewall blocking inbound connections.\n\nAlternative authentication:\nUse -i <keyfile.ppk> for Putty private key (convert from OpenSSH with puttygen).\n\nProduction:\nUse SSH keys, not passwords.\n\nTime estimate:\n3-5 minutes including file transfer.",
       "oscp_relevance": "high"
     },
     {
@@ -174,7 +174,7 @@
         "Certificate verify failed": "Always use /cert-ignore flag for self-signed certs in OSCP environments",
         "Clipboard not working": "Ensure +clipboard flag present, some Windows policies disable clipboard sharing"
       },
-      "notes": "xFreeRDP is the standard Linux RDP client for OSCP. Clipboard sharing critical for file transfer when no other options available. Drive sharing with +drive:share,/path mounts local directory as \\\\tsclient\\share in Windows - alternative to SMB/HTTP servers. Common OSCP pattern: RDP into dual-homed Windows host, then set up SSH/Plink tunnel to access internal network. Time estimate: 1-2 minutes for connection.",
+      "notes": "xFreeRDP is the standard Linux RDP client for OSCP.\n\nClipboard sharing critical for file transfer when no other options available.\n\nDrive sharing with +drive:share,/path mounts local directory as \\\\tsclient\\share in Windows - alternative to SMB/HTTP servers.\n\nCommon OSCP pattern:\nRDP into dual-homed Windows host, then set up SSH/Plink tunnel to access internal network.\n\nTime estimate:\n1-2 minutes for connection.",
       "oscp_relevance": "high"
     },
     {
@@ -183,7 +183,7 @@
       "category": "pivoting",
       "subcategory": "ssh-tunneling",
       "command": "ssh -V",
-      "description": "Display OpenSSH client version - check compatibility for remote dynamic forwarding (requires \u22657.6)",
+      "description": "Display OpenSSH client version - check compatibility for remote dynamic forwarding (requires ≥7.6)",
       "tags": [
         "SSH",
         "ENUMERATION",
@@ -195,8 +195,8 @@
       },
       "success_indicators": [
         "OpenSSH version displayed (e.g., OpenSSH_8.2p1)",
-        "Version \u22657.6 required for remote dynamic forwarding (-R port only)",
-        "Version \u22657.4 required for ProxyJump support"
+        "Version ≥7.6 required for remote dynamic forwarding (-R port only)",
+        "Version ≥7.4 required for ProxyJump support"
       ],
       "failure_indicators": [
         "Command not found - SSH client not installed"
@@ -204,7 +204,7 @@
       "alternatives": [],
       "prerequisites": [],
       "troubleshooting": {},
-      "notes": "Critical check before using ssh-remote-dynamic-port-forward. OpenSSH 7.6+ required for reverse SOCKS proxy. Windows 1803+ includes OpenSSH 8.1+. Most modern Linux has 7.6+.",
+      "notes": "Critical check before using ssh-remote-dynamic-port-forward.\n\nOpenSSH 7.6+ required for reverse SOCKS proxy.\n\nWindows 1803+ includes OpenSSH 8.1+.\n\nMost modern Linux has 7.6+.",
       "oscp_relevance": "medium"
     },
     {
@@ -252,7 +252,7 @@
       "alternatives": [],
       "prerequisites": [],
       "troubleshooting": {},
-      "notes": "Use when SSH tunnels fail silently. Verbose output shows: key exchange, authentication attempts, tunnel establishment, connection forwarding. Critical for diagnosing 'port forward works but connection hangs' scenarios.",
+      "notes": "Use when SSH tunnels fail silently.\n\nVerbose output shows:\nkey exchange, authentication attempts, tunnel establishment, connection forwarding.\n\nCritical for diagnosing 'port forward works but connection hangs' scenarios.",
       "oscp_relevance": "medium"
     },
     {
@@ -328,7 +328,7 @@
         "Routes disappear after disconnect": "SSHuttle removes routes on exit - keep terminal open or use screen/tmux",
         "Very slow performance": "Add --no-latency-control flag, or exclude pivot IP with -x to prevent routing loops"
       },
-      "notes": "SSHuttle creates transparent proxy - tools work normally without proxychains prefix. Advantage over SOCKS: UDP support, transparent to applications, easier syntax. Disadvantage: Requires Python on pivot, modifies local routing table (iptables), less stealthy than SOCKS. OSCP use case: When proxychains causes issues with specific tools (e.g., Metasploit, Responder). Time estimate: 2-3 minutes for setup, ~30 seconds per subnet route.",
+      "notes": "SSHuttle creates transparent proxy - tools work normally without proxychains prefix.\n\nAdvantage over SOCKS:\nUDP support, transparent to applications, easier syntax.\n\nDisadvantage:\nRequires Python on pivot, modifies local routing table (iptables), less stealthy than SOCKS.\n\nOSCP use case:\nWhen proxychains causes issues with specific tools (e.g., Metasploit, Responder).\n\nTime estimate:\n2-3 minutes for setup, ~30 seconds per subnet route.",
       "oscp_relevance": "medium"
     }
   ]

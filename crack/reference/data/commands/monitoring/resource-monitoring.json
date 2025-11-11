@@ -43,7 +43,7 @@
         "Kill memory-hogging process if needed: kill <PID>"
       ],
       "alternatives": [],
-      "notes": "OSCP defense tip: Unexpected high-memory processes may indicate cryptominers, memory scrapers, or DoS attacks. For top CPU: ps aux --sort=-%cpu | head -10. Time estimate: 2 seconds."
+      "notes": "OSCP defense tip:\nUnexpected high-memory processes may indicate cryptominers, memory scrapers, or DoS attacks.\n\nFor top CPU:\nps aux --sort=-%cpu | head -10.\n\nTime estimate:\n2 seconds."
     },
     {
       "id": "ps-sort-cpu",
@@ -85,7 +85,7 @@
         "Kill rogue process: kill <PID>"
       ],
       "alternatives": [],
-      "notes": "OSCP defense tip: Unexpected 100% CPU usage may indicate cryptominers, brute-force attacks, or fork bombs. Time estimate: 2 seconds."
+      "notes": "OSCP defense tip:\nUnexpected 100% CPU usage may indicate cryptominers, brute-force attacks, or fork bombs.\n\nTime estimate:\n2 seconds."
     },
     {
       "id": "free-memory-human",
@@ -128,7 +128,7 @@
       "alternatives": [
         "cat-proc-meminfo"
       ],
-      "notes": "'available' is key metric - memory available for starting new applications (includes reclaimable cache). Low available memory = system under pressure. Swap usage (high) = memory exhaustion. Time estimate: <1 second."
+      "notes": "'available' is key metric - memory available for starting new applications (includes reclaimable cache).\n\nLow available memory = system under pressure.\n\nSwap usage (high) = memory exhaustion.\n\nTime estimate:\n<1 second."
     },
     {
       "id": "vmstat-cpu-monitoring",
@@ -169,7 +169,7 @@
         "Use iostat for detailed I/O statistics"
       ],
       "alternatives": [],
-      "notes": "Key columns: r (processes waiting for CPU), b (blocked on I/O), si/so (swap in/out), us (user CPU%), sy (system CPU%), id (idle CPU%), wa (I/O wait%). High 'wa' = disk bottleneck. For continuous: vmstat 1. Time estimate: 5 seconds for 5 samples."
+      "notes": "Key columns:\nr (processes waiting for CPU), b (blocked on I/O), si/so (swap in/out), us (user CPU%), sy (system CPU%), id (idle CPU%), wa (I/O wait%).\n\nHigh 'wa' = disk bottleneck.\n\nFor continuous:\nvmstat 1.\n\nTime estimate:\n5 seconds for 5 samples."
     },
     {
       "id": "iostat-disk-stats",
@@ -210,7 +210,7 @@
         "Check disk health: smartctl -a /dev/sda"
       ],
       "alternatives": [],
-      "notes": "Key metrics: r/s (reads/sec), w/s (writes/sec), %util (disk busy %), await (average I/O wait time in ms). %util >80% consistently = disk bottleneck. Time estimate: 5 seconds for 5 samples. Part of sysstat package."
+      "notes": "Key metrics:\nr/s (reads/sec), w/s (writes/sec), %util (disk busy %), await (average I/O wait time in ms).\n\n%util >80% consistently = disk bottleneck.\n\nTime estimate:\n5 seconds for 5 samples.\n\nPart of sysstat package."
     },
     {
       "id": "uptime-load-average",
@@ -248,7 +248,7 @@
       "alternatives": [
         "cat-proc-loadavg"
       ],
-      "notes": "Load average shows average number of processes in run queue. On 4-core system: load of 4.0 = 100% CPU utilization, 8.0 = 200% (overloaded). Three numbers: 1-min, 5-min, 15-min averages. Time estimate: <1 second."
+      "notes": "Load average shows average number of processes in run queue.\n\nOn 4-core system:\nload of 4.0 = 100% CPU utilization, 8.0 = 200% (overloaded).\n\nThree numbers:\n1-min, 5-min, 15-min averages.\n\nTime estimate:\n<1 second."
     },
     {
       "id": "df-disk-usage",
@@ -289,7 +289,7 @@
         "Clear space if needed"
       ],
       "alternatives": [],
-      "notes": "OSCP tip: Full disk can prevent logging, break services, and stop reverse shells. Check Use% column. For specific directory: df -h /var. Time estimate: 1 second."
+      "notes": "OSCP tip:\nFull disk can prevent logging, break services, and stop reverse shells.\n\nCheck Use% column.\n\nFor specific directory:\ndf -h /var.\n\nTime estimate:\n1 second."
     },
     {
       "id": "du-directory-usage",
@@ -336,7 +336,7 @@
         "Clear old logs or temporary files"
       ],
       "alternatives": [],
-      "notes": "Useful for finding what's consuming disk space. To see subdirectories: du -h <DIR> --max-depth=1 | sort -hr. Time estimate: 1-10 seconds depending on directory size."
+      "notes": "Useful for finding what's consuming disk space.\n\nTo see subdirectories:\ndu -h <DIR> --max-depth=1 | sort -hr.\n\nTime estimate:\n1-10 seconds depending on directory size."
     },
     {
       "id": "lsof-user-files",
@@ -385,7 +385,7 @@
         "Check deleted files still held open: lsof -u <USER> | grep deleted"
       ],
       "alternatives": [],
-      "notes": "Shows everything a user has open: regular files, directories, network sockets, devices. Useful for investigating compromised accounts. Time estimate: 2-5 seconds."
+      "notes": "Shows everything a user has open:\nregular files, directories, network sockets, devices.\n\nUseful for investigating compromised accounts.\n\nTime estimate:\n2-5 seconds."
     },
     {
       "id": "lsof-directory-usage",
@@ -432,7 +432,7 @@
       "alternatives": [
         "fuser-directory-processes"
       ],
-      "notes": "Useful before unmounting filesystems or deleting directories. +D is recursive (slow), +d is non-recursive (fast). Time estimate: 5-30 seconds depending on directory size."
+      "notes": "Useful before unmounting filesystems or deleting directories.\n\n+D is recursive (slow), +d is non-recursive (fast).\n\nTime estimate:\n5-30 seconds depending on directory size."
     },
     {
       "id": "fuser-directory-processes",
@@ -479,7 +479,7 @@
       "alternatives": [
         "lsof-directory-usage"
       ],
-      "notes": "Lighter weight than lsof. Useful before unmounting. ACCESS types: c (current directory), e (executable), f (open file), r (root directory). Time estimate: 1 second."
+      "notes": "Lighter weight than lsof.\n\nUseful before unmounting.\n\nACCESS types:\nc (current directory), e (executable), f (open file), r (root directory).\n\nTime estimate:\n1 second."
     },
     {
       "id": "w-user-activity",
@@ -523,7 +523,7 @@
       "alternatives": [
         "user"
       ],
-      "notes": "CRITICAL for defense monitoring. Shows active users, their terminal, source IP (FROM), login time, idle time, and current command. OSCP tip: Check FROM column for unexpected IPs, WHAT column for suspicious commands (shells, persistence scripts). Time estimate: <1 second."
+      "notes": "CRITICAL for defense monitoring.\n\nShows active users, their terminal, source IP (FROM), login time, idle time, and current command.\n\nOSCP tip:\nCheck FROM column for unexpected IPs, WHAT column for suspicious commands (shells, persistence scripts).\n\nTime estimate:\n<1 second."
     },
     {
       "id": "who-logged-in",
@@ -563,7 +563,7 @@
         "w-user-activity",
         "user"
       ],
-      "notes": "More detailed than 'users' command but less info than 'w'. Shows boot time, runlevel, login processes. Time estimate: <1 second."
+      "notes": "More detailed than 'users' command but less info than 'w'.\n\nShows boot time, runlevel, login processes.\n\nTime estimate:\n<1 second."
     },
     {
       "id": "last-login-history",
@@ -604,7 +604,7 @@
         "View last login per user: lastlog-user-last"
       ],
       "alternatives": [],
-      "notes": "Reads /var/log/wtmp. OSCP defense tip: Look for (1) Logins from unexpected IPs, (2) Short-lived sessions (in/out quickly = potential intrusion), (3) Logins at unusual hours. For specific user: last -a <USERNAME>. Time estimate: 1-3 seconds."
+      "notes": "Reads /var/log/wtmp.\n\nOSCP defense tip:\nLook for (1) Logins from unexpected IPs, (2) Short-lived sessions (in/out quickly = potential intrusion), (3) Logins at unusual hours.\n\nFor specific user:\nlast -a <USERNAME>.\n\nTime estimate:\n1-3 seconds."
     },
     {
       "id": "lastlog-user-last",
@@ -643,7 +643,7 @@
       "alternatives": [
         "last-login-history"
       ],
-      "notes": "Shows one entry per user (most recent login). Reads /var/log/lastlog. '**Never logged in**' is normal for service accounts. Time estimate: 1 second."
+      "notes": "Shows one entry per user (most recent login).\n\nReads /var/log/lastlog.\n\n'**Never logged in**' is normal for service accounts.\n\nTime estimate:\n1 second."
     }
   ]
 }

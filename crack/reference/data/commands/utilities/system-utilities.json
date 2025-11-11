@@ -89,7 +89,7 @@
         "chmod-executable"
       ],
       "oscp_relevance": "medium",
-      "notes": "Common permissions: 755 for executables, 644 for files, 700 for sensitive scripts"
+      "notes": "Common permissions:\n755 for executables, 644 for files, 700 for sensitive scripts"
     },
     {
       "id": "chmod-writable",

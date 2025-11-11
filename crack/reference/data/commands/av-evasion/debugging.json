@@ -25,7 +25,7 @@
           "required": true
         }
       ],
-      "notes": "Syntax: Launch WinDbg, attach to target process WinDbg essential for understanding AMSI internals. Attach to PowerShell to analyze AmsiScanBuffer. Use sparingly in OSCP (time-consuming). Good for lab research before exam. ~5 min setup time. Time estimate: 5 minutes (first-time setup) References: docs/av-evasion/debugging.md#windbg-basics, PEN-300 Chapter 7.1.1 Manual alternative: Use x64dbg, OllyDbg (32-bit), or Visual Studio debugger",
+      "notes": "Syntax:\nLaunch WinDbg, attach to target process WinDbg essential for understanding AMSI internals.\n\nAttach to PowerShell to analyze AmsiScanBuffer.\n\nUse sparingly in OSCP (time-consuming).\n\nGood for lab research before exam.\n\n~5 min setup time.\n\nTime estimate:\n5 minutes (first-time setup) References:\ndocs/av-evasion/debugging.md#windbg-basics, PEN-300 Chapter 7.1.1 Manual alternative:\nUse x64dbg, OllyDbg (32-bit), or Visual Studio debugger",
       "success_indicators": [
         "WinDbg attaches to process, breaks at entry point or continues execution. Debugger command prompt ready."
       ],
@@ -71,7 +71,7 @@
           "required": false
         }
       ],
-      "notes": "Syntax: Execute in WinDbg command window Breakpoints critical for AMSI research. AmsiScanBuffer most important (called on every script scan). Practice setting bp before exam. Takes 1-2 min per breakpoint. Time estimate: 2 minutes per breakpoint References: docs/av-evasion/debugging.md#breakpoints, PEN-300 Chapter 7.1.1 Manual alternative: Use x64dbg GUI, hardware breakpoints (ba command), or memory breakpoints",
+      "notes": "Syntax:\nExecute in WinDbg command window Breakpoints critical for AMSI research.\n\nAmsiScanBuffer most important (called on every script scan).\n\nPractice setting bp before exam.\n\nTakes 1-2 min per breakpoint.\n\nTime estimate:\n2 minutes per breakpoint References:\ndocs/av-evasion/debugging.md#breakpoints, PEN-300 Chapter 7.1.1 Manual alternative:\nUse x64dbg GUI, hardware breakpoints (ba command), or memory breakpoints",
       "success_indicators": [
         "Breakpoint set. Execution continues until breakpoint hit, then breaks to debugger prompt."
       ],
@@ -110,7 +110,7 @@
           "required": false
         }
       ],
-      "notes": "Syntax: Execute in WinDbg after breaking at function Memory inspection reveals AMSI context structure (first 4 bytes: \"AMSI\"). Critical for understanding context corruption bypass. Use 'du' for PowerShell strings (Unicode). ~1 min per inspection. Time estimate: 1 minute References: docs/av-evasion/debugging.md#memory-inspection, PEN-300 Chapter 7.2 Manual alternative: Use Process Explorer memory viewer, x64dbg memory map, or CheatEngine",
+      "notes": "Syntax:\nExecute in WinDbg after breaking at function Memory inspection reveals AMSI context structure (first 4 bytes:\n\"AMSI\").\n\nCritical for understanding context corruption bypass.\n\nUse 'du' for PowerShell strings (Unicode).\n\n~1 min per inspection.\n\nTime estimate:\n1 minute References:\ndocs/av-evasion/debugging.md#memory-inspection, PEN-300 Chapter 7.2 Manual alternative:\nUse Process Explorer memory viewer, x64dbg memory map, or CheatEngine",
       "success_indicators": [
         "Memory contents displayed in specified format (hex, ASCII, Unicode, etc.)."
       ],
@@ -161,7 +161,7 @@
           "required": false
         }
       ],
-      "notes": "Syntax: Execute in WinDbg Understanding AmsiScanBuffer disassembly shows WHERE to patch for memory bypass. Look for 'test', 'cmp', 'je' instructions (validation logic). 'xor rax, rax; ret' = clean return. ~10 min to analyze function. Time estimate: 10 minutes (function analysis) References: docs/av-evasion/debugging.md#disassembly, PEN-300 Chapter 7.4.1 Manual alternative: Use IDA Pro, Ghidra, Binary Ninja, or x64dbg for static analysis",
+      "notes": "Syntax:\nExecute in WinDbg Understanding AmsiScanBuffer disassembly shows WHERE to patch for memory bypass.\n\nLook for 'test', 'cmp', 'je' instructions (validation logic).\n\n'xor rax, rax; ret' = clean return.\n\n~10 min to analyze function.\n\nTime estimate:\n10 minutes (function analysis) References:\ndocs/av-evasion/debugging.md#disassembly, PEN-300 Chapter 7.4.1 Manual alternative:\nUse IDA Pro, Ghidra, Binary Ninja, or x64dbg for static analysis",
       "success_indicators": [
         "Assembly instructions with addresses, opcodes, and mnemonics. Shows function logic flow."
       ],
@@ -195,7 +195,7 @@
         }
       ],
       "prerequisites": [],
-      "notes": "Syntax: Execute from Kali or Windows with Frida installed Frida is powerful but may be blocked by AV/EDR. Good for lab analysis before exam. Shows WHAT PowerShell sends to AMSI for scanning. Custom handlers reveal buffer contents. ~15 min setup first time. Time estimate: 15 minutes (first-time setup) References: docs/av-evasion/debugging.md#frida, PEN-300 Chapter 7.2.2 Manual alternative: Use API Monitor, Process Monitor, or WinDbg for function tracing",
+      "notes": "Syntax:\nExecute from Kali or Windows with Frida installed Frida is powerful but may be blocked by AV/EDR.\n\nGood for lab analysis before exam.\n\nShows WHAT PowerShell sends to AMSI for scanning.\n\nCustom handlers reveal buffer contents.\n\n~15 min setup first time.\n\nTime estimate:\n15 minutes (first-time setup) References:\ndocs/av-evasion/debugging.md#frida, PEN-300 Chapter 7.2.2 Manual alternative:\nUse API Monitor, Process Monitor, or WinDbg for function tracing",
       "success_indicators": [
         "Real-time log of AMSI function calls with timestamps. Handler scripts can log arguments and return values."
       ],
@@ -253,7 +253,7 @@
           "required": true
         }
       ],
-      "notes": "Syntax: Execute in WinDbg after breaking Live patching validates bypass techniques before implementing in code. Patch AmsiScanBuffer with 'xor rax,rax; ret' to test if bypass works. Reversible (just restart process). ~5 min to test patch. Time estimate: 5 minutes References: docs/av-evasion/debugging.md#live-patching, PEN-300 Chapter 7.4.2 Manual alternative: Use x64dbg patches, Cheat Engine, or process memory writers",
+      "notes": "Syntax:\nExecute in WinDbg after breaking Live patching validates bypass techniques before implementing in code.\n\nPatch AmsiScanBuffer with 'xor rax,rax; ret' to test if bypass works.\n\nReversible (just restart process).\n\n~5 min to test patch.\n\nTime estimate:\n5 minutes References:\ndocs/av-evasion/debugging.md#live-patching, PEN-300 Chapter 7.4.2 Manual alternative:\nUse x64dbg patches, Cheat Engine, or process memory writers",
       "success_indicators": [
         "Memory modified. Function behavior changes according to patch. Live testing of bypass techniques."
       ],

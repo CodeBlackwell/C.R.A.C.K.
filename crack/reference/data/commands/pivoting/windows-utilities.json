@@ -46,7 +46,7 @@
         "Element not found": "Verify exact rule: netsh interface portproxy show all, ensure listenaddress matches (e.g., 0.0.0.0 vs 192.168.x.x)",
         "Access denied": "Run as Administrator"
       },
-      "notes": "Critical for cleanup in OSCP exam - remove port forwards to avoid leaving persistent backdoors. Also delete associated firewall rules with netsh-firewall-delete-rule. For complete cleanup: netsh interface portproxy reset (removes all rules).",
+      "notes": "Critical for cleanup in OSCP exam - remove port forwards to avoid leaving persistent backdoors.\n\nAlso delete associated firewall rules with netsh-firewall-delete-rule.\n\nFor complete cleanup:\nnetsh interface portproxy reset (removes all rules).",
       "oscp_relevance": "medium"
     },
     {
@@ -80,7 +80,7 @@
       "alternatives": [],
       "prerequisites": [],
       "troubleshooting": {},
-      "notes": "Quick check for tool availability. Common OSCP checks: where ssh (OpenSSH client), where python, where powershell, where curl. Equivalent to Linux 'which' command.",
+      "notes": "Quick check for tool availability.\n\nCommon OSCP checks:\nwhere ssh (OpenSSH client), where python, where powershell, where curl.\n\nEquivalent to Linux 'which' command.",
       "oscp_relevance": "medium"
     },
     {
@@ -108,7 +108,7 @@
       "alternatives": [],
       "prerequisites": [],
       "troubleshooting": {},
-      "notes": "Critical OSCP enumeration command. Check: OS version (for exploit research), Hotfix list (missing patches = vulnerabilities), Network adapters (multi-homed = pivot candidate), System Type (32-bit vs 64-bit for exploit selection). Time estimate: 5-10 seconds for output.",
+      "notes": "Critical OSCP enumeration command.\n\nCheck:\nOS version (for exploit research), Hotfix list (missing patches = vulnerabilities), Network adapters (multi-homed = pivot candidate), System Type (32-bit vs 64-bit for exploit selection).\n\nTime estimate:\n5-10 seconds for output.",
       "oscp_relevance": "high"
     },
     {
@@ -138,7 +138,7 @@
       "alternatives": [],
       "prerequisites": [],
       "troubleshooting": {},
-      "notes": "Critical for privilege escalation assessment. Key privileges: SeImpersonatePrivilege (Potato exploits), SeDebugPrivilege (process injection), SeBackupPrivilege (backup file access), SeRestorePrivilege (file restore), SeLoadDriverPrivilege (driver loading). If high-value privilege present, search for corresponding exploit. Time estimate: immediate.",
+      "notes": "Critical for privilege escalation assessment.\n\nKey privileges:\nSeImpersonatePrivilege (Potato exploits), SeDebugPrivilege (process injection), SeBackupPrivilege (backup file access), SeRestorePrivilege (file restore), SeLoadDriverPrivilege (driver loading).\n\nIf high-value privilege present, search for corresponding exploit.\n\nTime estimate:\nimmediate.",
       "oscp_relevance": "high"
     },
     {
@@ -167,7 +167,7 @@
       "alternatives": [],
       "prerequisites": [],
       "troubleshooting": {},
-      "notes": "Critical OSCP enumeration for pivot identification. Look for: Multiple network adapters (dual-homed = pivot candidate), Internal IP ranges (10.x, 172.16-31.x, 192.168.x = potential pivot targets), DNS servers (identify domain controllers). Common pattern: Host has 192.168.45.x (WAN) and 172.16.50.x (internal) = perfect pivot point. Time estimate: immediate.",
+      "notes": "Critical OSCP enumeration for pivot identification.\n\nLook for:\nMultiple network adapters (dual-homed = pivot candidate), Internal IP ranges (10.x, 172.16-31.x, 192.168.x = potential pivot targets), DNS servers (identify domain controllers).\n\nCommon pattern:\nHost has 192.168.45.x (WAN) and 172.16.50.x (internal) = perfect pivot point.\n\nTime estimate:\nimmediate.",
       "oscp_relevance": "high"
     },
     {
@@ -199,7 +199,7 @@
       "alternatives": [],
       "prerequisites": [],
       "troubleshooting": {},
-      "notes": "Critical for service enumeration and port forward verification. Use cases: Identify listening ports (potential services), Find established connections (active pivots), Verify port forward active (netstat -ano | findstr <PORT>), Map PID to process (tasklist | findstr <PID>). Combine with netsh-portproxy-show to see full pivot configuration. Time estimate: immediate.",
+      "notes": "Critical for service enumeration and port forward verification.\n\nUse cases:\nIdentify listening ports (potential services), Find established connections (active pivots), Verify port forward active (netstat -ano | findstr <PORT>), Map PID to process (tasklist | findstr <PID>).\n\nCombine with netsh-portproxy-show to see full pivot configuration.\n\nTime estimate:\nimmediate.",
       "oscp_relevance": "high"
     }
   ]

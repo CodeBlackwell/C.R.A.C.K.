@@ -41,7 +41,7 @@
         "Get-NetDomain not recognized": "PowerView not imported. Import: Import-Module .\\PowerView.ps1 or dot-source: . .\\PowerView.ps1",
         "Access Denied": "Not logged in as domain user. Verify: whoami /fqdn"
       },
-      "notes": "PowerView simplifies .NET LDAP queries into easy-to-use cmdlets. Get-NetDomain is equivalent to [System.DirectoryServices.ActiveDirectory.Domain]::GetCurrentDomain() but with cleaner output. Returns critical properties: PdcRoleOwner (target for enumeration), DomainMode (functional level), Forest (multi-domain environments). OSCP: Import PowerView at the start of AD enumeration for speed and convenience.\n\nAlternative Techniques:\n- $env:userdnsdomain",
+      "notes": "POWERVIEW SIMPLIFICATION:\nSimplifies .NET LDAP queries into easy cmdlets.\n\nEQUIVALENT TO:\n  [System.DirectoryServices.ActiveDirectory.Domain]::GetCurrentDomain()\n\nRETURNS CRITICAL PROPERTIES:\n- PdcRoleOwner:\nTarget for enumeration\n- DomainMode:\nFunctional level\n- Forest:\nMulti-domain environments\n\nOSCP:\nImport PowerView at start of AD enumeration.\n\nALTERNATIVE:\n  $env:userdnsdomain\n\nTime:\n<5 seconds",
       "oscp_relevance": "high"
     },
     {
@@ -84,7 +84,7 @@
         "Module not imported": "Import-Module .\\PowerView.ps1",
         "Unable to contact domain": "DC unreachable. Check network connectivity: ping <DC>"
       },
-      "notes": "Returns all DCs in the domain with detailed properties. IPAddress field useful for direct targeting. OSVersion reveals vulnerable legacy DCs (Server 2008, 2012). Forest property shows forest root (important in multi-domain environments). OSCP: Identify the PDC from PdcRoleOwner field - use this for all subsequent enumeration queries for accuracy.",
+      "notes": "ENUMERATE ALL DOMAIN CONTROLLERS:\nKEY PROPERTIES:\n- IPAddress:\nDirect targeting\n- OSVersion:\nIdentify legacy DCs (2008, 2012)\n- Forest:\nForest root (multi-domain)\n- PdcRoleOwner:\nPDC identification\n\nOSCP:\nIdentify PDC from PdcRoleOwner field.\nUse PDC for all subsequent enumeration (accuracy).\n\nTime:\n<5 seconds",
       "oscp_relevance": "high"
     },
     {
@@ -129,7 +129,7 @@
         "Module not imported": "Import-Module .\\PowerView.ps1",
         "Too much output": "Filter attributes: Get-NetUser | select samaccountname,description,memberof | Format-Table"
       },
-      "notes": "Returns ALL user attributes for every domain user - output can be overwhelming in large domains. Use select to filter: Get-NetUser | select samaccountname,pwdlastset,lastlogon filters for key attributes. Look for dormant accounts (old lastlogon), weak passwords (old pwdlastset), admin accounts (memberof contains Domain Admins). OSCP: Pipe to select immediately to avoid information overload.",
+      "notes": "ENUMERATE ALL DOMAIN USERS:\nWARNING:\nReturns ALL attributes for ALL users.\nOutput can be overwhelming in large domains.\n\nFILTER WITH SELECT:\n  Get-NetUser | select samaccountname,pwdlastset,lastlogon\n\nLOOK FOR:\n- Dormant accounts:\nOld lastlogon\n- Weak passwords:\nOld pwdlastset\n- Admin accounts:\nmemberof contains Domain Admins\n\nOSCP:\nPipe to select immediately (avoid overload).\n\nTime:\n10-30 seconds",
       "oscp_relevance": "high"
     },
     {
@@ -180,7 +180,7 @@
       "troubleshooting": {
         "User not found": "Verify spelling. List all users first: Get-NetUser | select samaccountname"
       },
-      "notes": "Much faster than Get-NetUser | Where-Object because it queries AD directly for the specific user. Key attributes to check: memberof (group memberships - Domain Admins?), admincount (1 = protected admin account), pwdlastset (password age - old = potentially weak), serviceprincipalname (Kerberoastable?), useraccountcontrol (account flags - disabled, password never expires, etc.). OSCP: Use this to quickly profile high-value target users discovered during enumeration.",
+      "notes": "QUERY SPECIFIC USER:\nFaster than Get-NetUser | Where-Object\nQueries AD directly.\n\nKEY ATTRIBUTES:\n- memberof:\nGroup memberships (Domain Admins?)\n- admincount:\n1 = protected admin account\n- pwdlastset:\nPassword age (old = weak)\n- serviceprincipalname:\nKerberoastable?\n- useraccountcontrol:\nAccount flags\n\nOSCP:\nQuickly profile high-value targets.\n\nTime:\n<5 seconds",
       "oscp_relevance": "high"
     },
     {
@@ -226,7 +226,7 @@
       "troubleshooting": {
         "krbtgt showing in results": "krbtgt has SPNs but is not Kerberoastable. Filter out: Get-NetUser -SPN | ? {$_.samaccountname -ne 'krbtgt'}"
       },
-      "notes": "Service accounts typically have elevated privileges (local admin, database access) and weak passwords (set once, rarely changed). SPN format reveals service type: HTTP/ (web servers), MSSQLSvc/ (SQL Server), TERMSRV/ (RDP). Kerberoasting workflow: (1) Request service ticket with valid domain credentials, (2) Extract ticket (contains service account password hash), (3) Crack offline with hashcat/john (no lockout risk). OSCP: One of the most reliable privilege escalation techniques - always enumerate SPNs early.",
+      "notes": "KERBEROASTING TARGETS:\nSERVICE ACCOUNT CHARACTERISTICS:\n- Elevated privileges (local admin, DB access)\n- Weak passwords (rarely changed)\n\nSPN FORMAT REVEALS SERVICE:\n- HTTP/:\nWeb servers\n- MSSQLSvc/:\nSQL Server\n- TERMSRV/:\nRDP\n\nKERBEROASTING WORKFLOW:\n1.\n\nRequest service ticket (valid domain creds)\n\n2.\n\nExtract ticket (contains password hash)\n\n3.\n\nCrack offline (hashcat/john, no lockout)\n\nOSCP:\nMost reliable privesc technique.\nEnumerate SPNs early.\n\nTime:\n5-10 seconds",
       "oscp_relevance": "high"
     },
     {
@@ -271,7 +271,7 @@
       "troubleshooting": {
         "Module not imported": "Import-Module .\\PowerView.ps1"
       },
-      "notes": "Returns ALL groups including default AD groups and custom organizational groups. Default high-privilege groups: Domain Admins (domain-wide admin), Enterprise Admins (forest-wide admin), Administrators (local admin on domain computers). Custom groups often reveal organizational structure: 'IT_Admins', 'SQL_DBAs', 'Service_Accounts', 'Management'. OSCP: Look for custom groups with 'Admin', 'IT', 'Service', 'Management' in the name - often have elevated privileges not obvious from the name alone.",
+      "notes": "ENUMERATE ALL GROUPS:\nDEFAULT HIGH-PRIVILEGE:\n- Domain Admins:\nDomain-wide admin\n- Enterprise Admins:\nForest-wide admin\n- Administrators:\nLocal admin on computers\n\nCUSTOM GROUPS REVEAL STRUCTURE:\n- IT_Admins\n- SQL_DBAs\n- Service_Accounts\n- Management\n\nOSCP:\nLook for 'Admin', 'IT', 'Service', 'Management' in names.\nOften have elevated privileges.\n\nTime:\n5-10 seconds",
       "oscp_relevance": "high"
     },
     {
@@ -324,7 +324,7 @@
         "Group not found": "Use quotes for group names with spaces. Verify exact name: Get-NetGroup | select cn",
         "Member field shows distinguished names": "Use Get-NetGroupMember for cleaner output with resolved usernames"
       },
-      "notes": "Member attribute shows distinguished names (LDAP format) not usernames. Format: 'CN=username,CN=Users,DC=corp,DC=com' for users, 'CN=groupname,CN=Users,DC=corp,DC=com' for nested groups. If member DN starts with 'CN=' and contains 'CN=Users', it's likely a group (nested group membership). Use Get-NetGroupMember -Recurse to automatically resolve nested groups. OSCP: Domain Admins members = instant win if compromised.",
+      "notes": "MEMBER ATTRIBUTE FORMAT:\nDistinguished names (LDAP), not usernames.\n\nFORMAT:\n- Users:\nCN=username,CN=Users,DC=corp,DC=com\n- Nested groups:\nCN=groupname,CN=Users,DC=corp,DC=com\n\nNESTED GROUP DETECTION:\nDN starts with 'CN=' and contains 'CN=Users' = likely group.\n\nBETTER ALTERNATIVE:\nGet-NetGroupMember -Recurse (auto-resolves nested)\n\nOSCP:\nDomain Admins members = instant win.\n\nTime:\n<5 seconds",
       "oscp_relevance": "high"
     },
     {
@@ -378,7 +378,7 @@
         "Nested groups not showing users": "Add -Recurse flag: Get-NetGroupMember -Identity \"<GROUPNAME>\" -Recurse",
         "Group not found": "Use quotes for group names with spaces"
       },
-      "notes": "Cleaner output than Get-NetGroup because it resolves distinguished names to usernames and shows object types (user vs group). MemberObjectClass reveals if member is a user (objectClass=user) or nested group (objectClass=group). -Recurse flag automatically resolves nested groups - essential for finding all effective members. OSCP: Always use -Recurse for privileged groups to find hidden admin accounts nested in subgroups.",
+      "notes": "CLEANER OUTPUT:\nResolves DNs to usernames.\nShows object types (user vs group).\n\nMEMBEROBJECTCLASS:\n- user:\nobjectClass=user\n- group:\nobjectClass=group (nested)\n\n-RECURSE FLAG:\nAutomatically resolves nested groups.\nEssential for finding all effective members.\n\nOSCP:\nAlways use -Recurse for privileged groups.\nFind hidden admin accounts in subgroups.\n\nTime:\n5-10 seconds",
       "oscp_relevance": "high"
     },
     {
@@ -424,7 +424,7 @@
         "Module not imported": "Import-Module .\\PowerView.ps1",
         "Output too large": "Filter by OS: Get-NetComputer -OperatingSystem '*Server*' | select dnshostname,operatingsystem"
       },
-      "notes": "Reveals all domain-joined machines without network scanning. operatingsystem identifies vulnerable legacy systems (Windows 7, Server 2008) for targeting. operatingsystemversion provides exact build number for CVE matching. dnshostname is the FQDN for connecting (RDP, WinRM, SMB). Filter examples: Get-NetComputer -OperatingSystem '*Server*' (servers only), Get-NetComputer -OperatingSystem '*2008*' (legacy servers). OSCP: Focus on legacy OS and servers - higher chance of misconfigurations and unpatched vulnerabilities.",
+      "notes": "ALL DOMAIN COMPUTERS:\nNo network scanning required.\n\nKEY FIELDS:\n- operatingsystem:\nIdentify legacy (7, 2008)\n- operatingsystemversion:\nExact build for CVE\n- dnshostname:\nFQDN for connections\n\nFILTER EXAMPLES:\n  Get-NetComputer -OperatingSystem '*Server*'\n  Get-NetComputer -OperatingSystem '*2008*'\n\nOSCP:\nFocus on legacy OS and servers.\nHigher misconfigurations/unpatched vulns.\n\nTime:\n10-30 seconds",
       "oscp_relevance": "high"
     },
     {
@@ -467,7 +467,7 @@
       "troubleshooting": {
         "Module not imported": "Import-Module .\\PowerView.ps1"
       },
-      "notes": "OUs organize objects in AD for management and GPO application. Common OUs: 'Domain Controllers' (DCs), 'Computers' (workstations), 'Servers' (servers), custom OUs by department/function. OU structure reveals organizational hierarchy and delegation boundaries. Admins often create OUs like 'Service Accounts', 'Privileged Users', 'Disabled Users' - investigate these for misconfigurations. OSCP: OUs are less critical than users/groups/computers but can reveal admin practices and potential targets.",
+      "notes": "OUs ORGANIZE OBJECTS:\nFor management and GPO application.\n\nCOMMON OUs:\n- Domain Controllers:\nDCs\n- Computers:\nWorkstations\n- Servers:\nServers\n- Custom:\nBy department/function\n\nINTERESTING OUs:\n- Service Accounts\n- Privileged Users\n- Disabled Users\n\nOSCP:\nLess critical than users/groups/computers.\nCan reveal admin practices.\n\nTime:\n5-10 seconds",
       "oscp_relevance": "medium"
     },
     {
@@ -509,7 +509,7 @@
       "troubleshooting": {
         "Module not imported": "Import-Module .\\PowerView.ps1"
       },
-      "notes": "GPOs define domain-wide settings: password policies, software installation, scripts, security settings. Default Domain Policy controls password requirements and account lockout. Custom GPOs may contain credentials (GPP passwords - cpassword attribute), startup scripts with hardcoded credentials, or weak security settings. whenchanged shows last modification - recent changes may indicate testing/debugging GPOs with weak security. OSCP: Focus on finding GPP passwords in SYSVOL (old vulnerability but still present in legacy environments).",
+      "notes": "GPOs DEFINE SETTINGS:\n- Password policies\n- Software installation\n- Scripts\n- Security settings\n\nDEFAULT DOMAIN POLICY:\nControls password requirements and lockout.\n\nVULNERABILITIES:\n- GPP passwords (cpassword attribute)\n- Startup scripts with hardcoded creds\n- Weak security settings\n\nWHENCHANGED:\nRecent changes = testing/debugging (weak security).\n\nOSCP:\nFind GPP passwords in SYSVOL.\nOld vuln, still present in legacy.\n\nTime:\n5-10 seconds",
       "oscp_relevance": "medium"
     },
     {
@@ -551,7 +551,7 @@
       "troubleshooting": {
         "Module not imported": "Import-Module .\\PowerView.ps1"
       },
-      "notes": "AD forests contain one or more domains in a trust relationship. Single domain environments: forest = domain (this command adds little value). Multi-domain environments: forest reveals domain structure and trust relationships. RootDomainSid identifies the forest root domain. Enterprise Admins group exists only in root domain and has admin rights across ALL domains in forest. OSCP: Most exam environments are single-domain, making this less relevant than Get-NetDomain. Use in multi-domain scenarios to map attack paths across domain boundaries.\n\nAlternative Techniques:\n- [system.directoryservices.activedirectory.forest]::getcurrentforest()",
+      "notes": "AD FORESTS:\nOne or more domains in trust relationship.\n\nSINGLE DOMAIN:\nForest = Domain (little value).\n\nMULTI-DOMAIN:\nReveals structure and trust relationships.\n\nENTERPRISE ADMINS:\nExists only in root domain.\nAdmin rights across ALL forest domains.\n\nOSCP:\nMost exams are single-domain.\nUse for multi-domain scenarios.\n\nALTERNATIVE:\n  [system.directoryservices.activedirectory.forest]::getcurrentforest()\n\nTime:\n<5 seconds",
       "oscp_relevance": "medium"
     },
     {
@@ -590,7 +590,7 @@
       "troubleshooting": {
         "Get-NetUser not recognized": "Import PowerView first: . .\\PowerView.ps1 or Import-Module PowerView.psd1"
       },
-      "notes": "Check description fields - admins often store passwords there. Look for patterns: 'temp password', 'default password', 'reset to'.",
+      "notes": "CHECK DESCRIPTION FIELDS:\nAdmins often store passwords there.\n\nCOMMON PATTERNS:\n- 'temp password'\n- 'default password'\n- 'reset to'\n- 'password:\nWinter2023'\n\nFILTER:\n  | ? {$_.description -match 'password|pwd|pw'}",
       "oscp_relevance": "high"
     },
     {
@@ -627,7 +627,7 @@
         "import-powerview"
       ],
       "troubleshooting": {},
-      "notes": "Target older OS versions (Server 2008, 2012) - likely unpatched. Check lastlogon to identify active machines.",
+      "notes": "TARGET OLDER OS:\nServer 2008, 2012 - likely unpatched.\n\nLASTLOGON:\nIdentify active machines.\n\nFILTER:\n  | ? {$_.operatingsystem -match 'Server 2008|2012'}",
       "oscp_relevance": "medium"
     },
     {
@@ -665,7 +665,7 @@
       "troubleshooting": {
         "No pingable hosts": "ICMP may be blocked. Try without -Ping flag to get all computers."
       },
-      "notes": "Slow on large domains. Use for small environments or when you need only active targets. Alternative: Get all computers then test with port scan.",
+      "notes": "WARNING:\nSlow on large domains (250+ computers).\n\nUSE FOR:\n- Small environments\n- Need only active targets\n\nALTERNATIVE:\nGet all computers, then port scan.",
       "oscp_relevance": "medium"
     },
     {
@@ -705,7 +705,7 @@
       "troubleshooting": {
         "Group not found": "Verify group name: Get-NetGroup | select name"
       },
-      "notes": "Critical for identifying privilege escalation paths. Nested groups often overlooked. Example: User \u2192 Helpdesk \u2192 ServerAdmins \u2192 Domain Admins.",
+      "notes": "Critical for identifying privilege escalation paths.\n\nNested groups often overlooked.\n\nEXAMPLE CHAIN:\nUser → Helpdesk → ServerAdmins → Domain Admins\n\nUSE -RECURSE:\nFinds all effective members through nested groups.",
       "oscp_relevance": "high"
     }
   ]

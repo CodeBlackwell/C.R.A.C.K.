@@ -451,7 +451,7 @@
         "Protocol negotiation failed": "SMBv1 disabled on target. Specify minimum protocol version: smbclient -N -L //<TARGET> --option='client min protocol=SMB2'",
         "No shares visible": "Shares may be hidden from listing. Try connecting to common shares directly: C$, ADMIN$, IPC$, Users, Public"
       },
-      "notes": "Null sessions often allowed on older Windows (pre-2000) and misconfigured Samba servers. This is the first step in SMB enumeration - always try before authenticated methods. Document all discovered shares in enumeration.md. Time estimate: 1-2 minutes. OSCP tip: If null session works, try accessing IPC$ for further enumeration with rpcclient.",
+      "notes": "Null sessions often allowed on older Windows (pre-2000) and misconfigured Samba servers.\n\nThis is the first step in SMB enumeration - always try before authenticated methods.\n\nDocument all discovered shares in enumeration.md.\n\nTime estimate:\n1-2 minutes.\n\nOSCP tip:\nIf null session works, try accessing IPC$ for further enumeration with rpcclient.",
       "oscp_relevance": "high"
     },
     {
@@ -515,7 +515,7 @@
         "No domain/workgroup info": "Target may be standalone. Focus on share and user enumeration instead of domain queries",
         "Connection timeout": "Port 445/139 may be rate-limited. Reduce scan speed or wait before retrying"
       },
-      "notes": "enum4linux wraps multiple Samba tools (smbclient, rpcclient, net). Best used after confirming SMB is accessible. Time estimate: 3-5 minutes for full scan. Can be noisy - IDS may detect. Document findings in enumeration.md: workgroup name, users, shares, password policy (useful for credential attacks). OSCP tip: Look for shares with READ/WRITE access, weak password policies (no complexity, no lockout), and user lists for credential spraying.",
+      "notes": "enum4linux wraps multiple Samba tools (smbclient, rpcclient, net).\n\nBest used after confirming SMB is accessible.\n\nTime estimate:\n3-5 minutes for full scan.\n\nCan be noisy - IDS may detect.\n\nDocument findings in enumeration.md:\nworkgroup name, users, shares, password policy (useful for credential attacks).\n\nOSCP tip:\nLook for shares with READ/WRITE access, weak password policies (no complexity, no lockout), and user lists for credential spraying.",
       "oscp_relevance": "high"
     },
     {
@@ -592,7 +592,7 @@
         "Connection timeout": "Firewall blocking port 445. Try legacy port: crackmapexec smb <TARGET> -u <USER> -p <PASS> --shares --port 139",
         "Kerberos error": "Domain authentication failed. Use local auth: crackmapexec smb <TARGET> -u <USER> -p <PASS> --shares --local-auth"
       },
-      "notes": "CrackMapExec is faster than enum4linux for share enumeration with known credentials. Shows explicit READ/WRITE permissions which is critical for exploitation planning. Time estimate: 30 seconds. OSCP tip: Look for non-standard shares (anything besides C$, ADMIN$, IPC$) and shares with WRITE access - potential for uploading payloads. For null session: crackmapexec smb <TARGET> -u '' -p '' --shares. For multiple targets: crackmapexec smb <SUBNET> -u <USER> -p <PASS> --shares",
+      "notes": "CrackMapExec is faster than enum4linux for share enumeration with known credentials.\n\nShows explicit READ/WRITE permissions which is critical for exploitation planning.\n\nTime estimate:\n30 seconds.\n\nOSCP tip:\nLook for non-standard shares (anything besides C$, ADMIN$, IPC$) and shares with WRITE access - potential for uploading payloads.\n\nFor null session:\ncrackmapexec smb <TARGET> -u '' -p '' --shares.\n\nFor multiple targets:\ncrackmapexec smb <SUBNET> -u <USER> -p <PASS> --shares",
       "oscp_relevance": "high"
     },
     {
@@ -667,7 +667,7 @@
         "Connection failed": "Port 445 blocked. Try legacy: smbclient //<TARGET>/<SHARE> -U <USER> -p 139",
         "Cannot access subdirectories": "Use 'cd <DIR>' to change directories. Use 'recurse ON' + 'prompt OFF' + 'mget *' for bulk download"
       },
-      "notes": "Interactive mode allows manual exploration which may reveal files missed by automated tools. Common useful commands: ls, cd, get, put, mget, mput, recurse, prompt. Time estimate: 5-15 minutes for manual exploration. OSCP tips: (1) Check for readable files in Users directories - look for Desktop, Documents, Downloads. (2) Check for writable directories - potential for malware upload. (3) Look for configuration files, scripts, passwords in plaintext. (4) For null session: smbclient //<TARGET>/<SHARE> -N. (5) For scripting: smbclient //<TARGET>/<SHARE> -U <USER>%<PASS> -c 'ls;get file.txt'",
+      "notes": "Interactive mode allows manual exploration which may reveal files missed by automated tools.\n\nCommon useful commands:\nls, cd, get, put, mget, mput, recurse, prompt.\n\nTime estimate:\n5-15 minutes for manual exploration.\n\nOSCP tips:\n(1) Check for readable files in Users directories - look for Desktop, Documents, Downloads.\n\n(2) Check for writable directories - potential for malware upload.\n\n(3) Look for configuration files, scripts, passwords in plaintext.\n\n(4) For null session:\nsmbclient //<TARGET>/<SHARE> -N.\n\n(5) For scripting:\nsmbclient //<TARGET>/<SHARE> -U <USER>%<PASS> -c 'ls;get file.txt'",
       "oscp_relevance": "high"
     },
     {
@@ -754,7 +754,7 @@
         "Slow enumeration": "Large shares take time. Cancel and use specific share: -R <SHARE> instead of all shares",
         "Cannot find sensitive files": "Use search pattern: smbmap -H <TARGET> -u <USER> -p <PASS> -R <SHARE> -A '.txt|.xml|.config|.ps1'"
       },
-      "notes": "smbmap shows file sizes and permissions which helps prioritize targets. Use -A flag with patterns to search for specific file types. Time estimate: 2-5 minutes depending on share size. OSCP tips: (1) Look for READ/WRITE directories - potential pivot points. (2) Common sensitive files: passwords.txt, users.txt, config.xml, web.config, *.ps1, *.kdbx (KeePass), id_rsa (SSH keys). (3) Use download: smbmap -H <TARGET> -u <USER> -p <PASS> --download '<SHARE>\\full\\path\\file.txt'. (4) For null session: smbmap -H <TARGET> -u '' -p ''. (5) Recursively list ALL shares: smbmap -H <TARGET> -u <USER> -p <PASS> -R (no share specified)",
+      "notes": "smbmap shows file sizes and permissions which helps prioritize targets.\n\nUse -A flag with patterns to search for specific file types.\n\nTime estimate:\n2-5 minutes depending on share size.\n\nOSCP tips:\n(1) Look for READ/WRITE directories - potential pivot points.\n\n(2) Common sensitive files:\npasswords.txt, users.txt, config.xml, web.config, *.ps1, *.kdbx (KeePass), id_rsa (SSH keys).\n\n(3) Use download:\nsmbmap -H <TARGET> -u <USER> -p <PASS> --download '<SHARE>\\full\\path\\file.txt'.\n\n(4) For null session:\nsmbmap -H <TARGET> -u '' -p ''.\n\n(5) Recursively list ALL shares:\nsmbmap -H <TARGET> -u <USER> -p <PASS> -R (no share specified)",
       "oscp_relevance": "high"
     },
     {
@@ -844,7 +844,7 @@
         "mount.cifs not found": "Install cifs-utils: sudo apt install cifs-utils",
         "Password visible in mount output": "Use credentials file: Create /tmp/smbcreds with 'username=<USER>\\npassword=<PASS>', then mount -o credentials=/tmp/smbcreds"
       },
-      "notes": "Mounting allows using standard Linux tools (grep, find, cat, cp) instead of SMB-specific commands. Much faster for bulk file operations. Time estimate: 1 minute to mount. OSCP tips: (1) Always create mount point first: sudo mkdir -p /mnt/smb. (2) For null session: username=guest,password='' or username='',password=''. (3) For guest: username=guest,password=guest. (4) Unmount when done: sudo umount <MOUNT_POINT>. (5) Check what's mounted: df -h | grep cifs. (6) Force unmount if stuck: sudo umount -f <MOUNT_POINT>. (7) Use find for sensitive files: find /mnt/smb -iname '*password*' -o -iname '*.config' -o -iname 'id_rsa'",
+      "notes": "Mounting allows using standard Linux tools (grep, find, cat, cp) instead of SMB-specific commands.\n\nMuch faster for bulk file operations.\n\nTime estimate:\n1 minute to mount.\n\nOSCP tips:\n(1) Always create mount point first:\nsudo mkdir -p /mnt/smb.\n\n(2) For null session:\nusername=guest,password='' or username='',password=''.\n\n(3) For guest:\nusername=guest,password=guest.\n\n(4) Unmount when done:\nsudo umount <MOUNT_POINT>.\n\n(5) Check what's mounted:\ndf -h | grep cifs.\n\n(6) Force unmount if stuck:\nsudo umount -f <MOUNT_POINT>.\n\n(7) Use find for sensitive files:\nfind /mnt/smb -iname '*password*' -o -iname '*.config' -o -iname 'id_rsa'",
       "oscp_relevance": "high"
     },
     {
@@ -925,7 +925,7 @@
         "403 Forbidden on /": "Try different paths: /admin, /api, /login, or enumerate with gobuster",
         "SSL error for https": "Self-signed cert. Use: curl -I -k https://<TARGET> (-k to ignore cert errors)"
       },
-      "notes": "Headers often reveal: Server version (Apache/2.4.41), Backend technology (X-Powered-By: PHP/7.4.3, ASP.NET), Framework (X-AspNet-Version), WAF presence (X-Sucuri-ID). Time estimate: 10 seconds. OSCP tips: (1) Look for outdated versions - searchsploit material. (2) X-Powered-By reveals backend language - useful for payload selection. (3) Test OPTIONS method: curl -I -X OPTIONS http://<TARGET> - may reveal PUT/DELETE allowed. (4) Missing security headers = potential vulnerabilities: X-Frame-Options, X-XSS-Protection, Content-Security-Policy. (5) For HTTPS: curl -I -k https://<TARGET> (bypass cert verification). (6) Verbose for debugging: curl -I -v http://<TARGET>",
+      "notes": "Headers often reveal:\nServer version (Apache/2.4.41), Backend technology (X-Powered-By:\nPHP/7.4.3, ASP.NET), Framework (X-AspNet-Version), WAF presence (X-Sucuri-ID).\n\nTime estimate:\n10 seconds.\n\nOSCP tips:\n(1) Look for outdated versions - searchsploit material.\n\n(2) X-Powered-By reveals backend language - useful for payload selection.\n\n(3) Test OPTIONS method:\ncurl -I -X OPTIONS http://<TARGET> - may reveal PUT/DELETE allowed.\n\n(4) Missing security headers = potential vulnerabilities:\nX-Frame-Options, X-XSS-Protection, Content-Security-Policy.\n\n(5) For HTTPS:\ncurl -I -k https://<TARGET> (bypass cert verification).\n\n(6) Verbose for debugging:\ncurl -I -v http://<TARGET>",
       "oscp_relevance": "high"
     },
     {
@@ -996,7 +996,7 @@
         "No technologies detected": "Increase aggression: whatweb -v -a 4 http://<TARGET> or try --force-text for unusual responses",
         "SSL certificate error": "Use -k flag: whatweb -v -a 3 https://<TARGET> (bypass cert verification)"
       },
-      "notes": "whatweb identifies: CMS (WordPress, Joomla, Drupal), Web servers (Apache, nginx, IIS), Languages (PHP, ASP.NET, Python), Frameworks (Laravel, Django, Rails), JavaScript libraries (jQuery, Bootstrap), WAFs, Analytics. Time estimate: 30-60 seconds. OSCP tips: (1) Prioritize CMS detection - WordPress/Joomla often have known vulns. (2) Version numbers critical - check searchsploit immediately. (3) For multiple URLs: whatweb -i urls.txt. (4) Check both HTTP and HTTPS: whatweb http://<TARGET> https://<TARGET>. (5) Look for development/staging indicators: X-Debug, X-Error, verbose error messages. (6) Admin panels: /wp-admin (WordPress), /administrator (Joomla), /admin",
+      "notes": "whatweb identifies:\nCMS (WordPress, Joomla, Drupal), Web servers (Apache, nginx, IIS), Languages (PHP, ASP.NET, Python), Frameworks (Laravel, Django, Rails), JavaScript libraries (jQuery, Bootstrap), WAFs, Analytics.\n\nTime estimate:\n30-60 seconds.\n\nOSCP tips:\n(1) Prioritize CMS detection - WordPress/Joomla often have known vulns.\n\n(2) Version numbers critical - check searchsploit immediately.\n\n(3) For multiple URLs:\nwhatweb -i urls.txt.\n\n(4) Check both HTTP and HTTPS:\nwhatweb http://<TARGET> https://<TARGET>.\n\n(5) Look for development/staging indicators:\nX-Debug, X-Error, verbose error messages.\n\n(6) Admin panels:\n/wp-admin (WordPress), /administrator (Joomla), /admin",
       "oscp_relevance": "high"
     },
     {
@@ -1070,7 +1070,7 @@
         "Connection errors": "Target may have rate limiting. Reduce threads: -t 10 or add delay: --delay 100ms",
         "Need to scan IP address": "Use: gobuster vhost -u http://<IP> -w <WORDLIST> --domain <DOMAIN> --append-domain"
       },
-      "notes": "Virtual hosts allow multiple websites on one IP address by routing based on Host header. Often reveals development/staging environments with weaker security. Time estimate: 2-5 minutes depending on wordlist size. OSCP tips: (1) Always try vhost fuzzing on web servers - hidden apps common in CTFs. (2) Use quality wordlists: /usr/share/seclists/Discovery/DNS/subdomains-top1million-20000.txt. (3) After finding vhosts, add to /etc/hosts for browsing: <IP> subdomain.domain.com. (4) Common vhosts in OSCP: dev, staging, admin, api, internal, vpn, mail, blog. (5) Compare response sizes - identical sizes across all attempts = wildcard response (filter with --exclude-length). (6) For IP-based scanning: gobuster vhost -u http://<IP> -w <WORDLIST> --domain target.com --append-domain",
+      "notes": "Virtual hosts allow multiple websites on one IP address by routing based on Host header.\n\nOften reveals development/staging environments with weaker security.\n\nTime estimate:\n2-5 minutes depending on wordlist size.\n\nOSCP tips:\n(1) Always try vhost fuzzing on web servers - hidden apps common in CTFs.\n\n(2) Use quality wordlists:\n/usr/share/seclists/Discovery/DNS/subdomains-top1million-20000.txt.\n\n(3) After finding vhosts, add to /etc/hosts for browsing:\n<IP> subdomain.domain.com.\n\n(4) Common vhosts in OSCP:\ndev, staging, admin, api, internal, vpn, mail, blog.\n\n(5) Compare response sizes - identical sizes across all attempts = wildcard response (filter with --exclude-length).\n\n(6) For IP-based scanning:\ngobuster vhost -u http://<IP> -w <WORDLIST> --domain target.com --append-domain",
       "oscp_relevance": "high"
     },
     {
@@ -1135,7 +1135,7 @@
         "REFUSED": "Nameserver explicitly denies transfer. Try other discovered nameservers from: dig NS <DOMAIN>",
         "Don't know nameserver": "Find nameservers first: dig NS <DOMAIN> or host -t ns <DOMAIN>"
       },
-      "notes": "Zone transfers should be restricted to authorized secondary nameservers only, but misconfigurations still exist. Successful transfer provides complete DNS records - massive information disclosure. Time estimate: 30 seconds. OSCP tips: (1) Always try zone transfer first - when it works, it's instant enumeration. (2) Find nameservers: dig NS <DOMAIN> then try AXFR on each. (3) Parse output for subdomains: dig axfr @<NS> <DOMAIN> | grep -E '^[a-zA-Z0-9]' | awk '{print $1}'. (4) Look for: internal hosts, dev/staging servers, admin interfaces, mail servers, database servers. (5) If transfer fails (common), fallback to: gobuster dns, dnsrecon -t brt, fierce --domain <DOMAIN>. (6) UDP port 53 required - check firewall: sudo nmap -p 53 -sU -Pn <NS>",
+      "notes": "Zone transfers should be restricted to authorized secondary nameservers only, but misconfigurations still exist.\n\nSuccessful transfer provides complete DNS records - massive information disclosure.\n\nTime estimate:\n30 seconds.\n\nOSCP tips:\n(1) Always try zone transfer first - when it works, it's instant enumeration.\n\n(2) Find nameservers:\ndig NS <DOMAIN> then try AXFR on each.\n\n(3) Parse output for subdomains:\ndig axfr @<NS> <DOMAIN> | grep -E '^[a-zA-Z0-9]' | awk '{print $1}'.\n\n(4) Look for:\ninternal hosts, dev/staging servers, admin interfaces, mail servers, database servers.\n\n(5) If transfer fails (common), fallback to:\ngobuster dns, dnsrecon -t brt, fierce --domain <DOMAIN>.\n\n(6) UDP port 53 required - check firewall:\nsudo nmap -p 53 -sU -Pn <NS>",
       "oscp_relevance": "medium"
     }
   ]

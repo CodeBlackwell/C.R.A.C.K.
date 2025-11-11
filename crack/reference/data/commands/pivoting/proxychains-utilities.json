@@ -55,7 +55,7 @@
         "Configuration syntax error": "Ensure format: socks5 <IP> <PORT> (space-separated, no quotes), verify [ProxyList] section exists",
         "DNS leaks outside tunnel": "Uncomment proxy_dns in config: sudo sed -i 's/#proxy_dns/proxy_dns/' /etc/proxychains4.conf"
       },
-      "notes": "Critical configuration step for SSH dynamic forwarding. Default config uses Tor (socks4 127.0.0.1 9050) - must replace with your SOCKS proxy. Recommended settings for OSCP: tcp_read_time_out = 1000, tcp_connect_time_out = 1000, proxy_dns enabled. Chain types: strict_chain (all proxies must work), dynamic_chain (skip dead proxies), random_chain (randomize order). For exam: Use strict_chain with single SOCKS proxy. Alternative: Create ~/.proxychains/proxychains.conf for user-specific config without sudo.",
+      "notes": "Critical configuration step for SSH dynamic forwarding.\n\nDefault config uses Tor (socks4 127.0.0.1 9050) - must replace with your SOCKS proxy.\n\nRecommended settings for OSCP:\ntcp_read_time_out = 1000, tcp_connect_time_out = 1000, proxy_dns enabled.\n\nChain types:\nstrict_chain (all proxies must work), dynamic_chain (skip dead proxies), random_chain (randomize order).\n\nFor exam:\nUse strict_chain with single SOCKS proxy.\n\nAlternative:\nCreate ~/.proxychains/proxychains.conf for user-specific config without sudo.",
       "oscp_relevance": "high"
     },
     {
@@ -122,7 +122,7 @@
         "Static binary incompatible": "Proxychains uses LD_PRELOAD (dynamic linking) - recompile nmap dynamically or use sshuttle instead",
         "DNS resolution hangs": "Add -n flag to skip DNS: proxychains nmap -sT -Pn -n <TARGET>, or enable proxy_dns in proxychains4.conf"
       },
-      "notes": "Critical OSCP technique for internal network enumeration through pivot. Limitations: TCP-only (no UDP/ICMP), must use -sT (connect scan, not SYN scan), no OS detection (-O), slower than direct scanning. Performance tuning: Reduce proxychains timeouts to 1000ms, use --top-ports=20 instead of -p-, add -T2 or -T3 timing. For full subnet scans, consider parallel execution: for ip in {1..254}; do proxychains -q nmap -sT -Pn --top-ports=20 172.16.50.$ip & done. Time estimate: 1-2 minutes per host with top 20 ports.",
+      "notes": "Critical OSCP technique for internal network enumeration through pivot.\n\nLimitations:\nTCP-only (no UDP/ICMP), must use -sT (connect scan, not SYN scan), no OS detection (-O), slower than direct scanning.\n\nPerformance tuning:\nReduce proxychains timeouts to 1000ms, use --top-ports=20 instead of -p-, add -T2 or -T3 timing.\n\nFor full subnet scans, consider parallel execution:\nfor ip in {1..254}; do proxychains -q nmap -sT -Pn --top-ports=20 172.16.50.$ip & done.\n\nTime estimate:\n1-2 minutes per host with top 20 ports.",
       "oscp_relevance": "high"
     },
     {
@@ -200,7 +200,7 @@
         "Socket error": "Check proxychains config: cat /etc/proxychains4.conf | grep socks5, verify SOCKS port matches SSH tunnel",
         "psql hangs at password prompt": "Add password to PGPASSWORD env var: PGPASSWORD=<pass> proxychains psql -h <TARGET> -U <USER> -d <DB>"
       },
-      "notes": "Common OSCP scenario: Find PostgreSQL credentials in config files (e.g., confluence.cfg.xml), access internal database through pivot. Alternative to port forwarding when you want interactive session without permanent tunnel. For non-interactive queries, use: echo 'SELECT * FROM users;' | proxychains psql -h <TARGET> -U <USER> -d <DB>. Time estimate: 1-2 minutes for connection and query.",
+      "notes": "Common OSCP scenario:\nFind PostgreSQL credentials in config files (e.g., confluence.cfg.xml), access internal database through pivot.\n\nAlternative to port forwarding when you want interactive session without permanent tunnel.\n\nFor non-interactive queries, use:\necho 'SELECT * FROM users;' | proxychains psql -h <TARGET> -U <USER> -d <DB>.\n\nTime estimate:\n1-2 minutes for connection and query.",
       "oscp_relevance": "medium"
     }
   ]

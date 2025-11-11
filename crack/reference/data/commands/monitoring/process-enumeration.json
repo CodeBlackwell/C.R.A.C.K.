@@ -51,7 +51,7 @@
         "top-snapshot",
         "pstree-hierarchy"
       ],
-      "notes": "OSCP Tip: Look for (1) processes running as root from writable directories (/tmp, /var/tmp), (2) custom services that might have misconfigurations, (3) database processes (mysql, postgresql) for credential hunting. Common manual alternative: cat /proc/*/cmdline (view process command lines directly from /proc filesystem). Time estimate: 5 seconds."
+      "notes": "OSCP Tip:\nLook for (1) processes running as root from writable directories (/tmp, /var/tmp), (2) custom services that might have misconfigurations, (3) database processes (mysql, postgresql) for credential hunting.\n\nCommon manual alternative:\ncat /proc/*/cmdline (view process command lines directly from /proc filesystem).\n\nTime estimate:\n5 seconds."
     },
     {
       "id": "ps-auxww-no-truncate",
@@ -96,7 +96,7 @@
       "alternatives": [
         "ps-ef-full"
       ],
-      "notes": "CRITICAL for OSCP: Passwords often passed as command-line arguments (mysql -u root -pPASSWORD, ssh user@host -i /path/key). The 'ww' flag prevents truncation that would hide these. Manual alternative: for pid in /proc/[0-9]*; do cat $pid/cmdline 2>/dev/null | tr '\\0' ' '; echo; done. Time estimate: 5 seconds."
+      "notes": "CRITICAL for OSCP:\nPasswords often passed as command-line arguments (mysql -u root -pPASSWORD, ssh user@host -i /path/key).\n\nThe 'ww' flag prevents truncation that would hide these.\n\nManual alternative:\nfor pid in /proc/[0-9]*; do cat $pid/cmdline 2>/dev/null | tr '\\0' ' '; echo; done.\n\nTime estimate:\n5 seconds."
     },
     {
       "id": "ps-ef-full",
@@ -139,7 +139,7 @@
         "ps-aux-full",
         "pstree-hierarchy"
       ],
-      "notes": "PPID (Parent Process ID) helps identify how processes were spawned. For example, PPID=1 means process was started by init/systemd (system service), while other PPIDs might indicate user-spawned or malicious processes. Time estimate: 5 seconds."
+      "notes": "PPID (Parent Process ID) helps identify how processes were spawned.\n\nFor example, PPID=1 means process was started by init/systemd (system service), while other PPIDs might indicate user-spawned or malicious processes.\n\nTime estimate:\n5 seconds."
     },
     {
       "id": "pstree-hierarchy",
@@ -180,7 +180,7 @@
       "alternatives": [
         "ps-ef-full"
       ],
-      "notes": "Excellent for spotting reverse shells or unauthorized processes. For example, www-data -> bash -> nc indicates a web shell spawned netcat. Manual alternative: ps auxf (forest mode shows hierarchy with ASCII art). Time estimate: 5 seconds."
+      "notes": "Excellent for spotting reverse shells or unauthorized processes.\n\nFor example, www-data -> bash -> nc indicates a web shell spawned netcat.\n\nManual alternative:\nps auxf (forest mode shows hierarchy with ASCII art).\n\nTime estimate:\n5 seconds."
     },
     {
       "id": "top-snapshot",
@@ -224,7 +224,7 @@
       "alternatives": [
         "ps-sort-cpu"
       ],
-      "notes": "Batch mode (-b) makes output suitable for documentation or log files. Without -b, top is interactive and not useful in scripts. For real-time monitoring, omit these flags and use: top. Time estimate: 5 seconds."
+      "notes": "Batch mode (-b) makes output suitable for documentation or log files.\n\nWithout -b, top is interactive and not useful in scripts.\n\nFor real-time monitoring, omit these flags and use:\ntop.\n\nTime estimate:\n5 seconds."
     },
     {
       "id": "pgrep-pattern-search",
@@ -271,7 +271,7 @@
         "Kill process if needed: kill <PID>"
       ],
       "alternatives": [],
-      "notes": "Much faster than 'ps aux | grep' and doesn't show the grep process itself. Use -i for case-insensitive: pgrep -afi <PATTERN>. Time estimate: 1 second. OSCP tip: Search for common services: pgrep -af 'mysql|postgresql|apache|nginx|ssh|vsftpd' to identify attack vectors."
+      "notes": "Much faster than 'ps aux | grep' and doesn't show the grep process itself.\n\nUse -i for case-insensitive:\npgrep -afi <PATTERN>.\n\nTime estimate:\n1 second.\n\nOSCP tip:\nSearch for common services:\npgrep -af 'mysql|postgresql|apache|nginx|ssh|vsftpd' to identify attack vectors."
     },
     {
       "id": "pidof-exact",
@@ -312,7 +312,7 @@
         "View process environment: cat /proc/<PID>/environ | tr '\\0' '\\n'"
       ],
       "alternatives": [],
-      "notes": "Returns ALL PIDs if multiple instances running. For single PID: pidof <NAME> | head -1. Time estimate: <1 second."
+      "notes": "Returns ALL PIDs if multiple instances running.\n\nFor single PID:\npidof <NAME> | head -1.\n\nTime estimate:\n<1 second."
     },
     {
       "id": "ps-user-filter",
@@ -357,7 +357,7 @@
         "Check user's cronjobs: crontab -u <USERNAME> -l"
       ],
       "alternatives": [],
-      "notes": "OSCP tip: Check www-data processes for web vulnerabilities, mysql processes for database attack vectors, root processes for privilege escalation opportunities. Time estimate: 2 seconds."
+      "notes": "OSCP tip:\nCheck www-data processes for web vulnerabilities, mysql processes for database attack vectors, root processes for privilege escalation opportunities.\n\nTime estimate:\n2 seconds."
     },
     {
       "id": "ps-pid-details",
@@ -401,7 +401,7 @@
         "Check process working directory: readlink /proc/<PID>/cwd"
       ],
       "alternatives": [],
-      "notes": "The '=' after 'cmd' removes the header for cleaner parsing in scripts. For multiple fields: ps -p <PID> -o pid=,cmd=,user=. Time estimate: <1 second."
+      "notes": "The '=' after 'cmd' removes the header for cleaner parsing in scripts.\n\nFor multiple fields:\nps -p <PID> -o pid=,cmd=,user=.\n\nTime estimate:\n<1 second."
     },
     {
       "id": "win-tasklist-verbose",
@@ -447,7 +447,7 @@
         "win-wmic-process-full",
         "win-ps-get-process"
       ],
-      "notes": "Window titles often reveal sensitive information (open files, database connections). OSCP tip: Look for (1) processes running from unusual locations (\\Temp, \\Users\\Public), (2) processes with high privileges (SYSTEM), (3) non-standard services. Time estimate: 5 seconds."
+      "notes": "Window titles often reveal sensitive information (open files, database connections).\n\nOSCP tip:\nLook for (1) processes running from unusual locations (\\Temp, \\Users\\Public), (2) processes with high privileges (SYSTEM), (3) non-standard services.\n\nTime estimate:\n5 seconds."
     },
     {
       "id": "win-tasklist-services",
@@ -489,7 +489,7 @@
         "win-wmic-service-full",
         "win-ps-get-service"
       ],
-      "notes": "Critical for Windows privilege escalation. svchost.exe hosts multiple services - this command reveals which ones. Time estimate: 5 seconds. OSCP tip: Combine with service configuration checks to find writable service binaries or unquoted service paths."
+      "notes": "Critical for Windows privilege escalation.\n\nsvchost.exe hosts multiple services - this command reveals which ones.\n\nTime estimate:\n5 seconds.\n\nOSCP tip:\nCombine with service configuration checks to find writable service binaries or unquoted service paths."
     },
     {
       "id": "win-wmic-process-full",
@@ -537,7 +537,7 @@
         "win-ps-get-process-detailed",
         "win-tasklist-verbose"
       ],
-      "notes": "WMIC deprecated in Windows 11+ but still present in OSCP target systems. Output is verbose (30+ properties per process). For specific fields: wmic process get ProcessId,Name,ExecutablePath,CommandLine. Time estimate: 10 seconds. OSCP tip: CommandLine often contains credentials passed as arguments."
+      "notes": "WMIC deprecated in Windows 11+ but still present in OSCP target systems.\n\nOutput is verbose (30+ properties per process).\n\nFor specific fields:\nwmic process get ProcessId,Name,ExecutablePath,CommandLine.\n\nTime estimate:\n10 seconds.\n\nOSCP tip:\nCommandLine often contains credentials passed as arguments."
     },
     {
       "id": "win-ps-get-process",
@@ -585,7 +585,7 @@
         "win-tasklist-verbose",
         "win-wmic-process-full"
       ],
-      "notes": "PowerShell is the modern Windows process management tool. Company field helps identify third-party software (potential attack vectors). For all properties: Get-Process | Select-Object *. Time estimate: 5 seconds. OSCP tip: Non-Microsoft processes often have weak permissions or outdated versions with known exploits."
+      "notes": "PowerShell is the modern Windows process management tool.\n\nCompany field helps identify third-party software (potential attack vectors).\n\nFor all properties:\nGet-Process | Select-Object *.\n\nTime estimate:\n5 seconds.\n\nOSCP tip:\nNon-Microsoft processes often have weak permissions or outdated versions with known exploits."
     },
     {
       "id": "win-ps-get-process-detailed",
@@ -633,7 +633,7 @@
       "alternatives": [
         "win-wmic-process-full"
       ],
-      "notes": "CRITICAL for credential discovery. CommandLine field shows full arguments including passwords, API keys, database strings. Time estimate: 10 seconds. OSCP tip: Common patterns to grep: '-p ', 'password=', 'token=', 'key=', 'api_key='. Modern alternative: Get-CimInstance win32_process (replaces Get-WmiObject in PowerShell 3.0+)."
+      "notes": "CRITICAL for credential discovery.\n\nCommandLine field shows full arguments including passwords, API keys, database strings.\n\nTime estimate:\n10 seconds.\n\nOSCP tip:\nCommon patterns to grep:\n'-p ', 'password=', 'token=', 'key=', 'api_key='.\n\nModern alternative:\nGet-CimInstance win32_process (replaces Get-WmiObject in PowerShell 3.0+)."
     }
   ]
 }

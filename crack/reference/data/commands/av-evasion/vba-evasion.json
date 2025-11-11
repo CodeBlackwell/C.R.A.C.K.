@@ -5,7 +5,7 @@
     {
       "id": "vba-shellcode-runner-basic",
       "name": "VBA Shellcode Runner (Basic)",
-      "description": "Basic VBA macro for executing shellcode in memory. Uses VirtualAlloc \u2192 RtlMoveMemory \u2192 CreateThread pattern. Foundation for Office-based payloads.",
+      "description": "Basic VBA macro for executing shellcode in memory. Uses VirtualAlloc → RtlMoveMemory → CreateThread pattern. Foundation for Office-based payloads.",
       "category": "vba-evasion",
       "tags": [
         "anti-virus",
@@ -26,7 +26,7 @@
           "required": true
         }
       ],
-      "notes": "Syntax: Add to Word/Excel VBA editor (Alt+F11), insert shellcode bytes Basic runner detected by all modern AV. Always combine with encryption (Caesar/XOR) and obfuscation. Auto_Open triggers on document open. Use AutoOpen() for compatibility. Time estimate: 5 minutes (with shellcode generation) References: docs/av-evasion/vba-evasion.md#basic-runner, PEN-300 Chapter 6.7 Manual alternative: Use PowerShell download cradle from VBA, WMI process creation, or COM object execution",
+      "notes": "Syntax:\nAdd to Word/Excel VBA editor (Alt+F11), insert shellcode bytes Basic runner detected by all modern AV.\n\nAlways combine with encryption (Caesar/XOR) and obfuscation.\n\nAuto_Open triggers on document open.\n\nUse AutoOpen() for compatibility.\n\nTime estimate:\n5 minutes (with shellcode generation) References:\ndocs/av-evasion/vba-evasion.md#basic-runner, PEN-300 Chapter 6.7 Manual alternative:\nUse PowerShell download cradle from VBA, WMI process creation, or COM object execution",
       "success_indicators": [
         "Macro executes silently when document opens (Auto_Open). Shellcode runs (e.g., Meterpreter callback)."
       ],
@@ -67,7 +67,7 @@
           "required": true
         }
       ],
-      "notes": "Syntax: Encrypt offline, paste encrypted bytes into VBA Caesar cipher is weak but better than plaintext. Key=2 is common in examples. For exam, consider XOR for better evasion. Combine with obfuscation and dechaining. Time estimate: 10 minutes (encryption + integration) References: docs/av-evasion/vba-evasion.md#caesar-cipher, PEN-300 Chapter 6.7.1 Manual alternative: Use XOR encryption (stronger), AES encryption, or base64 encoding",
+      "notes": "Syntax:\nEncrypt offline, paste encrypted bytes into VBA Caesar cipher is weak but better than plaintext.\n\nKey=2 is common in examples.\n\nFor exam, consider XOR for better evasion.\n\nCombine with obfuscation and dechaining.\n\nTime estimate:\n10 minutes (encryption + integration) References:\ndocs/av-evasion/vba-evasion.md#caesar-cipher, PEN-300 Chapter 6.7.1 Manual alternative:\nUse XOR encryption (stronger), AES encryption, or base64 encoding",
       "success_indicators": [
         "Encrypted shellcode decrypts and executes at runtime. Evades static signature scans."
       ],
@@ -81,7 +81,7 @@
     {
       "id": "vba-wmi-dechain",
       "name": "VBA WMI Process Dechaining",
-      "description": "Execute payload via WMI to break parent-child process chain. Office doc \u2192 WMI \u2192 powershell breaks typical macro detection. Payload runs outside Office sandbox.",
+      "description": "Execute payload via WMI to break parent-child process chain. Office doc → WMI → powershell breaks typical macro detection. Payload runs outside Office sandbox.",
       "category": "vba-evasion",
       "tags": [
         "anti-virus",
@@ -102,7 +102,7 @@
           "required": true
         }
       ],
-      "notes": "Syntax: Add to VBA macro, replace <BASE64_PAYLOAD> with encoded PowerShell WMI dechaining is powerful evasion technique. Breaks WINWORD -> powershell parent-child relationship that AV monitors. Always encode PowerShell with base64. Test network connectivity first. Time estimate: 5 minutes References: docs/av-evasion/vba-evasion.md#wmi-dechaining, PEN-300 Chapter 6.8.2 Manual alternative: Use WScript.Shell.Run, CreateObject(\"WScript.Shell\").Exec, or scheduled task creation",
+      "notes": "Syntax:\nAdd to VBA macro, replace <BASE64_PAYLOAD> with encoded PowerShell WMI dechaining is powerful evasion technique.\n\nBreaks WINWORD -> powershell parent-child relationship that AV monitors.\n\nAlways encode PowerShell with base64.\n\nTest network connectivity first.\n\nTime estimate:\n5 minutes References:\ndocs/av-evasion/vba-evasion.md#wmi-dechaining, PEN-300 Chapter 6.8.2 Manual alternative:\nUse WScript.Shell.Run, CreateObject(\"WScript.Shell\").Exec, or scheduled task creation",
       "success_indicators": [
         "PowerShell process spawned by wmiprvse.exe (not WINWORD.exe). Breaks behavioral detection chains."
       ],
@@ -129,7 +129,7 @@
       ],
       "command": "' Method 1: String concatenation\nDim cmd As String\ncmd = \"power\" & \"shell\" & \".exe\"\n\n' Method 2: Chr() function\ncmd = Chr(112) & Chr(111) & Chr(119) & Chr(101) & Chr(114) & Chr(115) & Chr(104) & Chr(101) & Chr(108) & Chr(108)\n\n' Method 3: StrReverse()\ncmd = StrReverse(\"exe.llehsrewop\")\n\n' Method 4: Replace()\ncmd = Replace(\"pXwXrshell.exe\", \"X\", \"o\")",
       "variables": [],
-      "notes": "Syntax: Apply to suspicious strings in VBA code String obfuscation is quick win (~10 min). Always obfuscate 'powershell', 'cmd', 'http', 'IEX', 'msfvenom'. Use random variable names (avoid shellcode, payload, etc.). Combine all methods for best results. Time estimate: 10 minutes References: docs/av-evasion/vba-evasion.md#obfuscation, PEN-300 Chapter 6.8.3 Manual alternative: Use variable substitution, encoded strings, or external data sources (document properties, hidden cells)",
+      "notes": "Syntax:\nApply to suspicious strings in VBA code String obfuscation is quick win (~10 min).\n\nAlways obfuscate 'powershell', 'cmd', 'http', 'IEX', 'msfvenom'.\n\nUse random variable names (avoid shellcode, payload, etc.).\n\nCombine all methods for best results.\n\nTime estimate:\n10 minutes References:\ndocs/av-evasion/vba-evasion.md#obfuscation, PEN-300 Chapter 6.8.3 Manual alternative:\nUse variable substitution, encoded strings, or external data sources (document properties, hidden cells)",
       "success_indicators": [
         "Obfuscated strings bypass simple signature matching. Code executes normally."
       ],
@@ -170,7 +170,7 @@
         }
       ],
       "prerequisites": [],
-      "notes": "Syntax: Use EvilClippy tool or manual hex editing Advanced technique, requires EvilClippy tool. Extremely effective against static analysis and sandboxes. Only works on .doc (not .docx). Test macro BEFORE stomping - can't debug after. Save original. Practice on lab before exam. Time estimate: 15 minutes (with EvilClippy) References: docs/av-evasion/vba-evasion.md#vba-stomping, https://github.com/outflanknl/EvilClippy, PEN-300 Chapter 6.7.2 Manual alternative: Use OfficeMalScanner, olevba, or manual p-code analysis/manipulation",
+      "notes": "Syntax:\nUse EvilClippy tool or manual hex editing Advanced technique, requires EvilClippy tool.\n\nExtremely effective against static analysis and sandboxes.\n\nOnly works on .doc (not .docx).\n\nTest macro BEFORE stomping - can't debug after.\n\nSave original.\n\nPractice on lab before exam.\n\nTime estimate:\n15 minutes (with EvilClippy) References:\ndocs/av-evasion/vba-evasion.md#vba-stomping, https://github.com/outflanknl/EvilClippy, PEN-300 Chapter 6.7.2 Manual alternative:\nUse OfficeMalScanner, olevba, or manual p-code analysis/manipulation",
       "success_indicators": [
         "Stomped document opens normally, macro executes. VBA editor shows empty/garbage code. Static analysis tools fail to extract meaningful source."
       ],
@@ -197,7 +197,7 @@
       ],
       "command": "' Method 1: Auto_Open (Word/Excel - legacy)\nSub Auto_Open()\n    ' Your payload\nEnd Sub\n\n' Method 2: AutoOpen (Word - no underscore)\nSub AutoOpen()\n    ' Your payload\nEnd Sub\n\n' Method 3: Document_Open (Word - modern)\nPrivate Sub Document_Open()\n    ' Your payload\nEnd Sub\n\n' Method 4: Workbook_Open (Excel)\nPrivate Sub Workbook_Open()\n    ' Your payload\nEnd Sub\n\n' Method 5: AutoExec (Word - on close)\nSub AutoExec()\n    ' Your payload\nEnd Sub",
       "variables": [],
-      "notes": "Syntax: Choose appropriate method for Office version and app Always implement Auto_Open AND AutoOpen for Word (compatibility). Excel uses Workbook_Open. Test on target Office version if known. Social engineering required to convince user to enable macros. Time estimate: 2 minutes References: docs/av-evasion/vba-evasion.md#auto-execution Manual alternative: Use ActiveX controls, form events, or button click handlers for user-initiated execution",
+      "notes": "Syntax:\nChoose appropriate method for Office version and app Always implement Auto_Open AND AutoOpen for Word (compatibility).\n\nExcel uses Workbook_Open.\n\nTest on target Office version if known.\n\nSocial engineering required to convince user to enable macros.\n\nTime estimate:\n2 minutes References:\ndocs/av-evasion/vba-evasion.md#auto-execution Manual alternative:\nUse ActiveX controls, form events, or button click handlers for user-initiated execution",
       "success_indicators": [
         "Macro executes automatically when document opens (if macros enabled)."
       ],

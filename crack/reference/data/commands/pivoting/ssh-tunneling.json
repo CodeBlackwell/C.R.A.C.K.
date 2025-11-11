@@ -86,7 +86,7 @@
         "Timeout connecting to SSH server": "Verify SSH server reachable: nc -zv <SSH_HOST> 22, check firewall rules",
         "Can bind port but connection hangs": "Destination unreachable from pivot - verify routing: ssh user@host 'nc -zv <DEST_IP> <DEST_PORT>'"
       },
-      "notes": "Local port forward limitation: One socket per -L flag. For multiple services, use multiple -L flags in single SSH command or use dynamic port forward (-D) with SOCKS proxy. Common OSCP use case: Access internal database/SMB from Kali through compromised DMZ host.",
+      "notes": "Local port forward limitation:\nOne socket per -L flag.\n\nFor multiple services, use multiple -L flags in single SSH command or use dynamic port forward (-D) with SOCKS proxy.\n\nCommon OSCP use case:\nAccess internal database/SMB from Kali through compromised DMZ host.",
       "oscp_relevance": "high"
     },
     {
@@ -164,7 +164,7 @@
         "DNS leaks outside tunnel": "Enable proxy_dns in proxychains4.conf, or use -n flag with nmap to skip DNS",
         "Very slow scans through SOCKS": "Reduce tcp_read_time_out and tcp_connect_time_out to 1000ms in proxychains4.conf"
       },
-      "notes": "Dynamic forward creates SOCKS5 proxy supporting multiple concurrent connections. More flexible than local forward (-L) which requires separate tunnel per destination. Common OSCP pattern: Use for internal network enumeration (nmap through proxychains), then switch to local forward for specific services. Proxychains limitation: TCP only, no UDP/ICMP support.",
+      "notes": "Dynamic forward creates SOCKS5 proxy supporting multiple concurrent connections.\n\nMore flexible than local forward (-L) which requires separate tunnel per destination.\n\nCommon OSCP pattern:\nUse for internal network enumeration (nmap through proxychains), then switch to local forward for specific services.\n\nProxychains limitation:\nTCP only, no UDP/ICMP support.",
       "oscp_relevance": "high"
     },
     {
@@ -252,7 +252,7 @@
         "bind: Cannot assign requested address": "GatewayPorts not enabled for 0.0.0.0 - use 127.0.0.1 or enable GatewayPorts in sshd_config",
         "Port binds but connections hang": "Destination unreachable from client - verify routing from compromised host"
       },
-      "notes": "Remote port forward reverses connection direction - critical for firewall bypass. Listening port on attacker-controlled SSH server, forwarding done by SSH client on compromised host. Use when inbound connections to compromised host blocked. GatewayPorts security note: Enabling in hostile networks allows anyone on SSH server's network to access forwarded port - bind to 127.0.0.1 when possible.",
+      "notes": "Remote port forward reverses connection direction - critical for firewall bypass.\n\nListening port on attacker-controlled SSH server, forwarding done by SSH client on compromised host.\n\nUse when inbound connections to compromised host blocked.\n\nGatewayPorts security note:\nEnabling in hostile networks allows anyone on SSH server's network to access forwarded port - bind to 127.0.0.1 when possible.",
       "oscp_relevance": "high"
     },
     {
@@ -303,7 +303,7 @@
       ],
       "failure_indicators": [
         "Connection refused - SSH server not reachable from client",
-        "OpenSSH version too old - requires \u22657.6 (released October 2017)",
+        "OpenSSH version too old - requires ≥7.6 (released October 2017)",
         "Permission denied - SSH authentication failed",
         "Proxychains socket error - check /etc/proxychains4.conf points to correct port"
       ],
@@ -318,11 +318,11 @@
       "prerequisites": [],
       "troubleshooting": {
         "OpenSSH version too old": "Upgrade OpenSSH on client, or use alternative: ssh -R port:localhost:socks_port + standalone SOCKS server (microsocks)",
-        "SOCKS port not listening on SSH server": "Verify OpenSSH server version \u22657.6: ssh -V on server, check sshd_config allows tunneling (PermitTunnel yes)",
+        "SOCKS port not listening on SSH server": "Verify OpenSSH server version ≥7.6: ssh -V on server, check sshd_config allows tunneling (PermitTunnel yes)",
         "Proxychains DLL init but no traffic": "Check proxychains4.conf syntax: [ProxyList] section correct, socks5 127.0.0.1 <SOCKS_PORT>",
         "Very slow performance": "Reduce timeouts in proxychains4.conf to 1000ms, use -T2 timing with nmap"
       },
-      "notes": "Remote dynamic forward combines reverse tunnel (firewall bypass) with SOCKS proxy (multi-destination flexibility). Requires OpenSSH \u22657.6 on compromised client (Windows 1803+ has version 8.1+, most modern Linux has \u22657.6). Syntax difference: Normal remote forward includes destination (-R port:host:hostport), remote dynamic only has port (-R port). Critical OSCP technique for enumeration through firewalled pivot points.",
+      "notes": "Remote dynamic forward combines reverse tunnel (firewall bypass) with SOCKS proxy (multi-destination flexibility).\n\nRequires OpenSSH ≥7.6 on compromised client (Windows 1803+ has version 8.1+, most modern Linux has ≥7.6).\n\nSyntax difference:\nNormal remote forward includes destination (-R port:host:hostport), remote dynamic only has port (-R port).\n\nCritical OSCP technique for enumeration through firewalled pivot points.",
       "oscp_relevance": "high"
     },
     {
@@ -391,7 +391,7 @@
         "Connection refused to destination": "Verify destination reachable: nc -zv <DEST_IP> <DEST_PORT> from pivot host",
         "Socat dies after first connection": "Forgot 'fork' flag - add ',fork' to TCP-LISTEN: socat TCP-LISTEN:<PORT>,fork TCP:<DEST>:<PORT>"
       },
-      "notes": "Socat simpler than SSH tunneling but lacks encryption and authentication. Useful for quick port forwards when security less critical or SSH unavailable. Limitation: One listening port per Socat process - need separate process for each port forward. Common OSCP use case: Quick access to internal database when Socat already installed on compromised host. For production: Use SSH tunneling for encrypted, authenticated forwarding.",
+      "notes": "Socat simpler than SSH tunneling but lacks encryption and authentication.\n\nUseful for quick port forwards when security less critical or SSH unavailable.\n\nLimitation:\nOne listening port per Socat process - need separate process for each port forward.\n\nCommon OSCP use case:\nQuick access to internal database when Socat already installed on compromised host.\n\nFor production:\nUse SSH tunneling for encrypted, authenticated forwarding.",
       "oscp_relevance": "medium"
     }
   ]

@@ -26,7 +26,7 @@
         }
       ],
       "prerequisites": [],
-      "notes": "Syntax: Execute in PowerShell with medium integrity (standard user) FodHelper is classic UAC bypass for Windows 10. Works on unpatched systems. Quick to execute (~10 sec). Always clean up registry key for stealth. Test integrity with 'whoami /groups' before and after. Useful after initial access to escalate without credentials. Time estimate: 2 minutes References: docs/av-evasion/uac-bypass.md#fodhelper, PEN-300 Chapter 7.5 Manual alternative: Use alternate UAC bypasses (eventvwr, sdclt, computerdefaults), exploit vulnerabilities, or request legitimate admin credentials",
+      "notes": "Syntax:\nExecute in PowerShell with medium integrity (standard user) FodHelper is classic UAC bypass for Windows 10.\n\nWorks on unpatched systems.\n\nQuick to execute (~10 sec).\n\nAlways clean up registry key for stealth.\n\nTest integrity with 'whoami /groups' before and after.\n\nUseful after initial access to escalate without credentials.\n\nTime estimate:\n2 minutes References:\ndocs/av-evasion/uac-bypass.md#fodhelper, PEN-300 Chapter 7.5 Manual alternative:\nUse alternate UAC bypasses (eventvwr, sdclt, computerdefaults), exploit vulnerabilities, or request legitimate admin credentials",
       "success_indicators": [
         "Payload executes with high integrity (admin) without UAC prompt. No console window appears if configured properly."
       ],
@@ -61,7 +61,7 @@
           "required": true
         }
       ],
-      "notes": "Syntax: Execute in PowerShell with medium integrity EventVwr is older bypass, may be patched. FodHelper more reliable on modern systems. Good backup option. Works on Windows 7-10. ~5 sec execution time. Time estimate: 2 minutes References: docs/av-evasion/uac-bypass.md#eventvwr Manual alternative: Use FodHelper, sdclt, computerdefaults, or other auto-elevate binaries",
+      "notes": "Syntax:\nExecute in PowerShell with medium integrity EventVwr is older bypass, may be patched.\n\nFodHelper more reliable on modern systems.\n\nGood backup option.\n\nWorks on Windows 7-10.\n\n~5 sec execution time.\n\nTime estimate:\n2 minutes References:\ndocs/av-evasion/uac-bypass.md#eventvwr Manual alternative:\nUse FodHelper, sdclt, computerdefaults, or other auto-elevate binaries",
       "success_indicators": [
         "EventVwr opens, payload executes with high integrity. Event Viewer may appear briefly."
       ],
@@ -87,7 +87,7 @@
       ],
       "command": "whoami /groups | findstr /i \"Mandatory Label\"",
       "variables": [],
-      "notes": "Syntax: Run in cmd.exe or PowerShell Always check integrity before attempting UAC bypass. Medium + Administrators group = UAC bypass will work. Low integrity = sandboxed process, escape first. High = already elevated, no bypass needed. Takes <5 sec to check. Time estimate: 10 seconds References: docs/av-evasion/uac-bypass.md#integrity-levels Manual alternative: Use PowerShell [Security.Principal.WindowsIdentity]::GetCurrent(), Process Explorer, or Task Manager Details pane",
+      "notes": "Syntax:\nRun in cmd.exe or PowerShell Always check integrity before attempting UAC bypass.\n\nMedium + Administrators group = UAC bypass will work.\n\nLow integrity = sandboxed process, escape first.\n\nHigh = already elevated, no bypass needed.\n\nTakes <5 sec to check.\n\nTime estimate:\n10 seconds References:\ndocs/av-evasion/uac-bypass.md#integrity-levels Manual alternative:\nUse PowerShell [Security.Principal.WindowsIdentity]::GetCurrent(), Process Explorer, or Task Manager Details pane",
       "success_indicators": [
         "Low: Mandatory Label\\Low Mandatory Level\nMedium: Mandatory Label\\Medium Mandatory Level\nHigh: Mandatory Label\\High Mandatory Level\nSystem: Mandatory Label\\System Mandatory Level"
       ],
@@ -112,7 +112,7 @@
       ],
       "command": "# Test registry creation (no trigger)\nNew-Item \"HKCU:\\Software\\Classes\\ms-settings\\Shell\\Open\\command\" -Force\nNew-ItemProperty -Path \"HKCU:\\Software\\Classes\\ms-settings\\Shell\\Open\\command\" -Name \"DelegateExecute\" -Value \"\" -Force\nSet-ItemProperty -Path \"HKCU:\\Software\\Classes\\ms-settings\\Shell\\Open\\command\" -Name \"(default)\" -Value \"cmd /c echo test\" -Force\n\nWrite-Host \"Registry keys created. Check for AV alerts...\"\nStart-Sleep 10\n\n# Cleanup\nRemove-Item \"HKCU:\\Software\\Classes\\ms-settings\\\" -Recurse -Force\nWrite-Host \"Cleaned up. No AV alert = bypass likely undetected.\"",
       "variables": [],
-      "notes": "Syntax: Execute in PowerShell to test detection Test before using in real engagement. Some EDR products specifically monitor HKCU\\Software\\Classes hijacking. If detected, try alternate bypasses (sdclt, computerdefaults) or token manipulation. ~30 sec test time. Time estimate: 30 seconds References: docs/av-evasion/uac-bypass.md#testing Manual alternative: Monitor Windows Event Logs (Security, Sysmon), check EDR console, or use Process Monitor to watch registry access",
+      "notes": "Syntax:\nExecute in PowerShell to test detection Test before using in real engagement.\n\nSome EDR products specifically monitor HKCU\\Software\\Classes hijacking.\n\nIf detected, try alternate bypasses (sdclt, computerdefaults) or token manipulation.\n\n~30 sec test time.\n\nTime estimate:\n30 seconds References:\ndocs/av-evasion/uac-bypass.md#testing Manual alternative:\nMonitor Windows Event Logs (Security, Sysmon), check EDR console, or use Process Monitor to watch registry access",
       "success_indicators": [
         "No AV alert = Bypass likely undetected. AV alert = Need alternate method or additional evasion."
       ],

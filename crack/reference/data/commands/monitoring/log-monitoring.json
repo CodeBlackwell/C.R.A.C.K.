@@ -50,7 +50,7 @@
         "tail-follow-multiple",
         "journalctl-follow"
       ],
-      "notes": "CRITICAL for OSCP defense monitoring and troubleshooting. Press Ctrl+C to exit. Common logs: /var/log/auth.log (authentication), /var/log/syslog (system), /var/log/apache2/access.log (web). Time estimate: runs continuously until stopped. Manual alternative: while true; do tail -n 1 <FILE>; sleep 1; done"
+      "notes": "CRITICAL for OSCP defense monitoring and troubleshooting.\n\nPress Ctrl+C to exit.\n\nCommon logs:\n/var/log/auth.log (authentication), /var/log/syslog (system), /var/log/apache2/access.log (web).\n\nTime estimate:\nruns continuously until stopped.\n\nManual alternative:\nwhile true; do tail -n 1 <FILE>; sleep 1; done"
     },
     {
       "id": "tail-follow-filter",
@@ -104,7 +104,7 @@
         "Track user activity: tail -f /var/log/auth.log | grep <USERNAME>"
       ],
       "alternatives": [],
-      "notes": "--line-buffered is REQUIRED or grep will buffer output and display will be delayed. OSCP defense patterns: 'Failed password' (brute force), 'Invalid user' (enumeration), 'Accepted publickey' (successful login), 'sudo.*COMMAND' (privilege usage). Time estimate: runs continuously."
+      "notes": "--line-buffered is REQUIRED or grep will buffer output and display will be delayed.\n\nOSCP defense patterns:\n'Failed password' (brute force), 'Invalid user' (enumeration), 'Accepted publickey' (successful login), 'sudo.*COMMAND' (privilege usage).\n\nTime estimate:\nruns continuously."
     },
     {
       "id": "tail-follow-multiple",
@@ -155,7 +155,7 @@
         "Use multitail for better multi-log display (if installed)"
       ],
       "alternatives": [],
-      "notes": "File headers show which file each line comes from: ==> /var/log/syslog <==. Useful for correlating events across logs. Time estimate: runs continuously."
+      "notes": "File headers show which file each line comes from:\n==> /var/log/syslog <==.\n\nUseful for correlating events across logs.\n\nTime estimate:\nruns continuously."
     },
     {
       "id": "journalctl-follow",
@@ -197,7 +197,7 @@
       "alternatives": [
         "tail-follow-log"
       ],
-      "notes": "systemd journal is unified log system on modern Linux. Combines all system and service logs. OSCP tip: Great for monitoring service failures, authentication attempts, and system events. Time estimate: runs continuously. For systems without systemd: fall back to tail -f /var/log/syslog"
+      "notes": "systemd journal is unified log system on modern Linux.\n\nCombines all system and service logs.\n\nOSCP tip:\nGreat for monitoring service failures, authentication attempts, and system events.\n\nTime estimate:\nruns continuously.\n\nFor systems without systemd:\nfall back to tail -f /var/log/syslog"
     },
     {
       "id": "journalctl-service-follow",
@@ -244,7 +244,7 @@
         "Add priority filter: journalctl -u <SERVICE> -f -p err"
       ],
       "alternatives": [],
-      "notes": "Service-specific monitoring helps troubleshoot issues. Common services: ssh, apache2, nginx, mysql, postgresql, cron. Can monitor multiple: journalctl -u ssh -u apache2 -f. Time estimate: runs continuously."
+      "notes": "Service-specific monitoring helps troubleshoot issues.\n\nCommon services:\nssh, apache2, nginx, mysql, postgresql, cron.\n\nCan monitor multiple:\njournalctl -u ssh -u apache2 -f.\n\nTime estimate:\nruns continuously."
     },
     {
       "id": "journalctl-priority-filter",
@@ -290,7 +290,7 @@
         "Combine with service: journalctl -u ssh -p warning"
       ],
       "alternatives": [],
-      "notes": "Priority levels (lowest to highest): 0=emerg, 1=alert, 2=crit, 3=err, 4=warning, 5=notice, 6=info, 7=debug. -p err shows errors, critical, alert, and emergency. For errors only (not above): journalctl PRIORITY=3. Time estimate: 1-5 seconds."
+      "notes": "Priority levels (lowest to highest):\n0=emerg, 1=alert, 2=crit, 3=err, 4=warning, 5=notice, 6=info, 7=debug.\n\n-p err shows errors, critical, alert, and emergency.\n\nFor errors only (not above):\njournalctl PRIORITY=3.\n\nTime estimate:\n1-5 seconds."
     },
     {
       "id": "journalctl-time-range",
@@ -337,7 +337,7 @@
         "Yesterday: journalctl --since yesterday --until today"
       ],
       "alternatives": [],
-      "notes": "Time formats: 'YYYY-MM-DD HH:MM:SS', 'yesterday', 'today', '1 hour ago', '30 minutes ago', '2 days ago'. Supports natural language. For recent events: journalctl --since \"5 minutes ago\". Time estimate: 1-10 seconds."
+      "notes": "Time formats:\n'YYYY-MM-DD HH:MM:SS', 'yesterday', 'today', '1 hour ago', '30 minutes ago', '2 days ago'.\n\nSupports natural language.\n\nFor recent events:\njournalctl --since \"5 minutes ago\".\n\nTime estimate:\n1-10 seconds."
     },
     {
       "id": "dmesg-kernel-messages",
@@ -375,7 +375,7 @@
         "Check disk errors: dmesg | grep -i \"I/O error\""
       ],
       "alternatives": [],
-      "notes": "Kernel ring buffer shows hardware events, driver loading, errors. Useful for hardware troubleshooting and detecting inserted USB devices. Output can be large - pipe to less: dmesg | less. Time estimate: 1-2 seconds."
+      "notes": "Kernel ring buffer shows hardware events, driver loading, errors.\n\nUseful for hardware troubleshooting and detecting inserted USB devices.\n\nOutput can be large - pipe to less:\ndmesg | less.\n\nTime estimate:\n1-2 seconds."
     },
     {
       "id": "dmesg-follow",
@@ -415,7 +415,7 @@
         "Detect network interface changes"
       ],
       "alternatives": [],
-      "notes": "-w flag requires dmesg from util-linux 2.21+ (2012+). Older systems: use watch -n 1 'dmesg | tail -20'. Useful for detecting hardware insertion (USB drives). Time estimate: runs continuously."
+      "notes": "-w flag requires dmesg from util-linux 2.21+ (2012+).\n\nOlder systems:\nuse watch -n 1 'dmesg | tail -20'.\n\nUseful for detecting hardware insertion (USB drives).\n\nTime estimate:\nruns continuously."
     },
     {
       "id": "grep-auth-failed",
@@ -457,7 +457,7 @@
       "alternatives": [
         "lastb-failed-logins"
       ],
-      "notes": "CRITICAL for OSCP defense. Patterns: 'Failed password for <USER>' (wrong password), 'Invalid user <USER>' (enumeration), 'Failed publickey for <USER>' (SSH key failed). Multiple failures from same IP = brute force attack. Time estimate: 1-3 seconds. Log location varies: /var/log/auth.log (Debian/Ubuntu), /var/log/secure (RHEL/CentOS)."
+      "notes": "CRITICAL for OSCP defense.\n\nPatterns:\n'Failed password for <USER>' (wrong password), 'Invalid user <USER>' (enumeration), 'Failed publickey for <USER>' (SSH key failed).\n\nMultiple failures from same IP = brute force attack.\n\nTime estimate:\n1-3 seconds.\n\nLog location varies:\n/var/log/auth.log (Debian/Ubuntu), /var/log/secure (RHEL/CentOS)."
     },
     {
       "id": "grep-sudo-commands",
@@ -498,7 +498,7 @@
         "Check for sudo failures: grep \"sudo.*incorrect password\" /var/log/auth.log"
       ],
       "alternatives": [],
-      "notes": "CRITICAL for defense auditing. Each sudo execution is logged with: timestamp, user, command, working directory. OSCP tip: Look for suspicious commands: bash, sh, vi, less, find, python (all can spawn shells). Time estimate: 2-5 seconds depending on log size."
+      "notes": "CRITICAL for defense auditing.\n\nEach sudo execution is logged with:\ntimestamp, user, command, working directory.\n\nOSCP tip:\nLook for suspicious commands:\nbash, sh, vi, less, find, python (all can spawn shells).\n\nTime estimate:\n2-5 seconds depending on log size."
     },
     {
       "id": "lastb-failed-logins",
@@ -542,7 +542,7 @@
       "alternatives": [
         "grep-auth-failed"
       ],
-      "notes": "Reads /var/log/btmp (bad login log). MUST run as root. OSCP defense tip: Multiple failures = brute force. Look for: (1) Same IP, multiple users (enumeration), (2) Same user, many attempts (password guessing), (3) Many IPs, same user (distributed attack). Time estimate: 1-5 seconds depending on attack history."
+      "notes": "Reads /var/log/btmp (bad login log).\n\nMUST run as root.\n\nOSCP defense tip:\nMultiple failures = brute force.\n\nLook for:\n(1) Same IP, multiple users (enumeration), (2) Same user, many attempts (password guessing), (3) Many IPs, same user (distributed attack).\n\nTime estimate:\n1-5 seconds depending on attack history."
     },
     {
       "id": "journalctl-boot-messages",
@@ -584,7 +584,7 @@
       "alternatives": [
         "dmesg-kernel-messages"
       ],
-      "notes": "Shows everything from current boot: kernel, systemd, services. Previous boot: -b -1, boot before that: -b -2, etc. List boots: journalctl --list-boots. Time estimate: 2-10 seconds depending on boot log size."
+      "notes": "Shows everything from current boot:\nkernel, systemd, services.\n\nPrevious boot:\n-b -1, boot before that:\n-b -2, etc.\n\nList boots:\njournalctl --list-boots.\n\nTime estimate:\n2-10 seconds depending on boot log size."
     }
   ]
 }

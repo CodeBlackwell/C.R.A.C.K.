@@ -18,7 +18,7 @@
       "flag_explanations": {
         "tr '\\0' ' '": "Translates null bytes (\\0) in cmdline files to spaces for readable output"
       },
-      "notes": "Each process has /proc/PID/cmdline containing its command line with null-byte separators. Useful for detecting suspicious processes or hidden arguments.",
+      "notes": "Each process has /proc/PID/cmdline containing its command line with null-byte separators.\n\nUseful for detecting suspicious processes or hidden arguments.",
       "oscp_relevance": "high",
       "tags": [
         "MONITORING",
@@ -45,7 +45,7 @@
         "ps-aux-full",
         "ps-grep-pattern"
       ],
-      "notes": "Piping ps output to grep is common but creates an extra grep process in results. Use pgrep for cleaner output.",
+      "notes": "Piping ps output to grep is common but creates an extra grep process in results.\n\nUse pgrep for cleaner output.",
       "oscp_relevance": "high",
       "tags": [
         "MONITORING",
@@ -74,7 +74,7 @@
       "alternatives": [
         "ps-grep-pattern"
       ],
-      "notes": "PID is always column 2 in 'ps aux' output. More reliable alternatives: pidof <name> or pgrep -f <pattern>",
+      "notes": "PID is always column 2 in 'ps aux' output.\n\nMore reliable alternatives:\npidof <name> or pgrep -f <pattern>",
       "oscp_relevance": "medium",
       "tags": [
         "MONITORING",
@@ -102,7 +102,7 @@
         "tr '\\0' ' '": "Converts null byte delimiters to spaces for readability"
       },
       "alternatives": [],
-      "notes": "/proc/PID/cmdline shows exact command with all arguments. Useful for revealing hidden flags or configurations.",
+      "notes": "/proc/PID/cmdline shows exact command with all arguments.\n\nUseful for revealing hidden flags or configurations.",
       "oscp_relevance": "high",
       "tags": [
         "MONITORING",
@@ -129,7 +129,7 @@
       "alternatives": [
         "crontab-user-list"
       ],
-      "notes": "Direct file access requires root. Preferred method: 'crontab -u <user> -l'. File location varies: Debian/Ubuntu use /var/spool/cron/crontabs/, RedHat uses /var/spool/cron/",
+      "notes": "Direct file access requires root.\n\nPreferred method:\n'crontab -u <user> -l'.\n\nFile location varies:\nDebian/Ubuntu use /var/spool/cron/crontabs/, RedHat uses /var/spool/cron/",
       "oscp_relevance": "high",
       "tags": [
         "MONITORING",
@@ -149,7 +149,7 @@
       "alternatives": [
         "crontab-system-wide"
       ],
-      "notes": "less allows scrolling and searching (use / to search). System crontab includes run-parts entries for hourly/daily/weekly/monthly jobs.",
+      "notes": "less allows scrolling and searching (use / to search).\n\nSystem crontab includes run-parts entries for hourly/daily/weekly/monthly jobs.",
       "oscp_relevance": "high",
       "tags": [
         "MONITORING",
@@ -169,7 +169,7 @@
         "-type f": "Match only regular files (exclude directories)",
         "/etc/cron*": "Glob pattern matching /etc/crontab, /etc/cron.d/, /etc/cron.daily/, etc."
       },
-      "notes": "Finds files in: /etc/cron.d/, /etc/cron.hourly/, /etc/cron.daily/, /etc/cron.weekly/, /etc/cron.monthly/, and /etc/crontab. Essential for comprehensive scheduled task enumeration.",
+      "notes": "Finds files in:\n/etc/cron.d/, /etc/cron.hourly/, /etc/cron.daily/, /etc/cron.weekly/, /etc/cron.monthly/, and /etc/crontab.\n\nEssential for comprehensive scheduled task enumeration.",
       "oscp_relevance": "high",
       "tags": [
         "MONITORING",
@@ -186,7 +186,7 @@
       "command": "at",
       "description": "Schedule one-time tasks using the AT utility (alternative to cron for non-recurring jobs)",
       "variables": [],
-      "notes": "AT utility schedules one-time jobs. View queued jobs: 'atq'. View job details: 'at -c <job_id>'. Jobs stored in /var/spool/at/. Requires atd daemon running.",
+      "notes": "AT utility schedules one-time jobs.\n\nView queued jobs:\n'atq'.\n\nView job details:\n'at -c <job_id>'.\n\nJobs stored in /var/spool/at/.\n\nRequires atd daemon running.",
       "oscp_relevance": "medium",
       "tags": [
         "MONITORING",
@@ -203,7 +203,7 @@
       "description": "Enumerate scheduled AT jobs by listing spool directory",
       "variables": [],
       "alternatives": [],
-      "notes": "Direct filesystem inspection of AT jobs. Job files named with format 'a<timestamp><queue>'. Better method: use 'atq' command. Requires appropriate permissions.",
+      "notes": "Direct filesystem inspection of AT jobs.\n\nJob files named with format 'a<timestamp><queue>'.\n\nBetter method:\nuse 'atq' command.\n\nRequires appropriate permissions.",
       "oscp_relevance": "medium",
       "tags": [
         "MONITORING",
@@ -226,7 +226,7 @@
       "alternatives": [
         "journalctl-follow"
       ],
-      "notes": "Syslog path varies: /var/log/syslog (Debian/Ubuntu), /var/log/messages (RedHat/CentOS). On systemd systems, prefer journalctl. Use Ctrl+C to exit.",
+      "notes": "Syslog path varies:\n/var/log/syslog (Debian/Ubuntu), /var/log/messages (RedHat/CentOS).\n\nOn systemd systems, prefer journalctl.\n\nUse Ctrl+C to exit.",
       "oscp_relevance": "high",
       "tags": [
         "MONITORING",
@@ -248,7 +248,7 @@
       "alternatives": [
         "dmesg-kernel-messages"
       ],
-      "notes": "Requires systemd. Shows same information as dmesg but with timestamps and systemd formatting. Use -f to follow in real-time.",
+      "notes": "Requires systemd.\n\nShows same information as dmesg but with timestamps and systemd formatting.\n\nUse -f to follow in real-time.",
       "oscp_relevance": "medium",
       "tags": [
         "MONITORING",
@@ -272,7 +272,7 @@
       "alternatives": [
         "dmesg-follow"
       ],
-      "notes": "Combines -k (kernel) and -f (follow). Useful for monitoring hardware events, driver issues, or kernel-level security events in real-time.",
+      "notes": "Combines -k (kernel) and -f (follow).\n\nUseful for monitoring hardware events, driver issues, or kernel-level security events in real-time.",
       "oscp_relevance": "medium",
       "tags": [
         "MONITORING",
@@ -294,7 +294,7 @@
         "grep -i failed": "Case-insensitive search for 'failed' in output"
       },
       "alternatives": [],
-      "notes": "Service name may vary: ssh, sshd, ssh.service. On non-systemd systems, check /var/log/auth.log or /var/log/secure directly.",
+      "notes": "Service name may vary:\nssh, sshd, ssh.service.\n\nOn non-systemd systems, check /var/log/auth.log or /var/log/secure directly.",
       "oscp_relevance": "high",
       "tags": [
         "MONITORING",
@@ -312,7 +312,7 @@
       "command": "journalctl | grep 'sudo.*COMMAND'",
       "description": "Find all sudo command executions logged by journald",
       "variables": [],
-      "notes": "Reveals privileged command history. Pattern matches sudo logs containing 'COMMAND=' entries. For focused output: journalctl _COMM=sudo | grep COMMAND=",
+      "notes": "Reveals privileged command history.\n\nPattern matches sudo logs containing 'COMMAND=' entries.\n\nFor focused output:\njournalctl _COMM=sudo | grep COMMAND=",
       "oscp_relevance": "high",
       "tags": [
         "MONITORING",
@@ -331,7 +331,7 @@
       "description": "Find all failed password authentication attempts across all services",
       "variables": [],
       "alternatives": [],
-      "notes": "Covers SSH, su, sudo, login, and other PAM-authenticated services. Add -S (since) flag for time range: journalctl -S today | grep 'Failed password'",
+      "notes": "Covers SSH, su, sudo, login, and other PAM-authenticated services.\n\nAdd -S (since) flag for time range:\njournalctl -S today | grep 'Failed password'",
       "oscp_relevance": "high",
       "tags": [
         "MONITORING",
@@ -352,7 +352,7 @@
       "alternatives": [
         "systemctl-list"
       ],
-      "notes": "Shows SysVinit scripts on older systems or systemd systems with legacy services. On systemd: use 'systemctl list-unit-files'. Service scripts are executable shell scripts.",
+      "notes": "Shows SysVinit scripts on older systems or systemd systems with legacy services.\n\nOn systemd:\nuse 'systemctl list-unit-files'.\n\nService scripts are executable shell scripts.",
       "oscp_relevance": "medium",
       "tags": [
         "MONITORING",
@@ -375,7 +375,7 @@
         "| head -20": "Show only first 20 lines (header + top processes)"
       },
       "alternatives": [],
-      "notes": "Batch mode suitable for scripting. Remove head to see all processes. Alternative: ps aux --sort=-%mem | head -20",
+      "notes": "Batch mode suitable for scripting.\n\nRemove head to see all processes.\n\nAlternative:\nps aux --sort=-%mem | head -20",
       "oscp_relevance": "medium",
       "tags": [
         "MONITORING",
@@ -399,7 +399,7 @@
         "| head -20": "Show only first 20 lines"
       },
       "alternatives": [],
-      "notes": "Useful for identifying CPU-intensive processes. CPU% shows usage since process start, not instantaneous. For real-time: use interactive top without -bn1.",
+      "notes": "Useful for identifying CPU-intensive processes.\n\nCPU% shows usage since process start, not instantaneous.\n\nFor real-time:\nuse interactive top without -bn1.",
       "oscp_relevance": "medium",
       "tags": [
         "MONITORING",
@@ -416,7 +416,7 @@
       "command": "cat /proc/meminfo",
       "description": "Display comprehensive memory statistics from kernel",
       "variables": [],
-      "notes": "Shows total, free, available, buffers, cached, swap, and more. Key fields: MemTotal, MemFree, MemAvailable (best indicator of free memory), SwapTotal, SwapFree.",
+      "notes": "Shows total, free, available, buffers, cached, swap, and more.\n\nKey fields:\nMemTotal, MemFree, MemAvailable (best indicator of free memory), SwapTotal, SwapFree.",
       "oscp_relevance": "low",
       "tags": [
         "MONITORING",
@@ -440,7 +440,7 @@
       "alternatives": [
         "ps-aux-full"
       ],
-      "notes": "Useful for scripting or capturing process state. Shows CPU, memory, load average, and process list. Default sort is by CPU usage.",
+      "notes": "Useful for scripting or capturing process state.\n\nShows CPU, memory, load average, and process list.\n\nDefault sort is by CPU usage.",
       "oscp_relevance": "medium",
       "tags": [
         "MONITORING",
@@ -461,7 +461,7 @@
         "1": "Sample interval in seconds",
         "5": "Number of samples to collect"
       },
-      "notes": "Requires sysstat package. Shows %user, %system, %iowait, %idle. Useful for performance analysis and baseline establishment. Historical data in /var/log/sa/.",
+      "notes": "Requires sysstat package.\n\nShows %user, %system, %iowait, %idle.\n\nUseful for performance analysis and baseline establishment.\n\nHistorical data in /var/log/sa/.",
       "oscp_relevance": "low",
       "tags": [
         "MONITORING",
@@ -478,7 +478,7 @@
       "command": "cat /proc/loadavg",
       "description": "Display 1, 5, and 15 minute load averages",
       "variables": [],
-      "notes": "Format: load1 load5 load15 running/total last_pid. Load represents average number of processes in run queue. Values > CPU count indicate potential bottleneck.",
+      "notes": "Format:\nload1 load5 load15 running/total last_pid.\n\nLoad represents average number of processes in run queue.\n\nValues > CPU count indicate potential bottleneck.",
       "oscp_relevance": "low",
       "tags": [
         "MONITORING",
@@ -498,7 +498,7 @@
       "alternatives": [
         "lsof-list"
       ],
-      "notes": "Shows open files, sockets, pipes for all processes. Requires root for other users' processes. Better alternative: lsof. Useful for identifying network connections or open files.",
+      "notes": "Shows open files, sockets, pipes for all processes.\n\nRequires root for other users' processes.\n\nBetter alternative:\nlsof.\n\nUseful for identifying network connections or open files.",
       "oscp_relevance": "medium",
       "tags": [
         "MONITORING",
@@ -528,7 +528,7 @@
       "alternatives": [
         "lsof-directory-usage"
       ],
-      "notes": "Faster than +D (recursive). Use +D for recursive search. Common use: identify which processes are accessing files in specific directory.",
+      "notes": "Faster than +D (recursive).\n\nUse +D for recursive search.\n\nCommon use:\nidentify which processes are accessing files in specific directory.",
       "oscp_relevance": "medium",
       "tags": [
         "MONITORING",
@@ -549,7 +549,7 @@
         "utmpdump": "Utility to decode binary utmp/wtmp files"
       },
       "alternatives": [],
-      "notes": "wtmp logs all login/logout events. Binary format requires utmpdump or last command. Better alternative: 'last' command provides formatted output. Useful for forensics and user activity tracking.",
+      "notes": "wtmp logs all login/logout events.\n\nBinary format requires utmpdump or last command.\n\nBetter alternative:\n'last' command provides formatted output.\n\nUseful for forensics and user activity tracking.",
       "oscp_relevance": "medium",
       "tags": [
         "MONITORING",

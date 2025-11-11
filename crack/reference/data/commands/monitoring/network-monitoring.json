@@ -52,7 +52,7 @@
         "netstat-listening-tcp",
         "ss-listening-all"
       ],
-      "notes": "CRITICAL for OSCP defense monitoring and privilege escalation. Shows: (1) What services are listening, (2) Which processes have active connections, (3) User running each service. The -P and -n flags provide raw data without DNS/service lookups (faster and avoids network activity). Time estimate: 2-5 seconds. Manual alternative: cat /proc/net/tcp; cat /proc/net/udp (manual parsing required)."
+      "notes": "CRITICAL for OSCP defense monitoring and privilege escalation.\n\nShows:\n(1) What services are listening, (2) Which processes have active connections, (3) User running each service.\n\nThe -P and -n flags provide raw data without DNS/service lookups (faster and avoids network activity).\n\nTime estimate:\n2-5 seconds.\n\nManual alternative:\ncat /proc/net/tcp; cat /proc/net/udp (manual parsing required)."
     },
     {
       "id": "lsof-listening-ports",
@@ -98,7 +98,7 @@
         "netstat-listening-tcp",
         "ss-listening-ports"
       ],
-      "notes": "Filters to only show listening ports (attack surface). OSCP tip: Compare internal listening ports (127.0.0.1:*) vs external (0.0.0.0:* or specific IP). Internal-only ports often have weaker authentication. For UDP listeners: lsof -i -P -n -sUDP:Idle. Time estimate: 2 seconds."
+      "notes": "Filters to only show listening ports (attack surface).\n\nOSCP tip:\nCompare internal listening ports (127.0.0.1:*) vs external (0.0.0.0:* or specific IP).\n\nInternal-only ports often have weaker authentication.\n\nFor UDP listeners:\nlsof -i -P -n -sUDP:Idle.\n\nTime estimate:\n2 seconds."
     },
     {
       "id": "lsof-port-specific",
@@ -149,7 +149,7 @@
       "alternatives": [
         "fuser-port-tcp"
       ],
-      "notes": "Essential for troubleshooting 'port already in use' errors or identifying what service is bound to a discovered port. For TCP only: lsof -i TCP:<PORT>. For UDP only: lsof -i UDP:<PORT>. Time estimate: <1 second."
+      "notes": "Essential for troubleshooting 'port already in use' errors or identifying what service is bound to a discovered port.\n\nFor TCP only:\nlsof -i TCP:<PORT>.\n\nFor UDP only:\nlsof -i UDP:<PORT>.\n\nTime estimate:\n<1 second."
     },
     {
       "id": "fuser-port-tcp",
@@ -198,7 +198,7 @@
       "alternatives": [
         "lsof-port-specific"
       ],
-      "notes": "Lighter weight than lsof. Good for quick port checks. For UDP: fuser -v <PORT>/udp. Time estimate: <1 second."
+      "notes": "Lighter weight than lsof.\n\nGood for quick port checks.\n\nFor UDP:\nfuser -v <PORT>/udp.\n\nTime estimate:\n<1 second."
     },
     {
       "id": "netstat-listening-tcp",
@@ -247,7 +247,7 @@
         "ss-listening-all",
         "lsof-listening-ports"
       ],
-      "notes": "Classic tool but deprecated in favor of 'ss' on modern systems. Still widely used in OSCP labs. MUST run with sudo for PID information, otherwise shows '(No info)'. OSCP tip: Focus on: (1) 0.0.0.0:* (externally accessible), (2) 127.0.0.1:* (local only, often weaker auth), (3) Unusual high ports (potential backdoors). Time estimate: 2 seconds."
+      "notes": "Classic tool but deprecated in favor of 'ss' on modern systems.\n\nStill widely used in OSCP labs.\n\nMUST run with sudo for PID information, otherwise shows '(No info)'.\n\nOSCP tip:\nFocus on:\n(1) 0.0.0.0:* (externally accessible), (2) 127.0.0.1:* (local only, often weaker auth), (3) Unusual high ports (potential backdoors).\n\nTime estimate:\n2 seconds."
     },
     {
       "id": "ss-listening-all",
@@ -298,7 +298,7 @@
         "netstat-listening-tcp",
         "lsof-listening-ports"
       ],
-      "notes": "Modern replacement for netstat - 10x faster on systems with many connections. Same syntax as netstat for easy transition. OSCP tip: Use with grep for specific ports: ss -tulpn | grep :80. For all connections (not just listening): ss -tupn. Time estimate: <1 second."
+      "notes": "Modern replacement for netstat - 10x faster on systems with many connections.\n\nSame syntax as netstat for easy transition.\n\nOSCP tip:\nUse with grep for specific ports:\nss -tulpn | grep :80.\n\nFor all connections (not just listening):\nss -tupn.\n\nTime estimate:\n<1 second."
     },
     {
       "id": "ss-established-connections",
@@ -342,7 +342,7 @@
         "Block malicious IPs: iptables -A OUTPUT -d <IP> -j DROP"
       ],
       "alternatives": [],
-      "notes": "Useful for detecting active attacks or data exfiltration. OSCP defense tip: Unexpected ESTABLISHED connections to external IPs may indicate compromise. Time estimate: <1 second."
+      "notes": "Useful for detecting active attacks or data exfiltration.\n\nOSCP defense tip:\nUnexpected ESTABLISHED connections to external IPs may indicate compromise.\n\nTime estimate:\n<1 second."
     },
     {
       "id": "win-netstat-process-mapping",
@@ -386,7 +386,7 @@
       "alternatives": [
         "win-ps-netstat-process"
       ],
-      "notes": "Essential for Windows network monitoring. Combine with tasklist to map PIDs to names: netstat -ano | findstr LISTENING, then tasklist /fi \"PID eq <PID>\". OSCP tip: Look for (1) LISTENING on 0.0.0.0 (externally accessible), (2) ESTABLISHED to unexpected IPs (C2 traffic), (3) Unusual ports (backdoors). Time estimate: 2 seconds."
+      "notes": "Essential for Windows network monitoring.\n\nCombine with tasklist to map PIDs to names:\nnetstat -ano | findstr LISTENING, then tasklist /fi \"PID eq <PID>\".\n\nOSCP tip:\nLook for (1) LISTENING on 0.0.0.0 (externally accessible), (2) ESTABLISHED to unexpected IPs (C2 traffic), (3) Unusual ports (backdoors).\n\nTime estimate:\n2 seconds."
     },
     {
       "id": "win-ps-netstat-process",
@@ -432,7 +432,7 @@
       "alternatives": [
         "win-netstat-process-mapping"
       ],
-      "notes": "Modern PowerShell alternative to netstat. Easier to parse and filter. For UDP: Get-NetUDPEndpoint. Time estimate: 3 seconds. OSCP tip: One-liner to show listening ports with names: Get-NetTCPConnection -State Listen | Select LocalPort,@{Name='Process';Expression={(Get-Process -Id $_.OwningProcess).Name}}"
+      "notes": "Modern PowerShell alternative to netstat.\n\nEasier to parse and filter.\n\nFor UDP:\nGet-NetUDPEndpoint.\n\nTime estimate:\n3 seconds.\n\nOSCP tip:\nOne-liner to show listening ports with names:\nGet-NetTCPConnection -State Listen | Select LocalPort,@{Name='Process';Expression={(Get-Process -Id $_.OwningProcess).Name}}"
     },
     {
       "id": "win-tasklist-pid",
@@ -480,7 +480,7 @@
         "win-wmic-process-pid",
         "win-ps-get-process"
       ],
-      "notes": "Quick way to map netstat PIDs to process names. Common workflow: netstat -ano | findstr :443 (get PID) \u2192 tasklist /fi \"PID eq 1234\" (get name). Time estimate: <1 second."
+      "notes": "Quick way to map netstat PIDs to process names.\n\nCommon workflow:\nnetstat -ano | findstr :443 (get PID) → tasklist /fi \"PID eq 1234\" (get name).\n\nTime estimate:\n<1 second."
     },
     {
       "id": "win-wmic-process-pid",
@@ -532,7 +532,7 @@
       "alternatives": [
         "win-tasklist-pid"
       ],
-      "notes": "More detailed than tasklist. CommandLine often reveals sensitive data. Time estimate: 1 second."
+      "notes": "More detailed than tasklist.\n\nCommandLine often reveals sensitive data.\n\nTime estimate:\n1 second."
     }
   ]
 }

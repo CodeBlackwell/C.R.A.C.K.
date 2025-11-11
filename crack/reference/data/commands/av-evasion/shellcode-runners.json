@@ -5,7 +5,7 @@
     {
       "id": "csharp-shellcode-runner-basic",
       "name": "C# Shellcode Runner (Basic)",
-      "description": "Basic C# template for executing raw shellcode via VirtualAlloc \u2192 CreateThread \u2192 WaitForSingleObject pattern. Foundation for all custom runners.",
+      "description": "Basic C# template for executing raw shellcode via VirtualAlloc → CreateThread → WaitForSingleObject pattern. Foundation for all custom runners.",
       "category": "shellcode-runners",
       "tags": [
         "anti-virus",
@@ -25,7 +25,7 @@
           "required": true
         }
       ],
-      "notes": "Syntax: Save as Program.cs, compile with csc.exe Basic runner will be flagged by modern AV. Always add encryption (caesar/xor) or heuristic evasion before deploying. Practice compiling on Windows target. Time estimate: 2 minutes (with pre-generated shellcode) References: docs/av-evasion/shellcode-runners.md#basic-runner, PEN-300 Chapter 6.5.1 Manual alternative: Use Python ctypes, PowerShell reflection, or compiled languages (C/C++) for shellcode execution",
+      "notes": "Syntax:\nSave as Program.cs, compile with csc.exe Basic runner will be flagged by modern AV.\n\nAlways add encryption (caesar/xor) or heuristic evasion before deploying.\n\nPractice compiling on Windows target.\n\nTime estimate:\n2 minutes (with pre-generated shellcode) References:\ndocs/av-evasion/shellcode-runners.md#basic-runner, PEN-300 Chapter 6.5.1 Manual alternative:\nUse Python ctypes, PowerShell reflection, or compiled languages (C/C++) for shellcode execution",
       "success_indicators": [
         "No console output. Shellcode executes (e.g., reverse shell connects, Meterpreter session opens)."
       ],
@@ -65,7 +65,7 @@
           "required": true
         }
       ],
-      "notes": "Syntax: Add encryption offline, add decryption to runner before VirtualAlloc Caesar cipher is weak but fast. Good for lab practice. For exam, use XOR or combine with heuristic evasion. Key=2 is common in examples. Time estimate: 5 minutes (encryption + integration) References: docs/av-evasion/shellcode-runners.md#caesar-cipher, PEN-300 Chapter 6.5.2 Manual alternative: Use XOR encryption (stronger), AES encryption (strongest), or custom encoding schemes",
+      "notes": "Syntax:\nAdd encryption offline, add decryption to runner before VirtualAlloc Caesar cipher is weak but fast.\n\nGood for lab practice.\n\nFor exam, use XOR or combine with heuristic evasion.\n\nKey=2 is common in examples.\n\nTime estimate:\n5 minutes (encryption + integration) References:\ndocs/av-evasion/shellcode-runners.md#caesar-cipher, PEN-300 Chapter 6.5.2 Manual alternative:\nUse XOR encryption (stronger), AES encryption (strongest), or custom encoding schemes",
       "success_indicators": [
         "Encrypted runner bypasses static signatures. Shellcode executes normally after runtime decryption."
       ],
@@ -104,7 +104,7 @@
           "required": true
         }
       ],
-      "notes": "Syntax: XOR encrypt offline, XOR decrypt at runtime (same key) XOR is standard industry practice. Key 0xAA common but predictable - use random key. Combine with heuristic evasion for best results. Time estimate: 5 minutes References: docs/av-evasion/shellcode-runners.md#xor-encryption Manual alternative: Use multi-byte XOR keys, AES encryption, or RC4 cipher for stronger protection",
+      "notes": "Syntax:\nXOR encrypt offline, XOR decrypt at runtime (same key) XOR is standard industry practice.\n\nKey 0xAA common but predictable - use random key.\n\nCombine with heuristic evasion for best results.\n\nTime estimate:\n5 minutes References:\ndocs/av-evasion/shellcode-runners.md#xor-encryption Manual alternative:\nUse multi-byte XOR keys, AES encryption, or RC4 cipher for stronger protection",
       "success_indicators": [
         "XOR encrypted payload bypasses more signatures than Caesar. Decrypts and executes at runtime."
       ],
@@ -143,7 +143,7 @@
           "required": true
         }
       ],
-      "notes": "Syntax: Add before shellcode execution in Main() Simple but effective against basic sandboxes. 10 seconds is standard. For exam, may skip to save time if target already compromised. Good for phishing scenarios. Time estimate: 1 minute (add to existing runner) References: docs/av-evasion/shellcode-runners.md#sleep-timer, PEN-300 Chapter 6.6.1 Manual alternative: Use non-emulated API checks (VirtualAllocExNuma), large memory allocations, or anti-debugging techniques",
+      "notes": "Syntax:\nAdd before shellcode execution in Main() Simple but effective against basic sandboxes.\n\n10 seconds is standard.\n\nFor exam, may skip to save time if target already compromised.\n\nGood for phishing scenarios.\n\nTime estimate:\n1 minute (add to existing runner) References:\ndocs/av-evasion/shellcode-runners.md#sleep-timer, PEN-300 Chapter 6.6.1 Manual alternative:\nUse non-emulated API checks (VirtualAllocExNuma), large memory allocations, or anti-debugging techniques",
       "success_indicators": [
         "In sandbox: Exits immediately (sandbox detected). On real system: Waits 10 seconds then executes payload."
       ],
@@ -169,7 +169,7 @@
       ],
       "command": "using System;\nusing System.Runtime.InteropServices;\n\n[DllImport(\"kernel32.dll\", SetLastError = true, ExactSpelling = true)]\nstatic extern IntPtr VirtualAllocExNuma(IntPtr hProcess, IntPtr lpAddress, uint dwSize, UInt32 flAllocationType, UInt32 flProtect, UInt32 nndPreferred);\n\n[DllImport(\"kernel32.dll\")]\nstatic extern IntPtr GetCurrentProcess();\n\n// Sandbox check\nIntPtr mem = VirtualAllocExNuma(GetCurrentProcess(), IntPtr.Zero, 0x1000, 0x3000, 0x4, 0);\nif(mem == null) {\n    return; // Sandbox detected - API not emulated\n}\n// Continue with payload",
       "variables": [],
-      "notes": "Syntax: Add before shellcode execution in Main() More sophisticated than sleep timer. Bypasses sandboxes that wait out delays. Combine both for maximum evasion. Quick to add (<10 lines). Time estimate: 2 minutes References: docs/av-evasion/shellcode-runners.md#non-emulated-api, PEN-300 Chapter 6.6.2 Manual alternative: Use FlsAlloc, GetTickCount64, or other rarely-emulated APIs. Check for debugger with IsDebuggerPresent.",
+      "notes": "Syntax:\nAdd before shellcode execution in Main() More sophisticated than sleep timer.\n\nBypasses sandboxes that wait out delays.\n\nCombine both for maximum evasion.\n\nQuick to add (<10 lines).\n\nTime estimate:\n2 minutes References:\ndocs/av-evasion/shellcode-runners.md#non-emulated-api, PEN-300 Chapter 6.6.2 Manual alternative:\nUse FlsAlloc, GetTickCount64, or other rarely-emulated APIs.\n\nCheck for debugger with IsDebuggerPresent.",
       "success_indicators": [
         "In sandbox: Exits (NULL returned). On real system: Continues to payload execution."
       ],
@@ -209,7 +209,7 @@
         }
       ],
       "prerequisites": [],
-      "notes": "Syntax: Run on Kali, copy output to C# runner Always use HTTPS payloads (not HTTP) for better evasion. Port 443 blends with legitimate traffic. Generate before exam, don't waste time during. Time estimate: 30 seconds References: docs/av-evasion/shellcode-runners.md#msfvenom-generation, PEN-300 Chapter 6.4 Manual alternative: Use custom reverse shell (bash, python, netcat) or C2 frameworks (Cobalt Strike, Sliver, Havoc)",
+      "notes": "Syntax:\nRun on Kali, copy output to C# runner Always use HTTPS payloads (not HTTP) for better evasion.\n\nPort 443 blends with legitimate traffic.\n\nGenerate before exam, don't waste time during.\n\nTime estimate:\n30 seconds References:\ndocs/av-evasion/shellcode-runners.md#msfvenom-generation, PEN-300 Chapter 6.4 Manual alternative:\nUse custom reverse shell (bash, python, netcat) or C2 frameworks (Cobalt Strike, Sliver, Havoc)",
       "success_indicators": [
         "Shellcode byte array in C# format:\nbyte[] buf = new byte[xxx] { 0xfc,0x48,0x83,... };"
       ],
@@ -247,7 +247,7 @@
           "required": true
         }
       ],
-      "notes": "Syntax: Run on Windows system with .NET Framework Practice compiling on Windows VM before exam. Framework64 for modern systems. /target:winexe hides console window (stealthier). Compilation is fast (<5 seconds). Time estimate: 30 seconds References: docs/av-evasion/shellcode-runners.md#compilation Manual alternative: Use Visual Studio, MSBuild, or cross-compile with Mono on Linux",
+      "notes": "Syntax:\nRun on Windows system with .NET Framework Practice compiling on Windows VM before exam.\n\nFramework64 for modern systems.\n\n/target:winexe hides console window (stealthier).\n\nCompilation is fast (<5 seconds).\n\nTime estimate:\n30 seconds References:\ndocs/av-evasion/shellcode-runners.md#compilation Manual alternative:\nUse Visual Studio, MSBuild, or cross-compile with Mono on Linux",
       "success_indicators": [
         "runner.exe created in current directory. No output = success."
       ],

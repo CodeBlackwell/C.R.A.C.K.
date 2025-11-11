@@ -36,7 +36,7 @@
         "evil-winrm-hash"
       ],
       "oscp_relevance": "high",
-      "notes": "NTLM hash format: lowercase hexadecimal, 32 characters. Common sources: secretsdump.py, mimikatz, crackmapexec --sam/--lsa"
+      "notes": "NTLM hash format:\nlowercase hexadecimal, 32 characters.\n\nCommon sources:\nsecretsdump.py, mimikatz, crackmapexec --sam/--lsa"
     },
     {
       "id": "verify-crackmapexec-installed",
@@ -64,7 +64,7 @@
       },
       "next_steps": [],
       "oscp_relevance": "high",
-      "notes": "CrackMapExec may be aliased as 'cme' in some environments. Check both variants."
+      "notes": "CrackMapExec may be aliased as 'cme' in some environments.\n\nCheck both variants."
     },
     {
       "id": "verify-neo4j-running",
@@ -97,7 +97,7 @@
         "bloodhound-ingest"
       ],
       "oscp_relevance": "medium",
-      "notes": "Neo4j required for BloodHound data ingestion and Active Directory analysis. Default ports: 7474 (HTTP), 7687 (Bolt)."
+      "notes": "Neo4j required for BloodHound data ingestion and Active Directory analysis.\n\nDefault ports:\n7474 (HTTP), 7687 (Bolt)."
     },
     {
       "id": "verify-web-server-up",
@@ -187,7 +187,7 @@
         "get-netgroup"
       ],
       "oscp_relevance": "high",
-      "notes": "PowerView cmdlets available after import: Get-NetDomain, Get-NetUser, Get-NetGroup, Get-NetComputer, Invoke-ShareFinder"
+      "notes": "PowerView cmdlets available after import:\nGet-NetDomain, Get-NetUser, Get-NetGroup, Get-NetComputer, Invoke-ShareFinder"
     },
     {
       "id": "verify-impacket-installed",
@@ -218,7 +218,7 @@
       },
       "next_steps": [],
       "oscp_relevance": "high",
-      "notes": "Impacket pre-installed on Kali. Core scripts: secretsdump.py, psexec.py, smbexec.py, wmiexec.py, GetNPUsers.py, GetUserSPNs.py"
+      "notes": "Impacket pre-installed on Kali.\n\nCore scripts:\nsecretsdump.py, psexec.py, smbexec.py, wmiexec.py, GetNPUsers.py, GetUserSPNs.py"
     },
     {
       "id": "verify-evil-winrm-installed",
@@ -277,7 +277,7 @@
         "nmap-vuln-scan"
       ],
       "oscp_relevance": "high",
-      "notes": "Nmap pre-installed on Kali Linux. Essential for port scanning and service enumeration."
+      "notes": "Nmap pre-installed on Kali Linux.\n\nEssential for port scanning and service enumeration."
     },
     {
       "id": "verify-mimikatz-available",
@@ -313,7 +313,7 @@
       },
       "next_steps": [],
       "oscp_relevance": "high",
-      "notes": "Mimikatz extracts plaintext passwords, hashes, tickets from memory. Requires SYSTEM/Admin privileges."
+      "notes": "Mimikatz extracts plaintext passwords, hashes, tickets from memory.\n\nRequires SYSTEM/Admin privileges."
     },
     {
       "id": "verify-rubeus-available",
@@ -353,7 +353,7 @@
         "rubeus-kerberoast"
       ],
       "oscp_relevance": "high",
-      "notes": "Rubeus is C# toolkit for Kerberos attacks: ASREPRoasting, Kerberoasting, overpass-the-hash, ticket manipulation"
+      "notes": "Rubeus is C# toolkit for Kerberos attacks:\nASREPRoasting, Kerberoasting, overpass-the-hash, ticket manipulation"
     },
     {
       "id": "verify-getcap-installed",
@@ -380,7 +380,7 @@
       },
       "next_steps": [],
       "oscp_relevance": "medium",
-      "notes": "Part of libcap2-bin package. Used to find binaries with elevated capabilities (e.g., CAP_SETUID for privilege escalation)"
+      "notes": "Part of libcap2-bin package.\n\nUsed to find binaries with elevated capabilities (e.g., CAP_SETUID for privilege escalation)"
     },
     {
       "id": "verify-docker-images-available",
@@ -411,7 +411,7 @@
       },
       "next_steps": [],
       "oscp_relevance": "medium",
-      "notes": "Docker privilege escalation requires existing images or ability to pull. Alpine is minimal (5MB) and commonly available."
+      "notes": "Docker privilege escalation requires existing images or ability to pull.\n\nAlpine is minimal (5MB) and commonly available."
     },
     {
       "id": "verify-curl-available",
@@ -443,7 +443,7 @@
       ],
       "next_steps": [],
       "oscp_relevance": "high",
-      "notes": "curl and wget pre-installed on most Linux. Windows 10+ includes curl.exe. Used for downloading exploits, tools, reverse shells."
+      "notes": "curl and wget pre-installed on most Linux.\n\nWindows 10+ includes curl.exe.\n\nUsed for downloading exploits, tools, reverse shells."
     },
     {
       "id": "verify-socat-installed",
@@ -474,7 +474,7 @@
         "socat-port-forward"
       ],
       "oscp_relevance": "medium",
-      "notes": "Socat is multipurpose relay tool for pivoting. Can forward TCP/UDP, create reverse shells, port redirection."
+      "notes": "Socat is multipurpose relay tool for pivoting.\n\nCan forward TCP/UDP, create reverse shells, port redirection."
     },
     {
       "id": "verify-rdp-service-running",
@@ -513,7 +513,7 @@
         "xfreerdp-connect"
       ],
       "oscp_relevance": "high",
-      "notes": "RDP default port 3389. Service name: TermService (Windows). Required for graphical remote access and lateral movement."
+      "notes": "RDP default port 3389.\n\nService name:\nTermService (Windows).\n\nRequired for graphical remote access and lateral movement."
     },
     {
       "id": "verify-python-available",
@@ -544,7 +544,7 @@
         "python-reverse-shell"
       ],
       "oscp_relevance": "high",
-      "notes": "Python usually pre-installed on Linux. Used for HTTP servers, reverse shells, exploit modifications, enumeration scripts."
+      "notes": "Python usually pre-installed on Linux.\n\nUsed for HTTP servers, reverse shells, exploit modifications, enumeration scripts."
     },
     {
       "id": "verify-socks-proxy-running",
@@ -587,7 +587,7 @@
         "proxychains-nmap"
       ],
       "oscp_relevance": "high",
-      "notes": "SOCKS proxy created via SSH dynamic port forwarding (ssh -D). Configure proxychains: /etc/proxychains4.conf"
+      "notes": "SOCKS proxy created via SSH dynamic port forwarding (ssh -D).\n\nConfigure proxychains:\n/etc/proxychains4.conf"
     },
     {
       "id": "verify-credentials",
@@ -640,7 +640,7 @@
       ],
       "next_steps": [],
       "oscp_relevance": "high",
-      "notes": "Use to validate credentials before exploitation. SMB (port 445) most reliable for Windows credential validation."
+      "notes": "Use to validate credentials before exploitation.\n\nSMB (port 445) most reliable for Windows credential validation."
     },
     {
       "id": "verify-powershell-access",
@@ -674,7 +674,7 @@
         "invoke-mimikatz"
       ],
       "oscp_relevance": "high",
-      "notes": "PowerShell v2+ on Windows 7+, v5.1 on Windows 10/Server 2016+. Required for most Windows enumeration and exploitation scripts."
+      "notes": "PowerShell v2+ on Windows 7+, v5.1 on Windows 10/Server 2016+.\n\nRequired for most Windows enumeration and exploitation scripts."
     },
     {
       "id": "verify-network-connectivity",
@@ -756,7 +756,7 @@
       },
       "next_steps": [],
       "oscp_relevance": "high",
-      "notes": "Many post-exploitation tools require elevated privileges. Linux: uid=0, Windows: Administrators/SYSTEM/Domain Admins groups."
+      "notes": "Many post-exploitation tools require elevated privileges.\n\nLinux:\nuid=0, Windows:\nAdministrators/SYSTEM/Domain Admins groups."
     },
     {
       "id": "verify-file-exists",
@@ -790,7 +790,7 @@
       },
       "alternatives": [],
       "oscp_relevance": "medium",
-      "notes": "test -f checks for regular files. Use -d for directories, -e for any file type (file/dir/symlink)."
+      "notes": "test -f checks for regular files.\n\nUse -d for directories, -e for any file type (file/dir/symlink)."
     },
     {
       "id": "verify-port-open",
@@ -951,7 +951,7 @@
         "-N": "Suppress password prompt (null authentication)",
         "-L": "List available shares on target"
       },
-      "notes": "Null sessions deprecated post-Windows 2000 but sometimes enabled on legacy systems. IPC$ share indicates anonymous access."
+      "notes": "Null sessions deprecated post-Windows 2000 but sometimes enabled on legacy systems.\n\nIPC$ share indicates anonymous access."
     },
     {
       "id": "verify-ldap-anonymous-bind",
@@ -998,7 +998,7 @@
         "-b \"\"": "Base DN (empty for rootDSE query)",
         "-s base": "Search scope: base object only"
       },
-      "notes": "Anonymous LDAP bind often disabled in hardened environments. If allowed, provides base DN for further enumeration."
+      "notes": "Anonymous LDAP bind often disabled in hardened environments.\n\nIf allowed, provides base DN for further enumeration."
     }
   ]
 }

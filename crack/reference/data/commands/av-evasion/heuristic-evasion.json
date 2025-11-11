@@ -31,7 +31,7 @@
           "required": true
         }
       ],
-      "notes": "Syntax: Add to C# Main() before payload execution Simple but effective against basic sandboxes. 10 seconds standard. Combine with other checks for best results. See also: csharp-sleep-timer in shellcode-runners. Time estimate: 1 minute (integration) References: docs/av-evasion/heuristic-evasion.md#sleep-timer, shellcode-runners.json#csharp-sleep-timer, PEN-300 Chapter 6.6.1 Manual alternative: Use GetTickCount() before/after sleep, or QueryPerformanceCounter for high-resolution timing",
+      "notes": "Syntax:\nAdd to C# Main() before payload execution Simple but effective against basic sandboxes.\n\n10 seconds standard.\n\nCombine with other checks for best results.\n\nSee also:\ncsharp-sleep-timer in shellcode-runners.\n\nTime estimate:\n1 minute (integration) References:\ndocs/av-evasion/heuristic-evasion.md#sleep-timer, shellcode-runners.json#csharp-sleep-timer, PEN-300 Chapter 6.6.1 Manual alternative:\nUse GetTickCount() before/after sleep, or QueryPerformanceCounter for high-resolution timing",
       "success_indicators": [
         "In sandbox: Exits immediately. On real system: Waits full duration then continues."
       ],
@@ -57,7 +57,7 @@
       ],
       "command": "using System;\nusing System.Runtime.InteropServices;\n\n[DllImport(\"kernel32.dll\", SetLastError = true, ExactSpelling = true)]\nstatic extern IntPtr VirtualAllocExNuma(IntPtr hProcess, IntPtr lpAddress, uint dwSize, UInt32 flAllocationType, UInt32 flProtect, UInt32 nndPreferred);\n\n[DllImport(\"kernel32.dll\")]\nstatic extern IntPtr GetCurrentProcess();\n\nIntPtr mem = VirtualAllocExNuma(GetCurrentProcess(), IntPtr.Zero, 0x1000, 0x3000, 0x4, 0);\nif(mem == IntPtr.Zero) {\n    return; // Sandbox detected\n}",
       "variables": [],
-      "notes": "Syntax: Add to C# Main() before payload execution More sophisticated than sleep timer. Bypasses time-aware sandboxes. Quick to implement. See also: csharp-non-emulated-api in shellcode-runners. Time estimate: 2 minutes (integration) References: docs/av-evasion/heuristic-evasion.md#non-emulated-apis, shellcode-runners.json#csharp-non-emulated-api, PEN-300 Chapter 6.6.2 Manual alternative: Use FlsAlloc, GetTickCount64, or other non-emulated APIs. Check for debugger with IsDebuggerPresent.",
+      "notes": "Syntax:\nAdd to C# Main() before payload execution More sophisticated than sleep timer.\n\nBypasses time-aware sandboxes.\n\nQuick to implement.\n\nSee also:\ncsharp-non-emulated-api in shellcode-runners.\n\nTime estimate:\n2 minutes (integration) References:\ndocs/av-evasion/heuristic-evasion.md#non-emulated-apis, shellcode-runners.json#csharp-non-emulated-api, PEN-300 Chapter 6.6.2 Manual alternative:\nUse FlsAlloc, GetTickCount64, or other non-emulated APIs.\n\nCheck for debugger with IsDebuggerPresent.",
       "success_indicators": [
         "In sandbox: Returns IntPtr.Zero, exits. On real system: Returns valid memory address, continues."
       ],
@@ -90,7 +90,7 @@
           "required": true
         }
       ],
-      "notes": "Syntax: Add before payload execution Simple but less reliable than API checks. Best used as additional layer. 100MB is safe middle ground. Don't go too large or real systems fail. Time estimate: 1 minute References: docs/av-evasion/heuristic-evasion.md#memory-checks Manual alternative: Use VirtualAlloc with large size, or allocate multiple large arrays",
+      "notes": "Syntax:\nAdd before payload execution Simple but less reliable than API checks.\n\nBest used as additional layer.\n\n100MB is safe middle ground.\n\nDon't go too large or real systems fail.\n\nTime estimate:\n1 minute References:\ndocs/av-evasion/heuristic-evasion.md#memory-checks Manual alternative:\nUse VirtualAlloc with large size, or allocate multiple large arrays",
       "success_indicators": [
         "In sandbox: Allocation fails or throws exception. On real system: Allocates successfully."
       ],
@@ -122,7 +122,7 @@
           "required": true
         }
       ],
-      "notes": "Syntax: Add at start of Main() Very simple check, takes 1 line. Not foolproof but adds friction. Use 2 cores as threshold for broader compatibility. Combine with API checks. Time estimate: 30 seconds References: docs/av-evasion/heuristic-evasion.md#environment-checks Manual alternative: Check RAM size, disk size, screen resolution, or installed programs",
+      "notes": "Syntax:\nAdd at start of Main() Very simple check, takes 1 line.\n\nNot foolproof but adds friction.\n\nUse 2 cores as threshold for broader compatibility.\n\nCombine with API checks.\n\nTime estimate:\n30 seconds References:\ndocs/av-evasion/heuristic-evasion.md#environment-checks Manual alternative:\nCheck RAM size, disk size, screen resolution, or installed programs",
       "success_indicators": [
         "In sandbox: Low core count, exits. On real system: Sufficient cores, continues."
       ],
@@ -148,7 +148,7 @@
       ],
       "command": "using System;\n\nstring username = Environment.UserName.ToLower();\nstring hostname = Environment.MachineName.ToLower();\n\nstring[] suspiciousNames = { \"sandbox\", \"malware\", \"virus\", \"analysis\", \"sample\", \"test\" };\n\nforeach(string name in suspiciousNames) {\n    if(username.Contains(name) || hostname.Contains(name)) {\n        return; // Sandbox detected\n    }\n}",
       "variables": [],
-      "notes": "Syntax: Add at start of Main() Low-hanging fruit. Easy to bypass but catches lazy sandboxes. Add common virtualization terms (vmware, vbox, qemu). Not reliable for exam but quick to add. Time estimate: 2 minutes References: docs/av-evasion/heuristic-evasion.md#environment-checks Manual alternative: Check for specific sandbox artifacts (files, registry keys, processes), or known MAC address ranges",
+      "notes": "Syntax:\nAdd at start of Main() Low-hanging fruit.\n\nEasy to bypass but catches lazy sandboxes.\n\nAdd common virtualization terms (vmware, vbox, qemu).\n\nNot reliable for exam but quick to add.\n\nTime estimate:\n2 minutes References:\ndocs/av-evasion/heuristic-evasion.md#environment-checks Manual alternative:\nCheck for specific sandbox artifacts (files, registry keys, processes), or known MAC address ranges",
       "success_indicators": [
         "In sandbox: Matches suspicious name, exits. On real system: Normal username/hostname, continues."
       ],
@@ -181,7 +181,7 @@
           "required": true
         }
       ],
-      "notes": "Syntax: Add before payload execution Clever check that's hard to fake realistically. Real systems accumulate artifacts over time. 5 files is safe threshold. Good for targeted attacks where you know environment. Time estimate: 2 minutes References: docs/av-evasion/heuristic-evasion.md#artifact-checks Manual alternative: Check browser history, cookie count, installed programs, or Windows event log size",
+      "notes": "Syntax:\nAdd before payload execution Clever check that's hard to fake realistically.\n\nReal systems accumulate artifacts over time.\n\n5 files is safe threshold.\n\nGood for targeted attacks where you know environment.\n\nTime estimate:\n2 minutes References:\ndocs/av-evasion/heuristic-evasion.md#artifact-checks Manual alternative:\nCheck browser history, cookie count, installed programs, or Windows event log size",
       "success_indicators": [
         "In sandbox: Low/zero file count, exits. On real system: Multiple recent files, continues."
       ],
@@ -214,7 +214,7 @@
           "required": true
         }
       ],
-      "notes": "Syntax: Add at start of Main() Effective against automated analysis. 10 minutes is safe threshold (most analysis completes in 5 min). Don't use values >30 min to avoid false positives on legitimate reboots. Time estimate: 1 minute References: docs/av-evasion/heuristic-evasion.md#uptime-checks Manual alternative: Check last boot time via WMI, or check process start times for long-running system processes",
+      "notes": "Syntax:\nAdd at start of Main() Effective against automated analysis.\n\n10 minutes is safe threshold (most analysis completes in 5 min).\n\nDon't use values >30 min to avoid false positives on legitimate reboots.\n\nTime estimate:\n1 minute References:\ndocs/av-evasion/heuristic-evasion.md#uptime-checks Manual alternative:\nCheck last boot time via WMI, or check process start times for long-running system processes",
       "success_indicators": [
         "In sandbox: Low uptime, exits. On real system: Longer uptime, continues."
       ],

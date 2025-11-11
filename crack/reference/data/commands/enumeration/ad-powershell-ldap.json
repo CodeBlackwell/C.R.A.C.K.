@@ -45,7 +45,7 @@
         "Cannot find type": "PowerShell version too old. Use PowerShell 3.0+. Check version: $PSVersionTable",
         "Access is denied": "Not logged in with domain account. Verify: whoami /fqdn"
       },
-      "notes": "Uses .NET System.DirectoryServices.ActiveDirectory namespace - available in PowerShell by default without imports. Returns domain object with critical properties: PdcRoleOwner (primary DC for enumeration), DomainControllers (all DCs in domain), Forest (multi-domain environments), Name (domain DNS name). OSCP: This is exam-safe - no PowerView or special tools required, works on any domain-joined Windows machine with PowerShell.\n\nAlternative Techniques:\n- $env:userdnsdomain",
+      "notes": ".NET SYSTEM.DIRECTORYSERVICES:\nAvailable in PowerShell by default (no imports needed).\n\nCOMMAND:\n  [System.DirectoryServices.ActiveDirectory.Domain]::GetCurrentDomain()\n\nRETURNS:\n- PdcRoleOwner:\nPrimary DC for enumeration\n- DomainControllers:\nAll DCs in domain\n- Forest:\nMulti-domain environments\n- Name:\nDomain DNS name\n\nOSCP ADVANTAGE:\nNo PowerView or special tools required.\nWorks on any domain-joined Windows machine with PowerShell.\n\nALTERNATIVE:\n  $env:userdnsdomain\n\nTime:\n<5 seconds",
       "oscp_relevance": "high"
     },
     {
@@ -89,7 +89,7 @@
       "troubleshooting": {
         "Property cannot be found": "Domain object not populated. Run full command: [System.DirectoryServices.ActiveDirectory.Domain]::GetCurrentDomain() first"
       },
-      "notes": "PDC (Primary Domain Controller) holds the most authoritative and up-to-date AD data. There is only ONE PDC per domain. Querying non-PDC DCs may return stale replication data (accounts/groups not yet synced). For enumeration accuracy, always target the PDC. OSCP: Use this to build the LDAP path for DirectorySearcher queries.",
+      "notes": "WHY TARGET THE PDC:\n- Most authoritative and up-to-date AD data\n- Only ONE PDC per domain\n- Non-PDC DCs may have stale replication data\n\nCOMMAND:\n  [System.DirectoryServices.ActiveDirectory.Domain]::GetCurrentDomain().PdcRoleOwner.Name\n\nUSAGE:\nStore in variable:\n  $PDC = [System.DirectoryServices.ActiveDirectory.Domain]::GetCurrentDomain().PdcRoleOwner.Name\n\nOSCP:\nUse this to build LDAP path for DirectorySearcher queries.\n\nTime:\n<5 seconds",
       "oscp_relevance": "high"
     },
     {
@@ -129,7 +129,7 @@
       "troubleshooting": {
         "Unable to contact the server": "Not logged in to domain or DC unreachable. Verify: whoami /fqdn"
       },
-      "notes": "Distinguished Names (DN) are unique identifiers in LDAP. Format: CN=name,OU=container,DC=domain,DC=tld. Reading right-to-left: DC components define the domain (top of hierarchy), OU/CN components define location within domain. For domain 'corp.com', DN is 'DC=corp,DC=com'. This is the searchbase for LDAP queries. OSCP: Required component for building LDAP connection strings.",
+      "notes": "DISTINGUISHED NAMES (DN):\nUnique identifiers in LDAP.\n\nFORMAT:\nCN=name,OU=container,DC=domain,DC=tld\n\nREAD RIGHT-TO-LEFT:\n- DC components:\nDomain (top of hierarchy)\n- OU/CN components:\nLocation within domain\n\nEXAMPLE:\nDomain 'corp.com' → DN is 'DC=corp,DC=com'\n\nCOMMAND:\n  ([adsi]'').distinguishedName\n\nOSCP:\nRequired for building LDAP connection strings.\n\nTime:\n<5 seconds",
       "oscp_relevance": "high"
     },
     {
@@ -170,7 +170,7 @@
         "LDAP path incomplete": "Check variables populated: echo $PDC; echo $DN",
         "Query fails with invalid path": "Verify DC reachable: ping $PDC"
       },
-      "notes": "LDAP path format: LDAP://HostName/DistinguishedName. HostName = PDC for accuracy. DistinguishedName = domain DN (searchbase). This path tells DirectorySearcher WHERE to search (PDC) and WHAT to search (entire domain from root). OSCP: This is the foundation for all manual LDAP enumeration - memorize this pattern.",
+      "notes": "LDAP PATH FORMAT:\nLDAP://HostName/DistinguishedName\n\nCOMPONENTS:\n- HostName:\nPDC for accuracy\n- DistinguishedName:\nDomain DN (searchbase)\n\nTELLS DIRECTORYSEARCHER:\n- WHERE to search:\nPDC\n- WHAT to search:\nEntire domain from root\n\nCOMMAND:\n  $PDC = [System.DirectoryServices.ActiveDirectory.Domain]::GetCurrentDomain().PdcRoleOwner.Name\n  $DN = ([adsi]'').distinguishedName\n  $LDAP = \"LDAP://$PDC/$DN\"\n  $LDAP\n\nOSCP:\nFoundation for all manual LDAP enumeration.\nMemorize this pattern.\n\nTime:\n5-10 seconds",
       "oscp_relevance": "high"
     },
     {
@@ -221,7 +221,7 @@
         "No results": "LDAP filter may be wrong. Test without filter: $dirsearcher.filter=\"objectClass=user\"; $dirsearcher.FindAll()",
         "Too much output": "Filter specific attributes: $obj.Properties | select samaccountname,description"
       },
-      "notes": "samAccountType values: 805306368 (users), 805306369 (computers), 268435456 (groups). LDAP filter syntax: (attribute=value) for equality, (attribute=*value*) for wildcards, (&(filter1)(filter2)) for AND, (|(filter1)(filter2)) for OR. Output contains ALL user attributes - pipe to select for clean output. OSCP: This is PowerView-free enumeration - works in restricted environments where imports are blocked.",
+      "notes": "SAMACCOUNTTYPE VALUES:\n- 805306368:\nUsers\n- 805306369:\nComputers  \n- 268435456:\nGroups\n\nLDAP FILTER SYNTAX:\n- (attribute=value):\nEquality\n- (attribute=*value*):\nWildcards\n- (&(filter1)(filter2)):\nAND\n- (|(filter1)(filter2)):\nOR\n\nOUTPUT:\nContains ALL user attributes.\nPipe to select for clean output:\n  | ForEach-Object {$_.Properties.samaccountname}\n\nOSCP:\nPowerView-free enumeration.\nWorks in restricted environments where imports blocked.\n\nTime:\n10-30 seconds",
       "oscp_relevance": "high"
     },
     {
@@ -271,7 +271,7 @@
         "Nested groups not showing users": "Member attribute shows distinguished names. CN=user is a user, CN=group,CN=Users is a nested group. Query nested group separately.",
         "Output format messy": "Use select-object: $group.properties.member | Format-List"
       },
-      "notes": "Group member attribute contains distinguished names (DNs). Format: 'CN=username,CN=Users,DC=corp,DC=com' for users, 'CN=groupname,CN=Users,DC=corp,DC=com' for nested groups. Nested groups are common - if member DN contains 'CN=Users' or 'OU=', it's likely a group, not a user. Enumerate recursively to find all users. OSCP: Look for groups with 'Admin', 'IT', 'Service' in CN - often have elevated privileges.",
+      "notes": "GROUP MEMBER ATTRIBUTE:\nContains distinguished names (DNs).\n\nFORMAT:\n- Users:\nCN=username,CN=Users,DC=corp,DC=com\n- Nested groups:\nCN=groupname,CN=Users,DC=corp,DC=com\n\nNESTED GROUP DETECTION:\nIf member DN contains 'CN=Users' or 'OU=' → likely a group.\nEnumerate recursively to find all users.\n\nOSCP TARGETS:\nLook for groups with 'Admin', 'IT', 'Service' in CN.\nOften have elevated privileges.\n\nTime:\n10-30 seconds",
       "oscp_relevance": "high"
     },
     {
@@ -323,7 +323,7 @@
         "Operating system field empty": "Some computer objects don't have OS populated. Check other attributes: $computer.properties",
         "DC not showing": "Use userAccountControl filter for DCs. Flag 8192 = Domain Controller."
       },
-      "notes": "Computer objects reveal network topology without port scanning. operatingsystem attribute identifies vulnerable legacy systems (Windows 7, Server 2008) for targeting. operatingsystemversion provides exact build number. lastLogon shows active vs dormant computers. OSCP: Focus on legacy OS versions and servers - higher chance of unpatched vulnerabilities.",
+      "notes": "COMPUTER OBJECTS:\nReveal network topology without port scanning.\n\nKEY ATTRIBUTES:\n- operatingsystem:\nIdentify legacy systems (Windows 7, Server 2008)\n- operatingsystemversion:\nExact build number\n- lastLogon:\nActive vs dormant computers\n- dnshostname:\nFQDN for connections\n\nOSCP TARGETS:\nFocus on legacy OS versions and servers.\nHigher chance of unpatched vulnerabilities.\n\nTime:\n10-30 seconds",
       "oscp_relevance": "high"
     },
     {
@@ -372,7 +372,7 @@
         "LDAP query syntax error": "Test filter manually first with DirectorySearcher",
         "No results": "Verify LDAP filter syntax. Common filters: (objectClass=user), (objectCategory=group), (samAccountType=805306368)"
       },
-      "notes": "This function encapsulates all previous LDAP enumeration steps into a reusable tool. Usage examples: LDAPSearch \"(samAccountType=805306368)\" for users, LDAPSearch \"(objectCategory=group)\" for groups, LDAPSearch \"(&(objectCategory=user)(servicePrincipalName=*))\" for Kerberoastable accounts. OSCP: Save this function to a file and import it at the start of AD enumeration - eliminates repetitive typing and reduces errors. This is PowerView-free, exam-safe enumeration.",
+      "notes": "REUSABLE LDAP FUNCTION:\nEncapsulates all previous LDAP steps.\n\nUSAGE EXAMPLES:\n- Users:\nLDAPSearch \"(samAccountType=805306368)\"\n- Groups:\nLDAPSearch \"(objectCategory=group)\"\n- Kerberoastable:\nLDAPSearch \"(&(objectCategory=user)(servicePrincipalName=*))\"\n\nOSCP WORKFLOW:\n1.\n\nSave function to file:\nfunction | Out-File LDAPSearch.ps1\n\n2.\n\nImport at start:\nImport-Module .\\LDAPSearch.ps1\n\n3.\n\nUse throughout enumeration\n\nADVANTAGE:\nPowerView-free, exam-safe enumeration.\nEliminates repetitive typing.\n\nTime:\nFunction creation 10 seconds, usage <5 seconds",
       "oscp_relevance": "high"
     },
     {
@@ -416,7 +416,7 @@
         "Function not defined": "Create LDAPSearch function first: ps-ldapsearch-function",
         "Returns computer accounts": "Filter computers: (&(objectClass=user)(!(objectClass=computer)))"
       },
-      "notes": "Requires LDAPSearch function defined first. Returns user AND computer objects (computers inherit from user class in AD schema). Filter out computers with LDAP filter or PowerShell: | ? {$_.Properties.samaccountname -notmatch '\\$$'}",
+      "notes": "REQUIRES:\nLDAPSearch function defined first.\n\nRETURNS:\nUser AND computer objects (computers inherit from user class).\n\nFILTER COMPUTERS:\n- LDAP:\n(&(objectClass=user)(!(objectClass=computer)))\n- PowerShell:\n| ? {$_.Properties.samaccountname -notmatch '\\$$'}\n\nTime:\n<10 seconds",
       "oscp_relevance": "high"
     },
     {
@@ -454,7 +454,7 @@
         "ps-ldapsearch-function"
       ],
       "troubleshooting": {},
-      "notes": "Returns all domain-joined computers with properties like OS version, last logon, DNS hostname.",
+      "notes": "QUERY ALL COMPUTERS:\nRETURNS:\n- DNS hostname\n- OS version\n- Last logon\n- Operating system details\n\nUSAGE:\n  LDAPSearch -LDAPQuery \"(objectClass=computer)\" | select -ExpandProperty Properties | select dnshostname,operatingsystem\n\nTime:\n<10 seconds",
       "oscp_relevance": "medium"
     },
     {
@@ -492,7 +492,7 @@
         "ps-ldapsearch-function"
       ],
       "troubleshooting": {},
-      "notes": "Returns all groups. Focus on privileged groups: Domain Admins, Enterprise Admins, Administrators.",
+      "notes": "QUERY ALL GROUPS:\nFOCUS ON:\n- Domain Admins\n- Enterprise Admins\n- Administrators\n- Custom admin groups\n\nGET MEMBERS:\n  $group.Properties.member\n\nTime:\n<10 seconds",
       "oscp_relevance": "medium"
     },
     {
@@ -534,7 +534,7 @@
       "troubleshooting": {
         "No results": "No SPNs registered. Try PowerView: Get-NetUser -SPN"
       },
-      "notes": "Critical for Kerberoasting. User accounts with SPNs allow requesting TGS tickets encrypted with service account password hash.",
+      "notes": "KERBEROASTING TARGETS:\nQUERY:\n  LDAPSearch -LDAPQuery \"(&(objectClass=user)(servicePrincipalName=*))\"\n\nWHY THIS MATTERS:\nUser accounts with SPNs → can request TGS tickets.\nTGS encrypted with service account password hash.\nCrack offline, no account lockout.\n\nNEXT STEPS:\n- Request TGS tickets\n- Extract with Rubeus/Mimikatz\n- Crack with hashcat\n\nTime:\n<10 seconds",
       "oscp_relevance": "high"
     },
     {
@@ -570,7 +570,7 @@
         "ps-ldapsearch-function"
       ],
       "troubleshooting": {},
-      "notes": "adminCount=1 indicates account is/was in privileged group. AdminSDHolder process sets this flag on Domain Admins, Enterprise Admins, and other high-privilege groups.",
+      "notes": "ADMINCOUNT ATTRIBUTE:\nQUERY:\n  LDAPSearch -LDAPQuery \"(adminCount=1)\"\n\nWHAT IT MEANS:\nAccount is/was in privileged group.\n\nADMINSDHOLDER PROCESS:\nSets this flag on:\n- Domain Admins\n- Enterprise Admins  \n- Account Operators\n- Backup Operators\n- Server Operators\n- Other high-privilege groups\n\nOSCP:\nIdentify privileged accounts for targeting.\n\nTime:\n<10 seconds",
       "oscp_relevance": "high"
     }
   ]

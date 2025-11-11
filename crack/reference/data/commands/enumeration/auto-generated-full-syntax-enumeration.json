@@ -30,7 +30,7 @@
         }
       ],
       "alternatives": [],
-      "notes": "Windows-style UNC path. Requires authentication to target. Use 'dir' for more details. Common shares: C$, ADMIN$, IPC$. From Linux: smbclient //target/share",
+      "notes": "Windows-style UNC path.\n\nRequires authentication to target.\n\nUse 'dir' for more details.\n\nCommon shares:\nC$, ADMIN$, IPC$.\n\nFrom Linux:\nsmbclient //target/share",
       "oscp_relevance": "high",
       "tags": [
         "ENUMERATION",
@@ -57,7 +57,7 @@
       "alternatives": [
         "get-gpppassword"
       ],
-      "notes": "Group Policy Preferences vulnerability (MS14-025). AES key published by Microsoft. Python script: gpp-decrypt. PowerShell: Get-GPPPassword. cPassword found in SYSVOL XML files.",
+      "notes": "Group Policy Preferences vulnerability (MS14-025).\n\nAES key published by Microsoft.\n\nPython script:\ngpp-decrypt.\n\nPowerShell:\nGet-GPPPassword.\n\ncPassword found in SYSVOL XML files.",
       "oscp_relevance": "high",
       "tags": [
         "ENUMERATION",
@@ -74,7 +74,7 @@
       "command": "$env:USERDNSDOMAIN | ForEach-Object { 'DC=' + ($_ -replace '\\.',',DC=') }",
       "description": "Convert current domain FQDN to LDAP Distinguished Name format",
       "variables": [],
-      "notes": "PowerShell one-liner to convert domain.local to DC=domain,DC=local format. Useful for constructing LDAP queries. Example: corp.local becomes DC=corp,DC=local. Required for many AD LDAP operations.",
+      "notes": "PowerShell one-liner to convert domain.local to DC=domain,DC=local format.\n\nUseful for constructing LDAP queries.\n\nExample:\ncorp.local becomes DC=corp,DC=local.\n\nRequired for many AD LDAP operations.",
       "oscp_relevance": "medium",
       "tags": [
         "ENUMERATION",
@@ -108,7 +108,7 @@
         "-m 22921": "Hash mode for Kerberos 5 AS-REP AES256-CBC (specific cipher mode)",
         "-a 0": "Attack mode 0 (straight/dictionary attack)"
       },
-      "notes": "Mode 22921 is for AES256-CBC specifically, NOT aes-256-ctr. For AS-REP roasting. Different from -m 19700 (Kerberos TGS-REP). Obtained via Rubeus, GetNPUsers.py, or similar tools.",
+      "notes": "Mode 22921 is for AES256-CBC specifically, NOT aes-256-ctr.\n\nFor AS-REP roasting.\n\nDifferent from -m 19700 (Kerberos TGS-REP).\n\nObtained via Rubeus, GetNPUsers.py, or similar tools.",
       "oscp_relevance": "medium",
       "tags": [
         "ENUMERATION",
@@ -136,7 +136,7 @@
       "alternatives": [
         "john-list"
       ],
-      "notes": "Bash one-liner for educational purposes or when hashcat/john unavailable. Extremely slow compared to dedicated tools. Change md5sum to sha1sum, sha256sum, etc. for other algorithms. Not recommended for production use.",
+      "notes": "Bash one-liner for educational purposes or when hashcat/john unavailable.\n\nExtremely slow compared to dedicated tools.\n\nChange md5sum to sha1sum, sha256sum, etc.\n\nfor other algorithms.\n\nNot recommended for production use.",
       "oscp_relevance": "low",
       "tags": [
         "ENUMERATION",

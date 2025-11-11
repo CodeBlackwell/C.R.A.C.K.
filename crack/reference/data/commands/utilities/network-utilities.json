@@ -6,7 +6,12 @@
       "category": "recon",
       "command": "ping -c <COUNT> <TARGET>",
       "description": "Test network connectivity using ICMP echo requests",
-      "tags": ["utility", "network", "recon", "OSCP:HIGH"],
+      "tags": [
+        "utility",
+        "network",
+        "recon",
+        "OSCP:HIGH"
+      ],
       "variables": [
         {
           "name": "<COUNT>",
@@ -26,8 +31,14 @@
         "-i": "Interval between packets in seconds",
         "-W": "Timeout in seconds"
       },
-      "success_indicators": ["bytes from", "time="],
-      "failure_indicators": ["100% packet loss", "Destination Host Unreachable"],
+      "success_indicators": [
+        "bytes from",
+        "time="
+      ],
+      "failure_indicators": [
+        "100% packet loss",
+        "Destination Host Unreachable"
+      ],
       "oscp_relevance": "high",
       "notes": "First test for connectivity - note Windows uses -n instead of -c"
     },
@@ -37,7 +48,12 @@
       "category": "recon",
       "command": "traceroute <TARGET>",
       "description": "Trace network path to target showing all hops",
-      "tags": ["utility", "network", "recon", "OSCP:MEDIUM"],
+      "tags": [
+        "utility",
+        "network",
+        "recon",
+        "OSCP:MEDIUM"
+      ],
       "variables": [
         {
           "name": "<TARGET>",
@@ -51,7 +67,9 @@
         "-m": "Maximum TTL hops",
         "-p": "Base port number"
       },
-      "alternatives": ["tracert-windows"],
+      "alternatives": [
+        "tracert-windows"
+      ],
       "oscp_relevance": "medium",
       "notes": "Useful for understanding network topology and firewall positions"
     },
@@ -61,7 +79,13 @@
       "category": "recon",
       "command": "tracert <TARGET>",
       "description": "Windows traceroute implementation",
-      "tags": ["utility", "network", "windows", "recon", "OSCP:MEDIUM"],
+      "tags": [
+        "utility",
+        "network",
+        "windows",
+        "recon",
+        "OSCP:MEDIUM"
+      ],
       "variables": [
         {
           "name": "<TARGET>",
@@ -74,7 +98,9 @@
         "-d": "No DNS resolution",
         "-h": "Maximum hops"
       },
-      "alternatives": ["traceroute-host"],
+      "alternatives": [
+        "traceroute-host"
+      ],
       "oscp_relevance": "medium"
     },
     {
@@ -83,7 +109,13 @@
       "category": "recon",
       "command": "dig <DOMAIN> <TYPE>",
       "description": "Perform DNS query using dig",
-      "tags": ["utility", "network", "dns", "recon", "OSCP:HIGH"],
+      "tags": [
+        "utility",
+        "network",
+        "dns",
+        "recon",
+        "OSCP:HIGH"
+      ],
       "variables": [
         {
           "name": "<DOMAIN>",
@@ -104,7 +136,10 @@
         "@<server>": "Query specific DNS server",
         "axfr": "Zone transfer attempt"
       },
-      "alternatives": ["nslookup-dns", "host-dns"],
+      "alternatives": [
+        "nslookup-dns",
+        "host-dns"
+      ],
       "oscp_relevance": "high",
       "notes": "Essential for DNS enumeration and zone transfer attempts"
     },
@@ -114,7 +149,13 @@
       "category": "recon",
       "command": "nslookup <DOMAIN>",
       "description": "Query DNS records using nslookup",
-      "tags": ["utility", "network", "dns", "recon", "OSCP:HIGH"],
+      "tags": [
+        "utility",
+        "network",
+        "dns",
+        "recon",
+        "OSCP:HIGH"
+      ],
       "variables": [
         {
           "name": "<DOMAIN>",
@@ -123,7 +164,10 @@
           "required": true
         }
       ],
-      "alternatives": ["dig-dns", "host-dns"],
+      "alternatives": [
+        "dig-dns",
+        "host-dns"
+      ],
       "oscp_relevance": "high",
       "notes": "Cross-platform DNS tool - works on Windows and Linux"
     },
@@ -133,7 +177,13 @@
       "category": "recon",
       "command": "host <DOMAIN>",
       "description": "Simple DNS lookup utility",
-      "tags": ["utility", "network", "dns", "recon", "OSCP:HIGH"],
+      "tags": [
+        "utility",
+        "network",
+        "dns",
+        "recon",
+        "OSCP:HIGH"
+      ],
       "variables": [
         {
           "name": "<DOMAIN>",
@@ -146,7 +196,10 @@
         "-t": "Query specific record type",
         "-a": "All records (equivalent to ANY)"
       },
-      "alternatives": ["dig-dns", "nslookup-dns"],
+      "alternatives": [
+        "dig-dns",
+        "nslookup-dns"
+      ],
       "oscp_relevance": "high",
       "notes": "Simpler than dig - good for quick lookups"
     },
@@ -156,7 +209,12 @@
       "category": "recon",
       "command": "whois <DOMAIN>",
       "description": "Query WHOIS information for domain or IP",
-      "tags": ["utility", "network", "recon", "OSCP:MEDIUM"],
+      "tags": [
+        "utility",
+        "network",
+        "recon",
+        "OSCP:MEDIUM"
+      ],
       "variables": [
         {
           "name": "<DOMAIN>",
@@ -174,7 +232,12 @@
       "category": "web",
       "command": "curl <URL>",
       "description": "Transfer data from or to a server using various protocols",
-      "tags": ["utility", "network", "web", "OSCP:HIGH"],
+      "tags": [
+        "utility",
+        "network",
+        "web",
+        "OSCP:HIGH"
+      ],
       "variables": [
         {
           "name": "<URL>",
@@ -196,7 +259,9 @@
         "-k": "Ignore SSL certificate errors",
         "-L": "Follow redirects"
       },
-      "alternatives": ["wget-url"],
+      "alternatives": [
+        "wget-url"
+      ],
       "oscp_relevance": "high",
       "notes": "Essential for web enumeration, API testing, and file downloads"
     },
@@ -206,7 +271,12 @@
       "category": "web",
       "command": "wget <URL>",
       "description": "Download files from web servers",
-      "tags": ["utility", "network", "web", "OSCP:HIGH"],
+      "tags": [
+        "utility",
+        "network",
+        "web",
+        "OSCP:HIGH"
+      ],
       "variables": [
         {
           "name": "<URL>",
@@ -224,7 +294,9 @@
         "-q": "Quiet mode",
         "-P": "Save to specific directory"
       },
-      "alternatives": ["curl-url"],
+      "alternatives": [
+        "curl-url"
+      ],
       "oscp_relevance": "high",
       "notes": "Simpler than curl for basic downloads - great for transferring files to targets"
     },
@@ -234,7 +306,12 @@
       "category": "exploitation",
       "command": "nc -lvnp <PORT>",
       "description": "Start netcat listener for reverse shells",
-      "tags": ["utility", "network", "listener", "OSCP:HIGH"],
+      "tags": [
+        "utility",
+        "network",
+        "listener",
+        "OSCP:HIGH"
+      ],
       "variables": [
         {
           "name": "<PORT>",
@@ -258,7 +335,11 @@
       "category": "exploitation",
       "command": "nc <TARGET> <PORT>",
       "description": "Connect to remote host using netcat",
-      "tags": ["utility", "network", "OSCP:HIGH"],
+      "tags": [
+        "utility",
+        "network",
+        "OSCP:HIGH"
+      ],
       "variables": [
         {
           "name": "<TARGET>",
@@ -287,7 +368,12 @@
       "category": "exploitation",
       "command": "ssh <USER>@<TARGET>",
       "description": "Connect to remote host via SSH",
-      "tags": ["utility", "network", "ssh", "OSCP:HIGH"],
+      "tags": [
+        "utility",
+        "network",
+        "ssh",
+        "OSCP:HIGH"
+      ],
       "variables": [
         {
           "name": "<USER>",
@@ -321,7 +407,12 @@
       "category": "file-transfer",
       "command": "scp <SOURCE> <USER>@<TARGET>:<DEST>",
       "description": "Securely copy files between hosts using SSH",
-      "tags": ["utility", "network", "file-transfer", "OSCP:HIGH"],
+      "tags": [
+        "utility",
+        "network",
+        "file-transfer",
+        "OSCP:HIGH"
+      ],
       "variables": [
         {
           "name": "<SOURCE>",
@@ -353,7 +444,9 @@
         "-i": "Specify private key file",
         "-r": "Recursive copy for directories"
       },
-      "alternatives": ["rsync-files"],
+      "alternatives": [
+        "rsync-files"
+      ],
       "oscp_relevance": "high",
       "notes": "Fast file transfer when SSH access is available"
     },
@@ -363,7 +456,12 @@
       "category": "file-transfer",
       "command": "rsync -avz <SOURCE> <USER>@<TARGET>:<DEST>",
       "description": "Synchronize files between systems efficiently",
-      "tags": ["utility", "network", "file-transfer", "OSCP:MEDIUM"],
+      "tags": [
+        "utility",
+        "network",
+        "file-transfer",
+        "OSCP:MEDIUM"
+      ],
       "variables": [
         {
           "name": "<SOURCE>",
@@ -397,7 +495,9 @@
         "-P": "Show progress and keep partial transfers",
         "--delete": "Delete files in destination not in source"
       },
-      "alternatives": ["scp-file"],
+      "alternatives": [
+        "scp-file"
+      ],
       "oscp_relevance": "medium",
       "notes": "More efficient than scp for large transfers or syncing directories"
     },
@@ -407,7 +507,12 @@
       "category": "enumeration",
       "command": "telnet <TARGET> <PORT>",
       "description": "Connect to remote host using telnet protocol",
-      "tags": ["utility", "network", "enumeration", "OSCP:MEDIUM"],
+      "tags": [
+        "utility",
+        "network",
+        "enumeration",
+        "OSCP:MEDIUM"
+      ],
       "variables": [
         {
           "name": "<TARGET>",
@@ -422,7 +527,9 @@
           "required": true
         }
       ],
-      "alternatives": ["nc-connect"],
+      "alternatives": [
+        "nc-connect"
+      ],
       "oscp_relevance": "medium",
       "notes": "Useful for banner grabbing and manual service interaction"
     },
@@ -432,7 +539,12 @@
       "category": "enumeration",
       "command": "ftp <TARGET>",
       "description": "Connect to FTP server",
-      "tags": ["utility", "network", "ftp", "OSCP:MEDIUM"],
+      "tags": [
+        "utility",
+        "network",
+        "ftp",
+        "OSCP:MEDIUM"
+      ],
       "variables": [
         {
           "name": "<TARGET>",
@@ -442,7 +554,7 @@
         }
       ],
       "oscp_relevance": "medium",
-      "notes": "Try anonymous login (user: anonymous, pass: anonymous@example.com)"
+      "notes": "Try anonymous login (user:\nanonymous, pass:\nanonymous@example.com)"
     }
   ]
 }

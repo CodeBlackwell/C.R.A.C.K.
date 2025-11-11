@@ -76,7 +76,7 @@
         "waf_blocking": "Try stealthier scan: remove aggressive options, add --user-agent 'Mozilla/5.0' OR use --random-user-agent",
         "403_forbidden": "WordPress may be blocking scanners. Try manual enumeration: wordpress-manual-version OR use different user agent"
       },
-      "notes": "WordPress is extremely common in OSCP labs (appears in 30%+ of machines). Always enumerate users first (u), then plugins (ap), then themes (at). API token enhances vulnerability detection but not required for basic enumeration. Time estimate: 5-15 minutes depending on plugin/theme count. Document all findings in enumeration.md. Free API token: https://wpscan.com/register (25 API calls/day sufficient for exam). Without API token, you still get plugin/theme/user enumeration but miss known vulnerabilities.",
+      "notes": "WordPress is extremely common in OSCP labs (appears in 30%+ of machines).\n\nAlways enumerate users first (u), then plugins (ap), then themes (at).\n\nAPI token enhances vulnerability detection but not required for basic enumeration.\n\nTime estimate:\n5-15 minutes depending on plugin/theme count.\n\nDocument all findings in enumeration.md.\n\nFree API token:\nhttps://wpscan.com/register (25 API calls/day sufficient for exam).\n\nWithout API token, you still get plugin/theme/user enumeration but miss known vulnerabilities.",
       "oscp_relevance": "high"
     },
     {
@@ -151,7 +151,7 @@
         "timeout": "Reduce scope: --enumerate ap (plugins only) OR --enumerate at (themes only)",
         "false_positives": "Aggressive mode may report inactive/deleted plugins. Verify manually: curl -I <URL>/wp-content/plugins/<PLUGIN>/"
       },
-      "notes": "Aggressive detection is more thorough but generates more logs (easier to detect). Use when passive enumeration (wpscan-enumerate-all) fails to find plugins/themes. Time estimate: 10-20 minutes. Passive mode: checks readme.txt and meta tags only (stealthy). Aggressive mode: attempts directory listing, checks multiple version files (noisy but complete). For OSCP, start passive then go aggressive if needed.",
+      "notes": "Aggressive detection is more thorough but generates more logs (easier to detect).\n\nUse when passive enumeration (wpscan-enumerate-all) fails to find plugins/themes.\n\nTime estimate:\n10-20 minutes.\n\nPassive mode:\nchecks readme.txt and meta tags only (stealthy).\n\nAggressive mode:\nattempts directory listing, checks multiple version files (noisy but complete).\n\nFor OSCP, start passive then go aggressive if needed.",
       "oscp_relevance": "high"
     },
     {
@@ -239,7 +239,7 @@
         "403_forbidden": "WAF or security plugin blocking. Try: 1) Reduce threads --max-threads 1, 2) Add delays --throttle 5000, 3) Change user-agent --random-user-agent",
         "connection_timeout": "Increase timeout: --request-timeout 60 --connect-timeout 60"
       },
-      "notes": "WordPress password attacks are common in OSCP (credentials often lead to RCE via plugin/theme upload). Time estimate: 15-60 minutes depending on wordlist size. Always enumerate users first (wpscan-enumerate-all). Common usernames: admin, administrator, editor, author, john. Start with small wordlist (1000-5000 passwords), expand if needed. Rate limiting: most WordPress sites allow 5-10 requests/second before blocking. Use --throttle to avoid lockout. Success = admin access = RCE via plugin/theme modification.",
+      "notes": "WordPress password attacks are common in OSCP (credentials often lead to RCE via plugin/theme upload).\n\nTime estimate:\n15-60 minutes depending on wordlist size.\n\nAlways enumerate users first (wpscan-enumerate-all).\n\nCommon usernames:\nadmin, administrator, editor, author, john.\n\nStart with small wordlist (1000-5000 passwords), expand if needed.\n\nRate limiting:\nmost WordPress sites allow 5-10 requests/second before blocking.\n\nUse --throttle to avoid lockout.\n\nSuccess = admin access = RCE via plugin/theme modification.",
       "oscp_relevance": "high"
     },
     {
@@ -304,7 +304,7 @@
         "parse_error": "Check XML syntax: ensure <methodCall> structure is correct. Use -H 'Content-Type: application/xml' if needed",
         "ssl_error": "Self-signed cert: add -k flag to curl command"
       },
-      "notes": "XML-RPC is a WordPress API endpoint (often enabled by default in older versions). Security implications: 1) Brute force: wp.getUsersBlogs method allows credential testing without lockout, 2) Pingback DDoS: pingback.ping can be abused for DDoS amplification, 3) system.multicall: send hundreds of login attempts in ONE request (bypasses rate limiting). Time estimate: 2-5 minutes. Pingback exploitation: attacker can make WordPress server ping arbitrary URLs (SSRF). For OSCP: check if XML-RPC is enabled, enumerate methods, test for brute force capability. Modern WordPress disables by default but legacy sites are vulnerable.",
+      "notes": "XML-RPC is a WordPress API endpoint (often enabled by default in older versions).\n\nSecurity implications:\n1) Brute force:\nwp.getUsersBlogs method allows credential testing without lockout, 2) Pingback DDoS:\npingback.ping can be abused for DDoS amplification, 3) system.multicall:\nsend hundreds of login attempts in ONE request (bypasses rate limiting).\n\nTime estimate:\n2-5 minutes.\n\nPingback exploitation:\nattacker can make WordPress server ping arbitrary URLs (SSRF).\n\nFor OSCP:\ncheck if XML-RPC is enabled, enumerate methods, test for brute force capability.\n\nModern WordPress disables by default but legacy sites are vulnerable.",
       "oscp_relevance": "high"
     },
     {
@@ -369,7 +369,7 @@
         "all_methods_fail": "Version fully hidden. Use behavioral fingerprinting: searchsploit wordpress <feature>, wpscan --url <URL> --enumerate vp (vulnerable plugins reveal version range)",
         "waf_blocking": "Use different user agent: curl -s -A 'Mozilla/5.0' <URL> | grep WordPress"
       },
-      "notes": "Manual version detection is CRITICAL when wpscan is blocked/unavailable (common in OSCP due to WAF/IPS). Time estimate: 1-2 minutes. Version detection methods (in order): 1) Meta generator tag (this command), 2) readme.html, 3) RSS feed generator, 4) JavaScript/CSS file paths, 5) Theme/plugin versions (indirect). Why manual matters: wpscan may be blocked by WAF but curl often bypasses. WordPress versions have known exploits: 4.x = RCE vulns, 5.0-5.2 = image upload RCE, 5.x = XSS. Always check version BEFORE exploitation attempts. Document in enumeration.md.",
+      "notes": "Manual version detection is CRITICAL when wpscan is blocked/unavailable (common in OSCP due to WAF/IPS).\n\nTime estimate:\n1-2 minutes.\n\nVersion detection methods (in order):\n1) Meta generator tag (this command), 2) readme.html, 3) RSS feed generator, 4) JavaScript/CSS file paths, 5) Theme/plugin versions (indirect).\n\nWhy manual matters:\nwpscan may be blocked by WAF but curl often bypasses.\n\nWordPress versions have known exploits:\n4.x = RCE vulns, 5.0-5.2 = image upload RCE, 5.x = XSS.\n\nAlways check version BEFORE exploitation attempts.\n\nDocument in enumeration.md.",
       "oscp_relevance": "high"
     }
   ]
