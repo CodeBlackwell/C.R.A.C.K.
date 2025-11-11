@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Set, TYPE_CHECKING
 
 if TYPE_CHECKING:  # pragma: no cover - imported for type checking only
-    from reference.core.registry import Command, HybridCommandRegistry
+    from crack.reference.core.registry import Command, HybridCommandRegistry
 
 
 class CommandResolver:
@@ -54,7 +54,7 @@ class CommandResolver:
         """Instantiate a command registry if none is currently available."""
 
         if self._registry is None:
-            from reference.core.registry import HybridCommandRegistry
+            from crack.reference.core.registry import HybridCommandRegistry
 
             self._registry = HybridCommandRegistry()
             self._commands = self._registry.commands  # type: ignore[assignment]

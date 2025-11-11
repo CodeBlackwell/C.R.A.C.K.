@@ -42,7 +42,7 @@ if command -v crack &> /dev/null; then
     echo -e "${GREEN}  ✓ crack command found${NC}"
 
     # Test core module imports
-    if python3 -c "from crack.track import cli; from reference import cli" 2>/dev/null; then
+    if python3 -c "from crack.track import cli; from crack.reference import HybridCommandRegistry" 2>/dev/null; then
         echo -e "${GREEN}  ✓ Core modules working${NC}"
     else
         echo -e "${RED}  ✗ Module import failed${NC}"

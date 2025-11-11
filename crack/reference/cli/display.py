@@ -5,8 +5,8 @@ CLI display handler for command output formatting
 import json
 from typing import List, Dict, Any
 
-from reference.cli.base import BaseCLIHandler
-from reference.core.registry import Command
+from crack.reference.cli.base import BaseCLIHandler
+from crack.reference.core.registry import Command
 
 
 class DisplayCLI(BaseCLIHandler):

@@ -6,7 +6,7 @@ Please update imports to: from crack.themes import Colors, ReferenceTheme
 
 Migration:
     # Old (deprecated):
-    from reference.core.colors import Colors, ReferenceTheme
+    from crack.reference.core.colors import Colors, ReferenceTheme
 
     # New (recommended):
     from crack.themes import Colors, ReferenceTheme

@@ -9,7 +9,7 @@ Date: 2025-11-08
 File: reference/core/neo4j_adapter.py (lines 798-1085)
 """
 
-from reference.core.neo4j_adapter import Neo4jCommandRegistryAdapter
+from crack.reference.core.neo4j_adapter import Neo4jCommandRegistryAdapter
 
 
 def example_1_find_alternatives():

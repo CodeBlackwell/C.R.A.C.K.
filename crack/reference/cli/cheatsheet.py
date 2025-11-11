@@ -3,9 +3,9 @@ CLI handler for cheatsheet display and interaction
 """
 
 from typing import Optional, List
-from reference.cli.base import BaseCLIHandler
-from reference.core.cheatsheet_registry import Cheatsheet, CheatsheetRegistry
-from reference.core.registry import Command
+from crack.reference.cli.base import BaseCLIHandler
+from crack.reference.core.cheatsheet_registry import Cheatsheet, CheatsheetRegistry
+from crack.reference.core.registry import Command
 
 
 class CheatsheetCLI(BaseCLIHandler):
@@ -604,7 +604,7 @@ class CheatsheetCLI(BaseCLIHandler):
             List of wrapped lines
         """
         # Strip ANSI codes for length calculation
-        from reference.core.colors import Colors
+        from crack.reference.core.colors import Colors
         plain_text = Colors.strip(text)
 
         # If line fits, return as-is

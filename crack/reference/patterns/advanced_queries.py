@@ -5,7 +5,7 @@ Pre-built implementations of the 10 patterns from 06-ADVANCED-QUERIES.md
 using the minimalist graph primitives.
 
 Usage:
-    from reference.patterns.advanced_queries import GraphQueryPatterns
+    from crack.reference.patterns.advanced_queries import GraphQueryPatterns
 
     patterns = GraphQueryPatterns(adapter)
     alternatives = patterns.multi_hop_alternatives('gobuster-dir', depth=3)
@@ -378,7 +378,7 @@ def create_pattern_helper(adapter) -> GraphQueryPatterns:
     Factory function to create pattern helper.
 
     Usage:
-        from reference.patterns.advanced_queries import create_pattern_helper
+        from crack.reference.patterns.advanced_queries import create_pattern_helper
 
         adapter = Neo4jCommandRegistryAdapter(...)
         patterns = create_pattern_helper(adapter)

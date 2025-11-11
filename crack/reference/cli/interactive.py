@@ -5,8 +5,8 @@ CLI interactive handler for command filling and execution
 import subprocess
 from typing import List, Optional
 
-from reference.cli.base import BaseCLIHandler
-from reference.core.registry import Command
+from crack.reference.cli.base import BaseCLIHandler
+from crack.reference.core.registry import Command
 
 
 class InteractiveCLI(BaseCLIHandler):
