@@ -27,7 +27,7 @@ from .variables.context import VariableContext
 from .filtering.selector import FindingSelector
 from crack.reference.core.registry import HybridCommandRegistry
 from crack.config import ConfigManager
-from crack.reference.core.colors import ReferenceTheme
+from crack.themes import ReferenceTheme
 
 
 class ChainInteractive:

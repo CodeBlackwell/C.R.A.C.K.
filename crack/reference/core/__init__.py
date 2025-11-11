@@ -7,8 +7,12 @@ from .neo4j_adapter import Neo4jCommandRegistryAdapter
 from .parser import MarkdownCommandParser
 from .placeholder import PlaceholderEngine
 from .validator import CommandValidator
-from .colors import ReferenceTheme, Colors, get_theme, disable_colors
+from crack.themes import ReferenceTheme, Colors, disable_colors
+from crack.themes.colors import get_theme as get_reference_theme
 from .cheatsheet_registry import CheatsheetRegistry, Cheatsheet, CheatsheetScenario, CheatsheetSection, EducationalHeader
+
+# Alias for backward compatibility
+get_theme = get_reference_theme
 
 # Shared infrastructure (DRY refactoring)
 from .command_filler import CommandFiller

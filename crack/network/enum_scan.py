@@ -22,7 +22,7 @@ try:
     from crack.network.port_scanner import PortScanner
     from crack.network.parallel_enumerator import ParallelEnumerator
     from crack.exploit.cve_lookup import CVELookup
-    from crack.utils.colors import Colors
+    from crack.themes import Colors
 except ImportError:
     # Fallback for direct execution
     from port_scanner import PortScanner

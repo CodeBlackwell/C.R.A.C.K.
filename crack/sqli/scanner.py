@@ -13,7 +13,7 @@ from .techniques import SQLiTechniques
 from .reporter import SQLiReporter
 
 try:
-    from ...utils.colors import Colors
+    from crack.themes import Colors
 except ImportError:
     # Fallback for standalone execution
     class Colors:

@@ -32,8 +32,9 @@ Example Usage:
 """
 
 from .manager import ThemeManager
-from .colors import Colors, ReferenceTheme, get_theme, disable_colors
+from .colors import Colors, ReferenceTheme, get_theme as get_reference_theme, disable_colors
 from .selector import ThemeSelector, interactive_theme_selector
+from .presets import get_theme, get_theme_names, get_all_themes, list_themes, is_pywal_available
 from . import helpers
 
 __all__ = [
@@ -43,6 +44,10 @@ __all__ = [
     'ThemeSelector',
     'interactive_theme_selector',
     'get_theme',
+    'get_theme_names',
+    'get_all_themes',
+    'list_themes',
+    'is_pywal_available',
     'disable_colors',
     'helpers',
 ]

@@ -120,7 +120,7 @@ def cheatsheets_command(args):
     from crack.reference.core import HybridCommandRegistry, ConfigManager, ReferenceTheme
     from crack.reference.core.cheatsheet_registry import CheatsheetRegistry
     from crack.reference.cli.cheatsheet import CheatsheetCLI
-    from crack.utils.colors import Colors
+    from crack.themes import Colors
 
     # Initialize registries
     theme = ReferenceTheme()
@@ -196,7 +196,7 @@ def cheatsheets_command(args):
 
 def _list_subjects(cheatsheet_registry):
     """List all available cheatsheet subjects/categories"""
-    from crack.utils.colors import Colors
+    from crack.themes import Colors
     from pathlib import Path
 
     # Get cheatsheet base directory

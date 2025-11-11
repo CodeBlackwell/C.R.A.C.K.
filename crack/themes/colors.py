@@ -331,6 +331,100 @@ class ReferenceTheme:
         """
         return self.warning(text)
 
+    # Notes formatting methods (for cheatsheets, command descriptions)
+
+    def _get_component_ansi(self, component: str) -> str:
+        """
+        Get ANSI code for component color from ThemeManager
+
+        Args:
+            component: Component name (e.g., 'notes_step', 'notes_section')
+
+        Returns:
+            ANSI escape code
+        """
+        if not self.enabled or not self._theme_mgr:
+            return ''
+        rich_color = self._theme_mgr.get_component_color(component, fallback='white')
+        return Colors.from_rich(rich_color)
+
+    def notes_step(self, text: str) -> str:
+        """
+        Format text for step markers
+
+        Used for: Step 1:, (1), etc.
+
+        Example:
+            print(theme.notes_step("Step 1:") + " Run nmap scan")
+        """
+        return self._color(text, self._get_component_ansi('notes_step'))
+
+    def notes_section(self, text: str) -> str:
+        """
+        Format text for section headers
+
+        Used for: OSCP METHODOLOGY:, ATTACK VECTOR:, etc.
+
+        Example:
+            print(theme.notes_section("OSCP METHODOLOGY:"))
+        """
+        return self._color(text, self._get_component_ansi('notes_section'))
+
+    def notes_success(self, text: str) -> str:
+        """
+        Format text for success indicators
+
+        Used for: SUCCESS:, EXPECTED OUTPUT:, etc.
+
+        Example:
+            print(theme.notes_success("✓ Command successful"))
+        """
+        return self._color(text, self._get_component_ansi('notes_success'))
+
+    def notes_failure(self, text: str) -> str:
+        """
+        Format text for failure/error indicators
+
+        Used for: FAILURE:, ERROR:, etc.
+
+        Example:
+            print(theme.notes_failure("✗ Connection failed"))
+        """
+        return self._color(text, self._get_component_ansi('notes_failure'))
+
+    def notes_code(self, text: str) -> str:
+        """
+        Format text for inline code/commands
+
+        Used for: Inline code snippets in notes
+
+        Example:
+            print("Run " + theme.notes_code("nmap -sV") + " to scan")
+        """
+        return self._color(text, self._get_component_ansi('notes_code'))
+
+    def notes_warning(self, text: str) -> str:
+        """
+        Format text for warning markers
+
+        Used for: WARNING:, CRITICAL:, PITFALL:, etc.
+
+        Example:
+            print(theme.notes_warning("WARNING:") + " This may trigger IDS")
+        """
+        return self._color(text, self._get_component_ansi('notes_warning'))
+
+    def notes_tip(self, text: str) -> str:
+        """
+        Format text for tip markers
+
+        Used for: TIP:, EXAM TIP:, etc.
+
+        Example:
+            print(theme.notes_tip("EXAM TIP:") + " Always check version numbers")
+        """
+        return self._color(text, self._get_component_ansi('notes_tip'))
+
 
 # Global theme instance
 _theme = ReferenceTheme()

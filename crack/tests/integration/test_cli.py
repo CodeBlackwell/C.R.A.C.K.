@@ -273,7 +273,7 @@ class TestCLIIntegrationWithModules:
     @pytest.mark.fast
     def test_colors_module_availability(self):
         """Test that Colors module is available to all components"""
-        from crack.utils.colors import Colors
+        from crack.themes import Colors
 
         # Check all color codes are defined
         assert hasattr(Colors, 'HEADER')

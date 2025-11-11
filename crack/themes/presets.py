@@ -7,6 +7,15 @@ All colors use Rich markup style names (e.g., 'cyan', 'bold green', 'bright_yell
 
 from typing import Dict, Any
 
+# Import pywal adapter (optional - graceful fallback if not installed)
+try:
+    from .pywal_adapter import get_all_pywal_themes, is_pywal_available
+except ImportError:
+    def get_all_pywal_themes():
+        return {}
+    def is_pywal_available():
+        return False
+
 
 # Theme structure:
 # - colors: Semantic roles (primary, success, warning, etc.)
@@ -77,6 +86,15 @@ BUILT_IN_THEMES: Dict[str, Dict[str, Any]] = {
             "status_active": "green",
             "status_inactive": "dim",
             "status_error": "red",
+
+            # Notes formatting (for command descriptions, cheatsheets)
+            "notes_step": "bold yellow",           # Step markers (Step 1:, (1), etc.)
+            "notes_section": "bold bright_cyan",   # Section headers (OSCP METHODOLOGY:, etc.)
+            "notes_success": "green",              # Success indicators and expected outputs
+            "notes_failure": "red",                # Failure messages and error indicators
+            "notes_code": "bright_black",          # Inline code/commands in notes
+            "notes_warning": "yellow",             # WARNING:, CRITICAL:, PITFALL: markers
+            "notes_tip": "bright_cyan",            # TIP:, EXAM TIP: markers
         }
     },
 
@@ -128,6 +146,15 @@ BUILT_IN_THEMES: Dict[str, Dict[str, Any]] = {
             "status_active": "bright_green",
             "status_inactive": "bright_black",
             "status_error": "bright_red",
+
+            # Notes formatting (for command descriptions, cheatsheets)
+            "notes_step": "bold bright_yellow",       # Step markers (Step 1:, (1), etc.)
+            "notes_section": "bold bright_white",     # Section headers (OSCP METHODOLOGY:, etc.)
+            "notes_success": "bright_green",          # Success indicators and expected outputs
+            "notes_failure": "bright_red",            # Failure messages and error indicators
+            "notes_code": "bright_black",             # Inline code/commands in notes
+            "notes_warning": "bright_yellow",         # WARNING:, CRITICAL:, PITFALL: markers
+            "notes_tip": "bright_cyan",               # TIP:, EXAM TIP: markers
         }
     },
 
@@ -179,6 +206,15 @@ BUILT_IN_THEMES: Dict[str, Dict[str, Any]] = {
             "status_active": "green",
             "status_inactive": "dim",
             "status_error": "red",
+
+            # Notes formatting (for command descriptions, cheatsheets)
+            "notes_step": "bold yellow",          # Step markers (Step 1:, (1), etc.)
+            "notes_section": "bold black",        # Section headers (OSCP METHODOLOGY:, etc.)
+            "notes_success": "green",             # Success indicators and expected outputs
+            "notes_failure": "red",               # Failure messages and error indicators
+            "notes_code": "dim",                  # Inline code/commands in notes
+            "notes_warning": "yellow",            # WARNING:, CRITICAL:, PITFALL: markers
+            "notes_tip": "blue",                  # TIP:, EXAM TIP: markers
         }
     },
 
@@ -230,6 +266,15 @@ BUILT_IN_THEMES: Dict[str, Dict[str, Any]] = {
             "status_active": "green",
             "status_inactive": "dim",
             "status_error": "red",
+
+            # Notes formatting (for command descriptions, cheatsheets)
+            "notes_step": "bold yellow",             # Step markers (Step 1:, (1), etc.)
+            "notes_section": "bold bright_white",    # Section headers (OSCP METHODOLOGY:, etc.)
+            "notes_success": "green",                # Success indicators and expected outputs
+            "notes_failure": "red",                  # Failure messages and error indicators
+            "notes_code": "dim",                     # Inline code/commands in notes
+            "notes_warning": "yellow",               # WARNING:, CRITICAL:, PITFALL: markers
+            "notes_tip": "bright_cyan",              # TIP:, EXAM TIP: markers
         }
     },
 
@@ -281,6 +326,15 @@ BUILT_IN_THEMES: Dict[str, Dict[str, Any]] = {
             "status_active": "green",
             "status_inactive": "dim",
             "status_error": "red",
+
+            # Notes formatting (for command descriptions, cheatsheets)
+            "notes_step": "bold yellow",              # Step markers (Step 1:, (1), etc.)
+            "notes_section": "bold bright_magenta",   # Section headers (OSCP METHODOLOGY:, etc.)
+            "notes_success": "green",                 # Success indicators and expected outputs
+            "notes_failure": "red",                   # Failure messages and error indicators
+            "notes_code": "dim",                      # Inline code/commands in notes
+            "notes_warning": "yellow",                # WARNING:, CRITICAL:, PITFALL: markers
+            "notes_tip": "cyan",                      # TIP:, EXAM TIP: markers
         }
     },
 
@@ -332,22 +386,38 @@ BUILT_IN_THEMES: Dict[str, Dict[str, Any]] = {
             "status_active": "white",
             "status_inactive": "dim",
             "status_error": "white",
+
+            # Notes formatting (for command descriptions, cheatsheets)
+            "notes_step": "bold white",       # Step markers (Step 1:, (1), etc.)
+            "notes_section": "bold white",    # Section headers (OSCP METHODOLOGY:, etc.)
+            "notes_success": "white",         # Success indicators and expected outputs
+            "notes_failure": "white",         # Failure messages and error indicators
+            "notes_code": "dim",              # Inline code/commands in notes
+            "notes_warning": "white",         # WARNING:, CRITICAL:, PITFALL: markers
+            "notes_tip": "white",             # TIP:, EXAM TIP: markers
         }
     }
 }
 
 
+def get_all_themes() -> Dict[str, Dict[str, Any]]:
+    """Get all available themes (built-in + pywal)"""
+    all_themes = dict(BUILT_IN_THEMES)  # Copy built-in themes
+    all_themes.update(get_all_pywal_themes())  # Add pywal themes (if available)
+    return all_themes
+
+
 def get_theme_names():
-    """Get list of available theme names"""
-    return list(BUILT_IN_THEMES.keys())
+    """Get list of available theme names (built-in + pywal)"""
+    return list(get_all_themes().keys())
 
 
 def get_theme(name: str) -> Dict[str, Any]:
     """
-    Get theme configuration by name
+    Get theme configuration by name (searches built-in + pywal themes)
 
     Args:
-        name: Theme name (e.g., 'oscp', 'dark')
+        name: Theme name (e.g., 'oscp', 'dark', 'pw_gruvbox')
 
     Returns:
         Theme configuration dict
@@ -355,28 +425,33 @@ def get_theme(name: str) -> Dict[str, Any]:
     Raises:
         KeyError: If theme name not found
     """
-    if name not in BUILT_IN_THEMES:
-        available = ', '.join(get_theme_names())
-        raise KeyError(f"Theme '{name}' not found. Available themes: {available}")
+    all_themes = get_all_themes()
 
-    return BUILT_IN_THEMES[name]
+    if name not in all_themes:
+        available = ', '.join(get_theme_names())
+        pywal_status = " (including pywal themes)" if is_pywal_available() else ""
+        raise KeyError(f"Theme '{name}' not found. Available themes{pywal_status}: {available}")
+
+    return all_themes[name]
 
 
 def list_themes() -> list:
     """
-    Get list of all themes with metadata
+    Get list of all themes with metadata (built-in + pywal)
 
     Returns:
         List of dicts with keys: name, display_name, description
     """
+    all_themes = get_all_themes()
+
     return [
         {
             "name": name,
             "display_name": theme["name"],
             "description": theme["description"]
         }
-        for name, theme in BUILT_IN_THEMES.items()
+        for name, theme in all_themes.items()
     ]
 
 
-__all__ = ['BUILT_IN_THEMES', 'get_theme', 'get_theme_names', 'list_themes']
+__all__ = ['BUILT_IN_THEMES', 'get_theme', 'get_theme_names', 'get_all_themes', 'list_themes', 'is_pywal_available']

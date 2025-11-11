@@ -12,7 +12,7 @@ from typing import Dict, List, Tuple, Optional
 import xml.etree.ElementTree as ET
 
 try:
-    from crack.utils.colors import Colors
+    from crack.themes import Colors
 except ImportError:
     class Colors:
         HEADER = '\033[95m'

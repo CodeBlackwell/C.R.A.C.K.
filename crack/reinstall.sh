@@ -37,7 +37,15 @@ cd "$SCRIPT_DIR"
 pip install -e . --break-system-packages
 echo -e "${GREEN}  ✓ Installation complete${NC}"
 
-echo -e "\n${YELLOW}[4/5] Verifying installation...${NC}"
+echo -e "\n${YELLOW}[4/5] Installing pywal16 for 250+ theme support...${NC}"
+pip install --break-system-packages pywal16 2>/dev/null || echo -e "${YELLOW}  ⚠ Pywal16 install skipped (optional)${NC}"
+if python3 -c "import pywal" 2>/dev/null; then
+    echo -e "${GREEN}  ✓ Pywal16 installed - 256 themes available${NC}"
+else
+    echo -e "${YELLOW}  → Running with 6 built-in themes${NC}"
+fi
+
+echo -e "\n${YELLOW}[5/6] Verifying installation...${NC}"
 if command -v crack &> /dev/null; then
     echo -e "${GREEN}  ✓ crack command found${NC}"
 
@@ -61,7 +69,7 @@ else
     exit 1
 fi
 
-echo -e "\n${YELLOW}[5/5] Installation Summary${NC}"
+echo -e "\n${YELLOW}[6/6] Installation Summary${NC}"
 echo -e "\n${GREEN}${BOLD}Installation successful!${NC}"
 echo -e "Version: $(crack --version 2>/dev/null | grep -o 'v[0-9.]*' || echo 'v1.0.0')"
 

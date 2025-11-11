@@ -3,7 +3,7 @@ Base CLI handler with shared utilities
 """
 
 from typing import List, Dict, Any
-from crack.reference.core.colors import ReferenceTheme
+from crack.themes import ReferenceTheme
 
 
 class BaseCLIHandler:

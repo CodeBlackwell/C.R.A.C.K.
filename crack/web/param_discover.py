@@ -13,7 +13,7 @@ from urllib.parse import urlparse, parse_qs, urlencode
 import re
 
 try:
-    from ..utils.colors import Colors
+    from crack.themes import Colors
 except ImportError:
     # Fallback for standalone execution
     class Colors:

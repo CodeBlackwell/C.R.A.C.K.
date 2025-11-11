@@ -10,7 +10,7 @@ from ..core.task_tree import TaskNode
 
 # Try to import Colors from crack utils
 try:
-    from crack.utils.colors import Colors
+    from crack.themes import Colors
 except ImportError:
     # Fallback if running standalone
     class Colors:

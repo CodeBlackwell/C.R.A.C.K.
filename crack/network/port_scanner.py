@@ -12,7 +12,7 @@ import sys
 from pathlib import Path
 
 try:
-    from crack.utils.colors import Colors
+    from crack.themes import Colors
 except ImportError:
     class Colors:
         HEADER = '\033[95m'

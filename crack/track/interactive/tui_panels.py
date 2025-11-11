@@ -19,7 +19,7 @@ from rich.text import Text
 from rich.console import Group
 from rich import box
 
-from crack.utils.colors import Colors
+from crack.themes import Colors
 
 
 class TUIPanels:

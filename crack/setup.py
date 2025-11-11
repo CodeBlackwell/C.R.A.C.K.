@@ -15,7 +15,7 @@ if readme_file.exists():
     long_description = (this_directory / "README.md").read_text()
 
 setup(
-    name="crack-toolkit",
+    name="crack",
     version="1.0.0",
     author="OSCP Student",
     description="C.R.A.C.K. - (C)omprehensive (R)econ & (A)ttack (C)reation (K)it - Professional pentesting tools for OSCP",
@@ -43,6 +43,7 @@ setup(
         "requests>=2.25.0",
         "beautifulsoup4>=4.9.0",
         "urllib3>=1.26.0",
+        "pywal16>=3.0.0",
     ],
     entry_points={
         "console_scripts": [

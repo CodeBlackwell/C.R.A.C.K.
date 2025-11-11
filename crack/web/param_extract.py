@@ -14,10 +14,10 @@ from urllib.parse import urlparse, urljoin
 from pathlib import Path
 
 try:
-    from ..utils.colors import Colors
+    from crack.themes import Colors
 except ImportError:
     try:
-        from crack.utils.colors import Colors
+        from crack.themes import Colors
     except ImportError:
         # Fallback colors
         class Colors:

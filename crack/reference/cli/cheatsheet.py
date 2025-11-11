@@ -547,13 +547,61 @@ class CheatsheetCLI(BaseCLIHandler):
             colored_content = content
             effective_width = width - indent_len
 
-            # Step labels: "Step N:" - Use warning (yellow) for prominence
-            if re.match(r'^Step \d+:', content):
-                step_match = re.match(r'^(Step \d+:)(.*)$', content)
+            # WARNING/CRITICAL/PITFALL markers - Use notes_warning for high visibility
+            if re.match(r'^(WARNING|CRITICAL|PITFALL):', content, re.IGNORECASE):
+                marker_match = re.match(r'^([A-Z]+:)(.*)$', content)
+                if marker_match:
+                    label = self.theme.notes_warning(marker_match.group(1))
+                    rest = marker_match.group(2)
+                    colored_content = label + rest
+
+            # TIP/EXAM TIP markers - Use notes_tip for helpful info
+            elif re.match(r'^(TIP|EXAM TIP):', content, re.IGNORECASE):
+                tip_match = re.match(r'^([^:]+:)(.*)$', content)
+                if tip_match:
+                    label = self.theme.notes_tip(tip_match.group(1))
+                    rest = tip_match.group(2)
+                    colored_content = label + rest
+
+            # SUCCESS/EXPECTED OUTPUT markers - Use notes_success
+            elif re.match(r'^(SUCCESS|EXPECTED OUTPUT|EXPECTED):', content, re.IGNORECASE):
+                success_match = re.match(r'^([^:]+:)(.*)$', content)
+                if success_match:
+                    label = self.theme.notes_success(success_match.group(1))
+                    rest = success_match.group(2)
+                    colored_content = label + rest
+
+            # FAILURE/ERROR markers - Use notes_failure
+            elif re.match(r'^(FAILURE|ERROR|FAILED):', content, re.IGNORECASE):
+                failure_match = re.match(r'^([^:]+:)(.*)$', content)
+                if failure_match:
+                    label = self.theme.notes_failure(failure_match.group(1))
+                    rest = failure_match.group(2)
+                    colored_content = label + rest
+
+            # Section headers (all caps words followed by colon) - Use notes_section
+            elif re.match(r'^[A-Z][A-Z\s]+:', content):
+                section_match = re.match(r'^([A-Z][A-Z\s]+:)(.*)$', content)
+                if section_match:
+                    label = self.theme.notes_section(section_match.group(1))
+                    rest = section_match.group(2)
+                    colored_content = label + rest
+
+            # Step labels: "Step N:" or "Step (N):" - Use notes_step for prominence
+            elif re.match(r'^Step (\d+|\(\d+\)):', content):
+                step_match = re.match(r'^(Step (?:\d+|\(\d+\)):)(.*)$', content)
                 if step_match:
-                    label = self.theme.warning(step_match.group(1))
+                    label = self.theme.notes_step(step_match.group(1))
                     rest = step_match.group(2)
                     colored_content = label + rest
+
+            # Numbered steps: "(1)", "(2)", "1.", "2." at start of line - Use notes_step
+            elif re.match(r'^(\(\d+\)|\d+\.)\s', content):
+                num_match = re.match(r'^((?:\(\d+\)|\d+\.))\s(.*)$', content)
+                if num_match:
+                    label = self.theme.notes_step(num_match.group(1))
+                    rest = num_match.group(2)
+                    colored_content = label + ' ' + rest
 
             # Traffic flow summary - Use info/muted for less emphasis
             elif content.startswith('Traffic:'):
@@ -563,9 +611,9 @@ class CheatsheetCLI(BaseCLIHandler):
                     rest = traffic_match.group(2)
                     colored_content = label + rest
 
-            # Indented lines (commands) - Use secondary (cyan/blue)
+            # Indented lines (commands) - Use notes_code for code-like appearance
             elif indent_len >= 2:
-                colored_content = self.theme.secondary(content)
+                colored_content = self.theme.notes_code(content)
 
             # Limitation/Alternative markers - Use warning for attention
             elif content.startswith('Limitation:') or content.startswith('Alternative:'):
@@ -604,7 +652,7 @@ class CheatsheetCLI(BaseCLIHandler):
             List of wrapped lines
         """
         # Strip ANSI codes for length calculation
-        from crack.reference.core.colors import Colors
+        from crack.themes import Colors
         plain_text = Colors.strip(text)
 
         # If line fits, return as-is

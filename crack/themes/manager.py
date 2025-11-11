@@ -262,6 +262,43 @@ class ThemeManager:
         color = self.get_color('emphasis')
         return f"[{color}]{text}[/{color}]"
 
+    # Notes formatting convenience methods
+
+    def notes_step(self, text: str) -> str:
+        """Wrap text in notes_step color markup (for step markers like 'Step 1:', '(1)', etc.)"""
+        color = self.get_component_color('notes_step')
+        return f"[{color}]{text}[/{color}]"
+
+    def notes_section(self, text: str) -> str:
+        """Wrap text in notes_section color markup (for section headers like 'OSCP METHODOLOGY:')"""
+        color = self.get_component_color('notes_section')
+        return f"[{color}]{text}[/{color}]"
+
+    def notes_success(self, text: str) -> str:
+        """Wrap text in notes_success color markup (for success indicators)"""
+        color = self.get_component_color('notes_success')
+        return f"[{color}]{text}[/{color}]"
+
+    def notes_failure(self, text: str) -> str:
+        """Wrap text in notes_failure color markup (for failure/error indicators)"""
+        color = self.get_component_color('notes_failure')
+        return f"[{color}]{text}[/{color}]"
+
+    def notes_code(self, text: str) -> str:
+        """Wrap text in notes_code color markup (for inline code/commands)"""
+        color = self.get_component_color('notes_code')
+        return f"[{color}]{text}[/{color}]"
+
+    def notes_warning(self, text: str) -> str:
+        """Wrap text in notes_warning color markup (for WARNING:, CRITICAL:, PITFALL:)"""
+        color = self.get_component_color('notes_warning')
+        return f"[{color}]{text}[/{color}]"
+
+    def notes_tip(self, text: str) -> str:
+        """Wrap text in notes_tip color markup (for TIP:, EXAM TIP:)"""
+        color = self.get_component_color('notes_tip')
+        return f"[{color}]{text}[/{color}]"
+
     # Component-specific convenience methods
 
     def panel_border(self) -> str:
