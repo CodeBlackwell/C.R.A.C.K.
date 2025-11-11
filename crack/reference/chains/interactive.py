@@ -25,9 +25,9 @@ from .session_storage import ChainSession
 from .core.step_processor import StepProcessor
 from .variables.context import VariableContext
 from .filtering.selector import FindingSelector
-from crack.reference.core.registry import HybridCommandRegistry
+from reference.core.registry import HybridCommandRegistry
 from crack.config import ConfigManager
-from crack.reference.core.colors import ReferenceTheme
+from reference.core.colors import ReferenceTheme
 
 
 class ChainInteractive:

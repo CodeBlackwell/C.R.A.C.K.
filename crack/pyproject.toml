@@ -49,6 +49,7 @@ crack = "crack.cli:main"
 [tool.setuptools]
 packages = [
     "crack",
+    "themes",
     "crack.network",
     "crack.web",
     "crack.sqli",

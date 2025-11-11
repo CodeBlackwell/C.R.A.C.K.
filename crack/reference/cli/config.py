@@ -2,7 +2,7 @@
 CLI config handler for configuration management
 """
 
-from crack.reference.cli.base import BaseCLIHandler
+from reference.cli.base import BaseCLIHandler
 
 
 class ConfigCLI(BaseCLIHandler):

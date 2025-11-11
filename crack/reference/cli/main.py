@@ -10,14 +10,14 @@ import logging
 from pathlib import Path
 from rich.console import Console
 
-from crack.reference.core import (
+from reference.core import (
     HybridCommandRegistry,
     PlaceholderEngine,
     CommandValidator,
     ConfigManager,
     ReferenceTheme
 )
-from crack.reference.cli import (
+from reference.cli import (
     ChainsCLI,
     DisplayCLI,
     InteractiveCLI,
@@ -66,7 +66,7 @@ class ReferenceCLI:
         """
         # Try Neo4j first
         try:
-            from crack.reference.core import Neo4jCommandRegistryAdapter
+            from reference.core import Neo4jCommandRegistryAdapter
 
             adapter = Neo4jCommandRegistryAdapter(
                 config_manager=self.config,
@@ -516,7 +516,7 @@ class ReferenceCLI:
         Returns:
             Exit code (0 for success)
         """
-        from crack.reference.core import Neo4jCommandRegistryAdapter
+        from reference.core import Neo4jCommandRegistryAdapter
 
         print(f"\n{self.theme.bold_white('CRACK Reference Backend Status')}\n")
         print("=" * 60)

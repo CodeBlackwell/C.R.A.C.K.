@@ -5,10 +5,10 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from crack.reference.cli.base import BaseCLIHandler
-from crack.reference.builders.chain_builder import ChainBuilder
-from crack.reference.chains.command_resolver import CommandResolver
-from crack.reference.core.registry import HybridCommandRegistry
+from reference.cli.base import BaseCLIHandler
+from reference.builders.chain_builder import ChainBuilder
+from reference.chains.command_resolver import CommandResolver
+from reference.core.registry import HybridCommandRegistry
 
 
 class ChainBuilderCLI(BaseCLIHandler):

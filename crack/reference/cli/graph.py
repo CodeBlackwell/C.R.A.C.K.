@@ -30,8 +30,8 @@ class GraphCLI:
     def _initialize_patterns(self):
         """Initialize pattern library if Neo4j backend available"""
         try:
-            from crack.reference.core import Neo4jCommandRegistryAdapter
-            from crack.reference.patterns.advanced_queries import create_pattern_helper
+            from reference.core import Neo4jCommandRegistryAdapter
+            from reference.patterns.advanced_queries import create_pattern_helper
 
             if isinstance(self.registry, Neo4jCommandRegistryAdapter):
                 self.patterns = create_pattern_helper(self.registry)

@@ -19,10 +19,12 @@ try:
 except ImportError:
     PYFIGLET_AVAILABLE = False
 
-from crack.utils.colors import Colors
+from themes import ReferenceTheme, Colors
 
 def print_banner():
-    """Display the C.R.A.C.K. banner with random font selection"""
+    """Display the C.R.A.C.K. banner with themed colors and random font"""
+    theme = ReferenceTheme()
+
     if PYFIGLET_AVAILABLE:
         # Curated list of fonts that work well for "CRACK"
         fonts = [
@@ -38,20 +40,21 @@ def print_banner():
             # Generate ASCII art with pyfiglet
             ascii_art = pyfiglet.figlet_format("CRACK", font=selected_font)
 
-            # Display with colors
-            print(f"{Colors.BOLD}{Colors.RED}{ascii_art}{Colors.END}")
-            print(f"{Colors.CYAN}  (C)omprehensive (R)econ & (A)ttack (C)reation (K)it{Colors.END}")
-            print(f"{Colors.YELLOW}  Professional OSCP Pentesting Toolkit{Colors.END}\n")
+            # Display with themed colors
+            print(theme.banner_title(ascii_art))
+            print(theme.banner_subtitle("  (C)omprehensive (R)econ & (A)ttack (C)reation (K)it"))
+            print(theme.banner_tagline("  Professional OSCP Pentesting Toolkit\n"))
         except pyfiglet.FontNotFound:
             # Fallback to standard if selected font not found
             ascii_art = pyfiglet.figlet_format("CRACK", font="standard")
-            print(f"{Colors.BOLD}{Colors.RED}{ascii_art}{Colors.END}")
-            print(f"{Colors.CYAN}  (C)omprehensive (R)econ & (A)ttack (C)reation (K)it{Colors.END}")
-            print(f"{Colors.YELLOW}  Professional OSCP Pentesting Toolkit{Colors.END}\n")
+            print(theme.banner_title(ascii_art))
+            print(theme.banner_subtitle("  (C)omprehensive (R)econ & (A)ttack (C)reation (K)it"))
+            print(theme.banner_tagline("  Professional OSCP Pentesting Toolkit\n"))
     else:
         # Simple text fallback if pyfiglet not available
-        print(f"\n{Colors.BOLD}{Colors.RED}C.R.A.C.K.{Colors.END}")
-        print(f"{Colors.CYAN}  (C)omprehensive (R)econ & (A)ttack (C)reation (K)it{Colors.END}")
+        print(f"\n{theme.banner_title('C.R.A.C.K.')}")
+        print(theme.banner_subtitle("  (C)omprehensive (R)econ & (A)ttack (C)reation (K)it"))
+        print(theme.banner_tagline("  Professional OSCP Pentesting Toolkit\n"))
 
 def html_enum_command(args):
     """Execute the HTML enumeration tool"""
@@ -403,6 +406,7 @@ def config_command(args):
         print("  crack config validate             - Validate all configured values")
         print("  crack config categories           - List all variable categories")
         print("  crack config setup                - Interactive setup wizard")
+        print("  crack config theme                - Interactive theme selector")
         print("  crack config edit                 - Open config file in editor")
         print("  crack config export FILE          - Export config to file")
         print("  crack config import FILE [--merge] - Import config from file")
@@ -604,6 +608,11 @@ def config_command(args):
             print(f"{Colors.GREEN}✓{Colors.END} Config {mode} from: {filepath}")
         else:
             print(f"{Colors.RED}✗{Colors.END} Failed to import config")
+
+    elif subcommand == 'theme':
+        # Launch interactive theme selector
+        from themes import interactive_theme_selector
+        interactive_theme_selector()
 
     else:
         print(f"{Colors.RED}Error:{Colors.END} Unknown subcommand: {subcommand}")

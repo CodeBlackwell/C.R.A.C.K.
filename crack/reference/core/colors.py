@@ -1,9 +1,32 @@
 """
-Simple ANSI color system for reference CLI
-Bridges Rich color names (from ThemeManager) to ANSI escape codes
+DEPRECATED: This module has moved to crack.themes.colors
+
+For backward compatibility, this module re-exports from the new location.
+Please update imports to: from crack.themes import Colors, ReferenceTheme
+
+Migration:
+    # Old (deprecated):
+    from reference.core.colors import Colors, ReferenceTheme
+
+    # New (recommended):
+    from crack.themes import Colors, ReferenceTheme
 """
 
-class Colors:
+import warnings
+
+warnings.warn(
+    "crack.reference.core.colors is deprecated. Use themes.colors instead.",
+    DeprecationWarning,
+    stacklevel=2
+)
+
+from themes.colors import Colors, ReferenceTheme, get_theme, disable_colors
+
+__all__ = ['Colors', 'ReferenceTheme', 'get_theme', 'disable_colors']
+
+
+# Old Colors class kept for reference (not exported)
+class _OldColors:
     """ANSI escape codes for terminal colors"""
 
     # Basic colors

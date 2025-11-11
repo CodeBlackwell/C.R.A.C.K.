@@ -6,10 +6,10 @@ import json
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from crack.reference.cli.base import BaseCLIHandler
-from crack.reference.chains.loader import ChainLoader
-from crack.reference.chains.registry import ChainRegistry
-from crack.reference.chains.command_resolver import CommandResolver
+from reference.cli.base import BaseCLIHandler
+from reference.chains.loader import ChainLoader
+from reference.chains.registry import ChainRegistry
+from reference.chains.command_resolver import CommandResolver
 
 
 class ChainsCLI(BaseCLIHandler):
@@ -458,7 +458,7 @@ class ChainsCLI(BaseCLIHandler):
             Exit code (0 for success)
         """
         try:
-            from crack.reference.chains.interactive import ChainInteractive
+            from reference.chains.interactive import ChainInteractive
 
             executor = ChainInteractive(chain_id, target, resume)
             executor.run()
