@@ -69,21 +69,77 @@ class Colors:
     }
 
     @classmethod
-    def from_rich(cls, rich_color: str) -> str:
+    def hex_to_rgb(cls, hex_color: str) -> tuple:
         """
-        Convert Rich color name to ANSI escape code
+        Convert hex color to RGB tuple
 
         Args:
-            rich_color: Rich color name (e.g., 'cyan', 'bold cyan', 'bright_green')
+            hex_color: Hex color string (e.g., '#689d6a' or '689d6a')
 
         Returns:
-            ANSI escape code string
+            RGB tuple (r, g, b) with values 0-255
+
+        Example:
+            >>> Colors.hex_to_rgb('#689d6a')
+            (104, 157, 106)
+        """
+        hex_color = hex_color.lstrip('#')
+        return tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
+
+    @classmethod
+    def rgb_to_ansi(cls, r: int, g: int, b: int, foreground: bool = True) -> str:
+        """
+        Convert RGB values to ANSI true color escape code
+
+        Args:
+            r: Red value (0-255)
+            g: Green value (0-255)
+            b: Blue value (0-255)
+            foreground: If True, sets foreground color; if False, sets background
+
+        Returns:
+            ANSI escape code for 24-bit true color
+
+        Example:
+            >>> Colors.rgb_to_ansi(104, 157, 106)
+            '\\033[38;2;104;157;106m'
+        """
+        code = 38 if foreground else 48  # 38=foreground, 48=background
+        return f'\033[{code};2;{r};{g};{b}m'
+
+    @classmethod
+    def from_rich(cls, rich_color: str) -> str:
+        """
+        Convert Rich color name OR hex color to ANSI escape code
+
+        Args:
+            rich_color: Rich color name (e.g., 'cyan', 'bold cyan') OR hex color (e.g., '#689d6a')
+
+        Returns:
+            ANSI escape code string (16-color or 24-bit RGB)
 
         Example:
             >>> Colors.from_rich('bold cyan')
             '\\033[1m\\033[36m'
+            >>> Colors.from_rich('#689d6a')
+            '\\033[38;2;104;157;106m'
+            >>> Colors.from_rich('bold #689d6a')
+            '\\033[1m\\033[38;2;104;157;106m'
         """
-        return ''.join(cls._RICH_MAP.get(part, '') for part in rich_color.split())
+        # Handle modifiers and hex colors
+        parts = rich_color.split()
+        ansi_parts = []
+
+        for part in parts:
+            # Check if it's a hex color
+            if part.startswith('#') or (len(part) == 6 and all(c in '0123456789abcdefABCDEF' for c in part)):
+                r, g, b = cls.hex_to_rgb(part)
+                ansi_parts.append(cls.rgb_to_ansi(r, g, b))
+            else:
+                # Regular color name or modifier
+                ansi_parts.append(cls._RICH_MAP.get(part, ''))
+
+        return ''.join(ansi_parts)
 
     @classmethod
     def strip(cls, text: str) -> str:
@@ -290,7 +346,7 @@ class ReferenceTheme:
 
     def match_metadata(self, text: str) -> str:
         """Color for match reason metadata (e.g., '→ matched in: tags')"""
-        return self._color(text, Colors.BRIGHT_BLUE)  # Subtle blue for metadata
+        return self._color(text, self._get_ansi('info'))  # Use theme info color
 
     # Banner-specific methods
 

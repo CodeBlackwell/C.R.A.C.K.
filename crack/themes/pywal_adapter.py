@@ -35,84 +35,94 @@ def _map_pywal_to_theme(colors_dict: Dict[str, str], theme_name: str, theme_desc
     Convert pywal color dictionary to CRACK theme format
 
     Args:
-        colors_dict: Pywal colors dictionary (color0-15)
+        colors_dict: Pywal colors dictionary (color0-15) with hex values
         theme_name: Display name for the theme
         theme_desc: Optional description
 
     Returns:
         Theme dictionary matching BUILT_IN_THEMES structure
+
+    Note:
+        Preserves hex color values for true 24-bit color output.
+        The hex colors will be converted to RGB ANSI codes by Colors.from_rich().
     """
-    # Convert pywal colors to Rich names
-    rich_colors = {
-        pywal_key: PYWAL_TO_RICH_MAP.get(pywal_key, 'white')
-        for pywal_key in colors_dict.keys()
-    }
+    # Use hex colors directly (no conversion to generic names!)
+    # colors_dict already contains hex values like '#689d6a'
 
     # Map to semantic roles
     return {
         "name": theme_name,
         "description": theme_desc or f"Pywal theme: {theme_name}",
         "colors": {
-            # Core semantic colors (using base16 standard mapping)
-            "primary": rich_colors.get('color4', 'cyan'),         # Blue
-            "secondary": rich_colors.get('color5', 'magenta'),    # Purple
-            "success": rich_colors.get('color2', 'green'),        # Green
-            "warning": rich_colors.get('color3', 'yellow'),       # Yellow
-            "danger": rich_colors.get('color1', 'red'),           # Red
-            "info": rich_colors.get('color6', 'cyan'),            # Cyan
-            "muted": rich_colors.get('color8', 'dim'),            # Bright Black
-            "emphasis": f"bold {rich_colors.get('color15', 'bright_white')}",  # Bold White
+            # Core semantic colors (using base16 standard mapping with hex values)
+            "primary": colors_dict.get('color4', '#0000ff'),         # Blue hex
+            "secondary": colors_dict.get('color5', '#ff00ff'),       # Magenta hex
+            "success": colors_dict.get('color2', '#00ff00'),         # Green hex
+            "warning": colors_dict.get('color3', '#ffff00'),         # Yellow hex
+            "danger": colors_dict.get('color1', '#ff0000'),          # Red hex
+            "info": colors_dict.get('color6', '#00ffff'),            # Cyan hex
+            "muted": colors_dict.get('color8', '#808080'),           # Bright black/gray hex
+            "emphasis": f"bold {colors_dict.get('color15', '#ffffff')}",  # Bold white hex
 
             # Text colors
-            "text": rich_colors.get('color7', 'white'),
-            "text_dim": rich_colors.get('color8', 'dim'),
-            "text_bright": rich_colors.get('color15', 'bright_white'),
+            "text": colors_dict.get('color7', '#ffffff'),            # White hex
+            "text_dim": colors_dict.get('color8', '#808080'),        # Gray hex
+            "text_bright": colors_dict.get('color15', '#ffffff'),   # Bright white hex
         },
         "components": {
-            # Panel borders
-            "panel_border": rich_colors.get('color6', 'cyan'),
-            "overlay_border": rich_colors.get('color4', 'blue'),
-            "form_border": rich_colors.get('color2', 'green'),
-            "error_border": rich_colors.get('color1', 'red'),
-            "warning_border": rich_colors.get('color3', 'yellow'),
+            # Panel borders (using hex colors)
+            "panel_border": colors_dict.get('color6', '#00ffff'),       # Cyan hex
+            "overlay_border": colors_dict.get('color4', '#0000ff'),     # Blue hex
+            "form_border": colors_dict.get('color2', '#00ff00'),        # Green hex
+            "error_border": colors_dict.get('color1', '#ff0000'),       # Red hex
+            "warning_border": colors_dict.get('color3', '#ffff00'),     # Yellow hex
 
-            # Task states
-            "task_pending": rich_colors.get('color3', 'yellow'),
-            "task_in_progress": rich_colors.get('color6', 'cyan'),
-            "task_completed": rich_colors.get('color2', 'green'),
-            "task_failed": rich_colors.get('color1', 'red'),
-            "task_skipped": rich_colors.get('color8', 'dim'),
+            # Task states (using hex colors)
+            "task_pending": colors_dict.get('color3', '#ffff00'),       # Yellow hex
+            "task_in_progress": colors_dict.get('color6', '#00ffff'),   # Cyan hex
+            "task_completed": colors_dict.get('color2', '#00ff00'),     # Green hex
+            "task_failed": colors_dict.get('color1', '#ff0000'),        # Red hex
+            "task_skipped": colors_dict.get('color8', '#808080'),       # Gray hex
 
-            # Priority badges
-            "priority_high": rich_colors.get('color9', 'bright_red'),
-            "priority_medium": rich_colors.get('color3', 'yellow'),
-            "priority_low": rich_colors.get('color8', 'dim'),
-            "quick_win": rich_colors.get('color11', 'bright_yellow'),
+            # Priority badges (using hex colors)
+            "priority_high": colors_dict.get('color9', '#ff0000'),      # Bright red hex
+            "priority_medium": colors_dict.get('color3', '#ffff00'),    # Yellow hex
+            "priority_low": colors_dict.get('color8', '#808080'),       # Gray hex
+            "quick_win": colors_dict.get('color11', '#ffff00'),         # Bright yellow hex
 
-            # Port states
-            "port_open": rich_colors.get('color2', 'green'),
-            "port_filtered": rich_colors.get('color3', 'yellow'),
-            "port_closed": rich_colors.get('color8', 'dim'),
+            # Port states (using hex colors)
+            "port_open": colors_dict.get('color2', '#00ff00'),          # Green hex
+            "port_filtered": colors_dict.get('color3', '#ffff00'),      # Yellow hex
+            "port_closed": colors_dict.get('color8', '#808080'),        # Gray hex
 
-            # Finding types
-            "finding_vulnerability": rich_colors.get('color1', 'red'),
-            "finding_directory": rich_colors.get('color6', 'cyan'),
-            "finding_file": rich_colors.get('color4', 'blue'),
-            "finding_credential": rich_colors.get('color3', 'yellow'),
-            "finding_user": rich_colors.get('color5', 'magenta'),
-            "finding_general": rich_colors.get('color7', 'white'),
+            # Finding types (using hex colors)
+            "finding_vulnerability": colors_dict.get('color1', '#ff0000'),  # Red hex
+            "finding_directory": colors_dict.get('color6', '#00ffff'),      # Cyan hex
+            "finding_file": colors_dict.get('color4', '#0000ff'),           # Blue hex
+            "finding_credential": colors_dict.get('color3', '#ffff00'),     # Yellow hex
+            "finding_user": colors_dict.get('color5', '#ff00ff'),           # Magenta hex
+            "finding_general": colors_dict.get('color7', '#ffffff'),        # White hex
 
-            # UI elements
-            "menu_number": f"bold {rich_colors.get('color15', 'bright_white')}",
-            "hotkey": rich_colors.get('color6', 'cyan'),
-            "command": rich_colors.get('color8', 'bright_black'),
-            "timestamp": rich_colors.get('color8', 'dim'),
-            "progress_bar": rich_colors.get('color6', 'cyan'),
+            # UI elements (using hex colors)
+            "menu_number": f"bold {colors_dict.get('color15', '#ffffff')}",  # Bold white hex
+            "hotkey": colors_dict.get('color6', '#00ffff'),                   # Cyan hex
+            "command": colors_dict.get('color8', '#808080'),                  # Gray hex
+            "timestamp": colors_dict.get('color8', '#808080'),                # Gray hex
+            "progress_bar": colors_dict.get('color6', '#00ffff'),             # Cyan hex
 
-            # Status indicators
-            "status_active": rich_colors.get('color2', 'green'),
-            "status_inactive": rich_colors.get('color8', 'dim'),
-            "status_error": rich_colors.get('color1', 'red'),
+            # Status indicators (using hex colors)
+            "status_active": colors_dict.get('color2', '#00ff00'),      # Green hex
+            "status_inactive": colors_dict.get('color8', '#808080'),    # Gray hex
+            "status_error": colors_dict.get('color1', '#ff0000'),       # Red hex
+
+            # Notes formatting (for command descriptions, cheatsheets) (using hex colors)
+            "notes_step": f"bold {colors_dict.get('color3', '#ffff00')}",      # Step markers (yellow)
+            "notes_section": f"bold {colors_dict.get('color6', '#00ffff')}",   # Section headers (cyan)
+            "notes_success": colors_dict.get('color2', '#00ff00'),              # Success indicators (green)
+            "notes_failure": colors_dict.get('color1', '#ff0000'),              # Failure messages (red)
+            "notes_code": colors_dict.get('color8', '#808080'),                 # Inline code (gray)
+            "notes_warning": colors_dict.get('color3', '#ffff00'),              # WARNING markers (yellow)
+            "notes_tip": colors_dict.get('color6', '#00ffff'),                  # TIP markers (cyan)
         }
     }
 
