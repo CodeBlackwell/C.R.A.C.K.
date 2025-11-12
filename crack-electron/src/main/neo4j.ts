@@ -732,6 +732,117 @@ ipcMain.handle('get-chain-graph', async (_event, chainId: string) => {
 });
 logIPC('Registered IPC handler: get-chain-graph');
 
+// IPC Handler: Get attack chains containing a specific command
+ipcMain.handle('get-command-chains', async (_event, commandId: string) => {
+  logIPC('IPC: get-command-chains called', { commandId });
+
+  try {
+    const query = `
+      MATCH (cmd:Command {id: $commandId})
+      MATCH (step:ChainStep)-[:EXECUTES]->(cmd)
+      MATCH (chain:AttackChain)-[:HAS_STEP]->(step)
+
+      // Get all steps from the chains containing this command
+      MATCH (chain)-[:HAS_STEP]->(allSteps:ChainStep)
+      OPTIONAL MATCH (allSteps)-[:EXECUTES]->(stepCmd:Command)
+
+      WITH chain, allSteps, stepCmd, cmd
+      ORDER BY chain.id, allSteps.order
+
+      WITH chain,
+           collect({
+             step: allSteps,
+             command: stepCmd,
+             isTargetCommand: stepCmd.id = cmd.id
+           }) as steps
+
+      RETURN chain, steps
+    `;
+
+    const results = await runQuery(query, { commandId });
+
+    if (results && results.length > 0) {
+      // Build graph from all chains containing this command
+      const nodes = new Map();
+      const edges: any[] = [];
+      let targetNodeId = commandId;
+
+      results.forEach((record: any) => {
+        const chain = record.chain;
+        const steps = record.steps || [];
+
+        // Process each step as a node
+        steps.forEach((stepData: any, index: number) => {
+          if (!stepData.step) return;
+
+          const step = stepData.step;
+          const cmd = stepData.command;
+          const isTarget = stepData.isTargetCommand;
+
+          // Create unique ID for step node
+          const nodeId = `${chain.id}_step_${index}`;
+
+          // Add node
+          nodes.set(nodeId, {
+            data: {
+              id: nodeId,
+              label: `${chain.name}\nStep ${index + 1}`,
+              description: step.description?.substring(0, 100) || '',
+              type: isTarget ? 'center' : 'step',
+              chainId: chain.id,
+              chainName: chain.name,
+              stepOrder: index,
+              command: cmd,
+            }
+          });
+
+          // Track the target command node for highlighting
+          if (isTarget) {
+            targetNodeId = nodeId;
+          }
+
+          // Add edge from previous step (if not first)
+          if (index > 0) {
+            const prevNodeId = `${chain.id}_step_${index - 1}`;
+            edges.push({
+              data: {
+                id: `${prevNodeId}_${nodeId}`,
+                source: prevNodeId,
+                target: nodeId,
+                label: 'NEXT',
+                type: 'next_step'
+              }
+            });
+          }
+        });
+      });
+
+      const graphData = {
+        elements: {
+          nodes: Array.from(nodes.values()),
+          edges: edges
+        }
+      };
+
+      logIPC('IPC: get-command-chains completed', {
+        chainCount: results.length,
+        nodeCount: graphData.elements.nodes.length,
+        edgeCount: graphData.elements.edges.length,
+      });
+
+      return graphData;
+    }
+
+    logIPC('IPC: get-command-chains - command not in any chains', { commandId });
+    return { elements: { nodes: [], edges: [] } };
+  } catch (error) {
+    logError('IPC: get-command-chains failed', error);
+    console.error('Get command chains error:', error);
+    return { elements: { nodes: [], edges: [] } };
+  }
+});
+logIPC('Registered IPC handler: get-command-chains');
+
 // IPC Handler: Console bridge (renderer logs to terminal)
 ipcMain.on('log-to-terminal', (_event, level: string, message: string) => {
   const prefix = `[RENDERER:${level.toUpperCase()}]`;

@@ -20,7 +20,7 @@ function App() {
     connected: boolean;
     uri?: string;
   }>({ connected: false });
-  const [activeView, setActiveView] = useState<'commands' | 'cheatsheets' | 'chains'>('cheatsheets');
+  const [activeView, setActiveView] = useState<'commands' | 'cheatsheets' | 'chains'>('chains');
   const [expandedCommandId, setExpandedCommandId] = useState<string | null>(null);
 
   // Debug: Log component mount

@@ -32,6 +32,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getChainGraph: (chainId: string) =>
     ipcRenderer.invoke('get-chain-graph', chainId),
 
+  getCommandChains: (commandId: string) =>
+    ipcRenderer.invoke('get-command-chains', commandId),
+
   // Console bridge - send renderer logs to terminal
   logToTerminal: (level: string, message: string) =>
     ipcRenderer.send('log-to-terminal', level, message),
@@ -58,6 +61,7 @@ export interface ElectronAPI {
   }) => Promise<any[]>;
   getChain: (chainId: string) => Promise<any>;
   getChainGraph: (chainId: string) => Promise<any>;
+  getCommandChains: (commandId: string) => Promise<any>;
   logToTerminal: (level: string, message: string) => void;
 }
 
