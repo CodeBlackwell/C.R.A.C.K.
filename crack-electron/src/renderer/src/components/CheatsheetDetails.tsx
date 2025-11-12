@@ -4,9 +4,10 @@ import { Cheatsheet } from '../types/cheatsheet';
 
 interface CheatsheetDetailsProps {
   cheatsheet: Cheatsheet;
+  onCommandClick?: (commandId: string) => void;
 }
 
-export default function CheatsheetDetails({ cheatsheet }: CheatsheetDetailsProps) {
+export default function CheatsheetDetails({ cheatsheet, onCommandClick }: CheatsheetDetailsProps) {
   const [copied, setCopied] = useState(false);
 
   // Derive source file path from cheatsheet ID
@@ -186,6 +187,10 @@ export default function CheatsheetDetails({ cheatsheet }: CheatsheetDetailsProps
                                   size="sm"
                                   variant="light"
                                   color="blue"
+                                  style={{
+                                    cursor: onCommandClick ? 'pointer' : 'default',
+                                  }}
+                                  onClick={() => onCommandClick?.(cmdId)}
                                 >
                                   {cmdId}
                                 </Badge>
@@ -278,6 +283,10 @@ export default function CheatsheetDetails({ cheatsheet }: CheatsheetDetailsProps
                                   size="sm"
                                   variant="light"
                                   color="green"
+                                  style={{
+                                    cursor: onCommandClick ? 'pointer' : 'default',
+                                  }}
+                                  onClick={() => onCommandClick?.(cmdId)}
                                 >
                                   {cmdId}
                                 </Badge>

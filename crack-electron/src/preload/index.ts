@@ -23,6 +23,15 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getCheatsheet: (cheatsheetId: string) =>
     ipcRenderer.invoke('get-cheatsheet', cheatsheetId),
 
+  searchChains: (query: string, filters?: any) =>
+    ipcRenderer.invoke('search-chains', query, filters),
+
+  getChain: (chainId: string) =>
+    ipcRenderer.invoke('get-chain', chainId),
+
+  getChainGraph: (chainId: string) =>
+    ipcRenderer.invoke('get-chain-graph', chainId),
+
   // Console bridge - send renderer logs to terminal
   logToTerminal: (level: string, message: string) =>
     ipcRenderer.send('log-to-terminal', level, message),
@@ -44,6 +53,11 @@ export interface ElectronAPI {
     tags?: string[];
   }) => Promise<any[]>;
   getCheatsheet: (cheatsheetId: string) => Promise<any>;
+  searchChains: (query: string, filters?: {
+    category?: string;
+  }) => Promise<any[]>;
+  getChain: (chainId: string) => Promise<any>;
+  getChainGraph: (chainId: string) => Promise<any>;
   logToTerminal: (level: string, message: string) => void;
 }
 

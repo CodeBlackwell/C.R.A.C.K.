@@ -524,6 +524,214 @@ ipcMain.handle('get-cheatsheet', async (_event, cheatsheetId: string) => {
 });
 logIPC('Registered IPC handler: get-cheatsheet');
 
+// IPC Handler: Search attack chains
+ipcMain.handle('search-chains', async (_event, searchQuery: string, filters?: {
+  category?: string;
+}) => {
+  logIPC('IPC: search-chains called', {
+    query: searchQuery || '(empty)',
+    filters,
+  });
+
+  try {
+    let query = `
+      MATCH (ac:AttackChain)
+    `;
+
+    const params: Record<string, any> = {};
+    const conditions: string[] = [];
+
+    if (searchQuery && searchQuery.trim()) {
+      conditions.push(`(
+        toLower(ac.name) CONTAINS toLower($searchQuery)
+        OR toLower(ac.description) CONTAINS toLower($searchQuery)
+      )`);
+      params.searchQuery = searchQuery.trim();
+    }
+
+    // Filter by category if provided (though currently empty in DB)
+    if (filters?.category && filters.category !== 'all') {
+      conditions.push('ac.category = $category');
+      params.category = filters.category;
+    }
+
+    if (conditions.length > 0) {
+      query += ' WHERE ' + conditions.join(' AND ');
+    }
+
+    query += `
+      RETURN ac.id as id, ac.name as name,
+             ac.description as description, ac.category as category,
+             ac.platform as platform, ac.difficulty as difficulty,
+             ac.time_estimate as time_estimate, ac.oscp_relevant as oscp_relevant
+      ORDER BY ac.name
+      LIMIT 100
+    `;
+
+    const results = await runQuery(query, params);
+    logIPC('IPC: search-chains completed', { resultCount: results.length });
+    return results;
+  } catch (error) {
+    logError('IPC: search-chains failed', error);
+    console.error('Search chains error:', error);
+    return [];
+  }
+});
+logIPC('Registered IPC handler: search-chains');
+
+// IPC Handler: Get attack chain details with steps
+ipcMain.handle('get-chain', async (_event, chainId: string) => {
+  logIPC('IPC: get-chain called', { chainId });
+
+  try {
+    const query = `
+      MATCH (ac:AttackChain {id: $chainId})
+      OPTIONAL MATCH (ac)-[:HAS_STEP]->(step:ChainStep)
+      OPTIONAL MATCH (step)-[:EXECUTES]->(cmd:Command)
+      WITH ac, step, cmd
+      ORDER BY step.order
+      RETURN ac,
+             collect({
+               step: step,
+               command: cmd
+             }) as steps
+    `;
+
+    const results = await runQuery(query, { chainId });
+
+    if (results && results.length > 0) {
+      const record = results[0];
+
+      // Debug: Log raw Neo4j structure
+      console.log('[DEBUG] Raw steps from Neo4j:', JSON.stringify(record.steps.slice(0, 1), null, 2));
+      if (record.steps.length > 0 && record.steps[0].step) {
+        console.log('[DEBUG] First step object keys:', Object.keys(record.steps[0].step));
+        console.log('[DEBUG] Has .properties?', 'properties' in record.steps[0].step);
+        if ('properties' in record.steps[0].step) {
+          console.log('[DEBUG] Properties content:', record.steps[0].step.properties);
+        }
+      }
+
+      // Extract steps - manually unwrap Neo4j node properties
+      const steps = record.steps
+        .filter((s: any) => s.step && s.step.properties)
+        .map((s: any) => {
+          const stepProps = s.step.properties || {};
+          const cmdProps = s.command?.properties || null;
+
+          return {
+            id: stepProps.id || '',
+            description: stepProps.description || '',
+            expected_output: stepProps.expected_output || '',
+            notes: stepProps.notes || '',
+            order: stepProps.order,
+            command: cmdProps ? {
+              id: cmdProps.id || '',
+              name: cmdProps.name || '',
+              command: cmdProps.command || '',
+              description: cmdProps.description || ''
+            } : null
+          };
+        });
+
+      const chain = {
+        ...record.ac,
+        steps
+      };
+
+      logIPC('IPC: get-chain completed', {
+        id: chain.id,
+        name: chain.name,
+        stepCount: chain.steps.length
+      });
+      return chain;
+    }
+
+    logIPC('IPC: get-chain - not found', { chainId });
+    return null;
+  } catch (error) {
+    logError('IPC: get-chain failed', error);
+    console.error('Get chain error:', error);
+    return null;
+  }
+});
+logIPC('Registered IPC handler: get-chain');
+
+// IPC Handler: Get chain graph (steps as nodes with dependencies)
+ipcMain.handle('get-chain-graph', async (_event, chainId: string) => {
+  logIPC('IPC: get-chain-graph called', { chainId });
+
+  try {
+    const query = `
+      MATCH (ac:AttackChain {id: $chainId})-[:HAS_STEP]->(step:ChainStep)
+      OPTIONAL MATCH (step)-[:EXECUTES]->(cmd:Command)
+      WITH ac, step, cmd
+      ORDER BY step.order
+      RETURN ac.name as chainName,
+             collect({
+               id: step.id,
+               description: step.description,
+               expected_output: step.expected_output,
+               notes: step.notes,
+               order: step.order,
+               command: cmd
+             }) as steps
+    `;
+
+    const results = await runQuery(query, { chainId });
+
+    if (results && results.length > 0 && results[0].steps) {
+      const steps = results[0].steps.filter((s: any) => s.id);
+      const nodes = steps.map((step: any, index: number) => ({
+        data: {
+          id: step.id,
+          label: `Step ${index + 1}`,
+          description: step.description?.substring(0, 100) || '',
+          type: 'step',
+          order: step.order || index,
+          command: step.command
+        }
+      }));
+
+      // Create edges based on sequential order (step dependencies)
+      const edges: any[] = [];
+      for (let i = 0; i < steps.length - 1; i++) {
+        edges.push({
+          data: {
+            id: `${steps[i].id}-${steps[i + 1].id}`,
+            source: steps[i].id,
+            target: steps[i + 1].id,
+            label: 'NEXT',
+            type: 'next'
+          }
+        });
+      }
+
+      const graphData = {
+        elements: {
+          nodes,
+          edges
+        }
+      };
+
+      logIPC('IPC: get-chain-graph completed', {
+        nodeCount: nodes.length,
+        edgeCount: edges.length
+      });
+
+      return graphData;
+    }
+
+    logIPC('IPC: get-chain-graph - no steps found', { chainId });
+    return { elements: { nodes: [], edges: [] } };
+  } catch (error) {
+    logError('IPC: get-chain-graph failed', error);
+    console.error('Get chain graph error:', error);
+    return { elements: { nodes: [], edges: [] } };
+  }
+});
+logIPC('Registered IPC handler: get-chain-graph');
+
 // IPC Handler: Console bridge (renderer logs to terminal)
 ipcMain.on('log-to-terminal', (_event, level: string, message: string) => {
   const prefix = `[RENDERER:${level.toUpperCase()}]`;

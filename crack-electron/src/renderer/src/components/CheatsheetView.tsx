@@ -154,7 +154,6 @@ export default function CheatsheetView({ onSelectCheatsheet }: CheatsheetViewPro
         {categorizedResults.size > 0 && (
           <Accordion
             multiple
-            defaultValue={Array.from(categorizedResults.keys())}
             variant="separated"
             styles={{
               item: {
@@ -164,7 +163,7 @@ export default function CheatsheetView({ onSelectCheatsheet }: CheatsheetViewPro
                 marginBottom: '8px',
               },
               control: {
-                padding: '12px 16px',
+                padding: '8px 12px',
                 '&:hover': {
                   background: '#2C2E33',
                 },
@@ -197,7 +196,7 @@ export default function CheatsheetView({ onSelectCheatsheet }: CheatsheetViewPro
                         ref={selectedId === sheet.id ? selectedItemRef : null}
                         onClick={() => handleSheetClick(sheet.id)}
                         style={{
-                          padding: '12px 16px',
+                          padding: '8px 12px',
                           cursor: 'pointer',
                           background:
                             selectedId === sheet.id ? '#2C2E33' : 'transparent',

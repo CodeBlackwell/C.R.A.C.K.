@@ -1,15 +1,19 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Paper, Text, ScrollArea, Accordion, Loader, Center, Stack, Badge, Group, Code, Divider } from '@mantine/core';
 import { Cheatsheet } from '../types/cheatsheet';
 import { Command } from '../types/command';
 
 interface CheatsheetCommandListProps {
   cheatsheet: Cheatsheet;
+  expandedCommandId?: string | null;
 }
 
-export default function CheatsheetCommandList({ cheatsheet }: CheatsheetCommandListProps) {
+export default function CheatsheetCommandList({ cheatsheet, expandedCommandId }: CheatsheetCommandListProps) {
   const [commands, setCommands] = useState<Command[]>([]);
   const [loading, setLoading] = useState(true);
+  const [accordionValue, setAccordionValue] = useState<string | null>(null);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const expandedItemRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const fetchCommands = async () => {
@@ -51,6 +55,24 @@ export default function CheatsheetCommandList({ cheatsheet }: CheatsheetCommandL
 
     fetchCommands();
   }, [cheatsheet]);
+
+  // Handle external command expansion requests
+  useEffect(() => {
+    if (expandedCommandId) {
+      console.log('[CheatsheetCommandList] Expanding command:', expandedCommandId);
+      setAccordionValue(expandedCommandId);
+
+      // Scroll into view after a brief delay to allow accordion to expand
+      setTimeout(() => {
+        if (expandedItemRef.current) {
+          expandedItemRef.current.scrollIntoView({
+            behavior: 'smooth',
+            block: 'nearest',
+          });
+        }
+      }, 100);
+    }
+  }, [expandedCommandId]);
 
   const handleCopyCommand = (command: string) => {
     navigator.clipboard.writeText(command);
@@ -120,8 +142,10 @@ export default function CheatsheetCommandList({ cheatsheet }: CheatsheetCommandL
         Commands ({commands.length})
       </Text>
 
-      <ScrollArea style={{ flex: 1 }}>
+      <ScrollArea style={{ flex: 1 }} viewportRef={scrollAreaRef}>
         <Accordion
+          value={accordionValue}
+          onChange={setAccordionValue}
           variant="separated"
           styles={{
             item: {
@@ -145,8 +169,12 @@ export default function CheatsheetCommandList({ cheatsheet }: CheatsheetCommandL
           }}
         >
           {commands.map((command) => (
-            <Accordion.Item key={command.id} value={command.id}>
-              <Accordion.Control>
+            <div
+              key={command.id}
+              ref={command.id === expandedCommandId ? expandedItemRef : null}
+            >
+              <Accordion.Item value={command.id}>
+                <Accordion.Control>
                 <Group gap="xs" justify="space-between" wrap="nowrap">
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <Text size="sm" fw={600} truncate>
@@ -263,6 +291,7 @@ export default function CheatsheetCommandList({ cheatsheet }: CheatsheetCommandL
                 </Stack>
               </Accordion.Panel>
             </Accordion.Item>
+            </div>
           ))}
         </Accordion>
       </ScrollArea>

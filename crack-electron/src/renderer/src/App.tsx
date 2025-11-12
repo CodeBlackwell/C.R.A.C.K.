@@ -6,6 +6,7 @@ import CheatsheetView from './components/CheatsheetView';
 import CheatsheetDetails from './components/CheatsheetDetails';
 import CheatsheetCommandList from './components/CheatsheetCommandList';
 import ChainView from './components/ChainView';
+import ChainDetails from './components/ChainDetails';
 import GraphView from './components/GraphView';
 import CommandDetails from './components/CommandDetails';
 import { Command } from './types/command';
@@ -14,11 +15,13 @@ import { Cheatsheet } from './types/cheatsheet';
 function App() {
   const [selectedCommand, setSelectedCommand] = useState<Command | null>(null);
   const [selectedCheatsheet, setSelectedCheatsheet] = useState<Cheatsheet | null>(null);
+  const [selectedChainId, setSelectedChainId] = useState<string | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<{
     connected: boolean;
     uri?: string;
   }>({ connected: false });
-  const [activeView, setActiveView] = useState<'commands' | 'cheatsheets' | 'chains'>('commands');
+  const [activeView, setActiveView] = useState<'commands' | 'cheatsheets' | 'chains'>('cheatsheets');
+  const [expandedCommandId, setExpandedCommandId] = useState<string | null>(null);
 
   // Debug: Log component mount
   useEffect(() => {
@@ -71,9 +74,33 @@ function App() {
       console.log('[App] Cheatsheet data received:', cheatsheet ? cheatsheet.name : 'null');
       setSelectedCheatsheet(cheatsheet);
       setSelectedCommand(null); // Clear command when selecting cheatsheet
+      setExpandedCommandId(null); // Clear expanded command when selecting new cheatsheet
     } catch (error) {
       console.error('[App] Error fetching cheatsheet:', error);
     }
+  };
+
+  const handleChainSelect = (chainId: string) => {
+    console.log('[App] Chain selected:', chainId);
+    setSelectedChainId(chainId);
+    setSelectedCommand(null); // Clear command when selecting chain
+    setSelectedCheatsheet(null); // Clear cheatsheet when selecting chain
+  };
+
+  const handleChainCommandClick = async (commandId: string) => {
+    console.log('[App] Chain command clicked:', commandId);
+    try {
+      const command = await window.electronAPI.getCommand(commandId);
+      console.log('[App] Command data received from chain:', command ? command.name : 'null');
+      setSelectedCommand(command);
+    } catch (error) {
+      console.error('[App] Error fetching command from chain:', error);
+    }
+  };
+
+  const handleCommandBadgeClick = (commandId: string) => {
+    console.log('[App] Command badge clicked:', commandId);
+    setExpandedCommandId(commandId);
   };
 
   // Debug: Log state changes
@@ -139,9 +166,9 @@ function App() {
                 value={activeView}
                 onChange={(value) => setActiveView(value as 'commands' | 'cheatsheets' | 'chains')}
                 data={[
-                  { label: 'Commands', value: 'commands' },
                   { label: 'Cheatsheets', value: 'cheatsheets' },
                   { label: 'Chains', value: 'chains' },
+                  { label: 'Commands', value: 'commands' },
                 ]}
                 fullWidth
                 styles={{
@@ -163,12 +190,14 @@ function App() {
                 {activeView === 'cheatsheets' && (
                   <CheatsheetView onSelectCheatsheet={handleCheatsheetSelect} />
                 )}
-                {activeView === 'chains' && <ChainView />}
+                {activeView === 'chains' && (
+                  <ChainView onSelectChain={handleChainSelect} />
+                )}
               </div>
             </div>
 
-            {/* Center Panel: Graph (only shown when not viewing cheatsheet) */}
-            {!selectedCheatsheet && (
+            {/* Center Panel: Graph (only shown when not viewing cheatsheet or chain) */}
+            {!selectedCheatsheet && !selectedChainId && (
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {selectedCommand ? (
                   <>
@@ -264,7 +293,20 @@ function App() {
             {/* Center Panel when cheatsheet selected: Cheatsheet Details */}
             {selectedCheatsheet && (
               <div style={{ flex: 1, height: '100%' }}>
-                <CheatsheetDetails cheatsheet={selectedCheatsheet} />
+                <CheatsheetDetails
+                  cheatsheet={selectedCheatsheet}
+                  onCommandClick={handleCommandBadgeClick}
+                />
+              </div>
+            )}
+
+            {/* Center Panel when chain selected: Chain Details */}
+            {selectedChainId && !selectedCheatsheet && (
+              <div style={{ flex: 1, height: '100%' }}>
+                <ChainDetails
+                  chainId={selectedChainId}
+                  onCommandClick={handleChainCommandClick}
+                />
               </div>
             )}
 
@@ -273,7 +315,10 @@ function App() {
               {selectedCommand ? (
                 <CommandDetails command={selectedCommand} />
               ) : selectedCheatsheet ? (
-                <CheatsheetCommandList cheatsheet={selectedCheatsheet} />
+                <CheatsheetCommandList
+                  cheatsheet={selectedCheatsheet}
+                  expandedCommandId={expandedCommandId}
+                />
               ) : (
                 <Paper
                   shadow="sm"
