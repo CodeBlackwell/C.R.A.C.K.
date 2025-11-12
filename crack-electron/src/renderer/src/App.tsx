@@ -173,83 +173,102 @@ function App() {
               </div>
             </div>
 
-            {/* Center Panel: Graph */}
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <div style={{ flex: 1 }}>
-                <GraphView
-                  selectedCommandId={selectedCommand?.id}
-                  onNodeClick={handleCommandSelect}
-                />
-              </div>
+            {/* Center Panel: Graph (only shown when not viewing cheatsheet) */}
+            {!selectedCheatsheet && (
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {selectedCommand ? (
+                  <>
+                    <div style={{ flex: 1 }}>
+                      <GraphView
+                        selectedCommandId={selectedCommand.id}
+                        onNodeClick={handleCommandSelect}
+                      />
+                    </div>
 
-              {/* Footer: Tags & Output Indicators */}
-              {selectedCommand && (
-                <Paper
-                  style={{
-                    background: '#25262b',
-                    border: '1px solid #373A40',
-                    padding: '12px 16px',
-                  }}
-                >
-                  <Stack gap="md">
-                    {/* Tags */}
-                    {selectedCommand.tags && selectedCommand.tags.length > 0 && (
-                      <div>
-                        <Text size="xs" fw={600} mb="xs" c="dimmed">
-                          Tags
-                        </Text>
-                        <Group gap="xs" wrap="wrap">
-                          {selectedCommand.tags.map((tag) => (
-                            <Badge key={tag} variant="light" color="gray" size="sm">
-                              {tag}
-                            </Badge>
-                          ))}
-                        </Group>
-                      </div>
-                    )}
-
-                    {/* Output Indicators */}
-                    {selectedCommand.indicators && selectedCommand.indicators.length > 0 && (
-                      <>
-                        {selectedCommand.tags && selectedCommand.tags.length > 0 && <Divider />}
-                        <div>
-                          <Text size="xs" fw={600} mb="xs" c="dimmed">
-                            Output Indicators
-                          </Text>
-                          <Group gap="xs" wrap="wrap">
-                            {selectedCommand.indicators.map((indicator, idx) => {
-                              // Determine color based on indicator type
-                              const isPositive = ['success', 'positive', 'valid', 'found'].includes(
-                                indicator.type?.toLowerCase() || ''
-                              );
-                              const color = isPositive ? 'green' : 'red';
-
-                              return (
-                                <Badge
-                                  key={idx}
-                                  size="sm"
-                                  color={color}
-                                  variant="light"
-                                  style={{
-                                    cursor: 'default',
-                                    fontFamily: 'monospace',
-                                  }}
-                                >
-                                  {indicator.pattern}
+                    {/* Footer: Tags & Output Indicators */}
+                    <Paper
+                      style={{
+                        background: '#25262b',
+                        border: '1px solid #373A40',
+                        padding: '12px 16px',
+                      }}
+                    >
+                      <Stack gap="md">
+                        {/* Tags */}
+                        {selectedCommand.tags && selectedCommand.tags.length > 0 && (
+                          <div>
+                            <Text size="xs" fw={600} mb="xs" c="dimmed">
+                              Tags
+                            </Text>
+                            <Group gap="xs" wrap="wrap">
+                              {selectedCommand.tags.map((tag) => (
+                                <Badge key={tag} variant="light" color="gray" size="sm">
+                                  {tag}
                                 </Badge>
-                              );
-                            })}
-                          </Group>
-                        </div>
-                      </>
-                    )}
-                  </Stack>
-                </Paper>
-              )}
-            </div>
+                              ))}
+                            </Group>
+                          </div>
+                        )}
 
-            {/* Right Panel: Details */}
-            <div style={{ width: '450px', height: '100%' }}>
+                        {/* Output Indicators */}
+                        {selectedCommand.indicators && selectedCommand.indicators.length > 0 && (
+                          <>
+                            {selectedCommand.tags && selectedCommand.tags.length > 0 && <Divider />}
+                            <div>
+                              <Text size="xs" fw={600} mb="xs" c="dimmed">
+                                Output Indicators
+                              </Text>
+                              <Group gap="xs" wrap="wrap">
+                                {selectedCommand.indicators.map((indicator, idx) => {
+                                  // Determine color based on indicator type
+                                  const isPositive = ['success', 'positive', 'valid', 'found'].includes(
+                                    indicator.type?.toLowerCase() || ''
+                                  );
+                                  const color = isPositive ? 'green' : 'red';
+
+                                  return (
+                                    <Badge
+                                      key={idx}
+                                      size="sm"
+                                      color={color}
+                                      variant="light"
+                                      style={{
+                                        cursor: 'default',
+                                        fontFamily: 'monospace',
+                                      }}
+                                    >
+                                      {indicator.pattern}
+                                    </Badge>
+                                  );
+                                })}
+                              </Group>
+                            </div>
+                          </>
+                        )}
+                      </Stack>
+                    </Paper>
+                  </>
+                ) : (
+                  <Paper
+                    style={{
+                      background: '#25262b',
+                      border: '1px solid #373A40',
+                      height: '100%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <Text c="dimmed" size="sm">
+                      Select a command to view its relationship graph
+                    </Text>
+                  </Paper>
+                )}
+              </div>
+            )}
+
+            {/* Right Panel: Details (expands when graph is hidden) */}
+            <div style={{ width: selectedCheatsheet ? 'auto' : '450px', flex: selectedCheatsheet ? 1 : undefined, height: '100%' }}>
               {selectedCommand ? (
                 <CommandDetails command={selectedCommand} />
               ) : selectedCheatsheet ? (

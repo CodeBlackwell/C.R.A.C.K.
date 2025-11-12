@@ -80,13 +80,39 @@ export default function CheatsheetDetails({ cheatsheet, onCommandClick }: Cheats
               <Text size="lg" fw={600} mb="md">
                 Attack Scenarios
               </Text>
-              <Accordion variant="separated">
+              <Accordion
+                variant="separated"
+                styles={{
+                  item: {
+                    background: '#1a1b1e',
+                    border: '1px solid #373A40',
+                    borderRadius: '8px',
+                  },
+                  control: {
+                    padding: '14px 16px',
+                    '&:hover': {
+                      background: '#2C2E33',
+                    },
+                  },
+                  content: {
+                    padding: '0 16px 16px 16px',
+                  },
+                  chevron: {
+                    color: '#22c1c3',
+                  },
+                }}
+              >
                 {cheatsheet.scenarios.map((scenario, idx) => (
                   <Accordion.Item key={idx} value={`scenario-${idx}`}>
                     <Accordion.Control>
-                      <Text size="sm" fw={600}>
-                        {scenario.title}
-                      </Text>
+                      <Group gap="xs">
+                        <Badge size="sm" variant="filled" color="cyan">
+                          {idx + 1}
+                        </Badge>
+                        <Text size="sm" fw={600}>
+                          {scenario.title}
+                        </Text>
+                      </Group>
                     </Accordion.Control>
                     <Accordion.Panel>
                       <Stack gap="md">
@@ -153,36 +179,73 @@ export default function CheatsheetDetails({ cheatsheet, onCommandClick }: Cheats
               <Text size="lg" fw={600} mb="md">
                 Command Sections
               </Text>
-              <Stack gap="md">
+              <Accordion
+                variant="separated"
+                styles={{
+                  item: {
+                    background: '#1a1b1e',
+                    border: '1px solid #373A40',
+                    borderRadius: '8px',
+                  },
+                  control: {
+                    padding: '14px 16px',
+                    '&:hover': {
+                      background: '#2C2E33',
+                    },
+                  },
+                  content: {
+                    padding: '0 16px 16px 16px',
+                  },
+                  chevron: {
+                    color: '#22c1c3',
+                  },
+                }}
+              >
                 {cheatsheet.sections.map((section, idx) => (
-                  <Paper key={idx} p="md" style={{ background: '#1a1b1e', border: '1px solid #373A40' }}>
-                    <Text size="md" fw={600} mb="xs">
-                      {section.title}
-                    </Text>
-                    {section.notes && (
-                      <Text size="sm" c="dimmed" mb="md">
-                        {section.notes}
-                      </Text>
-                    )}
-                    {section.commands && section.commands.length > 0 && (
+                  <Accordion.Item key={idx} value={`section-${idx}`}>
+                    <Accordion.Control>
                       <Group gap="xs">
-                        {section.commands.map((cmdId) => (
-                          <Badge
-                            key={cmdId}
-                            size="sm"
-                            variant="light"
-                            color="green"
-                            style={{ cursor: onCommandClick ? 'pointer' : 'default' }}
-                            onClick={() => onCommandClick && onCommandClick(cmdId)}
-                          >
-                            {cmdId}
-                          </Badge>
-                        ))}
+                        <Badge size="sm" variant="filled" color="green">
+                          Phase {idx + 1}
+                        </Badge>
+                        <Text size="sm" fw={600}>
+                          {section.title}
+                        </Text>
                       </Group>
-                    )}
-                  </Paper>
+                    </Accordion.Control>
+                    <Accordion.Panel>
+                      <Stack gap="md">
+                        {section.notes && (
+                          <Text size="sm" c="dimmed">
+                            {section.notes}
+                          </Text>
+                        )}
+                        {section.commands && section.commands.length > 0 && (
+                          <div>
+                            <Text size="xs" fw={600} mb="xs" c="dimmed">
+                              COMMANDS
+                            </Text>
+                            <Group gap="xs">
+                              {section.commands.map((cmdId) => (
+                                <Badge
+                                  key={cmdId}
+                                  size="sm"
+                                  variant="light"
+                                  color="green"
+                                  style={{ cursor: onCommandClick ? 'pointer' : 'default' }}
+                                  onClick={() => onCommandClick && onCommandClick(cmdId)}
+                                >
+                                  {cmdId}
+                                </Badge>
+                              ))}
+                            </Group>
+                          </div>
+                        )}
+                      </Stack>
+                    </Accordion.Panel>
+                  </Accordion.Item>
                 ))}
-              </Stack>
+              </Accordion>
             </div>
           )}
         </Stack>
