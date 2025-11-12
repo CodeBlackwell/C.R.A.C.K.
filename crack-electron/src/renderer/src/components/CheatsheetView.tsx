@@ -1,17 +1,20 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import {
   TextInput,
   Paper,
-  Table,
   ScrollArea,
   Badge,
   Text,
   Loader,
   Group,
+  Accordion,
+  Stack,
+  Box,
 } from '@mantine/core';
 import { useDebouncedValue } from '@mantine/hooks';
 import { IconSearch } from '@tabler/icons-react';
 import { CheatsheetListItem } from '../types/cheatsheet';
+import { groupByCategory } from '../utils/categoryUtils';
 
 interface CheatsheetViewProps {
   onSelectCheatsheet: (cheatsheetId: string) => void;
@@ -23,8 +26,7 @@ export default function CheatsheetView({ onSelectCheatsheet }: CheatsheetViewPro
   const [results, setResults] = useState<CheatsheetListItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [selectedIndex, setSelectedIndex] = useState<number>(0);
-  const selectedRowRef = useRef<HTMLTableRowElement>(null);
+  const selectedItemRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     console.log('[CheatsheetView] Component mounted');
@@ -41,7 +43,11 @@ export default function CheatsheetView({ onSelectCheatsheet }: CheatsheetViewPro
         const data = await window.electronAPI.searchCheatsheets(debouncedQuery);
         console.log('[CheatsheetView] Search results received:', data.length, 'cheatsheets');
         setResults(data);
-        setSelectedIndex(0);
+        // Select first result if available
+        if (data.length > 0 && !selectedId) {
+          setSelectedId(data[0].id);
+          onSelectCheatsheet(data[0].id);
+        }
       } catch (error) {
         console.error('[CheatsheetView] Search error:', error);
         setResults([]);
@@ -55,43 +61,50 @@ export default function CheatsheetView({ onSelectCheatsheet }: CheatsheetViewPro
 
   // Auto-load selected cheatsheet
   useEffect(() => {
-    if (results.length > 0 && selectedIndex >= 0 && selectedIndex < results.length) {
-      const selectedSheet = results[selectedIndex];
-      setSelectedId(selectedSheet.id);
-      onSelectCheatsheet(selectedSheet.id);
+    if (selectedId) {
+      onSelectCheatsheet(selectedId);
 
-      // Scroll selected row into view
-      if (selectedRowRef.current) {
-        selectedRowRef.current.scrollIntoView({
+      // Scroll selected item into view
+      if (selectedItemRef.current) {
+        selectedItemRef.current.scrollIntoView({
           behavior: 'smooth',
           block: 'nearest',
         });
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedIndex, results]);
+  }, [selectedId]);
+
+  // Group results by category
+  const categorizedResults = useMemo(() => {
+    return groupByCategory(results);
+  }, [results]);
 
   // Keyboard navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (results.length === 0) return;
 
+      const currentIndex = results.findIndex((s) => s.id === selectedId);
+
       if (e.key === 'ArrowDown') {
         e.preventDefault();
-        setSelectedIndex((prev) => Math.min(prev + 1, results.length - 1));
+        const nextIndex = Math.min(currentIndex + 1, results.length - 1);
+        setSelectedId(results[nextIndex].id);
       } else if (e.key === 'ArrowUp') {
         e.preventDefault();
-        setSelectedIndex((prev) => Math.max(prev - 1, 0));
+        const prevIndex = Math.max(currentIndex - 1, 0);
+        setSelectedId(results[prevIndex].id);
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [results.length]);
+  }, [results, selectedId]);
 
-  const handleRowClick = (index: number) => {
-    console.log('[CheatsheetView] Row clicked at index:', index);
-    setSelectedIndex(index);
+  const handleSheetClick = (sheetId: string) => {
+    console.log('[CheatsheetView] Sheet clicked:', sheetId);
+    setSelectedId(sheetId);
   };
 
   return (
@@ -132,68 +145,103 @@ export default function CheatsheetView({ onSelectCheatsheet }: CheatsheetViewPro
       />
 
       <ScrollArea style={{ flex: 1 }}>
-        <Table
-          highlightOnHover
-          style={{
-            fontSize: '13px',
-          }}
-        >
-          <Table.Thead>
-            <Table.Tr>
-              <Table.Th>Name</Table.Th>
-              <Table.Th>Tags</Table.Th>
-            </Table.Tr>
-          </Table.Thead>
-          <Table.Tbody>
-            {results.map((sheet, index) => (
-              <Table.Tr
-                key={sheet.id}
-                ref={selectedIndex === index ? selectedRowRef : null}
-                onClick={() => handleRowClick(index)}
-                style={{
-                  cursor: 'pointer',
-                  background:
-                    selectedIndex === index ? '#2C2E33' : 'transparent',
-                }}
-              >
-                <Table.Td>
-                  <Text size="sm" fw={500}>
-                    {sheet.name}
-                  </Text>
-                  <Text size="xs" c="dimmed" lineClamp={1}>
-                    {sheet.description}
-                  </Text>
-                </Table.Td>
-                <Table.Td>
-                  <Group gap={4}>
-                    {sheet.tags?.slice(0, 2).map((tag) => (
-                      <Badge
-                        key={tag}
-                        size="xs"
-                        variant="dot"
-                        color="cyan"
-                      >
-                        {tag}
-                      </Badge>
-                    ))}
-                    {sheet.tags?.length > 2 && (
-                      <Text size="xs" c="dimmed">
-                        +{sheet.tags.length - 2}
-                      </Text>
-                    )}
-                  </Group>
-                </Table.Td>
-              </Table.Tr>
-            ))}
-          </Table.Tbody>
-        </Table>
-
         {results.length === 0 && !loading && (
           <Text ta="center" c="dimmed" mt="xl">
-            {query
-              ? 'No cheatsheets found'
-              : 'Start searching for cheatsheets'}
+            {query ? 'No cheatsheets found' : 'Loading cheatsheets...'}
           </Text>
+        )}
+
+        {categorizedResults.size > 0 && (
+          <Accordion
+            multiple
+            defaultValue={Array.from(categorizedResults.keys())}
+            variant="separated"
+            styles={{
+              item: {
+                background: '#1a1b1e',
+                border: '1px solid #373A40',
+                borderRadius: '8px',
+                marginBottom: '8px',
+              },
+              control: {
+                padding: '12px 16px',
+                '&:hover': {
+                  background: '#2C2E33',
+                },
+              },
+              content: {
+                padding: '0',
+              },
+              chevron: {
+                color: '#22c1c3',
+              },
+            }}
+          >
+            {Array.from(categorizedResults.entries()).map(([category, sheets]) => (
+              <Accordion.Item key={category} value={category}>
+                <Accordion.Control>
+                  <Group gap="xs">
+                    <Text size="sm" fw={600} c="cyan">
+                      {category}
+                    </Text>
+                    <Badge size="sm" variant="light" color="gray">
+                      {sheets.length}
+                    </Badge>
+                  </Group>
+                </Accordion.Control>
+                <Accordion.Panel>
+                  <Stack gap={0}>
+                    {sheets.map((sheet) => (
+                      <Box
+                        key={sheet.id}
+                        ref={selectedId === sheet.id ? selectedItemRef : null}
+                        onClick={() => handleSheetClick(sheet.id)}
+                        style={{
+                          padding: '12px 16px',
+                          cursor: 'pointer',
+                          background:
+                            selectedId === sheet.id ? '#2C2E33' : 'transparent',
+                          borderLeft:
+                            selectedId === sheet.id
+                              ? '3px solid #22c1c3'
+                              : '3px solid transparent',
+                        }}
+                        onMouseEnter={(e) => {
+                          if (selectedId !== sheet.id) {
+                            e.currentTarget.style.background = '#25262b';
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (selectedId !== sheet.id) {
+                            e.currentTarget.style.background = 'transparent';
+                          }
+                        }}
+                      >
+                        <Text size="sm" fw={500} mb={4}>
+                          {sheet.name}
+                        </Text>
+                        <Text size="xs" c="dimmed" lineClamp={2} mb={6}>
+                          {sheet.description}
+                        </Text>
+                        <Group gap={4}>
+                          {sheet.tags?.slice(0, 3).map((tag) => (
+                            <Badge key={tag} size="xs" variant="dot" color="cyan">
+                              {tag}
+                            </Badge>
+                          ))}
+                          {sheet.tags?.length > 3 && (
+                            <Text size="xs" c="dimmed">
+                              +{sheet.tags.length - 3}
+                            </Text>
+                          )}
+                        </Group>
+                      </Box>
+                    ))}
+                  </Stack>
+                </Accordion.Panel>
+              </Accordion.Item>
+            ))}
+          </Accordion>
         )}
       </ScrollArea>
     </Paper>

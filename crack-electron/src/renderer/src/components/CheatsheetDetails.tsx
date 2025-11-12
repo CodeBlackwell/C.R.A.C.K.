@@ -1,12 +1,38 @@
 import { Paper, Text, Stack, Accordion, Badge, Group, Divider, Code, ScrollArea } from '@mantine/core';
+import { useState } from 'react';
 import { Cheatsheet } from '../types/cheatsheet';
 
 interface CheatsheetDetailsProps {
   cheatsheet: Cheatsheet;
-  onCommandClick?: (commandId: string) => void;
 }
 
-export default function CheatsheetDetails({ cheatsheet, onCommandClick }: CheatsheetDetailsProps) {
+export default function CheatsheetDetails({ cheatsheet }: CheatsheetDetailsProps) {
+  const [copied, setCopied] = useState(false);
+
+  // Derive source file path from cheatsheet ID
+  const getSourcePath = (id: string): string => {
+    const basePath = '/home/kali/Desktop/OSCP/crack/reference/data/cheatsheets';
+
+    if (id.startsWith('ad-')) {
+      return `${basePath}/active-directory/${id}.json`;
+    } else if (id.startsWith('hash-') || id.includes('password') || id.includes('keepass') || id.includes('ssh-private-key')) {
+      return `${basePath}/password-attacks/${id}.json`;
+    } else if (id.startsWith('metasploit-')) {
+      return `${basePath}/metasploit/${id}.json`;
+    }
+
+    // Default to root cheatsheets directory
+    return `${basePath}/${id}.json`;
+  };
+
+  const sourcePath = getSourcePath(cheatsheet.id);
+
+  const handleCopyPath = () => {
+    navigator.clipboard.writeText(sourcePath);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   return (
     <Paper
       shadow="sm"
@@ -26,6 +52,20 @@ export default function CheatsheetDetails({ cheatsheet, onCommandClick }: Cheats
           <div>
             <Text size="xl" fw={700} mb="xs">
               {cheatsheet.name}
+            </Text>
+            <Text
+              size="xs"
+              c="dimmed"
+              mb="md"
+              style={{
+                cursor: 'pointer',
+                fontFamily: 'monospace',
+                userSelect: 'none',
+              }}
+              onClick={handleCopyPath}
+              title="Click to copy path"
+            >
+              {copied ? '✓ Copied to clipboard!' : `📄 ${sourcePath}`}
             </Text>
             <Text size="sm" c="dimmed" mb="md">
               {cheatsheet.description}
@@ -115,24 +155,28 @@ export default function CheatsheetDetails({ cheatsheet, onCommandClick }: Cheats
                       </Group>
                     </Accordion.Control>
                     <Accordion.Panel>
-                      <Stack gap="md">
+                      <Stack gap="xl">
                         <div>
-                          <Text size="xs" fw={600} mb="xs" c="dimmed">
+                          <Text size="xs" fw={600} mb="xs" c="cyan">
                             CONTEXT
                           </Text>
-                          <Text size="sm">{scenario.context}</Text>
+                          <Text size="sm" style={{ whiteSpace: 'pre-line' }}>
+                            {scenario.context}
+                          </Text>
                         </div>
 
                         <div>
-                          <Text size="xs" fw={600} mb="xs" c="dimmed">
+                          <Text size="xs" fw={600} mb="xs" c="yellow">
                             APPROACH
                           </Text>
-                          <Text size="sm">{scenario.approach}</Text>
+                          <Text size="sm" style={{ whiteSpace: 'pre-line' }}>
+                            {scenario.approach}
+                          </Text>
                         </div>
 
                         {scenario.commands && scenario.commands.length > 0 && (
                           <div>
-                            <Text size="xs" fw={600} mb="xs" c="dimmed">
+                            <Text size="xs" fw={600} mb="xs" c="blue">
                               COMMANDS
                             </Text>
                             <Group gap="xs">
@@ -142,8 +186,6 @@ export default function CheatsheetDetails({ cheatsheet, onCommandClick }: Cheats
                                   size="sm"
                                   variant="light"
                                   color="blue"
-                                  style={{ cursor: onCommandClick ? 'pointer' : 'default' }}
-                                  onClick={() => onCommandClick && onCommandClick(cmdId)}
                                 >
                                   {cmdId}
                                 </Badge>
@@ -153,17 +195,21 @@ export default function CheatsheetDetails({ cheatsheet, onCommandClick }: Cheats
                         )}
 
                         <div>
-                          <Text size="xs" fw={600} mb="xs" c="dimmed">
+                          <Text size="xs" fw={600} mb="xs" c="green">
                             EXPECTED OUTCOME
                           </Text>
-                          <Text size="sm">{scenario.expected_outcome}</Text>
+                          <Text size="sm" style={{ whiteSpace: 'pre-line' }}>
+                            {scenario.expected_outcome}
+                          </Text>
                         </div>
 
                         <div>
-                          <Text size="xs" fw={600} mb="xs" c="dimmed">
+                          <Text size="xs" fw={600} mb="xs" c="grape">
                             WHY THIS WORKS
                           </Text>
-                          <Text size="sm">{scenario.why_this_works}</Text>
+                          <Text size="sm" style={{ whiteSpace: 'pre-line' }}>
+                            {scenario.why_this_works}
+                          </Text>
                         </div>
                       </Stack>
                     </Accordion.Panel>
@@ -232,8 +278,6 @@ export default function CheatsheetDetails({ cheatsheet, onCommandClick }: Cheats
                                   size="sm"
                                   variant="light"
                                   color="green"
-                                  style={{ cursor: onCommandClick ? 'pointer' : 'default' }}
-                                  onClick={() => onCommandClick && onCommandClick(cmdId)}
                                 >
                                   {cmdId}
                                 </Badge>

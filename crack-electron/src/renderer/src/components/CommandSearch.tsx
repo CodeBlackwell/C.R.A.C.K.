@@ -8,10 +8,12 @@ import {
   Text,
   Loader,
   Group,
-  Checkbox,
+  Divider,
 } from '@mantine/core';
 import { useDebouncedValue } from '@mantine/hooks';
 import { IconSearch } from '@tabler/icons-react';
+import NestedCategoryAccordion from './NestedCategoryAccordion';
+import { CategoryHierarchy } from '../types/category';
 
 interface CommandSearchProps {
   onSelectCommand: (commandId: string) => void;
@@ -33,7 +35,10 @@ export default function CommandSearch({ onSelectCommand }: CommandSearchProps) {
   const [loading, setLoading] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedIndex, setSelectedIndex] = useState<number>(0);
-  const [oscpOnly, setOscpOnly] = useState(false);
+  const [hierarchies, setHierarchies] = useState<CategoryHierarchy[]>([]);
+  const [hierarchiesLoading, setHierarchiesLoading] = useState(true);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedSubcategory, setSelectedSubcategory] = useState<string | null>(null);
   const selectedRowRef = useRef<HTMLTableRowElement>(null);
 
   // Debug: Log mount
@@ -41,13 +46,47 @@ export default function CommandSearch({ onSelectCommand }: CommandSearchProps) {
     console.log('[CommandSearch] Component mounted');
   }, []);
 
+  // Fetch category hierarchies on mount
   useEffect(() => {
-    console.log('[CommandSearch] Search triggered:', { debouncedQuery, oscpOnly });
+    const fetchHierarchies = async () => {
+      try {
+        console.log('[CommandSearch] Fetching category hierarchies...');
+        const data = await window.electronAPI.getCategoryHierarchy();
+        console.log('[CommandSearch] Hierarchies received:', data.length, 'categories');
+        setHierarchies(data);
+      } catch (error) {
+        console.error('[CommandSearch] Failed to fetch hierarchies:', error);
+        setHierarchies([]);
+      } finally {
+        setHierarchiesLoading(false);
+      }
+    };
+
+    fetchHierarchies();
+  }, []);
+
+  // Search commands with category/subcategory filters
+  useEffect(() => {
+    console.log('[CommandSearch] Search triggered:', {
+      debouncedQuery,
+      selectedCategory,
+      selectedSubcategory,
+    });
+
     const search = async () => {
       setLoading(true);
       try {
-        const filters = oscpOnly ? { oscp_only: true } : undefined;
-        console.log('[CommandSearch] Calling searchCommands API...');
+        const filters: any = {};
+
+        // Only add filters if category/subcategory are selected
+        if (selectedCategory) {
+          filters.category = selectedCategory;
+        }
+        if (selectedSubcategory) {
+          filters.subcategory = selectedSubcategory;
+        }
+
+        console.log('[CommandSearch] Calling searchCommands API with filters:', filters);
         const data = await window.electronAPI.searchCommands(
           debouncedQuery,
           filters
@@ -65,7 +104,7 @@ export default function CommandSearch({ onSelectCommand }: CommandSearchProps) {
     };
 
     search();
-  }, [debouncedQuery, oscpOnly]);
+  }, [debouncedQuery, selectedCategory, selectedSubcategory]);
 
   // Auto-load selected command when navigating with keyboard
   useEffect(() => {
@@ -107,6 +146,21 @@ export default function CommandSearch({ onSelectCommand }: CommandSearchProps) {
     setSelectedIndex(index);
   };
 
+  const handleCategorySelect = (category: string, subcategory: string) => {
+    console.log('[CommandSearch] Category/subcategory selected:', { category, subcategory });
+
+    // If clicking the same category/subcategory, deselect it
+    if (selectedCategory === category && selectedSubcategory === subcategory) {
+      console.log('[CommandSearch] Deselecting category');
+      setSelectedCategory(null);
+      setSelectedSubcategory(null);
+    } else {
+      setSelectedCategory(category);
+      setSelectedSubcategory(subcategory);
+    }
+    setQuery(''); // Clear search when changing category
+  };
+
   return (
     <Paper
       shadow="sm"
@@ -117,22 +171,43 @@ export default function CommandSearch({ onSelectCommand }: CommandSearchProps) {
         height: '100%',
         display: 'flex',
         flexDirection: 'column',
+        overflow: 'hidden',
       }}
     >
+      {/* Category Hierarchy Accordion */}
+      <Text size="lg" fw={600} mb="sm">
+        Categories
+      </Text>
+      <ScrollArea h={300} mb="md">
+        <NestedCategoryAccordion
+          hierarchies={hierarchies}
+          selectedCategory={selectedCategory}
+          selectedSubcategory={selectedSubcategory}
+          onSelect={handleCategorySelect}
+          loading={hierarchiesLoading}
+        />
+      </ScrollArea>
+
+      <Divider mb="md" />
+
+      {/* Search Section */}
       <Group mb="md" justify="space-between">
         <Text size="lg" fw={600}>
           Commands ({results.length})
         </Text>
-        <Checkbox
-          label="OSCP Only"
-          checked={oscpOnly}
-          onChange={(e) => setOscpOnly(e.currentTarget.checked)}
-          size="sm"
-        />
+        {selectedCategory && selectedSubcategory && (
+          <Badge size="sm" variant="light" color="blue">
+            {selectedCategory} → {selectedSubcategory}
+          </Badge>
+        )}
       </Group>
 
       <TextInput
-        placeholder="Search commands..."
+        placeholder={
+          selectedCategory && selectedSubcategory
+            ? 'Search in selected category...'
+            : 'Search all commands...'
+        }
         value={query}
         onChange={(e) => setQuery(e.currentTarget.value)}
         leftSection={<IconSearch size={16} />}
@@ -218,7 +293,11 @@ export default function CommandSearch({ onSelectCommand }: CommandSearchProps) {
 
         {results.length === 0 && !loading && (
           <Text ta="center" c="dimmed" mt="xl">
-            {query ? 'No commands found' : 'Start typing to search...'}
+            {query
+              ? 'No commands found'
+              : selectedCategory && selectedSubcategory
+              ? 'No commands in this category'
+              : 'Select a category or start searching'}
           </Text>
         )}
       </ScrollArea>

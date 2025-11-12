@@ -4,6 +4,7 @@ import '@mantine/core/styles.css';
 import CommandSearch from './components/CommandSearch';
 import CheatsheetView from './components/CheatsheetView';
 import CheatsheetDetails from './components/CheatsheetDetails';
+import CheatsheetCommandList from './components/CheatsheetCommandList';
 import ChainView from './components/ChainView';
 import GraphView from './components/GraphView';
 import CommandDetails from './components/CommandDetails';
@@ -73,13 +74,6 @@ function App() {
     } catch (error) {
       console.error('[App] Error fetching cheatsheet:', error);
     }
-  };
-
-  const handleCheatsheetCommandClick = async (commandId: string) => {
-    console.log('[App] Command clicked from cheatsheet:', commandId);
-    // Load command and switch to commands view
-    await handleCommandSelect(commandId);
-    setActiveView('commands');
   };
 
   // Debug: Log state changes
@@ -267,15 +261,19 @@ function App() {
               </div>
             )}
 
-            {/* Right Panel: Details (expands when graph is hidden) */}
-            <div style={{ width: selectedCheatsheet ? 'auto' : '450px', flex: selectedCheatsheet ? 1 : undefined, height: '100%' }}>
+            {/* Center Panel when cheatsheet selected: Cheatsheet Details */}
+            {selectedCheatsheet && (
+              <div style={{ flex: 1, height: '100%' }}>
+                <CheatsheetDetails cheatsheet={selectedCheatsheet} />
+              </div>
+            )}
+
+            {/* Right Panel: Command Details or Cheatsheet Command List */}
+            <div style={{ width: '450px', height: '100%' }}>
               {selectedCommand ? (
                 <CommandDetails command={selectedCommand} />
               ) : selectedCheatsheet ? (
-                <CheatsheetDetails
-                  cheatsheet={selectedCheatsheet}
-                  onCommandClick={handleCheatsheetCommandClick}
-                />
+                <CheatsheetCommandList cheatsheet={selectedCheatsheet} />
               ) : (
                 <Paper
                   shadow="sm"

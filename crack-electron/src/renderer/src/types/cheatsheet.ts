@@ -34,4 +34,5 @@ export interface CheatsheetListItem {
   name: string;
   description: string;
   tags: string[];
+  category?: string;
 }

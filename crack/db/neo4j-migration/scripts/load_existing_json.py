@@ -102,7 +102,13 @@ def load_cheatsheet_jsons(base_dir: str = "reference/data/cheatsheets") -> Tuple
             data['_source_file'] = str(json_file.relative_to(base_path.parent))
 
             # Cheatsheets may have different structures - normalize
-            if 'commands' in data:
+            if 'cheatsheets' in data:
+                # Array of cheatsheets (Active Directory format)
+                for sheet in data.get('cheatsheets', []):
+                    sheet['_source_file'] = str(json_file.relative_to(base_path.parent))
+                    sheet['_is_cheatsheet'] = True
+                    cheatsheets.append(sheet)
+            elif 'commands' in data:
                 # Same structure as command files
                 for cmd in data.get('commands', []):
                     cmd['_source_file'] = str(json_file.relative_to(base_path.parent))

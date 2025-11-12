@@ -30,6 +30,7 @@ function createWindow() {
   win = new BrowserWindow({
     width: 1400,
     height: 900,
+    fullscreen: true,
     webPreferences: {
       preload: path.join(__dirname, '../preload/index.js'),
       contextIsolation: true,
@@ -57,6 +58,19 @@ function createWindow() {
 
   win.on('responsive', () => {
     logElectron('Window became responsive again');
+  });
+
+  // ESC key to toggle fullscreen
+  win.webContents.on('before-input-event', (event, input) => {
+    if (input.key === 'Escape' && input.type === 'keyDown') {
+      const isCurrentlyFullscreen = win?.isFullScreen();
+      logElectron('ESC pressed - toggling fullscreen', {
+        currentState: isCurrentlyFullscreen,
+        newState: !isCurrentlyFullscreen,
+      });
+      win?.setFullScreen(!isCurrentlyFullscreen);
+      event.preventDefault();
+    }
   });
 
   if (VITE_DEV_SERVER_URL) {
