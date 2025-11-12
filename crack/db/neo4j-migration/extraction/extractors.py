@@ -4,6 +4,7 @@ Concrete extractors for Neo4j data transformation.
 Uses the extraction framework to eliminate ~150 lines of repetitive logic.
 """
 
+import json
 from typing import List, Dict, Any, Tuple, Set
 from .extraction_framework import (
     NodeRelationshipExtractor,
@@ -401,3 +402,76 @@ class AttackChainsExtractor(SimpleNodeExtractor):
             'notes': 'notes'
         }
         super().__init__(field_mapping, context)
+
+
+class CheatsheetsExtractor(NodeRelationshipExtractor):
+    """
+    Extract cheatsheet nodes and cheatsheet->command relationships.
+
+    Pattern:
+    - Extract cheatsheet nodes with JSON-stringified complex fields
+    - Extract command references from scenarios and sections
+    - Create cheatsheet->command relationships
+    """
+
+    def extract_nodes(self, sources: List[Dict], id_field: str = 'id') -> List[Dict]:
+        """Extract cheatsheet nodes"""
+        cheatsheets = []
+
+        for sheet in sources:
+            sheet_id = self.validate_source_id(sheet, id_field)
+            if not sheet_id:
+                continue
+
+            # Serialize complex nested structures as JSON strings for Neo4j
+            educational_header_json = json.dumps(sheet.get('educational_header', {}))
+            scenarios_json = json.dumps(sheet.get('scenarios', []))
+            sections_json = json.dumps(sheet.get('sections', []))
+            tags_list = join_list(sheet.get('tags', []))
+
+            cheatsheets.append({
+                'id': sheet_id,
+                'name': safe_get(sheet, 'name'),
+                'description': safe_get(sheet, 'description'),
+                'tags': tags_list,
+                'educational_header': educational_header_json,
+                'scenarios': scenarios_json,
+                'sections': sections_json
+            })
+
+        return cheatsheets
+
+    def extract_relationships(self, sources: List[Dict], id_field: str = 'id') -> List[Dict]:
+        """Extract cheatsheet->command relationships from scenarios and sections"""
+        relationships = []
+
+        for sheet in sources:
+            sheet_id = self.validate_source_id(sheet, id_field)
+            if not sheet_id:
+                continue
+
+            # Extract command IDs from scenarios
+            for scenario in sheet.get('scenarios', []):
+                for cmd_id in scenario.get('commands', []):
+                    if cmd_id:
+                        relationships.append({
+                            'cheatsheet_id': sheet_id,
+                            'command_id': cmd_id,
+                            'context': 'scenario',
+                            'scenario_title': safe_get(scenario, 'title'),
+                            'section_title': ''  # Empty for scenarios
+                        })
+
+            # Extract command IDs from sections
+            for section in sheet.get('sections', []):
+                for cmd_id in section.get('commands', []):
+                    if cmd_id:
+                        relationships.append({
+                            'cheatsheet_id': sheet_id,
+                            'command_id': cmd_id,
+                            'context': 'section',
+                            'scenario_title': '',  # Empty for sections
+                            'section_title': safe_get(section, 'title')
+                        })
+
+        return relationships

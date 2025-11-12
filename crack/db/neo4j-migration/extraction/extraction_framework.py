@@ -224,17 +224,18 @@ class TagExtractor(EntityExtractor):
     Specialized extractor for tags.
 
     Tags require special handling:
-    - Deduplication across multiple sources (commands, chains)
+    - Deduplication across multiple sources (commands, chains, cheatsheets)
     - Extraction from both direct tags and nested tag lists
     """
 
-    def extract_unique_tags(self, commands: List[Dict], chains: List[Dict]) -> List[Dict]:
+    def extract_unique_tags(self, commands: List[Dict], chains: List[Dict], cheatsheets: List[Dict] = None) -> List[Dict]:
         """
-        Extract unique tags from commands and chains.
+        Extract unique tags from commands, chains, and cheatsheets.
 
         Args:
             commands: List of command dicts
             chains: List of chain dicts
+            cheatsheets: List of cheatsheet dicts (optional)
 
         Returns:
             List of unique tag dicts with {name, category}
@@ -263,6 +264,18 @@ class TagExtractor(EntityExtractor):
                         'category': tag.get('category', '') if isinstance(tag, dict) else ''
                     })
                     seen_tags.add(tag_name)
+
+        # Extract from cheatsheets
+        if cheatsheets:
+            for sheet in cheatsheets:
+                for tag in sheet.get('tags', []):
+                    tag_name = tag if isinstance(tag, str) else tag.get('name')
+                    if tag_name and tag_name not in seen_tags:
+                        tags.append({
+                            'name': tag_name,
+                            'category': tag.get('category', '') if isinstance(tag, dict) else ''
+                        })
+                        seen_tags.add(tag_name)
 
         return tags
 

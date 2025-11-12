@@ -11,8 +11,17 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getGraph: (commandId: string) =>
     ipcRenderer.invoke('get-graph', commandId),
 
+  getCategoryHierarchy: () =>
+    ipcRenderer.invoke('get-category-hierarchy'),
+
   healthCheck: () =>
     ipcRenderer.invoke('neo4j-health-check'),
+
+  searchCheatsheets: (query: string, filters?: any) =>
+    ipcRenderer.invoke('search-cheatsheets', query, filters),
+
+  getCheatsheet: (cheatsheetId: string) =>
+    ipcRenderer.invoke('get-cheatsheet', cheatsheetId),
 
   // Console bridge - send renderer logs to terminal
   logToTerminal: (level: string, message: string) =>
@@ -23,12 +32,18 @@ contextBridge.exposeInMainWorld('electronAPI', {
 export interface ElectronAPI {
   searchCommands: (query: string, filters?: {
     category?: string;
+    subcategory?: string;
     tags?: string[];
     oscp_only?: boolean;
   }) => Promise<any[]>;
   getCommand: (commandId: string) => Promise<any>;
   getGraph: (commandId: string) => Promise<any>;
+  getCategoryHierarchy: () => Promise<any[]>;
   healthCheck: () => Promise<{ connected: boolean; uri?: string; error?: string }>;
+  searchCheatsheets: (query: string, filters?: {
+    tags?: string[];
+  }) => Promise<any[]>;
+  getCheatsheet: (cheatsheetId: string) => Promise<any>;
   logToTerminal: (level: string, message: string) => void;
 }
 

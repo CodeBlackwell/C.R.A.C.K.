@@ -51,6 +51,22 @@ nodes:
       - notes
     extractor: _extract_attack_chains_csv
 
+  cheatsheet:
+    name: cheatsheets
+    label: Cheatsheet
+    csv_filename: cheatsheets.csv
+    id_field: id
+    description: OSCP cheatsheets with scenarios and command references
+    fields:
+      - id
+      - name
+      - description
+      - tags
+      - educational_header
+      - scenarios
+      - sections
+    extractor: _extract_cheatsheets_csv
+
   tag:
     name: tags
     label: Tag
@@ -266,6 +282,41 @@ relationships:
       - chain_id
       - tag_name
     extractor: _extract_chain_tag_rels
+
+  cheatsheet_references_command:
+    name: cheatsheet_references_command
+    rel_type: REFERENCES_COMMAND
+    csv_filename: cheatsheet_references_command.csv
+    start_label: Cheatsheet
+    end_label: Command
+    start_id_col: cheatsheet_id
+    end_id_col: command_id
+    start_id_field: id
+    end_id_field: id
+    description: Cheatsheet references command in scenario or section
+    fields:
+      - cheatsheet_id
+      - command_id
+      - context
+      - scenario_title
+      - section_title
+    extractor: _extract_cheatsheet_command_rels
+
+  cheatsheet_tagged_with:
+    name: cheatsheet_tagged_with
+    rel_type: TAGGED
+    csv_filename: cheatsheet_tagged_with.csv
+    start_label: Cheatsheet
+    end_label: Tag
+    start_id_col: cheatsheet_id
+    end_id_col: tag_name
+    start_id_field: id
+    end_id_field: name
+    description: Cheatsheet tagged with tag
+    fields:
+      - cheatsheet_id
+      - tag_name
+    extractor: _extract_cheatsheet_tag_rels
 
 # =============================================================================
 # Configuration Notes

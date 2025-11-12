@@ -30,6 +30,7 @@ from extraction import (
     TagRelationshipsExtractor,
     CommandsExtractor,
     AttackChainsExtractor,
+    CheatsheetsExtractor,
     TagExtractor
 )
 
@@ -37,8 +38,8 @@ from extraction import (
 from validation import FieldValidator, ValidationResult
 
 
-def extract_unique_tags(commands: List[Dict], chains: List[Dict]) -> List[Dict]:
-    """Extract unique tags from all commands and chains"""
+def extract_unique_tags(commands: List[Dict], chains: List[Dict], cheatsheets: List[Dict]) -> List[Dict]:
+    """Extract unique tags from all commands, chains, and cheatsheets"""
     tag_set = set()
 
     # Tags from commands
@@ -49,6 +50,11 @@ def extract_unique_tags(commands: List[Dict], chains: List[Dict]) -> List[Dict]:
     # Tags from chains
     for chain in chains:
         tags = chain.get('metadata', {}).get('tags', [])
+        tag_set.update(tags)
+
+    # Tags from cheatsheets
+    for sheet in cheatsheets:
+        tags = sheet.get('tags', [])
         tag_set.update(tags)
 
     # Infer tag categories
@@ -205,7 +211,36 @@ def _extract_command_prerequisites_rels(commands: List[Dict], chains: List[Dict]
 def _extract_unique_tags_adapted(commands: List[Dict], chains: List[Dict], cheatsheets: List[Dict]) -> List[Dict]:
     """Extract unique tags using TagExtractor"""
     extractor = TagExtractor()
-    return extractor.extract_unique_tags(commands, chains)
+    return extractor.extract_unique_tags(commands, chains, cheatsheets)
+
+
+def _extract_cheatsheets_csv(commands: List[Dict], chains: List[Dict], cheatsheets: List[Dict]) -> List[Dict]:
+    """Extract cheatsheets for CSV using CheatsheetsExtractor"""
+    extractor = CheatsheetsExtractor()
+    return extractor.extract_nodes(cheatsheets)
+
+
+def _extract_cheatsheet_command_rels(commands: List[Dict], chains: List[Dict], cheatsheets: List[Dict]) -> List[Dict]:
+    """Extract cheatsheet->command relationships using CheatsheetsExtractor"""
+    extractor = CheatsheetsExtractor()
+    return extractor.extract_relationships(cheatsheets)
+
+
+def _extract_cheatsheet_tag_rels(commands: List[Dict], chains: List[Dict], cheatsheets: List[Dict]) -> List[Dict]:
+    """Extract cheatsheet->tag relationships"""
+    relationships = []
+    for sheet in cheatsheets:
+        sheet_id = sheet.get('id')
+        if not sheet_id:
+            continue
+        for tag in sheet.get('tags', []):
+            tag_name = tag if isinstance(tag, str) else tag.get('name')
+            if tag_name:
+                relationships.append({
+                    'cheatsheet_id': sheet_id,
+                    'tag_name': tag_name
+                })
+    return relationships
 
 
 def transform_all_to_neo4j(commands: List[Dict], chains: List[Dict], cheatsheets: List[Dict],

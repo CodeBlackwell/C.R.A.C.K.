@@ -398,6 +398,132 @@ ipcMain.handle('neo4j-health-check', async () => {
 });
 logIPC('Registered IPC handler: neo4j-health-check');
 
+// IPC Handler: Search cheatsheets
+ipcMain.handle('search-cheatsheets', async (_event, searchQuery: string, filters?: {
+  tags?: string[];
+}) => {
+  logIPC('IPC: search-cheatsheets called', {
+    query: searchQuery || '(empty)',
+    filters,
+  });
+
+  try {
+    let query = `
+      MATCH (cs:Cheatsheet)
+    `;
+
+    const params: Record<string, any> = {};
+    const conditions: string[] = [];
+
+    if (searchQuery && searchQuery.trim()) {
+      conditions.push(`(
+        toLower(cs.name) CONTAINS toLower($searchQuery)
+        OR toLower(cs.description) CONTAINS toLower($searchQuery)
+      )`);
+      params.searchQuery = searchQuery.trim();
+    }
+
+    if (filters?.tags && filters.tags.length > 0) {
+      conditions.push(`
+        ANY(tag IN cs.tags WHERE tag IN $tags)
+      `);
+      params.tags = filters.tags;
+    }
+
+    if (conditions.length > 0) {
+      query += ' WHERE ' + conditions.join(' AND ');
+    }
+
+    query += `
+      RETURN cs.id as id, cs.name as name,
+             cs.description as description, cs.tags as tags
+      ORDER BY cs.name
+      LIMIT 100
+    `;
+
+    const results = await runQuery(query, params);
+
+    // Split pipe-separated tags string into array
+    results.forEach(sheet => {
+      if (sheet.tags && typeof sheet.tags === 'string') {
+        sheet.tags = sheet.tags.split('|').filter(tag => tag.trim());
+      } else {
+        sheet.tags = [];
+      }
+    });
+
+    logIPC('IPC: search-cheatsheets completed', { resultCount: results.length });
+    return results;
+  } catch (error) {
+    logError('IPC: search-cheatsheets failed', error);
+    console.error('Search cheatsheets error:', error);
+    return [];
+  }
+});
+logIPC('Registered IPC handler: search-cheatsheets');
+
+// IPC Handler: Get cheatsheet details
+ipcMain.handle('get-cheatsheet', async (_event, cheatsheetId: string) => {
+  logIPC('IPC: get-cheatsheet called', { cheatsheetId });
+
+  try {
+    const query = `
+      MATCH (cs:Cheatsheet {id: $cheatsheetId})
+      RETURN cs.id as id, cs.name as name,
+             cs.description as description, cs.tags as tags,
+             cs.educational_header as educational_header,
+             cs.scenarios as scenarios,
+             cs.sections as sections
+    `;
+
+    const results = await runQuery(query, { cheatsheetId });
+
+    if (results && results.length > 0) {
+      const sheet = results[0];
+
+      // Parse JSON strings back to objects
+      try {
+        sheet.educational_header = JSON.parse(sheet.educational_header || '{}');
+      } catch (e) {
+        logError('Failed to parse educational_header JSON', e);
+        sheet.educational_header = { how_to_recognize: [], when_to_look_for: [] };
+      }
+
+      try {
+        sheet.scenarios = JSON.parse(sheet.scenarios || '[]');
+      } catch (e) {
+        logError('Failed to parse scenarios JSON', e);
+        sheet.scenarios = [];
+      }
+
+      try {
+        sheet.sections = JSON.parse(sheet.sections || '[]');
+      } catch (e) {
+        logError('Failed to parse sections JSON', e);
+        sheet.sections = [];
+      }
+
+      // Split pipe-separated tags string into array
+      if (sheet.tags && typeof sheet.tags === 'string') {
+        sheet.tags = sheet.tags.split('|').filter(tag => tag.trim());
+      } else {
+        sheet.tags = [];
+      }
+
+      logIPC('IPC: get-cheatsheet completed', { name: sheet.name });
+      return sheet;
+    }
+
+    logIPC('IPC: get-cheatsheet - not found', { cheatsheetId });
+    return null;
+  } catch (error) {
+    logError('IPC: get-cheatsheet failed', error);
+    console.error('Get cheatsheet error:', error);
+    return null;
+  }
+});
+logIPC('Registered IPC handler: get-cheatsheet');
+
 // IPC Handler: Console bridge (renderer logs to terminal)
 ipcMain.on('log-to-terminal', (_event, level: string, message: string) => {
   const prefix = `[RENDERER:${level.toUpperCase()}]`;

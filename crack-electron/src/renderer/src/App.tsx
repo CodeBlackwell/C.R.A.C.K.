@@ -1,17 +1,23 @@
 import { useState, useEffect } from 'react';
-import { MantineProvider, AppShell, Text, Badge, Group, Paper, Center } from '@mantine/core';
+import { MantineProvider, AppShell, Text, Badge, Group, Paper, Center, Code, Stack, Divider, SegmentedControl } from '@mantine/core';
 import '@mantine/core/styles.css';
 import CommandSearch from './components/CommandSearch';
+import CheatsheetView from './components/CheatsheetView';
+import CheatsheetDetails from './components/CheatsheetDetails';
+import ChainView from './components/ChainView';
 import GraphView from './components/GraphView';
 import CommandDetails from './components/CommandDetails';
 import { Command } from './types/command';
+import { Cheatsheet } from './types/cheatsheet';
 
 function App() {
   const [selectedCommand, setSelectedCommand] = useState<Command | null>(null);
+  const [selectedCheatsheet, setSelectedCheatsheet] = useState<Cheatsheet | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<{
     connected: boolean;
     uri?: string;
   }>({ connected: false });
+  const [activeView, setActiveView] = useState<'commands' | 'cheatsheets' | 'chains'>('commands');
 
   // Debug: Log component mount
   useEffect(() => {
@@ -22,6 +28,11 @@ function App() {
     });
     console.log('[App] electronAPI available:', !!window.electronAPI);
   }, []);
+
+  // Debug: Log active view changes
+  useEffect(() => {
+    console.log('[App] Active view changed:', activeView);
+  }, [activeView]);
 
   useEffect(() => {
     console.log('[App] Checking Neo4j connection...');
@@ -46,9 +57,29 @@ function App() {
       const command = await window.electronAPI.getCommand(commandId);
       console.log('[App] Command data received:', command ? command.name : 'null');
       setSelectedCommand(command);
+      setSelectedCheatsheet(null); // Clear cheatsheet when selecting command
     } catch (error) {
       console.error('[App] Error fetching command:', error);
     }
+  };
+
+  const handleCheatsheetSelect = async (cheatsheetId: string) => {
+    console.log('[App] Cheatsheet selected:', cheatsheetId);
+    try {
+      const cheatsheet = await window.electronAPI.getCheatsheet(cheatsheetId);
+      console.log('[App] Cheatsheet data received:', cheatsheet ? cheatsheet.name : 'null');
+      setSelectedCheatsheet(cheatsheet);
+      setSelectedCommand(null); // Clear command when selecting cheatsheet
+    } catch (error) {
+      console.error('[App] Error fetching cheatsheet:', error);
+    }
+  };
+
+  const handleCheatsheetCommandClick = async (commandId: string) => {
+    console.log('[App] Command clicked from cheatsheet:', commandId);
+    // Load command and switch to commands view
+    await handleCommandSelect(commandId);
+    setActiveView('commands');
   };
 
   // Debug: Log state changes
@@ -107,23 +138,125 @@ function App() {
 
         <AppShell.Main>
           <div style={{ display: 'flex', height: 'calc(100vh - 80px)', gap: '16px' }}>
-            {/* Left Panel: Search */}
-            <div style={{ width: '350px' }}>
-              <CommandSearch onSelectCommand={handleCommandSelect} />
+            {/* Left Panel: Navigation */}
+            <div style={{ width: '350px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {/* Navigation Header */}
+              <SegmentedControl
+                value={activeView}
+                onChange={(value) => setActiveView(value as 'commands' | 'cheatsheets' | 'chains')}
+                data={[
+                  { label: 'Commands', value: 'commands' },
+                  { label: 'Cheatsheets', value: 'cheatsheets' },
+                  { label: 'Chains', value: 'chains' },
+                ]}
+                fullWidth
+                styles={{
+                  root: {
+                    background: '#25262b',
+                    border: '1px solid #373A40',
+                  },
+                  label: {
+                    padding: '8px 16px',
+                  },
+                }}
+              />
+
+              {/* Conditional View Rendering */}
+              <div style={{ flex: 1, overflow: 'hidden' }}>
+                {activeView === 'commands' && (
+                  <CommandSearch onSelectCommand={handleCommandSelect} />
+                )}
+                {activeView === 'cheatsheets' && (
+                  <CheatsheetView onSelectCheatsheet={handleCheatsheetSelect} />
+                )}
+                {activeView === 'chains' && <ChainView />}
+              </div>
             </div>
 
             {/* Center Panel: Graph */}
-            <div style={{ flex: 1 }}>
-              <GraphView
-                selectedCommandId={selectedCommand?.id}
-                onNodeClick={handleCommandSelect}
-              />
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div style={{ flex: 1 }}>
+                <GraphView
+                  selectedCommandId={selectedCommand?.id}
+                  onNodeClick={handleCommandSelect}
+                />
+              </div>
+
+              {/* Footer: Tags & Output Indicators */}
+              {selectedCommand && (
+                <Paper
+                  style={{
+                    background: '#25262b',
+                    border: '1px solid #373A40',
+                    padding: '12px 16px',
+                  }}
+                >
+                  <Stack gap="md">
+                    {/* Tags */}
+                    {selectedCommand.tags && selectedCommand.tags.length > 0 && (
+                      <div>
+                        <Text size="xs" fw={600} mb="xs" c="dimmed">
+                          Tags
+                        </Text>
+                        <Group gap="xs" wrap="wrap">
+                          {selectedCommand.tags.map((tag) => (
+                            <Badge key={tag} variant="light" color="gray" size="sm">
+                              {tag}
+                            </Badge>
+                          ))}
+                        </Group>
+                      </div>
+                    )}
+
+                    {/* Output Indicators */}
+                    {selectedCommand.indicators && selectedCommand.indicators.length > 0 && (
+                      <>
+                        {selectedCommand.tags && selectedCommand.tags.length > 0 && <Divider />}
+                        <div>
+                          <Text size="xs" fw={600} mb="xs" c="dimmed">
+                            Output Indicators
+                          </Text>
+                          <Group gap="xs" wrap="wrap">
+                            {selectedCommand.indicators.map((indicator, idx) => {
+                              // Determine color based on indicator type
+                              const isPositive = ['success', 'positive', 'valid', 'found'].includes(
+                                indicator.type?.toLowerCase() || ''
+                              );
+                              const color = isPositive ? 'green' : 'red';
+
+                              return (
+                                <Badge
+                                  key={idx}
+                                  size="sm"
+                                  color={color}
+                                  variant="light"
+                                  style={{
+                                    cursor: 'default',
+                                    fontFamily: 'monospace',
+                                  }}
+                                >
+                                  {indicator.pattern}
+                                </Badge>
+                              );
+                            })}
+                          </Group>
+                        </div>
+                      </>
+                    )}
+                  </Stack>
+                </Paper>
+              )}
             </div>
 
             {/* Right Panel: Details */}
-            <div style={{ width: '450px' }}>
+            <div style={{ width: '450px', height: '100%' }}>
               {selectedCommand ? (
                 <CommandDetails command={selectedCommand} />
+              ) : selectedCheatsheet ? (
+                <CheatsheetDetails
+                  cheatsheet={selectedCheatsheet}
+                  onCommandClick={handleCheatsheetCommandClick}
+                />
               ) : (
                 <Paper
                   shadow="sm"
@@ -139,7 +272,7 @@ function App() {
                 >
                   <Center>
                     <Text c="dimmed" size="sm" style={{ textAlign: 'center' }}>
-                      Select a command to view details
+                      Select a command or cheatsheet to view details
                     </Text>
                   </Center>
                 </Paper>

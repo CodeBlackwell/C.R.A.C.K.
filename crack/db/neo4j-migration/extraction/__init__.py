@@ -21,7 +21,8 @@ from .extractors import (
     ChainStepsExtractor,
     TagRelationshipsExtractor,
     CommandsExtractor,
-    AttackChainsExtractor
+    AttackChainsExtractor,
+    CheatsheetsExtractor
 )
 
 __all__ = [
@@ -42,5 +43,6 @@ __all__ = [
     'ChainStepsExtractor',
     'TagRelationshipsExtractor',
     'CommandsExtractor',
-    'AttackChainsExtractor'
+    'AttackChainsExtractor',
+    'CheatsheetsExtractor'
 ]
