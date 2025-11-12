@@ -8,24 +8,18 @@ import {
   Stack,
   Box,
   Divider,
-  Button,
   ScrollArea,
 } from '@mantine/core';
-import { IconListCheck, IconGraph } from '@tabler/icons-react';
 import { AttackChain } from '../types/chain';
 
 interface ChainDetailsProps {
   chainId: string | null;
   onCommandClick?: (commandId: string) => void;
-  onToggleGraph?: () => void;
-  showGraphView?: boolean;
 }
 
 export default function ChainDetails({
   chainId,
   onCommandClick,
-  onToggleGraph,
-  showGraphView = false,
 }: ChainDetailsProps) {
   const [chain, setChain] = useState<AttackChain | null>(null);
   const [loading, setLoading] = useState(false);
@@ -153,21 +147,9 @@ export default function ChainDetails({
     >
       {/* Header */}
       <Box mb="md">
-        <Group justify="space-between" mb="xs">
-          <Text size="xl" fw={700}>
-            {chain.name}
-          </Text>
-          {onToggleGraph && (
-            <Button
-              variant="light"
-              size="xs"
-              leftSection={showGraphView ? <IconListCheck size={16} /> : <IconGraph size={16} />}
-              onClick={onToggleGraph}
-            >
-              {showGraphView ? 'List View' : 'Graph View'}
-            </Button>
-          )}
-        </Group>
+        <Text size="xl" fw={700} mb="xs">
+          {chain.name}
+        </Text>
 
         <Text
           size="xs"

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { MantineProvider, AppShell, Text, Badge, Group, Paper, Center, Code, Stack, Divider, SegmentedControl } from '@mantine/core';
+import { MantineProvider, AppShell, Text, Badge, Group, Paper, Center, Code, Stack, Divider, SegmentedControl, Button } from '@mantine/core';
 import '@mantine/core/styles.css';
 import CommandSearch from './components/CommandSearch';
 import CheatsheetView from './components/CheatsheetView';
@@ -7,10 +7,16 @@ import CheatsheetDetails from './components/CheatsheetDetails';
 import CheatsheetCommandList from './components/CheatsheetCommandList';
 import ChainView from './components/ChainView';
 import ChainDetails from './components/ChainDetails';
+import ChainGraphView from './components/ChainGraphView';
+import ChainControlsPanel from './components/ChainControlsPanel';
 import GraphView from './components/GraphView';
 import CommandDetails from './components/CommandDetails';
+import CommandChainGraph from './components/CommandChainGraph';
 import { Command } from './types/command';
 import { Cheatsheet } from './types/cheatsheet';
+
+type ViewMode = 'details' | 'graph';
+type ChainViewMode = 'graph' | 'list';
 
 function App() {
   const [selectedCommand, setSelectedCommand] = useState<Command | null>(null);
@@ -22,6 +28,8 @@ function App() {
   }>({ connected: false });
   const [activeView, setActiveView] = useState<'commands' | 'cheatsheets' | 'chains'>('chains');
   const [expandedCommandId, setExpandedCommandId] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<ViewMode>('details');
+  const [chainViewMode, setChainViewMode] = useState<ChainViewMode>('graph');
 
   // Debug: Log component mount
   useEffect(() => {
@@ -107,6 +115,18 @@ function App() {
   useEffect(() => {
     console.log('[App] Selected command changed:', selectedCommand?.id || 'none');
   }, [selectedCommand]);
+
+  // Reset view mode to details when command changes
+  useEffect(() => {
+    setViewMode('details');
+    console.log('[App] View mode reset to details');
+  }, [selectedCommand?.id]);
+
+  // Reset chain view mode to graph when chain changes
+  useEffect(() => {
+    setChainViewMode('graph');
+    console.log('[App] Chain view mode reset to graph');
+  }, [selectedChainId]);
 
   return (
     <MantineProvider
@@ -196,12 +216,186 @@ function App() {
               </div>
             </div>
 
-            {/* Center Panel: Graph (only shown when not viewing cheatsheet or chain) */}
+            {/* Center Panel: Graph or Chain Graph based on view mode */}
             {!selectedCheatsheet && !selectedChainId && (
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {selectedCommand ? (
                   <>
                     <div style={{ flex: 1 }}>
+                      {viewMode === 'details' ? (
+                        // Details mode: Show relationship graph
+                        <GraphView
+                          selectedCommandId={selectedCommand.id}
+                          onNodeClick={handleCommandSelect}
+                        />
+                      ) : (
+                        // Graph mode: Show attack chains (larger space)
+                        <CommandChainGraph commandId={selectedCommand.id} />
+                      )}
+                    </div>
+
+                    {/* Footer: Tags & Output Indicators (only in details mode) */}
+                    {viewMode === 'details' && (
+                      <Paper
+                        style={{
+                          background: '#25262b',
+                          border: '1px solid #373A40',
+                          padding: '12px 16px',
+                        }}
+                      >
+                        <Stack gap="md">
+                          {/* Tags */}
+                          {selectedCommand.tags && selectedCommand.tags.length > 0 && (
+                            <div>
+                              <Text size="xs" fw={600} mb="xs" c="dimmed">
+                                Tags
+                              </Text>
+                              <Group gap="xs" wrap="wrap">
+                                {selectedCommand.tags.map((tag) => (
+                                  <Badge key={tag} variant="light" color="gray" size="sm">
+                                    {tag}
+                                  </Badge>
+                                ))}
+                              </Group>
+                            </div>
+                          )}
+
+                          {/* Output Indicators */}
+                          {selectedCommand.indicators && selectedCommand.indicators.length > 0 && (
+                            <>
+                              {selectedCommand.tags && selectedCommand.tags.length > 0 && <Divider />}
+                              <div>
+                                <Text size="xs" fw={600} mb="xs" c="dimmed">
+                                  Output Indicators
+                                </Text>
+                                <Group gap="xs" wrap="wrap">
+                                  {selectedCommand.indicators.map((indicator, idx) => {
+                                    // Determine color based on indicator type
+                                    const isPositive = ['success', 'positive', 'valid', 'found'].includes(
+                                      indicator.type?.toLowerCase() || ''
+                                    );
+                                    const color = isPositive ? 'green' : 'red';
+
+                                    return (
+                                      <Badge
+                                        key={idx}
+                                        size="sm"
+                                        color={color}
+                                        variant="light"
+                                        style={{
+                                          cursor: 'default',
+                                          fontFamily: 'monospace',
+                                        }}
+                                      >
+                                        {indicator.pattern}
+                                      </Badge>
+                                    );
+                                  })}
+                                </Group>
+                              </div>
+                            </>
+                          )}
+                        </Stack>
+                      </Paper>
+                    )}
+                  </>
+                ) : (
+                  <Paper
+                    style={{
+                      background: '#25262b',
+                      border: '1px solid #373A40',
+                      height: '100%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <Text c="dimmed" size="sm">
+                      Select a command to view its relationship graph
+                    </Text>
+                  </Paper>
+                )}
+              </div>
+            )}
+
+            {/* Center Panel when cheatsheet selected: Cheatsheet Details */}
+            {selectedCheatsheet && (
+              <div style={{ flex: 1, height: '100%' }}>
+                <CheatsheetDetails
+                  cheatsheet={selectedCheatsheet}
+                  onCommandClick={handleCommandBadgeClick}
+                />
+              </div>
+            )}
+
+            {/* Center Panel when chain selected: Chain Graph or List View */}
+            {selectedChainId && !selectedCheatsheet && (
+              <div style={{ flex: 1, height: '100%' }}>
+                {chainViewMode === 'graph' ? (
+                  <ChainGraphView
+                    chainId={selectedChainId}
+                    onCommandClick={handleChainCommandClick}
+                  />
+                ) : (
+                  <ChainDetails
+                    chainId={selectedChainId}
+                    onCommandClick={handleChainCommandClick}
+                  />
+                )}
+              </div>
+            )}
+
+            {/* Right Panel: Command Details or Graph View based on view mode */}
+            <div style={{ width: '450px', height: '100%' }}>
+              {selectedCommand ? (
+                viewMode === 'details' ? (
+                  // Details mode: Show command details
+                  <CommandDetails
+                    command={selectedCommand}
+                    viewMode={viewMode}
+                    onViewModeChange={setViewMode}
+                  />
+                ) : (
+                  // Graph mode: Show relationship graph in right panel
+                  <Paper
+                    shadow="sm"
+                    style={{
+                      background: '#25262b',
+                      border: '1px solid #373A40',
+                      height: '100%',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      overflow: 'hidden',
+                    }}
+                  >
+                    {/* Header with view mode toggle */}
+                    <Group gap="xs" p="md" style={{ borderBottom: '1px solid #373A40' }}>
+                      <Button
+                        size="xs"
+                        variant={viewMode === 'details' ? 'filled' : 'subtle'}
+                        color="gray"
+                        onClick={() => {
+                          setViewMode('details');
+                          console.log('[App] View mode changed to: details');
+                        }}
+                      >
+                        Details
+                      </Button>
+                      <Button
+                        size="xs"
+                        variant={viewMode === 'graph' ? 'filled' : 'subtle'}
+                        color="gray"
+                        onClick={() => {
+                          setViewMode('graph');
+                          console.log('[App] View mode changed to: graph');
+                        }}
+                      >
+                        Graph View
+                      </Button>
+                    </Group>
+
+                    {/* Relationship graph */}
+                    <div style={{ flex: 1, position: 'relative' }}>
                       <GraphView
                         selectedCommandId={selectedCommand.id}
                         onNodeClick={handleCommandSelect}
@@ -212,7 +406,7 @@ function App() {
                     <Paper
                       style={{
                         background: '#25262b',
-                        border: '1px solid #373A40',
+                        borderTop: '1px solid #373A40',
                         padding: '12px 16px',
                       }}
                     >
@@ -270,54 +464,18 @@ function App() {
                         )}
                       </Stack>
                     </Paper>
-                  </>
-                ) : (
-                  <Paper
-                    style={{
-                      background: '#25262b',
-                      border: '1px solid #373A40',
-                      height: '100%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                  >
-                    <Text c="dimmed" size="sm">
-                      Select a command to view its relationship graph
-                    </Text>
                   </Paper>
-                )}
-              </div>
-            )}
-
-            {/* Center Panel when cheatsheet selected: Cheatsheet Details */}
-            {selectedCheatsheet && (
-              <div style={{ flex: 1, height: '100%' }}>
-                <CheatsheetDetails
-                  cheatsheet={selectedCheatsheet}
-                  onCommandClick={handleCommandBadgeClick}
-                />
-              </div>
-            )}
-
-            {/* Center Panel when chain selected: Chain Details */}
-            {selectedChainId && !selectedCheatsheet && (
-              <div style={{ flex: 1, height: '100%' }}>
-                <ChainDetails
-                  chainId={selectedChainId}
-                  onCommandClick={handleChainCommandClick}
-                />
-              </div>
-            )}
-
-            {/* Right Panel: Command Details or Cheatsheet Command List */}
-            <div style={{ width: '450px', height: '100%' }}>
-              {selectedCommand ? (
-                <CommandDetails command={selectedCommand} />
+                )
               ) : selectedCheatsheet ? (
                 <CheatsheetCommandList
                   cheatsheet={selectedCheatsheet}
                   expandedCommandId={expandedCommandId}
+                />
+              ) : selectedChainId ? (
+                <ChainControlsPanel
+                  chainId={selectedChainId}
+                  chainViewMode={chainViewMode}
+                  onViewModeChange={setChainViewMode}
                 />
               ) : (
                 <Paper
@@ -334,7 +492,7 @@ function App() {
                 >
                   <Center>
                     <Text c="dimmed" size="sm" style={{ textAlign: 'center' }}>
-                      Select a command or cheatsheet to view details
+                      Select a command, chain, or cheatsheet to view details
                     </Text>
                   </Center>
                 </Paper>
