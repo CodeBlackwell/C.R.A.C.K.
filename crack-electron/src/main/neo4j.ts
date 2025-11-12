@@ -101,6 +101,7 @@ debug.subsection('IPC HANDLERS REGISTRATION');
 // IPC Handler: Search commands
 ipcMain.handle('search-commands', async (_event, searchQuery: string, filters?: {
   category?: string;
+  subcategory?: string;
   tags?: string[];
   oscp_only?: boolean;
 }) => {
@@ -133,6 +134,16 @@ ipcMain.handle('search-commands', async (_event, searchQuery: string, filters?: 
       params.category = filters.category;
     }
 
+    if (filters?.subcategory) {
+      // "General" is the display name for empty subcategories
+      if (filters.subcategory === 'General') {
+        conditions.push('(c.subcategory = "" OR c.subcategory IS NULL)');
+      } else {
+        conditions.push('c.subcategory = $subcategory');
+        params.subcategory = filters.subcategory;
+      }
+    }
+
     if (filters?.oscp_only) {
       conditions.push('c.oscp_relevance = true');
     }
@@ -156,7 +167,6 @@ ipcMain.handle('search-commands', async (_event, searchQuery: string, filters?: 
              c.description as description, c.tags as tags,
              c.oscp_relevance as oscp_relevance
       ORDER BY c.name
-      LIMIT 100
     `;
 
     const results = await runQuery(query, params);
@@ -169,6 +179,49 @@ ipcMain.handle('search-commands', async (_event, searchQuery: string, filters?: 
   }
 });
 logIPC('Registered IPC handler: search-commands');
+
+// IPC Handler: Get category hierarchy with subcategories
+ipcMain.handle('get-category-hierarchy', async () => {
+  logIPC('IPC: get-category-hierarchy called');
+
+  try {
+    const query = `
+      MATCH (c:Command)
+      WITH c.category as category,
+           COALESCE(c.subcategory, '') as subcategory,
+           c
+      WITH category, subcategory, count(c) as count
+      ORDER BY category, subcategory
+      WITH category, collect({name: subcategory, count: count}) as subcategories
+      RETURN category,
+             subcategories,
+             reduce(total = 0, sub IN subcategories | total + sub.count) as totalCount
+      ORDER BY totalCount DESC
+    `;
+
+    const results = await runQuery(query);
+
+    // Process results to group "General" for empty subcategories
+    const processed = results.map((row: any) => ({
+      category: row.category,
+      totalCount: typeof row.totalCount === 'number' ? row.totalCount : (row.totalCount?.toNumber?.() || 0),
+      subcategories: row.subcategories.map((sub: any) => ({
+        name: sub.name === '' ? 'General' : sub.name,
+        count: typeof sub.count === 'number' ? sub.count : (sub.count?.toNumber?.() || 0)
+      }))
+    }));
+
+    logIPC('IPC: get-category-hierarchy completed', {
+      categoryCount: processed.length
+    });
+    return processed;
+  } catch (error) {
+    logError('IPC: get-category-hierarchy failed', error);
+    console.error('Get category hierarchy error:', error);
+    return [];
+  }
+});
+logIPC('Registered IPC handler: get-category-hierarchy');
 
 // IPC Handler: Get command details
 ipcMain.handle('get-command', async (_event, commandId: string) => {
@@ -191,12 +244,30 @@ ipcMain.handle('get-command', async (_event, commandId: string) => {
     const results = await runQuery(query, { commandId });
     if (results.length > 0) {
       const record = results[0];
+
+      // Parse JSON fields if they're strings
+      const parseJsonField = (field: any) => {
+        if (typeof field === 'string') {
+          try {
+            return JSON.parse(field);
+          } catch {
+            return field;
+          }
+        }
+        return field;
+      };
+
       const command = {
         ...record.command,
         flags: record.flags.filter((f: any) => f.name),
         variables: record.variables.filter((v: any) => v.name),
         indicators: record.indicators.filter((i: any) => i.pattern),
         tags: record.tags.filter((t: string) => t),
+        troubleshooting: parseJsonField(record.command.troubleshooting),
+        flag_explanations: parseJsonField(record.command.flag_explanations),
+        prerequisites: parseJsonField(record.command.prerequisites),
+        alternatives: parseJsonField(record.command.alternatives),
+        next_steps: parseJsonField(record.command.next_steps),
       };
       logIPC('IPC: get-command completed', {
         id: command.id,
@@ -227,20 +298,23 @@ ipcMain.handle('get-graph', async (_event, commandId: string) => {
       OPTIONAL MATCH (c)-[n:NEXT_STEP]->(next:Command)
       OPTIONAL MATCH (c)<-[ra:ALTERNATIVE]-(altFrom:Command)
       OPTIONAL MATCH (c)<-[pa:PREREQUISITE]-(preFrom:Command)
+      OPTIONAL MATCH (c)<-[na:NEXT_STEP]-(nextFrom:Command)
 
       WITH c,
            collect(DISTINCT {source: c.id, target: alt.id, type: 'ALTERNATIVE', command: alt{.*}}) as alternatives,
            collect(DISTINCT {source: c.id, target: pre.id, type: 'PREREQUISITE', command: pre{.*}}) as prerequisites,
            collect(DISTINCT {source: c.id, target: next.id, type: 'NEXT_STEP', command: next{.*}}) as nextSteps,
            collect(DISTINCT {source: altFrom.id, target: c.id, type: 'ALTERNATIVE', command: altFrom{.*}}) as alternativesFrom,
-           collect(DISTINCT {source: preFrom.id, target: c.id, type: 'PREREQUISITE', command: preFrom{.*}}) as prerequisitesFrom
+           collect(DISTINCT {source: preFrom.id, target: c.id, type: 'PREREQUISITE', command: preFrom{.*}}) as prerequisitesFrom,
+           collect(DISTINCT {source: nextFrom.id, target: c.id, type: 'NEXT_STEP', command: nextFrom{.*}}) as nextStepsFrom
 
       RETURN c as center,
              alternatives,
              prerequisites,
              nextSteps,
              alternativesFrom,
-             prerequisitesFrom
+             prerequisitesFrom,
+             nextStepsFrom
     `;
 
     const results = await runQuery(query, { commandId });
@@ -259,7 +333,7 @@ ipcMain.handle('get-graph', async (_event, commandId: string) => {
       // Process relationships
       const processEdges = (rels: any[], reverse = false) => {
         rels.forEach((rel: any) => {
-          if (rel.target && rel.command.id) {
+          if (rel.command && rel.command.id && rel.source && rel.target) {
             nodes.set(rel.command.id, {
               data: { id: rel.command.id, label: rel.command.name, ...rel.command }
             });
@@ -281,6 +355,7 @@ ipcMain.handle('get-graph', async (_event, commandId: string) => {
       processEdges(data.nextSteps);
       processEdges(data.alternativesFrom, true);
       processEdges(data.prerequisitesFrom, true);
+      processEdges(data.nextStepsFrom, true);
 
       const graphData = {
         elements: {
