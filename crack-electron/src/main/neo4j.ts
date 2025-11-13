@@ -708,7 +708,9 @@ ipcMain.handle('get-chain-graph', async (_event, chainId: string) => {
         data: {
           id: step.id,
           label: `Step ${index + 1}`,
-          description: step.description?.substring(0, 100) || '',
+          name: step.name || 'Unnamed Step',
+          objective: step.objective,
+          description: step.description || '',
           type: 'step',
           order: step.order || index,
           command: step.command

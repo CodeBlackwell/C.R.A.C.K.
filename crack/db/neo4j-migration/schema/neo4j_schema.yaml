@@ -125,6 +125,7 @@ nodes:
     fields:
       - id
       - name
+      - objective
       - description
       - expected_output
       - notes

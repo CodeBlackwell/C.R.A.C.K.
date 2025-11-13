@@ -289,6 +289,7 @@ class ChainStepsExtractor:
                 steps.append({
                     'id': step_id,
                     'name': safe_get(step, 'name'),
+                    'objective': safe_get(step, 'objective'),
                     'description': safe_get(step, 'description'),
                     'expected_output': safe_get(step, 'expected_output'),
                     'notes': safe_get(step, 'notes')

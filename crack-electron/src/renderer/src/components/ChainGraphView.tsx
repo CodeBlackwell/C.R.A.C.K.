@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Text, Loader, Center, Group, Badge, Stack, Paper } from '@mantine/core';
+import { Text, Loader, Center, Group, Badge, Stack, Paper, Box } from '@mantine/core';
 import cytoscape, { Core, EventObject } from 'cytoscape';
 // @ts-ignore
 import coseBilkent from 'cytoscape-cose-bilkent';
@@ -13,12 +13,22 @@ interface ChainGraphViewProps {
   onStepClick?: (stepId: string) => void;
 }
 
+interface TooltipData {
+  name: string;
+  objective?: string;
+  description: string;
+  commandName?: string;
+  x: number;
+  y: number;
+}
+
 export default function ChainGraphView({ chainId, onCommandClick, onStepClick }: ChainGraphViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const cyRef = useRef<Core | null>(null);
   const [loading, setLoading] = useState(false);
   const [stepCount, setStepCount] = useState(0);
   const [hasData, setHasData] = useState(false);
+  const [tooltip, setTooltip] = useState<TooltipData | null>(null);
 
   // Debug: Log mount
   useEffect(() => {
@@ -151,11 +161,23 @@ export default function ChainGraphView({ chainId, onCommandClick, onStepClick }:
     // Add tooltip on hover
     cyRef.current.on('mouseover', 'node', (evt: EventObject) => {
       const node = evt.target;
-      const description = node.data('description');
-      if (description) {
-        // Store tooltip in title attribute for native browser tooltip
-        node.data('tooltip', description);
-      }
+      const renderedPosition = node.renderedPosition();
+
+      const tooltipData: TooltipData = {
+        name: node.data('name') || 'Unnamed Step',
+        objective: node.data('objective'),
+        description: node.data('description') || '',
+        commandName: node.data('command')?.name,
+        x: renderedPosition.x,
+        y: renderedPosition.y,
+      };
+
+      setTooltip(tooltipData);
+    });
+
+    // Hide tooltip on mouseout
+    cyRef.current.on('mouseout', 'node', () => {
+      setTooltip(null);
     });
 
     return () => {
@@ -290,6 +312,54 @@ export default function ChainGraphView({ chainId, onCommandClick, onStepClick }:
             height: '100%',
           }}
         />
+
+        {/* Tooltip */}
+        {tooltip && (
+          <Box
+            style={{
+              position: 'absolute',
+              left: tooltip.x + 20,
+              top: tooltip.y - 20,
+              background: '#1a1b1e',
+              border: '1px solid #373A40',
+              borderRadius: '8px',
+              padding: '12px',
+              maxWidth: '300px',
+              zIndex: 1000,
+              pointerEvents: 'none',
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.5)',
+            }}
+          >
+            <Stack gap="xs">
+              <Text size="sm" fw={700} c="cyan">
+                {tooltip.name}
+              </Text>
+              {tooltip.objective && (
+                <Box>
+                  <Text size="xs" fw={600} c="dimmed" mb={2}>
+                    OBJECTIVE
+                  </Text>
+                  <Text size="xs" c="white">
+                    {tooltip.objective}
+                  </Text>
+                </Box>
+              )}
+              <Box>
+                <Text size="xs" fw={600} c="dimmed" mb={2}>
+                  DESCRIPTION
+                </Text>
+                <Text size="xs" c="dimmed" lineClamp={4}>
+                  {tooltip.description}
+                </Text>
+              </Box>
+              {tooltip.commandName && (
+                <Badge size="sm" variant="light" color="green">
+                  Command: {tooltip.commandName}
+                </Badge>
+              )}
+            </Stack>
+          </Box>
+        )}
 
         {!loading && !hasData && (
           <Center style={{ position: 'absolute', inset: 0 }}>
