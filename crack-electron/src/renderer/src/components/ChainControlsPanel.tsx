@@ -1,17 +1,24 @@
 import { useEffect, useState } from 'react';
 import { Paper, Text, Badge, Group, Stack, Button, ScrollArea, Divider, Code, Loader, Center } from '@mantine/core';
 import { AttackChain } from '../types/chain';
+import ChainStepDetails from './ChainStepDetails';
 
 interface ChainControlsPanelProps {
   chainId: string;
   chainViewMode: 'graph' | 'list';
   onViewModeChange: (mode: 'graph' | 'list') => void;
+  selectedStepId?: string | null;
+  onCommandClick?: (commandId: string) => void;
+  onClearStep?: () => void;
 }
 
 export default function ChainControlsPanel({
   chainId,
   chainViewMode,
   onViewModeChange,
+  selectedStepId,
+  onCommandClick,
+  onClearStep,
 }: ChainControlsPanelProps) {
   const [chain, setChain] = useState<AttackChain | null>(null);
   const [loading, setLoading] = useState(false);
@@ -81,6 +88,14 @@ export default function ChainControlsPanel({
     loadChain();
   }, [chainId]);
 
+  // Log content decision
+  const showStepDetails = selectedStepId && chainViewMode === 'graph';
+  console.log('[ChainControlsPanel] [RENDER] Content decision:', {
+    selectedStepId,
+    chainViewMode,
+    showStepDetails,
+  });
+
   if (loading || !chain) {
     return (
       <Paper
@@ -113,18 +128,34 @@ export default function ChainControlsPanel({
         overflow: 'hidden',
       }}
     >
-      {/* Header with view mode toggle */}
+      {/* Header with 3-button toggle */}
       <Group gap="xs" p="md" style={{ borderBottom: '1px solid #373A40' }}>
         <Button
           size="xs"
-          variant={chainViewMode === 'graph' ? 'filled' : 'subtle'}
+          variant={chainViewMode === 'graph' && !selectedStepId ? 'filled' : 'subtle'}
           color="gray"
           onClick={() => {
             onViewModeChange('graph');
-            console.log('[ChainControlsPanel] View mode changed to: graph');
+            if (onClearStep) {
+              onClearStep();
+            }
+            console.log('[ChainControlsPanel] View mode changed to: graph, step cleared');
           }}
         >
           Chain Graph
+        </Button>
+        <Button
+          size="xs"
+          variant={selectedStepId && chainViewMode === 'graph' ? 'filled' : 'subtle'}
+          color="gray"
+          disabled={!selectedStepId}
+          onClick={() => {
+            // Button is only enabled when step is selected
+            // Clicking it doesn't change view mode, just shows step details
+            console.log('[ChainControlsPanel] Chain Step tab clicked');
+          }}
+        >
+          Chain Step
         </Button>
         <Button
           size="xs"
@@ -139,118 +170,130 @@ export default function ChainControlsPanel({
         </Button>
       </Group>
 
-      {/* Chain Metadata */}
-      <ScrollArea
-        style={{ flex: 1 }}
-        type="auto"
-        offsetScrollbars
-        scrollbarSize={8}
-      >
-        <Stack gap="md" p="md">
-          {/* Chain Name */}
-          <div>
-            <Text size="lg" fw={700} mb="xs">
-              {chain.name}
-            </Text>
-            <Text size="xs" c="dimmed">
-              {chain.category}
-            </Text>
-          </div>
+      {/* Content Area: Show step details if step selected, otherwise show chain metadata */}
+      {showStepDetails ? (
+        <div style={{ flex: 1, overflow: 'hidden' }}>
+          {console.log('[ChainControlsPanel] [RENDER] Showing ChainStepDetails for step:', selectedStepId)}
+          <ChainStepDetails
+            chainId={chainId}
+            stepId={selectedStepId}
+            onCommandClick={onCommandClick}
+          />
+        </div>
+      ) : (
+        <ScrollArea
+          style={{ flex: 1 }}
+          type="auto"
+          offsetScrollbars
+          scrollbarSize={8}
+        >
+          {console.log('[ChainControlsPanel] [RENDER] Showing chain metadata')}
+          <Stack gap="md" p="md">
+            {/* Chain Name */}
+            <div>
+              <Text size="lg" fw={700} mb="xs">
+                {chain.name}
+              </Text>
+              <Text size="xs" c="dimmed">
+                {chain.category}
+              </Text>
+            </div>
 
-          <Divider color="#373A40" />
+            <Divider color="#373A40" />
 
-          {/* Badges */}
-          <div>
-            <Text size="xs" fw={600} mb="xs" c="dimmed">
-              Properties
-            </Text>
-            <Group gap={6}>
-              <Badge
-                size="sm"
-                variant="light"
-                color={getDifficultyColor(chain.difficulty)}
-              >
-                {chain.difficulty}
-              </Badge>
-              {(chain.oscp_relevant === true || chain.oscp_relevant === 'True') && (
-                <Badge size="sm" variant="light" color="blue">
-                  OSCP
-                </Badge>
-              )}
-              {chain.time_estimate && (
-                <Badge size="sm" variant="dot" color="gray">
-                  {chain.time_estimate}
-                </Badge>
-              )}
-              <Badge size="sm" variant="light" color="cyan">
-                {chain.platform}
-              </Badge>
-            </Group>
-          </div>
-
-          <Divider color="#373A40" />
-
-          {/* Description */}
-          {chain.description && (
-            <>
-              <div>
-                <Text size="xs" fw={600} mb="xs" c="dimmed">
-                  Description
-                </Text>
-                <Text size="sm" c="dimmed">
-                  {chain.description}
-                </Text>
-              </div>
-              <Divider color="#373A40" />
-            </>
-          )}
-
-          {/* Source Path */}
-          <div>
-            <Text size="xs" fw={600} mb="xs" c="dimmed">
-              Source File
-            </Text>
-            <Code
-              onClick={handleCopyPath}
-              style={{
-                fontSize: '10px',
-                background: copied ? '#2b8a3e' : '#1a1b1e',
-                border: `1px solid ${copied ? '#40c057' : '#373A40'}`,
-                padding: '8px',
-                display: 'block',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                wordBreak: 'break-all',
-              }}
-            >
-              {copied ? '✓ Copied to clipboard!' : getSourcePath(chain.id)}
-            </Code>
-          </div>
-
-          {/* OSCP Notes */}
-          {chain.notes && (
-            <>
-              <Divider color="#373A40" />
-              <div>
-                <Text size="xs" fw={600} mb="xs" c="dimmed">
-                  OSCP Notes
-                </Text>
-                <Paper
-                  p="sm"
-                  style={{
-                    background: '#1a1b1e',
-                    border: '1px solid #373A40',
-                  }}
+            {/* Badges */}
+            <div>
+              <Text size="xs" fw={600} mb="xs" c="dimmed">
+                Properties
+              </Text>
+              <Group gap={6}>
+                <Badge
+                  size="sm"
+                  variant="light"
+                  color={getDifficultyColor(chain.difficulty)}
                 >
-                  <Text size="xs" c="dimmed" style={{ whiteSpace: 'pre-wrap' }}>
-                    {chain.notes}
+                  {chain.difficulty}
+                </Badge>
+                {(chain.oscp_relevant === true || chain.oscp_relevant === 'True') && (
+                  <Badge size="sm" variant="light" color="blue">
+                    OSCP
+                  </Badge>
+                )}
+                {chain.time_estimate && (
+                  <Badge size="sm" variant="dot" color="gray">
+                    {chain.time_estimate}
+                  </Badge>
+                )}
+                <Badge size="sm" variant="light" color="cyan">
+                  {chain.platform}
+                </Badge>
+              </Group>
+            </div>
+
+            <Divider color="#373A40" />
+
+            {/* Description */}
+            {chain.description && (
+              <>
+                <div>
+                  <Text size="xs" fw={600} mb="xs" c="dimmed">
+                    Description
                   </Text>
-                </Paper>
-              </div>
-            </>
-          )}
-        </Stack>
-      </ScrollArea>
+                  <Text size="sm" c="dimmed">
+                    {chain.description}
+                  </Text>
+                </div>
+                <Divider color="#373A40" />
+              </>
+            )}
+
+            {/* Source Path */}
+            <div>
+              <Text size="xs" fw={600} mb="xs" c="dimmed">
+                Source File
+              </Text>
+              <Code
+                onClick={handleCopyPath}
+                style={{
+                  fontSize: '10px',
+                  background: copied ? '#2b8a3e' : '#1a1b1e',
+                  border: `1px solid ${copied ? '#40c057' : '#373A40'}`,
+                  padding: '8px',
+                  display: 'block',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  wordBreak: 'break-all',
+                }}
+              >
+                {copied ? '✓ Copied to clipboard!' : getSourcePath(chain.id)}
+              </Code>
+            </div>
+
+            {/* OSCP Notes */}
+            {chain.notes && (
+              <>
+                <Divider color="#373A40" />
+                <div>
+                  <Text size="xs" fw={600} mb="xs" c="dimmed">
+                    OSCP Notes
+                  </Text>
+                  <Paper
+                    p="sm"
+                    style={{
+                      background: '#1a1b1e',
+                      border: '1px solid #373A40',
+                    }}
+                  >
+                    <Text size="xs" c="dimmed" style={{ whiteSpace: 'pre-wrap' }}>
+                      {chain.notes}
+                    </Text>
+                  </Paper>
+                </div>
+              </>
+            )}
+          </Stack>
+        </ScrollArea>
+      )}
     </Paper>
   );
 }

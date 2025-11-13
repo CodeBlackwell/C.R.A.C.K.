@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { MantineProvider, AppShell, Text, Badge, Group, Paper, Center, Code, Stack, Divider, SegmentedControl, Button } from '@mantine/core';
 import '@mantine/core/styles.css';
 import CommandSearch from './components/CommandSearch';
@@ -8,6 +8,7 @@ import CheatsheetCommandList from './components/CheatsheetCommandList';
 import ChainView from './components/ChainView';
 import ChainDetails from './components/ChainDetails';
 import ChainGraphView from './components/ChainGraphView';
+import ChainStepDetails from './components/ChainStepDetails';
 import ChainControlsPanel from './components/ChainControlsPanel';
 import GraphView from './components/GraphView';
 import CommandDetails from './components/CommandDetails';
@@ -22,6 +23,7 @@ function App() {
   const [selectedCommand, setSelectedCommand] = useState<Command | null>(null);
   const [selectedCheatsheet, setSelectedCheatsheet] = useState<Cheatsheet | null>(null);
   const [selectedChainId, setSelectedChainId] = useState<string | null>(null);
+  const [selectedStepId, setSelectedStepId] = useState<string | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<{
     connected: boolean;
     uri?: string;
@@ -95,7 +97,7 @@ function App() {
     setSelectedCheatsheet(null); // Clear cheatsheet when selecting chain
   };
 
-  const handleChainCommandClick = async (commandId: string) => {
+  const handleChainCommandClick = useCallback(async (commandId: string) => {
     console.log('[App] Chain command clicked:', commandId);
     try {
       const command = await window.electronAPI.getCommand(commandId);
@@ -104,12 +106,26 @@ function App() {
     } catch (error) {
       console.error('[App] Error fetching command from chain:', error);
     }
-  };
+  }, []);
 
-  const handleCommandBadgeClick = (commandId: string) => {
+  const handleCommandBadgeClick = useCallback((commandId: string) => {
     console.log('[App] Command badge clicked:', commandId);
     setExpandedCommandId(commandId);
-  };
+  }, []);
+
+  const handleStepClick = useCallback((stepId: string) => {
+    console.log('[App] ========== Step Click Handler START ==========');
+    console.log('[App] Step clicked:', stepId);
+    setSelectedStepId(stepId);
+    console.log('[App] setSelectedStepId called with:', stepId);
+    console.log('[App] ========== Step Click Handler END ==========');
+    // Keep graph visible - user can manually switch tabs if desired
+  }, []);
+
+  const handleClearStep = useCallback(() => {
+    console.log('[App] Clearing selected step');
+    setSelectedStepId(null);
+  }, []);
 
   // Debug: Log state changes
   useEffect(() => {
@@ -125,8 +141,20 @@ function App() {
   // Reset chain view mode to graph when chain changes
   useEffect(() => {
     setChainViewMode('graph');
-    console.log('[App] Chain view mode reset to graph');
+    setSelectedStepId(null); // Clear selected step when chain changes
+    console.log('[App] Chain view mode reset to graph, step cleared');
   }, [selectedChainId]);
+
+  // Track selectedStepId changes
+  useEffect(() => {
+    console.log('[App] ========== selectedStepId changed:', selectedStepId, '==========');
+    console.log('[App] Current state after stepId change:', {
+      selectedChainId,
+      chainViewMode,
+      selectedStepId,
+      selectedCheatsheet: !!selectedCheatsheet,
+    });
+  }, [selectedStepId]);
 
   return (
     <MantineProvider
@@ -329,21 +357,38 @@ function App() {
             )}
 
             {/* Center Panel when chain selected: Chain Graph or List View */}
-            {selectedChainId && !selectedCheatsheet && (
-              <div style={{ flex: 1, height: '100%' }}>
-                {chainViewMode === 'graph' ? (
-                  <ChainGraphView
-                    chainId={selectedChainId}
-                    onCommandClick={handleChainCommandClick}
-                  />
-                ) : (
-                  <ChainDetails
-                    chainId={selectedChainId}
-                    onCommandClick={handleChainCommandClick}
-                  />
-                )}
-              </div>
-            )}
+            {(() => {
+              const shouldShowCenterPanel = selectedChainId && !selectedCheatsheet;
+              console.log('[App] [RENDER] Center panel evaluation:', {
+                selectedChainId,
+                selectedCheatsheet: !!selectedCheatsheet,
+                shouldShowCenterPanel,
+                chainViewMode,
+                selectedStepId,
+              });
+              return shouldShowCenterPanel ? (
+                <div style={{ flex: 1, height: '100%' }}>
+                  {chainViewMode === 'graph' ? (
+                    <>
+                      {console.log('[App] [RENDER] Rendering ChainGraphView for chain:', selectedChainId)}
+                      <ChainGraphView
+                        chainId={selectedChainId}
+                        onCommandClick={handleChainCommandClick}
+                        onStepClick={handleStepClick}
+                      />
+                    </>
+                  ) : (
+                    <>
+                      {console.log('[App] [RENDER] Rendering ChainDetails for chain:', selectedChainId)}
+                      <ChainDetails
+                        chainId={selectedChainId}
+                        onCommandClick={handleChainCommandClick}
+                      />
+                    </>
+                  )}
+                </div>
+              ) : null;
+            })()}
 
             {/* Right Panel: Command Details or Graph View based on view mode */}
             <div style={{ width: '450px', height: '100%' }}>
@@ -476,6 +521,9 @@ function App() {
                   chainId={selectedChainId}
                   chainViewMode={chainViewMode}
                   onViewModeChange={setChainViewMode}
+                  selectedStepId={selectedStepId}
+                  onCommandClick={handleChainCommandClick}
+                  onClearStep={handleClearStep}
                 />
               ) : (
                 <Paper

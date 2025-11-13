@@ -10,9 +10,10 @@ cytoscape.use(coseBilkent);
 interface ChainGraphViewProps {
   chainId: string;
   onCommandClick?: (commandId: string) => void;
+  onStepClick?: (stepId: string) => void;
 }
 
-export default function ChainGraphView({ chainId, onCommandClick }: ChainGraphViewProps) {
+export default function ChainGraphView({ chainId, onCommandClick, onStepClick }: ChainGraphViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const cyRef = useRef<Core | null>(null);
   const [loading, setLoading] = useState(false);
@@ -21,7 +22,12 @@ export default function ChainGraphView({ chainId, onCommandClick }: ChainGraphVi
 
   // Debug: Log mount
   useEffect(() => {
+    console.log('[ChainGraphView] ========== COMPONENT MOUNTED ==========');
     console.log('[ChainGraphView] Component mounted with chainId:', chainId);
+    return () => {
+      console.log('[ChainGraphView] ========== COMPONENT UNMOUNTING ==========');
+      console.log('[ChainGraphView] Component unmounting for chainId:', chainId);
+    };
   }, []);
 
   // Initialize Cytoscape
@@ -39,25 +45,39 @@ export default function ChainGraphView({ chainId, onCommandClick }: ChainGraphVi
           selector: 'node',
           style: {
             'background-color': '#5c7cfa',
-            'label': 'data(label)',
+            'label': (ele: any) => {
+              const command = ele.data('command');
+              const stepNum = ele.data('label'); // "Step X"
+              if (command && command.name) {
+                // Show command name + step number
+                return `${command.name}\n[${stepNum}]`;
+              }
+              // No command - show step number only
+              return stepNum;
+            },
             'color': '#fff',
             'text-valign': 'center',
             'text-halign': 'center',
-            'font-size': '11px',
-            'font-family': 'monospace',
-            'width': '80px',
-            'height': '80px',
-            'border-width': '2px',
+            'font-size': '10px',
+            'font-family': 'Inter, system-ui, sans-serif',
+            'width': '120px',
+            'height': '120px',
+            'border-width': '3px',
             'border-color': '#4c6ef5',
             'text-wrap': 'wrap',
-            'text-max-width': '100px',
+            'text-max-width': '110px',
           },
         },
         {
           selector: 'node[type="step"]',
           style: {
-            'background-color': '#5c7cfa',
-            'border-color': '#4c6ef5',
+            'background-color': (ele: any) => {
+              // Different color if step has a command
+              return ele.data('command') ? '#5c7cfa' : '#868e96';
+            },
+            'border-color': (ele: any) => {
+              return ele.data('command') ? '#4c6ef5' : '#6c757d';
+            },
           },
         },
         {
@@ -105,15 +125,36 @@ export default function ChainGraphView({ chainId, onCommandClick }: ChainGraphVi
 
     // Add click handler for nodes
     cyRef.current.on('tap', 'node', (evt: EventObject) => {
+      console.log('[ChainGraphView] ========== NODE TAP EVENT START ==========');
       const node = evt.target;
-      const commandId = node.data('commandId');
+      const stepId = node.data('id');
+      const command = node.data('command');
+      const commandId = command?.id;
       console.log('[ChainGraphView] Node clicked:', {
-        stepId: node.data('id'),
+        stepId,
         commandId,
+        hasCommand: !!command,
+        onStepClickDefined: !!onStepClick,
       });
 
-      if (commandId && onCommandClick) {
-        onCommandClick(commandId);
+      // Call step click handler (shows step details in right panel)
+      if (onStepClick) {
+        console.log('[ChainGraphView] Calling onStepClick with stepId:', stepId);
+        onStepClick(stepId);
+        console.log('[ChainGraphView] onStepClick returned');
+      } else {
+        console.warn('[ChainGraphView] onStepClick is not defined!');
+      }
+      console.log('[ChainGraphView] ========== NODE TAP EVENT END ==========');
+    });
+
+    // Add tooltip on hover
+    cyRef.current.on('mouseover', 'node', (evt: EventObject) => {
+      const node = evt.target;
+      const description = node.data('description');
+      if (description) {
+        // Store tooltip in title attribute for native browser tooltip
+        node.data('tooltip', description);
       }
     });
 
@@ -121,7 +162,7 @@ export default function ChainGraphView({ chainId, onCommandClick }: ChainGraphVi
       console.log('[ChainGraphView] Destroying Cytoscape instance');
       cyRef.current?.destroy();
     };
-  }, [onCommandClick]);
+  }, [onCommandClick, onStepClick]);
 
   // Load chain graph data
   useEffect(() => {
@@ -280,10 +321,25 @@ export default function ChainGraphView({ chainId, onCommandClick }: ChainGraphVi
                   height: 12,
                   background: '#5c7cfa',
                   borderRadius: '50%',
+                  border: '2px solid #4c6ef5',
                 }}
               />
               <Text size="xs" c="dimmed">
-                Attack Step
+                With Command
+              </Text>
+            </Group>
+            <Group gap="xs">
+              <div
+                style={{
+                  width: 12,
+                  height: 12,
+                  background: '#868e96',
+                  borderRadius: '50%',
+                  border: '2px solid #6c757d',
+                }}
+              />
+              <Text size="xs" c="dimmed">
+                No Command
               </Text>
             </Group>
             <Group gap="xs">
@@ -295,7 +351,7 @@ export default function ChainGraphView({ chainId, onCommandClick }: ChainGraphVi
                 }}
               />
               <Text size="xs" c="dimmed">
-                Next Step
+                Sequential
               </Text>
             </Group>
           </Group>
