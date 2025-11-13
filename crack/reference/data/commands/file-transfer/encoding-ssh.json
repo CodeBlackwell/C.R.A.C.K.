@@ -1,0 +1,210 @@
+{
+  "category": "file-transfer",
+  "subcategory": "encoding-ssh",
+  "description": "Base64 encoding and SSH-based file transfers",
+  "commands": [
+    {
+      "id": "ft-base64-encode",
+      "name": "Base64: Encode for Transfer",
+      "category": "file-transfer",
+      "subcategory": "encoding",
+      "command": "base64 -w0 <FILE>",
+      "description": "Encode file as base64 for copy/paste transfer or text-only channels",
+      "tags": [
+        "FILE_TRANSFER",
+        "ENCODING",
+        "BASE64",
+        "OSCP:MEDIUM"
+      ],
+      "variables": [
+        {
+          "name": "<FILE>",
+          "description": "File to encode",
+          "example": "binary.exe",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "-w0": "Wrap width 0 - disable line wrapping, output single line (required for easy copy/paste). Default wraps at 76 chars",
+        "-d": "Decode mode - decode base64 back to binary: base64 -d encoded.txt > binary.exe",
+        "-i <INPUT>": "Input file - alternative to redirection: base64 -w0 -i file.exe",
+        "Without -w0": "Output wrapped at 76 chars - harder to copy/paste, need to remove newlines"
+      },
+      "success_indicators": [
+        "Base64 string output to terminal",
+        "String length approximately 1.33x original file size",
+        "Only alphanumeric + / + = characters"
+      ],
+      "failure_indicators": [
+        "base64: command not found - should be on all Linux systems",
+        "File not found - wrong path",
+        "Output too large for terminal buffer - file >1MB not practical for copy/paste"
+      ],
+      "troubleshooting": {
+        "base64 not found": "Should be in coreutils on all Linux. Check: which base64. Alternative: openssl base64 -A < file",
+        "Terminal buffer overflow": "For large files, save to file: base64 -w0 file > encoded.txt, then transfer encoded.txt",
+        "Copy/paste corrupts encoding": "Verify no line breaks inserted: wc -l encoded.txt should be 1. Use proper terminal selection",
+        "Decode produces wrong file size": "Encoding corrupted during transfer. Re-encode and verify: md5sum original; encode; transfer; decode; md5sum decoded"
+      },
+      "prerequisites": [],
+      "alternatives": [
+        "ft-nc-send",
+        "ft-curl-upload"
+      ],
+      "next_steps": [
+        "ft-base64-decode"
+      ],
+      "notes": "OSCP METHODOLOGY: Use when only text-based exfiltration available (web shells, SQL injection, command injection with output only). Encodes binary files as printable text. Size increases ~33%.\n\nMANUAL ALTERNATIVE: Could use hex encoding (xxd), but base64 is more compact (hex is 2x size increase vs 1.33x).\n\nUSE CASES: \n- Copy/paste small files via RDP/VNC clipboard\n- Exfiltrate via SQL injection (SELECT base64_data)\n- Transfer via web shell echo output\n- Bypass file type restrictions\n\nEXAM TIP: Only practical for files <1MB due to terminal buffer limits and manual copy/paste. For larger files, use ft-nc-send or ft-curl-upload. After encoding, copy entire output (triple-click in terminal), paste to Kali, decode.\n\nDECODE ON KALI: echo '<BASE64_STRING>' | base64 -d > decoded_file\nDECODE ON WINDOWS: certutil -decode encoded.txt decoded.exe\nDECODE IN POWERSHELL: [System.Convert]::FromBase64String('<STRING>') | Set-Content -Encoding Byte decoded.exe\n\nTIME ESTIMATE: Encoding instant for files <10MB. Manual copy/paste adds 30-60 seconds.",
+      "oscp_relevance": "medium"
+    },
+    {
+      "id": "ft-scp-upload",
+      "name": "SCP: Secure Upload",
+      "category": "file-transfer",
+      "subcategory": "ssh-transfer",
+      "command": "scp <FILE> <USERNAME>@<TARGET>:/tmp/",
+      "description": "Upload file via SSH/SCP (requires credentials)",
+      "tags": [
+        "FILE_TRANSFER",
+        "SSH",
+        "SCP",
+        "UPLOAD",
+        "OSCP:MEDIUM"
+      ],
+      "variables": [
+        {
+          "name": "<FILE>",
+          "description": "Local file to upload",
+          "example": "exploit.sh",
+          "required": true
+        },
+        {
+          "name": "<USERNAME>",
+          "description": "SSH username on target",
+          "example": "user",
+          "required": true
+        },
+        {
+          "name": "<TARGET>",
+          "description": "Target IP address",
+          "example": "192.168.45.100",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "-P <PORT>": "SSH port - use capital P for scp (lowercase -p is preserve timestamps): scp -P 2222 file user@host:/tmp/",
+        "-i <KEY>": "SSH private key - use instead of password: scp -i id_rsa file user@host:/tmp/",
+        "-r": "Recursive - upload entire directory: scp -r /local/dir user@host:/tmp/",
+        "-C": "Compression - enable gzip compression for faster transfer over slow links: scp -C file user@host:/tmp/"
+      },
+      "success_indicators": [
+        "Password prompt appears (if using password auth)",
+        "Progress bar reaches 100%",
+        "File transferred message",
+        "Returns to prompt"
+      ],
+      "failure_indicators": [
+        "Connection refused - SSH not running or wrong port",
+        "Permission denied (publickey) - key auth required, no password auth",
+        "Host key verification failed - unknown host key",
+        "scp: command not found - rare, SSH package not installed"
+      ],
+      "troubleshooting": {
+        "Host key verification failed": "Accept new key: ssh-keyscan <TARGET> >> ~/.ssh/known_hosts OR use -o StrictHostKeyChecking=no (insecure)",
+        "Permission denied with password": "SSH may require key auth only. Generate key: ssh-keygen, copy: ssh-copy-id user@target",
+        "Non-standard SSH port": "Use -P (capital): scp -P 2222 file user@host:/tmp/",
+        "Destination permission denied": "Try writable directory: /tmp/, /dev/shm/, /var/tmp/, or user home: scp file user@host:~/",
+        "Connection times out": "Check SSH running: nc -zv <TARGET> 22, verify firewall allows port 22"
+      },
+      "prerequisites": [],
+      "alternatives": [
+        "ft-wget-download",
+        "ft-curl-upload"
+      ],
+      "next_steps": [
+        "ft-scp-download",
+        "ft-ssh-execute"
+      ],
+      "notes": "OSCP METHODOLOGY: Use when you have SSH credentials (password or key). Less common in OSCP than HTTP transfers, but useful when SSH is the primary access vector. Encrypted transfer, cleaner than setting up HTTP servers.\n\nMANUAL ALTERNATIVE: Could use SFTP interactively, but SCP is faster for scripting single file transfers.\n\nWHEN TO USE: \n- You have SSH credentials\n- Target allows SSH (port 22/custom port open)\n- Need encrypted transfer\n- Transferring to/from pivot boxes where you have SSH\n\nEXAM TIP: If you compromised SSH keys (/home/user/.ssh/id_rsa), use them: scp -i stolen_id_rsa file user@target:/tmp/. Remember -P (capital P) for non-standard ports.\n\nVS HTTP: SCP is encrypted and authenticated, but requires SSH access. HTTP is unauthenticated and works over more restricted firewalls.\n\nBIDIRECTIONAL: Use ft-scp-download for reverse transfer (target to Kali)\n\nTIME ESTIMATE: Fast, limited by network speed. 1-10MB/sec typical.",
+      "oscp_relevance": "medium"
+    },
+    {
+      "id": "ft-scp-download",
+      "name": "SCP: Secure Download",
+      "category": "file-transfer",
+      "subcategory": "ssh-transfer",
+      "command": "scp <USERNAME>@<TARGET>:<REMOTE_FILE> <LOCAL_PATH>",
+      "description": "Download file from target via SSH/SCP (exfiltration with credentials)",
+      "tags": [
+        "FILE_TRANSFER",
+        "SSH",
+        "SCP",
+        "DOWNLOAD",
+        "EXFILTRATION",
+        "OSCP:MEDIUM"
+      ],
+      "variables": [
+        {
+          "name": "<USERNAME>",
+          "description": "SSH username on target",
+          "example": "user",
+          "required": true
+        },
+        {
+          "name": "<TARGET>",
+          "description": "Target IP address",
+          "example": "192.168.45.100",
+          "required": true
+        },
+        {
+          "name": "<REMOTE_FILE>",
+          "description": "Full path to file on target",
+          "example": "/home/user/proof.txt",
+          "required": true
+        },
+        {
+          "name": "<LOCAL_PATH>",
+          "description": "Local destination (directory or filename)",
+          "example": "./proof.txt",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "-P <PORT>": "SSH port - use capital P: scp -P 2222 user@host:/file ./",
+        "-i <KEY>": "SSH private key: scp -i id_rsa user@host:/file ./",
+        "-r": "Recursive - download entire directory: scp -r user@host:/dir ./",
+        "-C": "Compression - faster over slow links: scp -C user@host:/file ./",
+        "Colon syntax": "user@host:/path separates host from path - colon required"
+      },
+      "success_indicators": [
+        "Password/key auth succeeds",
+        "Progress bar reaches 100%",
+        "File appears locally: ls -la <LOCAL_PATH>",
+        "File size matches source"
+      ],
+      "failure_indicators": [
+        "No such file or directory - wrong path on target",
+        "Permission denied - cannot read source file or write destination",
+        "Connection refused - SSH not accessible",
+        "Host key verification failed"
+      ],
+      "troubleshooting": {
+        "No such file or directory": "Verify file exists on target first: ssh user@target ls -la /path/to/file",
+        "Permission denied reading file": "File may be root-owned. If you have sudo: ssh user@target sudo cat /file > local_file OR gain root SSH first",
+        "Host key verification failed": "Add to known_hosts: ssh-keyscan <TARGET> >> ~/.ssh/known_hosts",
+        "Cannot write to local path": "Check local directory writable: ls -la ., try different destination",
+        "Wildcards not working": "Enclose remote path in quotes: scp user@host:'/path/*.txt' ./"
+      },
+      "prerequisites": [],
+      "alternatives": [
+        "ft-curl-upload",
+        "ft-nc-send"
+      ],
+      "next_steps": [
+        "ft-file-verify-md5"
+      ],
+      "notes": "OSCP METHODOLOGY: Use for exfiltration when you have SSH credentials. Cleaner than setting up upload servers. Encrypted transfer. Less common in OSCP than HTTP uploads, but valuable when SSH is access method.\n\nMANUAL ALTERNATIVE: Could SSH in and cat file, redirect output, but SCP preserves binary files perfectly.\n\nWILDCARDS: Download multiple files: scp user@host:'/var/log/*.log' ./logs/ (quotes required around remote path with wildcards)\n\nEXAM TIP: If you compromised SSH keys, use them: scp -i stolen_key user@target:/root/proof.txt ./. For files you cannot read (permission denied), try to escalate privileges first or use sudo over SSH.\n\nDIRECTORY DOWNLOAD: Download entire directories: scp -r user@target:/opt/sensitive_data ./loot/\n\nVS HTTP UPLOAD: SCP is bidirectional (same tool for upload/download), encrypted, but requires SSH access. HTTP upload works through more restrictive firewalls.\n\nTIME ESTIMATE: Fast, limited by network speed. 1-10MB/sec typical. Near-instant for proof.txt.",
+      "oscp_relevance": "medium"
+    }
+  ]
+}
