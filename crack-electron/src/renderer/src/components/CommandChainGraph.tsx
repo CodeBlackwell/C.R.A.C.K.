@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { Text, Loader, Center, Group, Badge, Stack } from '@mantine/core';
-import cytoscape, { Core } from 'cytoscape';
+import { Text, Loader, Center, Group, Badge, Stack, Box } from '@mantine/core';
+import cytoscape, { Core, EventObject } from 'cytoscape';
 // @ts-ignore
 import coseBilkent from 'cytoscape-cose-bilkent';
 
@@ -11,6 +11,15 @@ interface CommandChainGraphProps {
   commandId: string;
 }
 
+interface TooltipData {
+  chainName: string;
+  stepOrder: number;
+  description: string;
+  commandName?: string;
+  x: number;
+  y: number;
+}
+
 export default function CommandChainGraph({ commandId }: CommandChainGraphProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const cyRef = useRef<Core | null>(null);
@@ -19,6 +28,7 @@ export default function CommandChainGraph({ commandId }: CommandChainGraphProps)
   const [edgeCount, setEdgeCount] = useState(0);
   const [chainCount, setChainCount] = useState(0);
   const [hasData, setHasData] = useState(false);
+  const [tooltip, setTooltip] = useState<TooltipData | null>(null);
 
   // Debug: Log mount
   useEffect(() => {
@@ -115,6 +125,28 @@ export default function CommandChainGraph({ commandId }: CommandChainGraphProps)
     });
 
     console.log('[CommandChainGraph] Cytoscape initialized successfully');
+
+    // Add tooltip on hover
+    cyRef.current.on('mouseover', 'node', (evt: EventObject) => {
+      const node = evt.target;
+      const renderedPosition = node.renderedPosition();
+
+      const tooltipData: TooltipData = {
+        chainName: node.data('chainName') || 'Unknown Chain',
+        stepOrder: node.data('stepOrder') + 1 || 0,
+        description: node.data('description') || '',
+        commandName: node.data('command')?.name,
+        x: renderedPosition.x,
+        y: renderedPosition.y,
+      };
+
+      setTooltip(tooltipData);
+    });
+
+    // Hide tooltip on mouseout
+    cyRef.current.on('mouseout', 'node', () => {
+      setTooltip(null);
+    });
 
     return () => {
       console.log('[CommandChainGraph] Destroying Cytoscape instance');
@@ -276,6 +308,49 @@ export default function CommandChainGraph({ commandId }: CommandChainGraphProps)
               </Text>
             </Stack>
           </Center>
+        )}
+
+        {/* Tooltip */}
+        {tooltip && (
+          <Box
+            style={{
+              position: 'absolute',
+              left: tooltip.x + 20,
+              top: tooltip.y - 20,
+              background: '#1a1b1e',
+              border: '1px solid #373A40',
+              borderRadius: '8px',
+              padding: '12px',
+              maxWidth: '300px',
+              pointerEvents: 'none',
+              zIndex: 1000,
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.5)',
+            }}
+          >
+            <Stack gap="xs">
+              <Text size="sm" fw={700} c="cyan">
+                {tooltip.chainName}
+              </Text>
+              <Badge variant="light" color="blue" size="sm" style={{ width: 'fit-content' }}>
+                Step {tooltip.stepOrder}
+              </Badge>
+              {tooltip.description && (
+                <Box>
+                  <Text size="xs" fw={600} c="dimmed" mb={2}>
+                    DESCRIPTION
+                  </Text>
+                  <Text size="xs" c="dimmed" lineClamp={4}>
+                    {tooltip.description}
+                  </Text>
+                </Box>
+              )}
+              {tooltip.commandName && (
+                <Badge size="sm" variant="light" color="green">
+                  Command: {tooltip.commandName}
+                </Badge>
+              )}
+            </Stack>
+          </Box>
         )}
       </div>
 
