@@ -524,6 +524,7 @@ function App() {
                   selectedStepId={selectedStepId}
                   onCommandClick={handleChainCommandClick}
                   onClearStep={handleClearStep}
+                  onStepClick={handleStepClick}
                 />
               ) : (
                 <Paper

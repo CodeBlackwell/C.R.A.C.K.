@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Paper, Text, Badge, Group, Stack, Button, ScrollArea, Divider, Code, Loader, Center } from '@mantine/core';
 import { AttackChain } from '../types/chain';
 import ChainStepDetails from './ChainStepDetails';
+import GraphView from './GraphView';
 
 interface ChainControlsPanelProps {
   chainId: string;
@@ -10,7 +11,10 @@ interface ChainControlsPanelProps {
   selectedStepId?: string | null;
   onCommandClick?: (commandId: string) => void;
   onClearStep?: () => void;
+  onStepClick?: (stepId: string) => void;
 }
+
+type RightPanelView = 'details' | 'graph';
 
 export default function ChainControlsPanel({
   chainId,
@@ -19,10 +23,12 @@ export default function ChainControlsPanel({
   selectedStepId,
   onCommandClick,
   onClearStep,
+  onStepClick,
 }: ChainControlsPanelProps) {
   const [chain, setChain] = useState<AttackChain | null>(null);
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [rightPanelView, setRightPanelView] = useState<RightPanelView>('details');
 
   // Derive source file path from chain ID (same logic as ChainDetails)
   const getSourcePath = (id: string): string => {
@@ -128,50 +134,136 @@ export default function ChainControlsPanel({
         overflow: 'hidden',
       }}
     >
-      {/* Header with 3-button toggle */}
-      <Group gap="xs" p="md" style={{ borderBottom: '1px solid #373A40' }}>
-        <Button
-          size="xs"
-          variant={chainViewMode === 'graph' && !selectedStepId ? 'filled' : 'subtle'}
-          color="gray"
-          onClick={() => {
-            onViewModeChange('graph');
-            if (onClearStep) {
-              onClearStep();
-            }
-            console.log('[ChainControlsPanel] View mode changed to: graph, step cleared');
-          }}
-        >
-          Chain Graph
-        </Button>
-        <Button
-          size="xs"
-          variant={selectedStepId && chainViewMode === 'graph' ? 'filled' : 'subtle'}
-          color="gray"
-          disabled={!selectedStepId}
-          onClick={() => {
-            // Button is only enabled when step is selected
-            // Clicking it doesn't change view mode, just shows step details
-            console.log('[ChainControlsPanel] Chain Step tab clicked');
-          }}
-        >
-          Chain Step
-        </Button>
-        <Button
-          size="xs"
-          variant={chainViewMode === 'list' ? 'filled' : 'subtle'}
-          color="gray"
-          onClick={() => {
-            onViewModeChange('list');
-            console.log('[ChainControlsPanel] View mode changed to: list');
-          }}
-        >
-          List View
-        </Button>
-      </Group>
+      {/* Header with view mode toggle */}
+      <Stack gap="xs" p="md" style={{ borderBottom: '1px solid #373A40' }}>
+        {/* Primary navigation: Details / Graph View */}
+        <Group gap="xs">
+          <Button
+            size="xs"
+            variant={rightPanelView === 'details' ? 'filled' : 'subtle'}
+            color="gray"
+            onClick={() => {
+              setRightPanelView('details');
+              console.log('[ChainControlsPanel] Right panel view changed to: details');
+            }}
+          >
+            Details
+          </Button>
+          <Button
+            size="xs"
+            variant={rightPanelView === 'graph' ? 'filled' : 'subtle'}
+            color="gray"
+            onClick={() => {
+              setRightPanelView('graph');
+              console.log('[ChainControlsPanel] Right panel view changed to: graph');
+            }}
+          >
+            Graph View
+          </Button>
+        </Group>
 
-      {/* Content Area: Show step details if step selected, otherwise show chain metadata */}
-      {showStepDetails ? (
+        {/* Secondary navigation: Only show in details mode */}
+        {rightPanelView === 'details' && (
+          <Group gap="xs">
+            <Button
+              size="xs"
+              variant={chainViewMode === 'graph' && !selectedStepId ? 'filled' : 'subtle'}
+              color="cyan"
+              onClick={() => {
+                onViewModeChange('graph');
+                if (onClearStep) {
+                  onClearStep();
+                }
+                console.log('[ChainControlsPanel] View mode changed to: graph, step cleared');
+              }}
+            >
+              Chain Info
+            </Button>
+            <Button
+              size="xs"
+              variant={selectedStepId && chainViewMode === 'graph' ? 'filled' : 'subtle'}
+              color="cyan"
+              disabled={!selectedStepId}
+              onClick={() => {
+                // When clicked, switch to graph view to show the step details
+                if (chainViewMode !== 'graph') {
+                  onViewModeChange('graph');
+                }
+                console.log('[ChainControlsPanel] Switching to graph view to show step info');
+              }}
+            >
+              Step Info
+            </Button>
+            <Button
+              size="xs"
+              variant={chainViewMode === 'list' ? 'filled' : 'subtle'}
+              color="cyan"
+              onClick={() => {
+                onViewModeChange('list');
+                console.log('[ChainControlsPanel] View mode changed to: list');
+              }}
+            >
+              List View
+            </Button>
+          </Group>
+        )}
+      </Stack>
+
+      {/* Content Area: Show based on view mode */}
+      {rightPanelView === 'graph' ? (
+        // Graph View: Show command relationship graph
+        <div style={{ flex: 1, overflow: 'hidden' }}>
+          {(() => {
+            // Get the command ID from the selected step
+            const selectedStep = chain?.steps?.find(s => s.id === selectedStepId);
+            const commandId = selectedStep?.command?.id;
+
+            console.log('[ChainControlsPanel] [RENDER] Graph View mode:', {
+              selectedStepId,
+              hasStep: !!selectedStep,
+              commandId,
+            });
+
+            if (!commandId) {
+              return (
+                <Paper
+                  style={{
+                    height: '100%',
+                    background: '#25262b',
+                    border: '1px solid #373A40',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Center>
+                    <Stack gap="xs" align="center" style={{ maxWidth: '300px', textAlign: 'center' }}>
+                      <Text c="dimmed" size="sm">
+                        Select a step with a command to view its relationship graph
+                      </Text>
+                      <Text c="dimmed" size="xs" style={{ opacity: 0.7 }}>
+                        Click a step in the chain graph, then switch to Graph View
+                      </Text>
+                    </Stack>
+                  </Center>
+                </Paper>
+              );
+            }
+
+            return (
+              <GraphView
+                selectedCommandId={commandId}
+                onNodeClick={(clickedCommandId) => {
+                  if (onCommandClick) {
+                    onCommandClick(clickedCommandId);
+                  }
+                }}
+              />
+            );
+          })()}
+        </div>
+      ) : showStepDetails ? (
+        // Details View: Show step details
         <div style={{ flex: 1, overflow: 'hidden' }}>
           {console.log('[ChainControlsPanel] [RENDER] Showing ChainStepDetails for step:', selectedStepId)}
           <ChainStepDetails
@@ -181,6 +273,7 @@ export default function ChainControlsPanel({
           />
         </div>
       ) : (
+        // Details View: Show chain metadata
         <ScrollArea
           style={{ flex: 1 }}
           type="auto"
