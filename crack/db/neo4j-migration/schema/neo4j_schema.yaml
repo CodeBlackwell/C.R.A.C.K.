@@ -124,6 +124,7 @@ nodes:
     description: Chain steps
     fields:
       - id
+      - name
       - description
       - expected_output
       - notes

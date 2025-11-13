@@ -248,20 +248,40 @@ export default function ChainDetails({
           {chain.steps?.map((step, index) => (
             <Accordion.Item key={step.id || `step-${index}`} value={step.id || `step-${index}`}>
               <Accordion.Control>
-                <Group gap="xs">
+                <Group gap="xs" wrap="wrap">
                   <Badge size="sm" variant="filled" color="cyan">
                     Step {index + 1}
                   </Badge>
+                  <Text size="sm" fw={600} style={{ flex: 1 }}>
+                    {step.name || 'Unnamed Step'}
+                  </Text>
                   {step.command && (
-                    <Badge size="sm" variant="dot" color="green">
-                      Has Command
+                    <Badge size="xs" variant="dot" color="green">
+                      Command
+                    </Badge>
+                  )}
+                  {step.repeatable && (
+                    <Badge size="xs" variant="dot" color="blue">
+                      Repeatable
                     </Badge>
                   )}
                 </Group>
               </Accordion.Control>
               <Accordion.Panel>
-                <Stack gap="sm">
-                  {/* Step Description */}
+                <Stack gap="md">
+                  {/* Objective (always visible) */}
+                  {step.objective && (
+                    <Box>
+                      <Text size="xs" fw={600} c="dimmed" mb={4}>
+                        OBJECTIVE
+                      </Text>
+                      <Text size="sm" c="cyan" fw={500}>
+                        {step.objective}
+                      </Text>
+                    </Box>
+                  )}
+
+                  {/* Description (always visible) */}
                   <Box>
                     <Text size="xs" fw={600} c="dimmed" mb={4}>
                       DESCRIPTION
@@ -271,35 +291,139 @@ export default function ChainDetails({
                     </Text>
                   </Box>
 
-                  {/* Expected Output */}
-                  {step.expected_output && (
+                  {/* Dependencies */}
+                  {step.dependencies && step.dependencies.length > 0 && (
                     <Box>
                       <Text size="xs" fw={600} c="dimmed" mb={4}>
-                        EXPECTED OUTPUT
+                        DEPENDENCIES
                       </Text>
-                      <Paper
-                        p="xs"
-                        style={{
-                          background: '#0a0b0e',
-                          border: '1px solid #373A40',
-                        }}
-                      >
-                        <Text size="xs" c="green" style={{ fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>
-                          {step.expected_output}
-                        </Text>
-                      </Paper>
+                      <Group gap="xs">
+                        {step.dependencies.map((dep, idx) => (
+                          <Badge key={idx} size="sm" variant="light" color="orange">
+                            {dep}
+                          </Badge>
+                        ))}
+                      </Group>
                     </Box>
                   )}
 
-                  {/* Step Notes */}
-                  {step.notes && (
+                  {/* Success Criteria (collapsible) */}
+                  {step.success_criteria && step.success_criteria.length > 0 && (
                     <Box>
-                      <Text size="xs" fw={600} c="dimmed" mb={4}>
-                        NOTES
-                      </Text>
-                      <Text size="xs" c="yellow" style={{ whiteSpace: 'pre-wrap' }}>
-                        {step.notes}
-                      </Text>
+                      <Accordion
+                        variant="contained"
+                        styles={{
+                          item: {
+                            background: '#0a0b0e',
+                            border: '1px solid #373A40',
+                          },
+                          control: {
+                            padding: '8px',
+                          },
+                        }}
+                      >
+                        <Accordion.Item value={`${step.id}-success`}>
+                          <Accordion.Control>
+                            <Group gap="xs">
+                              <Text size="xs" fw={600} c="green">
+                                SUCCESS CRITERIA
+                              </Text>
+                              <Badge size="xs" variant="filled" color="green">
+                                {step.success_criteria.length}
+                              </Badge>
+                            </Group>
+                          </Accordion.Control>
+                          <Accordion.Panel>
+                            <Stack gap="xs">
+                              {step.success_criteria.map((criteria, idx) => (
+                                <Text key={idx} size="xs" c="dimmed">
+                                  ✓ {criteria}
+                                </Text>
+                              ))}
+                            </Stack>
+                          </Accordion.Panel>
+                        </Accordion.Item>
+                      </Accordion>
+                    </Box>
+                  )}
+
+                  {/* Failure Conditions (collapsible) */}
+                  {step.failure_conditions && step.failure_conditions.length > 0 && (
+                    <Box>
+                      <Accordion
+                        variant="contained"
+                        styles={{
+                          item: {
+                            background: '#0a0b0e',
+                            border: '1px solid #373A40',
+                          },
+                          control: {
+                            padding: '8px',
+                          },
+                        }}
+                      >
+                        <Accordion.Item value={`${step.id}-failure`}>
+                          <Accordion.Control>
+                            <Group gap="xs">
+                              <Text size="xs" fw={600} c="red">
+                                FAILURE CONDITIONS
+                              </Text>
+                              <Badge size="xs" variant="filled" color="red">
+                                {step.failure_conditions.length}
+                              </Badge>
+                            </Group>
+                          </Accordion.Control>
+                          <Accordion.Panel>
+                            <Stack gap="xs">
+                              {step.failure_conditions.map((condition, idx) => (
+                                <Text key={idx} size="xs" c="dimmed">
+                                  ✗ {condition}
+                                </Text>
+                              ))}
+                            </Stack>
+                          </Accordion.Panel>
+                        </Accordion.Item>
+                      </Accordion>
+                    </Box>
+                  )}
+
+                  {/* Evidence to Collect (collapsible) */}
+                  {step.evidence && step.evidence.length > 0 && (
+                    <Box>
+                      <Accordion
+                        variant="contained"
+                        styles={{
+                          item: {
+                            background: '#0a0b0e',
+                            border: '1px solid #373A40',
+                          },
+                          control: {
+                            padding: '8px',
+                          },
+                        }}
+                      >
+                        <Accordion.Item value={`${step.id}-evidence`}>
+                          <Accordion.Control>
+                            <Group gap="xs">
+                              <Text size="xs" fw={600} c="yellow">
+                                EVIDENCE TO COLLECT
+                              </Text>
+                              <Badge size="xs" variant="filled" color="yellow">
+                                {step.evidence.length}
+                              </Badge>
+                            </Group>
+                          </Accordion.Control>
+                          <Accordion.Panel>
+                            <Stack gap="xs">
+                              {step.evidence.map((item, idx) => (
+                                <Text key={idx} size="xs" c="dimmed">
+                                  • {item}
+                                </Text>
+                              ))}
+                            </Stack>
+                          </Accordion.Panel>
+                        </Accordion.Item>
+                      </Accordion>
                     </Box>
                   )}
 

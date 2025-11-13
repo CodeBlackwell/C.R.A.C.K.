@@ -16,9 +16,16 @@ export interface AttackChain {
 
 export interface ChainStep {
   id: string;
+  name: string;
+  objective: string;
   description: string;
-  expected_output: string;
-  notes: string;
+  command_ref?: string;
+  evidence?: string[];
+  dependencies?: string[];
+  repeatable?: boolean;
+  success_criteria?: string[];
+  failure_conditions?: string[];
+  next_steps?: string[];
   order?: number;
   command?: ChainStepCommand | null;
 }

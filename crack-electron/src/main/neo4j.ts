@@ -619,11 +619,33 @@ ipcMain.handle('get-chain', async (_event, chainId: string) => {
           const stepProps = s.step.properties || {};
           const cmdProps = s.command?.properties || null;
 
+          // Helper function to parse array fields (may be JSON strings)
+          const parseArrayField = (field: any): string[] | undefined => {
+            if (!field) return undefined;
+            if (Array.isArray(field)) return field;
+            if (typeof field === 'string') {
+              try {
+                const parsed = JSON.parse(field);
+                return Array.isArray(parsed) ? parsed : undefined;
+              } catch {
+                return undefined;
+              }
+            }
+            return undefined;
+          };
+
           return {
             id: stepProps.id || '',
+            name: stepProps.name || '',
+            objective: stepProps.objective || '',
             description: stepProps.description || '',
-            expected_output: stepProps.expected_output || '',
-            notes: stepProps.notes || '',
+            command_ref: stepProps.command_ref,
+            evidence: parseArrayField(stepProps.evidence),
+            dependencies: parseArrayField(stepProps.dependencies),
+            repeatable: stepProps.repeatable,
+            success_criteria: parseArrayField(stepProps.success_criteria),
+            failure_conditions: parseArrayField(stepProps.failure_conditions),
+            next_steps: parseArrayField(stepProps.next_steps),
             order: stepProps.order,
             command: cmdProps ? {
               id: cmdProps.id || '',
@@ -670,9 +692,9 @@ ipcMain.handle('get-chain-graph', async (_event, chainId: string) => {
       RETURN ac.name as chainName,
              collect({
                id: step.id,
+               name: step.name,
+               objective: step.objective,
                description: step.description,
-               expected_output: step.expected_output,
-               notes: step.notes,
                order: step.order,
                command: cmd
              }) as steps
