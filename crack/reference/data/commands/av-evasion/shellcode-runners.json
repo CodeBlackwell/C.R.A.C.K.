@@ -1,11 +1,11 @@
 {
   "category": "Shellcode Runners",
-  "description": "Custom shellcode execution templates for C#, VBA, and PowerShell. Includes encryption methods to evade signature detection.",
+  "description": "Custom shellcode execution templates for C#, VBA, and PowerShell.\nIncludes encryption methods to evade signature detection.",
   "commands": [
     {
       "id": "csharp-shellcode-runner-basic",
       "name": "C# Shellcode Runner (Basic)",
-      "description": "Basic C# template for executing raw shellcode via VirtualAlloc → CreateThread → WaitForSingleObject pattern. Foundation for all custom runners.",
+      "description": "Basic C# template for executing raw shellcode via VirtualAlloc → CreateThread → WaitForSingleObject pattern.\nFoundation for all custom runners.",
       "category": "shellcode-runners",
       "tags": [
         "anti-virus",
@@ -39,7 +39,7 @@
     {
       "id": "csharp-caesar-encrypt",
       "name": "C# Caesar Cipher Encryption",
-      "description": "Encrypt shellcode with Caesar cipher (byte rotation). Simple obfuscation to evade static signatures. Decrypt at runtime before execution.",
+      "description": "Encrypt shellcode with Caesar cipher (byte rotation).\nSimple obfuscation to evade static signatures.\nDecrypt at runtime before execution.",
       "category": "shellcode-runners",
       "tags": [
         "anti-virus",
@@ -78,7 +78,7 @@
     {
       "id": "csharp-xor-encrypt",
       "name": "C# XOR Encryption",
-      "description": "XOR encryption for shellcode. Stronger than Caesar cipher. Each byte XORed with key, decrypt by XORing again (XOR is reversible).",
+      "description": "XOR encryption for shellcode.\nStronger than Caesar cipher.\nEach byte XORed with key, decrypt by XORing again (XOR is reversible).",
       "category": "shellcode-runners",
       "tags": [
         "anti-virus",
@@ -117,7 +117,7 @@
     {
       "id": "csharp-sleep-timer",
       "name": "C# Sleep Timer Evasion",
-      "description": "Heuristic evasion using sleep timer with elapsed time validation. Sandboxes skip Sleep() calls - detect by measuring actual elapsed time.",
+      "description": "Heuristic evasion using sleep timer with elapsed time validation.\nSandboxes skip Sleep() calls - detect by measuring actual elapsed time.",
       "category": "shellcode-runners",
       "tags": [
         "anti-virus",
@@ -156,7 +156,7 @@
     {
       "id": "csharp-non-emulated-api",
       "name": "C# Non-Emulated API Check",
-      "description": "Detect sandbox by calling VirtualAllocExNuma - rarely emulated API. If NULL returned, sandbox detected. Combines with GetCurrentProcess for legitimacy.",
+      "description": "Detect sandbox by calling VirtualAllocExNuma - rarely emulated API.\nIf NULL returned, sandbox detected.\nCombines with GetCurrentProcess for legitimacy.",
       "category": "shellcode-runners",
       "tags": [
         "anti-virus",
@@ -182,7 +182,7 @@
     {
       "id": "msfvenom-csharp-payload",
       "name": "Generate msfvenom C# Shellcode",
-      "description": "Generate shellcode in C# byte array format for use in custom runners. Use HTTPS payloads for encrypted C2 communication.",
+      "description": "Generate shellcode in C# byte array format for use in custom runners.\nUse HTTPS payloads for encrypted C2 communication.",
       "category": "shellcode-runners",
       "tags": [
         "anti-virus",
@@ -222,7 +222,7 @@
     {
       "id": "compile-csharp-runner",
       "name": "Compile C# Shellcode Runner",
-      "description": "Compile C# source code to Windows executable using csc.exe (.NET Framework compiler). Must be run on Windows target or staging system.",
+      "description": "Compile C# source code to Windows executable using csc.exe (.NET Framework compiler).\nMust be run on Windows target or staging system.",
       "category": "shellcode-runners",
       "tags": [
         "anti-virus",

