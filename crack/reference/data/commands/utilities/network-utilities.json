@@ -555,6 +555,47 @@
       ],
       "oscp_relevance": "medium",
       "notes": "Try anonymous login (user:\nanonymous, pass:\nanonymous@example.com)"
+    },
+    {
+      "id": "nmap-udp-scan",
+      "name": "Nmap UDP Port Scan",
+      "category": "enumeration",
+      "command": "nmap -sU -p <PORT> <TARGET>",
+      "description": "Scan UDP ports to verify service availability (commonly used for Kerberos port 88)",
+      "tags": [
+        "OSCP:HIGH",
+        "ENUMERATION",
+        "UDP",
+        "NMAP"
+      ],
+      "variables": [
+        {
+          "name": "<PORT>",
+          "description": "UDP port number to scan",
+          "example": "88",
+          "required": true
+        },
+        {
+          "name": "<TARGET>",
+          "description": "Target IP address or hostname",
+          "example": "192.168.1.10",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "-sU": "UDP scan - scans UDP ports instead of TCP (slower than TCP scans)",
+        "-p": "Port specification - specify which port(s) to scan"
+      },
+      "success_indicators": [
+        "open|filtered - port may be open (UDP doesn't guarantee response)",
+        "open - definitive open port (rare, requires specific response)"
+      ],
+      "failure_indicators": [
+        "closed - ICMP port unreachable received",
+        "filtered - firewall blocking probes"
+      ],
+      "notes": "UDP scanning is slower and less reliable than TCP. Use -Pn flag to skip host discovery if needed. Common for verifying Kerberos (88/udp), DNS (53/udp), SNMP (161/udp).",
+      "oscp_relevance": "high"
     }
   ]
 }

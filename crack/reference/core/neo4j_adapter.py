@@ -78,7 +78,7 @@ class Neo4jCommandRegistryAdapter:
         self.theme = theme
 
         if self.theme is None:
-            from .colors import ReferenceTheme
+            from crack.themes.colors import ReferenceTheme
             self.theme = ReferenceTheme()
 
         # Initialize shared components
