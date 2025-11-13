@@ -24,6 +24,7 @@ function App() {
   const [selectedCheatsheet, setSelectedCheatsheet] = useState<Cheatsheet | null>(null);
   const [selectedChainId, setSelectedChainId] = useState<string | null>(null);
   const [selectedStepId, setSelectedStepId] = useState<string | null>(null);
+  const [chainCommandView, setChainCommandView] = useState<string | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<{
     connected: boolean;
     uri?: string;
@@ -95,17 +96,12 @@ function App() {
     setSelectedChainId(chainId);
     setSelectedCommand(null); // Clear command when selecting chain
     setSelectedCheatsheet(null); // Clear cheatsheet when selecting chain
+    setChainCommandView(null); // Clear chain command view when selecting new chain
   };
 
-  const handleChainCommandClick = useCallback(async (commandId: string) => {
+  const handleChainCommandClick = useCallback((commandId: string) => {
     console.log('[App] Chain command clicked:', commandId);
-    try {
-      const command = await window.electronAPI.getCommand(commandId);
-      console.log('[App] Command data received from chain:', command ? command.name : 'null');
-      setSelectedCommand(command);
-    } catch (error) {
-      console.error('[App] Error fetching command from chain:', error);
-    }
+    setChainCommandView(commandId);
   }, []);
 
   const handleCommandBadgeClick = useCallback((commandId: string) => {
@@ -125,6 +121,7 @@ function App() {
   const handleClearStep = useCallback(() => {
     console.log('[App] Clearing selected step');
     setSelectedStepId(null);
+    setChainCommandView(null); // Clear chain command view when clearing step
   }, []);
 
   // Debug: Log state changes
@@ -525,6 +522,11 @@ function App() {
                   onCommandClick={handleChainCommandClick}
                   onClearStep={handleClearStep}
                   onStepClick={handleStepClick}
+                  chainCommandView={chainCommandView}
+                  onCommandViewBack={() => {
+                    console.log('[App] Clearing chain command view');
+                    setChainCommandView(null);
+                  }}
                 />
               ) : (
                 <Paper

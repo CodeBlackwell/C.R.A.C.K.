@@ -1,21 +1,45 @@
+import { useState, useEffect } from 'react';
 import { Paper, Text, Code, Stack, Badge, Group, Divider, ScrollArea, Button } from '@mantine/core';
-import { useState } from 'react';
+import { IconArrowLeft } from '@tabler/icons-react';
 import { Command } from '../types/command';
+import CommandChainGraph from './CommandChainGraph';
 
-interface CommandDetailsProps {
-  command: Command;
-  viewMode: 'details' | 'graph';
-  onViewModeChange: (mode: 'details' | 'graph') => void;
+interface ChainCommandViewProps {
+  commandId: string;
+  chainName: string;
+  stepNumber: number | null;
+  onBack: () => void;
 }
 
-export default function CommandDetails({ command, viewMode, onViewModeChange }: CommandDetailsProps) {
+export default function ChainCommandView({ commandId, chainName, stepNumber, onBack }: ChainCommandViewProps) {
+  const [command, setCommand] = useState<Command | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [viewMode, setViewMode] = useState<'details' | 'graph'>('details');
   const [copiedRef, setCopiedRef] = useState(false);
   const [copiedCmd, setCopiedCmd] = useState(false);
+
+  useEffect(() => {
+    console.log('[ChainCommandView] Loading command:', commandId);
+    setLoading(true);
+
+    window.electronAPI.getCommand(commandId)
+      .then((cmd) => {
+        console.log('[ChainCommandView] Command loaded:', cmd ? cmd.name : 'null');
+        setCommand(cmd);
+      })
+      .catch((error) => {
+        console.error('[ChainCommandView] Error loading command:', error);
+        setCommand(null);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  }, [commandId]);
 
   const copyToClipboard = async (text: string, type: 'ref' | 'cmd') => {
     try {
       await navigator.clipboard.writeText(text);
-      console.log(`[CommandDetails] Copied to clipboard: ${text.substring(0, 50)}...`);
+      console.log(`[ChainCommandView] Copied to clipboard: ${text.substring(0, 50)}...`);
 
       if (type === 'ref') {
         setCopiedRef(true);
@@ -25,9 +49,47 @@ export default function CommandDetails({ command, viewMode, onViewModeChange }: 
         setTimeout(() => setCopiedCmd(false), 2000);
       }
     } catch (error) {
-      console.error('[CommandDetails] Failed to copy to clipboard:', error);
+      console.error('[ChainCommandView] Failed to copy to clipboard:', error);
     }
   };
+
+  if (loading) {
+    return (
+      <Paper
+        shadow="sm"
+        p="md"
+        style={{
+          background: '#25262b',
+          border: '1px solid #373A40',
+          height: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <Text c="dimmed" size="sm">Loading command...</Text>
+      </Paper>
+    );
+  }
+
+  if (!command) {
+    return (
+      <Paper
+        shadow="sm"
+        p="md"
+        style={{
+          background: '#25262b',
+          border: '1px solid #373A40',
+          height: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <Text c="dimmed" size="sm">Command not found</Text>
+      </Paper>
+    );
+  }
 
   return (
     <Paper
@@ -42,15 +104,31 @@ export default function CommandDetails({ command, viewMode, onViewModeChange }: 
         flexDirection: 'column',
       }}
     >
-      {/* Navigation Bar */}
+      {/* Breadcrumb with Back Button */}
+      <Group gap="xs" mb="md" style={{ borderBottom: '1px solid #373A40', paddingBottom: '8px' }}>
+        <Button
+          size="xs"
+          variant="subtle"
+          color="gray"
+          leftSection={<IconArrowLeft size={14} />}
+          onClick={onBack}
+        >
+          Back
+        </Button>
+        <Text size="xs" c="dimmed">
+          {chainName} {stepNumber !== null ? `→ Step ${stepNumber}` : ''} → {command.name}
+        </Text>
+      </Group>
+
+      {/* View Mode Toggle */}
       <Group gap="xs" mb="md" style={{ borderBottom: '1px solid #373A40', paddingBottom: '8px' }}>
         <Button
           size="xs"
           variant={viewMode === 'details' ? 'filled' : 'subtle'}
           color="gray"
           onClick={() => {
-            onViewModeChange('details');
-            console.log('[CommandDetails] View mode changed to: details');
+            setViewMode('details');
+            console.log('[ChainCommandView] View mode changed to: details');
           }}
         >
           Details
@@ -60,22 +138,23 @@ export default function CommandDetails({ command, viewMode, onViewModeChange }: 
           variant={viewMode === 'graph' ? 'filled' : 'subtle'}
           color="gray"
           onClick={() => {
-            onViewModeChange('graph');
-            console.log('[CommandDetails] View mode changed to: graph');
+            setViewMode('graph');
+            console.log('[ChainCommandView] View mode changed to: graph');
           }}
         >
           Graph View
         </Button>
       </Group>
 
-      {/* Details View */}
-      <ScrollArea
-        style={{ flex: 1 }}
-        type="auto"
-        offsetScrollbars
-        scrollbarSize={8}
-      >
-        <Stack gap="md">
+      {/* Content Area */}
+      {viewMode === 'details' ? (
+        <ScrollArea
+          style={{ flex: 1 }}
+          type="auto"
+          offsetScrollbars
+          scrollbarSize={8}
+        >
+          <Stack gap="md">
             {/* Header */}
             <div>
               <Group gap="xs" mb="xs">
@@ -218,12 +297,10 @@ export default function CommandDetails({ command, viewMode, onViewModeChange }: 
                             )}
                           </Group>
 
-                          {/* Description */}
                           <Text size="sm" c="dimmed" mb={flag.explanation || flag.example ? 'xs' : 0}>
                             {flag.description}
                           </Text>
 
-                          {/* Detailed Explanation */}
                           {flag.explanation && (
                             <Text
                               size="xs"
@@ -243,7 +320,6 @@ export default function CommandDetails({ command, viewMode, onViewModeChange }: 
                             </Text>
                           )}
 
-                          {/* Example */}
                           {flag.example && (
                             <div style={{ marginTop: '8px' }}>
                               <Text size="xs" fw={500} c="dimmed" mb={4}>
@@ -254,8 +330,8 @@ export default function CommandDetails({ command, viewMode, onViewModeChange }: 
                                 style={{
                                   fontSize: '11px',
                                   background: '#0d0e10',
-                                  padding: '6px 8px',
-                                  border: '1px solid #2c2e33',
+                                  padding: '8px',
+                                  border: '1px solid #373A40',
                                 }}
                               >
                                 {flag.example}
@@ -265,32 +341,19 @@ export default function CommandDetails({ command, viewMode, onViewModeChange }: 
                         </Paper>
                       ))
                     ) : command.flag_explanations ? (
-                      Object.entries(command.flag_explanations).map(([flagName, explanation]) => (
-                        <Paper
-                          key={flagName}
-                          p="sm"
-                          style={{
-                            background: '#1a1b1e',
-                            border: '1px solid #373A40',
-                          }}
-                        >
-                          <Code
-                            style={{
-                              fontSize: '12px',
-                              fontWeight: 600,
-                              background: '#25262b',
-                              padding: '4px 8px',
-                              marginBottom: '8px',
-                              display: 'inline-block',
-                            }}
-                          >
-                            {flagName}
-                          </Code>
-                          <Text size="sm" c="dimmed">
-                            {explanation}
-                          </Text>
-                        </Paper>
-                      ))
+                      <Text
+                        size="sm"
+                        c="dimmed"
+                        style={{
+                          whiteSpace: 'pre-wrap',
+                          background: '#1a1b1e',
+                          padding: '12px',
+                          border: '1px solid #373A40',
+                          borderRadius: '4px',
+                        }}
+                      >
+                        {command.flag_explanations}
+                      </Text>
                     ) : null}
                   </Stack>
                 </div>
@@ -307,81 +370,43 @@ export default function CommandDetails({ command, viewMode, onViewModeChange }: 
                   </Text>
                   <Stack gap="xs">
                     {command.variables.map((variable, idx) => (
-                      <div key={idx}>
-                        <Code style={{ fontSize: '11px' }}>{variable.name}</Code>
-                        <Text size="xs" c="dimmed" pl="md" mt={4}>
-                          {variable.description}
-                        </Text>
-                        {variable.example && (
-                          <Text size="xs" c="dimmed" pl="md" mt={2}>
-                            Example: <Code style={{ fontSize: '10px' }}>{variable.example}</Code>
-                          </Text>
-                        )}
-                      </div>
-                    ))}
-                  </Stack>
-                </div>
-              </>
-            )}
-
-            {/* Prerequisites */}
-            {command.prerequisites && (
-              <>
-                <Divider />
-                <div>
-                  <Text size="sm" fw={600} mb="xs">
-                    Prerequisites
-                  </Text>
-                  <Paper
-                    p="sm"
-                    style={{
-                      background: '#1a1b1e',
-                      border: '1px solid #373A40',
-                    }}
-                  >
-                    {Array.isArray(command.prerequisites) ? (
-                      <Stack gap="xs">
-                        {command.prerequisites.map((prereq, idx) => (
-                          <Text key={idx} size="sm" c="dimmed">
-                            • {prereq}
-                          </Text>
-                        ))}
-                      </Stack>
-                    ) : (
-                      <Text size="sm" c="dimmed">
-                        {command.prerequisites}
-                      </Text>
-                    )}
-                  </Paper>
-                </div>
-              </>
-            )}
-
-            {/* Troubleshooting */}
-            {command.troubleshooting && Object.keys(command.troubleshooting).length > 0 && (
-              <>
-                <Divider />
-                <div>
-                  <Text size="sm" fw={600} mb="xs">
-                    Troubleshooting
-                  </Text>
-                  <Stack gap="md">
-                    {Object.entries(command.troubleshooting).map(([error, solution]) => (
                       <Paper
-                        key={error}
+                        key={idx}
                         p="sm"
                         style={{
                           background: '#1a1b1e',
                           border: '1px solid #373A40',
-                          borderLeft: '3px solid #fa5252',
                         }}
                       >
-                        <Text size="sm" fw={600} c="red" mb="xs">
-                          {error}
+                        <Group gap="xs" mb="xs">
+                          <Code
+                            style={{
+                              fontSize: '12px',
+                              fontWeight: 600,
+                              background: '#25262b',
+                              padding: '4px 8px',
+                            }}
+                          >
+                            {variable.name}
+                          </Code>
+                        </Group>
+                        <Text size="sm" c="dimmed" mb={variable.example ? 'xs' : 0}>
+                          {variable.description}
                         </Text>
-                        <Text size="sm" c="dimmed">
-                          {solution}
-                        </Text>
+                        {variable.example && (
+                          <Code
+                            block
+                            style={{
+                              fontSize: '11px',
+                              background: '#0d0e10',
+                              padding: '8px',
+                              marginTop: '8px',
+                              border: '1px solid #373A40',
+                            }}
+                          >
+                            {variable.example}
+                          </Code>
+                        )}
                       </Paper>
                     ))}
                   </Stack>
@@ -389,73 +414,31 @@ export default function CommandDetails({ command, viewMode, onViewModeChange }: 
               </>
             )}
 
-            {/* Alternatives */}
-            {command.alternatives && (
+            {/* Tags */}
+            {command.tags && command.tags.length > 0 && (
               <>
                 <Divider />
                 <div>
                   <Text size="sm" fw={600} mb="xs">
-                    Alternative Commands
+                    Tags
                   </Text>
-                  <Paper
-                    p="sm"
-                    style={{
-                      background: '#1a1b1e',
-                      border: '1px solid #373A40',
-                      borderLeft: '3px solid #fab005',
-                    }}
-                  >
-                    {Array.isArray(command.alternatives) ? (
-                      <Stack gap="xs">
-                        {command.alternatives.map((alt, idx) => (
-                          <Code key={idx} style={{ fontSize: '11px' }}>
-                            {alt}
-                          </Code>
-                        ))}
-                      </Stack>
-                    ) : (
-                      <Code style={{ fontSize: '11px' }}>{command.alternatives}</Code>
-                    )}
-                  </Paper>
-                </div>
-              </>
-            )}
-
-            {/* Next Steps */}
-            {command.next_steps && (
-              <>
-                <Divider />
-                <div>
-                  <Text size="sm" fw={600} mb="xs">
-                    Next Steps
-                  </Text>
-                  <Paper
-                    p="sm"
-                    style={{
-                      background: '#1a1b1e',
-                      border: '1px solid #373A40',
-                      borderLeft: '3px solid #51cf66',
-                    }}
-                  >
-                    {Array.isArray(command.next_steps) ? (
-                      <Stack gap="xs">
-                        {command.next_steps.map((step, idx) => (
-                          <Text key={idx} size="sm" c="dimmed">
-                            {idx + 1}. {step}
-                          </Text>
-                        ))}
-                      </Stack>
-                    ) : (
-                      <Text size="sm" c="dimmed">
-                        {command.next_steps}
-                      </Text>
-                    )}
-                  </Paper>
+                  <Group gap="xs">
+                    {command.tags.map((tag, idx) => (
+                      <Badge key={idx} variant="light" color="gray" size="sm">
+                        {tag}
+                      </Badge>
+                    ))}
+                  </Group>
                 </div>
               </>
             )}
           </Stack>
         </ScrollArea>
+      ) : (
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+          <CommandChainGraph commandId={command.id} />
+        </div>
+      )}
     </Paper>
   );
 }

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Paper, Text, Badge, Group, Stack, Button, ScrollArea, Divider, Code, Loader, Center } from '@mantine/core';
 import { AttackChain } from '../types/chain';
 import ChainStepDetails from './ChainStepDetails';
+import ChainCommandView from './ChainCommandView';
 import GraphView from './GraphView';
 
 interface ChainControlsPanelProps {
@@ -12,6 +13,8 @@ interface ChainControlsPanelProps {
   onCommandClick?: (commandId: string) => void;
   onClearStep?: () => void;
   onStepClick?: (stepId: string) => void;
+  chainCommandView?: string | null;
+  onCommandViewBack?: () => void;
 }
 
 type RightPanelView = 'details' | 'graph';
@@ -24,6 +27,8 @@ export default function ChainControlsPanel({
   onCommandClick,
   onClearStep,
   onStepClick,
+  chainCommandView,
+  onCommandViewBack,
 }: ChainControlsPanelProps) {
   const [chain, setChain] = useState<AttackChain | null>(null);
   const [loading, setLoading] = useState(false);
@@ -210,7 +215,18 @@ export default function ChainControlsPanel({
       </Stack>
 
       {/* Content Area: Show based on view mode */}
-      {rightPanelView === 'graph' ? (
+      {chainCommandView && onCommandViewBack ? (
+        // Command Reference View: Show command details with breadcrumb
+        <div style={{ flex: 1, overflow: 'hidden' }}>
+          {console.log('[ChainControlsPanel] [RENDER] Showing ChainCommandView for command:', chainCommandView)}
+          <ChainCommandView
+            commandId={chainCommandView}
+            chainName={chain.name}
+            stepNumber={selectedStepId ? parseInt(selectedStepId.split('-').pop() || '0', 10) : null}
+            onBack={onCommandViewBack}
+          />
+        </div>
+      ) : rightPanelView === 'graph' ? (
         // Graph View: Show command relationship graph
         <div style={{ flex: 1, overflow: 'hidden' }}>
           {(() => {
