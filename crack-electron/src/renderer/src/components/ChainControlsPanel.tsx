@@ -224,6 +224,7 @@ export default function ChainControlsPanel({
             chainName={chain.name}
             stepNumber={selectedStepId ? parseInt(selectedStepId.split('-').pop() || '0', 10) : null}
             onBack={onCommandViewBack}
+            onCommandClick={onCommandClick}
           />
         </div>
       ) : rightPanelView === 'graph' ? (

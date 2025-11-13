@@ -2,16 +2,17 @@ import { useState, useEffect } from 'react';
 import { Paper, Text, Code, Stack, Badge, Group, Divider, ScrollArea, Button } from '@mantine/core';
 import { IconArrowLeft } from '@tabler/icons-react';
 import { Command } from '../types/command';
-import CommandChainGraph from './CommandChainGraph';
+import GraphView from './GraphView';
 
 interface ChainCommandViewProps {
   commandId: string;
   chainName: string;
   stepNumber: number | null;
   onBack: () => void;
+  onCommandClick?: (commandId: string) => void;
 }
 
-export default function ChainCommandView({ commandId, chainName, stepNumber, onBack }: ChainCommandViewProps) {
+export default function ChainCommandView({ commandId, chainName, stepNumber, onBack, onCommandClick }: ChainCommandViewProps) {
   const [command, setCommand] = useState<Command | null>(null);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'details' | 'graph'>('details');
@@ -435,8 +436,16 @@ export default function ChainCommandView({ commandId, chainName, stepNumber, onB
           </Stack>
         </ScrollArea>
       ) : (
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-          <CommandChainGraph commandId={command.id} />
+        <div style={{ flex: 1, overflow: 'hidden' }}>
+          <GraphView
+            selectedCommandId={command.id}
+            onNodeClick={(clickedCommandId) => {
+              if (onCommandClick) {
+                console.log('[ChainCommandView] Graph node clicked:', clickedCommandId);
+                onCommandClick(clickedCommandId);
+              }
+            }}
+          />
         </div>
       )}
     </Paper>
