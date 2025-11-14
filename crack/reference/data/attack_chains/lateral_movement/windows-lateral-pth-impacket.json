@@ -1,7 +1,7 @@
 {
   "id": "windows-lateral-pth-impacket",
   "name": "Pass-the-Hash Attack Chain (Impacket)",
-  "description": "Complete pass-the-hash workflow: dump hashes, verify hash format, test hash validity, execute lateral movement without cracking password",
+  "description": "Complete pass-the-hash workflow: dump hashes, verify hash format, test hash validity, execute lateral movement without cracking password.\n\nLeverage NTLM hashes for authentication without requiring plaintext passwords.",
   "version": "1.0.0",
   "metadata": {
     "author": "CRACK Development Team",
@@ -40,7 +40,7 @@
       "id": "extract-hashes",
       "name": "Extract Password Hashes",
       "objective": "Dump NTLM hashes from compromised system using secretsdump or mimikatz",
-      "description": "Use impacket-secretsdump against compromised host to extract local SAM, cached domain credentials, and LSA secrets. Requires SYSTEM or local admin access.",
+      "description": "Use impacket-secretsdump against compromised host to extract local SAM, cached domain credentials, and LSA secrets.\nRequires SYSTEM or local admin access.",
       "command_ref": "secretsdump-hashes",
       "dependencies": [],
       "evidence": [
@@ -67,7 +67,7 @@
       "id": "parse-hashes",
       "name": "Parse and Format Hashes",
       "objective": "Extract NTLM hash portion and verify format for pass-the-hash tools",
-      "description": "Secretsdump output format: user:rid:lm:ntlm::: - extract 4th field (NTLM hash). Verify hash is 32 hexadecimal characters. Discard LM hash (3rd field) as it's rarely needed.",
+      "description": "Secretsdump output format: user:rid:lm:ntlm::: - extract 4th field (NTLM hash).\nVerify hash is 32 hexadecimal characters.\nDiscard LM hash (3rd field) as it's rarely needed.",
       "command_ref": "pth-verify-hash-format",
       "dependencies": [
         "extract-hashes"
@@ -95,7 +95,7 @@
       "id": "test-hash-validity",
       "name": "Verify Hash Validity",
       "objective": "Test hash against target before full exploitation to confirm it works",
-      "description": "Use CrackMapExec with -H flag to test hash authentication. This quick test (2-3 seconds) prevents wasting time on invalid hashes.",
+      "description": "Use CrackMapExec with -H flag to test hash authentication.\nThis quick test (2-3 seconds) prevents wasting time on invalid hashes.",
       "command_ref": "pth-verify-hash-format",
       "dependencies": [
         "parse-hashes"
@@ -123,7 +123,7 @@
       "id": "spray-hash",
       "name": "Spray Hash Across Network",
       "objective": "Test hash against multiple targets to identify all accessible systems",
-      "description": "Use CrackMapExec to test hash against subnet (CIDR notation). Local admin password reuse is common - same hash often grants access to multiple systems.",
+      "description": "Use CrackMapExec to test hash against subnet (CIDR notation).\nLocal admin password reuse is common - same hash often grants access to multiple systems.",
       "command_ref": "pth-cme-spray",
       "dependencies": [
         "test-hash-validity"
@@ -151,7 +151,7 @@
       "id": "execute-pth-psexec",
       "name": "Execute Pass-the-Hash with PSExec",
       "objective": "Use impacket-psexec with -hashes flag to gain SYSTEM shell on target",
-      "description": "Run impacket-psexec with -hashes :NTLM_HASH format. PSExec provides most stable shell and SYSTEM privileges immediately.",
+      "description": "Run impacket-psexec with -hashes :NTLM_HASH format.\nPSExec provides most stable shell and SYSTEM privileges immediately.",
       "command_ref": "pth-impacket-psexec",
       "dependencies": [
         "spray-hash"
@@ -179,7 +179,7 @@
       "id": "alternative-pth-wmi",
       "name": "Alternative: Pass-the-Hash with WMIExec",
       "objective": "If PSExec fails or detected, use WMIExec as fileless alternative",
-      "description": "WMIExec with -hashes provides fileless execution (no binary on disk). Slightly slower than PSExec but stealthier.",
+      "description": "WMIExec with -hashes provides fileless execution (no binary on disk).\nSlightly slower than PSExec but stealthier.",
       "command_ref": "pth-impacket-wmiexec",
       "dependencies": [
         "execute-pth-psexec"
@@ -207,7 +207,7 @@
       "id": "alternative-pth-evil-winrm",
       "name": "Alternative: Pass-the-Hash with Evil-WinRM",
       "objective": "If WinRM available, use Evil-WinRM for interactive PowerShell with hash",
-      "description": "Evil-WinRM with -H flag provides richest interactive shell with file upload/download. Requires WinRM enabled on target.",
+      "description": "Evil-WinRM with -H flag provides richest interactive shell with file upload/download.\nRequires WinRM enabled on target.",
       "command_ref": "pth-evil-winrm",
       "dependencies": [
         "alternative-pth-wmi"

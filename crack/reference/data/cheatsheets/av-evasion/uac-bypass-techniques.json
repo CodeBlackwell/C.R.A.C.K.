@@ -1,90 +1,94 @@
 {
-  "id": "uac-bypass-techniques",
-  "name": "UAC Bypass - Privilege Escalation Techniques",
-  "description": "Quick reference for bypassing User Account Control on Windows 7-11. Covers FodHelper, EventVwr, and detection validation methods.",
-  "category": "av-evasion",
-  "oscp_relevance": "medium",
-  "educational_header": {
-    "how_to_recognize": [
-      "User is in local Administrators group but shell has medium integrity level",
-      "Commands requiring elevation fail with 'access denied' despite admin membership",
-      "Checking integrity level with 'whoami /groups' shows 'Medium Mandatory Level'"
-    ],
-    "when_to_look_for": [
-      "After gaining shell as standard user who is also local admin",
-      "Before privilege escalation attempts when UAC is blocking admin rights",
-      "When horizontal movement gives admin user but not elevated session"
-    ]
-  },
-  "scenarios": [
+  "cheatsheets": [
     {
-      "title": "Scenario 1: FodHelper UAC Bypass (Windows 10 17134+)",
-      "context": "You have medium integrity shell as user who is member of local Administrators group. Need High integrity shell to run privileged commands (e.g., dump SAM, access SYSTEM files). UAC is enabled with default settings.",
-      "approach": "Phase 1: Verification (30 seconds)\n- Run check-integrity-level to confirm medium integrity\n- Verify user in Administrators group with 'net localgroup administrators'\n- Confirm Windows 10 build with 'systeminfo | findstr Build'\n\nPhase 2: FodHelper Exploitation (2 minutes)\n- Use fodhelper-uac-bypass to set registry key\n- Trigger FodHelper.exe execution (auto-elevates due to manifest)\n- Catch reverse shell with elevated privileges\n\nPhase 3: Validation (30 seconds)\n- Run check-integrity-level again\n- Should show 'High Mandatory Level'\n- Verify with administrative command (e.g., 'psexec -s cmd')",
-      "commands": [
-        "check-integrity-level",
-        "fodhelper-uac-bypass",
-        "check-integrity-level"
+      "id": "uac-bypass-techniques",
+      "name": "UAC Bypass - Privilege Escalation Techniques",
+      "description": "Quick reference for bypassing User Account Control on Windows 7-11. Covers FodHelper, EventVwr, and detection validation methods.",
+      "category": "av-evasion",
+      "oscp_relevance": "medium",
+      "educational_header": {
+        "how_to_recognize": [
+          "User is in local Administrators group but shell has medium integrity level",
+          "Commands requiring elevation fail with 'access denied' despite admin membership",
+          "Checking integrity level with 'whoami /groups' shows 'Medium Mandatory Level'"
+        ],
+        "when_to_look_for": [
+          "After gaining shell as standard user who is also local admin",
+          "Before privilege escalation attempts when UAC is blocking admin rights",
+          "When horizontal movement gives admin user but not elevated session"
+        ]
+      },
+      "scenarios": [
+        {
+          "title": "Scenario 1: FodHelper UAC Bypass (Windows 10 17134+)",
+          "context": "You have medium integrity shell as user who is member of local Administrators group. Need High integrity shell to run privileged commands (e.g., dump SAM, access SYSTEM files). UAC is enabled with default settings.",
+          "approach": "Phase 1: Verification (30 seconds)\n- Run check-integrity-level to confirm medium integrity\n- Verify user in Administrators group with 'net localgroup administrators'\n- Confirm Windows 10 build with 'systeminfo | findstr Build'\n\nPhase 2: FodHelper Exploitation (2 minutes)\n- Use fodhelper-uac-bypass to set registry key\n- Trigger FodHelper.exe execution (auto-elevates due to manifest)\n- Catch reverse shell with elevated privileges\n\nPhase 3: Validation (30 seconds)\n- Run check-integrity-level again\n- Should show 'High Mandatory Level'\n- Verify with administrative command (e.g., 'psexec -s cmd')",
+          "commands": [
+            "check-integrity-level",
+            "fodhelper-uac-bypass",
+            "check-integrity-level"
+          ],
+          "expected_outcome": "UAC bypassed in 2-3 minutes. High integrity shell obtained without UAC prompt. FodHelper technique works silently on Windows 10 builds 17134+.",
+          "why_this_works": "FodHelper.exe is Microsoft-signed binary with autoElevate manifest flag set to true. Registry key HKCU\\Software\\Classes\\ms-settings\\shell\\open\\command hijacks FodHelper's execution path. UAC trusts Microsoft binaries, so no prompt shown."
+        },
+        {
+          "title": "Scenario 2: EventVwr UAC Bypass (Broader Compatibility)",
+          "context": "FodHelper failed (older Windows version or patch applied). Need alternative bypass technique compatible with Windows 7-10.",
+          "approach": "Phase 1: Compatibility Check (1 minute)\n- Verify Windows version with 'ver'\n- Confirm UAC enabled with registry check\n- Run check-integrity-level to baseline\n\nPhase 2: EventVwr Exploitation (2 minutes)\n- Use eventvwr-uac-bypass to hijack registry path\n- Set HKCU\\Software\\Classes\\mscfile\\shell\\open\\command\n- Execute eventvwr.exe (also auto-elevates)\n\nPhase 3: Verification (1 minute)\n- Catch elevated reverse shell\n- Run check-integrity-level\n- Test privileged access (read C:\\Windows\\System32\\config\\SAM)",
+          "commands": [
+            "check-integrity-level",
+            "eventvwr-uac-bypass",
+            "check-integrity-level"
+          ],
+          "expected_outcome": "UAC bypassed in 3-4 minutes. EventVwr technique works on Windows 7, 8, and 10. Broader compatibility than FodHelper.",
+          "why_this_works": "EventVwr.exe (Event Viewer) also has autoElevate manifest. Registry hijack at HKCU\\Software\\Classes\\mscfile\\shell\\open\\command redirects .msc file association. When EventVwr opens MMC console, our command executes with high integrity."
+        },
+        {
+          "title": "Scenario 3: UAC Bypass Detection & Cleanup",
+          "context": "Successfully bypassed UAC and completed privileged tasks. Need to validate detection risk and clean up artifacts to reduce forensic footprint.",
+          "approach": "Phase 1: Detection Testing (2 minutes)\n- Run uac-bypass-detection to check if bypass triggered EDR\n- Review event logs for suspicious registry modifications\n- Check UAC event ID 4657 (registry value modification)\n\nPhase 2: Artifact Cleanup (2 minutes)\n- Delete registry keys created by bypass\n- FodHelper: Remove HKCU\\Software\\Classes\\ms-settings\n- EventVwr: Remove HKCU\\Software\\Classes\\mscfile\n- Clear specific event log entries if possible\n\nPhase 3: Validation (1 minute)\n- Re-run uac-bypass-detection\n- Verify registry keys deleted with 'reg query'\n- Confirm cleanup successful",
+          "commands": [
+            "uac-bypass-detection",
+            "check-integrity-level"
+          ],
+          "expected_outcome": "Detection validated and artifacts cleaned in 4-5 minutes. Reduced forensic footprint. Understanding of EDR detection methods for UAC bypass.",
+          "why_this_works": "Registry-based bypasses leave artifacts in HKCU hive and event logs. Manual cleanup removes evidence but high integrity shell persists (already spawned). Detection testing identifies if EDR flagged the technique, informing future operational security decisions."
+        }
       ],
-      "expected_outcome": "UAC bypassed in 2-3 minutes. High integrity shell obtained without UAC prompt. FodHelper technique works silently on Windows 10 builds 17134+.",
-      "why_this_works": "FodHelper.exe is Microsoft-signed binary with autoElevate manifest flag set to true. Registry key HKCU\\Software\\Classes\\ms-settings\\shell\\open\\command hijacks FodHelper's execution path. UAC trusts Microsoft binaries, so no prompt shown."
-    },
-    {
-      "title": "Scenario 2: EventVwr UAC Bypass (Broader Compatibility)",
-      "context": "FodHelper failed (older Windows version or patch applied). Need alternative bypass technique compatible with Windows 7-10.",
-      "approach": "Phase 1: Compatibility Check (1 minute)\n- Verify Windows version with 'ver'\n- Confirm UAC enabled with registry check\n- Run check-integrity-level to baseline\n\nPhase 2: EventVwr Exploitation (2 minutes)\n- Use eventvwr-uac-bypass to hijack registry path\n- Set HKCU\\Software\\Classes\\mscfile\\shell\\open\\command\n- Execute eventvwr.exe (also auto-elevates)\n\nPhase 3: Verification (1 minute)\n- Catch elevated reverse shell\n- Run check-integrity-level\n- Test privileged access (read C:\\Windows\\System32\\config\\SAM)",
-      "commands": [
-        "check-integrity-level",
-        "eventvwr-uac-bypass",
-        "check-integrity-level"
+      "sections": [
+        {
+          "title": "Phase 1: Detection & Validation",
+          "notes": "Always check current integrity level before attempting bypass. Prevents wasted time if already elevated. Also confirms UAC is actually enabled (bypass unnecessary if disabled).",
+          "commands": [
+            "check-integrity-level"
+          ]
+        },
+        {
+          "title": "Phase 2: Bypass Execution",
+          "notes": "Try FodHelper first (fastest, Windows 10 only). If fails or older OS, use EventVwr (broader compatibility). Both require user in local Administrators group—if not admin, use different privesc method.",
+          "commands": [
+            "fodhelper-uac-bypass",
+            "eventvwr-uac-bypass"
+          ]
+        },
+        {
+          "title": "Phase 3: Post-Exploitation & Cleanup",
+          "notes": "After obtaining high integrity shell, complete privileged tasks immediately. Then clean up registry artifacts to reduce detection. Remember: high integrity session persists even after cleanup.",
+          "commands": [
+            "check-integrity-level",
+            "uac-bypass-detection"
+          ]
+        }
       ],
-      "expected_outcome": "UAC bypassed in 3-4 minutes. EventVwr technique works on Windows 7, 8, and 10. Broader compatibility than FodHelper.",
-      "why_this_works": "EventVwr.exe (Event Viewer) also has autoElevate manifest. Registry hijack at HKCU\\Software\\Classes\\mscfile\\shell\\open\\command redirects .msc file association. When EventVwr opens MMC console, our command executes with high integrity."
-    },
-    {
-      "title": "Scenario 3: UAC Bypass Detection & Cleanup",
-      "context": "Successfully bypassed UAC and completed privileged tasks. Need to validate detection risk and clean up artifacts to reduce forensic footprint.",
-      "approach": "Phase 1: Detection Testing (2 minutes)\n- Run uac-bypass-detection to check if bypass triggered EDR\n- Review event logs for suspicious registry modifications\n- Check UAC event ID 4657 (registry value modification)\n\nPhase 2: Artifact Cleanup (2 minutes)\n- Delete registry keys created by bypass\n- FodHelper: Remove HKCU\\Software\\Classes\\ms-settings\n- EventVwr: Remove HKCU\\Software\\Classes\\mscfile\n- Clear specific event log entries if possible\n\nPhase 3: Validation (1 minute)\n- Re-run uac-bypass-detection\n- Verify registry keys deleted with 'reg query'\n- Confirm cleanup successful",
-      "commands": [
-        "uac-bypass-detection",
-        "check-integrity-level"
-      ],
-      "expected_outcome": "Detection validated and artifacts cleaned in 4-5 minutes. Reduced forensic footprint. Understanding of EDR detection methods for UAC bypass.",
-      "why_this_works": "Registry-based bypasses leave artifacts in HKCU hive and event logs. Manual cleanup removes evidence but high integrity shell persists (already spawned). Detection testing identifies if EDR flagged the technique, informing future operational security decisions."
+      "tags": [
+        "uac",
+        "bypass",
+        "privilege-escalation",
+        "windows",
+        "registry",
+        "fodhelper",
+        "eventvwr"
+      ]
     }
-  ],
-  "sections": [
-    {
-      "title": "Phase 1: Detection & Validation",
-      "notes": "Always check current integrity level before attempting bypass. Prevents wasted time if already elevated. Also confirms UAC is actually enabled (bypass unnecessary if disabled).",
-      "commands": [
-        "check-integrity-level"
-      ]
-    },
-    {
-      "title": "Phase 2: Bypass Execution",
-      "notes": "Try FodHelper first (fastest, Windows 10 only). If fails or older OS, use EventVwr (broader compatibility). Both require user in local Administrators group—if not admin, use different privesc method.",
-      "commands": [
-        "fodhelper-uac-bypass",
-        "eventvwr-uac-bypass"
-      ]
-    },
-    {
-      "title": "Phase 3: Post-Exploitation & Cleanup",
-      "notes": "After obtaining high integrity shell, complete privileged tasks immediately. Then clean up registry artifacts to reduce detection. Remember: high integrity session persists even after cleanup.",
-      "commands": [
-        "check-integrity-level",
-        "uac-bypass-detection"
-      ]
-    }
-  ],
-  "tags": [
-    "uac",
-    "bypass",
-    "privilege-escalation",
-    "windows",
-    "registry",
-    "fodhelper",
-    "eventvwr"
   ]
 }

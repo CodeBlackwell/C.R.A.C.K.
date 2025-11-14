@@ -1,7 +1,7 @@
 {
   "id": "web-sqli-postgres-fileretrieve",
   "name": "PostgreSQL Error-Based SQLi to File Retrieval",
-  "description": "Exploit error-based SQL injection to extract database credentials, establish direct PostgreSQL connection, and leverage superuser file functions to retrieve sensitive files when shell access is restricted by network policies",
+  "description": "Exploit error-based SQL injection to extract database credentials, establish direct PostgreSQL connection, and leverage superuser file functions to retrieve sensitive files when shell access is restricted by network policies.\n\nThis technique is particularly useful when traditional shell methods fail due to network restrictions.",
   "version": "1.0.0",
   "metadata": {
     "author": "CRACK Development Team",
@@ -40,7 +40,7 @@
       "name": "Detect SQL Injection Vulnerability",
       "objective": "Confirm SQL injection exists and identify database type",
       "command_ref": "sqli-detection-error",
-      "description": "Test for SQL injection by injecting single quote in POST parameters. Look for PostgreSQL-specific error messages indicating vulnerable parameter.",
+      "description": "Test for SQL injection by injecting single quote in POST parameters.\nLook for PostgreSQL-specific error messages indicating vulnerable parameter.",
       "evidence": [
         "ERROR: unterminated quoted string",
         "ERROR: syntax error at or near",
@@ -62,7 +62,7 @@
       "name": "Enumerate Column Count",
       "objective": "Determine number of columns in SQL query for UNION attack",
       "command_ref": "sqli-column-enum-orderby",
-      "description": "Use ORDER BY technique to count columns. Increment ORDER BY value until error occurs, revealing column count.",
+      "description": "Use ORDER BY technique to count columns.\nIncrement ORDER BY value until error occurs, revealing column count.",
       "dependencies": ["detect-sqli"],
       "evidence": [
         "Last successful ORDER BY number (e.g., ORDER BY 4 succeeds, ORDER BY 5 fails = 4 columns)"
@@ -81,7 +81,7 @@
       "name": "Test UNION SELECT Injection",
       "objective": "Confirm UNION injection works and identify displayed columns",
       "command_ref": "sqli-union-select-basic",
-      "description": "Test UNION SELECT with NULL values matching column count. Use test strings to identify which column positions display on page.",
+      "description": "Test UNION SELECT with NULL values matching column count.\nUse test strings to identify which column positions display on page.",
       "dependencies": ["enum-columns"],
       "evidence": [
         "Test strings visible in page output",
@@ -103,7 +103,7 @@
       "name": "Extract PostgreSQL Database Information",
       "objective": "Enumerate database version, name, user, and superuser status",
       "command_ref": "sqli-union-postgresql-info",
-      "description": "Use UNION SELECT to extract: version(), current_database(), current_user, usesuper status. Verify if database user has superuser privileges (required for file functions).",
+      "description": "Use UNION SELECT to extract: version(), current_database(), current_user, usesuper status.\nVerify if database user has superuser privileges (required for file functions).",
       "dependencies": ["test-union"],
       "evidence": [
         "PostgreSQL version string",
@@ -127,7 +127,7 @@
       "name": "Extract Database Credentials from Config File",
       "objective": "Read database configuration file to obtain plaintext password",
       "command_ref": "sqli-union-postgresql-info",
-      "description": "Use pg_read_file() via UNION SELECT to read common config file locations: /var/www/html/dbcon.php, /var/www/html/config.php, /etc/webapp/database.conf. Extract username and password from file contents.",
+      "description": "Use pg_read_file() via UNION SELECT to read common config file locations: /var/www/html/dbcon.php, /var/www/html/config.php, /etc/webapp/database.conf.\nExtract username and password from file contents.",
       "dependencies": ["extract-db-info"],
       "evidence": [
         "Config file contents visible",
@@ -151,7 +151,7 @@
       "name": "Establish Direct PostgreSQL Connection",
       "objective": "Connect to PostgreSQL database using extracted credentials",
       "command_ref": "postgres-direct-connect",
-      "description": "Use psql client to connect directly to PostgreSQL server on port 5432. Bypass web application layer entirely. Verify connection success and superuser privileges.",
+      "description": "Use psql client to connect directly to PostgreSQL server on port 5432.\nBypass web application layer entirely.\nVerify connection success and superuser privileges.",
       "dependencies": ["extract-credentials"],
       "evidence": [
         "psql prompt appears (database_name=#)",
@@ -175,7 +175,7 @@
       "name": "Verify Superuser Privileges",
       "objective": "Confirm superuser status and available file functions",
       "command_ref": "postgres-privilege-check",
-      "description": "Verify usesuper is TRUE and test pg_ls_dir() and pg_read_file() functions are available. Confirm postgres user file access permissions.",
+      "description": "Verify usesuper is TRUE and test pg_ls_dir() and pg_read_file() functions are available.\nConfirm postgres user file access permissions.",
       "dependencies": ["connect-postgres"],
       "evidence": [
         "usesuper = t (TRUE)",
@@ -198,7 +198,7 @@
       "name": "Enumerate Filesystem for Sensitive Files",
       "objective": "Systematically search filesystem for flags, credentials, or sensitive data",
       "command_ref": "postgres-file-enum",
-      "description": "Use pg_ls_dir() to list directories. Check common locations: /, /home, /tmp, /var, /var/www, /opt, /root (if accessible). Look for flag.txt, credentials, .ssh keys, or other sensitive files.",
+      "description": "Use pg_ls_dir() to list directories.\nCheck common locations: /, /home, /tmp, /var, /var/www, /opt, /root (if accessible).\nLook for flag.txt, credentials, .ssh keys, or other sensitive files.",
       "dependencies": ["verify-privileges"],
       "evidence": [
         "Directory listings from multiple paths",
@@ -222,7 +222,7 @@
       "name": "Retrieve Sensitive File Contents",
       "objective": "Read target file using pg_read_file() and extract contents",
       "command_ref": "postgres-file-read",
-      "description": "Use pg_read_file('/path/to/file') to read file contents. For large files, may need to read in chunks using offset/length parameters.",
+      "description": "Use pg_read_file('/path/to/file') to read file contents.\nFor large files, may need to read in chunks using offset/length parameters.",
       "dependencies": ["enum-filesystem"],
       "evidence": [
         "File contents displayed",

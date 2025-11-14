@@ -1,7 +1,7 @@
 {
   "id": "windows-lateral-psexec-full",
   "name": "PSExec Lateral Movement - Full Attack Chain",
-  "description": "Complete PSExec attack from Kali: verify ADMIN$ share, authenticate with Impacket PSExec, obtain SYSTEM shell",
+  "description": "Complete PSExec attack from Kali: verify ADMIN$ share, authenticate with Impacket PSExec, obtain SYSTEM shell.\n\nThis is the most reliable lateral movement technique for OSCP, providing immediate SYSTEM-level access.",
   "version": "1.0.0",
   "metadata": {
     "author": "CRACK Development Team",
@@ -40,7 +40,7 @@
       "id": "verify-smb-access",
       "name": "Verify SMB and ADMIN$ Access",
       "objective": "Confirm SMB port 445 open and ADMIN$ share accessible with current credentials",
-      "description": "Use CrackMapExec to test SMB authentication and share enumeration. Look for Pwn3d! indicator confirming admin access and ADMIN$ in share list.",
+      "description": "Use CrackMapExec to test SMB authentication and share enumeration.\nLook for Pwn3d! indicator confirming admin access and ADMIN$ in share list.",
       "command_ref": "cme-smb-shares",
       "dependencies": [],
       "evidence": [
@@ -66,7 +66,7 @@
       "id": "verify-firewall",
       "name": "Verify File and Printer Sharing Enabled",
       "objective": "Ensure firewall allows File and Printer Sharing (required for PSExec)",
-      "description": "Check ports 445 (SMB) and 135 (RPC for service creation) are open. These are required for PSExec to upload binary and create service.",
+      "description": "Check ports 445 (SMB) and 135 (RPC for service creation) are open.\nThese are required for PSExec to upload binary and create service.",
       "command_ref": "psexec-verify-firewall",
       "dependencies": [
         "verify-smb-access"
@@ -94,7 +94,7 @@
       "id": "execute-psexec",
       "name": "Execute Impacket PSExec",
       "objective": "Use impacket-psexec to gain remote SYSTEM shell on target",
-      "description": "Run impacket-psexec with domain/user:password@target format. PSExec will upload RemCom.exe, create service, and spawn cmd.exe as SYSTEM.",
+      "description": "Run impacket-psexec with domain/user:password@target format.\nPSExec will upload RemCom.exe, create service, and spawn cmd.exe as SYSTEM.",
       "command_ref": "psexec-impacket-shell",
       "dependencies": [
         "verify-firewall"
@@ -122,7 +122,7 @@
       "id": "verify-system",
       "name": "Verify SYSTEM Access",
       "objective": "Confirm shell is running as NT AUTHORITY\\SYSTEM with full privileges",
-      "description": "Run whoami to verify SYSTEM context. PSExec spawns shells as SYSTEM by default, providing highest privilege level.",
+      "description": "Run whoami to verify SYSTEM context.\nPSExec spawns shells as SYSTEM by default, providing highest privilege level.",
       "command_ref": "verify-root-access-ad",
       "dependencies": [
         "execute-psexec"
@@ -150,7 +150,7 @@
       "id": "dump-credentials",
       "name": "Dump Credentials",
       "objective": "Extract password hashes and credentials from target system",
-      "description": "Use SYSTEM access to dump SAM, SYSTEM, SECURITY registry hives or run mimikatz/secretsdump for credential extraction.",
+      "description": "Use SYSTEM access to dump SAM, SYSTEM, SECURITY registry hives or run mimikatz/secretsdump for credential extraction.\nExtract password hashes for further lateral movement.",
       "command_ref": "secretsdump-hashes",
       "dependencies": [
         "verify-system"
@@ -178,7 +178,7 @@
       "id": "lateral-movement-spray",
       "name": "Spray Hashes Across Network",
       "objective": "Test extracted hashes against other targets for further lateral movement",
-      "description": "Use CrackMapExec to spray obtained hashes across subnet. Local admin password reuse is common - same hash often works on multiple systems.",
+      "description": "Use CrackMapExec to spray obtained hashes across subnet.\nLocal admin password reuse is common - same hash often works on multiple systems.",
       "command_ref": "pth-cme-spray",
       "dependencies": [
         "dump-credentials"

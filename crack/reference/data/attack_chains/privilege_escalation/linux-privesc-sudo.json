@@ -1,7 +1,7 @@
 {
   "id": "linux-privesc-sudo-nopasswd",
   "name": "Sudo Privilege Escalation (Quick Win)",
-  "description": "Rapid privilege escalation via sudo misconfigurations - NOPASSWD entries and GTFOBins-exploitable commands",
+  "description": "Rapid privilege escalation via sudo misconfigurations - NOPASSWD entries and GTFOBins-exploitable commands.\n\nThis is the fastest privilege escalation path for Linux systems in OSCP environments.",
   "version": "1.0.0",
   "metadata": {
     "author": "CRACK Development Team",
@@ -37,7 +37,7 @@
       "id": "check-sudo-privs",
       "name": "Check Sudo Privileges",
       "objective": "Identify what commands current user can run with sudo privileges",
-      "description": "Run 'sudo -l' to list allowed commands. Look for NOPASSWD entries (no password required), GTFOBins-exploitable binaries, and dangerous env_keep settings. Parser extracts exploitable configurations automatically.",
+      "description": "Run 'sudo -l' to list allowed commands.\n\nLook for:\n- NOPASSWD entries (no password required)\n- GTFOBins-exploitable binaries\n- Dangerous env_keep settings\n\nParser extracts exploitable configurations automatically.",
       "command_ref": "check-sudo-privs",
       "evidence": [
         "sudo -l output showing allowed commands",
@@ -60,7 +60,7 @@
       "id": "analyze-sudoers",
       "name": "Analyze Sudoers Configuration",
       "objective": "Identify exploitable sudo configurations from parser output",
-      "description": "Review parsed findings for: (1) NOPASSWD entries - no password needed, (2) GTFOBins binaries - spawn shells or read files, (3) Wildcards - command injection opportunities, (4) env_keep=LD_PRELOAD - shared library injection. Parser auto-identifies exploitable binaries from GTFOBins database.",
+      "description": "Review parsed findings for:\n\n1. NOPASSWD entries - no password needed\n2. GTFOBins binaries - spawn shells or read files\n3. Wildcards - command injection opportunities\n4. env_keep=LD_PRELOAD - shared library injection\n\nParser auto-identifies exploitable binaries from GTFOBins database.",
       "command_ref": "analyze-sudoers",
       "dependencies": [
         "check-sudo-privs"
@@ -86,7 +86,7 @@
       "id": "research-technique",
       "name": "Research GTFOBins Exploitation Technique",
       "objective": "Find specific sudo exploitation technique for discovered binary",
-      "description": "Visit https://gtfobins.github.io/ and search for the binary name. Navigate to 'Sudo' section for exploitation commands. Copy exact syntax including flags. Common techniques: (1) Shell spawning (find, vim, less), (2) File reading (base64, xxd), (3) Command execution (python, perl, awk).",
+      "description": "Visit https://gtfobins.github.io/ and search for the binary name.\n\nNavigate to 'Sudo' section for exploitation commands.\nCopy exact syntax including flags.\n\nCommon techniques:\n1. Shell spawning (find, vim, less)\n2. File reading (base64, xxd)\n3. Command execution (python, perl, awk)",
       "command_ref": "gtfobins-sudo-lookup",
       "dependencies": [
         "analyze-sudoers"
@@ -111,7 +111,7 @@
       "id": "exploit-sudo",
       "name": "Execute Sudo Exploitation",
       "objective": "Run sudo command with GTFOBins technique to escalate privileges",
-      "description": "Execute exploitation command exactly as documented. For shell spawning: sudo <binary> <flags>. For file reading: sudo <binary> /etc/shadow. For command execution: sudo <binary> -c 'import os; os.system(\"/bin/bash\")'. Verify root shell spawned with correct privileges.",
+      "description": "Execute exploitation command exactly as documented.\n\nExploitation patterns:\n- Shell spawning: sudo <binary> <flags>\n- File reading: sudo <binary> /etc/shadow\n- Command execution: sudo <binary> -c 'import os; os.system(\"/bin/bash\")'\n\nVerify root shell spawned with correct privileges.",
       "command_ref": "execute-sudo-exploit",
       "dependencies": [
         "research-technique"
@@ -140,7 +140,7 @@
       "id": "verify-root",
       "name": "Verify Root Access",
       "objective": "Confirm effective UID is 0 and full root privileges obtained",
-      "description": "Run whoami, id, and attempt to read /etc/shadow to confirm root access. Check both real UID and effective UID. Verify filesystem access to root-only files. Test ability to read sensitive files and access /root directory.",
+      "description": "Run whoami, id, and attempt to read /etc/shadow to confirm root access.\n\nVerification steps:\n- Check both real UID and effective UID\n- Verify filesystem access to root-only files\n- Test ability to read sensitive files\n- Confirm access to /root directory",
       "command_ref": "verify-root-access-sudo",
       "dependencies": [
         "exploit-sudo"

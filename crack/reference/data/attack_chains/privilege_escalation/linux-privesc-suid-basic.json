@@ -1,7 +1,7 @@
 {
   "id": "linux-privesc-suid-basic",
   "name": "SUID Binary Privilege Escalation (Basic)",
-  "description": "Quick wins check (sudo) followed by SUID binary exploitation using GTFOBins to gain root shell",
+  "description": "Quick wins check (sudo) followed by SUID binary exploitation using GTFOBins to gain root shell.\n\nThis chain includes prerequisite quick-wins validation before time-intensive SUID enumeration.",
   "version": "1.0.0",
   "metadata": {
     "author": "CRACK Development Team",
@@ -36,7 +36,7 @@
       "id": "quick-wins-check",
       "name": "Quick Wins Check (Sudo Privileges)",
       "objective": "Check for instant root via sudo before time-consuming SUID enumeration",
-      "description": "OSCP time-saving: Always check sudo first (5 seconds) before SUID enumeration (2+ minutes). If user has NOPASSWD sudo, instant root without complex exploitation.",
+      "description": "OSCP time-saving: Always check sudo first (5 seconds) before SUID enumeration (2+ minutes).\n\nIf user has NOPASSWD sudo, instant root without complex exploitation.",
       "command_ref": "check-sudo-privs",
       "dependencies": [],
       "evidence": [
@@ -59,7 +59,7 @@
       "id": "find-suid",
       "name": "Enumerate SUID Binaries",
       "objective": "Locate all SUID binaries on system using find command",
-      "description": "Search entire filesystem for files with SUID bit set (-perm -4000). Redirect errors to /dev/null to avoid permission denied noise.",
+      "description": "Search entire filesystem for files with SUID bit set (-perm -4000).\n\nRedirect errors to /dev/null to avoid permission denied noise.",
       "command_ref": "find-suid-binaries",
       "dependencies": [
         "quick-wins-check"
@@ -84,7 +84,7 @@
       "id": "filter-interesting",
       "name": "Identify Exploitable SUID Binaries",
       "objective": "Filter out standard system binaries and focus on exploitable candidates",
-      "description": "Exclude common system binaries (passwd, sudo, ping, mount) that are expected to have SUID. Look for: find, vim, nmap, base64, less, more, python, perl, awk, etc.",
+      "description": "Exclude common system binaries (passwd, sudo, ping, mount) that are expected to have SUID.\n\nLook for:\n- find, vim, nmap\n- base64, less, more\n- python, perl, awk\n- Custom application binaries",
       "command_ref": "filter-suid-binaries",
       "dependencies": [
         "find-suid"
@@ -109,7 +109,7 @@
       "id": "check-gtfobins",
       "name": "Lookup GTFOBins Exploitation Technique",
       "objective": "Find exploitation technique for discovered SUID binary on GTFOBins website",
-      "description": "Visit https://gtfobins.github.io/ and search for binary name. Look for 'SUID' section specifically. Copy exploitation command syntax.",
+      "description": "Visit https://gtfobins.github.io/ and search for binary name.\n\nLook for 'SUID' section specifically.\n\nCopy exploitation command syntax.",
       "command_ref": "gtfobins-suid-lookup",
       "dependencies": [
         "filter-interesting"
@@ -134,7 +134,7 @@
       "id": "exploit-suid",
       "name": "Execute SUID Exploitation",
       "objective": "Run GTFOBins command to escalate privileges and spawn root shell",
-      "description": "Execute exploitation command exactly as documented on GTFOBins. Common example: /usr/bin/find . -exec /bin/bash -p \\; -quit",
+      "description": "Execute exploitation command exactly as documented on GTFOBins.\n\nCommon example:\n/usr/bin/find . -exec /bin/bash -p \\; -quit",
       "command_ref": "execute-suid-exploit-find",
       "dependencies": [
         "check-gtfobins"
@@ -162,7 +162,7 @@
       "id": "verify-root",
       "name": "Verify Root Access",
       "objective": "Confirm effective UID is 0 and full root privileges obtained",
-      "description": "Run whoami and id commands to verify root access. Check if you can read /etc/shadow or /root/ directory.",
+      "description": "Run whoami and id commands to verify root access.\n\nCheck if you can read /etc/shadow or /root/ directory.",
       "command_ref": "verify-root-access-suid",
       "dependencies": [
         "exploit-suid"

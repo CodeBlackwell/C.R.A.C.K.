@@ -71,6 +71,7 @@ export default function CheatsheetDetails({ cheatsheet, onCommandClick }: Cheats
             <Text size="sm" c="dimmed" mb="md">
               {cheatsheet.description}
             </Text>
+            {cheatsheet.tags && cheatsheet.tags.length > 0 && (
             <Group gap="xs">
               {cheatsheet.tags.map((tag) => (
                 <Badge key={tag} size="sm" variant="light" color="cyan">
@@ -78,6 +79,7 @@ export default function CheatsheetDetails({ cheatsheet, onCommandClick }: Cheats
                 </Badge>
               ))}
             </Group>
+          )}
           </div>
 
           <Divider />
@@ -85,33 +87,40 @@ export default function CheatsheetDetails({ cheatsheet, onCommandClick }: Cheats
           {/* Educational Header */}
           {cheatsheet.educational_header && (
             <>
-              <div>
-                <Text size="md" fw={600} mb="xs">
-                  How to Recognize
-                </Text>
-                <Stack gap="xs">
-                  {cheatsheet.educational_header.how_to_recognize.map((item, idx) => (
-                    <Text key={idx} size="sm" c="dimmed">
-                      • {item}
-                    </Text>
-                  ))}
-                </Stack>
-              </div>
+              {cheatsheet.educational_header.how_to_recognize && cheatsheet.educational_header.how_to_recognize.length > 0 && (
+                <div>
+                  <Text size="md" fw={600} mb="xs">
+                    How to Recognize
+                  </Text>
+                  <Stack gap="xs">
+                    {cheatsheet.educational_header.how_to_recognize.map((item, idx) => (
+                      <Text key={idx} size="sm" c="dimmed">
+                        • {item}
+                      </Text>
+                    ))}
+                  </Stack>
+                </div>
+              )}
 
-              <div>
-                <Text size="md" fw={600} mb="xs">
-                  When to Look For
-                </Text>
-                <Stack gap="xs">
-                  {cheatsheet.educational_header.when_to_look_for.map((item, idx) => (
-                    <Text key={idx} size="sm" c="dimmed">
-                      • {item}
-                    </Text>
-                  ))}
-                </Stack>
-              </div>
+              {cheatsheet.educational_header.when_to_look_for && cheatsheet.educational_header.when_to_look_for.length > 0 && (
+                <div>
+                  <Text size="md" fw={600} mb="xs">
+                    When to Look For
+                  </Text>
+                  <Stack gap="xs">
+                    {cheatsheet.educational_header.when_to_look_for.map((item, idx) => (
+                      <Text key={idx} size="sm" c="dimmed">
+                        • {item}
+                      </Text>
+                    ))}
+                  </Stack>
+                </div>
+              )}
 
-              <Divider />
+              {((cheatsheet.educational_header.how_to_recognize && cheatsheet.educational_header.how_to_recognize.length > 0) ||
+                (cheatsheet.educational_header.when_to_look_for && cheatsheet.educational_header.when_to_look_for.length > 0)) && (
+                <Divider />
+              )}
             </>
           )}
 
@@ -157,23 +166,27 @@ export default function CheatsheetDetails({ cheatsheet, onCommandClick }: Cheats
                     </Accordion.Control>
                     <Accordion.Panel>
                       <Stack gap="xl">
-                        <div>
-                          <Text size="xs" fw={600} mb="xs" c="cyan">
-                            CONTEXT
-                          </Text>
-                          <Text size="sm" style={{ whiteSpace: 'pre-line' }}>
-                            {scenario.context}
-                          </Text>
-                        </div>
+                        {scenario.context && (
+                          <div>
+                            <Text size="xs" fw={600} mb="xs" c="cyan">
+                              CONTEXT
+                            </Text>
+                            <Text size="sm" style={{ whiteSpace: 'pre-line' }}>
+                              {scenario.context}
+                            </Text>
+                          </div>
+                        )}
 
-                        <div>
-                          <Text size="xs" fw={600} mb="xs" c="yellow">
-                            APPROACH
-                          </Text>
-                          <Text size="sm" style={{ whiteSpace: 'pre-line' }}>
-                            {scenario.approach}
-                          </Text>
-                        </div>
+                        {scenario.approach && (
+                          <div>
+                            <Text size="xs" fw={600} mb="xs" c="yellow">
+                              APPROACH
+                            </Text>
+                            <Text size="sm" style={{ whiteSpace: 'pre-line' }}>
+                              {scenario.approach}
+                            </Text>
+                          </div>
+                        )}
 
                         {scenario.commands && scenario.commands.length > 0 && (
                           <div>
@@ -199,23 +212,27 @@ export default function CheatsheetDetails({ cheatsheet, onCommandClick }: Cheats
                           </div>
                         )}
 
-                        <div>
-                          <Text size="xs" fw={600} mb="xs" c="green">
-                            EXPECTED OUTCOME
-                          </Text>
-                          <Text size="sm" style={{ whiteSpace: 'pre-line' }}>
-                            {scenario.expected_outcome}
-                          </Text>
-                        </div>
+                        {scenario.expected_outcome && (
+                          <div>
+                            <Text size="xs" fw={600} mb="xs" c="green">
+                              EXPECTED OUTCOME
+                            </Text>
+                            <Text size="sm" style={{ whiteSpace: 'pre-line' }}>
+                              {scenario.expected_outcome}
+                            </Text>
+                          </div>
+                        )}
 
-                        <div>
-                          <Text size="xs" fw={600} mb="xs" c="grape">
-                            WHY THIS WORKS
-                          </Text>
-                          <Text size="sm" style={{ whiteSpace: 'pre-line' }}>
-                            {scenario.why_this_works}
-                          </Text>
-                        </div>
+                        {scenario.why_this_works && (
+                          <div>
+                            <Text size="xs" fw={600} mb="xs" c="grape">
+                              WHY THIS WORKS
+                            </Text>
+                            <Text size="sm" style={{ whiteSpace: 'pre-line' }}>
+                              {scenario.why_this_works}
+                            </Text>
+                          </div>
+                        )}
                       </Stack>
                     </Accordion.Panel>
                   </Accordion.Item>

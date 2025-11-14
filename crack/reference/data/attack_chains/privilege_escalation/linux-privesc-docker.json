@@ -1,7 +1,7 @@
 {
   "id": "linux-privesc-docker-mount",
   "name": "Docker Group Privilege Escalation",
-  "description": "Exploit Docker group membership to escalate privileges from low-privilege user to root via container filesystem mounting",
+  "description": "Exploit Docker group membership to escalate privileges from low-privilege user to root via container filesystem mounting.\n\nDocker group membership is equivalent to root access on the host system.",
   "version": "1.0.0",
   "metadata": {
     "author": "CRACK Development Team",
@@ -37,7 +37,7 @@
       "id": "verify-docker-group",
       "name": "Verify Docker Group Membership",
       "objective": "Check if current user is in docker group",
-      "description": "Run groups and id commands to confirm docker group membership. User must be in docker group to execute docker commands without sudo. This is the prerequisite for all Docker escape techniques.",
+      "description": "Run groups and id commands to confirm docker group membership.\n\nUser must be in docker group to execute docker commands without sudo.\n\nThis is the prerequisite for all Docker escape techniques.",
       "command_ref": "check-docker-group",
       "evidence": [
         "groups command shows 'docker'",
@@ -59,7 +59,7 @@
       "id": "check-docker-socket",
       "name": "Check Docker Socket Access",
       "objective": "Verify access to Docker socket and test if docker commands work",
-      "description": "Check permissions on /var/run/docker.sock and test docker ps command. Socket must be readable/writable by user or docker group. This confirms docker group membership is effective and daemon is accessible.",
+      "description": "Check permissions on /var/run/docker.sock and test docker ps command.\n\nSocket must be readable/writable by user or docker group.\n\nThis confirms docker group membership is effective and daemon is accessible.",
       "command_ref": "check-docker-socket",
       "evidence": [
         "Socket permissions show srw-rw---- root docker",
@@ -84,7 +84,7 @@
       "id": "check-available-images",
       "name": "List Available Docker Images",
       "objective": "Enumerate available Docker images to use for container escape",
-      "description": "Run docker images to see locally cached images. Prefer using existing images to avoid network traffic/logging. If no images available, alpine is smallest option (5MB). Any Linux image works for mount escape.",
+      "description": "Run docker images to see locally cached images.\n\nPrefer using existing images to avoid network traffic/logging.\n\nIf no images available, alpine is smallest option (5MB).\nAny Linux image works for mount escape.",
       "command_ref": "list-docker-images",
       "evidence": [
         "REPOSITORY TAG IMAGE ID listing",
@@ -109,7 +109,7 @@
       "id": "mount-host-escape",
       "name": "Execute Docker Mount Escape",
       "objective": "Mount host filesystem in container and chroot to gain root access",
-      "description": "Run docker with -v /:/mnt to mount entire host filesystem at /mnt inside container. Then chroot /mnt to change root directory to host filesystem. This gives full root access to host from inside container. Use smallest available image (alpine preferred).",
+      "description": "Run docker with -v /:/mnt to mount entire host filesystem at /mnt inside container.\n\nThen chroot /mnt to change root directory to host filesystem.\n\nThis gives full root access to host from inside container.\n\nUse smallest available image (alpine preferred).",
       "command_ref": "docker-mount-escape",
       "evidence": [
         "Container starts with interactive shell",
@@ -137,7 +137,7 @@
       "id": "verify-root",
       "name": "Verify Root Access to Host",
       "objective": "Confirm full root access to host filesystem and sensitive files",
-      "description": "Test access to root-only files: /mnt/etc/shadow (password hashes), /mnt/root directory, /mnt/root/.ssh/id_rsa (SSH key). Success confirms complete host compromise. Can now read any file, modify any file, plant backdoors.",
+      "description": "Test access to root-only files:\n- /mnt/etc/shadow (password hashes)\n- /mnt/root directory\n- /mnt/root/.ssh/id_rsa (SSH key)\n\nSuccess confirms complete host compromise.\n\nCan now read any file, modify any file, plant backdoors.",
       "command_ref": "verify-docker-root",
       "evidence": [
         "Shadow file contents visible (password hashes)",

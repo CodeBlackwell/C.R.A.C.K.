@@ -1,7 +1,7 @@
 {
   "id": "windows-lateral-wmi-full",
   "name": "WMI Lateral Movement - Full Attack Chain",
-  "description": "Complete WMI lateral movement from Kali to Windows: verify admin access, encode payload, execute WMI, obtain reverse shell",
+  "description": "Complete WMI lateral movement from Kali to Windows: verify admin access, encode payload, execute WMI, obtain reverse shell.\n\nThis chain demonstrates fileless remote code execution using Windows Management Instrumentation.",
   "version": "1.0.0",
   "metadata": {
     "author": "CRACK Development Team",
@@ -39,7 +39,7 @@
       "id": "verify-admin-access",
       "name": "Verify Admin Access with CrackMapExec",
       "objective": "Confirm credentials grant local administrator access before attempting lateral movement",
-      "description": "Use CrackMapExec to test SMB authentication and verify admin rights (Pwn3d! indicator). This prevents wasting time on failed exploitation attempts.",
+      "description": "Use CrackMapExec to test SMB authentication and verify admin rights (Pwn3d! indicator).\n\nThis prevents wasting time on failed exploitation attempts.",
       "command_ref": "cme-smb-shares",
       "dependencies": [],
       "evidence": [
@@ -65,7 +65,7 @@
       "id": "check-wmi-port",
       "name": "Verify WMI/RPC Port Accessibility",
       "objective": "Ensure RPC port 135 is accessible for WMI communication",
-      "description": "WMI requires RPC port 135 + dynamic high ports (49152-65535). Quick nmap check saves time before attempting full exploitation.",
+      "description": "WMI requires RPC port 135 + dynamic high ports (49152-65535).\n\nQuick nmap check saves time before attempting full exploitation.",
       "command_ref": "lateral-movement-port-check",
       "dependencies": [
         "verify-admin-access"
@@ -93,7 +93,7 @@
       "id": "generate-payload",
       "name": "Generate Base64 PowerShell Reverse Shell",
       "objective": "Create encoded PowerShell payload for reverse shell callback to Kali",
-      "description": "Generate base64-encoded PowerShell reverse shell using helper script. Encoding avoids command-line escaping issues and provides basic evasion.",
+      "description": "Generate base64-encoded PowerShell reverse shell using helper script.\n\nEncoding avoids command-line escaping issues and provides basic evasion.",
       "command_ref": "revshell-ps-generator",
       "dependencies": [
         "check-wmi-port"
@@ -121,7 +121,7 @@
       "id": "setup-listener",
       "name": "Start Netcat Listener",
       "objective": "Set up listener on Kali to catch reverse shell connection",
-      "description": "Start Netcat listener on specified port (commonly 443 or 4444) before executing payload to catch incoming shell.",
+      "description": "Start Netcat listener on specified port (commonly 443 or 4444) before executing payload to catch incoming shell.\n\nListener must be active before payload execution.",
       "command_ref": "nc-listener-tcp",
       "dependencies": [
         "generate-payload"
@@ -149,7 +149,7 @@
       "id": "execute-wmi",
       "name": "Execute WMI Lateral Movement",
       "objective": "Use impacket-wmiexec to execute encoded payload on target via WMI",
-      "description": "Execute base64-encoded PowerShell reverse shell on target using WMI. Impacket-wmiexec provides semi-interactive shell or can run single commands.",
+      "description": "Execute base64-encoded PowerShell reverse shell on target using WMI.\n\nImpacket-wmiexec provides semi-interactive shell or can run single commands.",
       "command_ref": "wmi-impacket-exec",
       "dependencies": [
         "setup-listener"
@@ -177,7 +177,7 @@
       "id": "verify-shell",
       "name": "Verify Reverse Shell Access",
       "objective": "Confirm reverse shell connection and identify compromised system context",
-      "description": "Run whoami and hostname commands to verify shell access and confirm target system. Check user context (should be authenticated user, not SYSTEM).",
+      "description": "Run whoami and hostname commands to verify shell access and confirm target system.\n\nCheck user context (should be authenticated user, not SYSTEM).",
       "command_ref": "verify-root-access-ad",
       "dependencies": [
         "execute-wmi"
@@ -205,7 +205,7 @@
       "id": "post-exploit-enum",
       "name": "Post-Exploitation Enumeration",
       "objective": "Enumerate target system for privilege escalation opportunities and sensitive data",
-      "description": "Begin basic enumeration: check privileges (whoami /priv), group membership (whoami /groups), running processes, installed software, network connections.",
+      "description": "Begin basic enumeration:\n- Check privileges (whoami /priv)\n- Group membership (whoami /groups)\n- Running processes\n- Installed software\n- Network connections",
       "command_ref": "check-sudo-privs",
       "dependencies": [
         "verify-shell"

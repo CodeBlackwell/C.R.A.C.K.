@@ -1,85 +1,147 @@
 {
-  "id": "metasploit-scanning",
-  "name": "Metasploit Auxiliary Modules - Network Scanning & Service Enumeration",
-  "description": "Comprehensive service enumeration using Metasploit auxiliary modules for SMB, SSH, FTP, MySQL, HTTP and other common OSCP services with database integration",
-  "educational_header": {
-    "how_to_recognize": [
-      "Nmap shows open ports but limited service version information",
-      "Need to enumerate SMB shares, users, or domain information without enum4linux",
-      "SSH/FTP/MySQL services requiring brute force or version detection",
-      "HTTP services needing directory enumeration or vulnerability scanning",
-      "Services with authentication requiring credential validation across multiple hosts",
-      "Requirement to scan multiple targets simultaneously with threading"
-    ],
-    "when_to_look_for": [
-      "After initial nmap port scan identifies services (deeper enumeration phase)",
-      "When specialized tools (enum4linux, hydra) are unavailable or failing",
-      "For multi-target scans where threading and database integration add value",
-      "When you need structured output stored in Metasploit database for reporting",
-      "Before exploitation to validate service versions and configurations",
-      "When testing credentials across multiple hosts/services (password spraying)"
-    ]
-  },
-  "scenarios": [
+  "cheatsheets": [
     {
-      "title": "Scenario 1: SMB Enumeration Without Credentials",
-      "context": "Target network with 5 Windows hosts (192.168.45.100-104), SMB (445/tcp) open. Goal: Enumerate SMB version, shares, users, and domain info without authentication. Alternative to enum4linux.",
-      "approach": "Step 1: Set workspace and import nmap data: workspace -a smb-scan; db_import nmap.xml. Step 2: Run SMB version scanner: use auxiliary/scanner/smb/smb_version; services -p 445 -R; run. Step 3: Enumerate shares: use auxiliary/scanner/smb/smb_enumshares; services -p 445 -R; run. Step 4: Enumerate users: use auxiliary/scanner/smb/smb_enumusers; set RHOSTS 192.168.45.100; run. Step 5: Check for MS17-010 (EternalBlue): use auxiliary/scanner/smb/smb_ms17_010; services -p 445 -R; run. Step 6: Review findings: services -p 445 (shows detected versions); creds (shows any discovered credentials).",
-      "commands": ["msf-workspace-add", "msf-db-import", "msf-aux-smb-version", "msf-aux-smb-shares", "msf-aux-smb-users", "msf-aux-smb-ms17010"],
-      "expected_outcome": "smb_version reveals: 'Windows Server 2008 R2 Build 7601' (OS), 'Samba 3.6.25' (version). smb_enumshares shows: IPC$ (no auth), ADMIN$ (auth required), C$ (auth required), SharedDocs (readable). smb_enumusers discovers: Administrator, Guest, john, bob (domain users). smb_ms17_010 shows: '[+] 192.168.45.100:445 - Host is VULNERABLE to MS17-010!' or '[-] 192.168.45.100:445 - Host does NOT appear vulnerable'. Time: 2-5 minutes for all 5 hosts with THREADS=5. Data stored in services table (versions), notes table (shares, users). Manual alternative: enum4linux -a <IP> (same functionality, no database storage).",
-      "why_this_works": "SMB auxiliary modules leverage: Null session authentication (pre-Windows 10, often enabled on legacy systems), SMB protocol commands (NetShareEnumAll, NetUserEnum, NetServerGetInfo), Anonymous bind to IPC$ share (allows limited enumeration). smb_version uses SMB negotiate protocol to extract: OS version (from server capabilities), SMB dialect (SMBv1, SMBv2, SMBv3), Domain/workgroup name. smb_enumshares queries shares with NetShareEnumAll API, notes permissions (READ, WRITE). smb_enumusers uses RID cycling (500-550 for well-known users) or SAMR protocol. smb_ms17_010 checks for: MS17-010 signatures (EternalBlue/EternalRomance), Specific SMBv1 vulnerabilities (CVE-2017-0143 to CVE-2017-0148). Advantages over standalone tools: Threading (scan 50 hosts in time of 1), Database integration (results queryable), Module chaining (auto-populate RHOSTS), Credential reuse (discovered creds auto-tested). OSCP value: Fast domain enumeration, identify EternalBlue targets, discover readable shares for intelligence gathering."
-    },
-    {
-      "title": "Scenario 2: Multi-Service Brute Force with Credential Reuse",
-      "context": "Discovered credentials (admin:Password123) on one target. Need to test across 10 targets with SSH (22), FTP (21), and MySQL (3306). Goal: Identify credential reuse for lateral movement.",
-      "approach": "Step 1: Import target list and set workspace: workspace -a cred-spray; db_import targets_nmap.xml. Step 2: Test SSH with discovered credentials: use auxiliary/scanner/ssh/ssh_login; set USERNAME admin; set PASSWORD Password123; services -p 22 -R; run. Step 3: Test FTP: use auxiliary/scanner/ftp/ftp_login; set USERNAME admin; set PASSWORD Password123; services -p 21 -R; run. Step 4: Test MySQL: use auxiliary/scanner/mysql/mysql_login; set USERNAME admin; set PASSWORD Password123; services -p 3306 -R; run. Step 5: Review successful logins: creds (shows valid credentials by service). Step 6: Use discovered sessions: sessions -l (if modules created sessions); sessions -i 1 (interact with SSH session).",
-      "commands": ["msf-aux-ssh-login", "msf-aux-ftp-login", "msf-aux-mysql-login", "msf-creds-list", "msf-sessions-list"],
-      "expected_outcome": "ssh_login shows: '[+] 192.168.45.100:22 - Success: admin:Password123 (uid=1000, gid=1000)', creates session if possible. ftp_login shows: '[+] 192.168.45.102:21 - Success: admin:Password123', '[*] 192.168.45.103:21 - Login failed'. mysql_login shows: '[+] 192.168.45.101:3306 - Success: admin:Password123'. creds command displays table: host, port, user, pass, type (password), service (ssh/ftp/mysql). Time: 1-3 minutes with THREADS=10. Successful SSH logins may create command shell sessions (check with sessions -l). Manual alternative: hydra -l admin -p Password123 ssh://192.168.45.100 (per-service, no database integration).",
-      "why_this_works": "Login scanners automate authentication testing using: Service-specific protocols (SSH v2, FTP commands, MySQL auth), Credential validation without interactive login, Threading for parallel testing (THREADS option), Session creation on success (SSH, FTP can spawn shells). SSH module: Uses Net::SSH library, tests password/key authentication, creates Metasploit session if CREATESESSION=true, stores successful credentials in database. FTP module: Sends USER/PASS commands, checks 230 response code (login success), can execute FTP commands if session created. MySQL module: Uses MySQL authentication protocol, tests against mysql.user table, can execute SQL if credentials valid. Database credential storage: Automatically saves valid credentials in creds table, Associates credentials with host and service (host:port:user:pass), Enables credential reuse in other modules (db_creds provides auto-fill). OSCP strategy: Find one weak credential, spray across all targets, use services -p <PORT> -R for bulk testing. Common OSCP credentials to test: admin:admin, admin:password, root:toor, administrator:Password123. Avoid account lockouts: Set STOP_ON_SUCCESS=true, use THREADS=1 for careful testing, check lockout policies first (auxiliary/scanner/smb/smb_login has USER_AS_PASS option)."
-    },
-    {
-      "title": "Scenario 3: HTTP Service Discovery and Vulnerability Scanning",
-      "context": "Web application on 192.168.45.100:80 and :8080. Nmap shows 'Apache 2.4.41'. Goal: Enumerate directories, identify web technologies, scan for common vulnerabilities (SQL injection, XSS, misconfigurations).",
-      "approach": "Step 1: Enumerate HTTP directories: use auxiliary/scanner/http/dir_scanner; set RHOSTS 192.168.45.100; set RPORT 80; set DICTIONARY /usr/share/wordlists/dirb/common.txt; run. Step 2: Identify web technologies: use auxiliary/scanner/http/http_version; set RHOSTS 192.168.45.100; set RPORT 80; run. Step 3: Check for Shellshock vulnerability: use auxiliary/scanner/http/apache_mod_cgi_bash_env; set RHOSTS 192.168.45.100; set TARGETURI /cgi-bin/test.cgi; run. Step 4: Test for SQL injection: use auxiliary/scanner/http/sqlmap; set RHOSTS 192.168.45.100; set TARGETURI /login.php?id=1; run. Step 5: Scan for common web vulnerabilities: use auxiliary/scanner/http/robots_txt; set RHOSTS 192.168.45.100; run. Step 6: Review discovered paths: notes -t http.* (database notes with HTTP findings).",
-      "commands": ["msf-aux-http-dirscanner", "msf-aux-http-version", "msf-aux-http-robots"],
-      "expected_outcome": "dir_scanner finds: /admin (200 OK), /login.php (200 OK), /backup (403 Forbidden), /config (404 Not Found). Stores results in notes table. http_version reveals: 'Apache/2.4.41 (Ubuntu)', 'PHP/7.4.3'. apache_mod_cgi_bash_env shows: '[+] 192.168.45.100:80 - Vulnerable to CVE-2014-6271 (Shellshock)'. robots_txt discovers: Disallow: /admin, Disallow: /backup (intel on hidden paths). Time: 5-10 minutes for comprehensive HTTP scan. Database storage: notes table contains all findings with timestamps. Manual alternatives: gobuster dir -u http://192.168.45.100 -w common.txt (directories only), nikto -h 192.168.45.100 (vulnerability scan, different coverage).",
-      "why_this_works": "HTTP auxiliary modules automate web reconnaissance: dir_scanner uses HTTP GET requests with wordlist, checks response codes (200, 301, 302, 401, 403), identifies valid paths and authentication requirements. http_version extracts server headers: Server header (Apache/2.4.41, nginx/1.18.0), X-Powered-By header (PHP/7.4.3, ASP.NET), Detects technologies (WordPress, Joomla via fingerprinting). Shellshock scanner (apache_mod_cgi_bash_env): Tests CGI scripts for bash environment variable injection (CVE-2014-6271), Sends payload: () { :; }; echo vulnerable, Checks response for 'vulnerable' string. robots_txt scanner: Fetches /robots.txt, parses Disallow entries, reveals intentionally hidden paths (often security-sensitive). SQLmap integration (if available): Automates SQL injection testing, Tests GET/POST parameters, Reports injectable parameters with payload. Metasploit HTTP advantages: Database integration (all findings centralized), Module chaining (discovered paths feed into other modules), Credential reuse (creds table provides auth for protected paths), Reporting (db_export includes all HTTP notes). OSCP limitations: Metasploit HTTP modules less comprehensive than dedicated tools (gobuster, nikto, Burp Suite), better for initial discovery. Workflow: Metasploit for quick discovery → Dedicated tools for deep testing."
-    },
-    {
-      "title": "Scenario 4: Port Scanning and Service Detection with Database Integration",
-      "context": "Large subnet (192.168.45.0/24) with unknown hosts. Need comprehensive port scan with service detection. Goal: Use Metasploit for scanning, store results in database, feed into exploitation modules.",
-      "approach": "Step 1: Set up workspace: workspace -a subnet-scan. Step 2: Run TCP SYN scan on top 100 ports: use auxiliary/scanner/portscan/syn; set RHOSTS 192.168.45.0/24; set THREADS 50; run. Step 3: Run service version detection on discovered ports: use auxiliary/scanner/portscan/tcp; set RHOSTS 192.168.45.0/24; set PORTS 22,80,443,445,3389; run. Step 4: Review discovered hosts: hosts (shows all active IPs). Step 5: Filter services by port: services -p 445 (all SMB hosts). Step 6: Use database for targeted scanning: use auxiliary/scanner/smb/smb_version; services -p 445 -R; run (auto-populate from database).",
-      "commands": ["msf-aux-portscan-syn", "msf-aux-portscan-tcp", "msf-hosts-list", "msf-services-filter-port"],
-      "expected_outcome": "syn scanner finds: 192.168.45.100 (22,80,445 open), 192.168.45.101 (22,3306 open), 192.168.45.102 (80,443,8080 open). Time: 5-10 minutes for /24 subnet with THREADS=50. tcp scanner provides basic version detection: 192.168.45.100:445 microsoft-ds, 192.168.45.101:3306 mysql. hosts command shows 15 active hosts. services -p 445 filters to 5 SMB hosts for targeted enumeration. Database enables workflow: Scan entire subnet → Filter by service → Run targeted auxiliary modules → Exploit vulnerable services. Manual alternative: nmap -sS -p- 192.168.45.0/24 -oA subnet_scan; db_import subnet_scan.xml (more comprehensive, slower).",
-      "why_this_works": "Metasploit port scanners provide database-integrated alternative to nmap: syn scanner (portscan/syn) uses raw sockets (requires root), sends SYN packets without completing handshake (stealth), detects open (SYN-ACK), closed (RST), filtered (no response). tcp scanner (portscan/tcp) uses full TCP handshake, more reliable but louder, can grab basic service banners. Advantages over standalone nmap: Native database integration (no import step), Threaded scanning (THREADS option for speed), Direct RHOSTS population (services -p 445 -R), Module ecosystem (scan → enumerate → exploit chain). Database-driven workflow: Port scan stores: host.address (IP), service.port (22, 80, 445), service.proto (tcp/udp), service.state (open/closed/filtered). Subsequent modules use: services -p <PORT> -R (set RHOSTS to all matching IPs), hosts -R (set RHOSTS to all workspace IPs), services -s http -R (set RHOSTS to HTTP services). OSCP considerations: Metasploit port scanning slower than nmap (use nmap for initial discovery), Metasploit excels at auxiliary enumeration after ports known, Database integration reduces manual work (no IP copying/pasting). Recommended workflow: nmap -sS -p- <SUBNET> for port discovery → db_import → Metasploit auxiliary modules for service enumeration → Metasploit exploit modules for attacks. Threading best practices: Local network: THREADS=50, VPN connection: THREADS=10 (avoid dropped packets), Single target: THREADS=1 (accurate banner grabbing)."
+      "id": "metasploit-scanning",
+      "name": "Metasploit Auxiliary Modules - Network Scanning & Service Enumeration",
+      "description": "Comprehensive service enumeration using Metasploit auxiliary modules for SMB, SSH, FTP, MySQL, HTTP and other common OSCP services with database integration",
+      "educational_header": {
+        "how_to_recognize": [
+          "Nmap shows open ports but limited service version information",
+          "Need to enumerate SMB shares, users, or domain information without enum4linux",
+          "SSH/FTP/MySQL services requiring brute force or version detection",
+          "HTTP services needing directory enumeration or vulnerability scanning",
+          "Services with authentication requiring credential validation across multiple hosts",
+          "Requirement to scan multiple targets simultaneously with threading"
+        ],
+        "when_to_look_for": [
+          "After initial nmap port scan identifies services (deeper enumeration phase)",
+          "When specialized tools (enum4linux, hydra) are unavailable or failing",
+          "For multi-target scans where threading and database integration add value",
+          "When you need structured output stored in Metasploit database for reporting",
+          "Before exploitation to validate service versions and configurations",
+          "When testing credentials across multiple hosts/services (password spraying)"
+        ]
+      },
+      "scenarios": [
+        {
+          "title": "Scenario 1: SMB Enumeration Without Credentials",
+          "context": "Target network with 5 Windows hosts (192.168.45.100-104), SMB (445/tcp) open. Goal: Enumerate SMB version, shares, users, and domain info without authentication. Alternative to enum4linux.",
+          "approach": "Step 1: Set workspace and import nmap data: workspace -a smb-scan; db_import nmap.xml. Step 2: Run SMB version scanner: use auxiliary/scanner/smb/smb_version; services -p 445 -R; run. Step 3: Enumerate shares: use auxiliary/scanner/smb/smb_enumshares; services -p 445 -R; run. Step 4: Enumerate users: use auxiliary/scanner/smb/smb_enumusers; set RHOSTS 192.168.45.100; run. Step 5: Check for MS17-010 (EternalBlue): use auxiliary/scanner/smb/smb_ms17_010; services -p 445 -R; run. Step 6: Review findings: services -p 445 (shows detected versions); creds (shows any discovered credentials).",
+          "commands": [
+            "msf-workspace-add",
+            "msf-db-import",
+            "msf-aux-smb-version",
+            "msf-aux-smb-shares",
+            "msf-aux-smb-users",
+            "msf-aux-smb-ms17010"
+          ],
+          "expected_outcome": "smb_version reveals: 'Windows Server 2008 R2 Build 7601' (OS), 'Samba 3.6.25' (version). smb_enumshares shows: IPC$ (no auth), ADMIN$ (auth required), C$ (auth required), SharedDocs (readable). smb_enumusers discovers: Administrator, Guest, john, bob (domain users). smb_ms17_010 shows: '[+] 192.168.45.100:445 - Host is VULNERABLE to MS17-010!' or '[-] 192.168.45.100:445 - Host does NOT appear vulnerable'. Time: 2-5 minutes for all 5 hosts with THREADS=5. Data stored in services table (versions), notes table (shares, users). Manual alternative: enum4linux -a <IP> (same functionality, no database storage).",
+          "why_this_works": "SMB auxiliary modules leverage: Null session authentication (pre-Windows 10, often enabled on legacy systems), SMB protocol commands (NetShareEnumAll, NetUserEnum, NetServerGetInfo), Anonymous bind to IPC$ share (allows limited enumeration). smb_version uses SMB negotiate protocol to extract: OS version (from server capabilities), SMB dialect (SMBv1, SMBv2, SMBv3), Domain/workgroup name. smb_enumshares queries shares with NetShareEnumAll API, notes permissions (READ, WRITE). smb_enumusers uses RID cycling (500-550 for well-known users) or SAMR protocol. smb_ms17_010 checks for: MS17-010 signatures (EternalBlue/EternalRomance), Specific SMBv1 vulnerabilities (CVE-2017-0143 to CVE-2017-0148). Advantages over standalone tools: Threading (scan 50 hosts in time of 1), Database integration (results queryable), Module chaining (auto-populate RHOSTS), Credential reuse (discovered creds auto-tested). OSCP value: Fast domain enumeration, identify EternalBlue targets, discover readable shares for intelligence gathering."
+        },
+        {
+          "title": "Scenario 2: Multi-Service Brute Force with Credential Reuse",
+          "context": "Discovered credentials (admin:Password123) on one target. Need to test across 10 targets with SSH (22), FTP (21), and MySQL (3306). Goal: Identify credential reuse for lateral movement.",
+          "approach": "Step 1: Import target list and set workspace: workspace -a cred-spray; db_import targets_nmap.xml. Step 2: Test SSH with discovered credentials: use auxiliary/scanner/ssh/ssh_login; set USERNAME admin; set PASSWORD Password123; services -p 22 -R; run. Step 3: Test FTP: use auxiliary/scanner/ftp/ftp_login; set USERNAME admin; set PASSWORD Password123; services -p 21 -R; run. Step 4: Test MySQL: use auxiliary/scanner/mysql/mysql_login; set USERNAME admin; set PASSWORD Password123; services -p 3306 -R; run. Step 5: Review successful logins: creds (shows valid credentials by service). Step 6: Use discovered sessions: sessions -l (if modules created sessions); sessions -i 1 (interact with SSH session).",
+          "commands": [
+            "msf-aux-ssh-login",
+            "msf-aux-ftp-login",
+            "msf-aux-mysql-login",
+            "msf-creds-list",
+            "msf-sessions-list"
+          ],
+          "expected_outcome": "ssh_login shows: '[+] 192.168.45.100:22 - Success: admin:Password123 (uid=1000, gid=1000)', creates session if possible. ftp_login shows: '[+] 192.168.45.102:21 - Success: admin:Password123', '[*] 192.168.45.103:21 - Login failed'. mysql_login shows: '[+] 192.168.45.101:3306 - Success: admin:Password123'. creds command displays table: host, port, user, pass, type (password), service (ssh/ftp/mysql). Time: 1-3 minutes with THREADS=10. Successful SSH logins may create command shell sessions (check with sessions -l). Manual alternative: hydra -l admin -p Password123 ssh://192.168.45.100 (per-service, no database integration).",
+          "why_this_works": "Login scanners automate authentication testing using: Service-specific protocols (SSH v2, FTP commands, MySQL auth), Credential validation without interactive login, Threading for parallel testing (THREADS option), Session creation on success (SSH, FTP can spawn shells). SSH module: Uses Net::SSH library, tests password/key authentication, creates Metasploit session if CREATESESSION=true, stores successful credentials in database. FTP module: Sends USER/PASS commands, checks 230 response code (login success), can execute FTP commands if session created. MySQL module: Uses MySQL authentication protocol, tests against mysql.user table, can execute SQL if credentials valid. Database credential storage: Automatically saves valid credentials in creds table, Associates credentials with host and service (host:port:user:pass), Enables credential reuse in other modules (db_creds provides auto-fill). OSCP strategy: Find one weak credential, spray across all targets, use services -p <PORT> -R for bulk testing. Common OSCP credentials to test: admin:admin, admin:password, root:toor, administrator:Password123. Avoid account lockouts: Set STOP_ON_SUCCESS=true, use THREADS=1 for careful testing, check lockout policies first (auxiliary/scanner/smb/smb_login has USER_AS_PASS option)."
+        },
+        {
+          "title": "Scenario 3: HTTP Service Discovery and Vulnerability Scanning",
+          "context": "Web application on 192.168.45.100:80 and :8080. Nmap shows 'Apache 2.4.41'. Goal: Enumerate directories, identify web technologies, scan for common vulnerabilities (SQL injection, XSS, misconfigurations).",
+          "approach": "Step 1: Enumerate HTTP directories: use auxiliary/scanner/http/dir_scanner; set RHOSTS 192.168.45.100; set RPORT 80; set DICTIONARY /usr/share/wordlists/dirb/common.txt; run. Step 2: Identify web technologies: use auxiliary/scanner/http/http_version; set RHOSTS 192.168.45.100; set RPORT 80; run. Step 3: Check for Shellshock vulnerability: use auxiliary/scanner/http/apache_mod_cgi_bash_env; set RHOSTS 192.168.45.100; set TARGETURI /cgi-bin/test.cgi; run. Step 4: Test for SQL injection: use auxiliary/scanner/http/sqlmap; set RHOSTS 192.168.45.100; set TARGETURI /login.php?id=1; run. Step 5: Scan for common web vulnerabilities: use auxiliary/scanner/http/robots_txt; set RHOSTS 192.168.45.100; run. Step 6: Review discovered paths: notes -t http.* (database notes with HTTP findings).",
+          "commands": [
+            "msf-aux-http-dirscanner",
+            "msf-aux-http-version",
+            "msf-aux-http-robots"
+          ],
+          "expected_outcome": "dir_scanner finds: /admin (200 OK), /login.php (200 OK), /backup (403 Forbidden), /config (404 Not Found). Stores results in notes table. http_version reveals: 'Apache/2.4.41 (Ubuntu)', 'PHP/7.4.3'. apache_mod_cgi_bash_env shows: '[+] 192.168.45.100:80 - Vulnerable to CVE-2014-6271 (Shellshock)'. robots_txt discovers: Disallow: /admin, Disallow: /backup (intel on hidden paths). Time: 5-10 minutes for comprehensive HTTP scan. Database storage: notes table contains all findings with timestamps. Manual alternatives: gobuster dir -u http://192.168.45.100 -w common.txt (directories only), nikto -h 192.168.45.100 (vulnerability scan, different coverage).",
+          "why_this_works": "HTTP auxiliary modules automate web reconnaissance: dir_scanner uses HTTP GET requests with wordlist, checks response codes (200, 301, 302, 401, 403), identifies valid paths and authentication requirements. http_version extracts server headers: Server header (Apache/2.4.41, nginx/1.18.0), X-Powered-By header (PHP/7.4.3, ASP.NET), Detects technologies (WordPress, Joomla via fingerprinting). Shellshock scanner (apache_mod_cgi_bash_env): Tests CGI scripts for bash environment variable injection (CVE-2014-6271), Sends payload: () { :; }; echo vulnerable, Checks response for 'vulnerable' string. robots_txt scanner: Fetches /robots.txt, parses Disallow entries, reveals intentionally hidden paths (often security-sensitive). SQLmap integration (if available): Automates SQL injection testing, Tests GET/POST parameters, Reports injectable parameters with payload. Metasploit HTTP advantages: Database integration (all findings centralized), Module chaining (discovered paths feed into other modules), Credential reuse (creds table provides auth for protected paths), Reporting (db_export includes all HTTP notes). OSCP limitations: Metasploit HTTP modules less comprehensive than dedicated tools (gobuster, nikto, Burp Suite), better for initial discovery. Workflow: Metasploit for quick discovery → Dedicated tools for deep testing."
+        },
+        {
+          "title": "Scenario 4: Port Scanning and Service Detection with Database Integration",
+          "context": "Large subnet (192.168.45.0/24) with unknown hosts. Need comprehensive port scan with service detection. Goal: Use Metasploit for scanning, store results in database, feed into exploitation modules.",
+          "approach": "Step 1: Set up workspace: workspace -a subnet-scan. Step 2: Run TCP SYN scan on top 100 ports: use auxiliary/scanner/portscan/syn; set RHOSTS 192.168.45.0/24; set THREADS 50; run. Step 3: Run service version detection on discovered ports: use auxiliary/scanner/portscan/tcp; set RHOSTS 192.168.45.0/24; set PORTS 22,80,443,445,3389; run. Step 4: Review discovered hosts: hosts (shows all active IPs). Step 5: Filter services by port: services -p 445 (all SMB hosts). Step 6: Use database for targeted scanning: use auxiliary/scanner/smb/smb_version; services -p 445 -R; run (auto-populate from database).",
+          "commands": [
+            "msf-aux-portscan-syn",
+            "msf-aux-portscan-tcp",
+            "msf-hosts-list",
+            "msf-services-filter-port"
+          ],
+          "expected_outcome": "syn scanner finds: 192.168.45.100 (22,80,445 open), 192.168.45.101 (22,3306 open), 192.168.45.102 (80,443,8080 open). Time: 5-10 minutes for /24 subnet with THREADS=50. tcp scanner provides basic version detection: 192.168.45.100:445 microsoft-ds, 192.168.45.101:3306 mysql. hosts command shows 15 active hosts. services -p 445 filters to 5 SMB hosts for targeted enumeration. Database enables workflow: Scan entire subnet → Filter by service → Run targeted auxiliary modules → Exploit vulnerable services. Manual alternative: nmap -sS -p- 192.168.45.0/24 -oA subnet_scan; db_import subnet_scan.xml (more comprehensive, slower).",
+          "why_this_works": "Metasploit port scanners provide database-integrated alternative to nmap: syn scanner (portscan/syn) uses raw sockets (requires root), sends SYN packets without completing handshake (stealth), detects open (SYN-ACK), closed (RST), filtered (no response). tcp scanner (portscan/tcp) uses full TCP handshake, more reliable but louder, can grab basic service banners. Advantages over standalone nmap: Native database integration (no import step), Threaded scanning (THREADS option for speed), Direct RHOSTS population (services -p 445 -R), Module ecosystem (scan → enumerate → exploit chain). Database-driven workflow: Port scan stores: host.address (IP), service.port (22, 80, 445), service.proto (tcp/udp), service.state (open/closed/filtered). Subsequent modules use: services -p <PORT> -R (set RHOSTS to all matching IPs), hosts -R (set RHOSTS to all workspace IPs), services -s http -R (set RHOSTS to HTTP services). OSCP considerations: Metasploit port scanning slower than nmap (use nmap for initial discovery), Metasploit excels at auxiliary enumeration after ports known, Database integration reduces manual work (no IP copying/pasting). Recommended workflow: nmap -sS -p- <SUBNET> for port discovery → db_import → Metasploit auxiliary modules for service enumeration → Metasploit exploit modules for attacks. Threading best practices: Local network: THREADS=50, VPN connection: THREADS=10 (avoid dropped packets), Single target: THREADS=1 (accurate banner grabbing)."
+        }
+      ],
+      "sections": [
+        {
+          "title": "Phase 1: Initial Service Discovery (Post-Nmap)",
+          "notes": "After nmap port scan, use Metasploit auxiliary modules for deeper service enumeration. Import nmap results first (db_import), then use services -p <PORT> -R for auto-targeting. Threading speeds up multi-host scans (set THREADS 10-50). Estimated time: 5-15 minutes depending on target count.",
+          "commands": [
+            "msf-db-import",
+            "msf-services-filter-port",
+            "msf-aux-smb-version",
+            "msf-aux-ssh-version",
+            "msf-aux-http-version"
+          ]
+        },
+        {
+          "title": "Phase 2: SMB Enumeration (Windows Targets)",
+          "notes": "SMB is high-value OSCP target. Run version detection first, then share enumeration, then user enumeration. Check MS17-010 on all SMB hosts (easy win if vulnerable). Use smb_login for credential testing. Estimated time: 3-5 minutes per subnet.",
+          "commands": [
+            "msf-aux-smb-version",
+            "msf-aux-smb-shares",
+            "msf-aux-smb-users",
+            "msf-aux-smb-ms17010",
+            "msf-aux-smb-login"
+          ]
+        },
+        {
+          "title": "Phase 3: Credential Testing (Password Spraying)",
+          "notes": "After discovering credentials (web app, config file, default creds), spray across all targets. Use ssh_login, ftp_login, mysql_login modules. Set STOP_ON_SUCCESS=true to avoid lockouts. Check creds command after each scan for successful logins. Estimated time: 2-5 minutes for credential spray.",
+          "commands": [
+            "msf-aux-ssh-login",
+            "msf-aux-ftp-login",
+            "msf-aux-mysql-login",
+            "msf-creds-list"
+          ]
+        },
+        {
+          "title": "Phase 4: Web Application Discovery",
+          "notes": "HTTP services require multi-faceted scanning. Run dir_scanner for path discovery, http_version for technology fingerprinting, robots_txt for intel, then vulnerability-specific scans (Shellshock, SQL injection). Results in notes table feed into exploitation phase. Estimated time: 10-20 minutes per web server.",
+          "commands": [
+            "msf-aux-http-dirscanner",
+            "msf-aux-http-version",
+            "msf-aux-http-robots"
+          ]
+        },
+        {
+          "title": "Phase 5: Database Review and Exploitation Prep",
+          "notes": "Review all findings: hosts (discovered hosts), services (enumerated services with versions), creds (valid credentials), notes (auxiliary module findings). Use filters: services -p 445 (SMB targets), services -s http (web servers), creds (credential reuse opportunities). Export for reporting: db_export -f xml /root/scan_results.xml. Estimated time: 5 minutes to review and prioritize targets.",
+          "commands": [
+            "msf-hosts-list",
+            "msf-services-list",
+            "msf-creds-list",
+            "msf-db-export"
+          ]
+        }
+      ],
+      "tags": [
+        "METASPLOIT",
+        "AUXILIARY",
+        "SCANNING",
+        "ENUMERATION",
+        "SMB",
+        "SSH",
+        "HTTP",
+        "DATABASE",
+        "OSCP:HIGH"
+      ]
     }
-  ],
-  "sections": [
-    {
-      "title": "Phase 1: Initial Service Discovery (Post-Nmap)",
-      "notes": "After nmap port scan, use Metasploit auxiliary modules for deeper service enumeration. Import nmap results first (db_import), then use services -p <PORT> -R for auto-targeting. Threading speeds up multi-host scans (set THREADS 10-50). Estimated time: 5-15 minutes depending on target count.",
-      "commands": ["msf-db-import", "msf-services-filter-port", "msf-aux-smb-version", "msf-aux-ssh-version", "msf-aux-http-version"]
-    },
-    {
-      "title": "Phase 2: SMB Enumeration (Windows Targets)",
-      "notes": "SMB is high-value OSCP target. Run version detection first, then share enumeration, then user enumeration. Check MS17-010 on all SMB hosts (easy win if vulnerable). Use smb_login for credential testing. Estimated time: 3-5 minutes per subnet.",
-      "commands": ["msf-aux-smb-version", "msf-aux-smb-shares", "msf-aux-smb-users", "msf-aux-smb-ms17010", "msf-aux-smb-login"]
-    },
-    {
-      "title": "Phase 3: Credential Testing (Password Spraying)",
-      "notes": "After discovering credentials (web app, config file, default creds), spray across all targets. Use ssh_login, ftp_login, mysql_login modules. Set STOP_ON_SUCCESS=true to avoid lockouts. Check creds command after each scan for successful logins. Estimated time: 2-5 minutes for credential spray.",
-      "commands": ["msf-aux-ssh-login", "msf-aux-ftp-login", "msf-aux-mysql-login", "msf-creds-list"]
-    },
-    {
-      "title": "Phase 4: Web Application Discovery",
-      "notes": "HTTP services require multi-faceted scanning. Run dir_scanner for path discovery, http_version for technology fingerprinting, robots_txt for intel, then vulnerability-specific scans (Shellshock, SQL injection). Results in notes table feed into exploitation phase. Estimated time: 10-20 minutes per web server.",
-      "commands": ["msf-aux-http-dirscanner", "msf-aux-http-version", "msf-aux-http-robots"]
-    },
-    {
-      "title": "Phase 5: Database Review and Exploitation Prep",
-      "notes": "Review all findings: hosts (discovered hosts), services (enumerated services with versions), creds (valid credentials), notes (auxiliary module findings). Use filters: services -p 445 (SMB targets), services -s http (web servers), creds (credential reuse opportunities). Export for reporting: db_export -f xml /root/scan_results.xml. Estimated time: 5 minutes to review and prioritize targets.",
-      "commands": ["msf-hosts-list", "msf-services-list", "msf-creds-list", "msf-db-export"]
-    }
-  ],
-  "tags": ["METASPLOIT", "AUXILIARY", "SCANNING", "ENUMERATION", "SMB", "SSH", "HTTP", "DATABASE", "OSCP:HIGH"]
+  ]
 }

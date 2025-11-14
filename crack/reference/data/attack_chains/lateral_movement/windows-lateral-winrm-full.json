@@ -1,7 +1,7 @@
 {
   "id": "windows-lateral-winrm-full",
   "name": "WinRM Lateral Movement - Full Attack Chain",
-  "description": "Complete WinRM/PowerShell remoting attack: verify WinRM enabled, authenticate with Evil-WinRM, obtain interactive PowerShell shell",
+  "description": "Complete WinRM/PowerShell remoting attack: verify WinRM enabled, authenticate with Evil-WinRM, obtain interactive PowerShell shell.\n\nThis chain demonstrates the preferred method for Windows lateral movement from Kali.",
   "version": "1.0.0",
   "metadata": {
     "author": "CRACK Development Team",
@@ -40,7 +40,7 @@
       "id": "verify-winrm-port",
       "name": "Verify WinRM Port Open",
       "objective": "Check if WinRM ports (5985 HTTP or 5986 HTTPS) are accessible",
-      "description": "Quick nmap scan to verify WinRM service availability. Port 5985 is HTTP (default), 5986 is HTTPS. Most Windows Server environments have 5985 open by default.",
+      "description": "Quick nmap scan to verify WinRM service availability.\n\nPort 5985 is HTTP (default), 5986 is HTTPS.\nMost Windows Server environments have 5985 open by default.",
       "command_ref": "lateral-movement-port-check",
       "dependencies": [],
       "evidence": [
@@ -66,7 +66,7 @@
       "id": "test-winrm-auth",
       "name": "Test WinRM Authentication",
       "objective": "Verify credentials work with WinRM before attempting full shell",
-      "description": "Use CrackMapExec winrm module to test authentication. This is faster than attempting full Evil-WinRM connection and provides clear success/failure indication.",
+      "description": "Use CrackMapExec winrm module to test authentication.\n\nThis is faster than attempting full Evil-WinRM connection and provides clear success/failure indication.",
       "command_ref": "cme-winrm",
       "dependencies": [
         "verify-winrm-port"
@@ -94,7 +94,7 @@
       "id": "connect-evil-winrm",
       "name": "Connect with Evil-WinRM",
       "objective": "Establish interactive PowerShell remoting session using Evil-WinRM",
-      "description": "Launch Evil-WinRM with credentials (password or hash). Connection provides full interactive PowerShell with tab completion, command history, and file transfer capabilities.",
+      "description": "Launch Evil-WinRM with credentials (password or hash).\n\nConnection provides full interactive PowerShell with tab completion, command history, and file transfer capabilities.",
       "command_ref": "evil-winrm-creds",
       "dependencies": [
         "test-winrm-auth"
@@ -122,7 +122,7 @@
       "id": "verify-access",
       "name": "Verify Shell Access and Context",
       "objective": "Confirm shell functionality and identify user context",
-      "description": "Run basic commands to verify: whoami (user context), hostname (correct target), Get-ComputerInfo (system details), net user <username> /domain (group memberships).",
+      "description": "Run basic commands to verify:\n- whoami (user context)\n- hostname (correct target)\n- Get-ComputerInfo (system details)\n- net user <username> /domain (group memberships)",
       "command_ref": "verify-root-access-ad",
       "dependencies": [
         "connect-evil-winrm"
@@ -151,7 +151,7 @@
       "id": "upload-tools",
       "name": "Upload Enumeration Tools",
       "objective": "Transfer enumeration tools (PowerUp, Sherlock, winPEAS) to target using Evil-WinRM",
-      "description": "Use Evil-WinRM's built-in upload command to transfer PowerShell enumeration scripts. Syntax: upload /path/to/local/file C:\\path\\to\\remote\\file",
+      "description": "Use Evil-WinRM's built-in upload command to transfer PowerShell enumeration scripts.\n\nSyntax: upload /path/to/local/file C:\\path\\to\\remote\\file",
       "command_ref": "evil-winrm-shell",
       "dependencies": [
         "verify-access"
@@ -179,7 +179,7 @@
       "id": "enumerate-target",
       "name": "Enumerate for Privilege Escalation",
       "objective": "Run enumeration scripts to identify privilege escalation paths",
-      "description": "Execute PowerUp.ps1 (Invoke-AllChecks), Sherlock.ps1, or winPEAS to identify misconfigurations, unquoted service paths, weak permissions, credentials in registry, etc.",
+      "description": "Execute PowerUp.ps1 (Invoke-AllChecks), Sherlock.ps1, or winPEAS to identify misconfigurations.\n\nTargets include:\n- Unquoted service paths\n- Weak permissions\n- Credentials in registry\n- Service misconfigurations",
       "command_ref": "check-sudo-privs",
       "dependencies": [
         "upload-tools"
@@ -207,7 +207,7 @@
       "id": "download-loot",
       "name": "Download Sensitive Files",
       "objective": "Exfiltrate credentials, configuration files, and sensitive data using Evil-WinRM",
-      "description": "Use Evil-WinRM's download command to retrieve files: download C:\\path\\to\\remote\\file /local/path. Common targets: SAM/SYSTEM hives, NTDS.dit, web.config, database configs.",
+      "description": "Use Evil-WinRM's download command to retrieve files.\n\nSyntax: download C:\\path\\to\\remote\\file /local/path\n\nCommon targets:\n- SAM/SYSTEM hives\n- NTDS.dit\n- web.config\n- Database configs",
       "command_ref": "evil-winrm-shell",
       "dependencies": [
         "enumerate-target"

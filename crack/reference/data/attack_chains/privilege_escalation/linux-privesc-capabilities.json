@@ -1,7 +1,7 @@
 {
   "id": "linux-privesc-capabilities-enum",
   "name": "Linux Capabilities Privilege Escalation",
-  "description": "Enumerate and exploit Linux file capabilities to escalate privileges. Capabilities are a modern alternative to SUID binaries that grant specific elevated permissions. Dangerous capabilities like cap_setuid, cap_dac_override, and cap_dac_read_search enable privilege escalation through various exploitation techniques.",
+  "description": "Enumerate and exploit Linux file capabilities to escalate privileges.\n\nCapabilities are a modern alternative to SUID binaries that grant specific elevated permissions.\n\nDangerous capabilities like cap_setuid, cap_dac_override, and cap_dac_read_search enable privilege escalation through various exploitation techniques.",
   "version": "1.0.0",
   "metadata": {
     "author": "CRACK Reference",
@@ -41,7 +41,7 @@
       "id": "enumerate-capabilities",
       "name": "Enumerate File Capabilities",
       "objective": "Find all binaries with capabilities set on the system",
-      "description": "Use getcap to recursively search the filesystem for binaries with Linux capabilities. Capabilities grant specific elevated permissions without requiring full SUID root. This step identifies potential privilege escalation vectors by locating binaries with dangerous capabilities.",
+      "description": "Use getcap to recursively search the filesystem for binaries with Linux capabilities.\n\nCapabilities grant specific elevated permissions without requiring full SUID root.\n\nThis step identifies potential privilege escalation vectors by locating binaries with dangerous capabilities.",
       "command_ref": "enumerate-capabilities",
       "evidence": [
         "List of binaries with capabilities and their associated capability sets",
@@ -69,7 +69,7 @@
       "id": "identify-exploitable",
       "name": "Identify Exploitable Capabilities",
       "objective": "Filter enumerated capabilities to identify those that enable privilege escalation",
-      "description": "Analyze discovered capabilities to identify dangerous ones that enable privilege escalation. Focus on cap_setuid (spawn root shell), cap_dac_override (edit any file), cap_dac_read_search (read sensitive files), cap_sys_admin (mount filesystems), and cap_sys_ptrace (inject code into processes). Cross-reference binaries against GTFOBins database for documented exploitation techniques.",
+      "description": "Analyze discovered capabilities to identify dangerous ones that enable privilege escalation.\n\nFocus on:\n- cap_setuid (spawn root shell)\n- cap_dac_override (edit any file)\n- cap_dac_read_search (read sensitive files)\n- cap_sys_admin (mount filesystems)\n- cap_sys_ptrace (inject code into processes)\n\nCross-reference binaries against GTFOBins database for documented exploitation techniques.",
       "command_ref": "filter-exploitable-caps",
       "evidence": [
         "List of exploitable capabilities with severity classifications",
@@ -98,7 +98,7 @@
       "id": "research-technique",
       "name": "Research Exploitation Technique",
       "objective": "Find documented exploitation technique for identified capability and binary combination",
-      "description": "Consult GTFOBins capabilities section and HackTricks for specific exploitation techniques. Each capability/binary combination requires different approach. For example, Python with cap_setuid uses os.setuid(0), vim with cap_dac_override edits /etc/passwd, tar with cap_dac_read_search reads sensitive files. Document exact command syntax and expected behavior.",
+      "description": "Consult GTFOBins capabilities section and HackTricks for specific exploitation techniques.\n\nEach capability/binary combination requires different approach.\n\nExamples:\n- Python with cap_setuid uses os.setuid(0)\n- vim with cap_dac_override edits /etc/passwd\n- tar with cap_dac_read_search reads sensitive files\n\nDocument exact command syntax and expected behavior.",
       "command_ref": "gtfobins-cap-lookup",
       "evidence": [
         "GTFOBins or HackTricks exploitation technique documented",
@@ -128,7 +128,7 @@
       "id": "exploit-capability",
       "name": "Execute Capability Exploitation",
       "objective": "Use identified capability to perform privileged operations and escalate privileges",
-      "description": "Execute documented exploitation technique using the capability-enabled binary. For cap_setuid: spawn root shell via setuid(0) syscall. For cap_dac_override: edit sensitive files like /etc/passwd to add UID 0 user. For cap_dac_read_search: read shadow file or SSH keys. For cap_sys_ptrace: inject shellcode into root process. Verify privileged operation succeeds.",
+      "description": "Execute documented exploitation technique using the capability-enabled binary.\n\nExploitation methods by capability:\n- cap_setuid: spawn root shell via setuid(0) syscall\n- cap_dac_override: edit sensitive files like /etc/passwd to add UID 0 user\n- cap_dac_read_search: read shadow file or SSH keys\n- cap_sys_ptrace: inject shellcode into root process\n\nVerify privileged operation succeeds.",
       "command_ref": "execute-cap-exploit",
       "evidence": [
         "Privileged operation completed successfully",
@@ -160,7 +160,7 @@
       "id": "verify-access",
       "name": "Verify Elevated Access",
       "objective": "Confirm successful privilege escalation to root-level access",
-      "description": "Verify escalated privileges by testing root-level operations. Check effective UID with whoami and id commands. Attempt to read /etc/shadow to confirm read access to sensitive files. Try accessing /root directory or reading root SSH keys. If root shell obtained, verify with shell prompt and environment variables. Document exact level of access achieved.",
+      "description": "Verify escalated privileges by testing root-level operations.\n\nVerification steps:\n- Check effective UID with whoami and id commands\n- Attempt to read /etc/shadow to confirm read access to sensitive files\n- Try accessing /root directory or reading root SSH keys\n- If root shell obtained, verify with shell prompt and environment variables\n\nDocument exact level of access achieved.",
       "command_ref": "verify-cap-access",
       "evidence": [
         "whoami output showing root or elevated user",
