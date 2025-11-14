@@ -372,6 +372,7 @@ function App() {
                         chainId={selectedChainId}
                         onCommandClick={handleChainCommandClick}
                         onStepClick={handleStepClick}
+                        onCommandDoubleClick={handleChainCommandClick}
                       />
                     </>
                   ) : (

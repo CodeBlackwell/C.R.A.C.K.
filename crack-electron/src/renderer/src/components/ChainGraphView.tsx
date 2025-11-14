@@ -11,6 +11,7 @@ interface ChainGraphViewProps {
   chainId: string;
   onCommandClick?: (commandId: string) => void;
   onStepClick?: (stepId: string) => void;
+  onCommandDoubleClick?: (commandId: string) => void;
 }
 
 interface TooltipData {
@@ -22,7 +23,7 @@ interface TooltipData {
   y: number;
 }
 
-export default function ChainGraphView({ chainId, onCommandClick, onStepClick }: ChainGraphViewProps) {
+export default function ChainGraphView({ chainId, onCommandClick, onStepClick, onCommandDoubleClick }: ChainGraphViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const cyRef = useRef<Core | null>(null);
   const [loading, setLoading] = useState(false);
@@ -58,9 +59,9 @@ export default function ChainGraphView({ chainId, onCommandClick, onStepClick }:
             'label': (ele: any) => {
               const command = ele.data('command');
               const stepNum = ele.data('label'); // "Step X"
-              if (command && command.name) {
+              if (command && command.properties && command.properties.name) {
                 // Show command name + step number
-                return `${command.name}\n[${stepNum}]`;
+                return `${command.properties.name}\n[${stepNum}]`;
               }
               // No command - show step number only
               return stepNum;
@@ -158,6 +159,34 @@ export default function ChainGraphView({ chainId, onCommandClick, onStepClick }:
       console.log('[ChainGraphView] ========== NODE TAP EVENT END ==========');
     });
 
+    // Add double-click handler for nodes to open command reference directly
+    cyRef.current.on('dbltap', 'node', (evt: EventObject) => {
+      console.log('[ChainGraphView] ========== NODE DOUBLE-TAP EVENT START ==========');
+      const node = evt.target;
+      const command = node.data('command');
+      const commandId = command?.properties?.id;
+      console.log('[ChainGraphView] Node double-clicked:', {
+        commandId,
+        hasCommand: !!command,
+        commandStructure: command ? Object.keys(command) : [],
+        onCommandDoubleClickDefined: !!onCommandDoubleClick,
+      });
+
+      // Call command double-click handler if command exists
+      if (command && commandId && onCommandDoubleClick) {
+        console.log('[ChainGraphView] Calling onCommandDoubleClick with commandId:', commandId);
+        onCommandDoubleClick(commandId);
+        console.log('[ChainGraphView] onCommandDoubleClick returned');
+      } else if (!command) {
+        console.warn('[ChainGraphView] Node has no associated command - cannot open command reference');
+      } else if (!commandId) {
+        console.warn('[ChainGraphView] Command exists but ID not found. Command structure:', command);
+      } else if (!onCommandDoubleClick) {
+        console.warn('[ChainGraphView] onCommandDoubleClick is not defined!');
+      }
+      console.log('[ChainGraphView] ========== NODE DOUBLE-TAP EVENT END ==========');
+    });
+
     // Add tooltip on hover
     cyRef.current.on('mouseover', 'node', (evt: EventObject) => {
       const node = evt.target;
@@ -167,7 +196,7 @@ export default function ChainGraphView({ chainId, onCommandClick, onStepClick }:
         name: node.data('name') || 'Unnamed Step',
         objective: node.data('objective'),
         description: node.data('description') || '',
-        commandName: node.data('command')?.name,
+        commandName: node.data('command')?.properties?.name,
         x: renderedPosition.x,
         y: renderedPosition.y,
       };
@@ -184,7 +213,7 @@ export default function ChainGraphView({ chainId, onCommandClick, onStepClick }:
       console.log('[ChainGraphView] Destroying Cytoscape instance');
       cyRef.current?.destroy();
     };
-  }, [onCommandClick, onStepClick]);
+  }, [onCommandClick, onStepClick, onCommandDoubleClick]);
 
   // Load chain graph data
   useEffect(() => {
