@@ -115,7 +115,21 @@ export default function WriteupControlsPanel({ writeupId }: WriteupControlsPanel
     return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
   };
 
-  const oscpScore = getOSCPRelevanceScore(writeup.oscp_relevance);
+  // Extract values with proper fallbacks for nested structure
+  const difficulty = writeup.metadata?.difficulty || 'unknown';
+  const oscpScoreValue = writeup.oscp_relevance?.score || 'low';
+  const examApplicable = writeup.oscp_relevance?.exam_applicable || false;
+  const platform = writeup.source?.platform || 'unknown';
+  const os = writeup.metadata?.os || 'unknown';
+  const machineType = writeup.source?.type || 'unknown';
+  const totalDurationMinutes = writeup.time_breakdown?.total_minutes || 0;
+  const ipAddress = writeup.metadata?.ip_address || '';
+  const author = writeup.metadata?.writeup_author || writeup.metadata?.machine_author || '';
+  const rating = writeup.metadata?.rating;
+  const releaseDate = writeup.source?.release_date || '';
+  const retirementDate = writeup.source?.retire_date || '';
+
+  const oscpScore = getOSCPRelevanceScore(oscpScoreValue);
 
   return (
     <Paper
@@ -139,15 +153,15 @@ export default function WriteupControlsPanel({ writeupId }: WriteupControlsPanel
             </Text>
             <Progress
               value={oscpScore}
-              color={getOSCPRelevanceColor(writeup.oscp_relevance)}
+              color={getOSCPRelevanceColor(oscpScoreValue)}
               size="lg"
               mb="xs"
             />
             <Group justify="space-between">
               <Text size="xs" c="dimmed">
-                {writeup.oscp_relevance.toUpperCase()}
+                {oscpScoreValue.toUpperCase()}
               </Text>
-              {writeup.exam_applicable && (
+              {examApplicable && (
                 <Badge size="xs" variant="filled" color="cyan">
                   Exam Applicable
                 </Badge>
@@ -168,29 +182,29 @@ export default function WriteupControlsPanel({ writeupId }: WriteupControlsPanel
                 <Badge
                   size="xs"
                   variant="light"
-                  color={getDifficultyColor(writeup.difficulty)}
+                  color={getDifficultyColor(difficulty)}
                 >
-                  {writeup.difficulty}
+                  {difficulty}
                 </Badge>
               </Group>
               <Group justify="space-between">
                 <Text size="xs" c="dimmed">Platform</Text>
                 <Badge size="xs" variant="dot" color="gray">
-                  {writeup.platform}
+                  {platform}
                 </Badge>
               </Group>
               <Group justify="space-between">
                 <Text size="xs" c="dimmed">OS</Text>
-                <Text size="xs">{writeup.os}</Text>
+                <Text size="xs">{os}</Text>
               </Group>
               <Group justify="space-between">
                 <Text size="xs" c="dimmed">Type</Text>
-                <Text size="xs">{writeup.machine_type}</Text>
+                <Text size="xs">{machineType}</Text>
               </Group>
-              {writeup.total_duration_minutes && (
+              {totalDurationMinutes > 0 && (
                 <Group justify="space-between">
                   <Text size="xs" c="dimmed">Duration</Text>
-                  <Text size="xs">{formatDuration(writeup.total_duration_minutes)}</Text>
+                  <Text size="xs">{formatDuration(totalDurationMinutes)}</Text>
                 </Group>
               )}
             </Stack>
@@ -204,29 +218,29 @@ export default function WriteupControlsPanel({ writeupId }: WriteupControlsPanel
               Machine Details
             </Text>
             <Stack gap="xs">
-              {writeup.ip_address && (
+              {ipAddress && (
                 <Group justify="space-between">
                   <Text size="xs" c="dimmed">IP Address</Text>
-                  <Text size="xs" ff="monospace">{writeup.ip_address}</Text>
+                  <Text size="xs" ff="monospace">{ipAddress}</Text>
                 </Group>
               )}
-              {writeup.author && (
+              {author && (
                 <Group justify="space-between">
                   <Text size="xs" c="dimmed">Author</Text>
-                  <Text size="xs">{writeup.author}</Text>
+                  <Text size="xs">{author}</Text>
                 </Group>
               )}
-              {writeup.rating !== undefined && (
+              {rating !== undefined && (
                 <Group justify="space-between">
                   <Text size="xs" c="dimmed">Rating</Text>
-                  <Text size="xs">{writeup.rating}/5</Text>
+                  <Text size="xs">{rating}/5</Text>
                 </Group>
               )}
             </Stack>
           </Box>
 
           {/* Timeline (if dates available) */}
-          {(writeup.release_date || writeup.retirement_date) && (
+          {(releaseDate || retirementDate) && (
             <>
               <Divider color="#373A40" />
               <Box>
@@ -234,18 +248,263 @@ export default function WriteupControlsPanel({ writeupId }: WriteupControlsPanel
                   Timeline
                 </Text>
                 <Stack gap="xs">
-                  {writeup.release_date && (
+                  {releaseDate && (
                     <Group justify="space-between">
                       <Text size="xs" c="dimmed">Released</Text>
-                      <Text size="xs">{writeup.release_date}</Text>
+                      <Text size="xs">{releaseDate}</Text>
                     </Group>
                   )}
-                  {writeup.retirement_date && (
+                  {retirementDate && (
                     <Group justify="space-between">
                       <Text size="xs" c="dimmed">Retired</Text>
-                      <Text size="xs">{writeup.retirement_date}</Text>
+                      <Text size="xs">{retirementDate}</Text>
                     </Group>
                   )}
+                </Stack>
+              </Box>
+            </>
+          )}
+
+          {/* Time Breakdown (Phase 6) */}
+          {writeup.time_breakdown && (
+            <>
+              <Divider color="#373A40" />
+              <Box>
+                <Text size="xs" fw={600} mb="xs" c="dimmed">
+                  Time Breakdown
+                </Text>
+                <Stack gap="xs">
+                  {writeup.time_breakdown.enumeration !== undefined && (
+                    <Group justify="space-between">
+                      <Text size="xs" c="dimmed">Enumeration</Text>
+                      <Text size="xs">{writeup.time_breakdown.enumeration}m</Text>
+                    </Group>
+                  )}
+                  {writeup.time_breakdown.foothold !== undefined && (
+                    <Group justify="space-between">
+                      <Text size="xs" c="dimmed">Foothold</Text>
+                      <Text size="xs">{writeup.time_breakdown.foothold}m</Text>
+                    </Group>
+                  )}
+                  {writeup.time_breakdown.foothold_sqli !== undefined && (
+                    <Group justify="space-between">
+                      <Text size="xs" c="dimmed">Foothold (SQLi)</Text>
+                      <Text size="xs">{writeup.time_breakdown.foothold_sqli}m</Text>
+                    </Group>
+                  )}
+                  {writeup.time_breakdown.foothold_file_upload !== undefined && (
+                    <Group justify="space-between">
+                      <Text size="xs" c="dimmed">Foothold (File Upload)</Text>
+                      <Text size="xs">{writeup.time_breakdown.foothold_file_upload}m</Text>
+                    </Group>
+                  )}
+                  {writeup.time_breakdown.lateral_movement !== undefined && (
+                    <Group justify="space-between">
+                      <Text size="xs" c="dimmed">Lateral Movement</Text>
+                      <Text size="xs">{writeup.time_breakdown.lateral_movement}m</Text>
+                    </Group>
+                  )}
+                  {writeup.time_breakdown.privilege_escalation !== undefined && (
+                    <Group justify="space-between">
+                      <Text size="xs" c="dimmed">Privilege Escalation</Text>
+                      <Text size="xs">{writeup.time_breakdown.privilege_escalation}m</Text>
+                    </Group>
+                  )}
+                  {writeup.time_breakdown.privilege_escalation_analysis !== undefined && (
+                    <Group justify="space-between">
+                      <Text size="xs" c="dimmed">PrivEsc (Analysis)</Text>
+                      <Text size="xs">{writeup.time_breakdown.privilege_escalation_analysis}m</Text>
+                    </Group>
+                  )}
+                  {writeup.time_breakdown.privilege_escalation_exploitation !== undefined && (
+                    <Group justify="space-between">
+                      <Text size="xs" c="dimmed">PrivEsc (Exploitation)</Text>
+                      <Text size="xs">{writeup.time_breakdown.privilege_escalation_exploitation}m</Text>
+                    </Group>
+                  )}
+                  <Divider color="#373A40" size="xs" />
+                  <Group justify="space-between">
+                    <Text size="xs" fw={600}>Total</Text>
+                    <Text size="xs" fw={600}>
+                      {writeup.time_breakdown.total_minutes}m ({(writeup.time_breakdown.total_hours || 0).toFixed(2)}h)
+                    </Text>
+                  </Group>
+                  {writeup.time_breakdown.oscp_time_estimate && (
+                    <Group justify="space-between">
+                      <Text size="xs" c="cyan">OSCP Estimate</Text>
+                      <Text size="xs" c="cyan">{writeup.time_breakdown.oscp_time_estimate}</Text>
+                    </Group>
+                  )}
+                </Stack>
+              </Box>
+            </>
+          )}
+
+          {/* Enhanced Stats (Phase 7) */}
+          {writeup.attack_phases && Array.isArray(writeup.attack_phases) && writeup.attack_phases.length > 0 && (
+            <>
+              <Divider color="#373A40" />
+              <Box>
+                <Text size="xs" fw={600} mb="xs" c="dimmed">
+                  Attack Stats
+                </Text>
+                <Stack gap="xs">
+                  <Group justify="space-between">
+                    <Text size="xs" c="dimmed">Attack Phases</Text>
+                    <Badge size="xs" variant="light" color="gray">
+                      {writeup.attack_phases.length}
+                    </Badge>
+                  </Group>
+                  <Group justify="space-between">
+                    <Text size="xs" c="dimmed">Total Commands</Text>
+                    <Badge size="xs" variant="light" color="green">
+                      {Array.isArray(writeup.attack_phases)
+                        ? writeup.attack_phases.reduce(
+                            (sum, phase) => sum + (phase.commands_used?.length || 0),
+                            0
+                          )
+                        : 0}
+                    </Badge>
+                  </Group>
+                  <Group justify="space-between">
+                    <Text size="xs" c="dimmed">Failed Attempts</Text>
+                    <Badge size="xs" variant="light" color="red">
+                      {Array.isArray(writeup.attack_phases)
+                        ? writeup.attack_phases.reduce(
+                            (sum, phase) => sum + (phase.failed_attempts?.length || 0),
+                            0
+                          )
+                        : 0}
+                    </Badge>
+                  </Group>
+                  <Group justify="space-between">
+                    <Text size="xs" c="dimmed">Vulnerabilities</Text>
+                    <Badge size="xs" variant="light" color="orange">
+                      {Array.isArray(writeup.attack_phases)
+                        ? writeup.attack_phases.reduce(
+                            (sum, phase) => sum + (phase.vulnerabilities?.length || 0),
+                            0
+                          )
+                        : 0}
+                    </Badge>
+                  </Group>
+                  <Group justify="space-between">
+                    <Text size="xs" c="dimmed">Credentials Obtained</Text>
+                    <Badge size="xs" variant="light" color="yellow">
+                      {Array.isArray(writeup.attack_phases)
+                        ? writeup.attack_phases.reduce(
+                            (sum, phase) => sum + (phase.credentials_obtained?.length || 0),
+                            0
+                          )
+                        : 0}
+                    </Badge>
+                  </Group>
+                </Stack>
+              </Box>
+            </>
+          )}
+
+          {/* Flags Captured */}
+          {writeup.time_breakdown?.flags_captured && (
+            <>
+              <Divider color="#373A40" />
+              <Box>
+                <Text size="xs" fw={600} mb="xs" c="dimmed">
+                  Flags Captured
+                </Text>
+                <Stack gap="xs">
+                  {writeup.time_breakdown.flags_captured.user && (
+                    <Group justify="space-between">
+                      <Text size="xs" c="dimmed">User Flag</Text>
+                      <Text size="xs" ff="monospace" c="green">
+                        {writeup.time_breakdown.flags_captured.user}
+                      </Text>
+                    </Group>
+                  )}
+                  {writeup.time_breakdown.flags_captured.root && (
+                    <Group justify="space-between">
+                      <Text size="xs" c="dimmed">Root Flag</Text>
+                      <Text size="xs" ff="monospace" c="cyan">
+                        {writeup.time_breakdown.flags_captured.root}
+                      </Text>
+                    </Group>
+                  )}
+                </Stack>
+              </Box>
+            </>
+          )}
+
+          {/* Similar Machines Quick Links */}
+          {writeup.oscp_relevance?.similar_machines && (
+            <>
+              <Divider color="#373A40" />
+              <Box>
+                <Text size="xs" fw={600} mb="xs" c="dimmed">
+                  Similar Machines
+                </Text>
+                <Stack gap="xs">
+                  {writeup.oscp_relevance.similar_machines.proving_grounds &&
+                    writeup.oscp_relevance.similar_machines.proving_grounds.length > 0 && (
+                      <Box>
+                        <Text size="xs" c="dimmed" mb={4}>
+                          Proving Grounds
+                        </Text>
+                        <Group gap={4}>
+                          {writeup.oscp_relevance.similar_machines.proving_grounds
+                            .slice(0, 3)
+                            .map((machine, idx) => (
+                              <Badge key={idx} size="xs" variant="light" color="green">
+                                {machine}
+                              </Badge>
+                            ))}
+                          {writeup.oscp_relevance.similar_machines.proving_grounds.length > 3 && (
+                            <Text size="xs" c="dimmed">
+                              +{writeup.oscp_relevance.similar_machines.proving_grounds.length - 3} more
+                            </Text>
+                          )}
+                        </Group>
+                      </Box>
+                    )}
+                  {writeup.oscp_relevance.similar_machines.hackthebox &&
+                    writeup.oscp_relevance.similar_machines.hackthebox.length > 0 && (
+                      <Box>
+                        <Text size="xs" c="dimmed" mb={4}>
+                          HackTheBox
+                        </Text>
+                        <Group gap={4}>
+                          {writeup.oscp_relevance.similar_machines.hackthebox.slice(0, 3).map((machine, idx) => (
+                            <Badge key={idx} size="xs" variant="light" color="orange">
+                              {machine}
+                            </Badge>
+                          ))}
+                          {writeup.oscp_relevance.similar_machines.hackthebox.length > 3 && (
+                            <Text size="xs" c="dimmed">
+                              +{writeup.oscp_relevance.similar_machines.hackthebox.length - 3} more
+                            </Text>
+                          )}
+                        </Group>
+                      </Box>
+                    )}
+                  {writeup.oscp_relevance.similar_machines.oscp_labs &&
+                    writeup.oscp_relevance.similar_machines.oscp_labs.length > 0 && (
+                      <Box>
+                        <Text size="xs" c="dimmed" mb={4}>
+                          OSCP Labs
+                        </Text>
+                        <Group gap={4}>
+                          {writeup.oscp_relevance.similar_machines.oscp_labs.slice(0, 3).map((machine, idx) => (
+                            <Badge key={idx} size="xs" variant="light" color="cyan">
+                              {machine}
+                            </Badge>
+                          ))}
+                          {writeup.oscp_relevance.similar_machines.oscp_labs.length > 3 && (
+                            <Text size="xs" c="dimmed">
+                              +{writeup.oscp_relevance.similar_machines.oscp_labs.length - 3} more
+                            </Text>
+                          )}
+                        </Group>
+                      </Box>
+                    )}
                 </Stack>
               </Box>
             </>

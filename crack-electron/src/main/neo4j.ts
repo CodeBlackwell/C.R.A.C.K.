@@ -953,22 +953,147 @@ ipcMain.handle('get-writeup', async (_event, writeupId: string) => {
   try {
     const query = `
       MATCH (w:Writeup {id: $writeupId})
-      RETURN w.id as id, w.name as name, w.platform as platform,
-             w.difficulty as difficulty, w.oscp_relevance as oscp_relevance,
-             w.exam_applicable as exam_applicable, w.synopsis as synopsis,
-             w.oscp_reasoning as oscp_reasoning,
-             w.total_duration_minutes as total_duration_minutes,
-             w.machine_type as machine_type, w.os as os,
-             w.ip_address as ip_address, w.release_date as release_date,
-             w.retirement_date as retirement_date, w.author as author,
-             w.rating as rating, w.user_owns as user_owns,
-             w.root_owns as root_owns, w.tags as tags
+      RETURN w
     `;
 
     const results = await runQuery(query, { writeupId });
     if (results.length > 0) {
-      logIPC('IPC: get-writeup completed', { writeupId });
-      return results[0];
+      const writeup = results[0].w;
+
+      // Helper function to safely parse JSON fields
+      const parseJsonField = (field: any): any => {
+        if (!field) return null;
+        if (typeof field === 'string') {
+          try {
+            return JSON.parse(field);
+          } catch (error) {
+            logError(`Failed to parse JSON field: ${field.substring(0, 100)}...`, error);
+            return field;
+          }
+        }
+        return field;
+      };
+
+      // Build the complete writeup object with parsed nested structures
+      const fullWriteup = {
+        id: writeup.id,
+        name: writeup.name,
+
+        // Parse nested objects
+        source: parseJsonField(writeup.source) || {
+          platform: writeup.platform,
+          type: writeup.machine_type,
+          release_date: writeup.release_date,
+          retire_date: writeup.retirement_date,
+        },
+
+        metadata: parseJsonField(writeup.metadata) || {
+          difficulty: writeup.difficulty,
+          os: writeup.os,
+          ip_address: writeup.ip_address,
+          machine_author: writeup.author,
+          rating: writeup.rating,
+          user_owns: writeup.user_owns,
+          system_owns: writeup.root_owns,
+        },
+
+        oscp_relevance: parseJsonField(writeup.oscp_relevance_full) || {
+          score: writeup.oscp_relevance,
+          reasoning: writeup.oscp_reasoning,
+          exam_applicable: writeup.exam_applicable,
+        },
+
+        synopsis: writeup.synopsis,
+        skills: parseJsonField(writeup.skills) || { required: [], learned: [] },
+        tags: writeup.tags || [],
+
+        // Parse large nested arrays with explicit string handling
+        attack_phases: (() => {
+          const rawValue = writeup.attack_phases;
+          logIPC('[DEBUG] attack_phases raw type:', typeof rawValue);
+
+          // If null/undefined, return empty array
+          if (!rawValue) {
+            logIPC('[DEBUG] attack_phases is null/undefined, returning []');
+            return [];
+          }
+
+          // If already an array, return it directly
+          if (Array.isArray(rawValue)) {
+            logIPC('[DEBUG] attack_phases is already array, length:', rawValue.length);
+            return rawValue;
+          }
+
+          // If it's a string, try to parse it
+          if (typeof rawValue === 'string') {
+            logIPC('[DEBUG] attack_phases is string, attempting parse...');
+            try {
+              const parsed = JSON.parse(rawValue);
+              if (Array.isArray(parsed)) {
+                logIPC('[DEBUG] Successfully parsed to array, length:', parsed.length);
+                return parsed;
+              } else {
+                logError('[DEBUG] Parsed but not array, type:', typeof parsed);
+                return [];
+              }
+            } catch (error) {
+              logError('[DEBUG] Failed to parse attack_phases:', error);
+              return [];
+            }
+          }
+
+          // Try parseJsonField as a fallback
+          const parsed = parseJsonField(rawValue);
+          if (Array.isArray(parsed)) {
+            logIPC('[DEBUG] parseJsonField returned array, length:', parsed.length);
+            return parsed;
+          }
+
+          // Unknown type, return empty array
+          logError('[DEBUG] attack_phases is unexpected type, returning []:', typeof rawValue);
+          return [];
+        })(),
+        key_learnings: (() => {
+          const parsed = parseJsonField(writeup.key_learnings);
+          if (Array.isArray(parsed)) return parsed;
+          if (typeof parsed === 'string') {
+            try {
+              const reparsed = JSON.parse(parsed);
+              return Array.isArray(reparsed) ? reparsed : [];
+            } catch {
+              return [];
+            }
+          }
+          return [];
+        })(),
+        alternative_approaches: parseJsonField(writeup.alternative_approaches) || {},
+        time_breakdown: parseJsonField(writeup.time_breakdown) || {
+          total_minutes: writeup.total_duration_minutes,
+          total_hours: writeup.total_duration_minutes ? writeup.total_duration_minutes / 60 : 0,
+        },
+        references: (() => {
+          const parsed = parseJsonField(writeup.references);
+          if (Array.isArray(parsed)) return parsed;
+          if (typeof parsed === 'string') {
+            try {
+              const reparsed = JSON.parse(parsed);
+              return Array.isArray(reparsed) ? reparsed : [];
+            } catch {
+              return [];
+            }
+          }
+          return [];
+        })(),
+        files: parseJsonField(writeup.files) || {},
+      };
+
+      logIPC('IPC: get-writeup completed', {
+        writeupId,
+        hasAttackPhases: Array.isArray(fullWriteup.attack_phases) && fullWriteup.attack_phases.length > 0,
+        hasKeyLearnings: Array.isArray(fullWriteup.key_learnings) && fullWriteup.key_learnings.length > 0,
+        attackPhasesType: typeof fullWriteup.attack_phases,
+      });
+      return fullWriteup;
     }
 
     logIPC('IPC: get-writeup - no writeup found', { writeupId });
