@@ -35,6 +35,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getCommandChains: (commandId: string) =>
     ipcRenderer.invoke('get-command-chains', commandId),
 
+  searchWriteups: (query: string, filters?: any) =>
+    ipcRenderer.invoke('search-writeups', query, filters),
+
+  getWriteup: (writeupId: string) =>
+    ipcRenderer.invoke('get-writeup', writeupId),
+
   // Console bridge - send renderer logs to terminal
   logToTerminal: (level: string, message: string) =>
     ipcRenderer.send('log-to-terminal', level, message),
@@ -62,6 +68,14 @@ export interface ElectronAPI {
   getChain: (chainId: string) => Promise<any>;
   getChainGraph: (chainId: string) => Promise<any>;
   getCommandChains: (commandId: string) => Promise<any>;
+  searchWriteups: (query: string, filters?: {
+    platform?: string;
+    difficulty?: string;
+    oscp_relevance?: string;
+    os?: string;
+    exam_applicable?: boolean;
+  }) => Promise<any[]>;
+  getWriteup: (writeupId: string) => Promise<any>;
   logToTerminal: (level: string, message: string) => void;
 }
 

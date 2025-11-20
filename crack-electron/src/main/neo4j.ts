@@ -867,6 +867,127 @@ ipcMain.handle('get-command-chains', async (_event, commandId: string) => {
 });
 logIPC('Registered IPC handler: get-command-chains');
 
+// IPC Handler: Search writeups
+ipcMain.handle('search-writeups', async (_event, searchQuery: string, filters?: {
+  platform?: string;
+  difficulty?: string;
+  oscp_relevance?: string;
+  os?: string;
+  exam_applicable?: boolean;
+}) => {
+  logIPC('IPC: search-writeups called', {
+    query: searchQuery || '(empty)',
+    filters,
+  });
+
+  try {
+    let query = `
+      MATCH (w:Writeup)
+    `;
+
+    const params: Record<string, any> = {};
+    const conditions: string[] = [];
+
+    if (searchQuery && searchQuery.trim()) {
+      conditions.push(`(
+        toLower(w.name) CONTAINS toLower($searchQuery)
+        OR toLower(w.synopsis) CONTAINS toLower($searchQuery)
+        OR toLower(w.oscp_reasoning) CONTAINS toLower($searchQuery)
+      )`);
+      params.searchQuery = searchQuery.trim();
+    }
+
+    if (filters?.platform) {
+      conditions.push('w.platform = $platform');
+      params.platform = filters.platform;
+    }
+
+    if (filters?.difficulty) {
+      conditions.push('w.difficulty = $difficulty');
+      params.difficulty = filters.difficulty;
+    }
+
+    if (filters?.oscp_relevance) {
+      conditions.push('w.oscp_relevance = $oscp_relevance');
+      params.oscp_relevance = filters.oscp_relevance;
+    }
+
+    if (filters?.os) {
+      conditions.push('w.os = $os');
+      params.os = filters.os;
+    }
+
+    if (filters?.exam_applicable !== undefined) {
+      conditions.push('w.exam_applicable = $exam_applicable');
+      params.exam_applicable = filters.exam_applicable;
+    }
+
+    if (conditions.length > 0) {
+      query += ' WHERE ' + conditions.join(' AND ');
+    }
+
+    query += `
+      RETURN w.id as id, w.name as name, w.platform as platform,
+             w.difficulty as difficulty, w.oscp_relevance as oscp_relevance,
+             w.machine_type as machine_type, w.os as os,
+             w.total_duration_minutes as total_duration_minutes
+      ORDER BY
+        CASE w.oscp_relevance
+          WHEN 'high' THEN 1
+          WHEN 'medium' THEN 2
+          WHEN 'low' THEN 3
+          ELSE 4
+        END,
+        w.name
+      LIMIT 100
+    `;
+
+    const results = await runQuery(query, params);
+    logIPC('IPC: search-writeups completed', { resultCount: results.length });
+    return results;
+  } catch (error) {
+    logError('IPC: search-writeups failed', error);
+    console.error('Search writeups error:', error);
+    return [];
+  }
+});
+logIPC('Registered IPC handler: search-writeups');
+
+// IPC Handler: Get writeup details
+ipcMain.handle('get-writeup', async (_event, writeupId: string) => {
+  logIPC('IPC: get-writeup called', { writeupId });
+
+  try {
+    const query = `
+      MATCH (w:Writeup {id: $writeupId})
+      RETURN w.id as id, w.name as name, w.platform as platform,
+             w.difficulty as difficulty, w.oscp_relevance as oscp_relevance,
+             w.exam_applicable as exam_applicable, w.synopsis as synopsis,
+             w.oscp_reasoning as oscp_reasoning,
+             w.total_duration_minutes as total_duration_minutes,
+             w.machine_type as machine_type, w.os as os,
+             w.ip_address as ip_address, w.release_date as release_date,
+             w.retirement_date as retirement_date, w.author as author,
+             w.rating as rating, w.user_owns as user_owns,
+             w.root_owns as root_owns, w.tags as tags
+    `;
+
+    const results = await runQuery(query, { writeupId });
+    if (results.length > 0) {
+      logIPC('IPC: get-writeup completed', { writeupId });
+      return results[0];
+    }
+
+    logIPC('IPC: get-writeup - no writeup found', { writeupId });
+    return null;
+  } catch (error) {
+    logError('IPC: get-writeup failed', error);
+    console.error('Get writeup error:', error);
+    return null;
+  }
+});
+logIPC('Registered IPC handler: get-writeup');
+
 // IPC Handler: Console bridge (renderer logs to terminal)
 ipcMain.on('log-to-terminal', (_event, level: string, message: string) => {
   const prefix = `[RENDERER:${level.toUpperCase()}]`;

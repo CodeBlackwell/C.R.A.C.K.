@@ -10,6 +10,9 @@ import ChainDetails from './components/ChainDetails';
 import ChainGraphView from './components/ChainGraphView';
 import ChainStepDetails from './components/ChainStepDetails';
 import ChainControlsPanel from './components/ChainControlsPanel';
+import WriteupView from './components/WriteupView';
+import WriteupDetails from './components/WriteupDetails';
+import WriteupControlsPanel from './components/WriteupControlsPanel';
 import GraphView from './components/GraphView';
 import CommandDetails from './components/CommandDetails';
 import CommandChainGraph from './components/CommandChainGraph';
@@ -24,12 +27,13 @@ function App() {
   const [selectedCheatsheet, setSelectedCheatsheet] = useState<Cheatsheet | null>(null);
   const [selectedChainId, setSelectedChainId] = useState<string | null>(null);
   const [selectedStepId, setSelectedStepId] = useState<string | null>(null);
+  const [selectedWriteupId, setSelectedWriteupId] = useState<string | null>(null);
   const [chainCommandView, setChainCommandView] = useState<string | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<{
     connected: boolean;
     uri?: string;
   }>({ connected: false });
-  const [activeView, setActiveView] = useState<'commands' | 'cheatsheets' | 'chains'>('chains');
+  const [activeView, setActiveView] = useState<'commands' | 'cheatsheets' | 'chains' | 'writeups'>('chains');
   const [expandedCommandId, setExpandedCommandId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('details');
   const [chainViewMode, setChainViewMode] = useState<ChainViewMode>('graph');
@@ -97,6 +101,14 @@ function App() {
     setSelectedCommand(null); // Clear command when selecting chain
     setSelectedCheatsheet(null); // Clear cheatsheet when selecting chain
     setChainCommandView(null); // Clear chain command view when selecting new chain
+  };
+
+  const handleWriteupSelect = (writeupId: string) => {
+    console.log('[App] Writeup selected:', writeupId);
+    setSelectedWriteupId(writeupId);
+    setSelectedCommand(null); // Clear command when selecting writeup
+    setSelectedCheatsheet(null); // Clear cheatsheet when selecting writeup
+    setSelectedChainId(null); // Clear chain when selecting writeup
   };
 
   const handleChainCommandClick = useCallback((commandId: string) => {
@@ -206,26 +218,57 @@ function App() {
           <div style={{ display: 'flex', height: 'calc(100vh - 80px)', gap: '16px' }}>
             {/* Left Panel: Navigation */}
             <div style={{ width: '350px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {/* Navigation Header */}
-              <SegmentedControl
-                value={activeView}
-                onChange={(value) => setActiveView(value as 'commands' | 'cheatsheets' | 'chains')}
-                data={[
-                  { label: 'Cheatsheets', value: 'cheatsheets' },
-                  { label: 'Chains', value: 'chains' },
-                  { label: 'Commands', value: 'commands' },
-                ]}
-                fullWidth
-                styles={{
-                  root: {
-                    background: '#25262b',
-                    border: '1px solid #373A40',
-                  },
-                  label: {
-                    padding: '8px 16px',
-                  },
+              {/* Navigation Header - 2 Row Layout */}
+              <Paper
+                p="xs"
+                style={{
+                  background: '#25262b',
+                  border: '1px solid #373A40',
                 }}
-              />
+              >
+                <Stack gap="xs">
+                  {/* Row 1: Cheatsheets, Chains, Commands */}
+                  <Group gap="xs" grow>
+                    <Button
+                      size="sm"
+                      variant={activeView === 'cheatsheets' ? 'filled' : 'subtle'}
+                      color={activeView === 'cheatsheets' ? 'cyan' : 'gray'}
+                      onClick={() => setActiveView('cheatsheets')}
+                      style={{ flex: 1 }}
+                    >
+                      Cheatsheets
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant={activeView === 'chains' ? 'filled' : 'subtle'}
+                      color={activeView === 'chains' ? 'cyan' : 'gray'}
+                      onClick={() => setActiveView('chains')}
+                      style={{ flex: 1 }}
+                    >
+                      Chains
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant={activeView === 'commands' ? 'filled' : 'subtle'}
+                      color={activeView === 'commands' ? 'cyan' : 'gray'}
+                      onClick={() => setActiveView('commands')}
+                      style={{ flex: 1 }}
+                    >
+                      Commands
+                    </Button>
+                  </Group>
+                  {/* Row 2: Writeups (full width) */}
+                  <Button
+                    size="sm"
+                    variant={activeView === 'writeups' ? 'filled' : 'subtle'}
+                    color={activeView === 'writeups' ? 'cyan' : 'gray'}
+                    onClick={() => setActiveView('writeups')}
+                    fullWidth
+                  >
+                    Writeups
+                  </Button>
+                </Stack>
+              </Paper>
 
               {/* Conditional View Rendering */}
               <div style={{ flex: 1, overflow: 'hidden' }}>
@@ -238,11 +281,14 @@ function App() {
                 {activeView === 'chains' && (
                   <ChainView onSelectChain={handleChainSelect} />
                 )}
+                {activeView === 'writeups' && (
+                  <WriteupView onSelectWriteup={handleWriteupSelect} />
+                )}
               </div>
             </div>
 
             {/* Center Panel: Graph or Chain Graph based on view mode */}
-            {!selectedCheatsheet && !selectedChainId && (
+            {!selectedCheatsheet && !selectedChainId && !selectedWriteupId && (
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {selectedCommand ? (
                   <>
@@ -388,6 +434,13 @@ function App() {
               ) : null;
             })()}
 
+            {/* Center Panel when writeup selected: Writeup Details */}
+            {selectedWriteupId && (
+              <div style={{ flex: 1, height: '100%' }}>
+                <WriteupDetails writeupId={selectedWriteupId} />
+              </div>
+            )}
+
             {/* Right Panel: Command Details or Graph View based on view mode */}
             <div style={{ width: '450px', height: '100%' }}>
               {selectedCommand ? (
@@ -529,6 +582,8 @@ function App() {
                     setChainCommandView(null);
                   }}
                 />
+              ) : selectedWriteupId ? (
+                <WriteupControlsPanel writeupId={selectedWriteupId} />
               ) : (
                 <Paper
                   shadow="sm"
@@ -544,7 +599,7 @@ function App() {
                 >
                   <Center>
                     <Text c="dimmed" size="sm" style={{ textAlign: 'center' }}>
-                      Select a command, chain, or cheatsheet to view details
+                      Select a command, chain, cheatsheet, or writeup to view details
                     </Text>
                   </Center>
                 </Paper>
