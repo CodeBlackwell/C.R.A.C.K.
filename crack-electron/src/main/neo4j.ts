@@ -931,14 +931,7 @@ ipcMain.handle('search-writeups', async (_event, searchQuery: string, filters?: 
              w.difficulty as difficulty, w.oscp_relevance as oscp_relevance,
              w.machine_type as machine_type, w.os as os,
              w.total_duration_minutes as total_duration_minutes
-      ORDER BY
-        CASE w.oscp_relevance
-          WHEN 'high' THEN 1
-          WHEN 'medium' THEN 2
-          WHEN 'low' THEN 3
-          ELSE 4
-        END,
-        w.name
+      ORDER BY w.name
       LIMIT 100
     `;
 
