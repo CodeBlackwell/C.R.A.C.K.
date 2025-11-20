@@ -1,0 +1,364 @@
+{
+  "category": "web",
+  "subcategory": "sql-injection",
+  "description": "Advanced SQLMap commands for request file analysis and database enumeration",
+  "commands": [
+    {
+      "id": "sqlmap-from-request",
+      "name": "SQLMap from Request File",
+      "category": "web",
+      "subcategory": "sql-injection",
+      "command": "sqlmap -r <REQUEST_FILE> -p <PARAMETER> --batch",
+      "description": "Run SQLMap using saved HTTP request file from Burp Suite (preserves headers, cookies, POST data)",
+      "tags": [
+        "AUTOMATION",
+        "BURP",
+        "DATABASE",
+        "EXPLOITATION",
+        "INJECTION",
+        "OSCP:HIGH",
+        "SQLI",
+        "SQLMAP",
+        "SQL_INJECTION",
+        "WEB"
+      ],
+      "variables": [
+        {
+          "name": "<REQUEST_FILE>",
+          "description": "Path to saved HTTP request file from Burp (Copy to file → Save)",
+          "example": "reset.req",
+          "required": true
+        },
+        {
+          "name": "<PARAMETER>",
+          "description": "Parameter to test for SQL injection",
+          "example": "email",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "-r": "Read request from file - preserves exact HTTP request including headers, cookies, POST data, Content-Type",
+        "-p": "Specify parameter to test - focuses sqlmap on single parameter instead of testing all",
+        "--batch": "Never ask for user input, use default behavior - essential for automation and consistency"
+      },
+      "success_indicators": [
+        "sqlmap identified the following injection point(s)",
+        "Parameter: <PARAMETER> (POST)",
+        "Type: boolean-based blind",
+        "Type: time-based blind"
+      ],
+      "failure_indicators": [
+        "unable to connect to the target URL",
+        "all tested parameters do not appear to be injectable",
+        "403 Forbidden (WAF blocking)"
+      ],
+      "next_steps": [
+        "sqlmap-from-request-level3",
+        "sqlmap-enumerate-databases"
+      ],
+      "alternatives": [
+        "sqli-manual-test"
+      ],
+      "prerequisites": [
+        "sqli-manual-test"
+      ],
+      "troubleshooting": {
+        "file_not_found": "Check request file path. Format: POST /reset HTTP/1.1\\nHost: target.com\\nContent-Type: application/x-www-form-urlencoded\\n\\nemail=test@test.com",
+        "invalid_request_format": "Request file must be RAW HTTP request with headers. Copy from Burp: Right-click → Copy to file",
+        "default_level_insufficient": "If no injection found, use sqlmap-from-request-level3 (--level 3) for more thorough testing"
+      },
+      "notes": "CRITICAL OSCP technique: Using request files preserves ALL HTTP context.\n\nWhy use -r instead of -u:\n(1) Preserves custom headers\n(2) Maintains session cookies\n(3) Preserves exact POST data format\n(4) Captures Content-Type\n\nCreating request file from Burp:\n1. Intercept request in Burp Proxy\n2. Right-click → Copy to file\n3. Save as .req file (e.g., reset.req)\n4. Run sqlmap -r reset.req\n\nOSCP TIP: ALWAYS test manually first with single quote. Document findings before using sqlmap.\n\nTime estimate: 5-10 minutes",
+      "oscp_relevance": "high"
+    },
+    {
+      "id": "sqlmap-from-request-level3",
+      "name": "SQLMap from Request with Level 3",
+      "category": "web",
+      "subcategory": "sql-injection",
+      "command": "sqlmap -r <REQUEST_FILE> -p <PARAMETER> --batch --level 3",
+      "description": "Run SQLMap with increased test depth (level 3) for detecting complex/blind SQL injection that default level misses",
+      "tags": [
+        "AUTOMATION",
+        "BURP",
+        "DATABASE",
+        "EXPLOITATION",
+        "INJECTION",
+        "OSCP:HIGH",
+        "SQLI",
+        "SQLMAP",
+        "SQL_INJECTION",
+        "THOROUGH",
+        "WEB"
+      ],
+      "variables": [
+        {
+          "name": "<REQUEST_FILE>",
+          "description": "Path to saved HTTP request file from Burp",
+          "example": "reset.req",
+          "required": true
+        },
+        {
+          "name": "<PARAMETER>",
+          "description": "Parameter to test for SQL injection",
+          "example": "email",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "-r": "Read request from file",
+        "-p": "Specify parameter to test",
+        "--batch": "Never ask for user input",
+        "--level 3": "CRITICAL - Increases test thoroughness. Tests HTTP headers (User-Agent, Referer, Cookie), more payload variations. Required for detecting subtle blind SQLi"
+      },
+      "success_indicators": [
+        "sqlmap identified the following injection point(s)",
+        "Type: boolean-based blind",
+        "it looks like the back-end DBMS is"
+      ],
+      "failure_indicators": [
+        "all tested parameters do not appear to be injectable",
+        "WAF/IDS detected and blocking"
+      ],
+      "next_steps": [
+        "sqlmap-enumerate-databases"
+      ],
+      "alternatives": [
+        "sqlmap-from-request"
+      ],
+      "prerequisites": [
+        "sqli-manual-test",
+        "sqlmap-from-request"
+      ],
+      "troubleshooting": {
+        "still_not_detected": "Try --level 5 (max). Add --risk 2 or --risk 3. Verify manual SQLi first",
+        "too_slow": "Level 3 tests more injection points. Add --threads 5",
+        "waf_blocking": "Add --delay=2. Use --random-agent and --tamper=space2comment"
+      },
+      "notes": "CRITICAL OSCP LESSON from HackTheBox Usage machine:\n\nDEFAULT SQLMAP (--level 1) FAILED to detect blind SQLi.\nMANUAL TESTING confirmed vulnerability.\nSOLUTION: --level 3 successfully detected it.\n\nLevel 1 (default): ~100 payloads, basic GET/POST\nLevel 3: ~500 payloads, adds headers, more variations\n\nTime estimate:\nLevel 1: 5-10 minutes\nLevel 3: 15-30 minutes\n\nTrust manual verification over tool defaults.\nDocument in failed_attempts.md.",
+      "oscp_relevance": "high"
+    },
+    {
+      "id": "sqlmap-enumerate-databases",
+      "name": "SQLMap Enumerate Databases",
+      "category": "web",
+      "subcategory": "sql-injection",
+      "command": "sqlmap -r <REQUEST_FILE> -p <PARAMETER> --batch --dbs",
+      "description": "Enumerate all database names on target server (first step after confirming SQL injection)",
+      "tags": [
+        "AUTOMATION",
+        "DATABASE",
+        "ENUMERATION",
+        "EXPLOITATION",
+        "INJECTION",
+        "OSCP:HIGH",
+        "SQLI",
+        "SQLMAP",
+        "SQL_INJECTION",
+        "WEB"
+      ],
+      "variables": [
+        {
+          "name": "<REQUEST_FILE>",
+          "description": "Path to saved HTTP request file from Burp",
+          "example": "reset.req",
+          "required": true
+        },
+        {
+          "name": "<PARAMETER>",
+          "description": "Parameter confirmed vulnerable to SQL injection",
+          "example": "email",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "-r": "Read request from file",
+        "-p": "Specify vulnerable parameter",
+        "--batch": "Never ask for user input",
+        "--dbs": "Enumerate database names only - does NOT dump data, just lists database names"
+      },
+      "success_indicators": [
+        "available databases [X]:",
+        "[*] usage_blog",
+        "application database visible"
+      ],
+      "failure_indicators": [
+        "unable to enumerate the databases",
+        "no databases found"
+      ],
+      "next_steps": [
+        "sqlmap-enumerate-tables"
+      ],
+      "alternatives": [
+        "sqli-union-mysql-info"
+      ],
+      "prerequisites": [
+        "sqlmap-from-request-level3"
+      ],
+      "troubleshooting": {
+        "no_databases_enumerated": "Verify SQLi confirmed first. Check --current-db",
+        "only_system_databases": "Use --current-db then enumerate tables directly",
+        "slow_enumeration": "Add --threads 5"
+      },
+      "notes": "Standard sqlmap workflow:\n1. Confirm SQLi\n2. Enumerate databases (THIS COMMAND)\n3. Enumerate tables\n4. Dump data\n\nIgnore system databases (information_schema, mysql, postgres, master).\nFocus on application databases.\n\nTime estimate: 1-5 minutes",
+      "oscp_relevance": "high"
+    },
+    {
+      "id": "sqlmap-enumerate-tables",
+      "name": "SQLMap Enumerate Tables",
+      "category": "web",
+      "subcategory": "sql-injection",
+      "command": "sqlmap -r <REQUEST_FILE> -p <PARAMETER> --batch -D <DATABASE> --tables",
+      "description": "Enumerate all table names in specified database (step 2 after database enumeration)",
+      "tags": [
+        "AUTOMATION",
+        "DATABASE",
+        "ENUMERATION",
+        "EXPLOITATION",
+        "INJECTION",
+        "OSCP:HIGH",
+        "SQLI",
+        "SQLMAP",
+        "SQL_INJECTION",
+        "WEB"
+      ],
+      "variables": [
+        {
+          "name": "<REQUEST_FILE>",
+          "description": "Path to saved HTTP request file from Burp",
+          "example": "reset.req",
+          "required": true
+        },
+        {
+          "name": "<PARAMETER>",
+          "description": "Parameter confirmed vulnerable to SQL injection",
+          "example": "email",
+          "required": true
+        },
+        {
+          "name": "<DATABASE>",
+          "description": "Database name from previous --dbs enumeration",
+          "example": "usage_blog",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "-r": "Read request from file",
+        "-p": "Specify vulnerable parameter",
+        "--batch": "Never ask for user input",
+        "-D": "Specify database name - must match exact name from --dbs output",
+        "--tables": "Enumerate table names only - does NOT dump data"
+      },
+      "success_indicators": [
+        "Database: <DATABASE>",
+        "[X] tables:",
+        "[*] admin",
+        "[*] users"
+      ],
+      "failure_indicators": [
+        "database '<DATABASE>' does not exist",
+        "no tables found"
+      ],
+      "next_steps": [
+        "sqlmap-dump-table"
+      ],
+      "alternatives": [
+        "sqli-union-mysql-info"
+      ],
+      "prerequisites": [
+        "sqlmap-enumerate-databases"
+      ],
+      "troubleshooting": {
+        "database_not_found": "Verify exact database name (case-sensitive)",
+        "slow_enumeration": "Add --threads 5. Or guess table names and dump directly",
+        "too_many_tables": "Target specific tables: -T users,admin --dump"
+      },
+      "notes": "High-value table names (OSCP targets):\n- users, admin, accounts\n- credentials, passwords, config\n\nPrioritization:\n1. Dump authentication tables first\n2. Then credentials/config\n3. Application data if needed\n\nOSCP tip: Don't enumerate ALL tables. Target high-value first.\n\nTime estimate: 1-3 minutes (UNION), 10-20 minutes (blind)",
+      "oscp_relevance": "high"
+    },
+    {
+      "id": "sqlmap-dump-table",
+      "name": "SQLMap Dump Table Data",
+      "category": "web",
+      "subcategory": "sql-injection",
+      "command": "sqlmap -r <REQUEST_FILE> -p <PARAMETER> --batch -D <DATABASE> -T <TABLE> --dump",
+      "description": "Dump complete contents of specified table including all columns and rows (final step to extract credentials/data)",
+      "tags": [
+        "AUTOMATION",
+        "CREDENTIAL_ACCESS",
+        "DATABASE",
+        "EXPLOITATION",
+        "EXTRACTION",
+        "INJECTION",
+        "OSCP:HIGH",
+        "SQLI",
+        "SQLMAP",
+        "SQL_INJECTION",
+        "WEB"
+      ],
+      "variables": [
+        {
+          "name": "<REQUEST_FILE>",
+          "description": "Path to saved HTTP request file from Burp",
+          "example": "reset.req",
+          "required": true
+        },
+        {
+          "name": "<PARAMETER>",
+          "description": "Parameter confirmed vulnerable to SQL injection",
+          "example": "email",
+          "required": true
+        },
+        {
+          "name": "<DATABASE>",
+          "description": "Database name from --dbs enumeration",
+          "example": "usage_blog",
+          "required": true
+        },
+        {
+          "name": "<TABLE>",
+          "description": "Table name from --tables enumeration",
+          "example": "admin_users",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "-r": "Read request from file",
+        "-p": "Specify vulnerable parameter",
+        "--batch": "Never ask for user input - auto-cracks password hashes, auto-saves to CSV",
+        "-D": "Specify database name",
+        "-T": "Specify table name to dump",
+        "--dump": "Dump ALL columns and rows - extracts complete data, saves to CSV, auto-detects hashes"
+      },
+      "success_indicators": [
+        "Database: <DATABASE>",
+        "Table: <TABLE>",
+        "[X] entries",
+        "| username | password | email |",
+        "dumped to CSV file"
+      ],
+      "failure_indicators": [
+        "table '<TABLE>' does not exist",
+        "no data in table",
+        "connection timeout"
+      ],
+      "next_steps": [
+        "john-crack-bcrypt",
+        "ssh-connect-password"
+      ],
+      "alternatives": [
+        "sqli-union-mysql-info"
+      ],
+      "prerequisites": [
+        "sqlmap-enumerate-databases",
+        "sqlmap-enumerate-tables"
+      ],
+      "troubleshooting": {
+        "table_not_found": "Verify exact table name (case-sensitive)",
+        "too_much_data": "Limit rows: --start=1 --stop=100. Or filter: --where='username LIKE \"%admin%\"'",
+        "slow_extraction": "Add --threads 5. Dump specific columns: -C username,password"
+      },
+      "notes": "Final step in SQL injection exploitation.\n\nOutput location: ~/.local/share/sqlmap/output/<TARGET>/dump/<DATABASE>/<TABLE>.csv\n\nPost-dump actions:\n1. Check for plaintext passwords\n2. Crack hashes with john/hashcat\n3. Test credentials on SSH, admin panels, other services\n4. Check for password reuse\n\nTime estimate:\nUNION: 30 sec - 2 min (100 rows)\nBoolean blind: 10-30 min\n\nDocument in breakthrough.md.",
+      "oscp_relevance": "high"
+    }
+  ]
+}

