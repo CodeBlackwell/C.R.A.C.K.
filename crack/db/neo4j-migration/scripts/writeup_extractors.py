@@ -32,8 +32,10 @@ class WriteupNodesExtractor:
         - id, name, platform, machine_type, difficulty, os, os_version
         - ip_address, oscp_relevance, exam_applicable, synopsis
         - total_duration_minutes, release_date, retire_date
-        - writeup_author, writeup_date, tags
+        - writeup_author, writeup_date, tags, attack_phases
         """
+        import json
+
         nodes = []
 
         for writeup in writeups:
@@ -41,6 +43,10 @@ class WriteupNodesExtractor:
             metadata = writeup.get('metadata', {})
             oscp = writeup.get('oscp_relevance', {})
             time_breakdown = writeup.get('time_breakdown', {})
+
+            # Serialize attack_phases as JSON string for Neo4j storage
+            attack_phases = writeup.get('attack_phases', [])
+            attack_phases_json = json.dumps(attack_phases) if attack_phases else '[]'
 
             node = {
                 'id': writeup.get('id', ''),
@@ -62,7 +68,8 @@ class WriteupNodesExtractor:
                 'writeup_date': metadata.get('writeup_date', ''),
                 'tags': '|'.join(writeup.get('tags', [])),  # Pipe-separated for Neo4j
                 'machine_author': metadata.get('machine_author', ''),
-                'points': metadata.get('points', 0)
+                'points': metadata.get('points', 0),
+                'attack_phases': attack_phases_json  # JSON string for Neo4j
             }
 
             nodes.append(node)

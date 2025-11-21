@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- Attack Phases tab now displays writeup attack phases correctly
+- Fixed migration scripts to properly serialize and store attack_phases as JSON in Neo4j
+- Resolved JSON parsing errors caused by missing attack_phases field in database
+
 ### Added
 - New ChainStepDetails component for displaying individual attack chain step information
 - Step-level navigation in chain graph view with clickable nodes

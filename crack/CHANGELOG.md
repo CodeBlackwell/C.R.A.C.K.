@@ -2,6 +2,25 @@
 
 ## [Unreleased]
 
+### Fixed - Writeup Attack Phases Migration (2025-11-21)
+
+#### Issue
+Writeup attack_phases field was not being stored in Neo4j during migration, causing the Attack Phases tab in the Electron app to display "No attack phases documented" despite the data existing in source JSON files.
+
+#### Files Modified
+- `db/neo4j-migration/scripts/writeup_extractors.py`: Added attack_phases serialization to WriteupNodesExtractor
+- `db/scripts/migrate_writeups.py`: Updated _import_writeup_nodes() to store attack_phases field in Neo4j
+
+#### Solution
+- WriteupNodesExtractor now serializes attack_phases array as JSON string using json.dumps()
+- Migration script stores attack_phases as clean JSON string in Neo4j (no embedded control characters)
+- Electron app's existing parsing logic successfully parses the clean JSON
+
+#### Result
+- ✅ Attack Phases tab displays all phases correctly (enumeration, foothold, lateral_movement, privilege_escalation)
+- ✅ Future writeup migrations will include attack_phases automatically
+- ✅ No more JSON parsing errors or control character corruption
+
 ### Added - Airgeddon Helper for WiFi Security Auditing (2025-10-14)
 
 #### WiFi Security Auditing Tool (OSWP/PEN-210)

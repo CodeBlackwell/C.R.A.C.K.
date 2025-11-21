@@ -291,6 +291,7 @@ class WriteupMigration:
         with open(filepath, 'r', encoding='utf-8') as f:
             reader = csv.DictReader(f)
             for row in reader:
+                # Store attack_phases as JSON string (already serialized in CSV)
                 session.run("""
                     MERGE (w:Writeup {id: $id})
                     SET w.name = $name,
@@ -298,7 +299,20 @@ class WriteupMigration:
                         w.difficulty = $difficulty,
                         w.os = $os,
                         w.oscp_relevance = $oscp_relevance,
-                        w.total_duration_minutes = toInteger($total_duration_minutes)
+                        w.total_duration_minutes = toInteger($total_duration_minutes),
+                        w.attack_phases = $attack_phases,
+                        w.synopsis = $synopsis,
+                        w.tags = $tags,
+                        w.os_version = $os_version,
+                        w.ip_address = $ip_address,
+                        w.oscp_reasoning = $oscp_reasoning,
+                        w.exam_applicable = ($exam_applicable = 'true'),
+                        w.release_date = $release_date,
+                        w.retire_date = $retire_date,
+                        w.writeup_author = $writeup_author,
+                        w.writeup_date = $writeup_date,
+                        w.machine_author = $machine_author,
+                        w.points = toInteger($points)
                 """, **row)
 
     def _import_cve_nodes(self, session):
