@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { Paper, Text, Loader, Center, Group, Badge } from '@mantine/core';
-import cytoscape, { Core } from 'cytoscape';
+import { Paper, Text, Loader, Center, Group, Badge, Box, Stack } from '@mantine/core';
+import cytoscape, { Core, EventObject } from 'cytoscape';
 // @ts-ignore
 import coseBilkent from 'cytoscape-cose-bilkent';
 
@@ -12,6 +12,17 @@ interface GraphViewProps {
   onNodeClick: (commandId: string) => void;
 }
 
+interface NodeTooltipData {
+  name: string;
+  category: string;
+  subcategory?: string;
+  description: string;
+  command: string;
+  tags: string[];
+  x: number;
+  y: number;
+}
+
 export default function GraphView({ selectedCommandId, onNodeClick }: GraphViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const cyRef = useRef<Core | null>(null);
@@ -19,6 +30,7 @@ export default function GraphView({ selectedCommandId, onNodeClick }: GraphViewP
   const [nodeCount, setNodeCount] = useState(0);
   const [edgeCount, setEdgeCount] = useState(0);
   const [hasData, setHasData] = useState(false);
+  const [tooltip, setTooltip] = useState<NodeTooltipData | null>(null);
 
   // Debug: Log mount and props
   useEffect(() => {
@@ -134,6 +146,27 @@ export default function GraphView({ selectedCommandId, onNodeClick }: GraphViewP
       const nodeId = event.target.data('id');
       console.log('[GraphView] Node clicked:', nodeId);
       onNodeClick(nodeId);
+    });
+
+    // Tooltip handlers
+    cyRef.current.on('mouseover', 'node', (event: EventObject) => {
+      const node = event.target;
+      const pos = node.renderedPosition();
+
+      setTooltip({
+        name: node.data('name') || node.data('label') || 'Unknown',
+        category: node.data('category') || 'Uncategorized',
+        subcategory: node.data('subcategory'),
+        description: node.data('description') || 'No description available',
+        command: node.data('command') || '',
+        tags: node.data('tags') || [],
+        x: pos.x,
+        y: pos.y,
+      });
+    });
+
+    cyRef.current.on('mouseout', 'node', () => {
+      setTooltip(null);
     });
 
     console.log('[GraphView] Cytoscape initialized successfully');
@@ -272,6 +305,84 @@ export default function GraphView({ selectedCommandId, onNodeClick }: GraphViewP
             height: '100%',
           }}
         />
+
+        {/* Tooltip */}
+        {tooltip && (
+          <Box
+            style={{
+              position: 'absolute',
+              left: tooltip.x + 20,
+              top: tooltip.y - 20,
+              background: '#1a1b1e',
+              border: '1px solid #373A40',
+              borderRadius: '8px',
+              padding: '12px',
+              maxWidth: '350px',
+              zIndex: 1000,
+              pointerEvents: 'none',
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.5)',
+            }}
+          >
+            <Stack gap="xs">
+              {/* Command Name */}
+              <Text size="sm" fw={700} c="cyan">
+                {tooltip.name}
+              </Text>
+
+              {/* Category/Subcategory */}
+              <Group gap="xs">
+                <Badge variant="light" color="blue" size="xs">
+                  {tooltip.category}
+                </Badge>
+                {tooltip.subcategory && (
+                  <Badge variant="light" color="grape" size="xs">
+                    {tooltip.subcategory}
+                  </Badge>
+                )}
+              </Group>
+
+              {/* Description */}
+              {tooltip.description && (
+                <Text size="xs" c="dimmed" lineClamp={3}>
+                  {tooltip.description}
+                </Text>
+              )}
+
+              {/* Command Syntax */}
+              {tooltip.command && tooltip.command.length < 80 && (
+                <Text
+                  size="xs"
+                  c="gray.4"
+                  style={{
+                    fontFamily: 'monospace',
+                    background: '#25262b',
+                    padding: '4px 8px',
+                    borderRadius: '4px',
+                    overflowX: 'auto',
+                  }}
+                >
+                  {tooltip.command}
+                </Text>
+              )}
+
+              {/* Tags */}
+              {tooltip.tags && tooltip.tags.length > 0 && (
+                <Group gap="xs">
+                  {tooltip.tags.slice(0, 4).map((tag, index) => (
+                    <Badge key={index} variant="dot" color="gray" size="xs">
+                      {tag}
+                    </Badge>
+                  ))}
+                  {tooltip.tags.length > 4 && (
+                    <Text size="xs" c="dimmed">
+                      +{tooltip.tags.length - 4} more
+                    </Text>
+                  )}
+                </Group>
+              )}
+            </Stack>
+          </Box>
+        )}
 
         {!selectedCommandId && !loading && (
           <Center style={{ position: 'absolute', inset: 0 }}>
