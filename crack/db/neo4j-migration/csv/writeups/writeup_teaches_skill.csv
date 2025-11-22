@@ -1,0 +1,7 @@
+writeup_id,skill_name,proficiency_level,practice_value
+htb-usage,SQL Injection (manual detection and automated exploitation),intermediate,high
+htb-usage,File upload filter bypass techniques,intermediate,high
+htb-usage,Binary analysis with strings command,intermediate,high
+htb-usage,7zip symlink abuse via listfile exploitation,intermediate,high
+htb-usage,Credential hunting in configuration files,intermediate,high
+htb-usage,Password reuse identification,intermediate,high

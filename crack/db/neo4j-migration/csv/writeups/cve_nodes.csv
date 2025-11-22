@@ -1,0 +1,2 @@
+cve_id,name,description,severity,component,version,exploitability,type
+CVE-2023-24249,Arbitrary File Upload in Laravel-admin,Well-documented CVE with public PoCs available. Manual exploitation preferred for OSCP learning.,critical,encore/laravel-admin,1.8.18,medium,filter bypass

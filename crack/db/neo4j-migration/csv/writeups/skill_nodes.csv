@@ -1,0 +1,11 @@
+name,category,oscp_importance
+Web application fundamentals,web_exploitation,medium
+Linux fundamentals,general,medium
+Command line proficiency,general,medium
+Basic scripting knowledge,general,medium
+SQL Injection (manual detection and automated exploitation),web_exploitation,medium
+File upload filter bypass techniques,web_exploitation,medium
+Binary analysis with strings command,binary_analysis,medium
+7zip symlink abuse via listfile exploitation,general,medium
+Credential hunting in configuration files,general,medium
+Password reuse identification,general,medium
