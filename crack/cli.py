@@ -105,6 +105,13 @@ def scan_analyze_command(args):
     sys.argv = ['scan_analyzer'] + args
     scan_analyzer.main()
 
+def dns_enum_command(args):
+    """Execute the recursive DNS enumeration tool"""
+    from crack.network import dns_enum
+    # Pass arguments to the original main function
+    sys.argv = ['dns_enum'] + args
+    dns_enum.main()
+
 def reference_command(args):
     """Execute the reference system"""
     from crack.reference.cli import main as ref_main
@@ -770,6 +777,12 @@ def main():
                                                 help='Scan Analyzer - Parse nmap output',
                                                 add_help=False)
     scan_analyze_parser.set_defaults(func=scan_analyze_command)
+
+    # DNS Enumeration subcommand
+    dns_enum_parser = subparsers.add_parser('dns-enum',
+                                            help='Recursive DNS Enumeration',
+                                            add_help=False)
+    dns_enum_parser.set_defaults(func=dns_enum_command)
 
     # HTML Enumeration subcommand
     html_parser = subparsers.add_parser('html-enum',
