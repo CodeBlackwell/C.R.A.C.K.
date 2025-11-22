@@ -8,7 +8,6 @@
     "retire_date": "2024-08-10",
     "url": "https://app.hackthebox.com/machines/Usage"
   },
-
   "metadata": {
     "difficulty": "easy",
     "os": "linux",
@@ -22,21 +21,29 @@
     "user_owns": null,
     "system_owns": null
   },
-
   "oscp_relevance": {
     "score": "high",
     "reasoning": "Demonstrates critical OSCP techniques: manual SQL injection discovery, automated sqlmap exploitation, file upload filter bypass, binary analysis with strings, and symlink privilege escalation via misconfigured sudo binary. Password reuse and cleartext credential discovery are also high-value OSCP skills.",
     "exam_applicable": true,
     "similar_machines": {
-      "proving_grounds": ["Monsoon", "Fail", "Flimsy"],
-      "hackthebox": ["Stocker", "CozyHosting", "Keeper"],
-      "oscp_labs": ["SHENZI", "MEDTECH"]
+      "proving_grounds": [
+        "Monsoon",
+        "Fail",
+        "Flimsy"
+      ],
+      "hackthebox": [
+        "Stocker",
+        "CozyHosting",
+        "Keeper"
+      ],
+      "oscp_labs": [
+        "SHENZI",
+        "MEDTECH"
+      ]
     },
     "time_estimate_exam": "120-150 minutes for experienced, 180-240 for learning"
   },
-
   "synopsis": "Usage is an easy Linux machine that features a blog site vulnerable to SQL injection, which allows the administrator's hashed password to be dumped and cracked. This leads to access to the admin panel, where an outdated Laravel module is abused to upload a PHP web shell and obtain remote code execution. On the machine, plaintext credentials stored in a file allow SSH access as another user, who can run a custom binary as root. The tool makes an insecure call to 7zip, which is leveraged to read the root user's private SSH key and fully compromise the system.",
-
   "skills": {
     "required": [
       "Web application fundamentals",
@@ -53,7 +60,6 @@
       "Password reuse identification"
     ]
   },
-
   "tags": [
     "SQL_INJECTION",
     "BLIND_SQLI",
@@ -77,13 +83,11 @@
     "PRIVILEGE_ESCALATION",
     "LATERAL_MOVEMENT"
   ],
-
   "attack_phases": [
     {
       "phase": "enumeration",
       "duration_minutes": 15,
       "description": "Initial port scanning reveals SSH and HTTP services. Web enumeration discovers two virtual hosts (usage.htb and admin.usage.htb). Both present login pages with different functionalities.",
-
       "commands_used": [
         {
           "command_id": "nmap-quick-scan",
@@ -132,7 +136,16 @@
           "context": "Add admin subdomain after discovery",
           "step_number": 5,
           "command_executed": "echo 10.10.11.18  admin.usage.htb | sudo tee -a /etc/hosts",
-          "success": true
+          "success": true,
+          "screenshots": [
+            {
+              "file": "images/page03_img02.png",
+              "caption": "Browsing to the  admin   subdomain reveals yet another login page:",
+              "extracted_from_page": 3,
+              "confidence": "high",
+              "context": "Matches: Browsing to the  admin   subdomain reveals yet another login page:"
+            }
+          ]
         },
         {
           "command_id": "user-registration-test",
@@ -143,9 +156,7 @@
           "notes": "Post-authentication shows limited blog page - not primary attack vector"
         }
       ],
-
       "failed_attempts": [],
-
       "key_findings": [
         "Two virtual hosts: usage.htb (user portal) and admin.usage.htb (admin panel)",
         "OpenSSH 8.9p1 - no known exploits",
@@ -154,15 +165,12 @@
         "Laravel framework detected (from later admin panel inspection)",
         "User registration available for initial access testing"
       ],
-
       "oscp_notes": "Standard OSCP enumeration flow: fast port scan → detailed service scan → virtual host discovery → manual web enumeration. The two-stage nmap pattern is efficient for exam time management. Virtual host enumeration is critical - always check for subdomains when redirects occur."
     },
-
     {
       "phase": "foothold",
       "duration_minutes": 90,
       "description": "SQL injection vulnerability discovered in password reset form allows dumping admin credentials. After cracking bcrypt hash, access admin panel running vulnerable Laravel-admin package (CVE-2023-24249). File upload filter bypassed to achieve PHP webshell upload and RCE as dash user.",
-
       "vulnerabilities": [
         {
           "name": "SQL Injection in Password Reset Form",
@@ -189,7 +197,6 @@
           "notes": "Well-documented CVE with public PoCs available. Manual exploitation preferred for OSCP learning."
         }
       ],
-
       "commands_used": [
         {
           "command_id": "sqli-manual-test",
@@ -198,7 +205,16 @@
           "payload": "test' OR 1=1;-- -",
           "url": "http://usage.htb/forget-password",
           "success": true,
-          "notes": "Application returned 'Password reset link sent' for malicious payload, confirming injection. This differs from invalid email response."
+          "notes": "Application returned 'Password reset link sent' for malicious payload, confirming injection. This differs from invalid email response.",
+          "screenshots": [
+            {
+              "file": "images/page04_img02.png",
+              "caption": "Once registered, we log into the site using our email and password, landing us o...",
+              "extracted_from_page": 4,
+              "confidence": "high",
+              "context": "Matches: Once registered, we log into the site using our email and password, landing us o"
+            }
+          ]
         },
         {
           "command_id": "burpsuite-intercept-request",
@@ -281,7 +297,16 @@
               "cost_factor": 10
             }
           ],
-          "notes": "Bcrypt hash extracted - proceed to offline cracking"
+          "notes": "Bcrypt hash extracted - proceed to offline cracking",
+          "screenshots": [
+            {
+              "file": "images/page10_img01.png",
+              "caption": "entry to the admin panel.",
+              "extracted_from_page": 10,
+              "confidence": "high",
+              "context": "Matches: We navigate back to  admin.usage.htb   and authenticate with the credentials  ad"
+            }
+          ]
         },
         {
           "command_id": "john-crack-bcrypt",
@@ -331,7 +356,16 @@
           "step_number": 12,
           "command_executed": "mv shell.php shell.jpg",
           "success": true,
-          "notes": "Client-side filename check bypassed with image extension"
+          "notes": "Client-side filename check bypassed with image extension",
+          "screenshots": [
+            {
+              "file": "images/page13_img02.png",
+              "caption": "mv  shell.php shell.jpg",
+              "extracted_from_page": 13,
+              "confidence": "high",
+              "context": "Matches: mv  shell.php shell.jpg"
+            }
+          ]
         },
         {
           "command_id": "burpsuite-modify-upload",
@@ -399,7 +433,6 @@
           "success": true
         }
       ],
-
       "failed_attempts": [
         {
           "attempt": "sqlmap with default settings (no --level flag)",
@@ -424,9 +457,7 @@
           "notes": "Standard file upload bypass technique. Always test double extensions (.jpg.php, .png.php) for PHP applications."
         }
       ],
-
       "chains_applied": [],
-
       "key_findings": [
         "SQL injection in password reset form (manual detection crucial)",
         "Admin credentials: admin:whatever1",
@@ -435,15 +466,12 @@
         "Webshell upload path: /uploads/images/",
         "RCE achieved as dash user (uid=1000)"
       ],
-
       "oscp_notes": "This phase demonstrates complete OSCP web exploitation workflow: manual vulnerability discovery → automated tool usage (with proper flags!) → credential extraction → hash cracking → authenticated exploitation → RCE. Key lessons: (1) sqlmap --level 3 for blind SQLi, (2) CVE research for authenticated panels, (3) file upload bypass techniques, (4) webshell stability with PTY spawning. Time management: 90 minutes is realistic for exam (30 min SQLi + 30 min hash crack + 30 min file upload)."
     },
-
     {
       "phase": "lateral_movement",
       "duration_minutes": 20,
       "description": "Enumeration of dash user's home directory reveals .monitrc configuration file containing plaintext password. Password reused for xander user account, enabling SSH access with more stable shell.",
-
       "commands_used": [
         {
           "command_id": "linux-enumerate-home-directory",
@@ -506,33 +534,30 @@
           "notes": "More stable shell than reverse shell - preferred for privilege escalation enumeration"
         }
       ],
-
       "failed_attempts": [],
-
       "credentials_obtained": [
         {
           "username": "xander",
           "password": "3nc0d3d_pa$$w0rd",
           "source": "/home/dash/.monitrc",
-          "services": ["SSH", "system login"]
+          "services": [
+            "SSH",
+            "system login"
+          ]
         }
       ],
-
       "key_findings": [
         "Monit monitoring service running as dash user (port 2812)",
         "Cleartext credentials in .monitrc configuration",
         "Password reuse vulnerability (monit password == xander system password)",
         "Two user accounts on system: dash and xander"
       ],
-
       "oscp_notes": "Classic OSCP lateral movement: config file enumeration → plaintext credential discovery → password reuse testing. ALWAYS check hidden files in home directories (.bash_history, .*, config files). Password reuse is extremely common in OSCP labs. Time estimate: 10-15 minutes for thorough home directory enumeration, 5 minutes for password testing."
     },
-
     {
       "phase": "privilege_escalation",
       "duration_minutes": 45,
       "description": "User xander can run custom /usr/bin/usage_management binary as root via sudo. Static analysis with strings reveals insecure 7zip command with -snl flag. Exploitation involves creating symlink to /root/.ssh/id_rsa and leveraging 7zip's @listfile feature to read arbitrary files despite symlink-as-link storage flag.",
-
       "vulnerabilities": [
         {
           "name": "7zip Symlink Arbitrary File Read via Listfile",
@@ -547,7 +572,6 @@
           "notes": "The -snl flag should prevent following symlinks, but @listfile feature reads symlink targets when used. Allows arbitrary file read as root when combined with sudo binary."
         }
       ],
-
       "commands_used": [
         {
           "command_id": "check-sudo-privs",
@@ -565,7 +589,16 @@
           "command_executed": "file /usr/bin/usage_management",
           "success": true,
           "output": "ELF 64-bit LSB pie executable, x86-64, dynamically linked, not stripped",
-          "notes": "Not stripped = symbols present, easier to analyze. Dynamically linked = uses system libraries."
+          "notes": "Not stripped = symbols present, easier to analyze. Dynamically linked = uses system libraries.",
+          "screenshots": [
+            {
+              "file": "images/page10_img01.png",
+              "caption": "entry to the admin panel.",
+              "extracted_from_page": 10,
+              "confidence": "high",
+              "context": "Matches: We navigate back to  admin.usage.htb   and authenticate with the credentials  ad"
+            }
+          ]
         },
         {
           "command_id": "binary-dynamic-analysis",
@@ -693,9 +726,7 @@
           "success": true
         }
       ],
-
       "failed_attempts": [],
-
       "techniques": [
         {
           "name": "7zip Listfile Symlink Arbitrary File Read",
@@ -719,7 +750,6 @@
           ]
         }
       ],
-
       "key_findings": [
         "Sudo permission: /usr/bin/usage_management (NOPASSWD)",
         "Binary uses 7zip with -snl flag and wildcard in writable directory",
@@ -728,11 +758,9 @@
         "Root SSH private key successfully extracted",
         "Full root access achieved via SSH key authentication"
       ],
-
       "oscp_notes": "Advanced OSCP privilege escalation demonstrating binary analysis workflow: sudo -l → file type check → dynamic analysis (run binary) → static analysis (strings) → vulnerability research → exploitation. Key OSCP skills: (1) Binary analysis without reverse engineering tools, (2) Symlink abuse techniques, (3) Compression tool exploitation, (4) SSH key extraction and usage. Time estimate: 20-30 minutes for analysis, 15-20 minutes for research and exploitation. This is OSCP HARD mode - simpler privesc vectors usually available, but this teaches valuable methodology."
     }
   ],
-
   "key_learnings": [
     {
       "category": "web_exploitation",
@@ -787,7 +815,6 @@
       "importance": "critical"
     }
   ],
-
   "alternative_approaches": {
     "foothold": [
       {
@@ -806,7 +833,6 @@
       }
     ]
   },
-
   "time_breakdown": {
     "enumeration": 15,
     "foothold_sqli": 60,
@@ -822,7 +848,6 @@
     },
     "oscp_time_estimate": "120-180 minutes depending on experience level"
   },
-
   "references": [
     {
       "type": "cve",
@@ -866,7 +891,6 @@
       "url": "https://attack.mitre.org/techniques/T1078/"
     }
   ],
-
   "files": {
     "original_writeup": "/home/kali/Desktop/OSCP/crack/db/data/writeups/hackthebox/Usage/Usage.txt",
     "metadata": "/home/kali/Desktop/OSCP/crack/db/data/writeups/hackthebox/Usage/Usage.json",

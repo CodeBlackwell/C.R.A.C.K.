@@ -1,6 +1,8 @@
 import { ipcMain } from 'electron';
 import neo4j, { Driver, Session } from 'neo4j-driver';
 import { debug, logNeo4j, logIPC, logQuery, logError, logPerformance } from './debug';
+import * as fs from 'fs';
+import * as path from 'path';
 
 debug.section('NEO4J INITIALIZATION');
 
@@ -1005,7 +1007,9 @@ ipcMain.handle('get-writeup', async (_event, writeupId: string) => {
 
         synopsis: writeup.synopsis,
         skills: parseJsonField(writeup.skills) || { required: [], learned: [] },
-        tags: writeup.tags || [],
+        tags: typeof writeup.tags === 'string'
+          ? writeup.tags.split('|').filter(tag => tag.trim())
+          : (writeup.tags || []),
 
         // Parse large nested arrays with explicit string handling
         attack_phases: (() => {
@@ -1024,11 +1028,36 @@ ipcMain.handle('get-writeup', async (_event, writeupId: string) => {
             return rawValue;
           }
 
-          // If it's a string, try to parse it
+          // If it's a string, sanitize and parse properly
           if (typeof rawValue === 'string') {
-            logIPC('[DEBUG] attack_phases is string, attempting parse...');
+            logIPC('[DEBUG] attack_phases is string, sanitizing and parsing...');
+
             try {
-              const parsed = JSON.parse(rawValue);
+              // CRITICAL FIX: Replace only LITERAL control characters, not escape sequences
+              // Use regex to replace literal control chars with their JSON escape sequences
+              const sanitized = rawValue
+                .replace(/\\/g, '\\\\')   // Escape backslashes first (so \n stays as \\n)
+                .replace(/\n/g, '\\n')     // Escape literal newlines
+                .replace(/\r/g, '\\r')     // Escape literal carriage returns
+                .replace(/\t/g, '\\t')     // Escape literal tabs
+                .replace(/"/g, '\\"');     // Escape unescaped quotes
+
+              // Wait, this will double-escape already-escaped sequences. Need different approach:
+              // Just escape the actual control characters (ASCII < 32)
+              const properlyEscaped = rawValue.replace(/[\x00-\x1F]/g, (char) => {
+                switch (char) {
+                  case '\n': return '\\n';
+                  case '\r': return '\\r';
+                  case '\t': return '\\t';
+                  case '\b': return '\\b';
+                  case '\f': return '\\f';
+                  default: return '\\u' + ('0000' + char.charCodeAt(0).toString(16)).slice(-4);
+                }
+              });
+
+              logIPC('[DEBUG] String sanitized, attempting parse...');
+              const parsed = JSON.parse(properlyEscaped);
+
               if (Array.isArray(parsed)) {
                 logIPC('[DEBUG] Successfully parsed to array, length:', parsed.length);
                 return parsed;
@@ -1037,15 +1066,16 @@ ipcMain.handle('get-writeup', async (_event, writeupId: string) => {
                 return [];
               }
             } catch (error) {
-              logError('[DEBUG] Failed to parse attack_phases:', error);
+              logError('[DEBUG] Failed to parse attack_phases after sanitization:', error);
+              logError('[DEBUG] Raw value preview (first 300 chars):', rawValue.substring(0, 300));
               return [];
             }
           }
 
-          // Try parseJsonField as a fallback
+          // If not string, try parseJsonField anyway (handles objects, arrays)
           const parsed = parseJsonField(rawValue);
           if (Array.isArray(parsed)) {
-            logIPC('[DEBUG] parseJsonField returned array, length:', parsed.length);
+            logIPC('[DEBUG] parseJsonField returned array from non-string, length:', parsed.length);
             return parsed;
           }
 
@@ -1105,6 +1135,45 @@ ipcMain.handle('get-writeup', async (_event, writeupId: string) => {
   }
 });
 logIPC('Registered IPC handler: get-writeup');
+
+// IPC Handler: Get all images from writeup images directory
+ipcMain.handle('get-writeup-images', async (_event, imagesPath: string) => {
+  logIPC('IPC: get-writeup-images called', { imagesPath });
+
+  try {
+    // Check if path exists
+    if (!fs.existsSync(imagesPath)) {
+      logError('Images directory does not exist', { imagesPath });
+      return [];
+    }
+
+    // Read directory contents
+    const files = fs.readdirSync(imagesPath);
+
+    // Filter for image files only
+    const imageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp'];
+    const imageFiles = files
+      .filter(file => {
+        const ext = path.extname(file).toLowerCase();
+        return imageExtensions.includes(ext);
+      })
+      .sort() // Sort alphabetically (page01_img01, page01_img02, etc.)
+      .map(filename => ({
+        file: `images/${filename}`,
+        filename: filename,
+        // Extract page number from filename (e.g., page05_img01.png -> 5)
+        extracted_from_page: parseInt(filename.match(/page(\d+)/)?.[1] || '0', 10) || undefined
+      }));
+
+    logIPC('Images loaded from directory', { count: imageFiles.length });
+    return imageFiles;
+
+  } catch (error) {
+    logError('Failed to read images directory', { imagesPath, error });
+    return [];
+  }
+});
+logIPC('Registered IPC handler: get-writeup-images');
 
 // IPC Handler: Console bridge (renderer logs to terminal)
 ipcMain.on('log-to-terminal', (_event, level: string, message: string) => {

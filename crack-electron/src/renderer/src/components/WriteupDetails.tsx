@@ -11,7 +11,10 @@ import {
   Accordion,
   Stack,
   Code,
+  Tooltip,
+  ActionIcon,
 } from '@mantine/core';
+import { IconCopy, IconCheck } from '@tabler/icons-react';
 import {
   Writeup,
   AttackPhase,
@@ -19,6 +22,7 @@ import {
   FailedAttempt,
   Vulnerability,
 } from '../types/writeup';
+import { ImageGallery } from './ImageGallery';
 
 interface WriteupDetailsProps {
   writeupId: string | null;
@@ -27,6 +31,7 @@ interface WriteupDetailsProps {
 export default function WriteupDetails({ writeupId }: WriteupDetailsProps) {
   const [writeup, setWriteup] = useState<Writeup | null>(null);
   const [loading, setLoading] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     console.log('[WriteupDetails] Component mounted');
@@ -124,6 +129,13 @@ export default function WriteupDetails({ writeupId }: WriteupDetailsProps) {
     return mins > 0 ? `${hours}h ${mins}m` : `${hours} hours`;
   };
 
+  const handleCopyPath = (path: string) => {
+    navigator.clipboard.writeText(path).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
   // Extract values with proper fallbacks for nested structure
   const difficulty = writeup.metadata?.difficulty || 'unknown';
   const oscpScore = writeup.oscp_relevance?.score || 'low';
@@ -157,6 +169,44 @@ export default function WriteupDetails({ writeupId }: WriteupDetailsProps) {
         <Text size="xl" fw={700} mb="xs">
           {writeup.name}
         </Text>
+
+        {/* Metadata Path Subheader */}
+        {writeup.files?.metadata && (
+          <Tooltip label={copied ? "Copied!" : "Click to copy path"}>
+            <Box mb="sm">
+              <Group
+                gap={4}
+                style={{
+                  cursor: 'pointer',
+                  padding: '2px 8px',
+                  borderRadius: '4px',
+                  background: '#1a1b1e',
+                  border: '1px solid #373A40',
+                  transition: 'all 0.2s',
+                  display: 'inline-flex',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = '#2C2E33';
+                  e.currentTarget.style.borderColor = '#22c1c3';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = '#1a1b1e';
+                  e.currentTarget.style.borderColor = '#373A40';
+                }}
+                onClick={() => handleCopyPath(writeup.files.metadata)}
+              >
+                <Text size="xs" c="dimmed" style={{ fontFamily: 'monospace' }}>
+                  {writeup.files.metadata}
+                </Text>
+                {copied ? (
+                  <IconCheck size={14} color="#22c1c3" />
+                ) : (
+                  <IconCopy size={14} style={{ opacity: 0.6 }} />
+                )}
+              </Group>
+            </Box>
+          </Tooltip>
+        )}
 
         <Group gap={6} mb="sm">
           <Badge
@@ -450,6 +500,18 @@ export default function WriteupDetails({ writeupId }: WriteupDetailsProps) {
                                               )}
                                             </Box>
                                           ))}
+                                        </Box>
+                                      )}
+
+                                      {/* Screenshots for this command */}
+                                      {cmd.screenshots && cmd.screenshots.length > 0 && writeup?.files?.images && (
+                                        <Box mt="xs">
+                                          <ImageGallery
+                                            images={cmd.screenshots}
+                                            baseImagePath={writeup.files.images.replace(/\/images\/?$/, '')}
+                                            layout="inline"
+                                            showCaptions={true}
+                                          />
                                         </Box>
                                       )}
                                     </Stack>

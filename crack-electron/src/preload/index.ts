@@ -41,6 +41,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getWriteup: (writeupId: string) =>
     ipcRenderer.invoke('get-writeup', writeupId),
 
+  getWriteupImages: (imagesPath: string) =>
+    ipcRenderer.invoke('get-writeup-images', imagesPath),
+
   // Console bridge - send renderer logs to terminal
   logToTerminal: (level: string, message: string) =>
     ipcRenderer.send('log-to-terminal', level, message),
@@ -76,6 +79,7 @@ export interface ElectronAPI {
     exam_applicable?: boolean;
   }) => Promise<any[]>;
   getWriteup: (writeupId: string) => Promise<any>;
+  getWriteupImages: (imagesPath: string) => Promise<any[]>;
   logToTerminal: (level: string, message: string) => void;
 }
 

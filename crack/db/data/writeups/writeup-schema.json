@@ -235,6 +235,39 @@
                 "notes": {
                   "type": "string",
                   "description": "Additional context"
+                },
+                "screenshots": {
+                  "type": "array",
+                  "description": "Screenshots associated with this command execution",
+                  "items": {
+                    "type": "object",
+                    "required": ["file"],
+                    "properties": {
+                      "file": {
+                        "type": "string",
+                        "pattern": "^images/page\\d{2}_img\\d{2}\\.(png|jpg|jpeg)$",
+                        "description": "Relative path to screenshot file (e.g., images/page05_img01.png)"
+                      },
+                      "caption": {
+                        "type": "string",
+                        "description": "Human-readable description of what the screenshot shows"
+                      },
+                      "extracted_from_page": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "description": "PDF page number where image was extracted from"
+                      },
+                      "confidence": {
+                        "type": "string",
+                        "enum": ["high", "medium", "low"],
+                        "description": "Confidence level of automatic image-to-command mapping"
+                      },
+                      "context": {
+                        "type": "string",
+                        "description": "Additional context about why this screenshot is relevant"
+                      }
+                    }
+                  }
                 }
               }
             }
