@@ -35,6 +35,7 @@ function createWindow() {
       preload: path.join(__dirname, '../preload/index.js'),
       contextIsolation: true,
       nodeIntegration: false,
+      webSecurity: false, // Allow file:// URLs for local image loading
     },
     backgroundColor: '#1a1b1e', // Mantine dark theme background
     title: 'CRACK - Command Graph Visualizer',
