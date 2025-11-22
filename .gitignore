@@ -15,3 +15,17 @@ crack/reference/data/attack_chains/**/*.compiled.json
 OSMR
 
 */*.ovpn
+
+# Lab and course materials
+CRACK_targets/
+capstones/
+*_ips.txt
+
+# HTB working directories and temporary files
+crack/htb/outbound/
+*.state
+
+# Hash cracking files (practice/testing)
+*.hash
+*.kerberoast
+*.rule
