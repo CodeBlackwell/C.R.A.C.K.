@@ -529,6 +529,11 @@ class CheatsheetCLI(BaseCLIHandler):
         import re
 
         result_lines = []
+
+        # Handle both string and list inputs (approach can be either)
+        if isinstance(text, list):
+            text = '\n'.join(text)
+
         paragraphs = text.split('\n')
 
         for para in paragraphs:
