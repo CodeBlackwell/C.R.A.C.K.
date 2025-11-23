@@ -1,4 +1,5 @@
 {
+  "id": "ad-silver-ticket-methodology",
   "name": "Silver Ticket Attack Methodology",
   "description": "Complete workflow for forging Kerberos service tickets using service account password hashes. Silver tickets provide service-specific access with lower detection risk than Golden tickets.",
   "category": "active-directory",

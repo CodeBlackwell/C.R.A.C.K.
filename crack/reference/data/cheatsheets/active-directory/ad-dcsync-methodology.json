@@ -1,4 +1,5 @@
 {
+  "id": "ad-dcsync-methodology",
   "name": "DCSync Attack Methodology",
   "description": "Complete workflow for dumping domain credentials via DRSUAPI replication by impersonating a domain controller. DCSync is the primary post-exploitation technique after obtaining Domain Admin rights.",
   "category": "active-directory",
