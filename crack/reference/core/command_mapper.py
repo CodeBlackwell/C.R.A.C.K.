@@ -249,6 +249,37 @@ class CommandMapper:
             # Get command field name
             command_field = field_mapping.get('command', 'command')
 
+            # Import nested dataclass types
+            from crack.reference.core.registry import (
+                FlagDefinition,
+                ExampleDefinition,
+                EducationalContent
+            )
+
+            # Handle nested dataclasses - flags
+            flags_list = []
+            if 'flags' in cmd_node and cmd_node['flags']:
+                flags_list = [
+                    FlagDefinition(**flag) if isinstance(flag, dict) else flag
+                    for flag in cmd_node['flags']
+                ]
+
+            # Handle nested dataclasses - examples
+            examples_list = []
+            if 'examples' in cmd_node and cmd_node['examples']:
+                examples_list = [
+                    ExampleDefinition(**ex) if isinstance(ex, dict) else ex
+                    for ex in cmd_node['examples']
+                ]
+
+            # Handle nested dataclasses - educational
+            educational_obj = None
+            if 'educational' in cmd_node and cmd_node['educational']:
+                if isinstance(cmd_node['educational'], dict):
+                    educational_obj = EducationalContent(**cmd_node['educational'])
+                else:
+                    educational_obj = cmd_node['educational']
+
             # Build Command dataclass
             return Command(
                 id=cmd_node.get('id', ''),
@@ -267,7 +298,22 @@ class CommandMapper:
                 prerequisites=prerequisites,
                 troubleshooting=cmd_node.get('troubleshooting', {}),
                 notes=cmd_node.get('notes', ''),
-                oscp_relevance=cmd_node.get('oscp_relevance', 'medium')
+                oscp_relevance=cmd_node.get('oscp_relevance', 'medium'),
+                # Missing existing fields
+                advantages=cmd_node.get('advantages', []),
+                disadvantages=cmd_node.get('disadvantages', []),
+                use_cases=cmd_node.get('use_cases', []),
+                output_analysis=cmd_node.get('output_analysis', []),
+                common_uses=cmd_node.get('common_uses', []),
+                references=cmd_node.get('references', []),
+                # New PowerShell/platform-specific fields
+                os=cmd_node.get('os', ''),
+                flags=flags_list,
+                examples=examples_list,
+                educational=educational_obj,
+                oscp_priority=cmd_node.get('oscp_priority', ''),
+                related_commands=cmd_node.get('related_commands', []),
+                custom_metadata=cmd_node.get('custom_metadata', {})
             )
 
         except Exception as e:

@@ -21,6 +21,33 @@ class CommandVariable:
 
 
 @dataclass
+class FlagDefinition:
+    """Represents a command-line flag with description"""
+    flag: str
+    description: str
+    default_value: Optional[str] = None
+
+
+@dataclass
+class ExampleDefinition:
+    """Represents a command usage example"""
+    command: str
+    description: str
+    context: str = ""
+
+
+@dataclass
+class EducationalContent:
+    """Represents educational/learning content for a command"""
+    purpose: str = ""
+    manual_alternative: str = ""
+    common_failures: List[str] = field(default_factory=list)
+    when_to_use: List[str] = field(default_factory=list)
+    time_estimate: str = ""
+    technical_notes: List[str] = field(default_factory=list)
+
+
+@dataclass
 class Command:
     """Represents a reference command"""
     id: str
@@ -48,19 +75,70 @@ class Command:
     output_analysis: List[str] = field(default_factory=list)
     common_uses: List[str] = field(default_factory=list)
     references: List[Dict[str, str]] = field(default_factory=list)
+    # PowerShell/platform-specific fields
+    os: str = ""
+    flags: List[FlagDefinition] = field(default_factory=list)
+    examples: List[ExampleDefinition] = field(default_factory=list)
+    educational: Optional[EducationalContent] = None
+    oscp_priority: str = ""
+    related_commands: List[str] = field(default_factory=list)
+    custom_metadata: Dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict:
         """Convert to dictionary for JSON serialization"""
         data = asdict(self)
+        # Handle nested dataclasses
         data['variables'] = [asdict(var) for var in self.variables]
+        if self.flags:
+            data['flags'] = [asdict(flag) for flag in self.flags]
+        if self.examples:
+            data['examples'] = [asdict(ex) for ex in self.examples]
+        if self.educational:
+            data['educational'] = asdict(self.educational)
         return data
 
     @classmethod
     def from_dict(cls, data: dict) -> 'Command':
-        """Create from dictionary"""
-        variables = [CommandVariable(**var) for var in data.get('variables', [])]
-        data['variables'] = variables
-        return cls(**data)
+        """Create from dictionary - filters unknown fields and deserializes nested dataclasses"""
+        from dataclasses import fields as dataclass_fields
+
+        # Get valid field names for Command dataclass
+        valid_fields = {f.name for f in dataclass_fields(cls)}
+
+        # Filter data to only include valid fields
+        filtered_data = {k: v for k, v in data.items() if k in valid_fields}
+
+        # Handle nested dataclasses - variables (existing)
+        if 'variables' in filtered_data and filtered_data['variables']:
+            filtered_data['variables'] = [
+                CommandVariable(**var) if isinstance(var, dict) else var
+                for var in filtered_data['variables']
+            ]
+
+        # Handle nested dataclasses - flags
+        if 'flags' in filtered_data and filtered_data['flags']:
+            filtered_data['flags'] = [
+                FlagDefinition(**flag) if isinstance(flag, dict) else flag
+                for flag in filtered_data['flags']
+            ]
+
+        # Handle nested dataclasses - examples
+        if 'examples' in filtered_data and filtered_data['examples']:
+            filtered_data['examples'] = [
+                ExampleDefinition(**ex) if isinstance(ex, dict) else ex
+                for ex in filtered_data['examples']
+            ]
+
+        # Handle nested dataclasses - educational
+        if 'educational' in filtered_data and filtered_data['educational']:
+            if isinstance(filtered_data['educational'], dict):
+                # Filter educational fields to only include valid EducationalContent fields
+                from dataclasses import fields as dataclass_fields
+                edu_valid_fields = {f.name for f in dataclass_fields(EducationalContent)}
+                edu_filtered = {k: v for k, v in filtered_data['educational'].items() if k in edu_valid_fields}
+                filtered_data['educational'] = EducationalContent(**edu_filtered)
+
+        return cls(**filtered_data)
 
     def fill_placeholders(self, values: Dict[str, str]) -> str:
         """Fill command placeholders with provided values"""

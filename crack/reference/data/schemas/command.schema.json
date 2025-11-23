@@ -93,8 +93,195 @@
             "type": "string",
             "enum": ["high", "medium", "low"],
             "description": "Relevance for OSCP exam"
+          },
+          "subcategory": {
+            "type": "string",
+            "description": "Command subcategory"
+          },
+          "flag_explanations": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Flag explanations (flag: explanation)"
+          },
+          "next_steps": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Suggested next command IDs"
+          },
+          "prerequisites": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Command IDs to run first"
+          },
+          "troubleshooting": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Common issues and fixes"
+          },
+          "advantages": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Advantages of this technique"
+          },
+          "disadvantages": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Disadvantages of this technique"
+          },
+          "use_cases": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "When to use this command"
+          },
+          "output_analysis": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "How to analyze command output"
+          },
+          "common_uses": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Common use cases"
+          },
+          "references": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "title": {
+                  "type": "string"
+                },
+                "url": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Reference materials"
+          },
+          "os": {
+            "type": "string",
+            "enum": ["WINDOWS", "LINUX", "MACOS", ""],
+            "description": "Target operating system"
+          },
+          "flags": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["flag", "description"],
+              "properties": {
+                "flag": {
+                  "type": "string",
+                  "description": "Command-line flag"
+                },
+                "description": {
+                  "type": "string",
+                  "description": "What this flag does"
+                },
+                "default_value": {
+                  "type": ["string", "null"],
+                  "description": "Default value if not specified"
+                }
+              }
+            },
+            "description": "Detailed flag definitions"
+          },
+          "examples": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["command", "description"],
+              "properties": {
+                "command": {
+                  "type": "string",
+                  "description": "Example command"
+                },
+                "description": {
+                  "type": "string",
+                  "description": "What this example demonstrates"
+                },
+                "context": {
+                  "type": "string",
+                  "description": "When to use this example"
+                }
+              }
+            },
+            "description": "Usage examples with context"
+          },
+          "educational": {
+            "type": "object",
+            "properties": {
+              "purpose": {
+                "type": "string",
+                "description": "Educational purpose"
+              },
+              "manual_alternative": {
+                "type": "string",
+                "description": "How to achieve this manually"
+              },
+              "common_failures": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Common failure scenarios"
+              },
+              "when_to_use": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "When to use this command"
+              },
+              "time_estimate": {
+                "type": "string",
+                "description": "Expected execution time"
+              },
+              "technical_notes": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Technical implementation notes"
+              }
+            },
+            "description": "Educational content for learning"
+          },
+          "oscp_priority": {
+            "type": "string",
+            "enum": ["HIGH", "MEDIUM", "LOW", ""],
+            "description": "OSCP exam priority level (uppercase, complements oscp_relevance)"
+          },
+          "related_commands": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Related command IDs"
+          },
+          "custom_metadata": {
+            "type": "object",
+            "description": "Flexible storage for command-specific metadata"
           }
-        }
+        },
+        "additionalProperties": false
       }
     }
   }
