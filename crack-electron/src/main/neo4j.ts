@@ -955,12 +955,28 @@ ipcMain.handle('get-writeup', async (_event, writeupId: string) => {
   try {
     const query = `
       MATCH (w:Writeup {id: $writeupId})
-      RETURN w
+
+      // Fetch required skills
+      OPTIONAL MATCH (w)-[rs:REQUIRES_SKILL]->(requiredSkill:Skill)
+      WITH w, collect(DISTINCT requiredSkill.name) as requiredSkills
+
+      // Fetch learned skills
+      OPTIONAL MATCH (w)-[ts:TEACHES_SKILL]->(learnedSkill:Skill)
+      WITH w, requiredSkills, collect(DISTINCT learnedSkill.name) as learnedSkills
+
+      RETURN w, requiredSkills, learnedSkills
     `;
 
     const results = await runQuery(query, { writeupId });
     if (results.length > 0) {
       const writeup = results[0].w;
+      const requiredSkills = results[0].requiredSkills || [];
+      const learnedSkills = results[0].learnedSkills || [];
+
+      logIPC('[DEBUG] Skills from relationships:', {
+        required: requiredSkills.length,
+        learned: learnedSkills.length
+      });
 
       // Helper function to safely parse JSON fields
       const parseJsonField = (field: any): any => {
@@ -1006,7 +1022,10 @@ ipcMain.handle('get-writeup', async (_event, writeupId: string) => {
         },
 
         synopsis: writeup.synopsis,
-        skills: parseJsonField(writeup.skills) || { required: [], learned: [] },
+        skills: {
+          required: requiredSkills,
+          learned: learnedSkills
+        },
         tags: typeof writeup.tags === 'string'
           ? writeup.tags.split('|').filter(tag => tag.trim())
           : (writeup.tags || []),
