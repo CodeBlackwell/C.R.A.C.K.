@@ -21,7 +21,7 @@ class ChainValidator:
         command_resolver: Optional[CommandResolver] = None,
     ) -> None:
         if schema_path is None:
-            schema_path = Path(__file__).parent.parent / "schemas" / "attack_chain.schema.json"
+            schema_path = Path(__file__).parent.parent.parent / "db" / "schemas" / "attack_chain.schema.json"
         self._schema = self._load_schema(schema_path)
         self._validator = Draft202012Validator(self._schema) if self._schema else None
         self._command_resolver = command_resolver or CommandResolver()

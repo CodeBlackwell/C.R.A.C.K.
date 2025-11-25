@@ -1,0 +1,233 @@
+{
+  "target": "Usage",
+  "total_images": 22,
+  "total_text_blocks": 548,
+  "command_blocks_detected": 229,
+  "confidence_distribution": {
+    "high": 9,
+    "medium": 1,
+    "low": 12
+  },
+  "image_correlations": [
+    {
+      "file": "images/page01_img01.png",
+      "filename": "page01_img01.png",
+      "page": 1,
+      "y_position": 46.63372802734375,
+      "nearest_command_above": null,
+      "nearest_text_above": null,
+      "confidence": "low",
+      "suggested_caption": "Screenshot"
+    },
+    {
+      "file": "images/page01_img02.png",
+      "filename": "page01_img02.png",
+      "page": 1,
+      "y_position": 201.6260986328125,
+      "nearest_command_above": null,
+      "nearest_text_above": null,
+      "confidence": "low",
+      "suggested_caption": "Screenshot"
+    },
+    {
+      "file": "images/page03_img01.png",
+      "filename": "page03_img01.png",
+      "page": 3,
+      "y_position": 45.044097900390625,
+      "nearest_command_above": null,
+      "nearest_text_above": null,
+      "confidence": "low",
+      "suggested_caption": "Screenshot"
+    },
+    {
+      "file": "images/page03_img02.png",
+      "filename": "page03_img02.png",
+      "page": 3,
+      "y_position": 449.6139831542969,
+      "nearest_command_above": "Browsing to the  admin   subdomain reveals yet another login page:",
+      "nearest_text_above": "Browsing to the  admin   subdomain reveals yet another login page:",
+      "confidence": "high",
+      "suggested_caption": "Browsing to the  admin   subdomain reveals yet another login page:"
+    },
+    {
+      "file": "images/page04_img01.png",
+      "filename": "page04_img01.png",
+      "page": 4,
+      "y_position": 45.04411315917969,
+      "nearest_command_above": null,
+      "nearest_text_above": null,
+      "confidence": "low",
+      "suggested_caption": "Screenshot"
+    },
+    {
+      "file": "images/page04_img02.png",
+      "filename": "page04_img02.png",
+      "page": 4,
+      "y_position": 310.5181884765625,
+      "nearest_command_above": "Once registered, we log into the site using our email and password, landing us on a blog page:",
+      "nearest_text_above": "Once registered, we log into the site using our email and password, landing us on a blog page:",
+      "confidence": "high",
+      "suggested_caption": "Once registered, we log into the site using our email and password, landing us o..."
+    },
+    {
+      "file": "images/page05_img01.png",
+      "filename": "page05_img01.png",
+      "page": 5,
+      "y_position": 45.04412841796875,
+      "nearest_command_above": null,
+      "nearest_text_above": null,
+      "confidence": "low",
+      "suggested_caption": "Screenshot"
+    },
+    {
+      "file": "images/page05_img02.png",
+      "filename": "page05_img02.png",
+      "page": 5,
+      "y_position": 313.6976013183594,
+      "nearest_command_above": "We see that there is a password-reset functionality. Clicking on the hyperlink, we get redirected to  /forget-",
+      "nearest_text_above": "password  , where we can submit an email address to request a reset link.",
+      "confidence": "high",
+      "suggested_caption": "password  , where we can submit an email address to request a reset link."
+    },
+    {
+      "file": "images/page05_img03.png",
+      "filename": "page05_img03.png",
+      "page": 5,
+      "y_position": 510.0212707519531,
+      "nearest_command_above": null,
+      "nearest_text_above": "response:",
+      "confidence": "low",
+      "suggested_caption": "response:"
+    },
+    {
+      "file": "images/page06_img01.png",
+      "filename": "page06_img01.png",
+      "page": 6,
+      "y_position": 45.04411315917969,
+      "nearest_command_above": null,
+      "nearest_text_above": null,
+      "confidence": "low",
+      "suggested_caption": "Screenshot"
+    },
+    {
+      "file": "images/page06_img02.png",
+      "filename": "page06_img02.png",
+      "page": 6,
+      "y_position": 397.9499206542969,
+      "nearest_command_above": "boolean logic to always invoke a valid response, if the target web application is indeed susceptible to",
+      "nearest_text_above": "and therefore ignored.",
+      "confidence": "medium",
+      "suggested_caption": "and therefore ignored."
+    },
+    {
+      "file": "images/page10_img01.png",
+      "filename": "page10_img01.png",
+      "page": 10,
+      "y_position": 356.6186218261719,
+      "nearest_command_above": "We navigate back to  admin.usage.htb   and authenticate with the credentials  admin:whatever1  , allowing us",
+      "nearest_text_above": "entry to the admin panel.",
+      "confidence": "high",
+      "suggested_caption": "entry to the admin panel."
+    },
+    {
+      "file": "images/page11_img01.png",
+      "filename": "page11_img01.png",
+      "page": 11,
+      "y_position": 116.57904052734375,
+      "nearest_command_above": "in use. Notably, the site uses  encore/laravel-admin 1.8.18  , which appears to be vulnerable.",
+      "nearest_text_above": "in use. Notably, the site uses  encore/laravel-admin 1.8.18  , which appears to be vulnerable.",
+      "confidence": "high",
+      "suggested_caption": "in use. Notably, the site uses  encore/laravel-admin 1.8.18  , which appears to ..."
+    },
+    {
+      "file": "images/page12_img01.png",
+      "filename": "page12_img01.png",
+      "page": 12,
+      "y_position": 45.04408264160156,
+      "nearest_command_above": null,
+      "nearest_text_above": null,
+      "confidence": "low",
+      "suggested_caption": "Screenshot"
+    },
+    {
+      "file": "images/page12_img02.png",
+      "filename": "page12_img02.png",
+      "page": 12,
+      "y_position": 237.39358520507812,
+      "nearest_command_above": null,
+      "nearest_text_above": "Next, we press the  Setting   button, redirecting us to  /admin/auth/setting  .",
+      "confidence": "low",
+      "suggested_caption": "Next, we press the  Setting   button, redirecting us to  /admin/auth/setting  ."
+    },
+    {
+      "file": "images/page13_img01.png",
+      "filename": "page13_img01.png",
+      "page": 13,
+      "y_position": 45.044097900390625,
+      "nearest_command_above": null,
+      "nearest_text_above": null,
+      "confidence": "low",
+      "suggested_caption": "Screenshot"
+    },
+    {
+      "file": "images/page13_img02.png",
+      "filename": "page13_img02.png",
+      "page": 13,
+      "y_position": 460.7416076660156,
+      "nearest_command_above": "mv  shell.php shell.jpg",
+      "nearest_text_above": "mv  shell.php shell.jpg",
+      "confidence": "high",
+      "suggested_caption": "mv  shell.php shell.jpg"
+    },
+    {
+      "file": "images/page14_img01.png",
+      "filename": "page14_img01.png",
+      "page": 14,
+      "y_position": 68.88909912109375,
+      "nearest_command_above": "Before pressing  Submit  , we turn on our  BurpSuite   proxy to intercept the upload request.",
+      "nearest_text_above": "Before pressing  Submit  , we turn on our  BurpSuite   proxy to intercept the upload request.",
+      "confidence": "high",
+      "suggested_caption": "Before pressing  Submit  , we turn on our  BurpSuite   proxy to intercept the up..."
+    },
+    {
+      "file": "images/page14_img02.png",
+      "filename": "page14_img02.png",
+      "page": 14,
+      "y_position": 403.5135803222656,
+      "nearest_command_above": "server will interpret our PHP correctly. The full filename therefore becomes  shell.jpg.php  :",
+      "nearest_text_above": "server will interpret our PHP correctly. The full filename therefore becomes  shell.jpg.php  :",
+      "confidence": "high",
+      "suggested_caption": "server will interpret our PHP correctly. The full filename therefore becomes  sh..."
+    },
+    {
+      "file": "images/page15_img01.png",
+      "filename": "page15_img01.png",
+      "page": 15,
+      "y_position": 45.044097900390625,
+      "nearest_command_above": null,
+      "nearest_text_above": null,
+      "confidence": "low",
+      "suggested_caption": "Screenshot"
+    },
+    {
+      "file": "images/page15_img02.png",
+      "filename": "page15_img02.png",
+      "page": 15,
+      "y_position": 498.0987854003906,
+      "nearest_command_above": "http://admin.usage.htb/uploads/images/shell.jpg.php?melo=id",
+      "nearest_text_above": "http://admin.usage.htb/uploads/images/shell.jpg.php?melo=id",
+      "confidence": "high",
+      "suggested_caption": "http://admin.usage.htb/uploads/images/shell.jpg.php?melo=id"
+    },
+    {
+      "file": "images/page16_img01.png",
+      "filename": "page16_img01.png",
+      "page": 16,
+      "y_position": 45.04400634765625,
+      "nearest_command_above": null,
+      "nearest_text_above": null,
+      "confidence": "low",
+      "suggested_caption": "Screenshot"
+    }
+  ]
+}

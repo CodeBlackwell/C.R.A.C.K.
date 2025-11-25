@@ -131,6 +131,97 @@ nodes:
       - notes
     extractor: _extract_chain_steps_nodes
 
+  # =========================================================================
+  # Writeup Nodes
+  # =========================================================================
+  writeup:
+    name: writeups
+    label: Writeup
+    csv_filename: writeups.csv
+    id_field: id
+    description: Machine writeups with attack phases and learnings
+    fields:
+      - id
+      - name
+      - platform
+      - machine_type
+      - difficulty
+      - os
+      - os_version
+      - ip_address
+      - oscp_relevance
+      - oscp_reasoning
+      - exam_applicable
+      - synopsis
+      - total_duration_minutes
+      - release_date
+      - retire_date
+      - writeup_author
+      - writeup_date
+      - tags
+      - machine_author
+      - points
+      - attack_phases
+    extractor: _extract_writeups_nodes
+
+  cve:
+    name: cves
+    label: CVE
+    csv_filename: cves.csv
+    id_field: cve_id
+    description: CVE vulnerability entries discovered in writeups
+    fields:
+      - cve_id
+      - name
+      - description
+      - severity
+      - component
+      - version
+      - exploitability
+      - type
+    extractor: _extract_cve_nodes
+
+  technique:
+    name: techniques
+    label: Technique
+    csv_filename: techniques.csv
+    id_field: name
+    description: Attack techniques demonstrated in writeups
+    fields:
+      - name
+      - category
+      - difficulty
+      - description
+      - oscp_applicable
+      - steps
+      - detection_difficulty
+      - references
+    extractor: _extract_technique_nodes
+
+  platform:
+    name: platforms
+    label: Platform
+    csv_filename: platforms.csv
+    id_field: name
+    description: Training platforms (HackTheBox, ProvingGrounds, etc.)
+    fields:
+      - name
+      - url
+      - type
+    extractor: _extract_platform_nodes
+
+  skill:
+    name: skills
+    label: Skill
+    csv_filename: skills.csv
+    id_field: name
+    description: Skills required or learned from writeups
+    fields:
+      - name
+      - category
+      - oscp_importance
+    extractor: _extract_skill_nodes
+
 # =============================================================================
 # Relationship Definitions
 # =============================================================================
@@ -319,6 +410,154 @@ relationships:
       - cheatsheet_id
       - tag_name
     extractor: _extract_cheatsheet_tag_rels
+
+  # =========================================================================
+  # Writeup Relationships
+  # =========================================================================
+  writeup_demonstrates_command:
+    name: writeup_demonstrates_command
+    rel_type: DEMONSTRATES
+    csv_filename: writeup_demonstrates_command.csv
+    start_label: Writeup
+    end_label: Command
+    start_id_col: writeup_id
+    end_id_col: command_id
+    start_id_field: id
+    end_id_field: id
+    description: Writeup demonstrates usage of command
+    fields:
+      - writeup_id
+      - command_id
+      - phase
+      - step_number
+      - context
+      - command_executed
+      - success
+      - notes
+      - flags_used
+      - output_snippet
+      - url_visited
+    extractor: _extract_writeup_demonstrates_command_rels
+
+  writeup_failed_attempt:
+    name: writeup_failed_attempt
+    rel_type: FAILED_ATTEMPT
+    csv_filename: writeup_failed_attempt.csv
+    start_label: Writeup
+    end_label: Command
+    start_id_col: writeup_id
+    end_id_col: command_id
+    start_id_field: id
+    end_id_field: id
+    description: Writeup documents failed attempt with command
+    fields:
+      - writeup_id
+      - command_id
+      - phase
+      - attempt
+      - command_executed
+      - expected
+      - actual
+      - reason
+      - solution
+      - lesson_learned
+      - time_wasted_minutes
+      - importance
+    extractor: _extract_writeup_failed_attempt_rels
+
+  writeup_exploits_cve:
+    name: writeup_exploits_cve
+    rel_type: EXPLOITS_CVE
+    csv_filename: writeup_exploits_cve.csv
+    start_label: Writeup
+    end_label: CVE
+    start_id_col: writeup_id
+    end_id_col: cve_id
+    start_id_field: id
+    end_id_field: cve_id
+    description: Writeup exploits CVE vulnerability
+    fields:
+      - writeup_id
+      - cve_id
+      - phase
+      - exploitation_method
+      - severity
+      - location
+      - parameter
+    extractor: _extract_writeup_exploits_cve_rels
+
+  writeup_teaches_technique:
+    name: writeup_teaches_technique
+    rel_type: TEACHES_TECHNIQUE
+    csv_filename: writeup_teaches_technique.csv
+    start_label: Writeup
+    end_label: Technique
+    start_id_col: writeup_id
+    end_id_col: technique_name
+    start_id_field: id
+    end_id_field: name
+    description: Writeup teaches attack technique
+    fields:
+      - writeup_id
+      - technique_name
+      - phase
+      - difficulty
+      - oscp_applicable
+    extractor: _extract_writeup_teaches_technique_rels
+
+  writeup_from_platform:
+    name: writeup_from_platform
+    rel_type: FROM_PLATFORM
+    csv_filename: writeup_from_platform.csv
+    start_label: Writeup
+    end_label: Platform
+    start_id_col: writeup_id
+    end_id_col: platform_name
+    start_id_field: id
+    end_id_field: name
+    description: Writeup is from training platform
+    fields:
+      - writeup_id
+      - platform_name
+      - machine_type
+      - release_date
+      - retire_date
+    extractor: _extract_writeup_from_platform_rels
+
+  writeup_requires_skill:
+    name: writeup_requires_skill
+    rel_type: REQUIRES_SKILL
+    csv_filename: writeup_requires_skill.csv
+    start_label: Writeup
+    end_label: Skill
+    start_id_col: writeup_id
+    end_id_col: skill_name
+    start_id_field: id
+    end_id_field: name
+    description: Writeup requires prerequisite skill
+    fields:
+      - writeup_id
+      - skill_name
+      - importance
+    extractor: _extract_writeup_requires_skill_rels
+
+  writeup_teaches_skill:
+    name: writeup_teaches_skill
+    rel_type: TEACHES_SKILL
+    csv_filename: writeup_teaches_skill.csv
+    start_label: Writeup
+    end_label: Skill
+    start_id_col: writeup_id
+    end_id_col: skill_name
+    start_id_field: id
+    end_id_field: name
+    description: Writeup teaches new skill
+    fields:
+      - writeup_id
+      - skill_name
+      - proficiency_level
+      - practice_value
+    extractor: _extract_writeup_teaches_skill_rels
 
 # =============================================================================
 # Configuration Notes

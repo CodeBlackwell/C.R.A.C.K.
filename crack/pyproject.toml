@@ -57,9 +57,11 @@ packages = [
     "crack.utils",
     "crack.reference",
     "crack.reference.core",
-    "crack.reference.data",
     "crack.reference.docs",
-    "db"
+    "db",
+    "db.scripts",
+    "db.neo4j-migration",
+    "db.neo4j-migration.scripts"
 ]
 
 [tool.setuptools.package-dir]

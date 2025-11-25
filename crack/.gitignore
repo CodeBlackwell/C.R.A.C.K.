@@ -81,4 +81,6 @@ CRACK_targets/*.json
 !qa_profiles/**/profile.json
 
 # Debug logs
-.debug_logs/
+.debug_logs/crack/crack/
+*.egg-info/
+__pycache__/

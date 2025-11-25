@@ -1,0 +1,4 @@
+Backup: Tue Nov 25 07:56:26 AM UTC 2025
+Location: /home/kali/Desktop/KaliBackup/OSCP/crack
+Files: 205+ JSON files
+Purpose: Pre-migration safety

