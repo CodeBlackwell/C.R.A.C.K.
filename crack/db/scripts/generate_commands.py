@@ -6,7 +6,7 @@ Generates JSON command definitions for:
 1. Tool commands extracted from relations (497 candidates)
 2. Missing OSCP essentials (123 gaps)
 
-Output: JSON files in reference/data/commands/ organized by category
+Output: JSON files in db/data/commands/ organized by category
 """
 
 import json
@@ -2104,7 +2104,7 @@ def generate_all_commands():
     print(f"  File Transfer:                 {len(TRANSFER_COMMANDS):3d} commands")
     print(f"\n{'='*60}")
     print("\nNext steps:")
-    print("1. Review generated JSON files in reference/data/commands/generated/")
+    print("1. Review generated JSON files in db/data/commands/generated/")
     print("2. Verify command syntax against official documentation")
     print("3. Test variable substitution with crack reference --fill")
     print("4. Run migration script to import to database (if needed)")

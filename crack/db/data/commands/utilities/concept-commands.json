@@ -1,0 +1,67 @@
+{
+  "category": "utilities",
+  "subcategory": "conceptual",
+  "description": "Conceptual/manual steps for attack chains that don't map to specific executable commands",
+  "commands": [
+    {
+      "id": "concept-authentication",
+      "name": "Authenticate to Domain",
+      "category": "utilities",
+      "command": "# Manual authentication step - establish valid domain session",
+      "description": "Conceptual step: Establish authenticated session to Active Directory using valid credentials. Not a single command but a verification of authentication state.",
+      "tags": ["OSCP:LOW", "MANUAL", "CONCEPTUAL", "ACTIVE_DIRECTORY"],
+      "notes": "This is a conceptual step representing authentication verification rather than a specific command. In practice, authentication happens through various tools (impacket, Rubeus, runas, etc.) depending on context.",
+      "oscp_relevance": "low"
+    },
+    {
+      "id": "concept-filter-accounts",
+      "name": "Filter Service Accounts",
+      "category": "utilities",
+      "command": "# Manual filtering - remove computer accounts and MSAs from target list",
+      "description": "Conceptual step: Manually filter out uncrackable accounts (computer accounts ending in $, managed service accounts) from Kerberoasting target list.",
+      "tags": ["OSCP:LOW", "MANUAL", "CONCEPTUAL", "ACTIVE_DIRECTORY", "KERBEROASTING"],
+      "notes": "This is a manual analysis step where you review enumeration output and identify which accounts are worth targeting. Computer accounts have 120-character random passwords and are uncrackable.",
+      "oscp_relevance": "low"
+    },
+    {
+      "id": "concept-decision",
+      "name": "Choose Attack Method",
+      "category": "utilities",
+      "command": "# Manual decision - evaluate trade-offs and select optimal approach",
+      "description": "Conceptual step: Analyze available tools and methods, consider trade-offs (speed vs stealth vs detection), and select optimal approach for current scenario.",
+      "tags": ["OSCP:LOW", "MANUAL", "CONCEPTUAL", "METHODOLOGY"],
+      "notes": "This represents strategic decision-making in penetration testing. Not a command to execute, but a critical thinking step to choose the right tool for the situation.",
+      "oscp_relevance": "low"
+    },
+    {
+      "id": "concept-enumeration",
+      "name": "Active Directory Enumeration",
+      "category": "utilities",
+      "command": "# Manual enumeration - systematic AD reconnaissance with valid credentials",
+      "description": "Conceptual step: Perform comprehensive Active Directory enumeration using various tools and techniques. Includes users, groups, computers, GPOs, ACLs, shares, and more.",
+      "tags": ["OSCP:MEDIUM", "MANUAL", "CONCEPTUAL", "ACTIVE_DIRECTORY", "ENUMERATION"],
+      "notes": "This is an umbrella concept covering multiple enumeration commands. Standard users can still perform extensive AD reconnaissance even without admin rights.",
+      "oscp_relevance": "medium"
+    },
+    {
+      "id": "concept-calculation",
+      "name": "Calculate Safe Limits",
+      "category": "utilities",
+      "command": "# Manual calculation - determine safe password spray limits from lockout policy",
+      "description": "Conceptual step: Calculate conservative safe spray limits based on lockout threshold and observation window. Formula: safe_attempts = threshold - 2, wait_time = observation_window + 5min buffer.",
+      "tags": ["OSCP:MEDIUM", "MANUAL", "CONCEPTUAL", "PASSWORD_SPRAY", "LOCKOUT_POLICY"],
+      "notes": "Critical safety calculation for password spraying. Conservative approach subtracts 2 from threshold to account for user's own failed logins and timing uncertainty.",
+      "oscp_relevance": "medium"
+    },
+    {
+      "id": "concept-wait-timer",
+      "name": "Wait for Observation Window",
+      "category": "utilities",
+      "command": "# Manual wait - observation window + buffer to ensure counter resets",
+      "description": "Conceptual step: Wait for full observation window plus 5-minute buffer before next spray round. Use productive time for alternative enumeration and attacks.",
+      "tags": ["OSCP:MEDIUM", "MANUAL", "CONCEPTUAL", "PASSWORD_SPRAY", "TIMING"],
+      "notes": "Not a command but a mandatory waiting period between password spray rounds. Critical for avoiding account lockouts. Use wait time productively for Kerberoasting, AS-REP roasting, etc.",
+      "oscp_relevance": "medium"
+    }
+  ]
+}

@@ -159,7 +159,7 @@ def fix_file(json_file: str, dry_run: bool = False) -> tuple[int, list]:
 
     return total_fixes, all_changes
 
-def fix_all_commands(commands_dir: str = "reference/data/commands", dry_run: bool = False):
+def fix_all_commands(commands_dir: str = "db/data/commands", dry_run: bool = False):
     """Fix all command files."""
 
     json_files = glob.glob(f'{commands_dir}/**/*.json', recursive=True)
@@ -219,7 +219,7 @@ if __name__ == '__main__':
     import argparse
 
     parser = argparse.ArgumentParser(description='Auto-fix command validation violations')
-    parser.add_argument('--commands-dir', default='reference/data/commands',
+    parser.add_argument('--commands-dir', default='db/data/commands',
                        help='Directory containing command JSON files')
     parser.add_argument('--output', default='fix_report.json',
                        help='Output JSON report file')

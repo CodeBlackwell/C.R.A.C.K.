@@ -1,0 +1,207 @@
+{
+  "category": "pivoting",
+  "commands": [
+    {
+      "id": "proxychains-config",
+      "name": "Configure Proxychains",
+      "category": "pivoting",
+      "subcategory": "proxychains",
+      "command": "echo 'socks5 <BIND_ADDRESS> <SOCKS_PORT>' >> /etc/proxychains4.conf",
+      "description": "Configure proxychains4.conf to route traffic through SOCKS proxy - required before using proxychains",
+      "tags": [
+        "PROXYCHAINS",
+        "SOCKS",
+        "PIVOTING",
+        "OSCP:HIGH",
+        "CONFIGURATION"
+      ],
+      "variables": [
+        {
+          "name": "<BIND_ADDRESS>",
+          "description": "SOCKS proxy IP address (127.0.0.1 for local SSH tunnel)",
+          "example": "127.0.0.1",
+          "required": true
+        },
+        {
+          "name": "<SOCKS_PORT>",
+          "description": "SOCKS proxy port (must match SSH -D or -R port)",
+          "example": "9999",
+          "required": true
+        }
+      ],
+      "flag_explanations": {},
+      "success_indicators": [
+        "Line added to /etc/proxychains4.conf under [ProxyList] section",
+        "proxychains shows 'Strict chain ... <SOCKS_PORT> ... OK' when testing",
+        "Tools work through proxychains: proxychains curl http://internal-ip"
+      ],
+      "failure_indicators": [
+        "Permission denied - need sudo to edit /etc/proxychains4.conf",
+        "proxychains shows 'socket error' - wrong IP/port or SOCKS tunnel not running",
+        "DLL init but no traffic - configuration syntax error"
+      ],
+      "next_steps": [
+        "Verify SOCKS proxy running: ss -ntplu | grep <SOCKS_PORT>",
+        "Edit full config: sudo nano /etc/proxychains4.conf",
+        "Set timeout values: tcp_read_time_out = 1000, tcp_connect_time_out = 1000",
+        "Enable proxy_dns: Uncomment 'proxy_dns' line to prevent DNS leaks",
+        "Test configuration: proxychains curl -I http://internal-ip"
+      ],
+      "alternatives": [],
+      "prerequisites": [],
+      "troubleshooting": {
+        "Permission denied editing /etc/proxychains4.conf": "Use sudo: sudo bash -c 'echo \"socks5 <IP> <PORT>\" >> /etc/proxychains4.conf', or create user config: mkdir ~/.proxychains && cp /etc/proxychains4.conf ~/.proxychains/",
+        "proxychains shows old configuration": "Clear existing [ProxyList] entries: sudo sed -i '/^socks/d' /etc/proxychains4.conf before adding new one",
+        "Configuration syntax error": "Ensure format: socks5 <IP> <PORT> (space-separated, no quotes), verify [ProxyList] section exists",
+        "DNS leaks outside tunnel": "Uncomment proxy_dns in config: sudo sed -i 's/#proxy_dns/proxy_dns/' /etc/proxychains4.conf"
+      },
+      "notes": "Critical configuration step for SSH dynamic forwarding.\n\nDefault config uses Tor (socks4 127.0.0.1 9050) - must replace with your SOCKS proxy.\n\nRecommended settings for OSCP:\ntcp_read_time_out = 1000, tcp_connect_time_out = 1000, proxy_dns enabled.\n\nChain types:\nstrict_chain (all proxies must work), dynamic_chain (skip dead proxies), random_chain (randomize order).\n\nFor exam:\nUse strict_chain with single SOCKS proxy.\n\nAlternative:\nCreate ~/.proxychains/proxychains.conf for user-specific config without sudo.",
+      "oscp_relevance": "high"
+    },
+    {
+      "id": "proxychains-nmap",
+      "name": "Nmap Through Proxychains",
+      "category": "pivoting",
+      "subcategory": "proxychains",
+      "command": "proxychains -q nmap -sT -Pn --top-ports=<TOP_PORTS> -v <TARGET>",
+      "description": "Port scan through SOCKS proxy using proxychains - enumerate internal networks via pivot",
+      "tags": [
+        "PROXYCHAINS",
+        "NMAP",
+        "PIVOTING",
+        "ENUMERATION",
+        "OSCP:HIGH",
+        "SOCKS"
+      ],
+      "variables": [
+        {
+          "name": "<TOP_PORTS>",
+          "description": "Number of top ports to scan (use 20 for speed, 100 for thoroughness)",
+          "example": "20",
+          "required": true
+        },
+        {
+          "name": "<TARGET>",
+          "description": "Target IP address or subnet to scan",
+          "example": "172.16.50.217",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "-q": "Proxychains quiet mode - suppress proxy chain output",
+        "-sT": "TCP connect scan (required - proxychains uses LD_PRELOAD, incompatible with SYN scan)",
+        "-Pn": "Skip ping - assume host up (ICMP doesn't work through SOCKS)",
+        "--top-ports": "Scan N most common ports (faster than full 65535 scan)",
+        "-v": "Verbose output to show progress",
+        "-n": "(Recommended) Skip DNS resolution to prevent leaks and speed up scan",
+        "-p": "(Alternative) Scan specific ports - e.g., -p 22,80,443,3389,445"
+      },
+      "success_indicators": [
+        "proxychains shows 'OK' for each connection attempt",
+        "Nmap displays open ports on internal target",
+        "Scan completes without 'socket error' messages",
+        "Services detected on internal network IPs"
+      ],
+      "failure_indicators": [
+        "proxychains socket error - SOCKS proxy not running or misconfigured",
+        "All ports show as filtered - routing issue or target firewall",
+        "Very slow scan (>5 min for 20 ports) - timeout values too high in proxychains4.conf",
+        "DLL init but no results - static nmap binary incompatible with LD_PRELOAD"
+      ],
+      "next_steps": [
+        "Enumerate services: proxychains nmap -sT -sV -p <OPEN_PORTS> -Pn -v <TARGET>",
+        "Scan discovered subnet: proxychains nmap -sT -Pn --top-ports=20 172.16.50.0/24",
+        "Run vulnerability scan: proxychains nmap -sT -Pn --script=vuln -p <PORT> <TARGET>",
+        "Access discovered services: proxychains psql -h <TARGET>, proxychains smbclient -L //<TARGET>"
+      ],
+      "alternatives": [],
+      "prerequisites": [],
+      "troubleshooting": {
+        "Socket error or timeout": "Verify SOCKS proxy: ss -ntplu | grep <SOCKS_PORT>, test with proxychains curl http://<TARGET>",
+        "Very slow scan (5+ minutes)": "Reduce timeouts in /etc/proxychains4.conf: tcp_read_time_out=1000, tcp_connect_time_out=1000, use -T2 timing: proxychains nmap -sT -T2 -Pn",
+        "Static binary incompatible": "Proxychains uses LD_PRELOAD (dynamic linking) - recompile nmap dynamically or use sshuttle instead",
+        "DNS resolution hangs": "Add -n flag to skip DNS: proxychains nmap -sT -Pn -n <TARGET>, or enable proxy_dns in proxychains4.conf"
+      },
+      "notes": "Critical OSCP technique for internal network enumeration through pivot.\n\nLimitations:\nTCP-only (no UDP/ICMP), must use -sT (connect scan, not SYN scan), no OS detection (-O), slower than direct scanning.\n\nPerformance tuning:\nReduce proxychains timeouts to 1000ms, use --top-ports=20 instead of -p-, add -T2 or -T3 timing.\n\nFor full subnet scans, consider parallel execution:\nfor ip in {1..254}; do proxychains -q nmap -sT -Pn --top-ports=20 172.16.50.$ip & done.\n\nTime estimate:\n1-2 minutes per host with top 20 ports.",
+      "oscp_relevance": "high"
+    },
+    {
+      "id": "proxychains-psql",
+      "name": "PostgreSQL Through Proxychains",
+      "category": "pivoting",
+      "subcategory": "proxychains",
+      "command": "proxychains -q psql -h <TARGET> -p <PORT> -U <USERNAME> -d <DATABASE>",
+      "description": "Connect to internal PostgreSQL database through SOCKS proxy using proxychains",
+      "tags": [
+        "PROXYCHAINS",
+        "POSTGRESQL",
+        "DATABASE",
+        "PIVOTING",
+        "OSCP:MEDIUM",
+        "SOCKS"
+      ],
+      "variables": [
+        {
+          "name": "<TARGET>",
+          "description": "PostgreSQL server IP address (internal network)",
+          "example": "172.16.50.217",
+          "required": true
+        },
+        {
+          "name": "<PORT>",
+          "description": "PostgreSQL port (default 5432)",
+          "example": "5432",
+          "required": false
+        },
+        {
+          "name": "<USERNAME>",
+          "description": "Database username for authentication",
+          "example": "postgres",
+          "required": true
+        },
+        {
+          "name": "<DATABASE>",
+          "description": "Database name to connect to",
+          "example": "confluence",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "-q": "Proxychains quiet mode - suppress proxy output for clean psql session",
+        "-h": "PostgreSQL host IP address",
+        "-p": "PostgreSQL port (default 5432 if omitted)",
+        "-U": "Username for database authentication",
+        "-d": "Database name to connect to"
+      },
+      "success_indicators": [
+        "proxychains shows 'OK' for connection",
+        "psql prompt appears: dbname=>",
+        "\\l command lists databases",
+        "SELECT queries return results"
+      ],
+      "failure_indicators": [
+        "proxychains socket error - SOCKS proxy not running",
+        "psql: connection refused - PostgreSQL not listening or firewall blocking",
+        "psql: authentication failed - wrong username/password",
+        "timeout waiting for connection - routing issue through pivot"
+      ],
+      "next_steps": [
+        "List databases: \\l",
+        "List tables in database: \\dt",
+        "Query user table: SELECT * FROM cwd_user; (for Confluence)",
+        "Extract credentials: SELECT username, password_hash FROM users;",
+        "Check database version: SELECT version();"
+      ],
+      "alternatives": [],
+      "prerequisites": [],
+      "troubleshooting": {
+        "Connection timeout": "Verify PostgreSQL reachable: proxychains nc -zv <TARGET> 5432, check SOCKS proxy running",
+        "Authentication failed": "Verify credentials, try default: postgres:postgres, admin:admin, check case sensitivity",
+        "Socket error": "Check proxychains config: cat /etc/proxychains4.conf | grep socks5, verify SOCKS port matches SSH tunnel",
+        "psql hangs at password prompt": "Add password to PGPASSWORD env var: PGPASSWORD=<pass> proxychains psql -h <TARGET> -U <USER> -d <DB>"
+      },
+      "notes": "Common OSCP scenario:\nFind PostgreSQL credentials in config files (e.g., confluence.cfg.xml), access internal database through pivot.\n\nAlternative to port forwarding when you want interactive session without permanent tunnel.\n\nFor non-interactive queries, use:\necho 'SELECT * FROM users;' | proxychains psql -h <TARGET> -U <USER> -d <DB>.\n\nTime estimate:\n1-2 minutes for connection and query.",
+      "oscp_relevance": "medium"
+    }
+  ]
+}

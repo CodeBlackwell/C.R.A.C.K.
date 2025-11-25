@@ -18,7 +18,7 @@ from datetime import date
 # Base directory - scripts/utils -> scripts -> neo4j-migration -> crack (root)
 BASE_DIR = Path(__file__).parent.parent.parent.parent.parent
 MAPPING_REPORT = BASE_DIR / "db/neo4j-migration/data/mapping_report.json"
-OUTPUT_DIR = BASE_DIR / "reference/data/commands"
+OUTPUT_DIR = BASE_DIR / "db/data/commands"
 
 
 def normalize_command_id(text: str, suggestion: str = None) -> str:

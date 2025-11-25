@@ -1,0 +1,80 @@
+{
+  "cheatsheets": [
+    {
+      "id": "oscp-oneliners-collection",
+      "name": "OSCP One-Liners - Essential Command Collection",
+      "description": "Curated collection of single-line commands for rapid OSCP exploitation and enumeration. Organized by category for quick reference during exam scenarios.",
+      "category": "utilities",
+      "oscp_relevance": "high",
+      "educational_header": {
+        "how_to_recognize": [
+          "Need quick command without complex syntax or multiple steps",
+          "Time-sensitive situation requiring immediate execution",
+          "Copy-paste scenario where multi-line commands are impractical",
+          "Restricted shell where command chaining is easier than scripting"
+        ],
+        "when_to_look_for": [
+          "During OSCP exam when every second counts",
+          "When you need to quickly test a technique",
+          "In reverse shells where you can't upload scripts",
+          "When pivoting through multiple systems rapidly"
+        ]
+      },
+      "scenarios": [
+        {
+          "title": "Scenario: Quick PowerShell Elevation Test (RDP Access)",
+          "context": "You have RDP access to a Windows target as a user who is in the local Administrators group. You need to quickly test if you can elevate to High integrity without using UAC bypass techniques. You want to verify the UAC prompt behavior before attempting automation.",
+          "approach": "Phase 1: Verify User Context (30 seconds)\n- Check if user in Administrators group: net localgroup administrators\n- Check current integrity level: whoami /groups | findstr 'Mandatory'\n- Verify UAC enabled: reg query HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System /v EnableLUA\n\nPhase 2: Test Manual Elevation (1 minute)\n- Use powershell-runas-basic to open elevated shell\n- User clicks 'Yes' on UAC prompt (if appears)\n- Verify High integrity in new window\n\nPhase 3: Determine Next Steps (30 seconds)\n- If UAC prompt appeared and worked → User can manually elevate\n- If no prompt (UAC disabled) → User already has full admin rights\n- If prompt but denied → Need UAC bypass technique instead",
+          "commands": [
+            "powershell-runas-basic",
+            "powershell-runas-keepopen"
+          ],
+          "expected_outcome": "Understand UAC configuration and user privilege context in 2 minutes. Determine if automated UAC bypass needed or if manual elevation sufficient for current engagement.",
+          "why_this_works": "Manual UAC elevation reveals system configuration (UAC enabled/disabled, user admin status, consent vs credential prompt behavior) which informs automation strategy. Quick test before committing to complex bypass techniques."
+        },
+        {
+          "title": "Scenario: Output Capture from Elevated Command (RDP)",
+          "context": "You have RDP access and need to run a privileged command (like reading protected registry keys or accessing ADMIN$ share) but want to capture the output for documentation or further analysis without keeping an elevated window open.",
+          "approach": "Phase 1: Prepare Output Location (30 seconds)\n- Create temp directory if needed: mkdir C:\\temp\n- Verify write permissions: echo test > C:\\temp\\test.txt\n- Delete test file: del C:\\temp\\test.txt\n\nPhase 2: Execute Elevated Command with Redirect (1 minute)\n- Use powershell-runas-output-redirect with desired command\n- User clicks 'Yes' on UAC prompt\n- Wait for elevated window to flash and close\n\nPhase 3: Retrieve and Analyze Output (30 seconds)\n- Read output file: type C:\\temp\\output.txt\n- Analyze results in current shell\n- Clean up: del C:\\temp\\output.txt",
+          "commands": [
+            "powershell-runas-output-redirect"
+          ],
+          "expected_outcome": "Capture output from elevated command in current non-elevated shell in 2 minutes. Useful for one-off administrative queries without maintaining persistent elevated access.",
+          "why_this_works": "Output redirection to file bridges integrity level gap. Elevated process writes to file accessible by both Medium and High integrity processes. Current shell can read file after elevated process completes."
+        },
+        {
+          "title": "Scenario: Remote Script Execution with Elevation (RDP + Enumeration)",
+          "context": "You have RDP access to Windows target. Need to run enumeration tool (PowerUp.ps1, PowerView.ps1) with elevation but script is hosted on your attack machine. Want fileless execution without transferring script to disk.",
+          "approach": "Phase 1: Setup Web Server (Attacker Machine - 1 minute)\n- Navigate to script directory: cd /path/to/scripts\n- Start HTTP server: python3 -m http.server 80\n- Verify script accessible: curl http://localhost/PowerUp.ps1\n\nPhase 2: Execute Elevated Download (Target - 2 minutes)\n- Test connectivity: Test-NetConnection <LHOST> -Port 80\n- Use powershell-runas-download-execute with script URL\n- User clicks 'Yes' on UAC prompt\n- Script downloads and executes in elevated context\n\nPhase 3: Analyze Results (Variable time)\n- Review PowerUp findings in elevated window\n- Document privilege escalation vectors\n- Plan exploitation based on results",
+          "commands": [
+            "powershell-runas-download-execute"
+          ],
+          "expected_outcome": "Fileless execution of enumeration script with elevation in 3-4 minutes. No disk artifacts on target. Results displayed in elevated window for immediate analysis.",
+          "why_this_works": "Combines UAC elevation + remote download + in-memory execution. IEX executes script content without writing to disk. Elevated context allows privileged enumeration (service configs, registry keys, scheduled tasks)."
+        }
+      ],
+      "sections": [
+        {
+          "title": "Windows PowerShell - Manual UAC Elevation",
+          "notes": "One-liner commands for launching elevated PowerShell sessions via Start-Process -Verb RunAs.\n\nIMPORTANT LIMITATIONS:\n- Requires GUI access (RDP, physical console)\n- User must click UAC prompt manually\n- NOT suitable for reverse shells or automated exploitation\n- OSCP exam relevance: LOW (no GUI interaction possible)\n\nWHEN TO USE:\n- Internal penetration testing with RDP access\n- Testing UAC configuration behavior\n- Legitimate administrative tasks on controlled systems\n- Social engineering scenarios (convince user to approve)\n\nWHEN NOT TO USE (OSCP EXAM):\n- Reverse shells from web exploits\n- WinRM/SSH remote sessions (non-interactive)\n- Automated exploitation requiring no user interaction\n- Any scenario requiring stealth (UAC prompts are visible)\n\nBETTER ALTERNATIVES FOR OSCP:\n- UAC bypass techniques (fodhelper, eventvwr) - No prompt required\n- Service exploitation - Escalate without user interaction\n- Token impersonation (Potato exploits) - If SeImpersonate available\n- Credential reuse (runas /savecred) - If admin credentials cached",
+          "commands": [
+            "powershell-runas-basic",
+            "powershell-runas-output-redirect",
+            "powershell-runas-keepopen",
+            "powershell-runas-download-execute"
+          ]
+        }
+      ],
+      "tags": [
+        "ONE_LINER",
+        "OSCP",
+        "QUICK_REFERENCE",
+        "POWERSHELL",
+        "WINDOWS",
+        "UAC",
+        "ELEVATION",
+        "UTILITIES"
+      ]
+    }
+  ]
+}

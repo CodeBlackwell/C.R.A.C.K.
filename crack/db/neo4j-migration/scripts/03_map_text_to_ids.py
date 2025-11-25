@@ -4,7 +4,7 @@ Script 03: Map Text to IDs
 
 Purpose: Map text-based alternatives/prerequisites to command IDs
 Input:
-  - reference/data/commands/**/*.json (JSON files with violations)
+  - db/data/commands/**/*.json (JSON files with violations)
   - db/neo4j-migration/data/command_index.json (command index)
 Output: db/neo4j-migration/data/mapping_report.json
 
@@ -365,7 +365,7 @@ def main():
     # Paths
     project_root = Path('/home/kali/Desktop/OSCP/crack')
     index_file = project_root / 'db' / 'neo4j-migration' / 'data' / 'command_index.json'
-    commands_dir = project_root / 'reference' / 'data' / 'commands'
+    commands_dir = project_root / 'db' / 'data' / 'commands'
     output_file = project_root / 'db' / 'neo4j-migration' / 'data' / 'mapping_report.json'
 
     # Verify files exist

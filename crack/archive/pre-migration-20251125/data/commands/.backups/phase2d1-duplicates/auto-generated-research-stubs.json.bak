@@ -1,0 +1,68 @@
+{
+  "metadata": {
+    "generated": "2025-11-09",
+    "source": "bulk_create_stubs.py",
+    "purpose": "Auto-generated command stubs for missing references",
+    "status": "needs-manual-enrichment",
+    "count": 2,
+    "category": "research"
+  },
+  "commands": [
+    {
+      "id": "nessus",
+      "command": "nessus <TARGET>",
+      "category": "research",
+      "tags": [
+        "research",
+        "nessus",
+        "auto-generated"
+      ],
+      "description": "Auto-generated stub for nessus",
+      "variables": {
+        "<TARGET>": {
+          "type": "target",
+          "description": "Target IP address or hostname",
+          "required": true
+        }
+      },
+      "output_analysis": [
+        "Review nessus output for relevant information"
+      ],
+      "common_uses": [
+        "Alternative to nmap-vuln-scan"
+      ],
+      "alternatives": [],
+      "prerequisites": [],
+      "next_steps": [],
+      "notes": "AUTO-GENERATED STUB - Needs manual enrichment. Referenced in data/commands/recon.json"
+    },
+    {
+      "id": "searchsploit",
+      "command": "searchsploit --nmap <TARGET>",
+      "category": "research",
+      "tags": [
+        "research",
+        "searchsploit",
+        "auto-generated"
+      ],
+      "description": "Auto-generated stub for searchsploit",
+      "variables": {
+        "<TARGET>": {
+          "type": "target",
+          "description": "Target IP address or hostname",
+          "required": true
+        }
+      },
+      "output_analysis": [
+        "Review searchsploit output for relevant information"
+      ],
+      "common_uses": [
+        "Alternative to searchsploit"
+      ],
+      "alternatives": [],
+      "prerequisites": [],
+      "next_steps": [],
+      "notes": "AUTO-GENERATED STUB - Needs manual enrichment. Referenced in data/commands/exploitation/general.json"
+    }
+  ]
+}

@@ -1,0 +1,212 @@
+{
+  "metadata": {
+    "file_purpose": "Active Directory DCSync Prerequisites - Commands for verifying Domain Admin rights and replication privileges required for DCSync attacks",
+    "oscp_relevance": "High-priority credential access technique. DCSync allows remote extraction of password hashes without accessing the Domain Controller directly, making it critical for post-exploitation and lateral movement. Essential prerequisite verification prevents failed attack attempts.",
+    "educational_context": "DCSync leverages the Directory Replication Service (DRS) Remote Protocol to request password data from domain controllers. Unlike LSA dumps or memory scraping, DCSync doesn't require code execution on the DC itself - it's a legitimate replication request. However, it requires specific extended rights normally granted only to Domain Admins, Enterprise Admins, and domain controllers.",
+    "prerequisites": [
+      "Domain user credentials with elevated privileges",
+      "Network connectivity to Domain Controller (TCP/UDP ports 135, 445, 389)",
+      "Domain-joined machine OR authenticated session (runas /netonly, pass-the-hash)"
+    ],
+    "related_techniques": [
+      "Golden Ticket (ad-golden-ticket.json)",
+      "LSA Secrets Dump (ad-lsa-dump.json)",
+      "NTDS.dit Extraction (ad-ntds-extraction.json)",
+      "Pass the Hash (ad-pass-the-hash.json)"
+    ],
+    "attack_chain": [
+      "1. Compromise user account (phishing, password spray, etc.)",
+      "2. Verify Domain Admin OR replication rights (CRITICAL STEP)",
+      "3. Perform DCSync to extract krbtgt hash",
+      "4. Extract other high-value accounts (Administrator, service accounts)",
+      "5. Use hashes for Pass-the-Hash or crack for plaintext passwords",
+      "6. Escalate to Golden Ticket for persistence"
+    ],
+    "detection_evasion": [
+      "DCSync generates Event ID 4662 (replication request) on Domain Controller",
+      "Use during business hours when legitimate DC-to-DC replication occurs",
+      "Target specific users instead of dumping all hashes (--just-dc-user vs --just-dc)",
+      "Throttle requests to avoid pattern detection"
+    ]
+  },
+  "commands": [
+    {
+      "id": "ad-dcsync-check-domain-admins",
+      "name": "Verify Domain Admin Membership",
+      "category": "enumeration",
+      "subcategory": "active-directory",
+      "command": "net group \"Domain Admins\" /domain",
+      "description": "List all members of the Domain Admins group to verify current user has required privileges for DCSync. Domain Admins have replication rights by default.",
+      "variables": [],
+      "flag_explanations": {
+        "net group": "Windows built-in command for querying group information in Active Directory. Operates at the domain level (not local groups). This is the fastest native method to check group membership without requiring additional tools.",
+        "\"Domain Admins\"": "Built-in privileged group (SID S-1-5-21-<domain>-512) that has full administrative access across the entire domain. Members automatically receive the extended rights required for DCSync: Replicating Directory Changes, Replicating Directory Changes All, and Replicating Directory Changes in Filtered Set. CRITICAL: Quote the group name because it contains a space.",
+        "/domain": "Query the domain controller for authoritative group membership. Without this flag, 'net group' would query local groups instead of domain groups. ALWAYS use this flag when checking domain-level privileges."
+      },
+      "success_indicators": [
+        "Output contains: 'Group name     Domain Admins'",
+        "Output contains: 'Comment        Designated administrators of the domain'",
+        "Output lists usernames under 'Members'",
+        "Your username appears in the Members list",
+        "Output ends with: 'The command completed successfully'"
+      ],
+      "failure_indicators": [
+        "System error 5 has occurred. Access is denied.",
+        "The group name could not be found",
+        "There is no such global group",
+        "The user name or password is incorrect"
+      ],
+      "troubleshooting": {
+        "Access is denied": "Not authenticated to the domain. Solution: Verify you're on a domain-joined machine (systeminfo | findstr /B /C:\"Domain\"). If domain shows 'WORKGROUP', you're not domain-joined. Use 'runas /netonly' to authenticate with domain credentials: runas /netonly /user:<DOMAIN>\\<USER> cmd.exe",
+        "Group name could not be found": "Not connected to domain controller. Solution: Verify DC connectivity: nltest /dsgetdc:<DOMAIN>. Check DNS resolution: nslookup <DOMAIN>. Ensure network path to DC: ping <DC_FQDN>.",
+        "No such global group": "Typo in group name or querying local groups instead of domain. Solution: Verify exact group name with quotes: net group \"Domain Admins\" /domain. Check you're using /domain flag (not /localgroup).",
+        "User name or password is incorrect": "Session credentials expired or invalid. Solution: Re-authenticate with valid domain credentials. Use 'runas /netonly' for explicit credentials. Verify account is not locked: net user <USERNAME> /domain"
+      },
+      "prerequisites": [],
+      "next_steps": [
+        "ad-dcsync-check-user-groups",
+        "ad-dcsync-mimikatz-user",
+        "ad-dcsync-secretsdump-user"
+      ],
+      "alternatives": [
+        "ad-dcsync-check-user-groups",
+        "ad-dcsync-check-replication-rights"
+      ],
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "DCSYNC",
+        "ENUMERATION",
+        "CREDENTIAL_ACCESS",
+        "OSCP:HIGH",
+        "WINDOWS",
+        "NATIVE_COMMAND"
+      ],
+      "oscp_relevance": "high",
+      "notes": "ALWAYS verify Domain Admin membership BEFORE attempting DCSync. This saves time and avoids failed attack attempts that may generate alerts. If your user is NOT a Domain Admin, check for explicit replication rights assignment (rare but possible). Alternative high-privilege groups: Enterprise Admins (cross-forest), Administrators (domain-wide), Domain Controllers (computer accounts). Time estimate: <5 seconds.\n\nMANUAL ALTERNATIVES:\nPowerShell:\nGet-ADGroupMember -Identity \"Domain Admins\" | Select Name, SamAccountName\nGet-ADUser <USERNAME> -Properties MemberOf | Select -ExpandProperty MemberOf\n\nVerify YOUR membership:\nwhoami /groups | findstr \"Domain Admins\"\nnet user <USERNAME> /domain | findstr \"Domain Admins\"\n\nImpacket (Linux):\nlookupsid.py <DOMAIN>/<USER>:<PASS>@<DC_IP>\n\nTIME ESTIMATE: <5 seconds"
+    },
+    {
+      "id": "ad-dcsync-check-user-groups",
+      "name": "Check Current User's Group Memberships",
+      "category": "enumeration",
+      "subcategory": "active-directory",
+      "command": "whoami /groups",
+      "description": "Display all group memberships for the current user to verify Domain Admin or replication privileges. Native Windows command, no additional tools required.",
+      "variables": [],
+      "flag_explanations": {
+        "whoami": "Built-in Windows utility that displays security information about the current user and their access token. No installation required, works on all Windows versions from XP onwards. Faster than 'net user' because it queries the local security token instead of contacting the DC.",
+        "/groups": "Display all security groups the current user belongs to, including SIDs, types, and attributes. Shows both domain and local groups. CRITICAL: Check for 'Domain Admins' (S-1-5-21-<domain>-512), 'Enterprise Admins' (S-1-5-21-<root-domain>-519), or 'Administrators' (S-1-5-32-544). Any of these groups grant DCSync capabilities."
+      },
+      "success_indicators": [
+        "Output contains: 'GROUP INFORMATION'",
+        "Output contains: 'Domain Admins' with SID S-1-5-21-*-512",
+        "OR: 'Enterprise Admins' with SID S-1-5-21-*-519",
+        "OR: 'Administrators' with SID S-1-5-32-544",
+        "Group Type shows 'Group' and Attributes show 'Mandatory group, Enabled by default, Enabled group'"
+      ],
+      "failure_indicators": [
+        "No Domain Admins, Enterprise Admins, or Administrators group listed",
+        "Groups shown but all marked 'Use for deny only'",
+        "Only local machine groups visible (BUILTIN\\Users, etc.)"
+      ],
+      "troubleshooting": {
+        "No domain groups visible": "Not authenticated to domain. Solution: Verify domain authentication: echo %USERDOMAIN%. If shows local computer name instead of domain, re-authenticate with: runas /netonly /user:<DOMAIN>\\<USER> cmd.exe",
+        "Domain Admins present but DCSync fails": "Group membership cached locally but not effective. Solution: Logoff and logon to refresh token: shutdown /l. Or force token refresh: gpupdate /force && klist purge. Verify effective rights with: whoami /priv (look for SeBackupPrivilege, SeRestorePrivilege).",
+        "Groups marked 'Use for deny only'": "Account disabled or group membership revoked. Solution: Verify account status: net user <USERNAME> /domain. Check for 'Account active: No'. Contact domain admin or compromise different account."
+      },
+      "prerequisites": [],
+      "next_steps": [
+        "ad-dcsync-mimikatz-user",
+        "ad-dcsync-secretsdump-user"
+      ],
+      "alternatives": [
+        "ad-dcsync-check-domain-admins",
+        "ad-dcsync-check-replication-rights"
+      ],
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "DCSYNC",
+        "ENUMERATION",
+        "CREDENTIAL_ACCESS",
+        "OSCP:HIGH",
+        "WINDOWS",
+        "NATIVE_COMMAND"
+      ],
+      "oscp_relevance": "high",
+      "notes": "Fastest method to verify your OWN privileges without querying the domain controller. The security token contains all group memberships assigned at logon time. CRITICAL: Token is created at logon - if permissions changed after you logged in, whoami won't reflect new groups until you re-authenticate. For most current state, use 'net user <USERNAME> /domain' to query DC directly. Time estimate: Instant (<1 second).\n\nMANUAL ALTERNATIVES:\nCheck specific group:\nwhoami /groups | findstr /I \"Domain Admins\"\nwhoami /groups | findstr /I \"S-1-5-21-.*-512\"\n\nPowerShell:\n[Security.Principal.WindowsIdentity]::GetCurrent().Groups | ForEach-Object { $_.Translate([Security.Principal.NTAccount]) }\n\nVerify privileges (alternative indicator):\nwhoami /priv | findstr SeBackupPrivilege\nwhoami /priv | findstr SeRestorePrivilege\n\nLinux (after obtaining TGT):\nklist\nrpcclient -U <DOMAIN>/<USER>%<PASS> <DC_IP> -c 'getusername'\n\nTIME ESTIMATE: <1 second"
+    },
+    {
+      "id": "ad-dcsync-check-replication-rights",
+      "name": "Verify Replication Rights (Advanced)",
+      "category": "enumeration",
+      "subcategory": "active-directory",
+      "command": "powershell -c \"(Get-Acl 'AD:\\<DOMAIN_DN>').Access | Where-Object {$_.IdentityReference -eq '<DOMAIN>\\<USERNAME>' -and ($_.ObjectType -eq '1131f6aa-9c07-11d1-f79f-00c04fc2dcd2' -or $_.ObjectType -eq '1131f6ad-9c07-11d1-f79f-00c04fc2dcd2')} | Select IdentityReference, ActiveDirectoryRights, ObjectType\"",
+      "description": "Check for explicit replication rights assignment on domain object. Required only if user is NOT Domain Admin but may have custom replication permissions assigned.",
+      "variables": [
+        {
+          "name": "<DOMAIN_DN>",
+          "description": "Distinguished Name of domain (e.g., DC=corp,DC=com). Obtain with: ([ADSI]'').distinguishedName",
+          "example": "DC=corp,DC=com",
+          "required": true
+        },
+        {
+          "name": "<DOMAIN>",
+          "description": "NetBIOS domain name",
+          "example": "CORP",
+          "required": true
+        },
+        {
+          "name": "<USERNAME>",
+          "description": "Username to check (current user or target account)",
+          "example": "jeffadmin",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "Get-Acl 'AD:\\<DOMAIN_DN>'": "PowerShell cmdlet to retrieve Access Control List for the domain root object. The 'AD:' drive must be mounted (requires RSAT Active Directory module). This shows ALL permissions on the domain object, including replication rights.",
+        "ObjectType GUIDs": "1131f6aa-9c07-11d1-f79f-00c04fc2dcd2 = DS-Replication-Get-Changes (basic replication). 1131f6ad-9c07-11d1-f79f-00c04fc2dcd2 = DS-Replication-Get-Changes-All (sensitive data including password hashes). BOTH are required for DCSync. Domain Admins have these by default.",
+        "IdentityReference filter": "Matches the user or group being checked. Format: DOMAIN\\Username. This filters the ACL to show only permissions for the specified identity.",
+        "ActiveDirectoryRights": "The specific permissions granted. For DCSync, you need 'ExtendedRight' with the replication ObjectType GUIDs. Generic permissions like 'GenericAll' also grant replication rights."
+      },
+      "success_indicators": [
+        "Output shows: IdentityReference = <DOMAIN>\\<USERNAME>",
+        "Output shows: ActiveDirectoryRights = ExtendedRight",
+        "Output shows: ObjectType = 1131f6aa-9c07-11d1-f79f-00c04fc2dcd2 (DS-Replication-Get-Changes)",
+        "AND: ObjectType = 1131f6ad-9c07-11d1-f79f-00c04fc2dcd2 (DS-Replication-Get-Changes-All)",
+        "Both rights present = DCSync capable"
+      ],
+      "failure_indicators": [
+        "No output = No explicit replication rights",
+        "Only 1131f6aa present (missing 1131f6ad) = Insufficient rights",
+        "Get-Acl : Cannot find drive. A drive with the name 'AD' does not exist",
+        "Access is denied"
+      ],
+      "troubleshooting": {
+        "Cannot find drive 'AD'": "Active Directory PowerShell module not installed. Solution: Install RSAT: Add-WindowsCapability -Online -Name Rsat.ActiveDirectory.DS-LDS.Tools. Or use alternative: dsacls \"<DOMAIN_DN>\" | findstr /I \"<USERNAME>\"",
+        "Access is denied": "Insufficient privileges to read domain ACL. Solution: Must be authenticated domain user (any user can read ACLs). Verify domain connectivity: Test-ComputerSecureChannel -Verbose",
+        "No output but user IS Domain Admin": "Script filtered too strictly. Solution: Domain Admins inherit rights from Administrators group. Check with: Get-ADUser <USERNAME> -Properties MemberOf. If in Domain Admins, DCSync will work regardless of explicit ACL entries.",
+        "Only one ObjectType GUID present": "Missing required replication right. Solution: DCSync requires BOTH DS-Replication-Get-Changes (basic) AND DS-Replication-Get-Changes-All (secrets). Verify with: dsacls \"<DOMAIN_DN>\" to see full ACL. If only basic rights, DCSync will fail."
+      },
+      "prerequisites": [],
+      "next_steps": [
+        "ad-dcsync-mimikatz-user",
+        "ad-dcsync-secretsdump-user"
+      ],
+      "alternatives": [
+        "ad-dcsync-check-domain-admins",
+        "ad-dcsync-check-user-groups"
+      ],
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "DCSYNC",
+        "ENUMERATION",
+        "CREDENTIAL_ACCESS",
+        "OSCP:MEDIUM",
+        "WINDOWS",
+        "POWERSHELL",
+        "ADVANCED"
+      ],
+      "oscp_relevance": "medium",
+      "notes": "This check is RARELY needed in OSCP - most DCSync scenarios involve compromised Domain Admin accounts. Use this only if: (1) You have domain user creds but not DA, (2) Suspicious user has DCSync capability (red team defense evasion), (3) Investigating custom permission delegation. In real penetration tests, attackers occasionally find service accounts or helpdesk accounts with these rights assigned for legitimate backup purposes. Time estimate: 5-10 seconds.\n\nMANUAL ALTERNATIVES:\nWithout PowerShell (dsacls.exe):\ndsacls \"<DOMAIN_DN>\" | findstr /I \"<USERNAME>\"\ndsacls \"<DOMAIN_DN>\" | findstr /I \"1131f6aa-9c07-11d1-f79f-00c04fc2dcd2\"\n\nQuery specific user:\nGet-ADUser <USERNAME> -Properties * | Select Name, MemberOf, msDS-AllowedToDelegateTo\n\nBloodHound (automated):\nFind users with DCSync rights: MATCH (n:User)-[:GetChanges|GetChangesAll*1..]->(d:Domain) RETURN n.name\n\nImpacket (Linux):\npython3 dacledit.py -action read -principal <USERNAME> -target \"<DOMAIN_DN>\" '<DOMAIN>/<USER>:<PASS>'\n\nTIME ESTIMATE: 10-15 seconds (including RSAT module import)"
+    }
+  ]
+}

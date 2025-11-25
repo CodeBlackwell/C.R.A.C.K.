@@ -28,7 +28,7 @@ def get_json_stats():
         'ids': set()
     }
 
-    commands_dir = Path('/home/kali/Desktop/OSCP/crack/reference/data/commands')
+    commands_dir = Path('/home/kali/Desktop/OSCP/crack/db/data/commands')
     for json_file in commands_dir.rglob('*.json'):
         try:
             with open(json_file) as f:

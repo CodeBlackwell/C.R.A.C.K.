@@ -1,0 +1,1004 @@
+{
+  "commands": [
+    {
+      "id": "verify-ntlm-hash",
+      "name": "Verify NTLM Hash Obtained",
+      "category": "utilities",
+      "command": "test -f <HASH_FILE> && grep -qE '^[a-f0-9]{32}$' <HASH_FILE>",
+      "description": "Check if NTLM hash file exists and contains valid 32-character hexadecimal hash format",
+      "tags": [
+        "VERIFICATION",
+        "PREREQUISITE_CHECK",
+        "NTLM",
+        "CREDENTIALS"
+      ],
+      "variables": [
+        {
+          "name": "<HASH_FILE>",
+          "description": "File containing NTLM hash (from secretsdump, mimikatz, etc.)",
+          "example": "hashes.txt",
+          "required": true
+        }
+      ],
+      "success_indicators": [
+        "Exit code 0",
+        "No output (silent success)"
+      ],
+      "failure_indicators": [
+        "Exit code 1 (file not found or invalid hash format)",
+        "grep returns no matches"
+      ],
+      "troubleshooting": {
+        "File not found": "Ensure hash extraction completed: secretsdump.py or mimikatz",
+        "Invalid hash format": "Verify hash is 32 hex chars, extract from full hash string (username:rid:lm:ntlm)"
+      },
+      "next_steps": [
+        "evil-winrm-hash"
+      ],
+      "oscp_relevance": "high",
+      "notes": "NTLM hash format:\nlowercase hexadecimal, 32 characters.\n\nCommon sources:\nsecretsdump.py, mimikatz, crackmapexec --sam/--lsa"
+    },
+    {
+      "id": "verify-crackmapexec-installed",
+      "name": "Verify CrackMapExec Installed",
+      "category": "utilities",
+      "command": "which crackmapexec || which cme",
+      "description": "Verify CrackMapExec is installed and available in system PATH",
+      "tags": [
+        "VERIFICATION",
+        "PREREQUISITE_CHECK",
+        "TOOL_CHECK",
+        "CRACKMAPEXEC"
+      ],
+      "success_indicators": [
+        "Path to crackmapexec binary (e.g., /usr/bin/crackmapexec)",
+        "Exit code 0"
+      ],
+      "failure_indicators": [
+        "No output",
+        "Exit code 1 (command not found)"
+      ],
+      "troubleshooting": {
+        "Command not found": "sudo apt install crackmapexec -y",
+        "Installation failed": "pipx install crackmapexec"
+      },
+      "next_steps": [],
+      "oscp_relevance": "high",
+      "notes": "CrackMapExec may be aliased as 'cme' in some environments.\n\nCheck both variants."
+    },
+    {
+      "id": "verify-neo4j-running",
+      "name": "Verify Neo4j Database Running",
+      "category": "utilities",
+      "command": "systemctl is-active neo4j || sudo neo4j status | grep -q 'Neo4j is running'",
+      "description": "Check if Neo4j database service is running and active",
+      "tags": [
+        "VERIFICATION",
+        "PREREQUISITE_CHECK",
+        "NEO4J",
+        "DATABASE"
+      ],
+      "success_indicators": [
+        "Output: active",
+        "Neo4j is running",
+        "Exit code 0"
+      ],
+      "failure_indicators": [
+        "Output: inactive",
+        "Neo4j is not running",
+        "Exit code 1"
+      ],
+      "troubleshooting": {
+        "Service inactive": "sudo systemctl start neo4j",
+        "Service failed": "sudo systemctl status neo4j (check logs)",
+        "Port conflict": "sudo netstat -tulnp | grep 7474 (default HTTP port)"
+      },
+      "next_steps": [
+        "bloodhound-ingest"
+      ],
+      "oscp_relevance": "medium",
+      "notes": "Neo4j required for BloodHound data ingestion and Active Directory analysis.\n\nDefault ports:\n7474 (HTTP), 7687 (Bolt)."
+    },
+    {
+      "id": "verify-web-server-up",
+      "name": "Verify Web Server Responding",
+      "category": "utilities",
+      "command": "curl -I http://<TARGET>:<PORT> --connect-timeout 5 --max-time 10",
+      "description": "Verify web server is responding to HTTP requests within timeout",
+      "tags": [
+        "VERIFICATION",
+        "PREREQUISITE_CHECK",
+        "WEB",
+        "CONNECTIVITY"
+      ],
+      "variables": [
+        {
+          "name": "<TARGET>",
+          "description": "Target IP or hostname",
+          "required": true
+        },
+        {
+          "name": "<PORT>",
+          "description": "Web server port",
+          "example": "80",
+          "required": false
+        }
+      ],
+      "success_indicators": [
+        "HTTP/1.1 200 OK",
+        "HTTP/1.1 30x (redirects)",
+        "Server header present",
+        "Exit code 0"
+      ],
+      "failure_indicators": [
+        "Connection refused",
+        "Timeout after 5 seconds",
+        "Could not resolve host",
+        "Exit code 7 (connection failed)"
+      ],
+      "troubleshooting": {
+        "Connection timeout": "Verify port with nmap: nmap -p <PORT> <TARGET>",
+        "Connection refused": "Check firewall rules, verify service running",
+        "HTTPS required": "Use curl -Ik https://<TARGET>:<PORT>"
+      },
+      "next_steps": [
+        "nikto-web-scan"
+      ],
+      "oscp_relevance": "high",
+      "flag_explanations": {
+        "-I": "Fetch headers only (HEAD request)",
+        "--connect-timeout 5": "Maximum time to establish connection",
+        "--max-time 10": "Maximum total time for operation"
+      }
+    },
+    {
+      "id": "verify-powerview-imported",
+      "name": "Verify PowerView Module Loaded",
+      "category": "utilities",
+      "command": "powershell -Command \"Get-Command Get-NetDomain -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Name\"",
+      "description": "Check if PowerView module is imported and cmdlets are available in PowerShell session",
+      "tags": [
+        "VERIFICATION",
+        "PREREQUISITE_CHECK",
+        "POWERSHELL",
+        "POWERVIEW",
+        "ACTIVE_DIRECTORY"
+      ],
+      "success_indicators": [
+        "Output: Get-NetDomain",
+        "Exit code 0"
+      ],
+      "failure_indicators": [
+        "No output",
+        "Command not found",
+        "Exit code 1"
+      ],
+      "troubleshooting": {
+        "PowerView not loaded": "Import-Module <PATH>\\PowerView.ps1",
+        "Execution policy blocked": "Set-ExecutionPolicy Bypass -Scope Process",
+        "Module not found": "Download from github.com/PowerShellMafia/PowerSploit"
+      },
+      "prerequisites": [
+        "import-powerview"
+      ],
+      "next_steps": [
+        "get-netdomain",
+        "get-netuser",
+        "get-netgroup"
+      ],
+      "oscp_relevance": "high",
+      "notes": "PowerView cmdlets available after import:\nGet-NetDomain, Get-NetUser, Get-NetGroup, Get-NetComputer, Invoke-ShareFinder"
+    },
+    {
+      "id": "verify-impacket-installed",
+      "name": "Verify Impacket Toolkit Installed",
+      "category": "utilities",
+      "command": "which secretsdump.py && which psexec.py && which GetNPUsers.py",
+      "description": "Verify Impacket toolkit is installed with core scripts available",
+      "tags": [
+        "VERIFICATION",
+        "PREREQUISITE_CHECK",
+        "TOOL_CHECK",
+        "IMPACKET"
+      ],
+      "success_indicators": [
+        "Path to secretsdump.py",
+        "Path to psexec.py",
+        "Path to GetNPUsers.py",
+        "Exit code 0"
+      ],
+      "failure_indicators": [
+        "Command not found",
+        "Exit code 1"
+      ],
+      "troubleshooting": {
+        "Impacket not found": "sudo apt install python3-impacket -y",
+        "Scripts not in PATH": "pipx install impacket",
+        "Permission denied": "Add ~/.local/bin to PATH"
+      },
+      "next_steps": [],
+      "oscp_relevance": "high",
+      "notes": "Impacket pre-installed on Kali.\n\nCore scripts:\nsecretsdump.py, psexec.py, smbexec.py, wmiexec.py, GetNPUsers.py, GetUserSPNs.py"
+    },
+    {
+      "id": "verify-evil-winrm-installed",
+      "name": "Verify Evil-WinRM Installed",
+      "category": "utilities",
+      "command": "which evil-winrm",
+      "description": "Verify Evil-WinRM tool is installed and available for WinRM access",
+      "tags": [
+        "VERIFICATION",
+        "PREREQUISITE_CHECK",
+        "TOOL_CHECK",
+        "WINRM"
+      ],
+      "success_indicators": [
+        "Path to evil-winrm binary",
+        "Exit code 0"
+      ],
+      "failure_indicators": [
+        "Command not found",
+        "Exit code 1"
+      ],
+      "troubleshooting": {
+        "Evil-WinRM not found": "sudo gem install evil-winrm",
+        "Ruby not installed": "sudo apt install ruby ruby-dev -y"
+      },
+      "next_steps": [
+        "evil-winrm-hash"
+      ],
+      "oscp_relevance": "high",
+      "notes": "Evil-WinRM provides interactive PowerShell remote shell over WinRM (port 5985 HTTP, 5986 HTTPS)"
+    },
+    {
+      "id": "verify-nmap-installed",
+      "name": "Verify Nmap Installed",
+      "category": "utilities",
+      "command": "which nmap",
+      "description": "Verify Nmap network scanner is installed and available",
+      "tags": [
+        "VERIFICATION",
+        "PREREQUISITE_CHECK",
+        "TOOL_CHECK",
+        "NMAP"
+      ],
+      "success_indicators": [
+        "Path to nmap binary (e.g., /usr/bin/nmap)",
+        "Exit code 0"
+      ],
+      "failure_indicators": [
+        "Command not found",
+        "Exit code 1"
+      ],
+      "troubleshooting": {
+        "Nmap not found": "sudo apt install nmap -y"
+      },
+      "next_steps": [
+        "nmap-vuln-scan"
+      ],
+      "oscp_relevance": "high",
+      "notes": "Nmap pre-installed on Kali Linux.\n\nEssential for port scanning and service enumeration."
+    },
+    {
+      "id": "verify-mimikatz-available",
+      "name": "Verify Mimikatz Available",
+      "category": "utilities",
+      "command": "test -f <MIMIKATZ_PATH>/mimikatz.exe",
+      "description": "Check if Mimikatz executable exists at specified path on Windows host",
+      "tags": [
+        "VERIFICATION",
+        "PREREQUISITE_CHECK",
+        "MIMIKATZ",
+        "WINDOWS"
+      ],
+      "variables": [
+        {
+          "name": "<MIMIKATZ_PATH>",
+          "description": "Directory containing mimikatz.exe",
+          "example": "C:\\Tools\\Mimikatz",
+          "required": true
+        }
+      ],
+      "success_indicators": [
+        "Exit code 0 (file exists)",
+        "No output"
+      ],
+      "failure_indicators": [
+        "Exit code 1 (file not found)"
+      ],
+      "troubleshooting": {
+        "File not found": "Download from github.com/gentilkiwi/mimikatz/releases",
+        "Transfer failed": "Use certutil -urlcache or impacket-smbserver",
+        "AV detection": "Disable AV or use obfuscated version"
+      },
+      "next_steps": [],
+      "oscp_relevance": "high",
+      "notes": "Mimikatz extracts plaintext passwords, hashes, tickets from memory.\n\nRequires SYSTEM/Admin privileges."
+    },
+    {
+      "id": "verify-rubeus-available",
+      "name": "Verify Rubeus.exe Available",
+      "category": "utilities",
+      "command": "test -f <RUBEUS_PATH>/Rubeus.exe",
+      "description": "Check if Rubeus.exe Kerberos toolkit exists at specified path on Windows host",
+      "tags": [
+        "VERIFICATION",
+        "PREREQUISITE_CHECK",
+        "RUBEUS",
+        "KERBEROS",
+        "WINDOWS"
+      ],
+      "variables": [
+        {
+          "name": "<RUBEUS_PATH>",
+          "description": "Directory containing Rubeus.exe",
+          "example": "C:\\Tools\\Rubeus",
+          "required": true
+        }
+      ],
+      "success_indicators": [
+        "Exit code 0 (file exists)",
+        "No output"
+      ],
+      "failure_indicators": [
+        "Exit code 1 (file not found)"
+      ],
+      "troubleshooting": {
+        "File not found": "Download from github.com/GhostPack/Rubeus",
+        "Compilation required": "Compile with Visual Studio or use pre-compiled release",
+        "Transfer failed": "Use certutil -urlcache or SMB share"
+      },
+      "next_steps": [
+        "rubeus-asreproast",
+        "rubeus-kerberoast"
+      ],
+      "oscp_relevance": "high",
+      "notes": "Rubeus is C# toolkit for Kerberos attacks:\nASREPRoasting, Kerberoasting, overpass-the-hash, ticket manipulation"
+    },
+    {
+      "id": "verify-getcap-installed",
+      "name": "Verify getcap Utility Installed",
+      "category": "utilities",
+      "command": "which getcap",
+      "description": "Verify getcap utility is installed for enumerating Linux capabilities",
+      "tags": [
+        "VERIFICATION",
+        "PREREQUISITE_CHECK",
+        "LINUX",
+        "CAPABILITIES"
+      ],
+      "success_indicators": [
+        "Path to getcap binary",
+        "Exit code 0"
+      ],
+      "failure_indicators": [
+        "Command not found",
+        "Exit code 1"
+      ],
+      "troubleshooting": {
+        "getcap not found": "sudo apt install libcap2-bin -y"
+      },
+      "next_steps": [],
+      "oscp_relevance": "medium",
+      "notes": "Part of libcap2-bin package.\n\nUsed to find binaries with elevated capabilities (e.g., CAP_SETUID for privilege escalation)"
+    },
+    {
+      "id": "verify-docker-images-available",
+      "name": "Verify Docker Images Available",
+      "category": "utilities",
+      "command": "docker images | grep -q alpine || docker pull alpine",
+      "description": "Check if Docker images exist locally, pull alpine if none available",
+      "tags": [
+        "VERIFICATION",
+        "PREREQUISITE_CHECK",
+        "DOCKER",
+        "CONTAINER"
+      ],
+      "success_indicators": [
+        "alpine image listed in docker images",
+        "Pull successful: Downloaded newer image",
+        "Exit code 0"
+      ],
+      "failure_indicators": [
+        "Cannot connect to Docker daemon",
+        "Permission denied",
+        "Exit code 1"
+      ],
+      "troubleshooting": {
+        "Docker daemon not running": "sudo systemctl start docker",
+        "Permission denied": "sudo usermod -aG docker $USER (logout/login required)",
+        "Network error": "Check internet connectivity for image pull"
+      },
+      "next_steps": [],
+      "oscp_relevance": "medium",
+      "notes": "Docker privilege escalation requires existing images or ability to pull.\n\nAlpine is minimal (5MB) and commonly available."
+    },
+    {
+      "id": "verify-curl-available",
+      "name": "Verify curl or wget Available",
+      "category": "utilities",
+      "command": "which curl || which wget",
+      "description": "Check if curl or wget is available for HTTP file transfers",
+      "tags": [
+        "VERIFICATION",
+        "PREREQUISITE_CHECK",
+        "FILE_TRANSFER",
+        "HTTP"
+      ],
+      "success_indicators": [
+        "Path to curl or wget binary",
+        "Exit code 0"
+      ],
+      "failure_indicators": [
+        "Neither curl nor wget found",
+        "Exit code 1"
+      ],
+      "troubleshooting": {
+        "Both missing": "Use python3 -m http.server (if Python available)",
+        "Fallback option": "nc -lvnp <PORT> > file (manual netcat transfer)"
+      },
+      "alternatives": [
+        "python-http-server",
+        "nc-file-transfer"
+      ],
+      "next_steps": [],
+      "oscp_relevance": "high",
+      "notes": "curl and wget pre-installed on most Linux.\n\nWindows 10+ includes curl.exe.\n\nUsed for downloading exploits, tools, reverse shells."
+    },
+    {
+      "id": "verify-socat-installed",
+      "name": "Verify Socat Installed on Pivot Host",
+      "category": "utilities",
+      "command": "which socat",
+      "description": "Check if socat is installed for advanced port forwarding and redirection",
+      "tags": [
+        "VERIFICATION",
+        "PREREQUISITE_CHECK",
+        "SOCAT",
+        "PIVOTING"
+      ],
+      "success_indicators": [
+        "Path to socat binary",
+        "Exit code 0"
+      ],
+      "failure_indicators": [
+        "Command not found",
+        "Exit code 1"
+      ],
+      "troubleshooting": {
+        "Socat not found": "sudo apt install socat -y",
+        "On compromised host": "Transfer socat binary via file transfer techniques",
+        "Windows alternative": "Use netsh interface portproxy"
+      },
+      "next_steps": [
+        "socat-port-forward"
+      ],
+      "oscp_relevance": "medium",
+      "notes": "Socat is multipurpose relay tool for pivoting.\n\nCan forward TCP/UDP, create reverse shells, port redirection."
+    },
+    {
+      "id": "verify-rdp-service-running",
+      "name": "Verify RDP Service Running on Target",
+      "category": "utilities",
+      "command": "nmap -p 3389 -Pn <TARGET> | grep -q 'open'",
+      "description": "Check if Remote Desktop Protocol service is running and accessible on target",
+      "tags": [
+        "VERIFICATION",
+        "PREREQUISITE_CHECK",
+        "RDP",
+        "WINDOWS"
+      ],
+      "variables": [
+        {
+          "name": "<TARGET>",
+          "description": "Target IP or hostname",
+          "required": true
+        }
+      ],
+      "success_indicators": [
+        "3389/tcp open",
+        "Exit code 0"
+      ],
+      "failure_indicators": [
+        "3389/tcp closed",
+        "3389/tcp filtered",
+        "Exit code 1"
+      ],
+      "troubleshooting": {
+        "Port filtered": "Check firewall rules, try from different source IP",
+        "Port closed": "RDP disabled on target, verify service: Get-Service TermService",
+        "Alternative ports": "Scan for non-standard RDP ports: nmap -p- <TARGET>"
+      },
+      "next_steps": [
+        "xfreerdp-connect"
+      ],
+      "oscp_relevance": "high",
+      "notes": "RDP default port 3389.\n\nService name:\nTermService (Windows).\n\nRequired for graphical remote access and lateral movement."
+    },
+    {
+      "id": "verify-python-available",
+      "name": "Verify Python Available on Host",
+      "category": "utilities",
+      "command": "which python3 || which python",
+      "description": "Check if Python interpreter is available for scripting and exploitation",
+      "tags": [
+        "VERIFICATION",
+        "PREREQUISITE_CHECK",
+        "PYTHON"
+      ],
+      "success_indicators": [
+        "Path to python3 or python binary",
+        "Exit code 0"
+      ],
+      "failure_indicators": [
+        "Command not found",
+        "Exit code 1"
+      ],
+      "troubleshooting": {
+        "Python not found": "Check /usr/bin/python* manually",
+        "Python2 only": "Use python2 syntax for exploits",
+        "No Python": "Use compiled binaries or shell scripts"
+      },
+      "next_steps": [
+        "python-http-server",
+        "python-reverse-shell"
+      ],
+      "oscp_relevance": "high",
+      "notes": "Python usually pre-installed on Linux.\n\nUsed for HTTP servers, reverse shells, exploit modifications, enumeration scripts."
+    },
+    {
+      "id": "verify-socks-proxy-running",
+      "name": "Verify SOCKS Proxy Running",
+      "category": "utilities",
+      "command": "netstat -tulnp | grep -E ':<SOCKS_PORT>.*LISTEN'",
+      "description": "Check if SOCKS proxy is listening on specified port for pivoting",
+      "tags": [
+        "VERIFICATION",
+        "PREREQUISITE_CHECK",
+        "SOCKS",
+        "PIVOTING"
+      ],
+      "variables": [
+        {
+          "name": "<SOCKS_PORT>",
+          "description": "SOCKS proxy port",
+          "example": "1080",
+          "required": true
+        }
+      ],
+      "success_indicators": [
+        "Port in LISTEN state",
+        "Process ID shown",
+        "Exit code 0"
+      ],
+      "failure_indicators": [
+        "No output (port not listening)",
+        "Exit code 1"
+      ],
+      "troubleshooting": {
+        "Proxy not running": "ssh -D <SOCKS_PORT> user@pivot-host",
+        "Port in use": "Choose different port or kill existing process",
+        "Verify functionality": "proxychains4 nmap -sT -Pn <INTERNAL_TARGET>"
+      },
+      "prerequisites": [
+        "ssh-dynamic-forward"
+      ],
+      "next_steps": [
+        "proxychains-nmap"
+      ],
+      "oscp_relevance": "high",
+      "notes": "SOCKS proxy created via SSH dynamic port forwarding (ssh -D).\n\nConfigure proxychains:\n/etc/proxychains4.conf"
+    },
+    {
+      "id": "verify-credentials",
+      "name": "Verify Valid Credentials",
+      "category": "utilities",
+      "command": "crackmapexec smb <TARGET> -u <USERNAME> -p <PASSWORD>",
+      "description": "Verify credentials are valid against target SMB service",
+      "tags": [
+        "VERIFICATION",
+        "PREREQUISITE_CHECK",
+        "CREDENTIALS",
+        "SMB"
+      ],
+      "variables": [
+        {
+          "name": "<TARGET>",
+          "description": "Target IP or hostname",
+          "required": true
+        },
+        {
+          "name": "<USERNAME>",
+          "description": "Username to verify",
+          "required": true
+        },
+        {
+          "name": "<PASSWORD>",
+          "description": "Password to verify",
+          "required": true
+        }
+      ],
+      "success_indicators": [
+        "[+] Authenticated",
+        "STATUS_SUCCESS",
+        "Pwn3d! (admin access)",
+        "Exit code 0"
+      ],
+      "failure_indicators": [
+        "[-] Authentication failed",
+        "STATUS_LOGON_FAILURE",
+        "Exit code 1"
+      ],
+      "troubleshooting": {
+        "Authentication failed": "Verify username/password format, check account lockout",
+        "Connection error": "Verify SMB port open: nmap -p 445 <TARGET>",
+        "Alternative protocols": "Try WinRM: crackmapexec winrm <TARGET> -u <USERNAME> -p <PASSWORD>"
+      },
+      "alternatives": [
+        "verify-credentials",
+        "verify-credentials"
+      ],
+      "next_steps": [],
+      "oscp_relevance": "high",
+      "notes": "Use to validate credentials before exploitation.\n\nSMB (port 445) most reliable for Windows credential validation."
+    },
+    {
+      "id": "verify-powershell-access",
+      "name": "Verify PowerShell Access on Windows Host",
+      "category": "utilities",
+      "command": "powershell -Command \"$PSVersionTable.PSVersion\"",
+      "description": "Check if PowerShell is accessible and display version information",
+      "tags": [
+        "VERIFICATION",
+        "PREREQUISITE_CHECK",
+        "POWERSHELL",
+        "WINDOWS"
+      ],
+      "success_indicators": [
+        "Major Minor Build Revision",
+        "Version number displayed (e.g., 5.1)",
+        "Exit code 0"
+      ],
+      "failure_indicators": [
+        "Command not found",
+        "Access denied",
+        "Exit code 1"
+      ],
+      "troubleshooting": {
+        "PowerShell not found": "Verify Windows version (PowerShell included since Windows 7)",
+        "Execution policy blocked": "powershell -ExecutionPolicy Bypass -Command ...",
+        "Restricted environment": "Use cmd.exe alternatives or AppLocker bypass techniques"
+      },
+      "next_steps": [
+        "import-powerview",
+        "invoke-mimikatz"
+      ],
+      "oscp_relevance": "high",
+      "notes": "PowerShell v2+ on Windows 7+, v5.1 on Windows 10/Server 2016+.\n\nRequired for most Windows enumeration and exploitation scripts."
+    },
+    {
+      "id": "verify-network-connectivity",
+      "name": "Verify Network Connectivity to Target",
+      "category": "utilities",
+      "command": "ping -c 4 <TARGET> || nc -zv <TARGET> <PORT>",
+      "description": "Check basic network connectivity to target via ICMP or TCP",
+      "tags": [
+        "VERIFICATION",
+        "PREREQUISITE_CHECK",
+        "NETWORK",
+        "CONNECTIVITY"
+      ],
+      "variables": [
+        {
+          "name": "<TARGET>",
+          "description": "Target IP or hostname",
+          "required": true
+        },
+        {
+          "name": "<PORT>",
+          "description": "TCP port to test if ICMP blocked",
+          "example": "80",
+          "required": false
+        }
+      ],
+      "success_indicators": [
+        "4 packets transmitted, 4 received (ping)",
+        "Connection succeeded (nc)",
+        "0% packet loss",
+        "Exit code 0"
+      ],
+      "failure_indicators": [
+        "100% packet loss",
+        "Destination Host Unreachable",
+        "Connection refused/timed out",
+        "Exit code 1"
+      ],
+      "troubleshooting": {
+        "ICMP blocked": "Use TCP probe: nc -zv <TARGET> <PORT>",
+        "All ports filtered": "Verify routing, check firewall rules",
+        "DNS resolution failed": "Use IP address instead of hostname"
+      },
+      "next_steps": [],
+      "oscp_relevance": "high",
+      "flag_explanations": {
+        "-c 4": "Send 4 ICMP echo requests",
+        "-z": "Zero-I/O mode (scanning)",
+        "-v": "Verbose output"
+      }
+    },
+    {
+      "id": "verify-root-access",
+      "name": "Verify Root/Administrator Access",
+      "category": "utilities",
+      "command": "id | grep -qE '(uid=0|root)' || whoami /groups | grep -qE '(Administrators|BUILTIN\\\\Administrators)'",
+      "description": "Check if current user has root (Linux) or Administrator (Windows) privileges",
+      "tags": [
+        "VERIFICATION",
+        "PREREQUISITE_CHECK",
+        "PRIVILEGES",
+        "ROOT",
+        "ADMIN"
+      ],
+      "success_indicators": [
+        "uid=0(root) (Linux)",
+        "BUILTIN\\Administrators (Windows)",
+        "Exit code 0"
+      ],
+      "failure_indicators": [
+        "uid=1000 or higher (Linux)",
+        "No administrator group (Windows)",
+        "Exit code 1"
+      ],
+      "troubleshooting": {
+        "Not root/admin": "Run privilege escalation enumeration: linpeas.sh or winpeas.exe",
+        "Linux sudo check": "sudo -l (check allowed commands)",
+        "Windows UAC": "Use administrator shell or bypass UAC"
+      },
+      "next_steps": [],
+      "oscp_relevance": "high",
+      "notes": "Many post-exploitation tools require elevated privileges.\n\nLinux:\nuid=0, Windows:\nAdministrators/SYSTEM/Domain Admins groups."
+    },
+    {
+      "id": "verify-file-exists",
+      "name": "Verify File Exists",
+      "category": "utilities",
+      "command": "test -f <FILE_PATH>",
+      "description": "Check if specified file exists and is a regular file (not directory)",
+      "tags": [
+        "VERIFICATION",
+        "PREREQUISITE_CHECK",
+        "FILE_SYSTEM"
+      ],
+      "variables": [
+        {
+          "name": "<FILE_PATH>",
+          "description": "Full path to file to verify",
+          "required": true
+        }
+      ],
+      "success_indicators": [
+        "Exit code 0",
+        "No output (silent success)"
+      ],
+      "failure_indicators": [
+        "Exit code 1 (file not found or is directory)"
+      ],
+      "troubleshooting": {
+        "File not found": "Verify path with ls -la <DIRECTORY>",
+        "Is a directory": "Use test -d <FILE_PATH> to check for directories",
+        "Permission denied": "Check read permissions: ls -l <FILE_PATH>"
+      },
+      "alternatives": [],
+      "oscp_relevance": "medium",
+      "notes": "test -f checks for regular files.\n\nUse -d for directories, -e for any file type (file/dir/symlink)."
+    },
+    {
+      "id": "verify-port-open",
+      "name": "Verify Port Open on Target",
+      "category": "utilities",
+      "command": "nc -zv <TARGET> <PORT>",
+      "description": "Check if specified TCP port is open and accepting connections",
+      "tags": [
+        "VERIFICATION",
+        "PREREQUISITE_CHECK",
+        "PORT",
+        "NETWORK"
+      ],
+      "variables": [
+        {
+          "name": "<TARGET>",
+          "description": "Target IP or hostname",
+          "required": true
+        },
+        {
+          "name": "<PORT>",
+          "description": "Port number to verify",
+          "required": true
+        }
+      ],
+      "success_indicators": [
+        "[target] port [number] (service) open",
+        "Connection succeeded",
+        "Exit code 0"
+      ],
+      "failure_indicators": [
+        "Connection refused",
+        "Connection timed out",
+        "Exit code 1"
+      ],
+      "troubleshooting": {
+        "Connection refused": "Port closed, verify service running",
+        "Timeout": "Port filtered by firewall, try nmap -Pn",
+        "Alternative check": "nmap -p <PORT> -Pn <TARGET>"
+      },
+      "alternatives": [
+        "nmap-port-check",
+        "telnet-check"
+      ],
+      "next_steps": [],
+      "oscp_relevance": "high",
+      "flag_explanations": {
+        "-z": "Zero-I/O mode (scan only, no data transfer)",
+        "-v": "Verbose output showing connection status"
+      }
+    },
+    {
+      "id": "verify-sql-injection-vulnerable",
+      "name": "Verify SQL Injection Vulnerability",
+      "category": "utilities",
+      "command": "sqlmap -u \"http://<TARGET>/<ENDPOINT>?<PARAM>=<VALUE>\" --batch --dbs --level=1 --risk=1",
+      "description": "Test if parameter is vulnerable to SQL injection using automated sqlmap scan",
+      "tags": [
+        "VERIFICATION",
+        "PREREQUISITE_CHECK",
+        "SQL_INJECTION",
+        "WEB"
+      ],
+      "variables": [
+        {
+          "name": "<TARGET>",
+          "description": "Target web server IP or hostname",
+          "required": true
+        },
+        {
+          "name": "<ENDPOINT>",
+          "description": "Vulnerable endpoint path",
+          "example": "login.php",
+          "required": true
+        },
+        {
+          "name": "<PARAM>",
+          "description": "Parameter to test for injection",
+          "example": "id",
+          "required": true
+        },
+        {
+          "name": "<VALUE>",
+          "description": "Parameter value to inject payload",
+          "example": "1",
+          "required": true
+        }
+      ],
+      "success_indicators": [
+        "Parameter is vulnerable",
+        "Injectable parameter found",
+        "Database banner displayed",
+        "Exit code 0"
+      ],
+      "failure_indicators": [
+        "All tested parameters do not appear to be injectable",
+        "Connection timeout",
+        "Exit code 1"
+      ],
+      "troubleshooting": {
+        "False negative": "Increase level: --level=5 --risk=3",
+        "Manual test": "Try ' OR 1=1-- in parameter",
+        "POST parameters": "Use -r request.txt (capture with Burp)"
+      },
+      "next_steps": [
+        "sqli-union-mysql-info"
+      ],
+      "oscp_relevance": "high",
+      "flag_explanations": {
+        "--batch": "Non-interactive mode (accept defaults)",
+        "--dbs": "Enumerate databases if vulnerable",
+        "--level=1": "Test thoroughness (1-5, default 1)",
+        "--risk=1": "Risk of interference (1-3, default 1)"
+      }
+    },
+    {
+      "id": "verify-smb-null-session",
+      "name": "Verify SMB Null Session Allowed",
+      "category": "utilities",
+      "command": "smbclient -N -L //<TARGET>",
+      "description": "Check if target allows SMB null session for anonymous share enumeration",
+      "tags": [
+        "VERIFICATION",
+        "PREREQUISITE_CHECK",
+        "SMB",
+        "NULL_SESSION"
+      ],
+      "variables": [
+        {
+          "name": "<TARGET>",
+          "description": "Target IP or hostname",
+          "required": true
+        }
+      ],
+      "success_indicators": [
+        "Sharename list displayed",
+        "IPC$ or other shares visible",
+        "Exit code 0"
+      ],
+      "failure_indicators": [
+        "NT_STATUS_ACCESS_DENIED",
+        "session setup failed",
+        "Exit code 1"
+      ],
+      "troubleshooting": {
+        "Access denied": "Null sessions disabled (Windows default post-2000)",
+        "Alternative enumeration": "enum4linux -a <TARGET> (tries multiple protocols)",
+        "Credential-based": "smbclient -U <USERNAME> -L //<TARGET>"
+      },
+      "alternatives": [
+        "smb-crackmapexec-shares"
+      ],
+      "next_steps": [
+        "smbmap-enumerate"
+      ],
+      "oscp_relevance": "high",
+      "flag_explanations": {
+        "-N": "Suppress password prompt (null authentication)",
+        "-L": "List available shares on target"
+      },
+      "notes": "Null sessions deprecated post-Windows 2000 but sometimes enabled on legacy systems.\n\nIPC$ share indicates anonymous access."
+    },
+    {
+      "id": "verify-ldap-anonymous-bind",
+      "name": "Verify LDAP Anonymous Bind Allowed",
+      "category": "utilities",
+      "command": "ldapsearch -x -H ldap://<TARGET> -b \"\" -s base \"(objectClass=*)\"",
+      "description": "Check if LDAP server allows anonymous bind for unauthenticated enumeration",
+      "tags": [
+        "VERIFICATION",
+        "PREREQUISITE_CHECK",
+        "LDAP",
+        "ACTIVE_DIRECTORY",
+        "ANONYMOUS"
+      ],
+      "variables": [
+        {
+          "name": "<TARGET>",
+          "description": "Domain controller IP or hostname",
+          "required": true
+        }
+      ],
+      "success_indicators": [
+        "rootDSE information displayed",
+        "namingContexts shown",
+        "defaultNamingContext: DC=domain,DC=local",
+        "Exit code 0"
+      ],
+      "failure_indicators": [
+        "Server is unwilling to perform",
+        "Invalid credentials",
+        "Connection refused",
+        "Exit code 1"
+      ],
+      "troubleshooting": {
+        "Anonymous bind disabled": "Use valid credentials: -D 'CN=User,DC=domain' -w password",
+        "Connection error": "Verify LDAP port: nmap -p 389,636,3268,3269 <TARGET>",
+        "LDAPS required": "ldapsearch -x -H ldaps://<TARGET>:636"
+      },
+      "next_steps": [],
+      "oscp_relevance": "high",
+      "flag_explanations": {
+        "-x": "Simple authentication (not SASL)",
+        "-H ldap://<TARGET>": "LDAP URI to connect",
+        "-b \"\"": "Base DN (empty for rootDSE query)",
+        "-s base": "Search scope: base object only"
+      },
+      "notes": "Anonymous LDAP bind often disabled in hardened environments.\n\nIf allowed, provides base DN for further enumeration."
+    }
+  ]
+}

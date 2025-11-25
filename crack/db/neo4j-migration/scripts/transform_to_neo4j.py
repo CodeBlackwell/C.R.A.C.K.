@@ -12,7 +12,8 @@ import hashlib
 from pathlib import Path
 from typing import Dict, List, Any, Tuple, Set, Callable
 import argparse
-from load_existing_json import load_command_jsons, load_attack_chain_jsons, load_cheatsheet_jsons
+from load_existing_json import load_command_jsons, load_attack_chain_jsons, load_cheatsheet_jsons, load_writeup_jsons
+from writeup_extractors import WRITEUP_EXTRACTORS
 
 # Add parent directory to path to import schema module
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -243,6 +244,68 @@ def _extract_cheatsheet_tag_rels(commands: List[Dict], chains: List[Dict], cheat
     return relationships
 
 
+# =============================================================================
+# Writeup Extractor Wrapper Functions
+# =============================================================================
+# These functions wrap class-based writeup extractors to match pipeline signature.
+# Note: Writeups are stored in a module-level variable to avoid signature changes.
+
+_writeups_data: List[Dict] = []  # Module-level storage for writeup data
+
+def set_writeups_data(writeups: List[Dict]):
+    """Set writeup data for extractors to use"""
+    global _writeups_data
+    _writeups_data = writeups
+
+def _extract_writeups_nodes(commands: List[Dict], chains: List[Dict], cheatsheets: List[Dict]) -> List[Dict]:
+    """Extract writeup nodes for CSV"""
+    return WRITEUP_EXTRACTORS['writeups_nodes'].extract_nodes(_writeups_data)
+
+def _extract_cve_nodes(commands: List[Dict], chains: List[Dict], cheatsheets: List[Dict]) -> List[Dict]:
+    """Extract CVE nodes for CSV"""
+    return WRITEUP_EXTRACTORS['cve_nodes'].extract_nodes(_writeups_data)
+
+def _extract_technique_nodes(commands: List[Dict], chains: List[Dict], cheatsheets: List[Dict]) -> List[Dict]:
+    """Extract technique nodes for CSV"""
+    return WRITEUP_EXTRACTORS['technique_nodes'].extract_nodes(_writeups_data)
+
+def _extract_platform_nodes(commands: List[Dict], chains: List[Dict], cheatsheets: List[Dict]) -> List[Dict]:
+    """Extract platform nodes for CSV"""
+    return WRITEUP_EXTRACTORS['platform_nodes'].extract_nodes(_writeups_data)
+
+def _extract_skill_nodes(commands: List[Dict], chains: List[Dict], cheatsheets: List[Dict]) -> List[Dict]:
+    """Extract skill nodes for CSV"""
+    return WRITEUP_EXTRACTORS['skill_nodes'].extract_nodes(_writeups_data)
+
+def _extract_writeup_demonstrates_command_rels(commands: List[Dict], chains: List[Dict], cheatsheets: List[Dict]) -> List[Dict]:
+    """Extract Writeup->Command DEMONSTRATES relationships"""
+    return WRITEUP_EXTRACTORS['writeup_demonstrates_command'].extract_relationships(_writeups_data)
+
+def _extract_writeup_failed_attempt_rels(commands: List[Dict], chains: List[Dict], cheatsheets: List[Dict]) -> List[Dict]:
+    """Extract Writeup->Command FAILED_ATTEMPT relationships"""
+    return WRITEUP_EXTRACTORS['writeup_failed_attempt'].extract_relationships(_writeups_data)
+
+def _extract_writeup_exploits_cve_rels(commands: List[Dict], chains: List[Dict], cheatsheets: List[Dict]) -> List[Dict]:
+    """Extract Writeup->CVE EXPLOITS_CVE relationships"""
+    return WRITEUP_EXTRACTORS['writeup_exploits_cve'].extract_relationships(_writeups_data)
+
+def _extract_writeup_teaches_technique_rels(commands: List[Dict], chains: List[Dict], cheatsheets: List[Dict]) -> List[Dict]:
+    """Extract Writeup->Technique TEACHES_TECHNIQUE relationships"""
+    return WRITEUP_EXTRACTORS['writeup_teaches_technique'].extract_relationships(_writeups_data)
+
+def _extract_writeup_from_platform_rels(commands: List[Dict], chains: List[Dict], cheatsheets: List[Dict]) -> List[Dict]:
+    """Extract Writeup->Platform FROM_PLATFORM relationships"""
+    return WRITEUP_EXTRACTORS['writeup_from_platform'].extract_relationships(_writeups_data)
+
+def _extract_writeup_requires_skill_rels(commands: List[Dict], chains: List[Dict], cheatsheets: List[Dict]) -> List[Dict]:
+    """Extract Writeup->Skill REQUIRES_SKILL relationships"""
+    return WRITEUP_EXTRACTORS['writeup_requires_skill'].extract_relationships(_writeups_data)
+
+def _extract_writeup_teaches_skill_rels(commands: List[Dict], chains: List[Dict], cheatsheets: List[Dict]) -> List[Dict]:
+    """Extract Writeup->Skill TEACHES_SKILL relationships"""
+    return WRITEUP_EXTRACTORS['writeup_teaches_skill'].extract_relationships(_writeups_data)
+
+
 def transform_all_to_neo4j(commands: List[Dict], chains: List[Dict], cheatsheets: List[Dict],
                            output_dir: str, validate: bool = False):
     """Data-driven transformation using schema-loaded extraction specs"""
@@ -334,8 +397,8 @@ def main():
     )
     parser.add_argument(
         '--input-dir',
-        default='reference/data',
-        help='Input directory (default: reference/data/)'
+        default='db/data',
+        help='Input directory (default: db/data/)'
     )
     parser.add_argument(
         '--output-dir',
@@ -369,16 +432,24 @@ def main():
     # Load JSON data
     print(f"Loading JSON from: {input_dir}")
     commands, cmd_errors = load_command_jsons(str(input_dir / "commands"))
-    chains, chain_errors = load_attack_chain_jsons(str(input_dir / "attack_chains"))
+    chains, chain_errors = load_attack_chain_jsons(str(input_dir / "chains"))
     cheatsheets, sheet_errors = load_cheatsheet_jsons(str(input_dir / "cheatsheets"))
 
-    if cmd_errors or chain_errors or sheet_errors:
+    # Load writeups from db/data/writeups (separate directory structure)
+    writeups_dir = Path(__file__).parent.parent.parent / "data" / "writeups"
+    writeups, writeup_errors = load_writeup_jsons(str(writeups_dir))
+
+    # Set writeups data for extractors
+    set_writeups_data(writeups)
+
+    all_errors = cmd_errors + chain_errors + sheet_errors + writeup_errors
+    if all_errors:
         print("Errors loading JSON files:")
-        for err in cmd_errors + chain_errors + sheet_errors:
+        for err in all_errors:
             print(f"  ERROR: {err}")
         return 1
 
-    print(f"Loaded {len(commands)} commands, {len(chains)} chains, {len(cheatsheets)} cheatsheet entries")
+    print(f"Loaded {len(commands)} commands, {len(chains)} chains, {len(cheatsheets)} cheatsheet entries, {len(writeups)} writeups")
     print()
 
     # Transform to CSV

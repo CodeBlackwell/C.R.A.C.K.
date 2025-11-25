@@ -264,21 +264,21 @@ class SchemaValidator:
 
         # Phase 2B & 2C specific files
         phase_2b_files = [
-            'reference/data/commands/active-directory/ad-powershell-imports.json',
-            'reference/data/commands/post-exploit/windows-powershell-cmdlets.json',
-            'reference/data/commands/utilities/verification-utilities.json',
-            'reference/data/commands/utilities/extracted-utilities.json',
-            'reference/data/commands/web/xss-test-payloads.json',
-            'reference/data/commands/enumeration/tool-specific.json',
+            'db/data/commands/active-directory/ad-powershell-imports.json',
+            'db/data/commands/post-exploit/windows-powershell-cmdlets.json',
+            'db/data/commands/utilities/verification-utilities.json',
+            'db/data/commands/utilities/extracted-utilities.json',
+            'db/data/commands/web/xss-test-payloads.json',
+            'db/data/commands/enumeration/tool-specific.json',
         ]
 
         phase_2c_files = [
-            'reference/data/commands/post-exploit/auto-generated-full-syntax-post-exploit.json',
-            'reference/data/commands/exploitation/auto-generated-full-syntax-exploitation.json',
-            'reference/data/commands/monitoring/auto-generated-full-syntax-monitoring.json',
-            'reference/data/commands/pivoting/auto-generated-full-syntax-pivoting.json',
-            'reference/data/commands/enumeration/auto-generated-full-syntax-enumeration.json',
-            'reference/data/commands/web/auto-generated-full-syntax-web.json',
+            'db/data/commands/post-exploit/auto-generated-full-syntax-post-exploit.json',
+            'db/data/commands/exploitation/auto-generated-full-syntax-exploitation.json',
+            'db/data/commands/monitoring/auto-generated-full-syntax-monitoring.json',
+            'db/data/commands/pivoting/auto-generated-full-syntax-pivoting.json',
+            'db/data/commands/enumeration/auto-generated-full-syntax-enumeration.json',
+            'db/data/commands/web/auto-generated-full-syntax-web.json',
         ]
 
         report.append("PHASE 2B FILES (High-Priority Manual)")

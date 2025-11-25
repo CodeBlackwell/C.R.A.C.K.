@@ -1,0 +1,280 @@
+{
+  "commands": [
+    {
+      "id": "kerbrute-userenum-ad",
+      "name": "Kerbrute - Active Directory User Enumeration",
+      "description": "Enumerate valid AD usernames via Kerberos pre-authentication (AS-REQ) - extremely fast and stealthy",
+      "command": "kerbrute userenum -d <DOMAIN> --dc <DC_IP> <USERLIST>",
+      "category": "enumeration",
+      "subcategory": "active-directory",
+      "variables": [
+        {
+          "name": "<DOMAIN>",
+          "description": "Active Directory domain name (FQDN)",
+          "example": "corp.com",
+          "required": true
+        },
+        {
+          "name": "<DC_IP>",
+          "description": "Domain controller IP address",
+          "example": "192.168.50.70",
+          "required": true
+        },
+        {
+          "name": "<USERLIST>",
+          "description": "Username wordlist file",
+          "example": "/usr/share/seclists/Usernames/xato-net-10-million-usernames.txt",
+          "required": true
+        }
+      ],
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "USER_ENUMERATION",
+        "KERBEROS",
+        "LINUX",
+        "WINDOWS",
+        "OSCP:HIGH",
+        "QUICK_WIN"
+      ],
+      "flag_explanations": {
+        "userenum": "User enumeration mode",
+        "-d": "Domain name (FQDN like corp.com)",
+        "--dc": "Domain controller IP address",
+        "-o": "Output file for valid usernames (recommended)",
+        "-t": "Number of threads (default 10, increase for speed)",
+        "--safe": "Low-and-slow mode (delays between requests)"
+      },
+      "success_indicators": [
+        "[+] VALID USERNAME:",
+        "Done! Tested",
+        "successes"
+      ],
+      "failure_indicators": [
+        "Network error",
+        "Couldn't find any KDCs",
+        "context deadline exceeded"
+      ],
+      "next_steps": [
+        "kerbrute-passwordspray",
+        "as-rep-roasting",
+        "spray-passwords-ldap",
+        "crackmapexec-smb-spray"
+      ],
+      "alternatives": [
+        "enum4linux-users",
+        "crackmapexec-rid",
+        "ldapsearch-users"
+      ],
+      "prerequisites": [],
+      "troubleshooting": {
+        "Couldn't find any KDCs": "DC IP may be wrong or port 88 (Kerberos) is filtered. Verify: sudo nmap -p 88 -Pn -sU -v <DC_IP>",
+        "context deadline exceeded": "Network timeout. Try --safe flag for slower requests or check connectivity to port 88/UDP",
+        "Network error": "Kerberos port 88/UDP may be blocked. Verify firewall rules or try from different network position"
+      },
+      "notes": "FASTEST and MOST STEALTHY user enumeration method for AD.\n\nUses Kerberos pre-authentication (AS-REQ) to validate usernames.\n\nNOISE LEVEL:\nVery Low - only generates event ID 4768 (Kerberos TGT request) for valid users, which is normal traffic.\n\nInvalid usernames don't generate security logs.\n\nSPEED:\nCan test thousands of usernames per second.\n\nWHY THIS WORKS:\nWhen you request a TGT for a username, Kerberos responds differently for valid vs invalid users.\n\nValid users get 'PREAUTH_REQUIRED' error, invalid users get 'PRINCIPAL_UNKNOWN'.\n\nThis is by-design behavior, not a vulnerability.\n\nTIME ESTIMATE:\n10-60 seconds for 10k usernames.\n\nRECOMMENDED WORDLISTS:\n/usr/share/seclists/Usernames/Names/names.txt (common first names), /usr/share/seclists/Usernames/xato-net-10-million-usernames.txt (comprehensive).\n\nOSCP TIP:\nRun this BEFORE password spraying to build valid username list.\n\nNo credentials needed! Save output with -o flag:\nkerbrute userenum -d <DOMAIN> --dc <DC_IP> <USERLIST> -o valid_users.txt",
+      "oscp_relevance": "high"
+    },
+    {
+      "id": "crackmapexec-rid-cycling",
+      "name": "CrackMapExec - RID Cycling User Enumeration",
+      "description": "Enumerate domain users via RID cycling over SMB (requires NULL session or credentials)",
+      "command": "crackmapexec smb <TARGET> -u <USERNAME> -p <PASSWORD> --rid-brute",
+      "category": "enumeration",
+      "subcategory": "active-directory",
+      "variables": [
+        {
+          "name": "<TARGET>",
+          "description": "Domain controller or domain member IP",
+          "example": "192.168.50.70",
+          "required": true
+        },
+        {
+          "name": "<USERNAME>",
+          "description": "Username (use 'guest' or '' for null session)",
+          "example": "guest",
+          "required": true
+        },
+        {
+          "name": "<PASSWORD>",
+          "description": "Password (use '' for blank/null session)",
+          "example": "''",
+          "required": true
+        }
+      ],
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "USER_ENUMERATION",
+        "SMB",
+        "RID_CYCLING",
+        "LINUX",
+        "OSCP:MEDIUM"
+      ],
+      "flag_explanations": {
+        "--rid-brute": "Enable RID cycling to enumerate users",
+        "-u": "Username (use '' or 'guest' for null session attempts)",
+        "-p": "Password (use '' for blank password)",
+        "-d": "Domain name (optional)",
+        "--rid-brute-max": "Maximum RID to try (default 4000)"
+      },
+      "success_indicators": [
+        "[+]",
+        "SidTypeUser",
+        "Brute forcing RIDs",
+        "Found"
+      ],
+      "failure_indicators": [
+        "STATUS_ACCESS_DENIED",
+        "STATUS_LOGON_FAILURE",
+        "Connection refused"
+      ],
+      "next_steps": [
+        "crackmapexec-smb-spray",
+        "kerbrute-passwordspray",
+        "as-rep-roasting"
+      ],
+      "alternatives": [
+        "kerbrute-userenum-ad",
+        "enum4linux-users",
+        "ldapsearch-users"
+      ],
+      "prerequisites": [],
+      "troubleshooting": {
+        "STATUS_ACCESS_DENIED": "Null session or guest access blocked. Try with valid credentials: crackmapexec smb <TARGET> -u <VALID_USER> -p <VALID_PASS> --rid-brute",
+        "STATUS_LOGON_FAILURE": "Invalid credentials. Try guest account: crackmapexec smb <TARGET> -u 'guest' -p '' --rid-brute",
+        "Connection refused": "SMB port 445 blocked. Verify: sudo nmap -p 445 -Pn -v <TARGET>"
+      },
+      "notes": "TRADITIONAL user enumeration via RID cycling.\n\nRIDs (Relative Identifiers) are sequential numbers assigned to AD objects.\n\nBy querying RID 500, 501, 502...\n\nyou can enumerate users, groups, computers.\n\nREQUIRES:\nNULL session or valid credentials.\n\nNOISE LEVEL:\nHigh - SMB connections logged, many failed SID lookups generate events.\n\nWHY THIS WORKS:\nWindows exposes SID-to-name translation via MS-SAMR RPC over SMB.\n\nRIDs follow pattern:\nDomain SID + RID (e.g., S-1-5-21-[domain]-500 for Administrator).\n\nSLOWER than Kerbrute but works when Kerberos port filtered.\n\nTIME ESTIMATE:\n1-3 minutes for default range.\n\nMANUAL ALTERNATIVE:\nrpcclient -U '' -N <TARGET> then lookupsids S-1-5-21-[domain]-[RID].\n\nOSCP TIP:\nPrefer kerbrute-userenum-ad when possible (faster, stealthier).\n\nUse RID cycling when SMB is accessible but Kerberos is blocked, or when you want to enumerate groups/computers too (not just users).",
+      "oscp_relevance": "medium"
+    },
+    {
+      "id": "ldapsearch-users-ad",
+      "name": "ldapsearch - LDAP User Enumeration",
+      "description": "Enumerate Active Directory users via LDAP queries (anonymous or authenticated)",
+      "command": "ldapsearch -x -H ldap://<TARGET> -b '<DOMAIN_DN>' '(&(objectClass=user)(objectCategory=person))' sAMAccountName userPrincipalName",
+      "category": "enumeration",
+      "subcategory": "active-directory",
+      "variables": [
+        {
+          "name": "<TARGET>",
+          "description": "Domain controller IP or hostname",
+          "example": "192.168.50.70",
+          "required": true
+        },
+        {
+          "name": "<DOMAIN_DN>",
+          "description": "Domain distinguished name (e.g., DC=corp,DC=com)",
+          "example": "DC=corp,DC=com",
+          "required": true
+        }
+      ],
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "USER_ENUMERATION",
+        "LDAP",
+        "LINUX",
+        "OSCP:MEDIUM"
+      ],
+      "flag_explanations": {
+        "-x": "Use simple authentication (no SASL)",
+        "-H": "LDAP URI (ldap:// for unencrypted, ldaps:// for SSL)",
+        "-b": "Base DN for search (domain root)",
+        "-D": "Bind DN for authenticated queries (optional): -D '<USER>@<DOMAIN>'",
+        "-w": "Password for authenticated bind (optional, use with -D)",
+        "'(&(objectClass=user)(objectCategory=person))'": "LDAP filter: match user objects only (excludes computers)",
+        "sAMAccountName": "Attribute: Windows username (pre-Windows 2000)",
+        "userPrincipalName": "Attribute: UPN format (user@domain.com)",
+        "description": "Additional attribute to retrieve user descriptions",
+        "memberOf": "Additional attribute to retrieve group memberships"
+      },
+      "success_indicators": [
+        "sAMAccountName:",
+        "userPrincipalName:",
+        "# numEntries:"
+      ],
+      "failure_indicators": [
+        "ldap_bind: Invalid credentials",
+        "Can't contact LDAP server",
+        "Operations error",
+        "# numEntries: 0"
+      ],
+      "next_steps": [
+        "kerbrute-passwordspray",
+        "spray-passwords-ldap",
+        "as-rep-roasting"
+      ],
+      "alternatives": [
+        "kerbrute-userenum-ad",
+        "enum4linux-users",
+        "crackmapexec-rid-cycling"
+      ],
+      "prerequisites": [],
+      "troubleshooting": {
+        "Can't contact LDAP server": "LDAP port 389 blocked. Verify: sudo nmap -p 389,636 -Pn -v <TARGET>. Try LDAPS: ldaps://<TARGET>",
+        "Invalid credentials": "Anonymous bind disabled. Use credentials: ldapsearch -x -H ldap://<TARGET> -D '<USER>@<DOMAIN>' -w '<PASSWORD>' -b '<DOMAIN_DN>' ...",
+        "Operations error": "Anonymous queries restricted. Retry with valid credentials.",
+        "Too many results": "Add grep filter: ... | grep 'sAMAccountName:' | awk '{print $2}' > users.txt"
+      },
+      "notes": "COMPREHENSIVE user enumeration via LDAP.\n\nRetrieves ALL user objects from Active Directory.\n\nMay work ANONYMOUSLY if anonymous LDAP binding enabled (rare in modern domains).\n\nNOISE LEVEL:\nLow - LDAP queries often not logged.\n\nADVANTAGES:\nGets full user list in single query, can retrieve additional attributes (description, memberOf, pwdLastSet).\n\nWHY THIS WORKS:\nAD exposes user objects via LDAP, readable by authenticated users (sometimes anonymous).\n\nTIME ESTIMATE:\n5-15 seconds.\n\nOUTPUT PARSING:\nExtract usernames with grep/awk:\nldapsearch ...\n\n| grep 'sAMAccountName:' | awk '{print $2}' > users.txt.\n\nUSEFUL FILTERS:\nNon-disabled users:\n'(&(objectClass=user)(objectCategory=person)(!(userAccountControl:1.2.840.113556.1.4.803:=2)))'.\n\nUsers with no password expiry:\n'(&(objectClass=user)(userAccountControl:1.2.840.113556.1.4.803:=65536))'.\n\nOSCP TIP:\nTry anonymous bind first.\n\nIf blocked, use any valid credentials.\n\nCombine with kerbrute to validate enumerated users before spraying.",
+      "oscp_relevance": "medium"
+    },
+    {
+      "id": "enum4linux-users-ad",
+      "name": "Enum4linux - SMB User Enumeration",
+      "description": "Enumerate Active Directory users via SMB/RPC (supports null sessions and authenticated)",
+      "command": "enum4linux -U <TARGET>",
+      "category": "enumeration",
+      "subcategory": "active-directory",
+      "variables": [
+        {
+          "name": "<TARGET>",
+          "description": "Domain controller or domain member IP",
+          "example": "192.168.50.70",
+          "required": true
+        }
+      ],
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "USER_ENUMERATION",
+        "SMB",
+        "NULL_SESSION",
+        "LINUX",
+        "OSCP:MEDIUM"
+      ],
+      "flag_explanations": {
+        "-U": "Get userlist via SMB/RPC",
+        "-u": "Specify username for authenticated enumeration (use with -p)",
+        "-p": "Specify password for authenticated enumeration (use with -u)",
+        "-a": "Do all simple enumeration (users, shares, groups, password policy)",
+        "-v": "Verbose output"
+      },
+      "success_indicators": [
+        "user:",
+        "Users on",
+        "Got domain/workgroup name"
+      ],
+      "failure_indicators": [
+        "NT_STATUS_ACCESS_DENIED",
+        "Cannot connect to server",
+        "Protocol negotiation failed"
+      ],
+      "next_steps": [
+        "kerbrute-passwordspray",
+        "crackmapexec-smb-spray",
+        "as-rep-roasting"
+      ],
+      "alternatives": [
+        "kerbrute-userenum-ad",
+        "crackmapexec-rid-cycling",
+        "ldapsearch-users-ad"
+      ],
+      "prerequisites": [],
+      "troubleshooting": {
+        "NT_STATUS_ACCESS_DENIED": "Null session blocked. Try with credentials: enum4linux -u <USER> -p <PASS> -U <TARGET>",
+        "Protocol negotiation failed": "SMBv1 disabled. Use crackmapexec-rid-cycling instead (supports SMBv2/v3)",
+        "Cannot connect to server": "SMB ports filtered. Verify: sudo nmap -p 139,445 -Pn -v <TARGET>"
+      },
+      "notes": "CLASSIC user enumeration tool for Windows/AD environments.\n\nUses MS-SAMR RPC over SMB to enumerate users.\n\nOften works via NULL SESSION on older systems.\n\nNOISE LEVEL:\nMedium - SMB connections logged.\n\nLIMITATIONS:\nRequires SMBv1 or null sessions (both often disabled on modern domains).\n\nADVANTAGES:\nGets users, groups, shares, and password policy in one command (-a flag).\n\nWHY THIS WORKS:\nWindows exposes user enumeration via SAMR RPC for backward compatibility.\n\nTIME ESTIMATE:\n15-45 seconds.\n\nOUTPUT PARSING:\nExtract usernames:\nenum4linux -U <TARGET> | grep 'user:' | awk -F'[][]' '{print $2}'.\n\nOSCP TIP:\nGreat for quick all-in-one enumeration (enum4linux -a) but less reliable on modern domains than kerbrute.\n\nUse enum4linux first for broad recon, then kerbrute for targeted username validation.",
+      "oscp_relevance": "medium"
+    }
+  ]
+}

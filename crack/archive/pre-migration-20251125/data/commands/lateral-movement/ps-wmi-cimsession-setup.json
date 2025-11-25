@@ -1,0 +1,85 @@
+{
+  "commands": [
+    {
+      "id": "ps-wmi-cimsession-setup",
+      "name": "PowerShell WMI CIM Session Creation",
+      "description": "Create CIM session for WMI-based lateral movement using DCOM protocol",
+      "command": "$options = New-CimSessionOption -Protocol DCOM; $session = New-Cimsession -ComputerName <TARGET> -Credential $credential -SessionOption $options",
+      "category": "LATERAL_MOVEMENT",
+      "subcategory": "WMI",
+      "os": "WINDOWS",
+      "variables": [
+        {
+          "name": "<TARGET>",
+          "description": "Target hostname or IP address",
+          "example": "192.168.50.73",
+          "required": true
+        }
+      ],
+      "flags": [
+        {
+          "flag": "New-CimSessionOption -Protocol DCOM",
+          "description": "Creates session options object specifying DCOM as transport protocol (required for WMI over RPC port 135)",
+          "default_value": "WSMan (WinRM)"
+        },
+        {
+          "flag": "-ComputerName",
+          "description": "Target computer hostname or IP address",
+          "default_value": null
+        },
+        {
+          "flag": "-Credential",
+          "description": "PSCredential object containing username and password",
+          "default_value": "Current user context"
+        },
+        {
+          "flag": "-SessionOption",
+          "description": "CimSessionOption object (specifies DCOM protocol for WMI compatibility)",
+          "default_value": null
+        }
+      ],
+      "examples": [
+        {
+          "command": "$username = 'jen'; $password = 'Nexus123!'; $secureString = ConvertTo-SecureString $password -AsPlaintext -Force; $credential = New-Object System.Management.Automation.PSCredential $username, $secureString; $options = New-CimSessionOption -Protocol DCOM; $session = New-Cimsession -ComputerName 192.168.50.73 -Credential $credential -SessionOption $options",
+          "description": "Full one-liner: Create credentials and establish WMI CIM session to 192.168.50.73",
+          "context": "Complete WMI lateral movement setup"
+        },
+        {
+          "command": "$options = New-CimSessionOption -Protocol DCOM; $session = New-Cimsession -ComputerName FILES04 -Credential $credential -SessionOption $options",
+          "description": "Create WMI session to FILES04 (assuming credential object already exists)",
+          "context": "WMI session after credential setup"
+        }
+      ],
+      "educational": {
+        "purpose": "Establish WMI session using DCOM protocol for process creation and lateral movement - works when WinRM is disabled but WMI/RPC is available",
+        "manual_alternative": "Legacy wmic.exe utility (deprecated in Windows 10+): wmic /node:<TARGET> /user:<USER> /password:<PASS> process call create \"<COMMAND>\"",
+        "common_failures": [
+          "RPC port 135 blocked by firewall - WMI requires port 135 + dynamic high port (49152-65535)",
+          "User not in Administrators group on target (WMI requires admin rights)",
+          "Forgetting -Protocol DCOM option causes default WSMan protocol (WinRM) instead of WMI"
+        ],
+        "when_to_use": [
+          "WinRM disabled but WMI/RPC available on target",
+          "Targeting older Windows systems where WMI is more reliable",
+          "Firewall allows RPC (135) but blocks WinRM (5985/5986)",
+          "UAC remote restrictions block WinRM for local users"
+        ],
+        "exam_relevance": "MEDIUM - Alternative to WinRM when port 5985/5986 unavailable. Critical for understanding multiple lateral movement paths.",
+        "time_estimate": "10-20 seconds to establish session"
+      },
+      "oscp_priority": "MEDIUM",
+      "tags": [
+        "POWERSHELL",
+        "WMI",
+        "CIM",
+        "LATERAL_MOVEMENT",
+        "OSCP:MEDIUM"
+      ],
+      "related_commands": [
+        "ps-winrm-credential-setup",
+        "ps-wmi-invoke-method",
+        "wmic-process-create"
+      ]
+    }
+  ]
+}

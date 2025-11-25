@@ -1,0 +1,232 @@
+{
+  "id": "windows-lateral-pth-impacket",
+  "name": "Pass-the-Hash Attack Chain (Impacket)",
+  "description": "Complete pass-the-hash workflow: dump hashes, verify hash format, test hash validity, execute lateral movement without cracking password.\n\nLeverage NTLM hashes for authentication without requiring plaintext passwords.",
+  "version": "1.0.0",
+  "metadata": {
+    "author": "CRACK Development Team",
+    "created": "2025-11-08",
+    "updated": "2025-11-08",
+    "tags": [
+      "OSCP",
+      "WINDOWS",
+      "ACTIVE_DIRECTORY",
+      "LATERAL_MOVEMENT",
+      "PASS_THE_HASH",
+      "IMPACKET",
+      "NTLM",
+      "OSCP:HIGH"
+    ],
+    "category": "lateral_movement",
+    "platform": "windows",
+    "references": [
+      "https://attack.mitre.org/techniques/T1550/002/",
+      "https://www.sans.org/blog/pass-the-hash-attacks-tools-and-mitigation/"
+    ]
+  },
+  "difficulty": "intermediate",
+  "time_estimate": "15 minutes",
+  "oscp_relevant": true,
+  "prerequisites": [
+    "Initial foothold on Windows domain",
+    "SYSTEM or Administrator access on at least one machine",
+    "Impacket suite on Kali",
+    "Network access to additional targets",
+    "CrackMapExec for hash validation"
+  ],
+  "notes": "Pass-the-Hash (PtH) leverages NTLM hashes for authentication without cracking passwords. Critical for OSCP lateral movement when only hashes available. NTLM authentication uses hash directly in challenge-response, making plaintext password unnecessary. ADVANTAGES: No password cracking needed (saves hours), works across network, supports multiple protocols (SMB/WMI/WinRM). DISADVANTAGES: UAC blocks non-RID-500 local admin hashes (2014 patch), creates authentication logs. OSCP RELEVANCE: Very high - frequently the only path forward when credentials unknown.",
+  "steps": [
+    {
+      "id": "extract-hashes",
+      "name": "Extract Password Hashes",
+      "objective": "Dump NTLM hashes from compromised system using secretsdump or mimikatz",
+      "description": "Use impacket-secretsdump against compromised host to extract local SAM, cached domain credentials, and LSA secrets.\nRequires SYSTEM or local admin access.",
+      "command_ref": "secretsdump-hashes",
+      "dependencies": [],
+      "evidence": [
+        "SAM hashes dumped",
+        "Format: username:rid:lm:ntlm:::",
+        "Local Administrator hash present",
+        "Domain cached credentials if domain-joined"
+      ],
+      "success_criteria": [
+        "Secretsdump completes successfully",
+        "At least one NTLM hash extracted",
+        "Hashes properly formatted"
+      ],
+      "failure_conditions": [
+        "Access denied (need admin/SYSTEM)",
+        "Empty output",
+        "Connection failed"
+      ],
+      "next_steps": [
+        "parse-hashes"
+      ]
+    },
+    {
+      "id": "parse-hashes",
+      "name": "Parse and Format Hashes",
+      "objective": "Extract NTLM hash portion and verify format for pass-the-hash tools",
+      "description": "Secretsdump output format: user:rid:lm:ntlm::: - extract 4th field (NTLM hash).\nVerify hash is 32 hexadecimal characters.\nDiscard LM hash (3rd field) as it's rarely needed.",
+      "command_ref": "pth-verify-hash-format",
+      "dependencies": [
+        "extract-hashes"
+      ],
+      "evidence": [
+        "NTLM hash isolated: <32 hex chars>",
+        "Username noted for hash",
+        "Hash format verified"
+      ],
+      "success_criteria": [
+        "Hash is 32 hexadecimal characters",
+        "No spaces, colons, or extra characters",
+        "Username-to-hash mapping documented"
+      ],
+      "failure_conditions": [
+        "Hash wrong length",
+        "Invalid characters present",
+        "Hash format unrecognized"
+      ],
+      "next_steps": [
+        "test-hash-validity"
+      ]
+    },
+    {
+      "id": "test-hash-validity",
+      "name": "Verify Hash Validity",
+      "objective": "Test hash against target before full exploitation to confirm it works",
+      "description": "Use CrackMapExec with -H flag to test hash authentication.\nThis quick test (2-3 seconds) prevents wasting time on invalid hashes.",
+      "command_ref": "pth-verify-hash-format",
+      "dependencies": [
+        "parse-hashes"
+      ],
+      "evidence": [
+        "CrackMapExec output with authentication result",
+        "[+] Pwn3d! if admin access",
+        "+ without Pwn3d if authenticated but not admin"
+      ],
+      "success_criteria": [
+        "Hash authenticates successfully",
+        "Pwn3d! indicator for admin access",
+        "No STATUS_LOGON_FAILURE"
+      ],
+      "failure_conditions": [
+        "[-] Authentication failed",
+        "STATUS_LOGON_FAILURE",
+        "Invalid hash error"
+      ],
+      "next_steps": [
+        "spray-hash"
+      ]
+    },
+    {
+      "id": "spray-hash",
+      "name": "Spray Hash Across Network",
+      "objective": "Test hash against multiple targets to identify all accessible systems",
+      "description": "Use CrackMapExec to test hash against subnet (CIDR notation).\nLocal admin password reuse is common - same hash often grants access to multiple systems.",
+      "command_ref": "pth-cme-spray",
+      "dependencies": [
+        "test-hash-validity"
+      ],
+      "evidence": [
+        "Multiple targets scanned",
+        "[+] Pwn3d! indicators on some hosts",
+        "List of compromised systems"
+      ],
+      "success_criteria": [
+        "Scan completes",
+        "At least one additional Pwn3d! found",
+        "New lateral movement targets identified"
+      ],
+      "failure_conditions": [
+        "No additional systems compromised",
+        "All authentication failures",
+        "UAC blocking all local admin hashes"
+      ],
+      "next_steps": [
+        "execute-pth-psexec"
+      ]
+    },
+    {
+      "id": "execute-pth-psexec",
+      "name": "Execute Pass-the-Hash with PSExec",
+      "objective": "Use impacket-psexec with -hashes flag to gain SYSTEM shell on target",
+      "description": "Run impacket-psexec with -hashes :NTLM_HASH format.\nPSExec provides most stable shell and SYSTEM privileges immediately.",
+      "command_ref": "pth-impacket-psexec",
+      "dependencies": [
+        "spray-hash"
+      ],
+      "evidence": [
+        "[*] Requesting shares",
+        "C:\\Windows\\system32> prompt",
+        "SYSTEM shell obtained"
+      ],
+      "success_criteria": [
+        "Connection successful",
+        "Shell spawned",
+        "Running as SYSTEM"
+      ],
+      "failure_conditions": [
+        "STATUS_LOGON_FAILURE",
+        "Connection failed",
+        "UAC blocking (try domain user hash)"
+      ],
+      "next_steps": [
+        "alternative-pth-wmi"
+      ]
+    },
+    {
+      "id": "alternative-pth-wmi",
+      "name": "Alternative: Pass-the-Hash with WMIExec",
+      "objective": "If PSExec fails or detected, use WMIExec as fileless alternative",
+      "description": "WMIExec with -hashes provides fileless execution (no binary on disk).\nSlightly slower than PSExec but stealthier.",
+      "command_ref": "pth-impacket-wmiexec",
+      "dependencies": [
+        "execute-pth-psexec"
+      ],
+      "evidence": [
+        "WMI connection established",
+        "Semi-interactive shell",
+        "Commands executing"
+      ],
+      "success_criteria": [
+        "WMI authentication successful",
+        "Shell obtained",
+        "Fileless execution confirmed"
+      ],
+      "failure_conditions": [
+        "WMI unavailable",
+        "RPC blocked",
+        "Authentication failed"
+      ],
+      "next_steps": [
+        "alternative-pth-evil-winrm"
+      ]
+    },
+    {
+      "id": "alternative-pth-evil-winrm",
+      "name": "Alternative: Pass-the-Hash with Evil-WinRM",
+      "objective": "If WinRM available, use Evil-WinRM for interactive PowerShell with hash",
+      "description": "Evil-WinRM with -H flag provides richest interactive shell with file upload/download.\nRequires WinRM enabled on target.",
+      "command_ref": "pth-evil-winrm",
+      "dependencies": [
+        "alternative-pth-wmi"
+      ],
+      "evidence": [
+        "*Evil-WinRM* PS prompt",
+        "Interactive PowerShell",
+        "File transfer available"
+      ],
+      "success_criteria": [
+        "WinRM authentication successful",
+        "PowerShell shell obtained",
+        "Full interactivity"
+      ],
+      "failure_conditions": [
+        "WinRM not enabled",
+        "Port 5985/5986 closed",
+        "Hash format error (use bare hash, no colon prefix)"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,190 @@
+{
+  "cheatsheets": [
+    {
+      "id": "file-transfer-cheatsheet",
+      "name": "File Transfer Methods for OSCP",
+      "description": "Comprehensive guide to file transfer techniques for uploading tools to targets and exfiltrating data back to attack machine",
+      "educational_header": {
+        "how_to_recognize": [
+          "You have initial access (shell/RDP) and need to upload enumeration tools",
+          "Need to transfer exploit payloads to target system",
+          "Must exfiltrate proof.txt, database dumps, or sensitive files",
+          "HTTP downloads are blocked by firewall/proxy",
+          "PowerShell execution policy prevents scripts"
+        ],
+        "when_to_look_for": [
+          "Immediately after gaining initial foothold (upload linpeas/winPEAS)",
+          "During privilege escalation (upload exploit binaries)",
+          "After finding credentials (exfiltrate password hashes/databases)",
+          "When capturing flags (exfiltrate proof.txt/local.txt)",
+          "In restricted environments (alternative transfer methods needed)"
+        ]
+      },
+      "scenarios": [
+        {
+          "title": "Scenario 1: Initial Windows Shell - Upload Enumeration Tools",
+          "context": "You have cmd.exe shell on Windows target via web shell or RCE. Need to upload winPEAS.exe for privilege escalation enumeration.",
+          "approach": "Setup HTTP server on Kali, use certutil as first choice (Windows built-in LOLBin), fallback to PowerShell if certutil blocked",
+          "commands": [
+            "ft-python-http-server",
+            "ft-certutil-download",
+            "ft-powershell-iwr",
+            "ft-powershell-webclient"
+          ],
+          "expected_outcome": "winPEAS.exe successfully downloaded to C:\\Windows\\Temp\\ within 30 seconds. Verify with 'dir' command showing correct file size.",
+          "why_this_works": "Certutil bypasses most AppLocker policies because it's a legitimate Windows certificate tool. PowerShell WebClient is fastest for large files. HTTP port 80/8000 usually allowed for outbound connections."
+        },
+        {
+          "title": "Scenario 2: Linux SSH Access - Transfer Exploit Binary",
+          "context": "You have SSH credentials for low-privileged user on Linux target. Found kernel vulnerability (CVE-2021-4034 PwnKit), need to transfer compiled exploit.",
+          "approach": "Use SCP if SSH access available (fastest/cleanest), otherwise setup HTTP server and wget/curl download",
+          "commands": [
+            "ft-scp-upload",
+            "ft-python-http-server",
+            "ft-wget-download",
+            "ft-curl-download"
+          ],
+          "expected_outcome": "Exploit binary transferred with execute permissions to /tmp/exploit. File hash matches source to ensure integrity.",
+          "why_this_works": "SCP is bidirectional and encrypted, cleanest method with SSH access. Wget/curl are ubiquitous on Linux. /tmp/ is world-writable fallback if home directory has restrictions."
+        },
+        {
+          "title": "Scenario 3: Windows Target - HTTP Blocked, Use SMB",
+          "context": "Windows Server 2016 target with strict egress filtering - HTTP/HTTPS outbound blocked by firewall. Port 445 (SMB) allowed for internal network traffic.",
+          "approach": "Setup Impacket SMB server on Kali, access files directly from UNC path or copy to local disk",
+          "commands": [
+            "ft-smb-server",
+            "ft-smb-download"
+          ],
+          "expected_outcome": "Files accessible via \\\\<KALI_IP>\\share\\. Can execute tools directly from share or copy locally. 10-50x faster than HTTP for large files.",
+          "why_this_works": "Port 445 often allowed on internal networks for legitimate file sharing. SMB blends with normal traffic. Can execute directly from share without writing to disk (stealthier)."
+        },
+        {
+          "title": "Scenario 4: Exfiltrate Proof.txt from Windows",
+          "context": "Gained SYSTEM privileges on Windows target. Need to exfiltrate C:\\Users\\Administrator\\Desktop\\proof.txt to Kali for flag submission.",
+          "approach": "Setup uploadserver on Kali, use PowerShell Invoke-RestMethod to POST file, fallback to SMB if HTTP blocked, use pure PowerShell TCP if nc.exe unavailable",
+          "commands": [
+            "ft-uploadserver",
+            "ft-powershell-upload",
+            "ft-smb-server",
+            "ft-smb-upload",
+            "ft-nc-receive",
+            "ft-powershell-tcp-send"
+          ],
+          "expected_outcome": "proof.txt appears on Kali within 5 seconds. MD5 hash matches to verify integrity. File contains 32-character flag.",
+          "why_this_works": "Uploadserver accepts POST uploads at /upload endpoint. PowerShell Invoke-RestMethod is clean HTTP upload. SMB copy is fastest for any file size. Pure PowerShell TCP works when nc.exe not available. All methods preserve exact file contents."
+        },
+        {
+          "title": "Scenario 5: Exfiltrate Database from Linux",
+          "context": "Compromised web application, dumped MySQL database to /tmp/dump.sql (150MB). Need to exfiltrate to Kali for credential analysis.",
+          "approach": "For large files, use netcat or curl upload to avoid memory issues. Compress first if slow network.",
+          "commands": [
+            "ft-uploadserver",
+            "ft-curl-upload",
+            "ft-nc-receive",
+            "ft-nc-send"
+          ],
+          "expected_outcome": "150MB database transferred within 2-5 minutes on local network. Verify file size matches source. Extract credentials for lateral movement.",
+          "why_this_works": "Curl handles large files efficiently with streaming. Netcat is simplest (no dependencies) and works when HTTP blocked. Compression reduces transfer time but requires additional step."
+        },
+        {
+          "title": "Scenario 6: Restricted Shell - No wget/curl Available",
+          "context": "Linux target with minimal installed tools. No wget, curl, nc, scp available. Only bash and basic utilities.",
+          "approach": "Use bash /dev/tcp pseudo-device for raw TCP connection to download files",
+          "commands": [
+            "ft-python-http-server",
+            "ft-nc-receive",
+            "ft-bash-dev-tcp"
+          ],
+          "expected_outcome": "File downloaded using only bash built-in features. No external commands executed (stealthier in logs).",
+          "why_this_works": "Bash /dev/tcp creates TCP connections without external tools. Works when all download utilities removed. Requires bash (not sh/dash). Some systems compile bash without /dev/tcp support."
+        },
+        {
+          "title": "Scenario 7: Copy/Paste Exfiltration - No Network Transfer",
+          "context": "Windows target via RDP with clipboard access. Network file transfers monitored/blocked by DLP. Need to exfiltrate small config file (5KB).",
+          "approach": "Encode file as base64, copy output, paste to Kali, decode",
+          "commands": [
+            "ft-base64-encode"
+          ],
+          "expected_outcome": "File encoded as text, copied via clipboard, decoded on Kali matching original. Bypasses network monitoring.",
+          "why_this_works": "Base64 converts binary to printable text safe for clipboard. ~33% size increase. Only practical for files <1MB due to manual copy/paste. Works when all network transfers blocked."
+        }
+      ],
+      "sections": [
+        {
+          "title": "Phase 1: Setup Attack Machine Servers",
+          "notes": "Start these servers on Kali BEFORE attempting file transfers. Run in separate terminal windows to monitor connections.",
+          "commands": [
+            "ft-python-http-server",
+            "ft-smb-server",
+            "ft-uploadserver"
+          ]
+        },
+        {
+          "title": "Phase 2: Windows Target Downloads (Tools IN)",
+          "notes": "Transfer enumeration tools, exploits, or utilities TO Windows target. Try methods in order: certutil (fastest/stealthiest) → PowerShell → SMB (if HTTP blocked) → bitsadmin (background).",
+          "commands": [
+            "ft-certutil-download",
+            "ft-powershell-iwr",
+            "ft-powershell-webclient",
+            "ft-smb-download",
+            "ft-bitsadmin-download"
+          ]
+        },
+        {
+          "title": "Phase 3: Linux Target Downloads (Tools IN)",
+          "notes": "Transfer tools TO Linux target. wget is most common → curl if wget unavailable → /dev/tcp if no tools available.",
+          "commands": [
+            "ft-wget-download",
+            "ft-curl-download",
+            "ft-bash-dev-tcp"
+          ]
+        },
+        {
+          "title": "Phase 4: Windows Exfiltration (Data OUT)",
+          "notes": "Transfer proof.txt, hashes, databases FROM Windows target to Kali. PowerShell upload is cleanest → SMB for large files → netcat if HTTP blocked → pure PowerShell TCP if nc.exe unavailable.",
+          "commands": [
+            "ft-powershell-upload",
+            "ft-smb-upload",
+            "ft-nc-send",
+            "ft-powershell-tcp-send"
+          ]
+        },
+        {
+          "title": "Phase 5: Linux Exfiltration (Data OUT)",
+          "notes": "Transfer data FROM Linux target to Kali. Curl upload for HTTP → netcat for raw TCP → SCP if SSH credentials available.",
+          "commands": [
+            "ft-curl-upload",
+            "ft-nc-send",
+            "ft-scp-download"
+          ]
+        },
+        {
+          "title": "Phase 6: Netcat & Raw TCP Transfers",
+          "notes": "Universal transfer method when HTTP/SMB unavailable. Works on both Linux and Windows. Receiver starts first with -l flag, sender connects. Use pure PowerShell TCP if nc.exe not available on Windows.",
+          "commands": [
+            "ft-nc-receive",
+            "ft-nc-send",
+            "ft-powershell-tcp-send"
+          ]
+        },
+        {
+          "title": "Phase 7: Alternative Methods (Restricted Environments)",
+          "notes": "Use when standard methods fail due to firewalls, missing tools, or security controls.",
+          "commands": [
+            "ft-base64-encode",
+            "ft-bash-dev-tcp",
+            "ft-bitsadmin-download",
+            "ft-scp-upload",
+            "ft-scp-download"
+          ]
+        }
+      ],
+      "tags": [
+        "FILE_TRANSFER",
+        "OSCP:HIGH",
+        "METHODOLOGY",
+        "QUICK_WIN"
+      ]
+    }
+  ]
+}

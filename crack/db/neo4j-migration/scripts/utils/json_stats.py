@@ -59,7 +59,7 @@ def main():
     referenced_ids: Set[str] = set()  # IDs referenced in alternatives/prerequisites
 
     # Scan all JSON files
-    commands_dir = Path('/home/kali/Desktop/OSCP/crack/reference/data/commands')
+    commands_dir = Path('/home/kali/Desktop/OSCP/crack/db/data/commands')
 
     for json_file in sorted(commands_dir.rglob('*.json')):
         stats['files'] += 1

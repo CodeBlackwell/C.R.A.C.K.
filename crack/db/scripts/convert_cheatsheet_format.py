@@ -62,7 +62,7 @@ def convert_file(filepath: Path) -> bool:
         return False
 
 def main():
-    base_path = Path('/home/kali/Desktop/OSCP/crack/reference/data/cheatsheets')
+    base_path = Path('/home/kali/Desktop/OSCP/crack/db/data/cheatsheets')
 
     if not base_path.exists():
         print(f"Error: Directory not found: {base_path}")

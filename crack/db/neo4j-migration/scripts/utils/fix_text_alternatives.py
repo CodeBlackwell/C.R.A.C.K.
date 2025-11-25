@@ -189,7 +189,7 @@ def fix_remaining_alternatives(base_path: Path) -> Dict:
 
 
 def main():
-    base_path = Path('reference/data/commands')
+    base_path = Path('db/data/commands')
     updates_file = Path('db/neo4j-migration/data/QUICK_WIN_UPDATES.json')
 
     print("=" * 80)

@@ -1,0 +1,306 @@
+{
+  "cheatsheets": [
+    {
+      "id": "ad-golden-ticket-methodology",
+      "name": "Golden Ticket Attack Methodology",
+      "description": "Complete methodology for creating and using Kerberos Golden Tickets to achieve domain-wide persistence in Active Directory environments. Covers krbtgt hash extraction, TGT forgery, lateral movement, and operational security.",
+      "educational_header": {
+        "what_is_golden_ticket": "A Golden Ticket is a forged Kerberos Ticket Granting Ticket (TGT) created by encrypting arbitrary authentication data with the krbtgt account's password hash. Because the krbtgt account is used by the Key Distribution Center (KDC) to sign all TGTs in the domain, possessing its hash allows an attacker to create self-signed tickets that the domain controller will trust unconditionally. Unlike Silver Tickets (which forge service tickets for specific resources), Golden Tickets grant domain-wide access to all resources.",
+        "how_to_recognize": [
+          "You have compromised a Domain Admin account or the Domain Controller itself",
+          "You have successfully executed a DCSync attack and obtained password hashes",
+          "You need persistent domain-wide access that survives password changes",
+          "You want to access domain resources from a non-domain-joined machine",
+          "You need to bypass authentication logs associated with normal user login",
+          "You're performing a persistence technique after domain compromise",
+          "The krbtgt account password has never been changed (check password age)",
+          "You need administrative access to multiple domain systems simultaneously"
+        ],
+        "when_to_look_for": [
+          "During post-exploitation after achieving Domain Admin privileges",
+          "When establishing persistence mechanisms in an Active Directory environment",
+          "When you need to maintain access even if Domain Admin accounts are detected",
+          "After compromising a Domain Controller and wanting to pivot without alerts",
+          "When Silver Tickets are insufficient (need domain-wide access, not service-specific)",
+          "During red team operations requiring long-term persistent access",
+          "When you need to access resources from a workstation without domain join",
+          "After obtaining the NTDS.dit database from a Domain Controller",
+          "When testing detection capabilities of security monitoring solutions",
+          "In OSCP lab scenarios involving Active Directory privilege escalation chains"
+        ],
+        "prerequisites": [
+          "Domain Admin privileges OR Domain Controller system access (to obtain krbtgt hash)",
+          "Network access to Domain Controller (for DCSync attack)",
+          "Mimikatz, Rubeus, or Impacket tools available on attacker system",
+          "Knowledge of domain FQDN and ability to resolve domain hostnames",
+          "Understanding of Kerberos authentication protocol and ticket structure",
+          "Ability to execute commands on at least one domain-joined workstation"
+        ],
+        "advantages_over_silver_ticket": [
+          "Domain-wide access to ALL resources (Silver Ticket is service-specific)",
+          "Works against any service in the domain without knowing service account hashes",
+          "Ticket is signed by krbtgt, making it indistinguishable from legitimate TGTs",
+          "Can be used to request service tickets (TGS) for any service via normal Kerberos",
+          "Survives service account password changes (Silver Tickets are invalidated)",
+          "Provides access to Domain Controllers and other high-value targets",
+          "Can be created with arbitrary group memberships (Domain Admins, Enterprise Admins)",
+          "Longer persistence - krbtgt password rarely changes (only on functional level upgrades)"
+        ],
+        "key_differences_from_silver_ticket": [
+          "Golden: Forges TGT (Ticket Granting Ticket) | Silver: Forges TGS (Ticket Granting Service ticket)",
+          "Golden: Requires krbtgt account hash | Silver: Requires target service account hash",
+          "Golden: Grants domain-wide access | Silver: Grants access to specific service only",
+          "Golden: Service parameter: krbtgt/<domain> | Silver: Service parameter: <service>/<target>",
+          "Golden: Can request any service ticket | Silver: Used directly for one service",
+          "Golden: Extremely rare hash changes | Silver: Invalidated when service password changes",
+          "Golden: Higher detection risk (domain-wide abuse) | Silver: Lower detection risk (targeted)"
+        ],
+        "detection_indicators": [
+          "Event ID 4768 (TGT Request) with unusual account name or lifetime",
+          "Event ID 4769 (Service Ticket Request) using RC4 encryption (modern systems use AES)",
+          "Kerberos tickets with 10-year lifetimes (default Golden Ticket expiration)",
+          "TGT requests from non-domain-joined IPs or unusual geographic locations",
+          "Account showing Domain Admin group membership without corresponding AD changes",
+          "Kerberos authentication from accounts that should be disabled or don't exist",
+          "Multiple service ticket requests in rapid succession from single account",
+          "Kerberos tickets with unusual or forged SIDs in the PAC (Privilege Attribute Certificate)"
+        ],
+        "mitigation_and_defense": [
+          "Regularly rotate krbtgt account password (Microsoft recommends twice with 10-hour delay)",
+          "Monitor Event IDs 4768, 4769, 4770 for anomalous Kerberos activity",
+          "Alert on RC4 encryption usage (modern Windows uses AES256 by default)",
+          "Implement strong privileged access workstation (PAW) controls for Domain Admins",
+          "Monitor for DCSync activity (Event ID 4662 with specific replication rights)",
+          "Use Microsoft ATA/Azure ATP to detect forged ticket anomalies",
+          "Implement tiered administrative model to limit Domain Admin exposure",
+          "Enable additional PAC validation (KB3011780) on domain controllers"
+        ]
+      },
+      "scenarios": [
+        {
+          "title": "Scenario 1: Understanding Golden Tickets - Concept and Prerequisites",
+          "context": "You are a penetration tester who has successfully compromised a low-privileged domain user account (corp\\jen) on a Windows workstation (CLIENT74). Through reconnaissance, you've identified that the environment is an Active Directory domain (corp.com) with a Domain Controller (DC1). You've escalated privileges and obtained local Administrator access on the workstation. Your objective is to establish persistent domain-wide access using the Golden Ticket technique. Before creating the ticket, you need to understand the attack prerequisites and the underlying Kerberos authentication mechanism.",
+          "objective": "Understand the Golden Ticket attack vector, identify prerequisites, and gather initial reconnaissance data required for the attack.",
+          "approach": [
+            "1. UNDERSTAND THE ATTACK VECTOR: Golden Tickets exploit the Kerberos authentication protocol by forging Ticket Granting Tickets (TGTs). In normal Kerberos authentication, when a user logs in, the Key Distribution Center (KDC) on the Domain Controller issues a TGT encrypted with the krbtgt account's password hash. This TGT is then used to request service tickets (TGS) for accessing domain resources. Because the krbtgt hash is the secret key for ALL TGTs, possessing it allows complete forgery.",
+            "2. IDENTIFY PREREQUISITES: To create a Golden Ticket, you need three pieces of information: (a) Domain FQDN (e.g., corp.com), (b) Domain SID (Security Identifier, e.g., S-1-5-21-XXX-XXX-XXX), (c) krbtgt account NTLM hash (32 hexadecimal characters). The first two can be obtained from any domain user. The third requires Domain Admin privileges or DC compromise.",
+            "3. RECONNAISSANCE - OBTAIN DOMAIN FQDN: From your compromised workstation as user 'jen', determine the domain FQDN. Use the systeminfo command (look for 'Domain:' field), or use nltest /dsgetdc:<domain> to query the domain. The FQDN is required for the /domain parameter when creating the ticket. Example: nltest /dsgetdc:corp.com will confirm the domain name.",
+            "4. RECONNAISSANCE - OBTAIN DOMAIN SID: Use the 'whoami /user' command from any domain user context. This displays the user's SID in format: S-1-5-21-XXXXXXXXXX-XXXXXXXXXX-XXXXXXXXXX-YYYY. The Domain SID is everything EXCEPT the last segment (the user RID). Example: If whoami shows 'S-1-5-21-1987370270-658905905-1781884369-1105', the Domain SID is 'S-1-5-21-1987370270-658905905-1781884369'. CRITICAL: Do NOT include the user RID (the -1105 portion).",
+            "5. UNDERSTAND THE ESCALATION PATH: To obtain the krbtgt hash, you need Domain Admin privileges or direct Domain Controller access. This means Golden Ticket is a POST-EXPLOITATION persistence technique, not an initial access method. You must first compromise a Domain Admin account (via Kerberoasting, password spraying, or other privilege escalation) OR compromise the DC directly. Plan your privilege escalation path.",
+            "6. COMPARE WITH SILVER TICKETS: Understand why Golden Ticket is more powerful: Silver Tickets forge service tickets (TGS) for ONE specific service (e.g., CIFS/SERVER1), requiring that service's account hash. Golden Tickets forge the TGT itself, allowing access to ANY service in the domain. However, Golden Tickets require the krbtgt hash (harder to obtain) while Silver Tickets only need a service account hash (easier via Kerberoasting).",
+            "7. UNDERSTAND PERSISTENCE BENEFITS: The krbtgt account password is ONLY changed during domain functional level upgrades from pre-Windows Server 2008. In mature environments, this hash may be 5-10+ years old. Once you have it, you can create Golden Tickets indefinitely, even if all Domain Admin accounts are detected and disabled. This makes it the ultimate persistence mechanism.",
+            "8. PLAN OPERATIONAL SECURITY: Consider detection risks. Golden Tickets with default settings create 10-year lifetime tickets (extremely suspicious). Modern SOC teams monitor for: (a) RC4 encryption (deprecated), (b) Tickets with lifetimes >24 hours, (c) Kerberos traffic from non-domain IPs, (d) Event IDs 4768 (TGT request) with unusual patterns. Plan to customize ticket parameters for realistic lifetimes and use AES encryption if possible."
+          ],
+          "commands": [],
+          "expected_outcome": "You now understand that Golden Ticket attacks require: (1) Prior privilege escalation to Domain Admin or DC compromise, (2) Three key data points: domain FQDN, domain SID, and krbtgt NTLM hash, (3) Understanding of Kerberos protocol to use tickets effectively. You've gathered the domain FQDN (corp.com) and domain SID (S-1-5-21-1987370270-658905905-1781884369) from reconnaissance. Your next step is to escalate privileges to obtain the krbtgt hash.",
+          "why_this_works": "Golden Tickets work because of a fundamental aspect of Kerberos: the krbtgt account is the trust anchor for the entire domain. Every TGT issued by the KDC is encrypted with this account's hash, and domain controllers have no way to verify if a TGT was actually issued by them or forged by an attacker - as long as the encryption is valid, the ticket is trusted. This is unlike password authentication where the DC can validate against Active Directory. With Kerberos, the ticket itself IS the authentication proof. Additionally, there's no 'ticket issuance database' tracking which tickets were legitimately issued, making forged tickets undetectable through cryptographic validation alone. Detection relies on behavioral analysis (unusual ticket properties, anomalous access patterns) rather than cryptographic verification.",
+          "common_mistakes": [
+            "Attempting Golden Ticket before obtaining Domain Admin/DC access - you need the krbtgt hash first",
+            "Including the user RID in the domain SID parameter (use domain SID only, not user SID)",
+            "Using IP addresses for targets instead of hostnames (forces NTLM instead of Kerberos)",
+            "Assuming Golden Ticket is an initial access technique (it's post-exploitation persistence)",
+            "Not understanding the difference between TGT (Golden) and TGS (Silver) tickets",
+            "Forgetting that tickets must be injected into memory on the attacking workstation, not the target"
+          ],
+          "oscp_exam_relevance": "HIGH - OSCP labs frequently include Active Directory privilege escalation chains that culminate in Domain Admin access. Golden Ticket demonstrates understanding of Kerberos, post-exploitation persistence, and lateral movement. While obtaining the krbtgt hash requires prior Domain Admin access, the technique showcases complete domain compromise and is often part of full attack chain documentation in exam reports."
+        },
+        {
+          "title": "Scenario 2: Obtaining krbtgt Hash via DCSync (Remote Method)",
+          "context": "You are continuing from Scenario 1. Through a separate attack chain (e.g., Kerberoasting, AS-REP Roasting, or local privilege escalation + token impersonation), you have successfully compromised a Domain Admin account 'jeffadmin' and obtained their credentials. You are currently on the Windows workstation CLIENT74 with a command prompt running as 'corp\\jeffadmin'. The Domain Controller is DC1.corp.com (IP: 192.168.50.70). Your objective is to extract the krbtgt account's NTLM hash WITHOUT logging into the Domain Controller directly, using the DCSync attack technique.",
+          "objective": "Remotely extract the krbtgt account NTLM hash using Mimikatz's DCSync functionality, leveraging Domain Admin replication privileges.",
+          "approach": [
+            "1. UNDERSTAND DCSYNC ATTACK: DCSync is a technique that abuses the Directory Replication Service (DRS) protocol used by Domain Controllers to synchronize with each other. By default, Domain Admins, Enterprise Admins, and Domain Controllers have the 'DS-Replication-Get-Changes' and 'DS-Replication-Get-Changes-All' extended rights, allowing them to request password data from the DC. Mimikatz can impersonate a DC and request replication of any account's password hash.",
+            "2. VERIFY PRIVILEGES: Confirm you're running as a Domain Admin account. Use 'net user jeffadmin /domain' to display group memberships - you should see 'Domain Admins' listed. Alternatively, use 'whoami /groups' and look for 'CORP\\Domain Admins' with attributes 'Mandatory group, Enabled by default, Enabled group'. Without these privileges, DCSync will fail with ERROR 0x00002105 (access denied).",
+            "3. VERIFY DOMAIN CONTROLLER CONNECTIVITY: Ensure network connectivity to the DC and that DNS resolution works. Use 'nltest /dsgetdc:corp.com' to locate the DC. Use 'ping DC1.corp.com' to verify reachability. DCSync requires RPC connectivity (TCP 135, 445, and dynamic high ports 49152-65535). Firewall blocks will cause 'RPC server unavailable' errors.",
+            "4. LAUNCH MIMIKATZ: From C:\\Tools on CLIENT74, run mimikatz.exe. You should see the Mimikatz banner and 'mimikatz #' prompt. Mimikatz doesn't require installation - it's a standalone executable. For OPSEC, consider running from a memory-only location or using Invoke-Mimikatz PowerShell wrapper to avoid disk artifacts.",
+            "5. OBTAIN DEBUG PRIVILEGES: Run 'privilege::debug' to enable SeDebugPrivilege. This is required for many Mimikatz operations (though DCSync doesn't strictly need it, it's good practice). You should see 'Privilege '20' OK'. If you see an error, you're not running as Administrator. DCSync itself only requires domain replication rights, not local admin, but other Mimikatz functions need debug privilege.",
+            "6. EXECUTE DCSYNC ATTACK: Run the command 'lsadump::dcsync /domain:corp.com /user:krbtgt'. The /domain parameter specifies the target AD domain (use FQDN). The /user parameter specifies which account to extract - we want 'krbtgt'. Mimikatz will connect to the DC via RPC and request replication data for this account.",
+            "7. PARSE THE OUTPUT: DCSync output contains multiple fields. Look for these key pieces: (a) 'Domain : CORP / S-1-5-21-...' - confirms domain and shows domain SID, (b) 'RID  : 000001f6 (502)' - krbtgt's well-known RID is 502, (c) 'User : krbtgt' - confirms target account, (d) 'NTLM : [32-character hexadecimal hash]' - THIS IS THE GOLDEN TICKET KEY. Example: NTLM : 1693c6cefafffc7af11ef34d1c788f47.",
+            "8. SAVE THE KRBTGT HASH: IMMEDIATELY copy the NTLM hash to a secure note. This hash is the most sensitive credential in the domain - with it, you have permanent domain-wide access. Format: Exactly 32 hexadecimal characters (0-9, a-f). Do not include spaces, colons, or 'NTLM :' prefix. Example: 1693c6cefafffc7af11ef34d1c788f47.",
+            "9. OPTIONAL - EXTRACT AES KEYS: For improved OPSEC, also save the AES256 key from DCSync output (look for 'aes256_hmac'). AES encryption is less suspicious than RC4 (NTLM). However, Rubeus is required to use AES keys (Mimikatz golden ticket defaults to RC4). AES keys are 64 hexadecimal characters.",
+            "10. OPERATIONAL SECURITY: DCSync generates Event ID 4662 on the Domain Controller (An operation was performed on an object) with specific replication GUID. Advanced SOC teams monitor for DCSync. To reduce detection: (a) Perform during business hours (blend with legitimate DC-to-DC replication), (b) Extract only krbtgt, not all users (bulk extraction is more obvious), (c) Use a compromised service account with replication rights if available (less suspicious than Domain Admin account).",
+            "11. VERIFY HASH INTEGRITY: The hash should be exactly 32 hex characters. Common mistakes: Including spaces, copying 'NTLM :' prefix, confusing with LM hash (older format, usually empty). Test the hash format with a regex: ^[a-f0-9]{32}$ (should match). If length is wrong, re-run DCSync and carefully copy ONLY the hash portion.",
+            "12. ALTERNATIVE - EXTRACT ALL DOMAIN HASHES: If you want comprehensive persistence, use 'lsadump::dcsync /domain:corp.com /all /csv' to dump ALL domain account hashes to CSV format. This takes longer and is noisier, but provides password hashes for every domain user and computer account. Useful for offline password cracking and creating multiple persistence mechanisms."
+          ],
+          "commands": [
+            "ad-golden-ticket-dcsync-krbtgt"
+          ],
+          "expected_outcome": "You successfully extract the krbtgt account NTLM hash using DCSync without touching the Domain Controller's file system or memory directly. Output shows: Domain SID (S-1-5-21-1987370270-658905905-1781884369), krbtgt RID (502), and NTLM hash (1693c6cefafffc7af11ef34d1c788f47). You now have the key piece of data needed for Golden Ticket creation. No alerts are triggered (unless advanced monitoring is in place). The entire operation takes 10-30 seconds.",
+          "why_this_works": "DCSync works because it exploits LEGITIMATE Active Directory functionality. Domain Controllers must replicate password hashes between each other for authentication to work across multiple DCs. The replication protocol (MS-DRSR) has no way to distinguish between a real DC requesting replication and an attacker with replication privileges requesting the same data. Active Directory doesn't log or alert on replication requests by default because they're considered normal operations. The attack succeeds with only Domain Admin credentials - no exploitation, no malware, just abuse of intended functionality. This is why DCSync is so effective and difficult to prevent without behavioral monitoring.",
+          "common_mistakes": [
+            "Forgetting to specify /domain parameter (causes 'domain not found' error)",
+            "Using NetBIOS name instead of FQDN for domain (use 'corp.com' not 'CORP')",
+            "Running DCSync without Domain Admin privileges (ERROR 0x00002105)",
+            "Network/firewall blocking RPC to DC (ERROR 'RPC server unavailable')",
+            "Copying the wrong hash - LM hash field is usually empty, NTLM hash is the important one",
+            "Including spaces or 'NTLM :' prefix when saving the hash",
+            "Running from a non-domain-authenticated session (use runas /netonly if needed)"
+          ],
+          "oscp_exam_relevance": "HIGH - DCSync is a core post-exploitation technique in Active Directory environments. It demonstrates understanding of domain replication, privilege abuse, and stealth techniques. OSCP labs include scenarios where DCSync is necessary to extract credentials for lateral movement or persistence. Knowing both DCSync and Golden Ticket creates a complete attack narrative for exam documentation."
+        },
+        {
+          "title": "Scenario 3: Obtaining krbtgt Hash via LSA Dump (Domain Controller Access Method)",
+          "context": "ALTERNATIVE to Scenario 2. You have successfully compromised the Domain Controller DC1 directly (e.g., through exploitation of a vulnerable service, stolen RDP credentials, or physical access). You have remote desktop access to the DC as a local administrator account 'jeffadmin'. DCSync is not necessary because you have direct access to the DC's memory and registry. Your objective is to extract the krbtgt hash directly from the DC's Local Security Authority (LSA) using Mimikatz, which dumps credential material from the LSASS process.",
+          "objective": "Extract the krbtgt account NTLM hash directly from the Domain Controller's memory using LSA dump technique.",
+          "approach": [
+            "1. UNDERSTAND LSA DUMP: The Local Security Authority (LSA) is a protected Windows subsystem that handles authentication and stores sensitive security information in memory. On a Domain Controller, LSA caches password hashes for all domain accounts, including krbtgt. Mimikatz's 'lsadump::lsa' module dumps these cached secrets from the LSASS.exe process memory. Unlike DCSync (which uses network replication), this is direct memory access requiring local admin on the DC.",
+            "2. VERIFY DC ACCESS: Confirm you're logged into the Domain Controller (not just a domain-joined workstation). Run 'hostname' - it should show 'DC1'. Run 'systeminfo' and look for 'Domain Role: Primary Domain Controller' or 'Backup Domain Controller'. If the domain role is 'Member Server' or 'Workstation', you're on the wrong machine - LSA dump on a non-DC will only show local SAM hashes, not domain hashes.",
+            "3. VERIFY LOCAL ADMIN PRIVILEGES: LSA dump requires local Administrator rights on the DC. Run 'net localgroup Administrators' - your account should be listed. Note that Domain Admin automatically grants local admin on DCs, but verify anyway. If you only have domain user access, escalate privileges first.",
+            "4. OBTAIN SYSTEM PRIVILEGES: For maximum reliability, run Mimikatz as SYSTEM (not just Administrator). Use PsExec: 'PsExec.exe -s -i cmd.exe' to launch a command prompt as SYSTEM. From that prompt, run mimikatz.exe. WHY SYSTEM: Some LSA protections require SYSTEM context. Running as admin might work, but SYSTEM guarantees success.",
+            "5. LAUNCH MIMIKATZ ON DC: Navigate to C:\\Tools on the DC (or wherever you've placed mimikatz.exe). Run 'mimikatz.exe'. You'll see the Mimikatz banner. Verify you're running with high privileges - Mimikatz should not show UAC warnings.",
+            "6. ENABLE DEBUG PRIVILEGE: Run 'privilege::debug' to obtain SeDebugPrivilege. This is REQUIRED for LSA dump because you're accessing LSASS.exe memory. You should see 'Privilege '20' OK'. If you see 'ERROR', you don't have sufficient privileges - ensure you're running as SYSTEM via PsExec.",
+            "7. EXECUTE LSA DUMP: Run the command 'lsadump::lsa /patch'. The /patch flag is CRITICAL on modern Windows Server versions (2012+). It patches LSASS memory to bypass protections that prevent credential dumping. Without /patch, the dump will fail with error 0x00000002 or show empty hash fields.",
+            "8. PARSE THE OUTPUT: LSA dump displays ALL domain account hashes, not just krbtgt. Output is extensive and can be overwhelming. Scroll through carefully looking for the krbtgt entry. Each account section shows: (a) RID - Relative Identifier (krbtgt is always 502 / 0x1f6), (b) User - Account name, (c) LM - Old LM hash (usually empty), (d) NTLM - The password hash we need. Find the section with 'RID  : 000001f6 (502)' and 'User : krbtgt'.",
+            "9. EXTRACT KRBTGT HASH: Under the krbtgt entry, copy the NTLM hash. Format: 32 hexadecimal characters. Example from output: 'RID  : 000001f6 (502) / User : krbtgt / LM   : / NTLM : 1693c6cefafffc7af11ef34d1c788f47'. Save '1693c6cefafffc7af11ef34d1c788f47' - this is your Golden Ticket key.",
+            "10. SAVE ADDITIONAL HASHES: LSA dump also displays Administrator, Guest, and all other domain accounts. Save these for potential password cracking, lateral movement, or creating multiple persistence mechanisms. The built-in Administrator hash (RID 500) is also valuable for direct DC access.",
+            "11. SAVE OUTPUT TO FILE: Consider redirecting output for later analysis: 'mimikatz # lsadump::lsa /patch > C:\\temp\\lsa_dump.txt'. This allows offline parsing and prevents missing important hashes during live scrolling. Remember to securely delete this file after extraction to remove forensic artifacts.",
+            "12. OPERATIONAL SECURITY: LSA dump is VERY noisy from a detection perspective. It triggers: (a) Event ID 10 (LSASS process access) in Sysmon logs, (b) Potential antivirus/EDR alerts (accessing LSASS is a common malware technique), (c) Memory integrity violations if Credential Guard is enabled. If stealth is required, DCSync is preferable. LSA dump should be used when you already have DC access and stealth is less critical."
+          ],
+          "commands": [
+            "ad-golden-ticket-lsa-dump-krbtgt"
+          ],
+          "expected_outcome": "You successfully dump the Local Security Authority secrets from the Domain Controller's memory. The output displays password hashes for all domain accounts including Administrator (RID 500), Guest (RID 501), and krbtgt (RID 502). You extract the krbtgt NTLM hash: 1693c6cefafffc7af11ef34d1c788f47. The operation completes in 10-20 seconds. You now have the key data needed for Golden Ticket creation, plus additional Administrator and user hashes for lateral movement.",
+          "why_this_works": "LSA dump works because Domain Controllers cache password hashes in LSASS memory for authentication purposes. When a user authenticates, the DC must verify their password hash against the stored hash in Active Directory. For performance, these hashes are cached in the LSA subsystem's memory (LSASS.exe process). Mimikatz exploits the fact that any process with SeDebugPrivilege can read another process's memory. By reading LSASS memory and parsing the LSA data structures, Mimikatz extracts the cached password hashes. The /patch parameter bypasses modern protections (LSA Protection, Credential Guard checks) by temporarily modifying LSASS memory to disable validation routines. This is direct memory manipulation, not exploitation of a vulnerability.",
+          "common_mistakes": [
+            "Forgetting the /patch parameter (causes empty hash fields on modern Windows)",
+            "Running as Administrator instead of SYSTEM (may fail on protected systems)",
+            "Not running 'privilege::debug' first (access denied to LSASS memory)",
+            "Executing on a member server instead of Domain Controller (only gets local SAM hashes)",
+            "Confusing LM hash with NTLM hash (LM field is usually empty, NTLM is what you need)",
+            "Scrolling past krbtgt entry too quickly (output is very long, easy to miss)",
+            "Running with antivirus enabled (may block Mimikatz from accessing LSASS)"
+          ],
+          "oscp_exam_relevance": "MEDIUM - While DCSync is preferred in OSCP labs due to stealth and remote execution, LSA dump demonstrates understanding of Windows authentication architecture and credential extraction from memory. Useful when you've already compromised the DC and DCSync is unavailable or blocked. Shows technical depth in exam reports."
+        },
+        {
+          "title": "Scenario 4: Creating and Injecting Golden Ticket with Mimikatz",
+          "context": "You have successfully obtained the krbtgt NTLM hash (1693c6cefafffc7af11ef34d1c788f47) using either DCSync or LSA dump from previous scenarios. You have also gathered: Domain FQDN (corp.com), Domain SID (S-1-5-21-1987370270-658905905-1781884369), and confirmed an existing domain user account 'jen'. You are now back on the compromised workstation CLIENT74, logged in as the regular domain user 'corp\\jen' (NOT Domain Admin - demonstrating persistence). Your objective is to create a Golden Ticket that grants Domain Admin privileges to your low-privileged 'jen' account, inject it into memory, and verify the ticket is active.",
+          "objective": "Forge a Kerberos TGT using the krbtgt hash, inject it into the current session's ticket cache, and verify successful injection.",
+          "approach": [
+            "1. UNDERSTAND THE WORKFLOW: Golden Ticket creation has four phases: (a) Purge existing Kerberos tickets, (b) Create the forged TGT with krbtgt hash, (c) Inject ticket into memory, (d) Verify ticket is cached and usable. We'll perform all steps from a NON-PRIVILEGED user context to demonstrate that ticket creation doesn't require admin rights (only obtaining the krbtgt hash required elevated access).",
+            "2. VERIFY PREREQUISITES: Ensure you have: krbtgt NTLM hash (32 hex chars), Domain SID (S-1-5-21-..., WITHOUT user RID), Domain FQDN (corp.com), existing username to impersonate (jen). Double-check the Domain SID - the most common mistake is including the user RID. If your 'whoami /user' shows 'S-1-5-21-1987370270-658905905-1781884369-1105', use only 'S-1-5-21-1987370270-658905905-1781884369'.",
+            "3. LAUNCH MIMIKATZ ON WORKSTATION: On CLIENT74 as user jen, navigate to C:\\Tools and run mimikatz.exe. You do NOT need to run as Administrator for ticket creation (though you did for obtaining the krbtgt hash initially). Mimikatz prompt appears: 'mimikatz #'.",
+            "4. PURGE EXISTING TICKETS: Run 'kerberos::purge' to delete all Kerberos tickets from your current session. Output should show 'Ticket(s) purge for current session is OK'. WHY: Existing legitimate tickets might interfere with your Golden Ticket. Purging ensures Windows will use the forged ticket. This is optional but highly recommended for clean injection.",
+            "5. VERIFY TICKET CACHE IS EMPTY: Run 'exit' to close Mimikatz temporarily, then run 'klist' from the command prompt. You should see 'No credentials cached' or 'Cached Tickets: (0)'. This confirms purge was successful. If tickets remain, close all SMB connections ('net use * /delete') and purge again.",
+            "6. CREATE THE GOLDEN TICKET: Return to Mimikatz and run the golden ticket command with all required parameters: 'kerberos::golden /user:jen /domain:corp.com /sid:S-1-5-21-1987370270-658905905-1781884369 /krbtgt:1693c6cefafffc7af11ef34d1c788f47 /ptt'. Let's break down each parameter: (a) /user:jen - The account to impersonate (MUST exist post-July 2022), (b) /domain:corp.com - Target AD domain FQDN, (c) /sid:<DOMAIN_SID> - Domain SID WITHOUT user RID, (d) /krbtgt:<HASH> - The krbtgt NTLM hash from DCSync, (e) /ptt - Pass The Ticket (auto-inject into memory).",
+            "7. PARSE CREATION OUTPUT: Mimikatz displays detailed information about the forged ticket. Verify these fields: (a) 'User      : jen' - Confirms impersonated account, (b) 'Domain    : corp.com (CORP)' - Confirms target domain, (c) 'SID       : S-1-5-21-...' - Should match your Domain SID exactly, (d) 'User Id   : 500' - Mimikatz defaults to RID 500 (built-in Administrator), (e) 'Groups Id : *513 512 520 518 519' - Privileged groups including 512 (Domain Admins), (f) 'ServiceKey: [hash] - rc4_hmac_nt' - Confirms encryption type, (g) 'Golden ticket for 'jen @ corp.com' successfully submitted for current session' - Confirms injection.",
+            "8. UNDERSTAND THE FORGERY: Mimikatz automatically adds your user to the most privileged groups (Domain Admins, Enterprise Admins, Schema Admins, etc.) via the Groups Id field in the ticket's PAC (Privilege Attribute Certificate). Even though 'jen' is a low-privileged user in reality, the forged ticket claims she's a Domain Admin. The DC trusts this claim because the ticket is validly encrypted with the krbtgt hash.",
+            "9. VERIFY TICKET INJECTION: Exit Mimikatz (or open a new command prompt with 'misc::cmd') and run 'klist' to display cached tickets. You should see: (a) 'Client: jen @ CORP.COM', (b) 'Server: krbtgt/corp.com @ CORP.COM' - This indicates a TGT (not a service ticket), (c) 'KerbTicket Encryption Type: RC4-HMAC-NT', (d) 'Ticket Flags 0x40e10000' - Standard TGT flags (forwardable, renewable, etc.), (e) 'Start Time' and 'End Time' showing the ticket validity period (default: 10 years in the future!).",
+            "10. VERIFY GROUP MEMBERSHIPS: Run 'whoami /groups' to see what Windows believes your current group memberships are. You should see: CORP\\Domain Admins, CORP\\Enterprise Admins, CORP\\Schema Admins, BUILTIN\\Administrators, and other privileged groups. These are derived from the forged ticket's PAC, not from Active Directory. The jen account in AD is still low-privileged, but your Kerberos ticket claims otherwise.",
+            "11. UNDERSTAND TICKET LIFETIME: The default Golden Ticket has a 10-year lifetime (Renew Time shows a date 10 years in the future). This is EXTREMELY suspicious from a detection perspective. Legitimate TGTs have lifetimes of 10 hours (default AD policy). For better OPSEC, use /startoffset, /endin, and /renewmax parameters to create realistic ticket lifetimes. Example: /endin:600 creates a ticket expiring in 10 hours (600 minutes).",
+            "12. TROUBLESHOOTING INJECTION FAILURES: If 'klist' shows no tickets after creation: (a) Mimikatz may have shown an error during creation (scroll back and check), (b) You may be viewing a different session's tickets (open new cmd with 'mimikatz # misc::cmd'), (c) The ticket may have been created but not injected (missing /ptt flag - recreate with /ptt). If ticket exists but has wrong domain: Verify /domain parameter used FQDN (corp.com) not NetBIOS name (CORP)."
+          ],
+          "commands": [
+            "ad-golden-ticket-purge-tickets",
+            "ad-golden-ticket-mimikatz-create",
+            "ad-golden-ticket-verify-klist"
+          ],
+          "expected_outcome": "You successfully create a Golden Ticket for user 'jen' with forged Domain Admin privileges and inject it into memory. The 'klist' command shows a valid TGT for jen @ corp.com with Server: krbtgt/corp.com, indicating successful injection. 'whoami /groups' shows Domain Admins group membership even though jen is a regular user in Active Directory. You now have a domain-administrative Kerberos ticket ready for lateral movement. The entire process takes 15-30 seconds.",
+          "why_this_works": "The attack succeeds because Kerberos authentication is based on cryptographic trust, not centralized validation. When you present a TGT to request a service ticket, the KDC validates the TGT by decrypting it with the krbtgt hash. If decryption succeeds, the KDC trusts ALL claims in the ticket (username, group memberships, etc.) without checking Active Directory. There's no 'list of valid tickets' that the KDC maintains - ticket validity is purely cryptographic. Since our forged ticket is encrypted with the real krbtgt hash (which we stole), it decrypts correctly and is trusted. The KDC has no way to know we created the ticket ourselves versus it being legitimately issued. This is a fundamental limitation of the Kerberos protocol - the krbtgt hash is a single point of cryptographic failure for the entire domain.",
+          "common_mistakes": [
+            "Including user RID in /sid parameter (causes 'SID is too long' error)",
+            "Using IP address instead of FQDN for /domain (ticket created but won't work for authentication)",
+            "Forgetting /ptt flag (ticket created but not injected - must manually inject with 'kerberos::ptt <file>')",
+            "Using non-existent username post-July 2022 (ticket creation fails or ticket rejected by DC)",
+            "Incorrect krbtgt hash format (spaces, wrong length) causes 'Data length error'",
+            "Checking tickets in wrong session (klist shows 'no credentials' even though ticket exists in another session)",
+            "Not opening new command prompt after injection (old prompts don't inherit ticket - use 'misc::cmd')"
+          ],
+          "oscp_exam_relevance": "HIGH - This is the core Golden Ticket technique. OSCP exams require demonstrating post-exploitation persistence and lateral movement in Active Directory. Creating a Golden Ticket from a low-privileged account using stolen krbtgt hash shows complete understanding of Kerberos abuse, domain compromise, and persistence mechanisms. Essential for comprehensive AD attack documentation in exam reports."
+        },
+        {
+          "title": "Scenario 5: Using Golden Ticket for Domain-Wide Access and Persistence",
+          "context": "You have successfully created and injected a Golden Ticket in Scenario 4. Your 'klist' command confirms a valid TGT for jen @ corp.com with Server: krbtgt/corp.com. Your current context is a command prompt on CLIENT74 as user 'jen', but your Kerberos ticket claims Domain Admin privileges. The domain has multiple high-value targets: Domain Controller (DC1.corp.com, 192.168.50.70), File Server (FILES01.corp.com), Web Server (WEB01.corp.com). Your objective is to demonstrate domain-wide access by performing lateral movement to the Domain Controller, verify your privileged access, and understand persistence implications.",
+          "objective": "Use the Golden Ticket to authenticate to remote domain systems, demonstrating domain-wide administrative access and persistence capabilities.",
+          "approach": [
+            "1. UNDERSTAND KERBEROS VS NTLM AUTHENTICATION: This is CRITICAL for Golden Ticket usage. Windows authentication supports two protocols: Kerberos (default for domain) and NTLM (fallback for workgroup/IP-based). Golden Tickets ONLY work with Kerberos authentication. When you specify a target by HOSTNAME or FQDN (\\\\DC1 or \\\\DC1.corp.com), Windows uses Kerberos. When you specify by IP ADDRESS (\\\\192.168.50.70), Windows uses NTLM. Since your Golden Ticket is a Kerberos ticket, you MUST use hostnames, never IPs.",
+            "2. VERIFY GOLDEN TICKET IS ACTIVE: Before attempting lateral movement, run 'klist' to confirm your TGT is present. You should see 'Server: krbtgt/corp.com @ CORP.COM'. If tickets were purged or expired, recreate the Golden Ticket. Verify ticket expiration with End Time field - should be far in future (default 10 years).",
+            "3. TEST ACCESS WITH DIR COMMAND: Before using PsExec, test basic SMB access to the Domain Controller. Run 'dir \\\\DC1.corp.com\\C$' to list the C: drive on DC1. This requires Domain Admin privileges (local admin on the DC). If successful, you'll see directory listing of C:\\. WHY THIS WORKS: The 'dir' command initiates SMB connection to CIFS/DC1.corp.com service. Windows requests a service ticket (TGS) from the KDC using your Golden Ticket (TGT). KDC issues the service ticket, and SMB authentication succeeds. If this fails with 'Access Denied', your Golden Ticket has an issue.",
+            "4. PREPARE PSEXEC: Ensure PsExec.exe is available. It's part of Sysinternals Suite and should be in C:\\Tools\\SysinternalsSuite\\. PsExec is a legitimate Microsoft tool for remote command execution via SMB. It works by: (a) Connecting to ADMIN$ share on target, (b) Uploading a service executable, (c) Starting the service via Service Control Manager, (d) Executing your command in service context (SYSTEM privileges).",
+            "5. ATTEMPT LATERAL MOVEMENT WITH HOSTNAME: Run 'PsExec64.exe \\\\DC1 cmd.exe' to launch an interactive command prompt on the Domain Controller. PsExec connects using the HOSTNAME (DC1), which forces Kerberos authentication. Windows automatically presents your cached Golden Ticket for authentication. You should see: 'PsExec v2.4 - Execute processes remotely' followed by a new command prompt. The new prompt is running ON the Domain Controller.",
+            "6. VERIFY YOU'RE ON THE DC: In the new PsExec prompt, run verification commands: (a) 'hostname' - Should show 'DC1' (not CLIENT74), (b) 'ipconfig' - Should show IP 192.168.50.70 (DC's IP), (c) 'whoami' - Should show 'corp\\jen' (the account from your Golden Ticket), (d) 'whoami /groups' - Should show Domain Admins, Enterprise Admins, etc. (from forged ticket PAC). You now have command execution on the Domain Controller as a Domain Admin.",
+            "7. DEMONSTRATE THE IP ADDRESS FAILURE: To understand why hostnames are required, exit the PsExec session and try 'PsExec64.exe \\\\192.168.50.70 cmd.exe' (using IP instead of hostname). This will FAIL with 'Access is denied' even though the Golden Ticket is still valid. WHY: Using the IP forces NTLM authentication. NTLM requires the actual password hash of the user account (jen). Our Golden Ticket is a Kerberos-only credential and doesn't provide NTLM authentication material.",
+            "8. ACCESS ADDITIONAL DOMAIN RESOURCES: Test access to other domain systems. Try 'dir \\\\FILES01.corp.com\\Share', 'PsExec64.exe \\\\WEB01 cmd.exe', or 'net use \\\\APP01\\C$ /user:corp\\jen' (password not needed - Kerberos SSO). The Golden Ticket grants access to ANY domain resource because it claims Domain Admin privileges. You can access any file share, execute code on any server, dump credentials from any system.",
+            "9. UNDERSTAND PERSISTENCE IMPLICATIONS: Golden Tickets provide ULTIMATE persistence because: (a) The krbtgt password rarely changes (only on domain functional level upgrades), (b) Tickets can be created offline on non-domain systems (no network access needed), (c) You can create tickets for any existing user (low-privileged or disabled accounts work), (d) Tickets survive: Password changes (for any account except krbtgt), Account lockouts, Group Policy changes, Domain Admin account deletions. Even if all Domain Admin accounts are disabled, you can still create Golden Tickets.",
+            "10. DEMONSTRATE OFFLINE TICKET CREATION: To prove persistence, log out of the domain completely. Disconnect from network or join a workgroup. Run Mimikatz and create a new Golden Ticket with the same parameters. The ticket is created successfully even though you have NO network connectivity to the domain. Later, when you reconnect to the domain network, the ticket works for authentication. WHY: Ticket creation is purely local cryptography - Mimikatz encrypts the ticket data with the krbtgt hash locally, no DC communication needed.",
+            "11. RENEWAL AND LONG-TERM PERSISTENCE: Default Golden Tickets have 10-year expiration. For ongoing access, you can: (a) Create multiple tickets with staggered expirations, (b) Save the krbtgt hash securely for future ticket creation, (c) Use /renewmax parameter for renewable tickets (can extend lifetime without recreating). Before the ticket expires, create a new one using the saved krbtgt hash.",
+            "12. OPERATIONAL SECURITY CONSIDERATIONS: Golden Ticket usage generates logs that advanced SOCs monitor: (a) Event ID 4768 (TGT Request) - Shows 'unusual' TGT with long lifetime, (b) Event ID 4769 (Service Ticket Request) - Shows service ticket requests using RC4 (suspicious on modern networks), (c) Event ID 4672 (Special privileges assigned) - Shows Domain Admin logon from low-privileged account. For stealth: Use realistic ticket lifetimes (/endin:600 for 10 hours), use AES encryption instead of RC4 (requires AES krbtgt key with Rubeus), avoid excessive lateral movement, blend access patterns with normal user behavior.",
+            "13. CLEANUP (OPTIONAL): When finished, remove the Golden Ticket to reduce forensic footprint. Run 'mimikatz # kerberos::purge' to delete all tickets. Run 'net use * /delete /y' to close SMB connections. Consider clearing relevant event logs if you have permissions (wevtutil cl Security). However, remember that tickets are logged on the DC when used, so local cleanup doesn't erase all traces."
+          ],
+          "commands": [
+            "ad-golden-ticket-verify-klist",
+            "ad-golden-ticket-psexec-use",
+            "ad-golden-ticket-cleanup"
+          ],
+          "expected_outcome": "You successfully use the Golden Ticket to perform lateral movement from CLIENT74 (low-privileged workstation) to DC1 (Domain Controller) using PsExec with hostname-based authentication. The command 'PsExec64.exe \\\\DC1 cmd.exe' succeeds and grants an interactive shell on the DC. Verification commands confirm you're on DC1 with IP 192.168.50.70, running as corp\\jen with Domain Admins group membership. The IP-based attempt (\\\\192.168.50.70) fails, demonstrating the requirement for Kerberos authentication. You have achieved complete domain compromise and persistent access via Golden Ticket. The attack chain is complete: Initial compromise -> Privilege Escalation -> krbtgt extraction -> Golden Ticket creation -> Domain-wide access -> Persistence.",
+          "why_this_works": "The lateral movement succeeds because PsExec (and all Windows authentication) automatically uses cached Kerberos tickets when connecting to hostnames. The authentication flow is: (1) PsExec initiates connection to \\\\DC1 (FQDN triggers Kerberos), (2) Windows checks ticket cache and finds your Golden Ticket (TGT for jen @ corp.com), (3) Windows requests service ticket for CIFS/DC1.corp.com from KDC using the Golden Ticket, (4) KDC validates the Golden Ticket by decrypting with krbtgt hash (succeeds because we encrypted it correctly), (5) KDC trusts the ticket's claims (Domain Admin group membership) and issues service ticket, (6) PsExec uses service ticket to authenticate to DC1, (7) DC1 checks service ticket, sees Domain Admins group, grants access. At no point does any system verify that jen is actually a Domain Admin in Active Directory - the ticket's cryptographic validity is sufficient proof. This is the fundamental design of Kerberos: the ticket IS the authentication, not a reference to authentication.",
+          "common_mistakes": [
+            "Using IP addresses instead of hostnames (forces NTLM, causes 'Access Denied')",
+            "Forgetting to verify ticket with klist before attempting lateral movement",
+            "Assuming failed lateral movement means ticket is invalid (might be firewall/network issue)",
+            "Not understanding that Golden Ticket grants access to ALL systems, not just DC",
+            "Thinking ticket needs to be recreated for each target (one ticket works for entire domain)",
+            "Attempting to use Golden Ticket for non-Kerberos protocols (like WinRM over HTTP)",
+            "Not verifying you're on target system after PsExec (assuming success without confirmation)"
+          ],
+          "oscp_exam_relevance": "HIGH - Lateral movement and domain-wide access demonstration is critical for OSCP exam reports. Using Golden Ticket to move from workstation to Domain Controller shows complete Active Directory compromise. The technique demonstrates: Post-exploitation persistence, Kerberos protocol understanding, Lateral movement methodology, Domain privilege escalation, Comprehensive attack chain documentation. This is the type of complete attack narrative that earns full points in OSCP AD scenarios."
+        }
+      ],
+      "sections": [
+        {
+          "title": "Phase 1: Prerequisites and Reconnaissance",
+          "notes": "Gather required information and establish initial access. Golden Ticket requires Domain SID, domain FQDN, and krbtgt hash. The first two can be obtained from any domain user context. The krbtgt hash requires Domain Admin privileges or DC compromise (achieved through separate attack chain).",
+          "commands": []
+        },
+        {
+          "title": "Phase 2: Extract krbtgt Account Hash",
+          "notes": "Obtain the krbtgt account NTLM hash using either DCSync (remote, stealthy) or LSA dump (requires DC access, noisy). DCSync is preferred in most scenarios as it doesn't require logging into the DC and generates less suspicious activity. Both methods require Domain Admin privileges or equivalent replication rights.",
+          "commands": [
+            "ad-golden-ticket-dcsync-krbtgt",
+            "ad-golden-ticket-lsa-dump-krbtgt"
+          ]
+        },
+        {
+          "title": "Phase 3: Create and Inject Golden Ticket",
+          "notes": "Forge a Kerberos TGT using the krbtgt hash and inject it into memory. This can be performed from a non-privileged user context on any workstation (domain-joined or not). Purge existing tickets first for clean injection. Verify ticket creation with klist before attempting lateral movement.",
+          "commands": [
+            "ad-golden-ticket-purge-tickets",
+            "ad-golden-ticket-mimikatz-create",
+            "ad-golden-ticket-rubeus-create",
+            "ad-golden-ticket-verify-klist"
+          ]
+        },
+        {
+          "title": "Phase 4: Lateral Movement and Domain Access",
+          "notes": "Use the Golden Ticket to authenticate to domain resources and perform lateral movement. CRITICAL: Always use hostnames or FQDNs, never IP addresses (IPs force NTLM authentication which bypasses Kerberos tickets). The Golden Ticket grants domain-wide access to all systems and resources.",
+          "commands": [
+            "ad-golden-ticket-psexec-use"
+          ]
+        },
+        {
+          "title": "Phase 5: Persistence and Cleanup (Optional)",
+          "notes": "Golden Tickets provide long-term persistence because krbtgt password changes are rare. Save the krbtgt hash securely for future ticket creation. Tickets can be created offline and used when reconnecting to the network. For OPSEC, purge tickets and clear logs when operations are complete.",
+          "commands": [
+            "ad-golden-ticket-cleanup"
+          ]
+        }
+      ],
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "GOLDEN_TICKET",
+        "KERBEROS_ATTACKS",
+        "PERSISTENCE",
+        "LATERAL_MOVEMENT",
+        "PRIVILEGE_ESCALATION",
+        "DOMAIN_DOMINANCE",
+        "MIMIKATZ",
+        "RUBEUS",
+        "DCSYNC",
+        "TICKET_FORGERY",
+        "OSCP:HIGH",
+        "POST_EXPLOITATION",
+        "WINDOWS"
+      ]
+    }
+  ]
+}

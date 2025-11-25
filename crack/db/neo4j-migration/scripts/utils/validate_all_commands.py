@@ -19,7 +19,7 @@ validator_module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(validator_module)
 CommandValidator = validator_module.CommandValidator
 
-def validate_all_commands(commands_dir: str = "reference/data/commands"):
+def validate_all_commands(commands_dir: str = "db/data/commands"):
     """Validate all command files and generate comprehensive report."""
 
     validator = CommandValidator()
@@ -196,7 +196,7 @@ if __name__ == '__main__':
     import argparse
 
     parser = argparse.ArgumentParser(description='Validate all command JSON files')
-    parser.add_argument('--commands-dir', default='reference/data/commands',
+    parser.add_argument('--commands-dir', default='db/data/commands',
                        help='Directory containing command JSON files')
     parser.add_argument('--output', default='validation_report.json',
                        help='Output JSON report file')

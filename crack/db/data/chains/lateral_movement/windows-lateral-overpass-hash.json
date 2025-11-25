@@ -1,0 +1,233 @@
+{
+  "id": "windows-lateral-overpass-hash",
+  "name": "Overpass-the-Hash Attack Chain (NTLM to Kerberos)",
+  "description": "Complete overpass-the-hash workflow: convert NTLM hash to Kerberos TGT, use for tools requiring Kerberos authentication (Microsoft PsExec).\n\nThis technique upgrades NTLM authentication to Kerberos when tools only support Kerberos tickets.",
+  "version": "1.0.0",
+  "metadata": {
+    "author": "CRACK Development Team",
+    "created": "2025-11-08",
+    "updated": "2025-11-08",
+    "tags": [
+      "OSCP",
+      "WINDOWS",
+      "ACTIVE_DIRECTORY",
+      "LATERAL_MOVEMENT",
+      "OVERPASS_THE_HASH",
+      "KERBEROS",
+      "MIMIKATZ",
+      "RUBEUS",
+      "OSCP:HIGH"
+    ],
+    "category": "lateral_movement",
+    "platform": "windows",
+    "references": [
+      "https://attack.mitre.org/techniques/T1550/002/",
+      "https://www.blackhillsinfosec.com/abusing-microsoft-kerberos-sorry-you-guys-don-t-get-it/"
+    ]
+  },
+  "difficulty": "advanced",
+  "time_estimate": "20 minutes",
+  "oscp_relevant": true,
+  "prerequisites": [
+    "Compromised Windows host with mimikatz or Rubeus",
+    "NTLM hash obtained",
+    "Administrator rights on compromised host (for mimikatz privilege::debug)",
+    "Network access to domain controller",
+    "Target tool requires Kerberos (e.g., Microsoft PsExec64.exe)"
+  ],
+  "notes": "Overpass-the-Hash upgrades NTLM hash to Kerberos TGT for tools that only support Kerberos authentication. WHY NEEDED: Some Windows tools (Microsoft PsExec, certain COM objects) require Kerberos tickets, won't work with NTLM. HOW IT WORKS: Mimikatz injects NTLM hash into LSASS, requests TGT from KDC using hash for pre-authentication, resulting TGT can be used like normal Kerberos ticket. ADVANTAGES: Enables Kerberos-only tools with just hash, more compatible than pure pass-the-hash. DISADVANTAGES: Requires compromised Windows host (can't do from Kali), more complex than straightforward pass-the-hash. OSCP RELEVANCE: High - needed when Impacket tools fail but Microsoft tools available.",
+  "steps": [
+    {
+      "id": "verify-hash",
+      "name": "Verify NTLM Hash Obtained",
+      "objective": "Confirm NTLM hash is available and properly formatted",
+      "description": "Ensure hash is 32 hexadecimal characters with known username and domain.\nVerify hash was extracted from mimikatz sekurlsa::logonpasswords or secretsdump output.",
+      "command_ref": "pth-verify-hash-format",
+      "dependencies": [],
+      "evidence": [
+        "NTLM hash: 32 hex characters",
+        "Username known",
+        "Domain identified"
+      ],
+      "success_criteria": [
+        "Hash properly formatted",
+        "Username/domain mapped to hash",
+        "No invalid characters"
+      ],
+      "failure_conditions": [
+        "Hash wrong format",
+        "Username unknown",
+        "Hash incomplete"
+      ],
+      "next_steps": [
+        "launch-mimikatz"
+      ]
+    },
+    {
+      "id": "launch-mimikatz",
+      "name": "Launch Mimikatz with Debug Privileges",
+      "objective": "Start mimikatz and enable SeDebugPrivilege for LSASS access",
+      "description": "Run mimikatz as Administrator and execute privilege::debug.\nThis enables access to LSASS process where credentials are injected.",
+      "command_ref": "overpass-mimikatz-pth",
+      "dependencies": [
+        "verify-hash"
+      ],
+      "evidence": [
+        "Mimikatz banner displayed",
+        "privilege::debug returns 'Privilege '20' OK'",
+        "Administrator context confirmed"
+      ],
+      "success_criteria": [
+        "Mimikatz running",
+        "Debug privilege enabled",
+        "Ready for sekurlsa commands"
+      ],
+      "failure_conditions": [
+        "privilege::debug FAILED",
+        "Not running as Administrator",
+        "LSASS protection enabled (Credential Guard)"
+      ],
+      "next_steps": [
+        "inject-hash"
+      ]
+    },
+    {
+      "id": "inject-hash",
+      "name": "Inject NTLM Hash with sekurlsa::pth",
+      "objective": "Create new PowerShell process with NTLM hash injected into LSASS",
+      "description": "Execute sekurlsa::pth /user:<USER> /domain:<DOMAIN> /ntlm:<HASH> /run:powershell.\nThis spawns PowerShell with injected credentials.",
+      "command_ref": "overpass-mimikatz-pth",
+      "dependencies": [
+        "launch-mimikatz"
+      ],
+      "evidence": [
+        "New PowerShell window opens",
+        "Mimikatz shows: user, domain, NTLM, PID",
+        "Process created successfully"
+      ],
+      "success_criteria": [
+        "PowerShell spawns",
+        "No errors from mimikatz",
+        "New window visible"
+      ],
+      "failure_conditions": [
+        "ERROR kuhl_m_sekurlsa_pth",
+        "PowerShell doesn't spawn",
+        "NTLM seems invalid"
+      ],
+      "next_steps": [
+        "trigger-kerberos"
+      ]
+    },
+    {
+      "id": "trigger-kerberos",
+      "name": "Trigger Kerberos TGT Request",
+      "objective": "Force Kerberos authentication to generate TGT using injected hash",
+      "description": "From new PowerShell window, run 'net use \\\\<TARGET>' using HOSTNAME (not IP).\nThis triggers Kerberos pre-authentication using injected hash, generating TGT.",
+      "command_ref": "overpass-net-use-trigger",
+      "dependencies": [
+        "inject-hash"
+      ],
+      "evidence": [
+        "net use command completes successfully",
+        "No authentication errors",
+        "UNC path accessible"
+      ],
+      "success_criteria": [
+        "Command completes: 'The command completed successfully'",
+        "No 'Access is denied' error",
+        "Hostname used (not IP address)"
+      ],
+      "failure_conditions": [
+        "Access denied",
+        "Network path not found",
+        "IP used instead of hostname (Kerberos needs SPN)"
+      ],
+      "next_steps": [
+        "verify-tickets"
+      ]
+    },
+    {
+      "id": "verify-tickets",
+      "name": "Verify Kerberos Tickets Created",
+      "objective": "Confirm TGT and TGS tickets were generated using klist command",
+      "description": "Run klist in PowerShell to display cached Kerberos tickets.\nShould see TGT (Server: krbtgt/<DOMAIN>) and TGS (Server: cifs/<TARGET>).",
+      "command_ref": "kerberos-klist-verify",
+      "dependencies": [
+        "trigger-kerberos"
+      ],
+      "evidence": [
+        "klist shows: Client: <USER> @ <DOMAIN>",
+        "TGT present: Server: krbtgt/<DOMAIN>",
+        "TGS present: Server: cifs/<TARGET>",
+        "Cached Tickets: (2) or more"
+      ],
+      "success_criteria": [
+        "At least one TGT visible",
+        "At least one TGS visible",
+        "Tickets not expired"
+      ],
+      "failure_conditions": [
+        "Cached Tickets: (0)",
+        "No tickets found",
+        "TGT missing (only TGS present)"
+      ],
+      "next_steps": [
+        "use-microsoft-psexec"
+      ]
+    },
+    {
+      "id": "use-microsoft-psexec",
+      "name": "Execute Microsoft PsExec with Kerberos",
+      "objective": "Use official Microsoft PsExec64.exe with Kerberos tickets for lateral movement",
+      "description": "From PowerShell with injected credentials, run PsExec64.exe \\\\<TARGET> cmd.\nPsExec will use cached Kerberos tickets for authentication (no password needed).",
+      "command_ref": "psexec-sysinternals-interactive",
+      "dependencies": [
+        "verify-tickets"
+      ],
+      "evidence": [
+        "PsExec connects successfully",
+        "Remote cmd.exe shell obtained",
+        "Running as user on target"
+      ],
+      "success_criteria": [
+        "PsExec establishes connection",
+        "Interactive shell spawned",
+        "Commands execute on target"
+      ],
+      "failure_conditions": [
+        "Couldn't access target",
+        "Access denied (tickets may be expired)",
+        "Network path not found"
+      ],
+      "next_steps": [
+        "verify-lateral-movement"
+      ]
+    },
+    {
+      "id": "verify-lateral-movement",
+      "name": "Verify Lateral Movement Success",
+      "objective": "Confirm shell is on target system with correct user context",
+      "description": "Run whoami and hostname to verify.\nContext should be domain user (from hash), not SYSTEM.",
+      "command_ref": "verify-root-access-ad",
+      "dependencies": [
+        "use-microsoft-psexec"
+      ],
+      "evidence": [
+        "whoami: DOMAIN\\<USER>",
+        "hostname: <TARGET>",
+        "Correct target confirmed"
+      ],
+      "success_criteria": [
+        "Shell on correct target",
+        "User context matches hash owner",
+        "Can execute commands"
+      ],
+      "failure_conditions": [
+        "Wrong target",
+        "Wrong user context",
+        "Commands fail"
+      ]
+    }
+  ]
+}

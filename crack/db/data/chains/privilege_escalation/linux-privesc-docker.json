@@ -1,0 +1,164 @@
+{
+  "id": "linux-privesc-docker-mount",
+  "name": "Docker Group Privilege Escalation",
+  "description": "Exploit Docker group membership to escalate privileges from low-privilege user to root via container filesystem mounting.\n\nDocker group membership is equivalent to root access on the host system.",
+  "version": "1.0.0",
+  "metadata": {
+    "author": "CRACK Development Team",
+    "created": "2025-10-13",
+    "updated": "2025-10-13",
+    "tags": [
+      "DOCKER",
+      "LINUX",
+      "OSCP",
+      "POST_EXPLOITATION",
+      "PRIVILEGE_ESCALATION",
+      "QUICK_WIN",
+      "CONTAINER_ESCAPE"
+    ],
+    "category": "privilege_escalation",
+    "platform": "linux",
+    "references": [
+      "https://book.hacktricks.xyz/linux-hardening/privilege-escalation/docker-security",
+      "https://gtfobins.github.io/gtfobins/docker/"
+    ]
+  },
+  "difficulty": "beginner",
+  "time_estimate": "5 minutes",
+  "oscp_relevant": true,
+  "prerequisites": [
+    "Shell access as low-privilege user",
+    "User is member of docker group",
+    "Docker daemon is running"
+  ],
+  "notes": "Docker group membership is equivalent to root access. This is one of the fastest privilege escalation paths in OSCP labs. The mount escape technique is preferred over privileged mode as it's cleaner and more reliable. If no images are available, alpine can be pulled (5MB, fast download). Alternative techniques include socket mounting and pid namespace abuse, but direct mount escape is simplest. Always verify root access by reading /etc/shadow and /root directory after escalation.",
+  "steps": [
+    {
+      "id": "verify-docker-group",
+      "name": "Verify Docker Group Membership",
+      "objective": "Check if current user is in docker group",
+      "description": "Run groups and id commands to confirm docker group membership.\n\nUser must be in docker group to execute docker commands without sudo.\n\nThis is the prerequisite for all Docker escape techniques.",
+      "command_ref": "check-docker-group",
+      "evidence": [
+        "groups command shows 'docker'",
+        "id command shows docker GID in groups list"
+      ],
+      "dependencies": [],
+      "repeatable": false,
+      "success_criteria": [
+        "docker appears in groups output",
+        "User confirmed in docker group"
+      ],
+      "failure_conditions": [
+        "docker not in group list",
+        "Only standard user groups shown",
+        "Need to find alternative privilege escalation path"
+      ]
+    },
+    {
+      "id": "check-docker-socket",
+      "name": "Check Docker Socket Access",
+      "objective": "Verify access to Docker socket and test if docker commands work",
+      "description": "Check permissions on /var/run/docker.sock and test docker ps command.\n\nSocket must be readable/writable by user or docker group.\n\nThis confirms docker group membership is effective and daemon is accessible.",
+      "command_ref": "check-docker-socket",
+      "evidence": [
+        "Socket permissions show srw-rw---- root docker",
+        "docker ps executes without permission errors",
+        "CONTAINER ID header visible (even if no containers)"
+      ],
+      "dependencies": ["verify-docker-group"],
+      "repeatable": false,
+      "success_criteria": [
+        "Socket accessible to user",
+        "docker ps command succeeds",
+        "No permission denied errors"
+      ],
+      "failure_conditions": [
+        "Permission denied on socket",
+        "Cannot connect to Docker daemon",
+        "docker: command not found",
+        "Docker service not running"
+      ]
+    },
+    {
+      "id": "check-available-images",
+      "name": "List Available Docker Images",
+      "objective": "Enumerate available Docker images to use for container escape",
+      "description": "Run docker images to see locally cached images.\n\nPrefer using existing images to avoid network traffic/logging.\n\nIf no images available, alpine is smallest option (5MB).\nAny Linux image works for mount escape.",
+      "command_ref": "list-docker-images",
+      "evidence": [
+        "REPOSITORY TAG IMAGE ID listing",
+        "Available images: alpine, ubuntu, busybox, etc.",
+        "Image count and sizes shown"
+      ],
+      "dependencies": ["check-docker-socket"],
+      "repeatable": false,
+      "success_criteria": [
+        "At least one image available",
+        "Image names documented for next step",
+        "Smallest/simplest image identified"
+      ],
+      "failure_conditions": [
+        "No images available (need to pull)",
+        "All images are very large (slow)",
+        "Permission issues accessing image cache"
+      ],
+      "next_steps": ["mount-host-escape"]
+    },
+    {
+      "id": "mount-host-escape",
+      "name": "Execute Docker Mount Escape",
+      "objective": "Mount host filesystem in container and chroot to gain root access",
+      "description": "Run docker with -v /:/mnt to mount entire host filesystem at /mnt inside container.\n\nThen chroot /mnt to change root directory to host filesystem.\n\nThis gives full root access to host from inside container.\n\nUse smallest available image (alpine preferred).",
+      "command_ref": "docker-mount-escape",
+      "evidence": [
+        "Container starts with interactive shell",
+        "Shell prompt changes",
+        "Can access /mnt directory containing host filesystem",
+        "Files at /mnt/etc, /mnt/root visible"
+      ],
+      "dependencies": ["check-available-images"],
+      "repeatable": true,
+      "success_criteria": [
+        "Shell spawned successfully",
+        "Host filesystem accessible at /mnt",
+        "Can read /mnt/etc/shadow",
+        "Can list /mnt/root directory"
+      ],
+      "failure_conditions": [
+        "Image not found (wrong image name)",
+        "chroot command fails",
+        "Permission denied (docker group issue)",
+        "Container exits immediately"
+      ],
+      "next_steps": ["verify-root"]
+    },
+    {
+      "id": "verify-root",
+      "name": "Verify Root Access to Host",
+      "objective": "Confirm full root access to host filesystem and sensitive files",
+      "description": "Test access to root-only files:\n- /mnt/etc/shadow (password hashes)\n- /mnt/root directory\n- /mnt/root/.ssh/id_rsa (SSH key)\n\nSuccess confirms complete host compromise.\n\nCan now read any file, modify any file, plant backdoors.",
+      "command_ref": "verify-docker-root",
+      "evidence": [
+        "Shadow file contents visible (password hashes)",
+        "Root home directory listing shown",
+        "SSH private key accessible (if exists)",
+        "Full host filesystem traversal possible"
+      ],
+      "dependencies": ["mount-host-escape"],
+      "repeatable": true,
+      "success_criteria": [
+        "Can read /mnt/etc/shadow",
+        "Can list /mnt/root contents",
+        "No permission denied on root-only files",
+        "Root access confirmed"
+      ],
+      "failure_conditions": [
+        "Permission denied on shadow file",
+        "Cannot access /mnt/root",
+        "Still running as unprivileged user",
+        "chroot didn't work properly"
+      ]
+    }
+  ]
+}

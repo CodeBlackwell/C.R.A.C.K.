@@ -1,0 +1,639 @@
+{
+  "category": "monitoring",
+  "subcategory": "process-enumeration",
+  "description": "Process enumeration and monitoring commands for privilege escalation and defense",
+  "commands": [
+    {
+      "id": "ps-aux-full",
+      "name": "Full Process Snapshot",
+      "category": "monitoring",
+      "subcategory": "process-enumeration",
+      "command": "ps aux",
+      "description": "Display all running processes with user, PID, CPU, memory, and command details",
+      "variables": [],
+      "flag_explanations": {
+        "a": "Show processes for all users (not just current user)",
+        "u": "User-oriented format - displays username, CPU%, MEM%, VSZ, RSS, TTY, STAT, START, TIME, COMMAND",
+        "x": "Include processes without controlling terminal (daemons, background services)"
+      },
+      "tags": [
+        "DEFENSE",
+        "DISCOVERY",
+        "ENUMERATION",
+        "LINUX",
+        "MONITORING",
+        "OSCP:HIGH",
+        "POST_EXPLOITATION",
+        "PRIVILEGE_ESCALATION",
+        "QUICK_WIN",
+        "STARTER"
+      ],
+      "oscp_relevance": "high",
+      "success_indicators": [
+        "USER",
+        "PID",
+        "%CPU",
+        "%MEM",
+        "COMMAND"
+      ],
+      "failure_indicators": [
+        "ps: command not found",
+        "Permission denied"
+      ],
+      "next_steps": [
+        "Look for processes running as root with writable binaries",
+        "Check for unusual processes or services",
+        "Identify processes listening on network ports: ps-process-to-port",
+        "Search for specific processes: pgrep-pattern-search"
+      ],
+      "alternatives": [
+        "ps-ef-full",
+        "top-snapshot",
+        "pstree-hierarchy"
+      ],
+      "notes": "OSCP Tip:\nLook for (1) processes running as root from writable directories (/tmp, /var/tmp), (2) custom services that might have misconfigurations, (3) database processes (mysql, postgresql) for credential hunting.\n\nCommon manual alternative:\ncat /proc/*/cmdline (view process command lines directly from /proc filesystem).\n\nTime estimate:\n5 seconds."
+    },
+    {
+      "id": "ps-auxww-no-truncate",
+      "name": "Full Process Snapshot (No Truncation)",
+      "category": "monitoring",
+      "subcategory": "process-enumeration",
+      "command": "ps auxww",
+      "description": "Display all processes with full command lines (no truncation) - critical for finding hidden arguments",
+      "variables": [],
+      "flag_explanations": {
+        "a": "Show processes for all users",
+        "u": "User-oriented format with detailed columns",
+        "x": "Include processes without controlling terminal",
+        "ww": "Wide output - disables column width limit, shows full command line (default is 80 chars)"
+      },
+      "tags": [
+        "CREDENTIAL_ACCESS",
+        "DEFENSE",
+        "DETAILED",
+        "DISCOVERY",
+        "ENUMERATION",
+        "LINUX",
+        "MONITORING",
+        "OSCP:HIGH",
+        "POST_EXPLOITATION"
+      ],
+      "oscp_relevance": "high",
+      "success_indicators": [
+        "Full command lines visible",
+        "Arguments displayed completely",
+        "No truncation at column 80"
+      ],
+      "failure_indicators": [
+        "ps: command not found"
+      ],
+      "next_steps": [
+        "Search output for passwords in command arguments",
+        "Look for database connection strings with credentials",
+        "Check for API keys, tokens in process arguments",
+        "Document sensitive information in enumeration.md"
+      ],
+      "alternatives": [
+        "ps-ef-full"
+      ],
+      "notes": "CRITICAL for OSCP:\nPasswords often passed as command-line arguments (mysql -u root -pPASSWORD, ssh user@host -i /path/key).\n\nThe 'ww' flag prevents truncation that would hide these.\n\nManual alternative:\nfor pid in /proc/[0-9]*; do cat $pid/cmdline 2>/dev/null | tr '\\0' ' '; echo; done.\n\nTime estimate:\n5 seconds."
+    },
+    {
+      "id": "ps-ef-full",
+      "name": "Process List with Parent PIDs",
+      "category": "monitoring",
+      "subcategory": "process-enumeration",
+      "command": "ps -ef",
+      "description": "Alternative process format showing parent PID (PPID) for process hierarchy analysis",
+      "variables": [],
+      "flag_explanations": {
+        "-e": "Select all processes (equivalent to -A)",
+        "-f": "Full format listing - shows UID, PID, PPID, C (CPU utilization), STIME (start time), TTY, TIME, CMD"
+      },
+      "tags": [
+        "DEFENSE",
+        "DISCOVERY",
+        "ENUMERATION",
+        "LINUX",
+        "MONITORING",
+        "OSCP:MEDIUM",
+        "POST_EXPLOITATION"
+      ],
+      "oscp_relevance": "medium",
+      "success_indicators": [
+        "UID",
+        "PID",
+        "PPID",
+        "CMD"
+      ],
+      "failure_indicators": [
+        "ps: command not found"
+      ],
+      "next_steps": [
+        "Use PPID to trace process parent-child relationships",
+        "Identify orphaned processes (PPID = 1)",
+        "Check parent process of suspicious services: ps -p <PPID>",
+        "Visualize hierarchy: pstree-hierarchy"
+      ],
+      "alternatives": [
+        "ps-aux-full",
+        "pstree-hierarchy"
+      ],
+      "notes": "PPID (Parent Process ID) helps identify how processes were spawned.\n\nFor example, PPID=1 means process was started by init/systemd (system service), while other PPIDs might indicate user-spawned or malicious processes.\n\nTime estimate:\n5 seconds."
+    },
+    {
+      "id": "pstree-hierarchy",
+      "name": "Process Tree with PIDs",
+      "category": "monitoring",
+      "subcategory": "process-enumeration",
+      "command": "pstree -p",
+      "description": "Display process hierarchy as tree structure with PIDs - visualize parent-child relationships",
+      "variables": [],
+      "flag_explanations": {
+        "-p": "Show PIDs in parentheses after process names"
+      },
+      "tags": [
+        "DEFENSE",
+        "DISCOVERY",
+        "ENUMERATION",
+        "LINUX",
+        "MONITORING",
+        "OSCP:MEDIUM",
+        "POST_EXPLOITATION",
+        "VISUALIZATION"
+      ],
+      "oscp_relevance": "medium",
+      "success_indicators": [
+        "Tree structure displayed",
+        "PIDs shown in (parentheses)",
+        "Indentation shows hierarchy"
+      ],
+      "failure_indicators": [
+        "pstree: command not found"
+      ],
+      "next_steps": [
+        "Identify suspicious child processes under system services",
+        "Look for reverse shells under apache/nginx/www-data",
+        "Check for privilege escalation via process spawning",
+        "Examine specific branch: ps -p <PID> -o cmd="
+      ],
+      "alternatives": [
+        "ps-ef-full"
+      ],
+      "notes": "Excellent for spotting reverse shells or unauthorized processes.\n\nFor example, www-data -> bash -> nc indicates a web shell spawned netcat.\n\nManual alternative:\nps auxf (forest mode shows hierarchy with ASCII art).\n\nTime estimate:\n5 seconds."
+    },
+    {
+      "id": "top-snapshot",
+      "name": "Top Processes (Snapshot)",
+      "category": "monitoring",
+      "subcategory": "process-enumeration",
+      "command": "top -n 1 -b",
+      "description": "Non-interactive top snapshot - capture current top CPU/memory consumers for documentation",
+      "variables": [],
+      "flag_explanations": {
+        "-n": "Number of iterations before exiting (1 = single snapshot)",
+        "-b": "Batch mode - non-interactive output suitable for piping or logging"
+      },
+      "tags": [
+        "DEFENSE",
+        "DISCOVERY",
+        "ENUMERATION",
+        "LINUX",
+        "MONITORING",
+        "OSCP:MEDIUM",
+        "POST_EXPLOITATION",
+        "RESOURCE_MONITORING"
+      ],
+      "oscp_relevance": "medium",
+      "success_indicators": [
+        "top - 12:34:56 up",
+        "Tasks:",
+        "%Cpu(s):",
+        "PID",
+        "USER"
+      ],
+      "failure_indicators": [
+        "top: command not found"
+      ],
+      "next_steps": [
+        "Identify resource-heavy processes for further investigation",
+        "Check if high-CPU process is legitimate or malicious",
+        "Sort by memory: ps-sort-memory",
+        "Sort by CPU: ps-sort-cpu"
+      ],
+      "alternatives": [
+        "ps-sort-cpu"
+      ],
+      "notes": "Batch mode (-b) makes output suitable for documentation or log files.\n\nWithout -b, top is interactive and not useful in scripts.\n\nFor real-time monitoring, omit these flags and use:\ntop.\n\nTime estimate:\n5 seconds."
+    },
+    {
+      "id": "pgrep-pattern-search",
+      "name": "Find Processes by Name Pattern",
+      "category": "monitoring",
+      "subcategory": "process-enumeration",
+      "command": "pgrep -af <PATTERN>",
+      "description": "Search for running processes matching a pattern with full command line display",
+      "variables": [
+        {
+          "name": "<PATTERN>",
+          "description": "Process name pattern to search (regex supported)",
+          "example": "apache|nginx|mysql",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "-a": "List full command line (not just process name)",
+        "-f": "Match against full command line (not just process name)"
+      },
+      "tags": [
+        "DEFENSE",
+        "DISCOVERY",
+        "ENUMERATION",
+        "LINUX",
+        "MONITORING",
+        "OSCP:HIGH",
+        "POST_EXPLOITATION",
+        "SEARCH"
+      ],
+      "oscp_relevance": "high",
+      "success_indicators": [
+        "PID command_line pairs",
+        "Matching processes found"
+      ],
+      "failure_indicators": [
+        "No processes found",
+        "pgrep: command not found"
+      ],
+      "next_steps": [
+        "Get detailed info on found PID: ps-pid-details",
+        "Check process port bindings: lsof-process-ports",
+        "Examine process files: lsof -p <PID>",
+        "Kill process if needed: kill <PID>"
+      ],
+      "alternatives": [],
+      "notes": "Much faster than 'ps aux | grep' and doesn't show the grep process itself.\n\nUse -i for case-insensitive:\npgrep -afi <PATTERN>.\n\nTime estimate:\n1 second.\n\nOSCP tip:\nSearch for common services:\npgrep -af 'mysql|postgresql|apache|nginx|ssh|vsftpd' to identify attack vectors."
+    },
+    {
+      "id": "pidof-exact",
+      "name": "Get PID by Exact Name",
+      "category": "monitoring",
+      "subcategory": "process-enumeration",
+      "command": "pidof <PROCESS_NAME>",
+      "description": "Quickly get PID(s) of processes by exact name match",
+      "variables": [
+        {
+          "name": "<PROCESS_NAME>",
+          "description": "Exact process name",
+          "example": "apache2",
+          "required": true
+        }
+      ],
+      "flag_explanations": {},
+      "tags": [
+        "DEFENSE",
+        "LINUX",
+        "MONITORING",
+        "OSCP:MEDIUM",
+        "POST_EXPLOITATION",
+        "QUICK_WIN"
+      ],
+      "oscp_relevance": "medium",
+      "success_indicators": [
+        "One or more PIDs returned",
+        "Space-separated numbers"
+      ],
+      "failure_indicators": [
+        "No output (process not found)",
+        "pidof: command not found"
+      ],
+      "next_steps": [
+        "Examine process details: ps -p <PID> -o cmd=",
+        "Check open files: lsof -p <PID>",
+        "View process environment: cat /proc/<PID>/environ | tr '\\0' '\\n'"
+      ],
+      "alternatives": [],
+      "notes": "Returns ALL PIDs if multiple instances running.\n\nFor single PID:\npidof <NAME> | head -1.\n\nTime estimate:\n<1 second."
+    },
+    {
+      "id": "ps-user-filter",
+      "name": "Processes by User",
+      "category": "monitoring",
+      "subcategory": "process-enumeration",
+      "command": "ps -u <USERNAME>",
+      "description": "List all processes running as a specific user",
+      "variables": [
+        {
+          "name": "<USERNAME>",
+          "description": "Username to filter by",
+          "example": "www-data",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "-u": "Select by effective user ID or name"
+      },
+      "tags": [
+        "DEFENSE",
+        "ENUMERATION",
+        "LINUX",
+        "MONITORING",
+        "OSCP:HIGH",
+        "POST_EXPLOITATION",
+        "PRIVILEGE_ESCALATION"
+      ],
+      "oscp_relevance": "high",
+      "success_indicators": [
+        "PID",
+        "TTY",
+        "TIME",
+        "CMD"
+      ],
+      "failure_indicators": [
+        "No processes found for user"
+      ],
+      "next_steps": [
+        "Check root processes: ps -u root",
+        "Look for writable binaries: find / -user <USERNAME> -perm -w -type f 2>/dev/null",
+        "Check user's cronjobs: crontab -u <USERNAME> -l"
+      ],
+      "alternatives": [],
+      "notes": "OSCP tip:\nCheck www-data processes for web vulnerabilities, mysql processes for database attack vectors, root processes for privilege escalation opportunities.\n\nTime estimate:\n2 seconds."
+    },
+    {
+      "id": "ps-pid-details",
+      "name": "Get Full Command for PID",
+      "category": "monitoring",
+      "subcategory": "process-enumeration",
+      "command": "ps -p <PID> -o cmd=",
+      "description": "Display full command line for a specific PID without header (clean output)",
+      "variables": [
+        {
+          "name": "<PID>",
+          "description": "Process ID",
+          "example": "1234",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "-p": "Select by process ID",
+        "-o": "User-defined output format",
+        "cmd=": "Show full command line, no header (= suppresses column header)"
+      },
+      "tags": [
+        "DEFENSE",
+        "ENUMERATION",
+        "LINUX",
+        "MONITORING",
+        "OSCP:MEDIUM",
+        "POST_EXPLOITATION"
+      ],
+      "oscp_relevance": "medium",
+      "success_indicators": [
+        "Full command line displayed",
+        "No header row"
+      ],
+      "failure_indicators": [
+        "No such process"
+      ],
+      "next_steps": [
+        "Check what files process has open: lsof -p <PID>",
+        "View process environment variables: cat /proc/<PID>/environ | tr '\\0' '\\n'",
+        "Check process working directory: readlink /proc/<PID>/cwd"
+      ],
+      "alternatives": [],
+      "notes": "The '=' after 'cmd' removes the header for cleaner parsing in scripts.\n\nFor multiple fields:\nps -p <PID> -o pid=,cmd=,user=.\n\nTime estimate:\n<1 second."
+    },
+    {
+      "id": "win-tasklist-verbose",
+      "name": "Windows Task List (Verbose)",
+      "category": "monitoring",
+      "subcategory": "process-enumeration",
+      "command": "tasklist /v",
+      "description": "Display all Windows processes with verbose details including window titles and memory usage",
+      "variables": [],
+      "flag_explanations": {
+        "/v": "Verbose - displays additional information including status, username, CPU time, window title"
+      },
+      "tags": [
+        "DEFENSE",
+        "ENUMERATION",
+        "MONITORING",
+        "OSCP:HIGH",
+        "POST_EXPLOITATION",
+        "WINDOWS"
+      ],
+      "oscp_relevance": "high",
+      "success_indicators": [
+        "Image Name",
+        "PID",
+        "Session Name",
+        "Session#",
+        "Mem Usage",
+        "Status",
+        "User Name",
+        "Window Title"
+      ],
+      "failure_indicators": [
+        "ERROR: Access denied",
+        "'tasklist' is not recognized"
+      ],
+      "next_steps": [
+        "Look for unusual processes running as SYSTEM",
+        "Check for processes with interesting window titles (passwords, admin tools)",
+        "Map processes to services: win-tasklist-services",
+        "Get detailed process info: win-wmic-process-full"
+      ],
+      "alternatives": [
+        "win-wmic-process-full",
+        "win-ps-get-process"
+      ],
+      "notes": "Window titles often reveal sensitive information (open files, database connections).\n\nOSCP tip:\nLook for (1) processes running from unusual locations (\\Temp, \\Users\\Public), (2) processes with high privileges (SYSTEM), (3) non-standard services.\n\nTime estimate:\n5 seconds."
+    },
+    {
+      "id": "win-tasklist-services",
+      "name": "Windows Task List with Services",
+      "category": "monitoring",
+      "subcategory": "process-enumeration",
+      "command": "tasklist /svc",
+      "description": "Display which Windows services are running in each process (svchost.exe mapping)",
+      "variables": [],
+      "flag_explanations": {
+        "/svc": "Services - displays services hosted in each process (critical for identifying svchost.exe instances)"
+      },
+      "tags": [
+        "DEFENSE",
+        "ENUMERATION",
+        "MONITORING",
+        "OSCP:HIGH",
+        "POST_EXPLOITATION",
+        "PRIVILEGE_ESCALATION",
+        "WINDOWS"
+      ],
+      "oscp_relevance": "high",
+      "success_indicators": [
+        "Image Name",
+        "PID",
+        "Services",
+        "svchost.exe"
+      ],
+      "failure_indicators": [
+        "ERROR: Access denied"
+      ],
+      "next_steps": [
+        "Identify vulnerable services running in svchost.exe",
+        "Check service permissions: win-sc-query-config",
+        "Look for services with unquoted paths: win-wmic-service-path",
+        "Enumerate service DLLs for hijacking opportunities"
+      ],
+      "alternatives": [
+        "win-wmic-service-full",
+        "win-ps-get-service"
+      ],
+      "notes": "Critical for Windows privilege escalation.\n\nsvchost.exe hosts multiple services - this command reveals which ones.\n\nTime estimate:\n5 seconds.\n\nOSCP tip:\nCombine with service configuration checks to find writable service binaries or unquoted service paths."
+    },
+    {
+      "id": "win-wmic-process-full",
+      "name": "Windows WMIC Process Details",
+      "category": "monitoring",
+      "subcategory": "process-enumeration",
+      "command": "wmic process list full",
+      "description": "Comprehensive Windows process information including full paths, command lines, and parent PIDs",
+      "variables": [],
+      "flag_explanations": {
+        "process": "Query Win32_Process WMI class",
+        "list": "List instances",
+        "full": "Display all available properties (30+ fields including ExecutablePath, CommandLine, ParentProcessId)"
+      },
+      "tags": [
+        "DEFENSE",
+        "DETAILED",
+        "ENUMERATION",
+        "MONITORING",
+        "OSCP:HIGH",
+        "POST_EXPLOITATION",
+        "PRIVILEGE_ESCALATION",
+        "WINDOWS",
+        "WMIC"
+      ],
+      "oscp_relevance": "high",
+      "success_indicators": [
+        "CommandLine",
+        "ExecutablePath",
+        "ParentProcessId",
+        "ProcessId",
+        "Name"
+      ],
+      "failure_indicators": [
+        "ERROR: Access denied",
+        "WMIC is deprecated"
+      ],
+      "next_steps": [
+        "Search output for passwords in CommandLine field",
+        "Check ExecutablePath for writable locations: icacls <PATH>",
+        "Identify processes with weak permissions: AccessChk",
+        "Use PowerShell alternative: win-ps-get-process-detailed"
+      ],
+      "alternatives": [
+        "win-ps-get-process-detailed",
+        "win-tasklist-verbose"
+      ],
+      "notes": "WMIC deprecated in Windows 11+ but still present in OSCP target systems.\n\nOutput is verbose (30+ properties per process).\n\nFor specific fields:\nwmic process get ProcessId,Name,ExecutablePath,CommandLine.\n\nTime estimate:\n10 seconds.\n\nOSCP tip:\nCommandLine often contains credentials passed as arguments."
+    },
+    {
+      "id": "win-ps-get-process",
+      "name": "PowerShell Get Process",
+      "category": "monitoring",
+      "subcategory": "process-enumeration",
+      "command": "Get-Process | Select-Object Name,Id,Path,Company",
+      "description": "PowerShell process enumeration with selected properties (Name, PID, Path, Company)",
+      "variables": [],
+      "flag_explanations": {
+        "Get-Process": "Retrieves process objects for all running processes",
+        "Select-Object": "Filters output to specified properties",
+        "Name": "Process executable name",
+        "Id": "Process ID (PID)",
+        "Path": "Full path to executable (helps identify location)",
+        "Company": "Company that created the executable (identifies non-Microsoft processes)"
+      },
+      "tags": [
+        "DEFENSE",
+        "ENUMERATION",
+        "MONITORING",
+        "OSCP:HIGH",
+        "POST_EXPLOITATION",
+        "POWERSHELL",
+        "WINDOWS"
+      ],
+      "oscp_relevance": "high",
+      "success_indicators": [
+        "Name",
+        "Id",
+        "Path",
+        "Company"
+      ],
+      "failure_indicators": [
+        "Get-Process: command not found",
+        "Execution policy blocked"
+      ],
+      "next_steps": [
+        "Filter non-Microsoft processes: Get-Process | Where-Object {$_.Company -ne 'Microsoft Corporation'}",
+        "Sort by memory: Get-Process | Sort-Object WS -Descending | Select-Object -First 10",
+        "Get process with network connections: win-ps-netstat-process",
+        "Check process file permissions: icacls <PATH>"
+      ],
+      "alternatives": [
+        "win-tasklist-verbose",
+        "win-wmic-process-full"
+      ],
+      "notes": "PowerShell is the modern Windows process management tool.\n\nCompany field helps identify third-party software (potential attack vectors).\n\nFor all properties:\nGet-Process | Select-Object *.\n\nTime estimate:\n5 seconds.\n\nOSCP tip:\nNon-Microsoft processes often have weak permissions or outdated versions with known exploits."
+    },
+    {
+      "id": "win-ps-get-process-detailed",
+      "name": "PowerShell Get Process (Full Details)",
+      "category": "monitoring",
+      "subcategory": "process-enumeration",
+      "command": "Get-WmiObject win32_process | Select-Object Name,ProcessId,ExecutablePath,CommandLine",
+      "description": "PowerShell WMI process query with command-line arguments (reveals passwords, tokens)",
+      "variables": [],
+      "flag_explanations": {
+        "Get-WmiObject": "Query WMI (Windows Management Instrumentation) objects",
+        "win32_process": "WMI class for process information",
+        "ExecutablePath": "Full path to executable",
+        "CommandLine": "Full command line including all arguments (critical for credential hunting)"
+      },
+      "tags": [
+        "CREDENTIAL_ACCESS",
+        "DEFENSE",
+        "DETAILED",
+        "ENUMERATION",
+        "MONITORING",
+        "OSCP:HIGH",
+        "POST_EXPLOITATION",
+        "POWERSHELL",
+        "WINDOWS",
+        "WMI"
+      ],
+      "oscp_relevance": "high",
+      "success_indicators": [
+        "Name",
+        "ProcessId",
+        "ExecutablePath",
+        "CommandLine"
+      ],
+      "failure_indicators": [
+        "Access denied",
+        "Execution policy blocked"
+      ],
+      "next_steps": [
+        "Search CommandLine for passwords: | Where-Object {$_.CommandLine -like '*password*'}",
+        "Check for database connection strings",
+        "Look for API keys and tokens in arguments",
+        "Document findings in enumeration.md"
+      ],
+      "alternatives": [
+        "win-wmic-process-full"
+      ],
+      "notes": "CRITICAL for credential discovery.\n\nCommandLine field shows full arguments including passwords, API keys, database strings.\n\nTime estimate:\n10 seconds.\n\nOSCP tip:\nCommon patterns to grep:\n'-p ', 'password=', 'token=', 'key=', 'api_key='.\n\nModern alternative:\nGet-CimInstance win32_process (replaces Get-WmiObject in PowerShell 3.0+)."
+    }
+  ]
+}

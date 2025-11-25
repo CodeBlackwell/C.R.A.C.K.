@@ -97,7 +97,7 @@ def fix_missing_names_in_file(file_path: Path) -> Dict[str, int]:
 
 
 def main():
-    base_path = Path('reference/data/commands')
+    base_path = Path('db/data/commands')
 
     print("=" * 80)
     print("ROUND 1: AUTO-FIX MISSING NAME FIELDS")

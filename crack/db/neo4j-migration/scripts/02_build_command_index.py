@@ -3,7 +3,7 @@
 Script 02: Build Command Index
 
 Purpose: Create searchable index of all command IDs from JSON files
-Input: reference/data/commands/**/*.json
+Input: db/data/commands/**/*.json
 Output: db/neo4j-migration/data/command_index.json
 
 This index enables text-to-ID mapping for schema violation fixes.
@@ -244,7 +244,7 @@ def main():
     """Main execution"""
     # Paths
     project_root = Path('/home/kali/Desktop/OSCP/crack')
-    commands_dir = project_root / 'reference' / 'data' / 'commands'
+    commands_dir = project_root / 'db' / 'data' / 'commands'
     output_file = project_root / 'db' / 'neo4j-migration' / 'data' / 'command_index.json'
 
     # Verify commands directory exists

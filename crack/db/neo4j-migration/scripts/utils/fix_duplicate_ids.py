@@ -96,7 +96,7 @@ def fix_duplicates(base_path: Path) -> dict:
 
 
 def main():
-    base_path = Path('reference/data/commands')
+    base_path = Path('db/data/commands')
 
     print("=" * 80)
     print("ROUND 6: FIX DUPLICATE COMMAND IDs")

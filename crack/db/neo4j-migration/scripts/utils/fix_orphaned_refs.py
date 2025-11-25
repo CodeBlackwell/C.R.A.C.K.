@@ -141,7 +141,7 @@ def remove_orphaned_refs(base_path: Path, valid_ids: Set[str]) -> Dict:
 
 
 def main():
-    base_path = Path('reference/data/commands')
+    base_path = Path('db/data/commands')
     index_path = Path('db/neo4j-migration/data/command_index.json')
 
     print("=" * 80)

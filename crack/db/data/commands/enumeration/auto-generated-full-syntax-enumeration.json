@@ -1,0 +1,150 @@
+{
+  "metadata": {
+    "version": "1.0",
+    "description": "Full-syntax enumeration commands extracted from preservation plan Phase 2C.1c",
+    "category": "enumeration",
+    "date_created": "2025-11-09",
+    "source": "preservation_plan.json CREATE_FULL_CMD action",
+    "notes": "Filtered duplicates - original extraction had 10 items but 4 were monitoring duplicates"
+  },
+  "commands": [
+    {
+      "id": "smb-share-windows-list",
+      "name": "List SMB Shares (Windows CLI)",
+      "category": "enumeration",
+      "subcategory": "smb-enumeration",
+      "command": "ls \\\\<TARGET>\\<SHARE>",
+      "description": "List contents of remote SMB share using Windows command prompt",
+      "variables": [
+        {
+          "name": "<TARGET>",
+          "description": "Target Windows host IP or hostname",
+          "example": "192.168.1.50",
+          "required": true
+        },
+        {
+          "name": "<SHARE>",
+          "description": "Share name to enumerate",
+          "example": "C$",
+          "required": true
+        }
+      ],
+      "alternatives": [],
+      "notes": "Windows-style UNC path.\n\nRequires authentication to target.\n\nUse 'dir' for more details.\n\nCommon shares:\nC$, ADMIN$, IPC$.\n\nFrom Linux:\nsmbclient //target/share",
+      "oscp_relevance": "high",
+      "tags": [
+        "ENUMERATION",
+        "SMB",
+        "WINDOWS",
+        "SHARES"
+      ]
+    },
+    {
+      "id": "gpp-decrypt-python-script",
+      "name": "GPP Password Decryption Script",
+      "category": "enumeration",
+      "subcategory": "credential-extraction",
+      "command": "python gpp-decrypt.py <CPASSWORD>",
+      "description": "Decrypt Group Policy Preferences cPassword attribute using known AES key",
+      "variables": [
+        {
+          "name": "<CPASSWORD>",
+          "description": "Encrypted cpassword value from Groups.xml or other GPP files",
+          "example": "edBSHOwhZLTjt/QS9FeIcJ83mjWA98gw9guKOhJOdcqh+ZGMeXOsQbCpZ3xUjTLfCuNH8pG5aSVYdYw/NglVmQ",
+          "required": true
+        }
+      ],
+      "alternatives": [
+        "get-gpppassword"
+      ],
+      "notes": "Group Policy Preferences vulnerability (MS14-025).\n\nAES key published by Microsoft.\n\nPython script:\ngpp-decrypt.\n\nPowerShell:\nGet-GPPPassword.\n\ncPassword found in SYSVOL XML files.",
+      "oscp_relevance": "high",
+      "tags": [
+        "ENUMERATION",
+        "GPP",
+        "CREDENTIAL_EXTRACTION",
+        "ACTIVE_DIRECTORY"
+      ]
+    },
+    {
+      "id": "ps-get-domain-dn-format",
+      "name": "Convert Domain to Distinguished Name",
+      "category": "enumeration",
+      "subcategory": "ldap-queries",
+      "command": "$env:USERDNSDOMAIN | ForEach-Object { 'DC=' + ($_ -replace '\\.',',DC=') }",
+      "description": "Convert current domain FQDN to LDAP Distinguished Name format",
+      "variables": [],
+      "notes": "PowerShell one-liner to convert domain.local to DC=domain,DC=local format.\n\nUseful for constructing LDAP queries.\n\nExample:\ncorp.local becomes DC=corp,DC=local.\n\nRequired for many AD LDAP operations.",
+      "oscp_relevance": "medium",
+      "tags": [
+        "ENUMERATION",
+        "POWERSHELL",
+        "ACTIVE_DIRECTORY",
+        "LDAP"
+      ]
+    },
+    {
+      "id": "hashcat-kerberos-aes256-cbc",
+      "name": "Hashcat Kerberos AES256-CBC Mode",
+      "category": "enumeration",
+      "subcategory": "password-cracking",
+      "command": "hashcat -m 22921 -a 0 <HASH_FILE> <WORDLIST>",
+      "description": "Crack Kerberos AES256-CBC hashes (not aes-256-ctr)",
+      "variables": [
+        {
+          "name": "<HASH_FILE>",
+          "description": "File containing Kerberos AES256-CBC hashes",
+          "example": "hashes.txt",
+          "required": true
+        },
+        {
+          "name": "<WORDLIST>",
+          "description": "Password wordlist",
+          "example": "/usr/share/wordlists/rockyou.txt",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "-m 22921": "Hash mode for Kerberos 5 AS-REP AES256-CBC (specific cipher mode)",
+        "-a 0": "Attack mode 0 (straight/dictionary attack)"
+      },
+      "notes": "Mode 22921 is for AES256-CBC specifically, NOT aes-256-ctr.\n\nFor AS-REP roasting.\n\nDifferent from -m 19700 (Kerberos TGS-REP).\n\nObtained via Rubeus, GetNPUsers.py, or similar tools.",
+      "oscp_relevance": "medium",
+      "tags": [
+        "ENUMERATION",
+        "HASHCAT",
+        "KERBEROS",
+        "PASSWORD_CRACKING",
+        "ACTIVE_DIRECTORY"
+      ]
+    },
+    {
+      "id": "manual-hash-generation-loop",
+      "name": "Manual Password Hash Generation",
+      "category": "enumeration",
+      "subcategory": "password-cracking",
+      "command": "for pw in $(cat <WORDLIST>); do echo -n \"$pw\" | md5sum; done",
+      "description": "Generate MD5 hashes for wordlist manually using shell loop (educational/fallback)",
+      "variables": [
+        {
+          "name": "<WORDLIST>",
+          "description": "Wordlist file path",
+          "example": "wordlist.txt",
+          "required": true
+        }
+      ],
+      "alternatives": [
+        "john-list"
+      ],
+      "notes": "Bash one-liner for educational purposes or when hashcat/john unavailable.\n\nExtremely slow compared to dedicated tools.\n\nChange md5sum to sha1sum, sha256sum, etc.\n\nfor other algorithms.\n\nNot recommended for production use.",
+      "oscp_relevance": "low",
+      "tags": [
+        "ENUMERATION",
+        "BASH",
+        "PASSWORD_CRACKING",
+        "MANUAL",
+        "EDUCATIONAL"
+      ]
+    }
+  ]
+}

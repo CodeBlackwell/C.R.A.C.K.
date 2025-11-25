@@ -1,0 +1,128 @@
+{
+  "cheatsheets": [
+    {
+      "id": "ad-lateral-movement-prep",
+      "name": "Active Directory Lateral Movement Preparation",
+      "description": "Enumerate active sessions, logged-on users, accessible shares, and admin access paths to identify lateral movement opportunities and target high-value accounts",
+      "educational_header": {
+        "how_to_recognize": [
+          "You have domain user credentials and need to move laterally to other machines",
+          "Looking for paths to privileged accounts (where are Domain Admins logged in?)",
+          "Need to identify which machines you already have admin access on",
+          "Searching for sensitive data in network shares (credentials, configuration files)"
+        ],
+        "when_to_look_for": [
+          "After initial domain reconnaissance completes",
+          "When you have credentials but need to find where to use them effectively",
+          "Before attempting PsExec/WinRM/RDP lateral movement (verify admin access first)",
+          "OSCP exam: Always enumerate shares and sessions - credentials often found in SYSVOL/NETLOGON"
+        ]
+      },
+      "scenarios": [
+        {
+          "title": "Scenario 1: Find Where Domain Admins Are Logged In",
+          "context": "You compromised 'corp\\helpdesk' account. You need to escalate to Domain Admin. Rather than cracking passwords or exploiting ACLs, you want to find where Domain Admin accounts have active sessions - if you can compromise that machine, you can dump credentials from memory (Mimikatz). This is the hunter-gatherer approach.",
+          "approach": "Use Get-NetSession (PowerView) to enumerate active SMB sessions on all domain computers. Cross-reference session users against Domain Admins group members. This reveals which machines currently have Domain Admin accounts logged in. Target those machines for exploitation (vulnerability, credential reuse, etc.).",
+          "commands": [
+            "powerview-get-netsession",
+            "powerview-get-netloggedon",
+            "net-group-domain-admins"
+          ],
+          "expected_outcome": "Get-NetSession iterates through all domain computers (250+ in large env), queries NetSessionEnum API on each, returns active sessions. Output: 'UserName: DA-ADMIN, ComputerName: WS01.corp.com'. Cross-check 'DA-ADMIN' against Domain Admins members (net group 'Domain Admins' /domain). WS01 now becomes your target - compromise WS01 and dump DA-ADMIN's credentials from LSASS memory.",
+          "why_this_works": "NetSessionEnum API (exposed via SMB) returns active network sessions on a remote computer. When users access file shares, map drives, or use certain tools (PsExec, etc.), their username is logged in the session table. This API is intended for admins to see who's accessing resources but becomes recon gold for attackers. NOTE: Modern Windows (Server 2019+, Windows 11+) restricts NetSessionEnum to admins. On older systems (Server 2016-, Windows 10-), any authenticated user can call it."
+        },
+        {
+          "title": "Scenario 2: Enumerate Local Admin Access (Where Can I Already Go?)",
+          "context": "You have 'corp\\backupuser' credentials. Before attempting complex exploits, you want to know: which machines do I already have local admin access on? Backupuser might have delegated admin rights on backup servers, file servers, etc. This is free lateral movement - no exploit needed.",
+          "approach": "Use Find-LocalAdminAccess (PowerView) or Test-AdminAccess (manual). PowerView automates testing SMB admin shares (C$, ADMIN$) on all domain computers. Any machine where you can access C$ = you have local admin rights. These machines are lateral movement targets.",
+          "commands": [
+            "powerview-find-localadminaccess"
+          ],
+          "expected_outcome": "Find-LocalAdminAccess queries all domain computers (Get-NetComputer), attempts to access \\\\COMPUTER\\C$ on each. Output: 'FILESERVER01.corp.com', 'BACKUP-SRV.corp.com'. You have local admin on these machines without any exploitation. Use PsExec, WinRM, or RDP to authenticate and gain interactive access. From there, dump credentials, search for sensitive data, pivot to other systems.",
+          "why_this_works": "Windows administrative shares (C$, ADMIN$) are only accessible to local administrators. By testing access to C$ on each computer, you're effectively testing local admin rights. This works because: (1) Domain accounts can be members of local Administrators group via GPO or manual addition, (2) Certain privileged domain groups (Domain Admins, backup operators, etc.) have implicit local admin on all domain computers. You're not exploiting anything - just discovering where you already have access."
+        },
+        {
+          "title": "Scenario 3: Share Enumeration for Credential Harvesting",
+          "context": "You're 'corp\\lowpriv' and need privilege escalation. Standard attacks (Kerberoasting, ACLs) yielded nothing. Time to search network shares for credentials. Focus on: SYSVOL (GPP passwords), NETLOGON (scripts with hardcoded creds), user home directories (SSH keys, .rdp files, KeePass databases), application shares (web.config, appsettings.json).",
+          "approach": "Use Find-DomainShare (PowerView) or manual 'net view \\\\COMPUTER' to discover all SMB shares. Prioritize readable shares (exclude ADMIN$, C$ which require admin). Search for sensitive file types: .xml (GPP), .ps1 (scripts), .config (app configs), .txt (notes), .rdp (saved RDP credentials), .kdbx (KeePass). This is tedious but OSCP-relevant - credentials often found in shares.",
+          "commands": [
+            "powerview-find-domainshare",
+            "powerview-find-domainshare-exclude"
+          ],
+          "expected_outcome": "Find-DomainShare returns 50+ shares: SYSVOL, NETLOGON, Users, IT-Tools, Backups, etc. Mount accessible shares (net use Z: \\\\DC01\\SYSVOL) and search. Common findings: SYSVOL\\Policies\\{GUID}\\Machine\\Preferences\\Groups\\Groups.xml (GPP password, decrypt with gpp-decrypt), NETLOGON\\login.ps1 (hardcoded service account creds), Users\\jsmith\\.ssh\\id_rsa (SSH private key). One credential finding can unlock entire domain.",
+          "why_this_works": "Network shares are designed for data sharing but often contain sensitive information. SYSVOL is replicated to all DCs and readable by all authenticated users (requirement for GPO processing). NETLOGON hosts login scripts that run on user logon (often contain creds for mapped drives). User shares contain personal files (SSH keys, .rdp files with saved creds). This isn't an exploit - it's intended functionality being abused for credential harvesting."
+        },
+        {
+          "title": "Scenario 4: GPP Password Decryption (Groups.xml)",
+          "context": "During share enumeration, you found 'SYSVOL\\corp.com\\Policies\\{31B2F340-016D-11D2-945F-00C04FB984F9}\\Machine\\Preferences\\Groups\\Groups.xml' containing: <Properties ... cpassword='edBSHOwhZLTjt/QS9FeIcJ83mjWA98gw9guKOhJOdcqh+ZGMeXOsQbCpZ3xUjTLfCuNH8pG5aSVYdYw/NglVmQ' ... />. This is a GPP (Group Policy Preference) password - decrypt it for credentials.",
+          "approach": "GPP passwords are AES-256 encrypted using a published Microsoft key (disclosed in MS14-025). Use gpp-decrypt (Kali tool) or PowerShell (ConvertFrom-SecureString) to decrypt. The 'cpassword' attribute contains the AES-encrypted password. Common use case: GPP used to set local administrator password on workstations - decrypting gives you local admin everywhere.",
+          "commands": [
+            "gpp-password-decrypt"
+          ],
+          "expected_outcome": "gpp-decrypt 'edBSHO...' returns plaintext password: 'P@ssw0rd123'. Check the Groups.xml file context - it likely sets the local administrator password on all domain workstations. You now have local admin on 200+ machines. Use this credential with PsExec, WinRM, or RDP for lateral movement. This is a critical finding - instant domain-wide local admin access.",
+          "why_this_works": "Group Policy Preferences (introduced in Server 2008) allowed setting passwords via GPO (local admin password, scheduled task credentials, service accounts). Microsoft stored these passwords AES-256 encrypted in SYSVOL. PROBLEM: They published the AES key on MSDN for backward compatibility. MS14-025 (2014) deprecated this feature but SYSVOL isn't automatically cleaned - old GPP files persist for years. Any authenticated user can read SYSVOL, download Groups.xml, and decrypt with the published key."
+        },
+        {
+          "title": "Scenario 5: Remote Registry Enumeration for Auto-Logon Credentials",
+          "context": "You have local admin on 'WORKSTATION05' (found via Find-LocalAdminAccess). You want to check if auto-logon is enabled - this stores plaintext credentials in the registry (HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon). Use remote registry access to read these keys without interactive login.",
+          "approach": "Use Get-RemoteLocalAccountMember or manual reg.exe to query remote registry. Auto-logon credentials stored in: DefaultUserName, DefaultPassword (plaintext!), DefaultDomainName. If auto-logon is enabled, you get free credentials. Also check: stored RDP credentials (Credential Manager), cached domain credentials (SECURITY\\Cache).",
+          "commands": [
+            "powerview-get-netsession"
+          ],
+          "expected_outcome": "Remote registry query (reg query \\\\WORKSTATION05\\HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon /v DefaultPassword) returns: 'DefaultPassword REG_SZ P@ssw0rd123', 'DefaultUserName REG_SZ admin', 'DefaultDomainName REG_SZ CORP'. Auto-logon is enabled - you have domain credentials (corp\\admin:P@ssw0rd123). Test these credentials elsewhere - 'admin' might be a privileged account.",
+          "why_this_works": "Auto-logon feature (enabled via Sysprep or manual registry edit) stores credentials in plaintext in HKLM. This is by design - Windows needs the password to perform automatic login at boot. Remote Registry service (disabled by default on modern Windows, enabled on older systems) allows remote access to registry hives. If you have local admin + Remote Registry enabled, you can query registry keys remotely. Auto-logon is common on: lab environments, kiosks, legacy servers with services that require interactive login."
+        }
+      ],
+      "sections": [
+        {
+          "title": "Phase 1: Session Enumeration (Who's Logged In Where?)",
+          "notes": "Identify active user sessions across domain computers. Focus on privileged accounts (Domain Admins, service accounts). NetSessionEnum API restricted on modern Windows - expect failures on Server 2019+/Windows 11+. Fallback to Get-NetLoggedon (uses Remote Registry, also often blocked).",
+          "commands": [
+            "powerview-get-netsession",
+            "powerview-get-netloggedon",
+            "psloggedon"
+          ]
+        },
+        {
+          "title": "Phase 2: Local Admin Access Mapping",
+          "notes": "Test local admin access on all domain computers by attempting C$ share access. This identifies lateral movement targets where no exploit is needed. Also reveals delegation patterns (which accounts are local admin where).",
+          "commands": [
+            "powerview-find-localadminaccess"
+          ]
+        },
+        {
+          "title": "Phase 3: Share Discovery & Enumeration",
+          "notes": "Discover all SMB shares across domain computers. Prioritize: SYSVOL (GPP passwords), NETLOGON (scripts), user shares (credentials, keys), application shares (config files). Exclude default admin shares (C$, ADMIN$) unless testing local admin access.",
+          "commands": [
+            "powerview-find-domainshare",
+            "powerview-find-domainshare-exclude"
+          ]
+        },
+        {
+          "title": "Phase 4: GPP Password Hunting",
+          "notes": "Search SYSVOL for Groups.xml, ScheduledTasks.xml, Services.xml containing 'cpassword' attribute. These files contain AES-encrypted passwords that can be decrypted with published Microsoft key. Credential hunting in SYSVOL is OSCP exam staple.",
+          "commands": [
+            "gpp-password-files",
+            "gpp-password-decrypt"
+          ]
+        },
+        {
+          "title": "Phase 5: Credential Extraction from Shares",
+          "notes": "Manual credential hunting in accessible shares. Search for: .xml (app configs), .ps1 (scripts with hardcoded creds), .txt (password notes), .config (web.config, appsettings.json), .rdp (saved RDP sessions), .kdbx (KeePass databases), id_rsa (SSH keys). Use PowerShell or manual dir /s /b *.config to recursively search.",
+          "commands": [
+            "powerview-find-domainshare"
+          ]
+        }
+      ],
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "LATERAL_MOVEMENT",
+        "SESSION_ENUMERATION",
+        "SHARES",
+        "GPP",
+        "CREDENTIAL_HARVESTING",
+        "OSCP:HIGH"
+      ]
+    }
+  ]
+}

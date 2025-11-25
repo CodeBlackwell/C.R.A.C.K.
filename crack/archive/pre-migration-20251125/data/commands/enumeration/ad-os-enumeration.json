@@ -1,0 +1,316 @@
+{
+  "category": "enumeration",
+  "description": "Operating system version enumeration for Active Directory computers - identify legacy systems for targeted session enumeration",
+  "commands": [
+    {
+      "id": "powerview-get-netcomputer-os",
+      "name": "Enumerate Computer Operating Systems (PowerView)",
+      "category": "enumeration",
+      "command": "Get-NetComputer -FullData | Select-Object dnshostname, operatingsystem, operatingsystemversion",
+      "description": "Query Active Directory for all domain computers with OS version information to identify legacy systems vulnerable to session enumeration attacks",
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "ENUMERATION",
+        "POWERVIEW",
+        "OS_VERSION",
+        "COMPUTERS",
+        "OSCP:HIGH"
+      ],
+      "variables": [],
+      "flag_explanations": {
+        "-FullData": "Returns all LDAP attributes for computer objects including operatingsystem and operatingsystemversion. Required to get detailed OS information.",
+        "Select-Object": "PowerShell cmdlet to filter displayed properties - shows only relevant columns (hostname, OS name, OS build version)."
+      },
+      "success_indicators": [
+        "dnshostname: Fully qualified domain name",
+        "operatingsystem: Windows Server 2019, Windows 10 Enterprise, etc.",
+        "operatingsystemversion: 10.0 (build_number) format"
+      ],
+      "failure_indicators": [
+        "Module not imported",
+        "Access Denied",
+        "No computers returned",
+        "operatingsystem field empty (stale AD objects)"
+      ],
+      "next_steps": [
+        "Filter for legacy systems: Get-NetComputer -FullData | Where-Object {$_.operatingsystem -like '*Server 2012*' -or $_.operatingsystem -like '*Server 2016*'}",
+        "Identify NetSessionEnum-vulnerable targets (pre-Windows 10 1709, pre-Server 2019)",
+        "Run Get-NetSession against legacy systems only for higher success rate"
+      ],
+      "alternatives": [
+        "get-adcomputer",
+        "crackmapexec-smb-os"
+      ],
+      "prerequisites": [
+        "import-powerview"
+      ],
+      "troubleshooting": {
+        "Module not imported": "Import-Module .\\PowerView.ps1",
+        "operatingsystem field empty": "Stale computer objects (inactive). Filter by lastlogontimestamp to find active systems.",
+        "Too much output": "Use Where-Object to filter: | Where-Object {$_.operatingsystem -like '*Server*'} to show only servers"
+      },
+      "notes": "CRITICAL FOR SESSION ENUMERATION STRATEGY:\nIdentify systems vulnerable to NetSessionEnum attacks.\n\nBUILD NUMBER HISTORY:\nWindows 10:\n- 1507 (10240):\nVulnerable\n- 1511 (10586):\nVulnerable\n- 1607 (14393):\nVulnerable\n- 1703 (15063):\nVulnerable\n- 1709 (16299):\nRESTRICTED - only admins can query sessions\n\nWindows Server:\n- 2012 R2 (9600):\nVulnerable\n- 2016 (14393):\nVulnerable\n- 2019 (17763/1809):\nRESTRICTED\n\nTARGET BUILD NUMBERS:\n- Workstations:\n<16299 (pre-1709)\n- Servers:\n<17763 (pre-2019)\n\nCOMMAND:\n  Get-NetComputer -FullData | Select-Object dnshostname, operatingsystem, operatingsystemversion\n\nWHY THIS MATTERS:\nOlder systems = ANY domain user can enumerate sessions.\nModern systems = Only admins can enumerate.\n\nOSCP STRATEGY:\nEnumerate OS versions FIRST → save vulnerable targets → run Get-NetSession only on those.\n\nTime:\n10-30 seconds",
+      "oscp_relevance": "high"
+    },
+    {
+      "id": "powerview-get-netcomputer-os-filter",
+      "name": "Filter Legacy Operating Systems (PowerView)",
+      "category": "enumeration",
+      "command": "Get-NetComputer -FullData | Where-Object {($_.operatingsystem -like '*Server 2012*') -or ($_.operatingsystem -like '*Server 2016*') -or (($_.operatingsystem -like '*Windows 10*') -and ([int]($_.operatingsystemversion -split '\\.')[2] -lt 16299))}",
+      "description": "Filter domain computers to show only legacy systems vulnerable to unauthenticated NetSessionEnum (pre-Windows 10 1709, pre-Server 2019)",
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "ENUMERATION",
+        "POWERVIEW",
+        "OS_VERSION",
+        "FILTERING",
+        "OSCP:HIGH"
+      ],
+      "variables": [],
+      "flag_explanations": {
+        "-like '*Server 2012*'": "Matches Windows Server 2012 and 2012 R2 (both vulnerable to session enumeration)",
+        "-like '*Server 2016*'": "Matches Windows Server 2016 (vulnerable - build 14393)",
+        "[int]($_.operatingsystemversion -split '\\\\.')[2] -lt 16299": "Parses build number from version string (e.g., 10.0.15063), converts to integer, checks if less than 16299 (Windows 10 1709 threshold)"
+      },
+      "success_indicators": [
+        "List of legacy systems only",
+        "No Windows Server 2019+ or Windows 11 in results",
+        "Systems with build numbers < 16299 (workstations) or < 17763 (servers)"
+      ],
+      "failure_indicators": [
+        "Empty result (no legacy systems in domain)",
+        "Module not imported",
+        "Syntax error in Where-Object filter"
+      ],
+      "next_steps": [
+        "Save results to variable: $targets = Get-NetComputer ... | Select-Object -ExpandProperty dnshostname",
+        "Loop through targets for session enumeration: foreach ($target in $targets) { Get-NetSession -ComputerName $target }",
+        "Export to file: $targets | Out-File legacy_targets.txt"
+      ],
+      "alternatives": [],
+      "prerequisites": [
+        "import-powerview"
+      ],
+      "troubleshooting": {
+        "Syntax error": "PowerShell version 2.0 doesn't support complex Where-Object. Use older syntax: | ? {...}",
+        "Empty results": "Domain may only have modern systems. Try broader filter: | Where-Object {$_.operatingsystem -notlike '*2019*' -and $_.operatingsystem -notlike '*Windows 11*'}",
+        "operatingsystemversion parsing fails": "Some objects have non-standard version format. Add error handling: try/catch block or -match regex"
+      },
+      "notes": "PRE-FILTERED TARGET LIST:\nAutomatic filtering for vulnerable systems only.\n\nCOMMAND:\n  Get-NetComputer -FullData | Where-Object {($_.operatingsystem -like '*Server 2012*') -or ($_.operatingsystem -like '*Server 2016*') -or (($_.operatingsystem -like '*Windows 10*') -and ([int]($_.operatingsystemversion -split '\\\\.')[2] -lt 16299))}\n\nWHAT THIS FILTERS:\n- Server 2012 / 2012 R2 (build 9600)\n- Server 2016 (build 14393)\n- Windows 10 pre-1709 (build <16299)\n\nRESTRICTION SOURCE:\nMS security update KB4103727 (May 2018) changed SrvsvcSessionInfo registry permissions.\n\nOSCP TIME SAVINGS:\n- Without filter:\n30+ minutes (enumerate all systems)\n- With filter:\n2-3 minutes (vulnerable systems only)\n\nWORKFLOW:\n1.\n\nRun filter → save targets\n\n2.\n\nEnumerate sessions ONLY on those systems\n\n3.\n\nSkip modern systems entirely\n\nTime:\n10-30 seconds for filtering",
+      "oscp_relevance": "high"
+    },
+    {
+      "id": "check-netsessionenum-registry",
+      "name": "Check NetSessionEnum Registry Permissions",
+      "category": "enumeration",
+      "command": "Get-Acl 'HKLM:\\SYSTEM\\CurrentControlSet\\Services\\LanmanServer\\DefaultSecurity' | Format-List",
+      "description": "Inspect registry permissions on SrvsvcSessionInfo key to determine if NetSessionEnum API is restricted to administrators only (modern Windows) or allows authenticated users (legacy)",
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "ENUMERATION",
+        "REGISTRY",
+        "PERMISSIONS",
+        "NETSESSIONENUM",
+        "OSCP:MEDIUM"
+      ],
+      "variables": [],
+      "flag_explanations": {
+        "Get-Acl": "PowerShell cmdlet to retrieve Access Control List (permissions) for registry key",
+        "HKLM:\\SYSTEM\\CurrentControlSet\\Services\\LanmanServer\\DefaultSecurity": "Registry path where NetSessionEnum API permissions are configured. SrvsvcSessionInfo value under this key controls who can query SMB sessions.",
+        "Format-List": "Display ACL in readable list format (vs table format)"
+      },
+      "success_indicators": [
+        "Access control list displayed",
+        "Owner: NT AUTHORITY\\SYSTEM",
+        "Access rules show BUILTIN\\Administrators (FullControl) and Authenticated Users (Read) - vulnerable",
+        "Access rules show ONLY BUILTIN\\Administrators and SYSTEM - restricted (modern Windows)"
+      ],
+      "failure_indicators": [
+        "Access denied (must be local admin to read DefaultSecurity key ACL)",
+        "Key not found (unusual - should exist on all Windows)",
+        "PowerShell version too old (use regedit.exe /m for manual check)"
+      ],
+      "next_steps": [
+        "If Authenticated Users has Read access: NetSessionEnum will work from any domain user account",
+        "If only Administrators/SYSTEM have access: Need local admin for session enumeration, use alternatives (Remote Registry)",
+        "Document finding: Vulnerable systems = good session enum targets, Restricted systems = skip or use alternative methods"
+      ],
+      "alternatives": [
+        "reg-query-lanmanserver"
+      ],
+      "prerequisites": [],
+      "troubleshooting": {
+        "Access denied": "Need local admin on target system. Run from elevated PowerShell OR use PsExec: psexec.exe \\\\TARGET -s powershell",
+        "Key not found": "Path typo. Verify with: Test-Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Services\\LanmanServer\\DefaultSecurity'",
+        "Can't interpret ACL": "Export to file for analysis: Get-Acl ... | Export-Clixml acl.xml"
+      },
+      "notes": "Manual verification of NetSessionEnum vulnerability.\n\nThe SrvsvcSessionInfo registry value (REG_BINARY) under DefaultSecurity key is a Security Descriptor (SDDL format) that defines who can call NetWkstaUserEnum and NetSessionEnum APIs.\n\nPre-Windows 10 1709 / Server 2019:\nAuthenticated Users (S-1-5-11) have READ access to this SD = any domain user can enumerate sessions.\n\nPost-1709/2019:\nOnly Administrators (S-1-5-32-544) and SYSTEM (S-1-5-18) have access = session enumeration restricted.\n\nThis is the root cause of Get-NetSession failures.\n\nOSCP:\nYou likely won't check this manually (requires local admin) - instead, use OS version enumeration to predict vulnerability.\n\nThis command is for understanding WHY the restriction exists, not for routine recon.",
+      "oscp_relevance": "medium"
+    },
+    {
+      "id": "check-remote-registry-service",
+      "name": "Check Remote Registry Service Status",
+      "category": "enumeration",
+      "command": "Get-Service -ComputerName <TARGET> -Name RemoteRegistry",
+      "description": "Query Remote Registry service status on target system - required for PsLoggedOn and Get-NetLoggedon to enumerate logged-on users",
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "ENUMERATION",
+        "REMOTE_REGISTRY",
+        "SERVICES",
+        "OSCP:HIGH"
+      ],
+      "variables": [
+        {
+          "name": "<TARGET>",
+          "description": "Target hostname or IP",
+          "example": "WS01.corp.com",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "-ComputerName": "Target remote computer to query service status on. Uses WMI/CIM for remote query.",
+        "-Name RemoteRegistry": "Service name for Remote Registry (display name: 'Remote Registry', service name: 'RemoteRegistry')."
+      },
+      "success_indicators": [
+        "Status: Running - service active, can use Remote Registry enumeration",
+        "Status: Stopped, StartType: Manual - service can be started on-demand if you have admin access",
+        "Status: Stopped, StartType: Disabled - service explicitly disabled, harder to use"
+      ],
+      "failure_indicators": [
+        "Access denied (need local admin or remote service query permissions)",
+        "RPC server unavailable (firewall blocking, target offline)",
+        "Service not found (unusual - should exist on all Windows)"
+      ],
+      "next_steps": [
+        "If Running: Use PsLoggedOn or Get-NetLoggedon immediately",
+        "If Stopped + Manual: Start service (if admin): Start-Service -ComputerName <TARGET> -Name RemoteRegistry",
+        "If Disabled: Skip Remote Registry method, use alternatives (NetSessionEnum on legacy OS, or gain local admin)"
+      ],
+      "alternatives": [
+        "sc-query-remote",
+        "wmi-service-query"
+      ],
+      "prerequisites": [],
+      "troubleshooting": {
+        "Access denied": "Need local admin on target OR specific WMI query permissions. Try alternatives: PsExec + local query",
+        "RPC server unavailable": "Target firewall blocking. Check basic connectivity: Test-Connection <TARGET>",
+        "Cannot find service": "Service name case-sensitive on some PowerShell versions. Try: Get-Service -ComputerName <TARGET> | Where-Object {$_.Name -eq 'RemoteRegistry'}"
+      },
+      "notes": "REMOTE REGISTRY SERVICE:\nRequired for PsLoggedOn and Get-NetLoggedon to work.\n\nHOW IT WORKS:\nAllows remote access to registry hives (HKLM, HKCU, HKEY_USERS) via RPC.\nTools read HKEY_USERS:\neach loaded SID = logged-on user.\n\nSERVICE STARTUP TYPES:\n- Disabled:\nMust be changed to Manual/Automatic first\n- Manual:\nDefault on servers (auto-starts on connection)\n- Automatic:\nAlways running\n\nDEFAULT CONFIGURATIONS:\n- Windows 8+ workstations:\nDisabled\n- Server 2012+:\nManual (good for attackers)\n\nKEY INSIGHT:\nIf you have local admin + service is Manual → it auto-starts on connection (no explicit start needed).\n\nCOMMAND:\n  Get-Service -ComputerName <TARGET> -Name RemoteRegistry\n\nOSCP STRATEGY:\nCheck service status BEFORE attempting enumeration.\nSaves time vs blind attempts.\n\nTime:\n<5 seconds per target",
+      "oscp_relevance": "high"
+    },
+    {
+      "id": "enable-remote-registry",
+      "name": "Enable Remote Registry Service",
+      "category": "enumeration",
+      "command": "sc.exe \\\\<TARGET> config RemoteRegistry start= auto && sc.exe \\\\<TARGET> start RemoteRegistry",
+      "description": "Remotely enable and start Remote Registry service to allow session enumeration via PsLoggedOn or Get-NetLoggedon (requires local admin access)",
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "ENUMERATION",
+        "REMOTE_REGISTRY",
+        "SERVICES",
+        "LATERAL_MOVEMENT",
+        "OSCP:HIGH"
+      ],
+      "variables": [
+        {
+          "name": "<TARGET>",
+          "description": "Target hostname or IP where you have local admin access",
+          "example": "WORKSTATION05.corp.com",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "sc.exe": "Service Control command-line utility (sc.exe vs sc alias in PowerShell - .exe forces Windows binary)",
+        "\\\\\\\\<TARGET>": "UNC path prefix for remote service management",
+        "config RemoteRegistry start= auto": "Change service startup type to Automatic (service starts at boot). Note: space after 'start=' is required.",
+        "start RemoteRegistry": "Immediately start the service (doesn't wait for reboot)"
+      },
+      "success_indicators": [
+        "[SC] ChangeServiceConfig SUCCESS",
+        "[SC] StartService SUCCESS",
+        "Service transitions from Stopped to Running"
+      ],
+      "failure_indicators": [
+        "Access is denied (need local admin)",
+        "The RPC server is unavailable (firewall or target offline)",
+        "The service cannot be started (dependency failure or corruption)"
+      ],
+      "next_steps": [
+        "Verify service running: Get-Service -ComputerName <TARGET> -Name RemoteRegistry",
+        "Enumerate logged-on users: PsLoggedOn.exe \\\\<TARGET>",
+        "Alternative: Get-NetLoggedon -ComputerName <TARGET>"
+      ],
+      "alternatives": [
+        "ps-start-service-remote",
+        "wmi-service-start"
+      ],
+      "prerequisites": [],
+      "troubleshooting": {
+        "Access denied": "Verify local admin access: dir \\\\<TARGET>\\C$. If fails, you don't have admin rights.",
+        "RPC server unavailable": "Firewall blocking or SMB disabled. Test: Test-NetConnection <TARGET> -Port 445",
+        "Service fails to start": "Check dependencies: sc.exe \\\\<TARGET> qc RemoteRegistry. Dependencies must be running first.",
+        "Syntax error": "PowerShell interprets 'sc' as Set-Content alias. Use sc.exe to force Windows binary."
+      },
+      "notes": "ENABLE REMOTE REGISTRY REMOTELY:\nRequires local admin access on target.\n\nCOMMAND:\n  sc.exe \\\\<TARGET> config RemoteRegistry start= auto && sc.exe \\\\<TARGET> start RemoteRegistry\n\nWHAT THIS DOES:\n1.\n\nChange startup type to Automatic (persistent)\n\n2.\n\nStart service immediately\n\nWHY THIS WORKS:\nLocal admin → modify services via SCM → enable Remote Registry → use for enumeration.\n\nSERVICE STATES:\n- Disabled:\nMust change to Manual/Auto first (this command)\n- Manual:\nJust start it (no config change needed)\n- Automatic:\nAlready running (no action needed)\n\nOPSEC NOTE:\nEnabling services logged (Event ID 7040).\nPrefer targets where service already Manual.\n\nOSCP USE CASE:\nYou have admin but Remote Registry disabled → enable it → run PsLoggedOn/Get-NetLoggedon.\n\nTime:\n<10 seconds",
+      "oscp_relevance": "high"
+    },
+    {
+      "id": "query-hkey-users-remote",
+      "name": "Query Remote HKEY_USERS Hive",
+      "category": "enumeration",
+      "command": "reg query \\\\<TARGET>\\HKU",
+      "description": "Manually enumerate logged-on users by querying HKEY_USERS hive on remote system via Remote Registry (each SID = logged-on user)",
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "ENUMERATION",
+        "REMOTE_REGISTRY",
+        "SESSIONS",
+        "OSCP:MEDIUM"
+      ],
+      "variables": [
+        {
+          "name": "<TARGET>",
+          "description": "Target hostname or IP",
+          "example": "FILESERVER01",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "reg query": "Windows registry query command-line utility",
+        "\\\\\\\\<TARGET>\\\\HKU": "Remote registry path. HKU = HKEY_USERS hive (abbreviated form). Lists all loaded user profile registry hives."
+      },
+      "success_indicators": [
+        "List of SIDs displayed (S-1-5-21-... format)",
+        "Each SID represents a loaded user profile = logged-on user",
+        "S-1-5-18 = SYSTEM (always present), S-1-5-19 = LOCAL SERVICE, S-1-5-20 = NETWORK SERVICE"
+      ],
+      "failure_indicators": [
+        "Access is denied (need local admin OR Remote Registry service enabled)",
+        "Network path not found (target offline or firewall)",
+        "The system cannot find the file specified (Remote Registry service not running)"
+      ],
+      "next_steps": [
+        "Convert SIDs to usernames: wmic useraccount where sid='<SID>' get name",
+        "Alternative: PowerShell: (New-Object System.Security.Principal.SecurityIdentifier('<SID>')).Translate([System.Security.Principal.NTAccount]).Value",
+        "Filter out system accounts (S-1-5-18, S-1-5-19, S-1-5-20) - focus on domain user SIDs (S-1-5-21-...)"
+      ],
+      "alternatives": [
+        "ps-get-logged-on-users",
+        "psloggedon"
+      ],
+      "prerequisites": [
+        "check-remote-registry-service"
+      ],
+      "troubleshooting": {
+        "Access denied": "Remote Registry service not running OR insufficient permissions. Start service: sc.exe \\\\<TARGET> start RemoteRegistry",
+        "Network path not found": "SMB disabled or firewall blocking. Verify: Test-NetConnection <TARGET> -Port 445",
+        "Too many SIDs": "Filter for domain users only: reg query \\\\<TARGET>\\HKU | findstr S-1-5-21"
+      },
+      "notes": "MANUAL SESSION ENUMERATION:\nAlternative to PsLoggedOn/Get-NetLoggedon.\n\nHOW IT WORKS:\nWhen users log in (interactive, RDP, RunAs), their NTUSER.DAT registry hive loads into HKEY_USERS\\<SID>.\nEach SID = active session.\n\nCOMMAND:\n  reg query \\\\<TARGET>\\HKU\n\nSYSTEM SIDS TO IGNORE:\n- S-1-5-18:\nSYSTEM (always present)\n- S-1-5-19:\nLOCAL SERVICE\n- S-1-5-20:\nNETWORK SERVICE\n- S-1-5-21-...-500:\nBuilt-in Administrator (may not be logged in)\n\nDOMAIN USER SIDS:\nStart with S-1-5-21- and end with RID >1000.\n\nSID-TO-NAME CONVERSION:\nWMIC:\n  wmic useraccount where sid='<SID>' get name\n\nPowerShell:\n  (New-Object System.Security.Principal.SecurityIdentifier('<SID>')).Translate([System.Security.Principal.NTAccount]).Value\n\nOSCP ADVANTAGE:\nManual reg.exe often bypasses detection when automated tools blocked.\n\nTime:\n<10 seconds per target",
+      "oscp_relevance": "medium"
+    }
+  ]
+}

@@ -27,8 +27,8 @@ def main():
     )
     parser.add_argument(
         '--input-dir',
-        default='reference/data',
-        help='Input directory (default: reference/data/)'
+        default='db/data',
+        help='Input directory (default: db/data/)'
     )
     parser.add_argument(
         '--output-dir',
@@ -81,7 +81,7 @@ def main():
     # Load JSON data
     print(f"Loading JSON from: {input_dir}")
     commands, cmd_errors = load_command_jsons(str(input_dir / "commands"))
-    chains, chain_errors = load_attack_chain_jsons(str(input_dir / "attack_chains"))
+    chains, chain_errors = load_attack_chain_jsons(str(input_dir / "chains"))
     cheatsheets, sheet_errors = load_cheatsheet_jsons(str(input_dir / "cheatsheets"))
 
     if cmd_errors or chain_errors or sheet_errors:

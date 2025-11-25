@@ -179,7 +179,7 @@ class InvalidIDFixer:
         return file_stats
 
 def main():
-    base_path = Path('reference/data/commands')
+    base_path = Path('db/data/commands')
     fixer = InvalidIDFixer()
 
     print("=" * 80)

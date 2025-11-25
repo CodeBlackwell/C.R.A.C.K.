@@ -106,7 +106,7 @@ def fix_stub_unused_variables(base_path: Path) -> dict:
 
 
 def main():
-    base_path = Path('reference/data/commands')
+    base_path = Path('db/data/commands')
 
     print("=" * 80)
     print("ROUND 12: CLEAN UNUSED VARIABLES FROM STUB FILES")

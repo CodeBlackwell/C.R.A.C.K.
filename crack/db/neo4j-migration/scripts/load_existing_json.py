@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-Load and validate existing JSON files from reference/data/
+Load and validate existing JSON files from db/data/
 
-Scans commands, attack_chains, and cheatsheets directories for JSON files,
+Scans commands, chains, and cheatsheets directories for JSON files,
 parses them, and validates structure.
 """
 
@@ -12,9 +12,10 @@ import sys
 from pathlib import Path
 from typing import Dict, List, Any, Tuple
 import argparse
+from load_writeups import load_writeup_jsons
 
 
-def load_command_jsons(base_dir: str = "reference/data/commands") -> Tuple[List[Dict], List[str]]:
+def load_command_jsons(base_dir: str = "db/data/commands") -> Tuple[List[Dict], List[str]]:
     """Load all command JSON files, return list of command dicts and errors"""
     commands = []
     errors = []
@@ -46,7 +47,7 @@ def load_command_jsons(base_dir: str = "reference/data/commands") -> Tuple[List[
     return commands, errors
 
 
-def load_attack_chain_jsons(base_dir: str = "reference/data/attack_chains") -> Tuple[List[Dict], List[str]]:
+def load_attack_chain_jsons(base_dir: str = "db/data/chains") -> Tuple[List[Dict], List[str]]:
     """Load all attack chain JSON files, return list of chain dicts and errors"""
     chains = []
     errors = []
@@ -82,7 +83,7 @@ def load_attack_chain_jsons(base_dir: str = "reference/data/attack_chains") -> T
     return chains, errors
 
 
-def load_cheatsheet_jsons(base_dir: str = "reference/data/cheatsheets") -> Tuple[List[Dict], List[str]]:
+def load_cheatsheet_jsons(base_dir: str = "db/data/cheatsheets") -> Tuple[List[Dict], List[str]]:
     """Load all cheatsheet JSON files, return list of cheatsheet dicts and errors"""
     cheatsheets = []
     errors = []
@@ -243,12 +244,12 @@ def validate_loaded_data(commands: List[Dict], chains: List[Dict], cheatsheets: 
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Load and validate existing JSON files from reference/data/"
+        description="Load and validate existing JSON files from db/data/"
     )
     parser.add_argument(
         '--base-dir',
-        default='reference/data',
-        help='Base directory (default: reference/data/)'
+        default='db/data',
+        help='Base directory (default: db/data/)'
     )
     parser.add_argument(
         '--verbose',
@@ -283,7 +284,7 @@ def main():
             print(f"  ERROR: {err}")
 
     # Load attack chains
-    chain_dir = base_dir / "attack_chains"
+    chain_dir = base_dir / "chains"
     print(f"Loading attack chains from: {chain_dir}")
     chains, chain_errors = load_attack_chain_jsons(str(chain_dir))
     print(f"  Loaded {len(chains)} attack chains")

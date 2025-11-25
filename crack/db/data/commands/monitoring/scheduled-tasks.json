@@ -1,0 +1,548 @@
+{
+  "category": "monitoring",
+  "subcategory": "scheduled-tasks",
+  "description": "Scheduled task and cron job enumeration for privilege escalation and persistence detection",
+  "commands": [
+    {
+      "id": "crontab-user-list",
+      "name": "List User Cron Jobs",
+      "category": "monitoring",
+      "subcategory": "scheduled-tasks",
+      "command": "crontab -l",
+      "description": "Display current user's cron jobs (scheduled tasks)",
+      "variables": [],
+      "flag_explanations": {
+        "-l": "List - display current user's crontab entries"
+      },
+      "tags": [
+        "DEFENSE",
+        "ENUMERATION",
+        "LINUX",
+        "MONITORING",
+        "OSCP:HIGH",
+        "PERSISTENCE",
+        "POST_EXPLOITATION",
+        "PRIVILEGE_ESCALATION",
+        "SCHEDULED_TASKS"
+      ],
+      "oscp_relevance": "high",
+      "success_indicators": [
+        "* * * * *",
+        "Cron job entries",
+        "/bin/",
+        "@reboot"
+      ],
+      "failure_indicators": [
+        "no crontab for <user>",
+        "crontab: command not found"
+      ],
+      "next_steps": [
+        "Check other users' crontabs: crontab-user-specific",
+        "Check system-wide crontab: crontab-system-wide",
+        "Look for writable cron scripts: find /etc/cron* -type f -writable",
+        "Check cron script permissions for privesc"
+      ],
+      "alternatives": [],
+      "notes": "Cron format:\nminute hour day month weekday command.\n\nOSCP tip:\nCheck if cron scripts are writable - modify to run reverse shell as cron user.\n\nTime estimate:\n<1 second.\n\nSpecial strings:\n@reboot (run at startup), @daily, @hourly, @weekly, @monthly."
+    },
+    {
+      "id": "crontab-user-specific",
+      "name": "List Another User's Cron Jobs",
+      "category": "monitoring",
+      "subcategory": "scheduled-tasks",
+      "command": "sudo crontab -l -u <USERNAME>",
+      "description": "View cron jobs for a specific user (requires root privileges)",
+      "variables": [
+        {
+          "name": "<USERNAME>",
+          "description": "Username to check crontab for",
+          "example": "root",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "sudo": "Required to view other users' crontabs",
+        "-l": "List crontab entries",
+        "-u": "Specify user whose crontab to display"
+      },
+      "tags": [
+        "DEFENSE",
+        "ENUMERATION",
+        "LINUX",
+        "MONITORING",
+        "OSCP:HIGH",
+        "PERSISTENCE",
+        "POST_EXPLOITATION",
+        "PRIVILEGE_ESCALATION",
+        "SCHEDULED_TASKS"
+      ],
+      "oscp_relevance": "high",
+      "success_indicators": [
+        "* * * * *",
+        "Cron entries",
+        "Command paths"
+      ],
+      "failure_indicators": [
+        "no crontab for <user>",
+        "Permission denied"
+      ],
+      "next_steps": [
+        "Check root's crontab: sudo crontab -l -u root",
+        "Check if cron scripts are writable by current user",
+        "Replace script with malicious version if writable",
+        "Wait for cron to execute for privilege escalation"
+      ],
+      "alternatives": [],
+      "notes": "Root's crontab is high-value target.\n\nIf root cron runs writable script, instant privesc.\n\nCrontab location varies:\n/var/spool/cron/crontabs/ (Debian/Ubuntu), /var/spool/cron/ (RHEL/CentOS).\n\nTime estimate:\n<1 second."
+    },
+    {
+      "id": "crontab-system-wide",
+      "name": "View System-Wide Crontab",
+      "category": "monitoring",
+      "subcategory": "scheduled-tasks",
+      "command": "cat /etc/crontab",
+      "description": "Display system-wide cron configuration (runs as root)",
+      "variables": [],
+      "flag_explanations": {},
+      "tags": [
+        "DEFENSE",
+        "ENUMERATION",
+        "LINUX",
+        "MONITORING",
+        "OSCP:HIGH",
+        "PERSISTENCE",
+        "POST_EXPLOITATION",
+        "PRIVILEGE_ESCALATION",
+        "SCHEDULED_TASKS"
+      ],
+      "oscp_relevance": "high",
+      "success_indicators": [
+        "SHELL=/bin/sh",
+        "PATH=",
+        "* * * * *",
+        "root"
+      ],
+      "failure_indicators": [
+        "No such file",
+        "Permission denied"
+      ],
+      "next_steps": [
+        "Check cron directories: cron-directories-list",
+        "Look for writable scripts called by cron",
+        "Check PATH for writable directories (PATH hijacking)",
+        "Examine script permissions: ls -la <SCRIPT_PATH>"
+      ],
+      "alternatives": [
+        "less-etc-crontab"
+      ],
+      "notes": "/etc/crontab differs from user crontabs - includes username field.\n\nFormat:\nminute hour day month weekday user command.\n\nOSCP tip:\nCheck if PATH includes writable dirs like /tmp - allows command hijacking.\n\nTime estimate:\n<1 second."
+    },
+    {
+      "id": "cron-directories-list",
+      "name": "List Cron Directories",
+      "category": "monitoring",
+      "subcategory": "scheduled-tasks",
+      "command": "ls -la /etc/cron.*",
+      "description": "List all cron directories (hourly, daily, weekly, monthly) and their contents",
+      "variables": [],
+      "flag_explanations": {
+        "ls -la": "Long listing with all files",
+        "/etc/cron.*": "Wildcard matches cron.hourly, cron.daily, cron.weekly, cron.monthly, cron.d"
+      },
+      "tags": [
+        "DEFENSE",
+        "ENUMERATION",
+        "LINUX",
+        "MONITORING",
+        "OSCP:HIGH",
+        "PERSISTENCE",
+        "POST_EXPLOITATION",
+        "PRIVILEGE_ESCALATION",
+        "SCHEDULED_TASKS"
+      ],
+      "oscp_relevance": "high",
+      "success_indicators": [
+        "cron.hourly",
+        "cron.daily",
+        "cron.weekly",
+        "cron.monthly",
+        "cron.d"
+      ],
+      "failure_indicators": [
+        "No such file or directory"
+      ],
+      "next_steps": [
+        "Check file permissions: find /etc/cron* -type f -perm -o+w",
+        "Check for writable scripts: find /etc/cron* -writable 2>/dev/null",
+        "Examine script contents: cat /etc/cron.daily/<SCRIPT>",
+        "Modify writable script to add reverse shell"
+      ],
+      "alternatives": [],
+      "notes": "Scripts in these directories run automatically:\ncron.hourly (every hour), cron.daily (daily), cron.weekly (weekly), cron.monthly (monthly).\n\nAll run as root by default.\n\nCRITICAL privesc vector if writable.\n\nTime estimate:\n2 seconds.\n\nCommand to find writable:\nfind /etc/cron* -type f -writable 2>/dev/null"
+    },
+    {
+      "id": "cron-log-recent",
+      "name": "View Recent Cron Executions",
+      "category": "monitoring",
+      "subcategory": "scheduled-tasks",
+      "command": "grep -r \"CRON\" /var/log/syslog",
+      "description": "Search system logs for recent cron job executions (verify cron activity)",
+      "variables": [],
+      "flag_explanations": {
+        "grep": "Search for pattern",
+        "-r": "Recursive search (multiple log files)",
+        "\"CRON\"": "Search pattern for cron log entries",
+        "/var/log/syslog": "System log file (may be /var/log/messages on RHEL)"
+      },
+      "tags": [
+        "DEFENSE",
+        "ENUMERATION",
+        "LINUX",
+        "MONITORING",
+        "OSCP:MEDIUM",
+        "POST_EXPLOITATION",
+        "SCHEDULED_TASKS"
+      ],
+      "oscp_relevance": "medium",
+      "success_indicators": [
+        "CRON",
+        "CMD",
+        "(root)",
+        "session opened"
+      ],
+      "failure_indicators": [
+        "No such file",
+        "Permission denied"
+      ],
+      "next_steps": [
+        "Identify frequently-run cron jobs",
+        "Check execution times to plan privesc timing",
+        "Look for failed cron jobs (potential misconfigurations)",
+        "Monitor for new cron activity"
+      ],
+      "alternatives": [],
+      "notes": "Logs show when cron jobs execute and as which user.\n\nUseful for timing privilege escalation attempts.\n\nOn systemd systems:\njournalctl -u cron.\n\nTime estimate:\n3-5 seconds."
+    },
+    {
+      "id": "win-schtasks-list-all",
+      "name": "Windows List All Scheduled Tasks",
+      "category": "monitoring",
+      "subcategory": "scheduled-tasks",
+      "command": "schtasks /query /fo LIST /v",
+      "description": "Display all Windows scheduled tasks with verbose details",
+      "variables": [],
+      "flag_explanations": {
+        "/query": "Display scheduled tasks",
+        "/fo LIST": "Format output as list (easier to read than table)",
+        "/v": "Verbose - display detailed information including task actions, triggers, last run time"
+      },
+      "tags": [
+        "DEFENSE",
+        "DETAILED",
+        "ENUMERATION",
+        "MONITORING",
+        "OSCP:HIGH",
+        "PERSISTENCE",
+        "POST_EXPLOITATION",
+        "PRIVILEGE_ESCALATION",
+        "SCHEDULED_TASKS",
+        "WINDOWS"
+      ],
+      "oscp_relevance": "high",
+      "success_indicators": [
+        "TaskName:",
+        "Next Run Time:",
+        "Status:",
+        "Task To Run:",
+        "Run As User:"
+      ],
+      "failure_indicators": [
+        "ERROR: Access is denied",
+        "No tasks scheduled"
+      ],
+      "next_steps": [
+        "Look for tasks running as SYSTEM",
+        "Check task executable paths for writable locations",
+        "Identify custom (non-Microsoft) scheduled tasks",
+        "Check task XML for credentials: Get task XML definition"
+      ],
+      "alternatives": [
+        "win-ps-scheduled-tasks",
+        "get-scheduledtask"
+      ],
+      "notes": "CRITICAL for Windows privesc and persistence detection.\n\nOutput is verbose (20+ properties per task).\n\nOSCP tips:\n(1) Look for tasks with writable executables, (2) Tasks running as SYSTEM with Enabled status, (3) Custom tasks (non-Microsoft) in \\Task Scheduler Library\\.\n\nTime estimate:\n10-30 seconds depending on task count."
+    },
+    {
+      "id": "win-ps-scheduled-tasks",
+      "name": "PowerShell List Scheduled Tasks",
+      "category": "monitoring",
+      "subcategory": "scheduled-tasks",
+      "command": "Get-ScheduledTask | Where-Object {$_.State -ne \"Disabled\"}",
+      "description": "PowerShell cmdlet to list enabled Windows scheduled tasks",
+      "variables": [],
+      "flag_explanations": {
+        "Get-ScheduledTask": "Retrieves all scheduled tasks",
+        "Where-Object": "Filter results",
+        "$_.State -ne \"Disabled\"": "Exclude disabled tasks (show only Ready/Running tasks)"
+      },
+      "tags": [
+        "DEFENSE",
+        "ENUMERATION",
+        "MONITORING",
+        "OSCP:HIGH",
+        "PERSISTENCE",
+        "POST_EXPLOITATION",
+        "POWERSHELL",
+        "PRIVILEGE_ESCALATION",
+        "SCHEDULED_TASKS",
+        "WINDOWS"
+      ],
+      "oscp_relevance": "high",
+      "success_indicators": [
+        "TaskName",
+        "State",
+        "TaskPath",
+        "Ready",
+        "Running"
+      ],
+      "failure_indicators": [
+        "Get-ScheduledTask: command not found",
+        "Execution policy blocked"
+      ],
+      "next_steps": [
+        "Get task details: win-ps-scheduled-task-info",
+        "Filter non-Microsoft tasks: Where-Object {$_.TaskPath -notlike '\\Microsoft\\*'}",
+        "Check task action/executable: Get-ScheduledTaskInfo",
+        "Look for tasks with writable executables"
+      ],
+      "alternatives": [
+        "win-schtasks-list-all"
+      ],
+      "notes": "Modern PowerShell approach - faster and easier to parse than schtasks.\n\nTo see all tasks:\nGet-ScheduledTask (no filter).\n\nTime estimate:\n5 seconds.\n\nOne-liner for custom tasks:\nGet-ScheduledTask | Where-Object {$_.TaskPath -notlike '\\Microsoft\\*' -and $_.State -eq 'Ready'}"
+    },
+    {
+      "id": "win-ps-scheduled-task-info",
+      "name": "PowerShell Scheduled Task Details",
+      "category": "monitoring",
+      "subcategory": "scheduled-tasks",
+      "command": "Get-ScheduledTask -TaskName <TASK_NAME> | Get-ScheduledTaskInfo",
+      "description": "Get detailed information for specific scheduled task including last run time and result",
+      "variables": [
+        {
+          "name": "<TASK_NAME>",
+          "description": "Name of scheduled task",
+          "example": "MyBackup",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "Get-ScheduledTask": "Retrieve task object",
+        "-TaskName": "Specify task name",
+        "Get-ScheduledTaskInfo": "Get additional info (last run time, last result, next run time)"
+      },
+      "tags": [
+        "DEFENSE",
+        "DETAILED",
+        "ENUMERATION",
+        "MONITORING",
+        "OSCP:MEDIUM",
+        "POST_EXPLOITATION",
+        "POWERSHELL",
+        "SCHEDULED_TASKS",
+        "WINDOWS"
+      ],
+      "oscp_relevance": "medium",
+      "success_indicators": [
+        "LastRunTime",
+        "LastTaskResult",
+        "NextRunTime",
+        "NumberOfMissedRuns"
+      ],
+      "failure_indicators": [
+        "No such task",
+        "Execution policy blocked"
+      ],
+      "next_steps": [
+        "Get task action: (Get-ScheduledTask -TaskName <TASK_NAME>).Actions",
+        "Check executable path permissions: icacls <PATH>",
+        "Export task XML: Export-ScheduledTask -TaskName <TASK_NAME>",
+        "Modify task if writable: Set-ScheduledTask"
+      ],
+      "alternatives": [],
+      "notes": "Useful for verifying task execution status.\n\nLastTaskResult 0x0 = success, other values indicate errors.\n\nTime estimate:\n1 second."
+    },
+    {
+      "id": "win-schtasks-task-xml",
+      "name": "Export Scheduled Task XML",
+      "category": "monitoring",
+      "subcategory": "scheduled-tasks",
+      "command": "schtasks /query /tn <TASK_PATH> /xml",
+      "description": "Export scheduled task definition as XML (may contain credentials or sensitive data)",
+      "variables": [
+        {
+          "name": "<TASK_PATH>",
+          "description": "Full task path including folder",
+          "example": "\\Microsoft\\Windows\\MyTask",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "/query": "Query task",
+        "/tn": "Task name with full path",
+        "/xml": "Output task definition in XML format (includes all configuration details)"
+      },
+      "tags": [
+        "CREDENTIAL_ACCESS",
+        "DEFENSE",
+        "DETAILED",
+        "ENUMERATION",
+        "MONITORING",
+        "OSCP:MEDIUM",
+        "POST_EXPLOITATION",
+        "SCHEDULED_TASKS",
+        "WINDOWS"
+      ],
+      "oscp_relevance": "medium",
+      "success_indicators": [
+        "<?xml",
+        "<Task",
+        "<Actions>",
+        "<Command>",
+        "<Arguments>"
+      ],
+      "failure_indicators": [
+        "ERROR: The system cannot find the file specified"
+      ],
+      "next_steps": [
+        "Search XML for credentials or sensitive data",
+        "Check <Command> element for executable path",
+        "Verify <UserId> to see which account runs task",
+        "Check <Arguments> for command-line parameters"
+      ],
+      "alternatives": [],
+      "notes": "XML may contain Base64-encoded credentials or sensitive command arguments.\n\nTime estimate:\n1 second.\n\nSave to file:\nschtasks /query /tn <TASK> /xml > task.xml"
+    },
+    {
+      "id": "win-wmic-scheduled-job",
+      "name": "WMIC AT Jobs (Legacy)",
+      "category": "monitoring",
+      "subcategory": "scheduled-tasks",
+      "command": "wmic job list full",
+      "description": "List legacy AT jobs (older Windows scheduling system, pre-Task Scheduler)",
+      "variables": [],
+      "flag_explanations": {
+        "job": "Query Win32_ScheduledJob WMI class (AT command jobs)",
+        "list full": "Display all properties"
+      },
+      "tags": [
+        "DEFENSE",
+        "ENUMERATION",
+        "LEGACY",
+        "MONITORING",
+        "OSCP:LOW",
+        "POST_EXPLOITATION",
+        "SCHEDULED_TASKS",
+        "WINDOWS",
+        "WMIC"
+      ],
+      "oscp_relevance": "low",
+      "success_indicators": [
+        "Command",
+        "JobId",
+        "Owner"
+      ],
+      "failure_indicators": [
+        "No instance(s) available",
+        "WMIC is deprecated"
+      ],
+      "next_steps": [
+        "Check command path permissions if jobs found",
+        "Modern alternative: use schtasks or Get-ScheduledTask"
+      ],
+      "alternatives": [],
+      "notes": "AT jobs are legacy (Windows NT/2000 era), rarely used in modern systems.\n\nIncluded for completeness in older OSCP labs.\n\nTime estimate:\n1 second."
+    },
+    {
+      "id": "linux-at-jobs-list",
+      "name": "List Linux AT Jobs",
+      "category": "monitoring",
+      "subcategory": "scheduled-tasks",
+      "command": "atq",
+      "description": "List pending AT jobs (one-time scheduled commands)",
+      "variables": [],
+      "flag_explanations": {},
+      "tags": [
+        "DEFENSE",
+        "ENUMERATION",
+        "LINUX",
+        "MONITORING",
+        "OSCP:LOW",
+        "POST_EXPLOITATION",
+        "SCHEDULED_TASKS"
+      ],
+      "oscp_relevance": "low",
+      "success_indicators": [
+        "Job number",
+        "Date",
+        "Queue",
+        "User"
+      ],
+      "failure_indicators": [
+        "No jobs",
+        "atq: command not found"
+      ],
+      "next_steps": [
+        "View job details: at -c <JOB_ID>",
+        "Remove job: atrm <JOB_ID>",
+        "Check /var/spool/at/ for job files"
+      ],
+      "alternatives": [],
+      "notes": "AT is for one-time scheduled tasks (unlike cron for recurring).\n\nLess common than cron.\n\nView job:\nat -c <JOB_ID>.\n\nTime estimate:\n<1 second."
+    },
+    {
+      "id": "linux-systemd-timers",
+      "name": "List systemd Timers",
+      "category": "monitoring",
+      "subcategory": "scheduled-tasks",
+      "command": "systemctl list-timers --all",
+      "description": "List all systemd timers (modern Linux cron alternative)",
+      "variables": [],
+      "flag_explanations": {
+        "list-timers": "List timer units (systemd's scheduling mechanism)",
+        "--all": "Show all timers including inactive ones"
+      },
+      "tags": [
+        "DEFENSE",
+        "ENUMERATION",
+        "LINUX",
+        "MONITORING",
+        "OSCP:MEDIUM",
+        "PERSISTENCE",
+        "POST_EXPLOITATION",
+        "SCHEDULED_TASKS",
+        "SYSTEMD"
+      ],
+      "oscp_relevance": "medium",
+      "success_indicators": [
+        "NEXT",
+        "LEFT",
+        "LAST",
+        "PASSED",
+        "UNIT",
+        ".timer"
+      ],
+      "failure_indicators": [
+        "No timers found",
+        "systemctl: command not found"
+      ],
+      "next_steps": [
+        "View timer details: systemctl cat <TIMER_NAME>.timer",
+        "Check associated service: systemctl cat <TIMER_NAME>.service",
+        "Look for writable timer or service files: ls -la /etc/systemd/system/*.timer",
+        "Check service executable permissions"
+      ],
+      "alternatives": [],
+      "notes": "systemd timers are modern replacement for cron on systemd-based Linux.\n\nTimers trigger .service units.\n\nOSCP tip:\nCheck /etc/systemd/system/ for custom timers.\n\nTime estimate:\n2 seconds.\n\nTo see active only:\nsystemctl list-timers (no --all)"
+    }
+  ]
+}

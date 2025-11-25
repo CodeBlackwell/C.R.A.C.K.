@@ -1,0 +1,190 @@
+{
+  "id": "linux-privesc-capabilities-enum",
+  "name": "Linux Capabilities Privilege Escalation",
+  "description": "Enumerate and exploit Linux file capabilities to escalate privileges.\n\nCapabilities are a modern alternative to SUID binaries that grant specific elevated permissions.\n\nDangerous capabilities like cap_setuid, cap_dac_override, and cap_dac_read_search enable privilege escalation through various exploitation techniques.",
+  "version": "1.0.0",
+  "metadata": {
+    "author": "CRACK Reference",
+    "created": "2025-10-13",
+    "updated": "2025-10-13",
+    "tags": [
+      "LINUX",
+      "PRIVILEGE_ESCALATION",
+      "CAPABILITIES",
+      "FILE_PERMISSIONS",
+      "GTFOBINS",
+      "CAP_SETUID",
+      "CAP_DAC_OVERRIDE",
+      "POST_EXPLOITATION"
+    ],
+    "category": "privilege_escalation",
+    "platform": "linux",
+    "references": [
+      "https://gtfobins.github.io/#+capabilities",
+      "https://book.hacktricks.xyz/linux-hardening/privilege-escalation/linux-capabilities",
+      "https://man7.org/linux/man-pages/man7/capabilities.7.html",
+      "https://www.hackingarticles.in/linux-privilege-escalation-using-capabilities/"
+    ]
+  },
+  "difficulty": "intermediate",
+  "time_estimate": "10 minutes",
+  "oscp_relevant": true,
+  "prerequisites": [
+    "Low-privilege shell access on target system",
+    "Read permissions to enumerate file capabilities",
+    "Linux kernel 2.6.24+ with capabilities support",
+    "Target system with binaries that have capabilities set"
+  ],
+  "notes": "Capabilities are less common than SUID but critical to check during enumeration. Network capabilities (cap_net_raw, cap_net_admin) are non-exploitable for privilege escalation. cap_setuid provides instant root shell similar to SUID but cleaner. cap_dac_override allows read/write to any file (edit /etc/passwd for UID 0). cap_dac_read_search allows reading sensitive files (shadow, SSH keys). Always check GTFOBins capabilities section for exploitation techniques. Multiple capabilities on single binary may provide multiple exploitation paths. Capabilities persist after file execution unlike SUID.",
+  "steps": [
+    {
+      "id": "enumerate-capabilities",
+      "name": "Enumerate File Capabilities",
+      "objective": "Find all binaries with capabilities set on the system",
+      "description": "Use getcap to recursively search the filesystem for binaries with Linux capabilities.\n\nCapabilities grant specific elevated permissions without requiring full SUID root.\n\nThis step identifies potential privilege escalation vectors by locating binaries with dangerous capabilities.",
+      "command_ref": "enumerate-capabilities",
+      "evidence": [
+        "List of binaries with capabilities and their associated capability sets",
+        "Binary paths formatted as: /path/to/binary = cap_name+ep",
+        "Capabilities may be comma-separated for multiple caps per binary"
+      ],
+      "dependencies": [],
+      "repeatable": true,
+      "success_criteria": [
+        "At least one binary with capabilities found",
+        "getcap command executes successfully",
+        "Output contains capability notation (cap_*+ep)"
+      ],
+      "failure_conditions": [
+        "No capabilities found on system",
+        "Permission denied for all directories",
+        "getcap command not available",
+        "Filesystem mounted with nosuid option preventing capabilities"
+      ],
+      "next_steps": [
+        "identify-exploitable"
+      ]
+    },
+    {
+      "id": "identify-exploitable",
+      "name": "Identify Exploitable Capabilities",
+      "objective": "Filter enumerated capabilities to identify those that enable privilege escalation",
+      "description": "Analyze discovered capabilities to identify dangerous ones that enable privilege escalation.\n\nFocus on:\n- cap_setuid (spawn root shell)\n- cap_dac_override (edit any file)\n- cap_dac_read_search (read sensitive files)\n- cap_sys_admin (mount filesystems)\n- cap_sys_ptrace (inject code into processes)\n\nCross-reference binaries against GTFOBins database for documented exploitation techniques.",
+      "command_ref": "filter-exploitable-caps",
+      "evidence": [
+        "List of exploitable capabilities with severity classifications",
+        "Binaries matched against GTFOBins database",
+        "Recommended exploitation techniques for each capability"
+      ],
+      "dependencies": [
+        "enumerate-capabilities"
+      ],
+      "repeatable": false,
+      "success_criteria": [
+        "At least one exploitable capability identified (critical or high severity)",
+        "Binary matched to GTFOBins or known exploitation technique",
+        "Clear exploitation path available"
+      ],
+      "failure_conditions": [
+        "All capabilities are non-exploitable (network caps only)",
+        "Binaries not documented in GTFOBins",
+        "No known exploitation techniques for capability/binary combination"
+      ],
+      "next_steps": [
+        "research-technique"
+      ]
+    },
+    {
+      "id": "research-technique",
+      "name": "Research Exploitation Technique",
+      "objective": "Find documented exploitation technique for identified capability and binary combination",
+      "description": "Consult GTFOBins capabilities section and HackTricks for specific exploitation techniques.\n\nEach capability/binary combination requires different approach.\n\nExamples:\n- Python with cap_setuid uses os.setuid(0)\n- vim with cap_dac_override edits /etc/passwd\n- tar with cap_dac_read_search reads sensitive files\n\nDocument exact command syntax and expected behavior.",
+      "command_ref": "gtfobins-cap-lookup",
+      "evidence": [
+        "GTFOBins or HackTricks exploitation technique documented",
+        "Exact command syntax with variable substitution",
+        "Expected output and success indicators",
+        "Alternative techniques if primary fails"
+      ],
+      "dependencies": [
+        "identify-exploitable"
+      ],
+      "repeatable": true,
+      "success_criteria": [
+        "Exploitation technique found with complete command syntax",
+        "Technique applicable to target binary and capability",
+        "Success indicators clearly defined"
+      ],
+      "failure_conditions": [
+        "No documented technique for binary/capability combination",
+        "Technique requires additional dependencies not available",
+        "Command syntax unclear or incomplete"
+      ],
+      "next_steps": [
+        "exploit-capability"
+      ]
+    },
+    {
+      "id": "exploit-capability",
+      "name": "Execute Capability Exploitation",
+      "objective": "Use identified capability to perform privileged operations and escalate privileges",
+      "description": "Execute documented exploitation technique using the capability-enabled binary.\n\nExploitation methods by capability:\n- cap_setuid: spawn root shell via setuid(0) syscall\n- cap_dac_override: edit sensitive files like /etc/passwd to add UID 0 user\n- cap_dac_read_search: read shadow file or SSH keys\n- cap_sys_ptrace: inject shellcode into root process\n\nVerify privileged operation succeeds.",
+      "command_ref": "execute-cap-exploit",
+      "evidence": [
+        "Privileged operation completed successfully",
+        "Root shell spawned or sensitive file accessed",
+        "Evidence of elevated permissions (whoami output, file contents)",
+        "No permission denied errors"
+      ],
+      "dependencies": [
+        "research-technique"
+      ],
+      "repeatable": true,
+      "success_criteria": [
+        "Capability successfully exploited",
+        "Privileged operation completed (root shell, file read/write, etc.)",
+        "No errors during exploitation",
+        "Evidence of elevated access obtained"
+      ],
+      "failure_conditions": [
+        "Exploitation fails due to missing dependencies",
+        "Capability insufficient for intended operation",
+        "Binary behavior different than documented",
+        "System protections prevent capability abuse (AppArmor, SELinux)"
+      ],
+      "next_steps": [
+        "verify-access"
+      ]
+    },
+    {
+      "id": "verify-access",
+      "name": "Verify Elevated Access",
+      "objective": "Confirm successful privilege escalation to root-level access",
+      "description": "Verify escalated privileges by testing root-level operations.\n\nVerification steps:\n- Check effective UID with whoami and id commands\n- Attempt to read /etc/shadow to confirm read access to sensitive files\n- Try accessing /root directory or reading root SSH keys\n- If root shell obtained, verify with shell prompt and environment variables\n\nDocument exact level of access achieved.",
+      "command_ref": "verify-cap-access",
+      "evidence": [
+        "whoami output showing root or elevated user",
+        "id output showing uid=0 or privileged groups",
+        "Successful read of /etc/shadow or /root files",
+        "Root shell prompt (#) if applicable",
+        "Access to restricted system resources"
+      ],
+      "dependencies": [
+        "exploit-capability"
+      ],
+      "repeatable": true,
+      "success_criteria": [
+        "Root-level access confirmed via whoami or id",
+        "Can read /etc/shadow or other root-only files",
+        "No permission denied errors for root operations",
+        "Full privilege escalation achieved"
+      ],
+      "failure_conditions": [
+        "Still restricted to user-level access",
+        "Cannot read root-protected files",
+        "Effective UID not 0",
+        "Limited privilege escalation only"
+      ]
+    }
+  ]
+}

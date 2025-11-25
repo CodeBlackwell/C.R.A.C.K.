@@ -88,7 +88,7 @@ def fix_text_alternatives(base_path: Path, index_path: Path) -> dict:
 
 
 def main():
-    base_path = Path('reference/data/commands')
+    base_path = Path('db/data/commands')
     index_path = Path('db/neo4j-migration/data/command_index.json')
 
     print("=" * 80)

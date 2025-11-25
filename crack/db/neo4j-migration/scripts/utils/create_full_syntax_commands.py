@@ -348,7 +348,7 @@ def main():
     """Main transformation process."""
     # Load preservation plan items
     input_file = '/tmp/post_exploit_full_cmd.json'
-    output_file = '/home/kali/Desktop/OSCP/crack/reference/data/commands/post-exploit/auto-generated-full-syntax-post-exploit.json'
+    output_file = '/home/kali/Desktop/OSCP/crack/db/data/commands/post-exploit/auto-generated-full-syntax-post-exploit.json'
 
     print("Loading preservation plan items...")
     with open(input_file, 'r') as f:

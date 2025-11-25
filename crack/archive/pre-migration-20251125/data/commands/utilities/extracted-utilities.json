@@ -1,0 +1,363 @@
+{
+  "commands": [
+    {
+      "id": "sc-qc-service",
+      "name": "Query Service Configuration",
+      "category": "post-exploit",
+      "command": "sc qc <SERVICE_NAME>",
+      "description": "Query detailed service configuration information on Windows including start type, binary path, and service dependencies",
+      "variables": [
+        {
+          "name": "<SERVICE_NAME>",
+          "description": "Name of the Windows service to query",
+          "example": "wuauserv",
+          "required": true
+        }
+      ],
+      "tags": [
+        "MANUAL_CHECK",
+        "VERIFICATION",
+        "WINDOWS",
+        "SERVICE_ENUM"
+      ],
+      "success_indicators": [
+        "SERVICE_NAME:",
+        "BINARY_PATH_NAME:",
+        "SERVICE_START_NAME:"
+      ],
+      "flag_explanations": {
+        "qc": "Query configuration - displays service configuration details"
+      },
+      "notes": "Extracted from instruction text:\n'Manual check with:\nsc qc <servicename>'.\n\nUsed to manually verify service configuration details during privilege escalation enumeration.",
+      "oscp_relevance": "high",
+      "alternatives": [
+        "get-service"
+      ]
+    },
+    {
+      "id": "nmap-version-check",
+      "name": "Check Nmap Version",
+      "category": "enumeration",
+      "command": "nmap --version",
+      "description": "Verify installed nmap version to determine available features and capabilities",
+      "tags": [
+        "MANUAL_CHECK",
+        "VERIFICATION",
+        "VERSION_CHECK"
+      ],
+      "success_indicators": [
+        "Nmap version",
+        "Platform:"
+      ],
+      "flag_explanations": {
+        "--version": "Display version information and compilation details"
+      },
+      "notes": "Extracted from instruction text:\n'Check nmap version:\nnmap --version (if < 5.21, interactive works)'.\n\nNmap versions prior to 5.21 support interactive mode which can be exploited for privilege escalation via sudo.",
+      "oscp_relevance": "medium",
+      "next_steps": []
+    },
+    {
+      "id": "strings-binary-analysis",
+      "name": "Extract Strings from Binary",
+      "category": "post-exploit",
+      "command": "strings <BINARY_PATH>",
+      "description": "Extract printable character sequences from binary files to identify hardcoded credentials, file paths, or function names",
+      "variables": [
+        {
+          "name": "<BINARY_PATH>",
+          "description": "Path to binary file to analyze",
+          "example": "/usr/local/bin/vulnerable_app",
+          "required": true
+        }
+      ],
+      "tags": [
+        "MANUAL_CHECK",
+        "BINARY_ANALYSIS",
+        "REVERSE_ENGINEERING"
+      ],
+      "flag_explanations": {
+        "strings": "Default behavior extracts sequences of 4+ printable characters"
+      },
+      "notes": "Extracted from instruction text:\n'Manual binary analysis:\nstrings /path/to/binary'.\n\nCommon technique for analyzing SUID binaries, identifying library dependencies, or finding embedded credentials.",
+      "oscp_relevance": "high",
+      "alternatives": [],
+      "next_steps": []
+    },
+    {
+      "id": "getcap-specific-binary",
+      "name": "Check Specific Binary Capabilities",
+      "category": "post-exploit",
+      "command": "getcap <BINARY_PATH>",
+      "description": "Query Linux capabilities assigned to a specific binary for privilege escalation analysis",
+      "variables": [
+        {
+          "name": "<BINARY_PATH>",
+          "description": "Path to binary to check for capabilities",
+          "example": "/usr/bin/python3",
+          "required": true
+        }
+      ],
+      "tags": [
+        "MANUAL_CHECK",
+        "VERIFICATION",
+        "LINUX_CAPABILITIES",
+        "PRIVESC"
+      ],
+      "success_indicators": [
+        "cap_setuid",
+        "cap_net_raw",
+        "cap_dac_override"
+      ],
+      "failure_indicators": [
+        "has no capability"
+      ],
+      "notes": "Extracted from instruction text:\n'Check specific binary:\ngetcap /usr/bin/python3 (test known binary)'.\n\nVerifies if a known binary has capabilities that could be exploited for privilege escalation.",
+      "oscp_relevance": "high",
+      "prerequisites": [],
+      "alternatives": []
+    },
+    {
+      "id": "ldap-dn-path-check",
+      "name": "Manual LDAP DN Path Inspection",
+      "category": "enumeration",
+      "command": "grep -E 'CN=(Users|Groups)' <LDAP_OUTPUT_FILE>",
+      "description": "Manually inspect LDAP distinguished name paths to identify user and group container locations",
+      "variables": [
+        {
+          "name": "<LDAP_OUTPUT_FILE>",
+          "description": "File containing LDAP query output with DN paths",
+          "example": "ldap_results.txt",
+          "required": true
+        }
+      ],
+      "tags": [
+        "MANUAL_CHECK",
+        "ACTIVE_DIRECTORY",
+        "LDAP_ANALYSIS"
+      ],
+      "success_indicators": [
+        "CN=Users",
+        "CN=Groups",
+        "OU=Domain"
+      ],
+      "notes": "Extracted from instruction text:\n'Manual check:\nLook for 'CN=Users' or 'CN=Groups' in DN path'.\n\nUsed to manually verify LDAP query results and identify organizational structure in Active Directory environments.",
+      "oscp_relevance": "medium",
+      "alternatives": [
+        "ldapsearch-ad"
+      ]
+    },
+    {
+      "id": "ad-user-attribute-inspection",
+      "name": "Inspect AD User Attributes",
+      "category": "enumeration",
+      "command": "$script:AllUsers[-1].Properties | select description,info,comment",
+      "description": "Extract and display description, info, and comment attributes from Active Directory user objects that may contain credentials or sensitive information",
+      "tags": [
+        "MANUAL_CHECK",
+        "ACTIVE_DIRECTORY",
+        "POWERSHELL",
+        "USER_ENUM"
+      ],
+      "success_indicators": [
+        "description",
+        "info",
+        "comment"
+      ],
+      "notes": "Extracted from instruction text:\n'Manual attribute inspection:\n$script:AllUsers[-1].Properties | select description,info,comment'.\n\nPowerShell command to inspect specific attributes of AD user objects, often containing passwords or sensitive notes.",
+      "oscp_relevance": "high",
+      "prerequisites": [
+        "import-powerview"
+      ],
+      "alternatives": []
+    },
+    {
+      "id": "powerview-module-path-check",
+      "name": "Verify PowerView Module Path",
+      "category": "enumeration",
+      "command": "(Get-Module PowerView).Path | Select-String -Pattern 'version'",
+      "description": "Check loaded PowerView module path and version information to verify correct module is loaded",
+      "tags": [
+        "MANUAL_CHECK",
+        "VERIFICATION",
+        "POWERSHELL",
+        "ACTIVE_DIRECTORY"
+      ],
+      "success_indicators": [
+        "PowerView.ps1",
+        "version"
+      ],
+      "failure_indicators": [
+        "No modules match",
+        "Cannot find path"
+      ],
+      "notes": "Extracted from instruction text:\n'Check module path:\n(Get-Module PowerView).Path | Select-String -Pattern 'version''.\n\nVerifies PowerView module is correctly imported and identifies which version is active.",
+      "oscp_relevance": "medium",
+      "prerequisites": [
+        "import-powerview"
+      ],
+      "alternatives": []
+    },
+    {
+      "id": "ad-check-allextendedrights",
+      "name": "Enumerate All Extended Rights",
+      "category": "enumeration",
+      "command": "Get-ObjectAcl | ? {$_.ActiveDirectoryRights -match 'ExtendedRight'}",
+      "description": "Filter Active Directory ACLs to find all objects with ExtendedRight permissions including ForceChangePassword capability",
+      "tags": [
+        "MANUAL_CHECK",
+        "ACTIVE_DIRECTORY",
+        "POWERVIEW",
+        "ACL_ANALYSIS",
+        "PRIVESC"
+      ],
+      "success_indicators": [
+        "ActiveDirectoryRights",
+        "ExtendedRight",
+        "SecurityIdentifier"
+      ],
+      "flag_explanations": {
+        "?": "PowerShell alias for Where-Object to filter results",
+        "-match": "Regular expression matching operator"
+      },
+      "notes": "Extracted from instruction text:\n'Check for AllExtendedRights (includes ForceChangePassword):\nGet-ObjectAcl | ? {$_.ActiveDirectoryRights -match 'ExtendedRight'}'.\n\nIdentifies objects where current user has extended rights that may allow password changes or other privileged operations.",
+      "oscp_relevance": "high",
+      "prerequisites": [
+        "import-powerview"
+      ],
+      "alternatives": [],
+      "next_steps": []
+    },
+    {
+      "id": "ad-acl-enumeration-by-sid",
+      "name": "Enumerate ACLs by Security Identifier",
+      "category": "enumeration",
+      "command": "Get-ObjectAcl -Identity <TARGET> | ? {$_.SecurityIdentifier -eq <YOUR_SID>}",
+      "description": "Query Active Directory object ACLs filtered by specific security identifier to find permissions current user has on target",
+      "variables": [
+        {
+          "name": "<TARGET>",
+          "description": "Target AD object (user, group, computer, or OU)",
+          "example": "CN=Administrator,CN=Users,DC=corp,DC=com",
+          "required": true
+        },
+        {
+          "name": "<YOUR_SID>",
+          "description": "Security Identifier (SID) of current user or group",
+          "example": "S-1-5-21-1234567890-1234567890-1234567890-1001",
+          "required": true
+        }
+      ],
+      "tags": [
+        "MANUAL_CHECK",
+        "ACTIVE_DIRECTORY",
+        "POWERVIEW",
+        "ACL_ANALYSIS"
+      ],
+      "success_indicators": [
+        "ActiveDirectoryRights",
+        "ObjectType",
+        "InheritedObjectType"
+      ],
+      "notes": "Extracted from instruction text:\n'Manual enumeration:\nGet-ObjectAcl -Identity <TARGET> | ? {$_.SecurityIdentifier -eq <YOUR_SID>}'.\n\nManually enumerate specific ACL permissions current user has on target object to identify privilege escalation paths.",
+      "oscp_relevance": "high",
+      "prerequisites": [
+        "import-powerview"
+      ],
+      "alternatives": []
+    },
+    {
+      "id": "check-robots-txt",
+      "name": "Retrieve robots.txt File",
+      "category": "web",
+      "command": "curl http://<TARGET>/robots.txt",
+      "description": "Request robots.txt file from web server to discover hidden directories and files excluded from search engine indexing",
+      "variables": [
+        {
+          "name": "<TARGET>",
+          "description": "Target web server hostname or IP address",
+          "example": "192.168.1.100",
+          "required": true
+        }
+      ],
+      "tags": [
+        "MANUAL_CHECK",
+        "WEB_RECON",
+        "INFORMATION_DISCLOSURE"
+      ],
+      "success_indicators": [
+        "User-agent:",
+        "Disallow:",
+        "Allow:"
+      ],
+      "failure_indicators": [
+        "404 Not Found",
+        "403 Forbidden"
+      ],
+      "notes": "Extracted from instruction text:\n'Check robots.txt first:\ncurl http://<TARGET>/robots.txt'.\n\nFirst step in web reconnaissance to identify potentially sensitive directories and files before directory brute forcing.",
+      "oscp_relevance": "high",
+      "alternatives": [
+        "nikto-scan"
+      ],
+      "next_steps": []
+    },
+    {
+      "id": "check-rate-limiting",
+      "name": "Test for Rate Limiting",
+      "category": "web",
+      "command": "wfuzz -c -w <SMALL_WORDLIST> -u <TARGET_URL> -d \"<POST_DATA>\" --hc 429",
+      "description": "Test web application for rate limiting controls using small wordlist before full brute force attempt",
+      "variables": [
+        {
+          "name": "<SMALL_WORDLIST>",
+          "description": "Small wordlist for testing (10-20 entries)",
+          "example": "/usr/share/seclists/Passwords/Common-Credentials/10-million-password-list-top-20.txt",
+          "required": true
+        },
+        {
+          "name": "<TARGET_URL>",
+          "description": "Target URL endpoint to test",
+          "example": "http://192.168.1.100/login.php",
+          "required": true
+        },
+        {
+          "name": "<POST_DATA>",
+          "description": "POST data with FUZZ keyword",
+          "example": "username=admin&password=FUZZ",
+          "required": true
+        }
+      ],
+      "tags": [
+        "MANUAL_CHECK",
+        "WEB_TESTING",
+        "BRUTE_FORCE_PREP"
+      ],
+      "success_indicators": [
+        "200 OK responses without blocking",
+        "No 429 status codes"
+      ],
+      "failure_indicators": [
+        "429 Too Many Requests",
+        "Account locked",
+        "IP banned"
+      ],
+      "flag_explanations": {
+        "-c": "Colorize output for better readability",
+        "-w": "Specify wordlist file",
+        "-u": "Target URL",
+        "-d": "POST data to send",
+        "--hc": "Hide responses with specific HTTP status code"
+      },
+      "notes": "Extracted from instruction text:\n'Check for rate limiting:\nTest with small wordlist first'.\n\nProactive check to avoid account lockout or IP banning before attempting full password brute force attack.",
+      "oscp_relevance": "high",
+      "prerequisites": [
+        "check-robots-txt"
+      ],
+      "next_steps": [],
+      "troubleshooting": {
+        "429 status codes": "Rate limiting detected - use slower attack with --req-delay or manual attempts",
+        "Account lockout messages": "Reduce request rate, increase delay between attempts",
+        "IP blocking": "Use proxy rotation or VPN to change source IP"
+      }
+    }
+  ]
+}

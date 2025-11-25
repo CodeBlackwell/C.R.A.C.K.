@@ -1,0 +1,203 @@
+{
+  "id": "windows-lateral-psexec-full",
+  "name": "PSExec Lateral Movement - Full Attack Chain",
+  "description": "Complete PSExec attack from Kali: verify ADMIN$ share, authenticate with Impacket PSExec, obtain SYSTEM shell.\n\nThis is the most reliable lateral movement technique for OSCP, providing immediate SYSTEM-level access.",
+  "version": "1.0.0",
+  "metadata": {
+    "author": "CRACK Development Team",
+    "created": "2025-11-08",
+    "updated": "2025-11-08",
+    "tags": [
+      "OSCP",
+      "WINDOWS",
+      "ACTIVE_DIRECTORY",
+      "LATERAL_MOVEMENT",
+      "PSEXEC",
+      "IMPACKET",
+      "SMB",
+      "OSCP:HIGH"
+    ],
+    "category": "lateral_movement",
+    "platform": "windows",
+    "references": [
+      "https://attack.mitre.org/techniques/T1021/002/",
+      "https://docs.microsoft.com/en-us/sysinternals/downloads/psexec"
+    ]
+  },
+  "difficulty": "beginner",
+  "time_estimate": "10 minutes",
+  "oscp_relevant": true,
+  "prerequisites": [
+    "Valid domain credentials with local admin rights",
+    "ADMIN$ share accessible on target",
+    "File and Printer Sharing enabled (default on Windows Server)",
+    "SMB port 445 accessible",
+    "Impacket installed on Kali"
+  ],
+  "notes": "PSExec is the most reliable lateral movement technique for OSCP - provides SYSTEM-level access immediately. Works by uploading binary to ADMIN$ share, creating Windows service, executing payload. ADVANTAGES: Spawns SYSTEM shell, most stable, widely documented. DISADVANTAGES: Writes binary to disk (forensics), creates service (event logs), easier to detect than WMI. OSCP RELEVANCE: Very high - first technique to try when credentials available.",
+  "steps": [
+    {
+      "id": "verify-smb-access",
+      "name": "Verify SMB and ADMIN$ Access",
+      "objective": "Confirm SMB port 445 open and ADMIN$ share accessible with current credentials",
+      "description": "Use CrackMapExec to test SMB authentication and share enumeration.\nLook for Pwn3d! indicator confirming admin access and ADMIN$ in share list.",
+      "command_ref": "cme-smb-shares",
+      "dependencies": [],
+      "evidence": [
+        "[+] Pwn3d! indicator",
+        "ADMIN$ share visible in output",
+        "READ,WRITE permissions on ADMIN$"
+      ],
+      "success_criteria": [
+        "Authentication successful",
+        "Admin access confirmed (Pwn3d!)",
+        "ADMIN$ share accessible"
+      ],
+      "failure_conditions": [
+        "Authentication failed",
+        "ADMIN$ not accessible",
+        "User not local admin"
+      ],
+      "next_steps": [
+        "verify-firewall"
+      ]
+    },
+    {
+      "id": "verify-firewall",
+      "name": "Verify File and Printer Sharing Enabled",
+      "objective": "Ensure firewall allows File and Printer Sharing (required for PSExec)",
+      "description": "Check ports 445 (SMB) and 135 (RPC for service creation) are open.\nThese are required for PSExec to upload binary and create service.",
+      "command_ref": "psexec-verify-firewall",
+      "dependencies": [
+        "verify-smb-access"
+      ],
+      "evidence": [
+        "445/tcp open microsoft-ds",
+        "135/tcp open msrpc",
+        "Services responding"
+      ],
+      "success_criteria": [
+        "Port 445 open",
+        "Port 135 open (for service control)",
+        "No firewall blocking"
+      ],
+      "failure_conditions": [
+        "Port 445 filtered/closed",
+        "Port 135 closed (service creation will fail)",
+        "Firewall blocking"
+      ],
+      "next_steps": [
+        "execute-psexec"
+      ]
+    },
+    {
+      "id": "execute-psexec",
+      "name": "Execute Impacket PSExec",
+      "objective": "Use impacket-psexec to gain remote SYSTEM shell on target",
+      "description": "Run impacket-psexec with domain/user:password@target format.\nPSExec will upload RemCom.exe, create service, and spawn cmd.exe as SYSTEM.",
+      "command_ref": "psexec-impacket-shell",
+      "dependencies": [
+        "verify-firewall"
+      ],
+      "evidence": [
+        "[*] Requesting shares on target",
+        "[*] Uploading file",
+        "C:\\Windows\\system32> prompt"
+      ],
+      "success_criteria": [
+        "Connection established",
+        "Remote shell obtained",
+        "SYSTEM prompt visible"
+      ],
+      "failure_conditions": [
+        "SMB SessionError: STATUS_LOGON_FAILURE",
+        "STATUS_ACCESS_DENIED",
+        "Connection timeout"
+      ],
+      "next_steps": [
+        "verify-system"
+      ]
+    },
+    {
+      "id": "verify-system",
+      "name": "Verify SYSTEM Access",
+      "objective": "Confirm shell is running as NT AUTHORITY\\SYSTEM with full privileges",
+      "description": "Run whoami to verify SYSTEM context.\nPSExec spawns shells as SYSTEM by default, providing highest privilege level.",
+      "command_ref": "verify-root-access-ad",
+      "dependencies": [
+        "execute-psexec"
+      ],
+      "evidence": [
+        "whoami returns 'nt authority\\system'",
+        "Can access C:\\Windows\\System32\\config",
+        "Full system privileges"
+      ],
+      "success_criteria": [
+        "Shell context is SYSTEM",
+        "Can access protected directories",
+        "All privileges available"
+      ],
+      "failure_conditions": [
+        "Shell context is user (not SYSTEM)",
+        "Access denied to system files",
+        "Privileges limited"
+      ],
+      "next_steps": [
+        "dump-credentials"
+      ]
+    },
+    {
+      "id": "dump-credentials",
+      "name": "Dump Credentials",
+      "objective": "Extract password hashes and credentials from target system",
+      "description": "Use SYSTEM access to dump SAM, SYSTEM, SECURITY registry hives or run mimikatz/secretsdump for credential extraction.\nExtract password hashes for further lateral movement.",
+      "command_ref": "secretsdump-hashes",
+      "dependencies": [
+        "verify-system"
+      ],
+      "evidence": [
+        "SAM/SYSTEM hives dumped",
+        "NTLM hashes extracted",
+        "Credential material obtained"
+      ],
+      "success_criteria": [
+        "Hashes extracted successfully",
+        "Local admin hash obtained",
+        "Domain cached credentials retrieved"
+      ],
+      "failure_conditions": [
+        "Dump fails",
+        "Hashes empty",
+        "Antivirus blocks extraction"
+      ],
+      "next_steps": [
+        "lateral-movement-spray"
+      ]
+    },
+    {
+      "id": "lateral-movement-spray",
+      "name": "Spray Hashes Across Network",
+      "objective": "Test extracted hashes against other targets for further lateral movement",
+      "description": "Use CrackMapExec to spray obtained hashes across subnet.\nLocal admin password reuse is common - same hash often works on multiple systems.",
+      "command_ref": "pth-cme-spray",
+      "dependencies": [
+        "dump-credentials"
+      ],
+      "evidence": [
+        "Multiple [+] Pwn3d! indicators",
+        "Additional systems compromised",
+        "Hash reuse identified"
+      ],
+      "success_criteria": [
+        "Hash works on additional systems",
+        "New targets identified",
+        "Lateral movement paths expanded"
+      ],
+      "failure_conditions": [
+        "Hash doesn't work elsewhere",
+        "All targets show authentication failure",
+        "UAC blocking hash reuse"
+      ]
+    }
+  ]
+}

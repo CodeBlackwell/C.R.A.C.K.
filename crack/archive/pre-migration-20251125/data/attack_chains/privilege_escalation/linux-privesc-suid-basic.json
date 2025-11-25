@@ -1,0 +1,188 @@
+{
+  "id": "linux-privesc-suid-basic",
+  "name": "SUID Binary Privilege Escalation (Basic)",
+  "description": "Quick wins check (sudo) followed by SUID binary exploitation using GTFOBins to gain root shell.\n\nThis chain includes prerequisite quick-wins validation before time-intensive SUID enumeration.",
+  "version": "1.0.0",
+  "metadata": {
+    "author": "CRACK Development Team",
+    "created": "2025-10-13",
+    "updated": "2025-10-13",
+    "tags": [
+      "OSCP",
+      "LINUX",
+      "PRIVILEGE_ESCALATION",
+      "SUID",
+      "GTFOBINS",
+      "QUICK_WIN"
+    ],
+    "category": "privilege_escalation",
+    "platform": "linux",
+    "references": [
+      "https://gtfobins.github.io/",
+      "https://book.hacktricks.xyz/linux-unix/privilege-escalation#suid"
+    ]
+  },
+  "difficulty": "beginner",
+  "time_estimate": "20 minutes",
+  "oscp_relevant": true,
+  "prerequisites": [
+    "Shell access as low-privilege user (www-data, user, etc.)",
+    "Target system is Linux",
+    "Quick wins check (sudo -l) completed - if NOPASSWD found, use linux-privesc-sudo chain instead"
+  ],
+  "notes": "SUID binaries with setuid bit set run with owner's privileges (usually root). Misconfigured binaries like find, vim, nmap, base64 can be exploited for privilege escalation. GTFOBins provides exploitation techniques. This chain covers the most common OSCP scenario: finding SUID binary and exploiting it for root shell.\n\nOSCP Time-Saving Tip: This chain includes a prerequisite quick-wins check (Step 0) that tests for sudo access before running full SUID enumeration. If Step 0 finds NOPASSWD sudo access, consider switching to the linux-privesc-sudo chain for faster exploitation. SUID enumeration can take 2-5 minutes on large filesystems, while sudo check takes <5 seconds.",
+  "steps": [
+    {
+      "id": "quick-wins-check",
+      "name": "Quick Wins Check (Sudo Privileges)",
+      "objective": "Check for instant root via sudo before time-consuming SUID enumeration",
+      "description": "OSCP time-saving: Always check sudo first (5 seconds) before SUID enumeration (2+ minutes).\n\nIf user has NOPASSWD sudo, instant root without complex exploitation.",
+      "command_ref": "check-sudo-privs",
+      "dependencies": [],
+      "evidence": [
+        "sudo -l output showing allowed commands",
+        "NOPASSWD entries if present",
+        "GTFOBins-exploitable binaries if present"
+      ],
+      "success_criteria": [
+        "sudo -l executes successfully",
+        "Shows list of allowed commands (or 'not allowed' message)",
+        "Takes <5 seconds (vs 2+ minutes for SUID scan)"
+      ],
+      "failure_conditions": [
+        "Password required for sudo -l (unusual)",
+        "sudo not installed (extremely rare on real systems)",
+        "User not in sudoers file"
+      ]
+    },
+    {
+      "id": "find-suid",
+      "name": "Enumerate SUID Binaries",
+      "objective": "Locate all SUID binaries on system using find command",
+      "description": "Search entire filesystem for files with SUID bit set (-perm -4000).\n\nRedirect errors to /dev/null to avoid permission denied noise.",
+      "command_ref": "find-suid-binaries",
+      "dependencies": [
+        "quick-wins-check"
+      ],
+      "evidence": [
+        "List of SUID binary paths",
+        "Binaries owned by root",
+        "Custom or unusual SUID binaries visible"
+      ],
+      "success_criteria": [
+        "Find command executes without errors",
+        "At least 10-20 SUID binaries discovered",
+        "Results include non-standard binaries (not just passwd, sudo, ping)"
+      ],
+      "failure_conditions": [
+        "Find command syntax error",
+        "All directories permission denied (wrong user context)",
+        "No results returned (unlikely on real system)"
+      ]
+    },
+    {
+      "id": "filter-interesting",
+      "name": "Identify Exploitable SUID Binaries",
+      "objective": "Filter out standard system binaries and focus on exploitable candidates",
+      "description": "Exclude common system binaries (passwd, sudo, ping, mount) that are expected to have SUID.\n\nLook for:\n- find, vim, nmap\n- base64, less, more\n- python, perl, awk\n- Custom application binaries",
+      "command_ref": "filter-suid-binaries",
+      "dependencies": [
+        "find-suid"
+      ],
+      "evidence": [
+        "Shortened list of interesting binaries",
+        "GTFOBins-listed binaries identified",
+        "Custom application binaries"
+      ],
+      "success_criteria": [
+        "Filtered list contains 1-5 interesting binaries",
+        "At least one binary has known GTFOBins technique",
+        "Binaries are executable by current user"
+      ],
+      "failure_conditions": [
+        "No interesting binaries remain after filtering",
+        "All binaries are standard system tools",
+        "Binaries require specific conditions not present"
+      ]
+    },
+    {
+      "id": "check-gtfobins",
+      "name": "Lookup GTFOBins Exploitation Technique",
+      "objective": "Find exploitation technique for discovered SUID binary on GTFOBins website",
+      "description": "Visit https://gtfobins.github.io/ and search for binary name.\n\nLook for 'SUID' section specifically.\n\nCopy exploitation command syntax.",
+      "command_ref": "gtfobins-suid-lookup",
+      "dependencies": [
+        "filter-interesting"
+      ],
+      "evidence": [
+        "GTFOBins page loaded",
+        "SUID section present for binary",
+        "Exploitation command documented"
+      ],
+      "success_criteria": [
+        "Binary has GTFOBins entry",
+        "SUID exploitation technique documented",
+        "Command syntax is clear and testable"
+      ],
+      "failure_conditions": [
+        "Binary not listed on GTFOBins",
+        "No SUID section for binary",
+        "Technique requires additional prerequisites"
+      ]
+    },
+    {
+      "id": "exploit-suid",
+      "name": "Execute SUID Exploitation",
+      "objective": "Run GTFOBins command to escalate privileges and spawn root shell",
+      "description": "Execute exploitation command exactly as documented on GTFOBins.\n\nCommon example:\n/usr/bin/find . -exec /bin/bash -p \\; -quit",
+      "command_ref": "execute-suid-exploit-find",
+      "dependencies": [
+        "check-gtfobins"
+      ],
+      "evidence": [
+        "Command executes without errors",
+        "Shell prompt changes to root indicator",
+        "Elevated privileges confirmed"
+      ],
+      "success_criteria": [
+        "Root shell spawned (# prompt)",
+        "whoami returns 'root'",
+        "id shows uid=0(root) or euid=0(root)"
+      ],
+      "failure_conditions": [
+        "Permission denied error",
+        "Binary not found (wrong path)",
+        "Shell spawns but not privileged (missing -p flag for bash)"
+      ],
+      "next_steps": [
+        "verify-root"
+      ]
+    },
+    {
+      "id": "verify-root",
+      "name": "Verify Root Access",
+      "objective": "Confirm effective UID is 0 and full root privileges obtained",
+      "description": "Run whoami and id commands to verify root access.\n\nCheck if you can read /etc/shadow or /root/ directory.",
+      "command_ref": "verify-root-access-suid",
+      "dependencies": [
+        "exploit-suid"
+      ],
+      "evidence": [
+        "whoami output: root",
+        "id output: uid=0(root) gid=0(root) or euid=0(root)",
+        "Can access /etc/shadow",
+        "Can list /root/ directory"
+      ],
+      "success_criteria": [
+        "Effective UID is 0",
+        "Root filesystem access confirmed",
+        "Can read sensitive files"
+      ],
+      "failure_conditions": [
+        "UID is not 0 (privilege escalation failed)",
+        "Cannot access root-only files",
+        "Effective UID differs from real UID (may need -p flag)"
+      ]
+    }
+  ]
+}

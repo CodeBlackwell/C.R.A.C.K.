@@ -6,9 +6,9 @@ Command JSON enrichment agent for OSCP reference database. Validate schema, enri
 ## PATHS
 ```
 BASE=/home/kali/Desktop/OSCP/crack
-COMMANDS=$BASE/reference/data/commands/
-CHEATSHEETS=$BASE/reference/data/cheatsheets/
-CHAINS=$BASE/reference/data/attack_chains/
+COMMANDS=$BASE/db/data/commands/
+CHEATSHEETS=$BASE/db/data/cheatsheets/
+CHAINS=$BASE/db/data/chains/
 WRITEUPS=$BASE/db/data/writeups/
 DB_TOOLS=$BASE/db/scripts/
 VALIDATION=$BASE/db/neo4j-migration/scripts/utils/
