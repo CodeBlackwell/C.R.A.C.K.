@@ -16,6 +16,9 @@ export interface Command {
   flags?: Flag[];
   variables?: Variable[];
   indicators?: Indicator[];
+  examples?: Example[];
+  educational?: Educational;
+  related_commands?: string[];
 }
 
 export interface Flag {
@@ -37,6 +40,22 @@ export interface Indicator {
   pattern: string;
   type: string; // 'success' | 'failure'
   description: string;
+}
+
+export interface Example {
+  command: string;
+  description: string;
+  context?: string;
+}
+
+export interface Educational {
+  purpose?: string;
+  manual_alternative?: string;
+  common_failures?: string[];
+  when_to_use?: string[];
+  time_estimate?: string;
+  technical_notes?: string[];
+  exam_relevance?: string;
 }
 
 export interface GraphData {

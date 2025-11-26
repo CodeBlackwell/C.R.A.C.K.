@@ -270,6 +270,9 @@ ipcMain.handle('get-command', async (_event, commandId: string) => {
         prerequisites: parseJsonField(record.command.prerequisites),
         alternatives: parseJsonField(record.command.alternatives),
         next_steps: parseJsonField(record.command.next_steps),
+        examples: parseJsonField(record.command.examples),
+        educational: parseJsonField(record.command.educational),
+        related_commands: parseJsonField(record.command.related_commands),
       };
       logIPC('IPC: get-command completed', {
         id: command.id,

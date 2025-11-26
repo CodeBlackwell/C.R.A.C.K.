@@ -30,6 +30,15 @@ nodes:
       - subcategory
       - notes
       - oscp_relevance
+      # Enriched fields (stored as JSON strings)
+      - examples
+      - educational
+      - related_commands
+      - troubleshooting
+      - flag_explanations
+      - prerequisites
+      - alternatives
+      - next_steps
     extractor: _extract_commands_csv
 
   attack_chain:

@@ -450,6 +450,7 @@ function App() {
                     command={selectedCommand}
                     viewMode={viewMode}
                     onViewModeChange={setViewMode}
+                    onCommandSelect={handleCommandSelect}
                   />
                 ) : (
                   // Graph mode: Show relationship graph in right panel

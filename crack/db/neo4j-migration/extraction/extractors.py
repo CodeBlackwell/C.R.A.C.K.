@@ -379,25 +379,60 @@ class TagRelationshipsExtractor:
         return relationships
 
 
-class CommandsExtractor(SimpleNodeExtractor):
+class CommandsExtractor(NodeRelationshipExtractor):
     """
     Extract command nodes.
 
-    Simple 1:1 transformation from source commands to CSV.
+    Handles both simple fields and complex fields that need JSON serialization.
     """
 
     def __init__(self, context=None):
-        field_mapping = {
-            'id': 'id',
-            'name': 'name',
-            'category': 'category',
-            'command': 'command',
-            'description': 'description',
-            'subcategory': 'subcategory',
-            'notes': 'notes',
-            'oscp_relevance': 'oscp_relevance'
-        }
-        super().__init__(field_mapping, context)
+        super().__init__(context)
+
+    def extract_nodes(self, sources: List[Dict], id_field: str = 'id') -> List[Dict]:
+        """Extract command nodes with JSON-serialized complex fields"""
+        commands = []
+
+        for cmd in sources:
+            cmd_id = self.validate_source_id(cmd, id_field)
+            if not cmd_id:
+                continue
+
+            # Serialize complex nested structures as JSON strings for Neo4j
+            examples_json = json.dumps(cmd.get('examples', [])) if cmd.get('examples') else ''
+            educational_json = json.dumps(cmd.get('educational', {})) if cmd.get('educational') else ''
+            related_commands_json = json.dumps(cmd.get('related_commands', [])) if cmd.get('related_commands') else ''
+            troubleshooting_json = json.dumps(cmd.get('troubleshooting', {})) if cmd.get('troubleshooting') else ''
+            flag_explanations_json = json.dumps(cmd.get('flag_explanations', {})) if cmd.get('flag_explanations') else ''
+            prerequisites_json = json.dumps(cmd.get('prerequisites', [])) if cmd.get('prerequisites') else ''
+            alternatives_json = json.dumps(cmd.get('alternatives', [])) if cmd.get('alternatives') else ''
+            next_steps_json = json.dumps(cmd.get('next_steps', [])) if cmd.get('next_steps') else ''
+
+            commands.append({
+                'id': cmd_id,
+                'name': safe_get(cmd, 'name'),
+                'category': safe_get(cmd, 'category'),
+                'command': safe_get(cmd, 'command'),
+                'description': safe_get(cmd, 'description'),
+                'subcategory': safe_get(cmd, 'subcategory'),
+                'notes': safe_get(cmd, 'notes'),
+                'oscp_relevance': safe_get(cmd, 'oscp_relevance'),
+                # Enriched fields (JSON-serialized)
+                'examples': examples_json,
+                'educational': educational_json,
+                'related_commands': related_commands_json,
+                'troubleshooting': troubleshooting_json,
+                'flag_explanations': flag_explanations_json,
+                'prerequisites': prerequisites_json,
+                'alternatives': alternatives_json,
+                'next_steps': next_steps_json,
+            })
+
+        return commands
+
+    def extract_relationships(self, sources: List[Dict], id_field: str = 'id') -> List[Dict]:
+        """CommandsExtractor does not extract relationships"""
+        return []
 
 
 class AttackChainsExtractor(SimpleNodeExtractor):
