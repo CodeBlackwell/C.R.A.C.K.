@@ -1,0 +1,317 @@
+[
+  {
+    "query": "MATCH (u:User)-[:AdminTo]->(c:Computer)\nWHERE NOT u.admincount = true\n  AND NOT c.name STARTS WITH 'DC'\nRETURN u.name AS User,\n       collect(c.name) AS AdminOnComputers,\n       count(c) AS ComputerCount\nORDER BY ComputerCount DESC",
+    "name": "[CRACK - Lateral Movement] [HIGH] Non-DA Users with Local Admin on Workstations",
+    "description": "Find non-privileged users with local admin rights on workstations (not DCs). KEY QUERY from DCSync capstone - discovered MIKE->CLIENT75 attack path. These are prime lateral movement targets."
+  },
+  {
+    "query": "MATCH (n)-[:AdminTo]->(c:Computer)\nWHERE NOT c.name STARTS WITH 'DC'\nRETURN c.name AS Computer,\n       collect(n.name) AS LocalAdmins,\n       count(n) AS AdminCount\nORDER BY AdminCount DESC",
+    "name": "[CRACK - Lateral Movement] [HIGH] All Local Admins per Computer",
+    "description": "Enumerate all principals (users, groups) with local admin rights on each computer. Useful for identifying high-value targets with many admin paths."
+  },
+  {
+    "query": "MATCH (u)-[:CanPSRemote]->(c:Computer)\nRETURN u.name AS User,\n       collect(c.name) AS PSRemoteTargets,\n       count(c) AS TargetCount\nORDER BY TargetCount DESC",
+    "name": "[CRACK - Lateral Movement] [HIGH] PSRemote Access (Evil-WinRM Targets)",
+    "description": "Find users with PowerShell Remoting access to computers. These are Evil-WinRM targets for lateral movement."
+  },
+  {
+    "query": "MATCH (u)-[:CanRDP]->(c:Computer)\nRETURN u.name AS User,\n       collect(c.name) AS RDPTargets,\n       count(c) AS TargetCount\nORDER BY TargetCount DESC",
+    "name": "[CRACK - Lateral Movement] [HIGH] RDP Access Targets",
+    "description": "Find users with Remote Desktop access to computers. RDP provides interactive access for credential harvesting."
+  },
+  {
+    "query": "MATCH (u)-[:ExecuteDCOM]->(c:Computer)\nRETURN u.name AS User,\n       collect(c.name) AS DCOMTargets,\n       count(c) AS TargetCount\nORDER BY TargetCount DESC",
+    "name": "[CRACK - Lateral Movement] [MEDIUM] DCOM Execution Rights",
+    "description": "Find users with DCOM execution rights on computers. DCOM can be used for lateral movement via impacket-dcomexec."
+  },
+  {
+    "query": "MATCH (c:Computer {name:'<COMPUTER>'})<-[:HasSession]-(u:User)\nRETURN c.name AS Computer,\n       u.name AS LoggedOnUser,\n       u.admincount AS IsPrivileged,\n       u.enabled AS Enabled",
+    "name": "[CRACK - Lateral Movement] [HIGH] Sessions on Specific Computer (<COMPUTER>)",
+    "description": "Find all user sessions on a specific computer. Critical for identifying credential harvest opportunities after lateral movement."
+  },
+  {
+    "query": "MATCH (u:User {name:'<USER>'})-[r:AdminTo|CanRDP|CanPSRemote]->(c:Computer)\nRETURN c.name AS Target,\n       type(r) AS AccessType\nORDER BY AccessType",
+    "name": "[CRACK - Lateral Movement] [HIGH] All Computer Access for Specific User (<USER>)",
+    "description": "Find all computers a specific user can access via any lateral movement method (AdminTo, CanRDP, CanPSRemote)."
+  },
+  {
+    "query": "MATCH (u)-[r:AdminTo|CanRDP|CanPSRemote]->(c:Computer {name:'<COMPUTER>'})\nRETURN u.name AS User,\n       type(r) AS AccessType,\n       labels(u) AS UserType\nORDER BY AccessType",
+    "name": "[CRACK - Lateral Movement] [HIGH] All Users Who Can Access Specific Computer (<COMPUTER>)",
+    "description": "Find all users who can access a specific computer via any method. Useful when you've identified a high-value target."
+  },
+  {
+    "query": "MATCH (g:Group)-[:AdminTo]->(c:Computer)\nWHERE g.name =~ '(?i).*DOMAIN USERS.*'\nRETURN c.name AS Computer,\n       c.operatingsystem AS OS\nORDER BY c.name",
+    "name": "[CRACK - Lateral Movement] [HIGH] Computers Where Domain Users Are Local Admin",
+    "description": "Find computers where the Domain Users group has local admin. Major misconfiguration - any domain user can compromise these systems."
+  },
+  {
+    "query": "MATCH (n)-[:AdminTo]->(c:Computer)\nWHERE NOT c.name STARTS WITH 'DC'\nWITH c, collect(n.name) AS admins, count(n) AS adminCount\nWHERE adminCount > 2\nRETURN c.name AS Computer,\n       adminCount AS NumberOfAdminPaths,\n       admins AS Admins\nORDER BY adminCount DESC",
+    "name": "[CRACK - Lateral Movement] [MEDIUM] Computers with Multiple Admin Paths",
+    "description": "Find computers accessible via multiple different users. These are high-value targets with more exploitation options."
+  },
+  {
+    "query": "MATCH (c:Computer)<-[:HasSession]-(u:User)\nWHERE NOT c.name STARTS WITH 'DC'\n  AND u.admincount = true\nRETURN c.name AS Workstation,\n       collect(u.name) AS PrivilegedSessions,\n       count(u) AS SessionCount\nORDER BY SessionCount DESC",
+    "name": "[CRACK - Lateral Movement] [HIGH] Workstations with Domain Admin Sessions",
+    "description": "Find workstations where Domain Admins have active sessions. Prime targets for credential harvesting with mimikatz."
+  },
+  {
+    "query": "MATCH (u:User)-[:AdminTo]->(c:Computer)\nWHERE NOT u.domain = c.domain\nRETURN u.name AS ForeignUser,\n       u.domain AS UserDomain,\n       c.name AS Computer,\n       c.domain AS ComputerDomain",
+    "name": "[CRACK - Lateral Movement] [MEDIUM] Cross-Trust Lateral Movement",
+    "description": "Find users from trusted domains with local admin access. Useful in multi-domain environments."
+  },
+  {
+    "query": "MATCH (u:User)\nWHERE u.dontreqpreauth = true\n  AND u.enabled = true\nRETURN u.name AS User,\n       u.admincount AS IsPrivileged,\n       u.description AS Description\nORDER BY u.admincount DESC",
+    "name": "[CRACK - Quick Wins] [HIGH] AS-REP Roastable Users",
+    "description": "Find users with Kerberos pre-authentication disabled (dontreqpreauth=true). These can be AS-REP roasted without authentication using GetNPUsers.py."
+  },
+  {
+    "query": "MATCH (u:User)\nWHERE u.hasspn = true\n  AND u.enabled = true\n  AND NOT u.name STARTS WITH 'KRBTGT'\nRETURN u.name AS ServiceAccount,\n       u.serviceprincipalnames AS SPNs,\n       u.admincount AS IsPrivileged,\n       u.description AS Description\nORDER BY u.admincount DESC",
+    "name": "[CRACK - Quick Wins] [HIGH] Kerberoastable Service Accounts",
+    "description": "Find users with Service Principal Names (SPNs). These can be Kerberoasted to obtain TGS hashes for offline cracking."
+  },
+  {
+    "query": "MATCH (u:User)\nWHERE u.hasspn = true\n  AND u.enabled = true\n  AND u.admincount = true\nRETURN u.name AS HighValueTarget,\n       u.serviceprincipalnames AS SPNs,\n       u.description AS Description",
+    "name": "[CRACK - Quick Wins] [HIGH] High-Value Kerberoastable (Privileged + SPN)",
+    "description": "Find privileged users with SPNs. Cracking these provides immediate privilege escalation."
+  },
+  {
+    "query": "MATCH (c:Computer)\nWHERE c.unconstraineddelegation = true\n  AND c.enabled = true\nRETURN c.name AS Computer,\n       c.operatingsystem AS OS,\n       c.description AS Description",
+    "name": "[CRACK - Quick Wins] [HIGH] Unconstrained Delegation Systems",
+    "description": "Find computers with unconstrained delegation enabled. These can be abused to capture TGTs from authenticating users (printer bug, coercion attacks)."
+  },
+  {
+    "query": "MATCH (n)\nWHERE n.trustedtoauth = true\n  AND n.enabled = true\nRETURN labels(n) AS Type,\n       n.name AS Principal,\n       n.allowedtodelegate AS DelegationTargets",
+    "name": "[CRACK - Quick Wins] [HIGH] Constrained Delegation Principals",
+    "description": "Find users and computers with constrained delegation. Can be abused for S4U2Self/S4U2Proxy attacks to impersonate users."
+  },
+  {
+    "query": "MATCH (u:User)\nWHERE u.description IS NOT NULL\n  AND u.description <> ''\n  AND u.description =~ '(?i).*(pass|pwd|password|cred|secret).*'\nRETURN u.name AS User,\n       u.description AS Description,\n       u.admincount AS IsPrivileged\nORDER BY u.admincount DESC",
+    "name": "[CRACK - Quick Wins] [HIGH] Users with Passwords in Description",
+    "description": "Find users with password hints or actual passwords in their AD description field. Common admin mistake."
+  },
+  {
+    "query": "MATCH (u:User)\nWHERE u.pwdneverexpires = true\n  AND u.enabled = true\n  AND NOT u.name STARTS WITH 'KRBTGT'\nRETURN u.name AS User,\n       u.admincount AS IsPrivileged,\n       u.description AS Description\nORDER BY u.admincount DESC",
+    "name": "[CRACK - Quick Wins] [MEDIUM] Accounts with Password Never Expires",
+    "description": "Find accounts with non-expiring passwords. Often service accounts with weak passwords or credentials in documentation."
+  },
+  {
+    "query": "MATCH (u:User)\nWHERE u.lastlogon = 0\n  AND u.enabled = true\nRETURN u.name AS User,\n       u.description AS Description,\n       u.whencreated AS Created\nORDER BY u.whencreated DESC",
+    "name": "[CRACK - Quick Wins] [MEDIUM] Accounts That Never Logged In",
+    "description": "Find accounts that have never logged in. May have default or documented passwords."
+  },
+  {
+    "query": "MATCH (c:Computer)\nWHERE c.haslaps = false\n  AND c.enabled = true\n  AND NOT c.name STARTS WITH 'DC'\nRETURN c.name AS Computer,\n       c.operatingsystem AS OS\nORDER BY c.name",
+    "name": "[CRACK - Quick Wins] [MEDIUM] Computers Without LAPS",
+    "description": "Find computers that don't have LAPS deployed. Local admin passwords may be reused or weak."
+  },
+  {
+    "query": "MATCH (g:Group)-[:MemberOf*0..]->(p:Group)\nWHERE p.name =~ '(?i).*PRE-WINDOWS 2000.*'\nMATCH (m)-[:MemberOf]->(g)\nRETURN m.name AS Member,\n       labels(m) AS Type,\n       g.name AS ViaGroup",
+    "name": "[CRACK - Quick Wins] [LOW] Pre-Windows 2000 Compatible Access Accounts",
+    "description": "Find computers in Pre-Windows 2000 Compatible Access group. Legacy compatibility may expose vulnerabilities."
+  },
+  {
+    "query": "MATCH (n)-[r:GetChanges|GetChangesAll]->(d:Domain)\nRETURN DISTINCT n.name AS Principal,\n       labels(n) AS Type,\n       type(r) AS Right",
+    "name": "[CRACK - Privilege Escalation] [HIGH] DCSync Rights",
+    "description": "Find principals with DCSync rights (GetChanges + GetChangesAll on Domain). Can perform secretsdump.py to extract all domain hashes."
+  },
+  {
+    "query": "MATCH (attacker)-[:GenericAll]->(victim)\nWHERE victim.admincount = true\n   OR victim.name =~ '(?i).*(ADMIN|DOMAIN|ENTERPRISE).*'\nRETURN attacker.name AS Attacker,\n       victim.name AS Victim,\n       labels(victim) AS VictimType\nLIMIT 50",
+    "name": "[CRACK - Privilege Escalation] [HIGH] GenericAll on High-Value Targets",
+    "description": "Find principals with GenericAll (full control) over privileged users, groups, or computers. Can reset passwords, modify group memberships, etc."
+  },
+  {
+    "query": "MATCH (attacker)-[r:GenericAll|GenericWrite|ForceChangePassword|WriteDacl|WriteOwner|Owns]->(victim:User)\nWHERE victim.admincount = true\n  AND NOT attacker.admincount = true\nRETURN attacker.name AS ShadowAdmin,\n       type(r) AS Permission,\n       victim.name AS CanControl",
+    "name": "[CRACK - Privilege Escalation] [HIGH] Shadow Admins (Control over DA Users)",
+    "description": "Find non-privileged users with control over Domain Admin accounts. These 'shadow admins' can escalate without being in DA group."
+  },
+  {
+    "query": "MATCH (attacker)-[:WriteDacl]->(victim)\nWHERE victim.admincount = true\n   OR victim.name =~ '(?i).*(ADMIN|DOMAIN).*'\nRETURN attacker.name AS Attacker,\n       victim.name AS Victim,\n       labels(victim) AS VictimType",
+    "name": "[CRACK - Privilege Escalation] [HIGH] WriteDacl Abuse Paths",
+    "description": "Find principals with WriteDacl on high-value targets. Can grant themselves GenericAll then escalate further."
+  },
+  {
+    "query": "MATCH (attacker)-[:WriteOwner]->(victim)\nWHERE victim.admincount = true\n   OR victim.name =~ '(?i).*(ADMIN|DOMAIN).*'\nRETURN attacker.name AS Attacker,\n       victim.name AS Victim,\n       labels(victim) AS VictimType",
+    "name": "[CRACK - Privilege Escalation] [HIGH] WriteOwner Abuse Paths",
+    "description": "Find principals with WriteOwner on targets. Can take ownership, then WriteDacl, then GenericAll."
+  },
+  {
+    "query": "MATCH (attacker)-[:AddKeyCredentialLink]->(victim)\nWHERE NOT attacker.admincount = true\nRETURN attacker.name AS Attacker,\n       labels(attacker) AS AttackerType,\n       victim.name AS Target,\n       labels(victim) AS TargetType",
+    "name": "[CRACK - Privilege Escalation] [HIGH] AddKeyCredentialLink (Shadow Credentials)",
+    "description": "Find principals with AddKeyCredentialLink permission. Can add msDS-KeyCredentialLink for certificate-based auth without knowing password."
+  },
+  {
+    "query": "MATCH (attacker)-[:ForceChangePassword]->(victim:User)\nWHERE NOT attacker.admincount = true\n  AND victim.enabled = true\nRETURN attacker.name AS Attacker,\n       victim.name AS CanResetPassword,\n       victim.admincount AS VictimIsPrivileged\nORDER BY victim.admincount DESC",
+    "name": "[CRACK - Privilege Escalation] [HIGH] ForceChangePassword Rights",
+    "description": "Find principals who can reset passwords without knowing current password. Direct credential compromise."
+  },
+  {
+    "query": "MATCH (attacker)-[:AddMember]->(group:Group)\nWHERE group.admincount = true\n   OR group.name =~ '(?i).*(ADMIN|DOMAIN|ENTERPRISE).*'\nRETURN attacker.name AS Attacker,\n       group.name AS CanAddMembersTo",
+    "name": "[CRACK - Privilege Escalation] [HIGH] AddMember to Privileged Groups",
+    "description": "Find principals who can add members to privileged groups. Direct path to privilege escalation."
+  },
+  {
+    "query": "MATCH (owner)-[:Owns]->(owned)\nWHERE owned.admincount = true\n   OR owned.name =~ '(?i).*(ADMIN|DOMAIN).*'\nRETURN owner.name AS Owner,\n       owned.name AS OwnedObject,\n       labels(owned) AS ObjectType",
+    "name": "[CRACK - Privilege Escalation] [HIGH] Owns Relationships on Users/Groups",
+    "description": "Find principals who own other users or groups. Owner can grant themselves full control."
+  },
+  {
+    "query": "MATCH (u:User)-[r:GenericAll|GenericWrite|WriteProperty]->(g:GPO)\nWHERE NOT u.admincount = true\nRETURN u.name AS User,\n       g.name AS GPO,\n       type(r) AS Permission",
+    "name": "[CRACK - Privilege Escalation] [MEDIUM] GPO Abuse Paths",
+    "description": "Find users with write access to GPOs linked to computers. Can push malicious scripts via GPO."
+  },
+  {
+    "query": "MATCH (attacker)-[:GenericAll]->(ou:OU)\nWHERE NOT attacker.admincount = true\nRETURN attacker.name AS Attacker,\n       ou.name AS ControlledOU",
+    "name": "[CRACK - Privilege Escalation] [MEDIUM] OU Control for Object Manipulation",
+    "description": "Find principals with GenericAll on OUs containing privileged objects. Can modify objects within the OU."
+  },
+  {
+    "query": "MATCH (attacker)-[:AllExtendedRights]->(target)\nWHERE NOT attacker.admincount = true\n  AND (target.admincount = true OR target.name =~ '(?i).*(ADMIN|DOMAIN).*')\nRETURN attacker.name AS Attacker,\n       target.name AS Target,\n       labels(target) AS TargetType",
+    "name": "[CRACK - Privilege Escalation] [HIGH] AllExtendedRights Enumeration",
+    "description": "Find principals with AllExtendedRights on objects. Includes ForceChangePassword, Read LAPS, etc."
+  },
+  {
+    "query": "MATCH (n)-[:ReadLAPSPassword]->(c:Computer)\nWHERE NOT n.admincount = true\nRETURN n.name AS Principal,\n       labels(n) AS Type,\n       c.name AS Computer",
+    "name": "[CRACK - Privilege Escalation] [HIGH] Read LAPS Password Rights",
+    "description": "Find principals who can read LAPS passwords on computers. Direct local admin credential access."
+  },
+  {
+    "query": "MATCH (u:User)-[:MemberOf*1..]->(g:Group)\nWHERE g.name =~ '(?i).*DOMAIN ADMINS.*'\nRETURN DISTINCT u.name AS DomainAdmin,\n       u.enabled AS Enabled,\n       u.admincount AS AdminCount",
+    "name": "[CRACK - Privilege Escalation] [HIGH] All Domain Admins",
+    "description": "List all members of Domain Admins group (including nested membership). Know your targets."
+  },
+  {
+    "query": "MATCH (attacker)-[:GenericWrite]->(victim:User)\nWHERE victim.enabled = true\n  AND NOT attacker.admincount = true\nRETURN attacker.name AS Attacker,\n       victim.name AS Victim,\n       victim.admincount AS VictimIsPrivileged\nORDER BY victim.admincount DESC\nLIMIT 50",
+    "name": "[CRACK - Privilege Escalation] [HIGH] GenericWrite on Users",
+    "description": "Find principals with GenericWrite on users. Can modify SPN for Kerberoasting or set logon script."
+  },
+  {
+    "query": "MATCH (c:Computer {enabled:true})\nRETURN c.operatingsystem AS OS,\n       collect(c.name) AS Computers,\n       count(c) AS Count\nORDER BY Count DESC",
+    "name": "[CRACK - Operational] [MEDIUM] Computers by Operating System (Find Legacy)",
+    "description": "Enumerate computers grouped by OS. Legacy systems (2008, 2003, XP) are often more vulnerable."
+  },
+  {
+    "query": "MATCH (c:Computer {enabled:true})\nWHERE c.operatingsystem =~ '(?i).*(2008|2003|Windows 7|Windows XP|Vista).*'\nRETURN c.name AS Computer,\n       c.operatingsystem AS OS\nORDER BY c.operatingsystem",
+    "name": "[CRACK - Operational] [HIGH] Legacy Windows Systems",
+    "description": "Find Windows Server 2008/2003 and Windows 7/XP systems. Often missing patches and vulnerable to known exploits."
+  },
+  {
+    "query": "MATCH (u:User {enabled:true})\nWHERE u.pwdlastset > 0\nRETURN u.name AS User,\n       u.pwdlastset AS PasswordLastSet,\n       u.admincount AS IsPrivileged,\n       u.description AS Description\nORDER BY u.pwdlastset ASC\nLIMIT 25",
+    "name": "[CRACK - Operational] [MEDIUM] Password Age Distribution",
+    "description": "Find users with old passwords. Old passwords may be weak or appear in breach databases."
+  },
+  {
+    "query": "MATCH (u:User {enabled:true})\nWHERE u.lastlogon > 0\n  AND u.lastlogon < (datetime().epochSeconds - 7776000) * 1000\nRETURN u.name AS User,\n       u.lastlogon AS LastLogon,\n       u.description AS Description\nORDER BY u.lastlogon ASC\nLIMIT 25",
+    "name": "[CRACK - Operational] [MEDIUM] Inactive User Accounts",
+    "description": "Find enabled users who haven't logged in recently. May have default or forgotten passwords."
+  },
+  {
+    "query": "MATCH (u:User)\nRETURN u.enabled AS Enabled,\n       count(u) AS Count\nORDER BY Enabled DESC",
+    "name": "[CRACK - Operational] [LOW] Enabled vs Disabled Account Ratio",
+    "description": "Count enabled vs disabled accounts. High disabled count may indicate account churn."
+  },
+  {
+    "query": "MATCH (d:Domain)-[r:TrustedBy]->(t:Domain)\nRETURN d.name AS Domain,\n       t.name AS TrustedDomain,\n       r.trusttype AS TrustType,\n       r.transitive AS Transitive",
+    "name": "[CRACK - Operational] [MEDIUM] Domain Trust Relationships",
+    "description": "Enumerate domain trust relationships. Trusts may provide cross-domain attack paths."
+  },
+  {
+    "query": "MATCH ()-[r]-()\nRETURN type(r) AS Relationship,\n       count(r) AS Count\nORDER BY Count DESC",
+    "name": "[CRACK - Operational] [LOW] Relationship Count by Type",
+    "description": "Count all relationship types in the database. Helps understand AD structure and attack surface."
+  },
+  {
+    "query": "MATCH (n {highvalue:true})\nRETURN n.name AS Target,\n       labels(n) AS Type,\n       n.description AS Description\nORDER BY labels(n), n.name",
+    "name": "[CRACK - Operational] [HIGH] High-Value Target Summary",
+    "description": "List all objects marked as high-value in BloodHound. Primary targets for attack planning."
+  },
+  {
+    "query": "MATCH (u:User {name:'<USER>'})-[r:AdminTo|CanRDP|CanPSRemote|ExecuteDCOM]->(c:Computer)\nRETURN c.name AS Target,\n       type(r) AS AccessType,\n       c.operatingsystem AS OS\nORDER BY AccessType",
+    "name": "[CRACK - Owned Principal] [HIGH] What Can Owned User Access? (<USER>)",
+    "description": "Find all computers the owned user can access via any lateral movement method. First query to run after compromise."
+  },
+  {
+    "query": "MATCH (owned:User {name:'<USER>'})\nOPTIONAL MATCH (owned)-[:AdminTo]->(c:Computer)\nWITH owned, collect(DISTINCT c.name) AS AdminOn\nMATCH (roast:User {hasspn:true, enabled:true})\nWHERE NOT roast.name STARTS WITH 'KRBTGT'\nWITH owned, AdminOn, collect(DISTINCT roast.name) AS Kerberoast\nMATCH (asrep:User {dontreqpreauth:true, enabled:true})\nRETURN AdminOn AS LocalAdminOn,\n       Kerberoast AS KerberoastTargets,\n       collect(DISTINCT asrep.name) AS ASREPTargets",
+    "name": "[CRACK - Owned Principal] [HIGH] Quick Wins from Owned User Context (<USER>)",
+    "description": "Combined query showing admin access, Kerberoastable, and AS-REP roastable targets from owned user's perspective."
+  },
+  {
+    "query": "MATCH p=shortestPath(\n  (u:User {name:'<USER>'})-[*1..10]->(g:Group)\n)\nWHERE g.name =~ '(?i).*DOMAIN ADMINS.*'\nRETURN [n IN nodes(p) | n.name] AS Path,\n       [r IN relationships(p) | type(r)] AS EdgeTypes,\n       length(p) AS Hops",
+    "name": "[CRACK - Owned Principal] [HIGH] Path to DA from Owned User (<USER>)",
+    "description": "Find shortest path from owned user to Domain Admins group."
+  },
+  {
+    "query": "MATCH p=(u:User {name:'<USER>'})-[:MemberOf*1..5]->(g:Group)\nRETURN g.name AS GroupMembership,\n       g.admincount AS IsPrivilegedGroup,\n       length(p) AS NestingLevel\nORDER BY length(p)",
+    "name": "[CRACK - Owned Principal] [HIGH] Owned User Group Memberships (<USER>)",
+    "description": "List all groups the owned user belongs to (including nested). Identifies inherited privileges."
+  },
+  {
+    "query": "MATCH (u:User {name:'<USER>'})-[r:GenericAll|GenericWrite|WriteDacl|WriteOwner|ForceChangePassword|Owns|AddMember]->(target)\nRETURN target.name AS ControlledObject,\n       labels(target) AS ObjectType,\n       type(r) AS ControlType",
+    "name": "[CRACK - Owned Principal] [HIGH] Outbound Object Control from Owned (<USER>)",
+    "description": "Find all objects the owned user has control over (GenericAll, WriteDacl, etc.). Identifies privilege escalation targets."
+  },
+  {
+    "query": "MATCH (u:User {name:'<USER>'})-[:AdminTo]->(c:Computer)<-[:HasSession]-(session:User)\nRETURN c.name AS Computer,\n       collect(session.name) AS ActiveSessions,\n       collect(session.admincount) AS SessionPrivileged",
+    "name": "[CRACK - Owned Principal] [HIGH] First Hop Lateral Movement (<USER>)",
+    "description": "Find immediate lateral movement opportunities (single hop) from owned user to computers with interesting sessions."
+  },
+  {
+    "query": "MATCH (u:User {name:'<USER>'})\nMATCH (kerberoast:User {hasspn:true, enabled:true})\nWHERE NOT kerberoast.name STARTS WITH 'KRBTGT'\nOPTIONAL MATCH (u)-[r:GenericAll|GenericWrite|ForceChangePassword]->(kerberoast)\nRETURN kerberoast.name AS ServiceAccount,\n       kerberoast.serviceprincipalnames AS SPNs,\n       CASE WHEN r IS NOT NULL THEN type(r) ELSE 'None' END AS AdditionalControl",
+    "name": "[CRACK - Owned Principal] [HIGH] Kerberoastable from Owned Context (<USER>)",
+    "description": "Find Kerberoastable accounts that the owned user has additional control over (for targeted attack)."
+  },
+  {
+    "query": "MATCH (asrep:User {dontreqpreauth:true, enabled:true})\nRETURN asrep.name AS User,\n       asrep.admincount AS IsPrivileged,\n       asrep.description AS Description\nORDER BY asrep.admincount DESC",
+    "name": "[CRACK - Owned Principal] [HIGH] AS-REP Targets from Owned Context",
+    "description": "Find AS-REP roastable accounts. These can be attacked without any additional access."
+  },
+  {
+    "query": "MATCH (u:User {name:'<USER>'})-[:AdminTo]->(c:Computer)<-[:HasSession]-(priv:User {admincount:true})\nRETURN c.name AS Computer,\n       collect(priv.name) AS PrivilegedSessions,\n       count(priv) AS SessionCount\nORDER BY SessionCount DESC",
+    "name": "[CRACK - Owned Principal] [HIGH] Session Harvest Opportunities (<USER>)",
+    "description": "Find computers where owned user has admin AND privileged users have sessions. Prime mimikatz targets."
+  },
+  {
+    "query": "MATCH p=(\n  (u:User {name:'<USER>'})-[r1:AdminTo|GenericAll|ForceChangePassword]->(hop1)-[r2:AdminTo|GenericAll|ForceChangePassword|HasSession]->(hop2)\n)\nWHERE hop2.admincount = true\n   OR hop2.name =~ '(?i).*DOMAIN ADMINS.*'\nRETURN u.name AS Start,\n       hop1.name AS FirstHop,\n       type(r1) AS FirstEdge,\n       hop2.name AS SecondHop,\n       type(r2) AS SecondEdge",
+    "name": "[CRACK - Owned Principal] [HIGH] Chained Privilege Escalation (<USER>)",
+    "description": "Find multi-step privilege escalation paths from owned user through intermediate targets to Domain Admin."
+  },
+  {
+    "query": "MATCH (lowpriv:User)-[:AdminTo]->(pivot:Computer)\nWHERE NOT lowpriv.admincount = true\n  AND lowpriv.enabled = true\n  AND NOT pivot.name STARTS WITH 'DC'\nOPTIONAL MATCH (pivot)<-[:AdminTo]-(dagroup:Group)\nWHERE dagroup.name =~ '(?i).*DOMAIN ADMINS.*'\nRETURN lowpriv.name AS OwnedUser,\n       pivot.name AS PivotMachine,\n       CASE WHEN dagroup IS NOT NULL\n            THEN 'DA has admin here - MIMIKATZ TARGET'\n            ELSE 'Check for sessions' END AS Note",
+    "name": "[CRACK - Attack Chains] [HIGH] Full Attack Path: Owned User -> Pivot -> DA",
+    "description": "Find complete attack paths from low-privilege owned user through pivot systems to Domain Admin. Reconstructs DCSync capstone-style attack chains."
+  },
+  {
+    "query": "MATCH p=shortestPath((u:User {enabled:true})-[*1..5]->(g:Group))\nWHERE g.name =~ '(?i).*DOMAIN ADMINS.*'\n  AND NOT u.admincount = true\nRETURN u.name AS StartUser,\n       length(p) AS Hops,\n       [n IN nodes(p) | n.name] AS Path\nLIMIT 10",
+    "name": "[CRACK - Attack Chains] [HIGH] Shortest Path to Domain Admins",
+    "description": "Find shortest privilege escalation path from any enabled user to Domain Admins group."
+  },
+  {
+    "query": "MATCH p=allShortestPaths(\n  (u:User {enabled:true})-[r:AdminTo|HasSession|MemberOf|ForceChangePassword|\n   GenericAll|GenericWrite|WriteOwner|WriteDacl|AddMember*1..6]->(da:Group)\n)\nWHERE da.name =~ '(?i).*DOMAIN ADMINS.*'\n  AND NOT u.admincount = true\nRETURN p LIMIT 25",
+    "name": "[CRACK - Attack Chains] [HIGH] All Paths to Domain Admin (Multi-Hop)",
+    "description": "Find all privilege escalation paths to Domain Admins using common attack edges. More comprehensive than shortest path."
+  },
+  {
+    "query": "MATCH (owned:User)-[:AdminTo]->(c:Computer)<-[:AdminTo]-(da:Group)\nWHERE NOT owned.admincount = true\n  AND da.name =~ '(?i).*DOMAIN ADMINS.*'\nRETURN owned.name AS OwnedUser,\n       c.name AS TargetMachine,\n       'Run mimikatz - DA creds may be cached' AS Action",
+    "name": "[CRACK - Attack Chains] [HIGH] Credential Harvest Opportunities",
+    "description": "Find machines where you have admin AND Domain Admin has access. Prime targets for mimikatz credential dumping."
+  },
+  {
+    "query": "MATCH p=shortestPath((u:User {owned:true})-[*1..5]->(c:Computer {name:'<COMPUTER>'}))\nRETURN [n IN nodes(p) | n.name] AS Path,\n       [r IN relationships(p) | type(r)] AS EdgeTypes",
+    "name": "[CRACK - Attack Chains] [HIGH] Find Paths Through Specific Computer (<COMPUTER>)",
+    "description": "Find all attack paths that traverse a specific computer. Useful when you've identified a high-value pivot."
+  },
+  {
+    "query": "MATCH p=shortestPath(\n  (u1:User {name:'<SOURCE_USER>'})-[*1..10]->(u2:User {name:'<TARGET_USER>'})\n)\nRETURN [n IN nodes(p) | n.name] AS Path,\n       [r IN relationships(p) | type(r)] AS EdgeTypes,\n       length(p) AS Hops",
+    "name": "[CRACK - Attack Chains] [HIGH] Shortest Path Between Two Users (<SOURCE_USER>, <TARGET_USER>)",
+    "description": "Find shortest path between two specific users. Useful for targeted privilege escalation."
+  },
+  {
+    "query": "MATCH p=shortestPath(\n  (u:User {owned:true})-[*1..5]->(target {highvalue:true})\n)\nRETURN u.name AS StartUser,\n       target.name AS HighValueTarget,\n       labels(target) AS TargetType,\n       length(p) AS Hops\nORDER BY Hops ASC\nLIMIT 20",
+    "name": "[CRACK - Attack Chains] [HIGH] Path to High-Value Targets",
+    "description": "Find paths from owned users to all high-value targets (marked in BloodHound)."
+  },
+  {
+    "query": "MATCH p=(g:Group)-[:MemberOf*1..5]->(g)\nRETURN [n IN nodes(p) | n.name] AS CircularChain,\n       length(p) AS ChainLength",
+    "name": "[CRACK - Attack Chains] [LOW] Circular Group Memberships",
+    "description": "Find circular group membership chains. Can indicate misconfigurations or unintended privilege inheritance."
+  }
+]
