@@ -392,6 +392,13 @@ def db_command(args):
     sys.argv = ['crack-db'] + args
     sys.exit(db_main())
 
+def ports_command(args):
+    """Execute the port reference tool"""
+    from crack.utils import ports
+    # Pass arguments to the original main function
+    sys.argv = ['ports'] + args
+    ports.main()
+
 def config_command(args):
     """Execute configuration management"""
     from crack.config import ConfigManager
@@ -874,13 +881,19 @@ def main():
                                      add_help=False)
     db_parser.set_defaults(func=db_command)
 
+    # Port Reference subcommand
+    ports_parser = subparsers.add_parser('ports',
+                                         help='Port Reference - Quick lookup of common ports and attack tools',
+                                         add_help=False)
+    ports_parser.set_defaults(func=ports_command)
+
     # Parse known args to allow passing through tool-specific args
     args, remaining = parser.parse_known_args()
 
     # Show banner unless suppressed
-    # Note: reference and db commands have no banner by default
+    # Note: reference, db, and ports commands have no banner by default
     if not args.no_banner and args.tool:
-        if args.tool not in ['reference', 'db'] or '--banner' in remaining:
+        if args.tool not in ['reference', 'db', 'ports'] or '--banner' in remaining:
             print_banner()
 
     # Execute the selected tool
