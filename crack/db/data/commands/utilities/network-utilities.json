@@ -327,7 +327,16 @@
         "-p": "Specify port"
       },
       "oscp_relevance": "high",
-      "notes": "Essential for catching reverse shells - run before triggering exploit"
+      "notes": "Essential for catching reverse shells - run before triggering exploit",
+      "prerequisites": [],
+      "alternatives": [
+        "pwncat-listener",
+        "msfconsole-handler"
+      ],
+      "next_steps": [
+        "shell-stabilization",
+        "linux-privesc-enumeration"
+      ]
     },
     {
       "id": "nc-connect",

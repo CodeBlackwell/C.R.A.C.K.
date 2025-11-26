@@ -85,6 +85,15 @@
         "ENUMERATION",
         "CMD",
         "POST_EXPLOITATION"
+      ],
+      "prerequisites": [],
+      "alternatives": [
+        "powershell-get-content",
+        "cat-read-file"
+      ],
+      "next_steps": [
+        "evil-winrm-download-file",
+        "capture-root-flag"
       ]
     },
     {

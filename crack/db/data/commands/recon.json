@@ -103,8 +103,12 @@
         "All 65535 scanned ports are closed",
         "0 hosts up"
       ],
-      "next_steps": [],
+      "next_steps": [
+        "nmap-service-scan",
+        "nmap-udp-scan"
+      ],
       "alternatives": [],
+      "prerequisites": [],
       "notes": "Adjust --min-rate based on network stability",
       "oscp_relevance": "high",
       "methodology_guidance": {
@@ -166,8 +170,16 @@
         "Service scan Timing",
         "0 services on 0 hosts"
       ],
-      "next_steps": [],
+      "next_steps": [
+        "gobuster-dir",
+        "enum4linux-smb",
+        "smbmap-shares",
+        "hydra-ssh"
+      ],
       "alternatives": [],
+      "prerequisites": [
+        "nmap-quick-scan"
+      ],
       "notes": "Use after quick scan to investigate open ports",
       "oscp_relevance": "high",
       "methodology_guidance": {

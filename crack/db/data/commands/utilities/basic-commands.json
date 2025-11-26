@@ -34,8 +34,16 @@
         "Permission denied",
         "Is a directory"
       ],
-      "next_steps": [],
-      "alternatives": [],
+      "next_steps": [
+        "capture-root-flag",
+        "grep-search-file"
+      ],
+      "alternatives": [
+        "less-view-file",
+        "head-view-file",
+        "tail-view-file"
+      ],
+      "prerequisites": [],
       "troubleshooting": {
         "permission_denied": "File not readable by current user. Try with sudo: sudo cat <FILE>. Or check permissions: ls -l <FILE>",
         "binary_file": "File is binary. Use strings <FILE> to extract readable text. Or hexdump -C <FILE> for hex view"
@@ -177,8 +185,14 @@
         "Permission denied (missing sudo)",
         "sudo: command not found"
       ],
-      "next_steps": [],
-      "alternatives": [],
+      "next_steps": [
+        "ping-host",
+        "nmap-service-scan"
+      ],
+      "alternatives": [
+        "nano-edit-hosts"
+      ],
+      "prerequisites": [],
       "troubleshooting": {
         "still_not_resolving": "DNS cache issue. Flush with: sudo systemd-resolve --flush-caches. Or restart DNS: sudo systemctl restart systemd-resolved",
         "duplicate_entry": "Entry already exists. Edit /etc/hosts manually to update. Or remove old entry first"
@@ -259,7 +273,14 @@
         "Permission denied (not root)"
       ],
       "next_steps": [],
-      "alternatives": [],
+      "alternatives": [
+        "windows-read-file-type",
+        "cat-read-file"
+      ],
+      "prerequisites": [
+        "linux-privesc-to-root",
+        "sudo-exploit"
+      ],
       "troubleshooting": {
         "permission_denied": "Not root yet. Complete privilege escalation first. Check sudo: sudo -l. Find SUID: find / -perm -4000 2>/dev/null",
         "file_not_found": "May be named differently: cat /root/proof.txt. Or in alternate location: find / -name '*flag*' 2>/dev/null"

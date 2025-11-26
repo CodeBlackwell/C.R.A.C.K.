@@ -82,6 +82,15 @@
         "SHARPHOUND",
         "GRAPH_ANALYSIS",
         "ATTACK_PATH"
+      ],
+      "prerequisites": [
+        "sharphound-collect",
+        "invoke-bloodhound"
+      ],
+      "alternatives": [],
+      "next_steps": [
+        "bloodhound-analyze-paths",
+        "bloodhound-cypher-query"
       ]
     },
     {
@@ -132,6 +141,20 @@
         "GRAPH_ANALYSIS",
         "DOMAIN_ADMIN",
         "LATERAL_MOVEMENT"
+      ],
+      "prerequisites": [
+        "bloodhound-upload-data"
+      ],
+      "alternatives": [
+        "bloodhound-cypher-query",
+        "powerview-find-localadminaccess",
+        "powerview-get-netuser"
+      ],
+      "next_steps": [
+        "impacket-getuserspns-kerberoast",
+        "ad-dcsync-secretsdump-all",
+        "evil-winrm-shell",
+        "mimikatz-sekurlsa-logonpasswords"
       ]
     },
     {
@@ -182,6 +205,18 @@
         "GRAPH_DATABASE",
         "CUSTOM_QUERY",
         "ADVANCED_ENUMERATION"
+      ],
+      "prerequisites": [
+        "bloodhound-upload-data"
+      ],
+      "alternatives": [
+        "bloodhound-analyze-paths"
+      ],
+      "next_steps": [
+        "impacket-getuserspns-kerberoast",
+        "ad-dcsync-secretsdump-all",
+        "evil-winrm-shell",
+        "mimikatz-sekurlsa-logonpasswords"
       ]
     }
   ]

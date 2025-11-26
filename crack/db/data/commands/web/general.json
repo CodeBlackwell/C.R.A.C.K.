@@ -221,8 +221,15 @@
         "WAF detected",
         "Input filtered/escaped"
       ],
-      "next_steps": [],
-      "alternatives": [],
+      "next_steps": [
+        "sqlmap-from-request-level3",
+        "sqli-union-attack"
+      ],
+      "alternatives": [
+        "sqlmap-from-request",
+        "sqlmap-basic"
+      ],
+      "prerequisites": [],
       "notes": "Try with both single and double quotes",
       "oscp_relevance": "high",
       "methodology_guidance": {
