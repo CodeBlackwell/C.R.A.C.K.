@@ -83,7 +83,7 @@
         "Address already in use - port 80 occupied by another service",
         "Job for apache2.service failed - check configuration errors"
       ],
-      "next_steps": [],
+      "next_steps": ["ss-listening-ports", "ip-addr"],
       "alternatives": [],
       "prerequisites": [],
       "troubleshooting": {
@@ -178,7 +178,7 @@
         "ip: command not found - iproute2 not installed (use ifconfig alternative)",
         "No VPN interface (tun0/tap0) - VPN not connected"
       ],
-      "next_steps": [],
+      "next_steps": ["ssh-remote-port-forward", "apache2-start", "ip-route"],
       "alternatives": [],
       "prerequisites": [],
       "troubleshooting": {
@@ -368,7 +368,7 @@
       ],
       "next_steps": [],
       "alternatives": [],
-      "prerequisites": [],
+      "prerequisites": ["nmap-service-scan", "ssh-local-port-forward"],
       "troubleshooting": {
         "Connection refused": "Verify PostgreSQL running: sudo nmap -p <PORT> -Pn -v <TARGET>, check postgresql.conf for listen_addresses, verify pg_hba.conf allows remote connections",
         "Password authentication failed": "Check credentials, try default postgres:postgres, use -W to force password prompt",
@@ -422,9 +422,9 @@
         "Connection to <TARGET> failed - host unreachable or wrong IP",
         "session setup failed: NT_STATUS_LOGON_FAILURE - null session not permitted"
       ],
-      "next_steps": [],
-      "alternatives": [],
-      "prerequisites": [],
+      "next_steps": ["smbclient-connect", "enum4linux-smb", "smbmap-shares"],
+      "alternatives": ["enum4linux-smb", "smbmap-shares"],
+      "prerequisites": ["nmap-service-scan"],
       "troubleshooting": {
         "NT_STATUS_ACCESS_DENIED": "Null sessions disabled - try authenticated access with -U flag, or enumerate users first: enum4linux -U <TARGET>",
         "Connection timeout": "Verify SMB port open: sudo nmap -p 445 -Pn -v <TARGET>, check for firewall blocking port 445",

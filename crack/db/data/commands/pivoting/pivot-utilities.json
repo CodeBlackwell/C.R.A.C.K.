@@ -77,11 +77,9 @@
         "Remote port forwarding failed - port already in use on SSH server",
         "Network error: Software caused connection abort - firewall blocking outbound SSH"
       ],
-      "next_steps": [],
-      "alternatives": [
-        "chisel-http-tunneling"
-      ],
       "prerequisites": [],
+      "alternatives": ["ssh-remote-forward", "chisel-client", "plink-remote-forward-windows"],
+      "next_steps": ["nmap-service-scan", "nc-listener-setup"],
       "troubleshooting": {
         "Plink not found": "Download Plink: powershell wget https://the.earth.li/~sgtatham/putty/latest/w64/plink.exe -O plink.exe, or use certutil: certutil -urlcache -f https://the.earth.li/~sgtatham/putty/latest/w64/plink.exe plink.exe",
         "Store key in cache warning": "Answer 'y' to trust SSH server key fingerprint (first connection only)",
@@ -156,9 +154,9 @@
         "Certificate verification failed - use /cert-ignore flag",
         "CredSSP encryption error - downgrade CredSSP with /sec:rdp or update system"
       ],
-      "next_steps": [],
+      "next_steps": ["mimikatz-sekurlsa-logonpasswords", "systeminfo-windows", "whoami-priv"],
       "alternatives": [],
-      "prerequisites": [],
+      "prerequisites": ["nmap-service-scan"],
       "troubleshooting": {
         "Connection timeout": "Verify RDP port open: sudo nmap -p <PORT> -Pn -v <TARGET>, check firewall rules",
         "CredSSP encryption oracle remediation": "Downgrade security: xfreerdp /v:<TARGET> /u:<USER> /p:<PASS> /cert-ignore /sec:rdp",
@@ -308,9 +306,9 @@
         "Permission denied - SSH authentication failed",
         "Fatal: server died - Python not available on pivot host"
       ],
-      "next_steps": [],
-      "alternatives": [],
-      "prerequisites": [],
+      "prerequisites": ["ssh-connect"],
+      "alternatives": ["ssh-dynamic-forward", "chisel-socks", "ligolo-server"],
+      "next_steps": ["nmap-service-scan", "bloodhound-ingest"],
       "troubleshooting": {
         "server died with error code 127": "Python not found on pivot - install python3 or use alternative tunneling",
         "NAT traversal failed": "Requires iptables FORWARD rules - may need sudo on pivot or use ssh-dynamic-port-forward instead",

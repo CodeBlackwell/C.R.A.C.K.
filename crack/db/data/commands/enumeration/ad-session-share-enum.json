@@ -377,9 +377,19 @@
         "Logon failure",
         "Network path was not found"
       ],
-      "next_steps": [],
-      "alternatives": [],
-      "prerequisites": [],
+      "next_steps": [
+        "search-share-files",
+        "dir-admin-share",
+        "gpp-password-decrypt"
+      ],
+      "alternatives": [
+        "smbmap-enumerate-auth",
+        "crackmapexec-smb-framework"
+      ],
+      "prerequisites": [
+        "smbmap-shares",
+        "enum4linux-smb"
+      ],
       "troubleshooting": {
         "Access is denied": "No read permissions. Try other shares or authenticate with different credentials.",
         "Logon failure": "Invalid credentials. Re-authenticate: net use \\\\<TARGET>\\<SHARE> /user:<DOMAIN>\\<USERNAME>"
@@ -438,9 +448,19 @@
         "Access is denied",
         "File not found"
       ],
-      "next_steps": [],
-      "alternatives": [],
-      "prerequisites": [],
+      "next_steps": [
+        "gpp-password-decrypt",
+        "file-transfer-smb",
+        "cat-file"
+      ],
+      "alternatives": [
+        "smbmap-enumerate-auth",
+        "dir-admin-share"
+      ],
+      "prerequisites": [
+        "test-share-access",
+        "smbmap-shares"
+      ],
       "troubleshooting": {
         "Access is denied": "No read permissions on some files. Results may be incomplete.",
         "Long execution time": "Large share or slow network. Limit scope to specific file types: findstr /S /I \"password\" *.txt *.xml *.config",
@@ -482,9 +502,16 @@
         "Invalid cpassword",
         "gpp-decrypt: command not found"
       ],
-      "next_steps": [],
+      "next_steps": [
+        "crackmapexec-smb-spray",
+        "evil-winrm-creds",
+        "crackmapexec-validate-admin"
+      ],
       "alternatives": [],
-      "prerequisites": [],
+      "prerequisites": [
+        "search-share-files",
+        "enum4linux-smb"
+      ],
       "troubleshooting": {
         "Command not found": "Not on Kali. Use online decoder or PowerShell: $key = [byte[]](0x4e,0x99,0x06,0xe8,...); [System.Text.Encoding]::Unicode.GetString([System.Security.Cryptography.AES]::Create().CreateDecryptor($key,$null).TransformFinalBlock([Convert]::FromBase64String('<CPASSWORD>'),0,[Convert]::FromBase64String('<CPASSWORD>').Length))",
         "Invalid cpassword": "Corrupted value. Re-extract from XML: cat \\\\<DC>\\SYSVOL\\<DOMAIN>\\Policies\\<GUID>\\*.xml | findstr cpassword"

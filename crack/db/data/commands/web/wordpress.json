@@ -287,9 +287,9 @@
         "Parse error",
         "faultCode"
       ],
-      "next_steps": [],
-      "alternatives": [],
-      "prerequisites": [],
+      "prerequisites": ["wpscan-enumerate-all"],
+      "alternatives": ["wpscan-aggressive-detection"],
+      "next_steps": ["wpscan-password-attack", "searchsploit", "burp-intruder"],
       "troubleshooting": {
         "xmlrpc_disabled": "XML-RPC disabled (404 or error). This is good security but blocks this attack vector. Try other WordPress attacks",
         "no_methods_listed": "XML-RPC enabled but methods may be restricted. Try specific methods manually: wp.getUsersBlogs, pingback.ping",

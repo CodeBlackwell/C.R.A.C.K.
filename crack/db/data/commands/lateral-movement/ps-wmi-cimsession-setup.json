@@ -75,6 +75,9 @@
         "LATERAL_MOVEMENT",
         "OSCP:MEDIUM"
       ],
+      "prerequisites": ["ps-winrm-credential-setup"],
+      "alternatives": ["wmi-new-cimsession"],
+      "next_steps": ["ps-wmi-invoke-method"],
       "related_commands": [
         "ps-winrm-credential-setup",
         "ps-wmi-invoke-method",

@@ -160,9 +160,14 @@
         "The client cannot connect to the destination",
         "Access is denied"
       ],
-      "next_steps": [],
+      "next_steps": [
+        "evil-winrm-shell",
+        "enter-pssession"
+      ],
       "alternatives": [],
-      "prerequisites": [],
+      "prerequisites": [
+        "nmap-service-scan"
+      ],
       "troubleshooting": {
         "The client cannot connect": "WinRM service not running OR firewall blocking port 5985/5986. Check: Test-NetConnection <TARGET> -Port 5985",
         "Access is denied": "Authentication failure. Try with credentials: -Credential (Get-Credential). Check user is in Administrators or Remote Management Users group.",
@@ -328,9 +333,19 @@
         "System error 53 has occurred. The network path was not found.",
         "Multiple connections to a server or shared resource by the same user... not allowed"
       ],
-      "next_steps": [],
-      "alternatives": [],
-      "prerequisites": [],
+      "next_steps": [
+        "dir-admin-share",
+        "file-transfer-smb",
+        "ad-sam-dump-reg-save"
+      ],
+      "alternatives": [
+        "smbmap-shares",
+        "crackmapexec-smb-framework"
+      ],
+      "prerequisites": [
+        "crackmapexec-validate-admin",
+        "evil-winrm-shell"
+      ],
       "troubleshooting": {
         "Access denied": "Invalid credentials OR user not in local Administrators group. Verify: crackmapexec smb <TARGET> -u <USERNAME> -p <PASSWORD>",
         "User name or password incorrect": "Check credentials. For local account, use: /user:.\\<USERNAME> (dot = local machine)",
@@ -386,9 +401,19 @@
         "The network path was not found",
         "The system cannot find the file specified"
       ],
-      "next_steps": [],
-      "alternatives": [],
-      "prerequisites": [],
+      "next_steps": [
+        "search-share-files",
+        "file-transfer-smb"
+      ],
+      "alternatives": [
+        "smbmap-shares",
+        "crackmapexec-smb-framework"
+      ],
+      "prerequisites": [
+        "crackmapexec-validate-admin",
+        "evil-winrm-shell",
+        "net-use-admin-share"
+      ],
       "troubleshooting": {
         "Access is denied": "No permissions on share. For admin shares, need local admin. For regular shares, need Read permissions.",
         "Network path not found": "Invalid share name. List shares: net view \\\\<TARGET>",

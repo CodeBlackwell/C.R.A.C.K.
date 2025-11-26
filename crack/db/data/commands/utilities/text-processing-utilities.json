@@ -353,7 +353,10 @@
         "-e": "Select encoding (s=7-bit, b=8-bit, l=16-bit little-endian)"
       },
       "oscp_relevance": "high",
-      "notes": "Essential for finding credentials, paths, function names in binaries"
+      "notes": "Essential for finding credentials, paths, function names in binaries",
+      "prerequisites": [],
+      "alternatives": [],
+      "next_steps": ["hashid", "hash-identifier"]
     },
     {
       "id": "od-octal-dump",

@@ -105,8 +105,17 @@
         "Network Card(s) shows IP configuration"
       ],
       "failure_indicators": [],
-      "alternatives": [],
-      "prerequisites": [],
+      "prerequisites": [
+        "evil-winrm-shell"
+      ],
+      "alternatives": [
+        "ipconfig-all",
+        "get-computerinfo"
+      ],
+      "next_steps": [
+        "win-privesc-winpeas",
+        "win-kernel-exploits"
+      ],
       "troubleshooting": {},
       "notes": "Critical OSCP enumeration command.\n\nCheck:\nOS version (for exploit research), Hotfix list (missing patches = vulnerabilities), Network adapters (multi-homed = pivot candidate), System Type (32-bit vs 64-bit for exploit selection).\n\nTime estimate:\n5-10 seconds for output.",
       "oscp_relevance": "high"
@@ -135,8 +144,17 @@
         "SeDebugPrivilege, SeImpersonatePrivilege = high-value for privilege escalation"
       ],
       "failure_indicators": [],
-      "alternatives": [],
-      "prerequisites": [],
+      "prerequisites": [
+        "evil-winrm-shell"
+      ],
+      "alternatives": [
+        "whoami-priv",
+        "whoami-all"
+      ],
+      "next_steps": [
+        "windows-potato-attacks",
+        "win-potato-exploits"
+      ],
       "troubleshooting": {},
       "notes": "Critical for privilege escalation assessment.\n\nKey privileges:\nSeImpersonatePrivilege (Potato exploits), SeDebugPrivilege (process injection), SeBackupPrivilege (backup file access), SeRestorePrivilege (file restore), SeLoadDriverPrivilege (driver loading).\n\nIf high-value privilege present, search for corresponding exploit.\n\nTime estimate:\nimmediate.",
       "oscp_relevance": "high"
@@ -164,8 +182,18 @@
         "DNS Servers, Default Gateway displayed"
       ],
       "failure_indicators": [],
-      "alternatives": [],
-      "prerequisites": [],
+      "prerequisites": [
+        "evil-winrm-shell"
+      ],
+      "alternatives": [
+        "systeminfo-windows",
+        "ipconfig-all"
+      ],
+      "next_steps": [
+        "netstat-windows",
+        "ssh-dynamic-port-forward",
+        "chisel-client"
+      ],
       "troubleshooting": {},
       "notes": "Critical OSCP enumeration for pivot identification.\n\nLook for:\nMultiple network adapters (dual-homed = pivot candidate), Internal IP ranges (10.x, 172.16-31.x, 192.168.x = potential pivot targets), DNS servers (identify domain controllers).\n\nCommon pattern:\nHost has 192.168.45.x (WAN) and 172.16.50.x (internal) = perfect pivot point.\n\nTime estimate:\nimmediate.",
       "oscp_relevance": "high"
@@ -196,8 +224,18 @@
         "ESTABLISHED connections show active communications"
       ],
       "failure_indicators": [],
-      "alternatives": [],
-      "prerequisites": [],
+      "prerequisites": [
+        "evil-winrm-shell"
+      ],
+      "alternatives": [
+        "netstat-windows",
+        "ss-listening-ports"
+      ],
+      "next_steps": [
+        "ssh-dynamic-port-forward",
+        "chisel-client",
+        "proxychains-nmap"
+      ],
       "troubleshooting": {},
       "notes": "Critical for service enumeration and port forward verification.\n\nUse cases:\nIdentify listening ports (potential services), Find established connections (active pivots), Verify port forward active (netstat -ano | findstr <PORT>), Map PID to process (tasklist | findstr <PID>).\n\nCombine with netsh-portproxy-show to see full pivot configuration.\n\nTime estimate:\nimmediate.",
       "oscp_relevance": "high"

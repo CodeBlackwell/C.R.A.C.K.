@@ -45,7 +45,7 @@
         "operatingsystem field empty": "Stale computer objects (inactive). Filter by lastlogontimestamp to find active systems.",
         "Too much output": "Use Where-Object to filter: | Where-Object {$_.operatingsystem -like '*Server*'} to show only servers"
       },
-      "notes": "CRITICAL FOR SESSION ENUMERATION STRATEGY:\nIdentify systems vulnerable to NetSessionEnum attacks.\n\nBUILD NUMBER HISTORY:\nWindows 10:\n- 1507 (10240):\nVulnerable\n- 1511 (10586):\nVulnerable\n- 1607 (14393):\nVulnerable\n- 1703 (15063):\nVulnerable\n- 1709 (16299):\nRESTRICTED - only admins can query sessions\n\nWindows Server:\n- 2012 R2 (9600):\nVulnerable\n- 2016 (14393):\nVulnerable\n- 2019 (17763/1809):\nRESTRICTED\n\nTARGET BUILD NUMBERS:\n- Workstations:\n<16299 (pre-1709)\n- Servers:\n<17763 (pre-2019)\n\nCOMMAND:\n  Get-NetComputer -FullData | Select-Object dnshostname, operatingsystem, operatingsystemversion\n\nWHY THIS MATTERS:\nOlder systems = ANY domain user can enumerate sessions.\nModern systems = Only admins can enumerate.\n\nOSCP STRATEGY:\nEnumerate OS versions FIRST → save vulnerable targets → run Get-NetSession only on those.\n\nTime:\n10-30 seconds",
+      "notes": "CRITICAL FOR SESSION ENUMERATION STRATEGY:\nIdentify systems vulnerable to NetSessionEnum attacks.\n\nBUILD NUMBER HISTORY:\nWindows 10:\n- 1507 (10240):\nVulnerable\n- 1511 (10586):\nVulnerable\n- 1607 (14393):\nVulnerable\n- 1703 (15063):\nVulnerable\n- 1709 (16299):\nRESTRICTED - only admins can query sessions\n\nWindows Server:\n- 2012 R2 (9600):\nVulnerable\n- 2016 (14393):\nVulnerable\n- 2019 (17763/1809):\nRESTRICTED\n\nTARGET BUILD NUMBERS:\n- Workstations:\n<16299 (pre-1709)\n- Servers:\n<17763 (pre-2019)\n\nCOMMAND:\n  Get-NetComputer -FullData | Select-Object dnshostname, operatingsystem, operatingsystemversion\n\nWHY THIS MATTERS:\nOlder systems = ANY domain user can enumerate sessions.\nModern systems = Only admins can enumerate.\n\nOSCP STRATEGY:\nEnumerate OS versions FIRST \u2192 save vulnerable targets \u2192 run Get-NetSession only on those.\n\nTime:\n10-30 seconds",
       "oscp_relevance": "high",
       "methodology_guidance": {
         "after_success": "Filter for legacy systems: Get-NetComputer -FullData | Where-Object {$_.operatingsystem -like '*Server 2012*' -or $_.operatingsystem -like '*Server 2016*'} Identify NetSessionEnum-vulnerable targets (pre-Windows 10 1709, pre-Server 2019) Run Get-NetSession against legacy systems only for higher success rate"
@@ -91,7 +91,7 @@
         "Empty results": "Domain may only have modern systems. Try broader filter: | Where-Object {$_.operatingsystem -notlike '*2019*' -and $_.operatingsystem -notlike '*Windows 11*'}",
         "operatingsystemversion parsing fails": "Some objects have non-standard version format. Add error handling: try/catch block or -match regex"
       },
-      "notes": "PRE-FILTERED TARGET LIST:\nAutomatic filtering for vulnerable systems only.\n\nCOMMAND:\n  Get-NetComputer -FullData | Where-Object {($_.operatingsystem -like '*Server 2012*') -or ($_.operatingsystem -like '*Server 2016*') -or (($_.operatingsystem -like '*Windows 10*') -and ([int]($_.operatingsystemversion -split '\\\\.')[2] -lt 16299))}\n\nWHAT THIS FILTERS:\n- Server 2012 / 2012 R2 (build 9600)\n- Server 2016 (build 14393)\n- Windows 10 pre-1709 (build <16299)\n\nRESTRICTION SOURCE:\nMS security update KB4103727 (May 2018) changed SrvsvcSessionInfo registry permissions.\n\nOSCP TIME SAVINGS:\n- Without filter:\n30+ minutes (enumerate all systems)\n- With filter:\n2-3 minutes (vulnerable systems only)\n\nWORKFLOW:\n1.\n\nRun filter → save targets\n\n2.\n\nEnumerate sessions ONLY on those systems\n\n3.\n\nSkip modern systems entirely\n\nTime:\n10-30 seconds for filtering",
+      "notes": "PRE-FILTERED TARGET LIST:\nAutomatic filtering for vulnerable systems only.\n\nCOMMAND:\n  Get-NetComputer -FullData | Where-Object {($_.operatingsystem -like '*Server 2012*') -or ($_.operatingsystem -like '*Server 2016*') -or (($_.operatingsystem -like '*Windows 10*') -and ([int]($_.operatingsystemversion -split '\\\\.')[2] -lt 16299))}\n\nWHAT THIS FILTERS:\n- Server 2012 / 2012 R2 (build 9600)\n- Server 2016 (build 14393)\n- Windows 10 pre-1709 (build <16299)\n\nRESTRICTION SOURCE:\nMS security update KB4103727 (May 2018) changed SrvsvcSessionInfo registry permissions.\n\nOSCP TIME SAVINGS:\n- Without filter:\n30+ minutes (enumerate all systems)\n- With filter:\n2-3 minutes (vulnerable systems only)\n\nWORKFLOW:\n1.\n\nRun filter \u2192 save targets\n\n2.\n\nEnumerate sessions ONLY on those systems\n\n3.\n\nSkip modern systems entirely\n\nTime:\n10-30 seconds for filtering",
       "oscp_relevance": "high",
       "methodology_guidance": {
         "after_success": "Save results to variable: $targets = Get-NetComputer ... | Select-Object -ExpandProperty dnshostname Loop through targets for session enumeration: foreach ($target in $targets) { Get-NetSession -ComputerName $target } Export to file: $targets | Out-File legacy_targets.txt"
@@ -178,15 +178,23 @@
         "RPC server unavailable (firewall blocking, target offline)",
         "Service not found (unusual - should exist on all Windows)"
       ],
-      "next_steps": [],
-      "alternatives": [],
-      "prerequisites": [],
+      "next_steps": [
+        "enable-remote-registry",
+        "ad-sam-dump-reg-save"
+      ],
+      "alternatives": [
+        "get-service"
+      ],
+      "prerequisites": [
+        "nmap-service-scan",
+        "crackmapexec-smb-framework"
+      ],
       "troubleshooting": {
         "Access denied": "Need local admin on target OR specific WMI query permissions. Try alternatives: PsExec + local query",
         "RPC server unavailable": "Target firewall blocking. Check basic connectivity: Test-Connection <TARGET>",
         "Cannot find service": "Service name case-sensitive on some PowerShell versions. Try: Get-Service -ComputerName <TARGET> | Where-Object {$_.Name -eq 'RemoteRegistry'}"
       },
-      "notes": "REMOTE REGISTRY SERVICE:\nRequired for PsLoggedOn and Get-NetLoggedon to work.\n\nHOW IT WORKS:\nAllows remote access to registry hives (HKLM, HKCU, HKEY_USERS) via RPC.\nTools read HKEY_USERS:\neach loaded SID = logged-on user.\n\nSERVICE STARTUP TYPES:\n- Disabled:\nMust be changed to Manual/Automatic first\n- Manual:\nDefault on servers (auto-starts on connection)\n- Automatic:\nAlways running\n\nDEFAULT CONFIGURATIONS:\n- Windows 8+ workstations:\nDisabled\n- Server 2012+:\nManual (good for attackers)\n\nKEY INSIGHT:\nIf you have local admin + service is Manual → it auto-starts on connection (no explicit start needed).\n\nCOMMAND:\n  Get-Service -ComputerName <TARGET> -Name RemoteRegistry\n\nOSCP STRATEGY:\nCheck service status BEFORE attempting enumeration.\nSaves time vs blind attempts.\n\nTime:\n<5 seconds per target",
+      "notes": "REMOTE REGISTRY SERVICE:\nRequired for PsLoggedOn and Get-NetLoggedon to work.\n\nHOW IT WORKS:\nAllows remote access to registry hives (HKLM, HKCU, HKEY_USERS) via RPC.\nTools read HKEY_USERS:\neach loaded SID = logged-on user.\n\nSERVICE STARTUP TYPES:\n- Disabled:\nMust be changed to Manual/Automatic first\n- Manual:\nDefault on servers (auto-starts on connection)\n- Automatic:\nAlways running\n\nDEFAULT CONFIGURATIONS:\n- Windows 8+ workstations:\nDisabled\n- Server 2012+:\nManual (good for attackers)\n\nKEY INSIGHT:\nIf you have local admin + service is Manual \u2192 it auto-starts on connection (no explicit start needed).\n\nCOMMAND:\n  Get-Service -ComputerName <TARGET> -Name RemoteRegistry\n\nOSCP STRATEGY:\nCheck service status BEFORE attempting enumeration.\nSaves time vs blind attempts.\n\nTime:\n<5 seconds per target",
       "oscp_relevance": "high",
       "methodology_guidance": {
         "after_success": "If Running: Use PsLoggedOn or Get-NetLoggedon immediately",
@@ -232,16 +240,22 @@
         "The RPC server is unavailable (firewall or target offline)",
         "The service cannot be started (dependency failure or corruption)"
       ],
-      "next_steps": [],
+      "next_steps": [
+        "ad-sam-dump-reg-save",
+        "crackmapexec-sam-dump"
+      ],
       "alternatives": [],
-      "prerequisites": [],
+      "prerequisites": [
+        "check-remote-registry-service",
+        "crackmapexec-validate-admin"
+      ],
       "troubleshooting": {
         "Access denied": "Verify local admin access: dir \\\\<TARGET>\\C$. If fails, you don't have admin rights.",
         "RPC server unavailable": "Firewall blocking or SMB disabled. Test: Test-NetConnection <TARGET> -Port 445",
         "Service fails to start": "Check dependencies: sc.exe \\\\<TARGET> qc RemoteRegistry. Dependencies must be running first.",
         "Syntax error": "PowerShell interprets 'sc' as Set-Content alias. Use sc.exe to force Windows binary."
       },
-      "notes": "ENABLE REMOTE REGISTRY REMOTELY:\nRequires local admin access on target.\n\nCOMMAND:\n  sc.exe \\\\<TARGET> config RemoteRegistry start= auto && sc.exe \\\\<TARGET> start RemoteRegistry\n\nWHAT THIS DOES:\n1.\n\nChange startup type to Automatic (persistent)\n\n2.\n\nStart service immediately\n\nWHY THIS WORKS:\nLocal admin → modify services via SCM → enable Remote Registry → use for enumeration.\n\nSERVICE STATES:\n- Disabled:\nMust change to Manual/Auto first (this command)\n- Manual:\nJust start it (no config change needed)\n- Automatic:\nAlready running (no action needed)\n\nOPSEC NOTE:\nEnabling services logged (Event ID 7040).\nPrefer targets where service already Manual.\n\nOSCP USE CASE:\nYou have admin but Remote Registry disabled → enable it → run PsLoggedOn/Get-NetLoggedon.\n\nTime:\n<10 seconds",
+      "notes": "ENABLE REMOTE REGISTRY REMOTELY:\nRequires local admin access on target.\n\nCOMMAND:\n  sc.exe \\\\<TARGET> config RemoteRegistry start= auto && sc.exe \\\\<TARGET> start RemoteRegistry\n\nWHAT THIS DOES:\n1.\n\nChange startup type to Automatic (persistent)\n\n2.\n\nStart service immediately\n\nWHY THIS WORKS:\nLocal admin \u2192 modify services via SCM \u2192 enable Remote Registry \u2192 use for enumeration.\n\nSERVICE STATES:\n- Disabled:\nMust change to Manual/Auto first (this command)\n- Manual:\nJust start it (no config change needed)\n- Automatic:\nAlready running (no action needed)\n\nOPSEC NOTE:\nEnabling services logged (Event ID 7040).\nPrefer targets where service already Manual.\n\nOSCP USE CASE:\nYou have admin but Remote Registry disabled \u2192 enable it \u2192 run PsLoggedOn/Get-NetLoggedon.\n\nTime:\n<10 seconds",
       "oscp_relevance": "high",
       "methodology_guidance": {
         "after_success": "Verify service running: Get-Service -ComputerName <TARGET> -Name RemoteRegistry Enumerate logged-on users: PsLoggedOn.exe \\\\<TARGET> Alternative: Get-NetLoggedon -ComputerName <TARGET>"

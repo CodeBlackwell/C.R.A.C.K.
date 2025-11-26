@@ -95,8 +95,20 @@
         "No matching entries",
         "Permission denied"
       ],
-      "next_steps": [],
-      "alternatives": [],
+      "next_steps": [
+        "grep-auth-failed",
+        "grep-sudo-commands",
+        "lastb-failed-logins",
+        "journalctl-service-follow"
+      ],
+      "alternatives": [
+        "tail-follow-log",
+        "journalctl-follow",
+        "journalctl-service-follow"
+      ],
+      "prerequisites": [
+        "tail-follow-log"
+      ],
       "notes": "--line-buffered is REQUIRED or grep will buffer output and display will be delayed.\n\nOSCP defense patterns:\n'Failed password' (brute force), 'Invalid user' (enumeration), 'Accepted publickey' (successful login), 'sudo.*COMMAND' (privilege usage).\n\nTime estimate:\nruns continuously.",
       "methodology_guidance": {
         "after_success": "Monitor failed SSH attempts: tail -f /var/log/auth.log | grep 'Failed password' Watch for root logins: tail -f /var/log/auth.log | grep 'session opened.*root' Monitor sudo usage: tail -f /var/log/auth.log | grep 'sudo.*COMMAND' Track user activity: tail -f /var/log/auth.log | grep <USERNAME>"
@@ -231,8 +243,21 @@
         "No entries found",
         "Unit not found"
       ],
-      "next_steps": [],
-      "alternatives": [],
+      "next_steps": [
+        "journalctl-priority-filter",
+        "grep-auth-failed",
+        "grep-sudo-commands",
+        "systemctl-running-services"
+      ],
+      "alternatives": [
+        "tail-follow-filter",
+        "tail-follow-log",
+        "journalctl-follow"
+      ],
+      "prerequisites": [
+        "journalctl-follow",
+        "systemctl-running-services"
+      ],
       "notes": "Service-specific monitoring helps troubleshoot issues.\n\nCommon services:\nssh, apache2, nginx, mysql, postgresql, cron.\n\nCan monitor multiple:\njournalctl -u ssh -u apache2 -f.\n\nTime estimate:\nruns continuously.",
       "methodology_guidance": {
         "after_success": "Monitor SSH: journalctl -u ssh -f Monitor web server: journalctl -u apache2 -f or nginx Monitor database: journalctl -u postgresql -f Add priority filter: journalctl -u <SERVICE> -f -p err"
@@ -474,8 +499,18 @@
         "No matches found",
         "Permission denied"
       ],
-      "next_steps": [],
-      "alternatives": [],
+      "prerequisites": [
+        "cat-etc-sudoers",
+        "tail-follow-filter"
+      ],
+      "alternatives": [
+        "ps-aux-full",
+        "journalctl-service-follow"
+      ],
+      "next_steps": [
+        "sudo-exploit-find",
+        "test-sudo-without"
+      ],
       "notes": "CRITICAL for defense auditing.\n\nEach sudo execution is logged with:\ntimestamp, user, command, working directory.\n\nOSCP tip:\nLook for suspicious commands:\nbash, sh, vi, less, find, python (all can spawn shells).\n\nTime estimate:\n2-5 seconds depending on log size.",
       "methodology_guidance": {
         "after_success": "Identify privilege escalation attempts Track which users use sudo: grep \"sudo.*COMMAND\" /var/log/auth.log | grep -oP 'USER=\\w+' | sort | uniq -c Find specific command: grep \"sudo.*COMMAND=/usr/bin/bash\" /var/log/auth.log Check for sudo failures: grep \"sudo.*incorrect password\" /var/log/auth.log"

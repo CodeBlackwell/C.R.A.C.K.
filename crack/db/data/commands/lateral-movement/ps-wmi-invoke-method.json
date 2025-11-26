@@ -86,6 +86,9 @@
         "REMOTE_EXECUTION",
         "OSCP:MEDIUM"
       ],
+      "prerequisites": ["ps-wmi-cimsession-setup", "ps-winrm-credential-setup"],
+      "alternatives": ["wmi-invoke-method", "ps-winrm-invoke-command"],
+      "next_steps": ["mimikatz-sekurlsa-logonpasswords", "ps-reverse-shell-base64"],
       "related_commands": [
         "ps-wmi-cimsession-setup",
         "ps-reverse-shell-base64",

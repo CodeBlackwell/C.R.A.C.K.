@@ -20,9 +20,12 @@
         "chisel",
         "tunneling",
         "pivoting",
-        "server"
+        "server",
+        "OSCP:HIGH"
       ],
-      "next_steps": [],
+      "prerequisites": [],
+      "alternatives": ["ssh-dynamic-port-forward", "ligolo-server"],
+      "next_steps": ["chisel-client", "chisel-socks"],
       "flag_explanations": {
         "-p": "Server listening port",
         "--reverse": "Enable reverse tunneling",
@@ -76,9 +79,12 @@
         "chisel",
         "tunneling",
         "pivoting",
-        "client"
+        "client",
+        "OSCP:HIGH"
       ],
-      "next_steps": [],
+      "prerequisites": ["chisel-server"],
+      "alternatives": ["ssh-local-forward", "plink-remote-forward", "ligolo-agent"],
+      "next_steps": ["proxychains-nmap", "nmap-service-scan"],
       "methodology_guidance": {
         "after_success": "Access service at localhost:<LPORT>"
       }
@@ -108,10 +114,12 @@
         "oscp",
         "chisel",
         "socks",
-        "proxy"
+        "proxy",
+        "OSCP:HIGH"
       ],
-      "prerequisites": [],
-      "next_steps": [],
+      "prerequisites": ["chisel-server"],
+      "alternatives": ["ssh-dynamic-forward", "sshuttle-vpn"],
+      "next_steps": ["proxychains-config", "proxychains-nmap"],
       "methodology_guidance": {
         "after_success": "Configure proxychains Scan internal network"
       }
@@ -160,9 +168,12 @@
         "ssh",
         "tunneling",
         "port-forwarding",
-        "local"
+        "local",
+        "OSCP:HIGH"
       ],
-      "next_steps": [],
+      "prerequisites": ["ssh-connect"],
+      "alternatives": ["chisel-client", "ssh-local-port-forward", "plink-remote-forward"],
+      "next_steps": ["proxychains-nmap", "nmap-service-scan"],
       "flag_explanations": {
         "-L": "Local port forwarding",
         "-N": "No command execution (tunnel only)",
@@ -210,9 +221,12 @@
         "ssh",
         "tunneling",
         "port-forwarding",
-        "remote"
+        "remote",
+        "OSCP:HIGH"
       ],
-      "next_steps": [],
+      "prerequisites": ["ssh-connect"],
+      "alternatives": ["chisel-client", "plink-remote-forward", "ssh-remote-port-forward"],
+      "next_steps": ["nmap-service-scan", "nc-listener-setup"],
       "flag_explanations": {
         "-R": "Remote port forwarding",
         "-N": "No command execution"
@@ -253,9 +267,12 @@
         "ssh",
         "tunneling",
         "socks",
-        "dynamic"
+        "dynamic",
+        "OSCP:HIGH"
       ],
-      "next_steps": [],
+      "prerequisites": ["ssh-connect"],
+      "alternatives": ["chisel-socks", "sshuttle-vpn", "ssh-dynamic-port-forward"],
+      "next_steps": ["proxychains-config", "proxychains-nmap"],
       "flag_explanations": {
         "-D": "Dynamic port forwarding (SOCKS)",
         "-N": "No command execution",
@@ -276,10 +293,12 @@
         "oscp",
         "ligolo-ng",
         "pivoting",
-        "server"
+        "server",
+        "OSCP:HIGH"
       ],
       "prerequisites": [],
-      "next_steps": [],
+      "alternatives": ["chisel-server", "ssh-dynamic-port-forward"],
+      "next_steps": ["ligolo-agent"],
       "methodology_guidance": {
         "after_success": "Run ligolo agent on target Add routes"
       }
@@ -303,9 +322,12 @@
         "oscp",
         "ligolo-ng",
         "pivoting",
-        "agent"
+        "agent",
+        "OSCP:HIGH"
       ],
-      "next_steps": [],
+      "prerequisites": ["ligolo-server"],
+      "alternatives": ["chisel-client", "ssh-dynamic-forward"],
+      "next_steps": ["nmap-service-scan", "bloodhound-ingest"],
       "methodology_guidance": {
         "after_success": "Start session Add route to internal network"
       }

@@ -92,7 +92,10 @@
         "specific_user": "(samaccountname=<USERNAME>)",
         "servers": "(&(objectClass=computer)(operatingSystem=*Server*))",
         "service_accounts": "(&(objectClass=user)(servicePrincipalName=*))"
-      }
+      },
+      "prerequisites": ["ps-get-current-domain"],
+      "alternatives": ["ldapsearch-users-ad", "get-netuser"],
+      "next_steps": ["kerbrute-userenum-ad", "impacket-getnpusers-asreproast"]
     }
   ]
 }

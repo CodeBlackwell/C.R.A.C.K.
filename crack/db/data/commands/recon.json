@@ -41,8 +41,9 @@
         "Host seems down",
         "Note: Host seems down"
       ],
-      "next_steps": [],
-      "alternatives": [],
+      "next_steps": ["nmap-quick-scan", "nmap-service-scan"],
+      "alternatives": ["ping-host"],
+      "prerequisites": [],
       "notes": "Use -sn for host discovery only, no port scan",
       "oscp_relevance": "high",
       "methodology_guidance": {
@@ -331,8 +332,9 @@
         "Connection refused",
         "Could not connect"
       ],
-      "next_steps": [],
-      "alternatives": [],
+      "next_steps": ["smb-smbclient-connect", "smb-smbmap-recursive", "smb-mount-share", "hydra-smb-attack"],
+      "alternatives": ["smb-enum4linux-full", "smb-crackmapexec-shares", "smb-null-session-shares", "enum4linux-smb"],
+      "prerequisites": ["nmap-service-scan"],
       "notes": "Check for null sessions and guest access",
       "oscp_relevance": "high",
       "methodology_guidance": {
@@ -1048,9 +1050,9 @@
         "[-] Unable to connect",
         "context deadline exceeded"
       ],
-      "next_steps": [],
-      "alternatives": [],
-      "prerequisites": [],
+      "next_steps": ["gobuster-dir", "whatweb-technology-detection", "nikto-scan"],
+      "alternatives": ["ffuf-vhost-fuzz"],
+      "prerequisites": ["nmap-service-scan"],
       "troubleshooting": {
         "All entries return same size": "Server returns same response for all hosts. Filter by size: --exclude-length <SIZE> or try different status codes",
         "No results found": "Try common subdomains manually: dev, staging, test, admin, api, mobile, internal",

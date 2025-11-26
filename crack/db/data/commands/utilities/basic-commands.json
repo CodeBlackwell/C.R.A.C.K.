@@ -35,14 +35,9 @@
         "Is a directory"
       ],
       "next_steps": [
-        "capture-root-flag",
-        "grep-search-file"
+        "capture-root-flag"
       ],
-      "alternatives": [
-        "less-view-file",
-        "head-view-file",
-        "tail-view-file"
-      ],
+      "alternatives": [],
       "prerequisites": [],
       "troubleshooting": {
         "permission_denied": "File not readable by current user. Try with sudo: sudo cat <FILE>. Or check permissions: ls -l <FILE>",
@@ -189,9 +184,7 @@
         "ping-host",
         "nmap-service-scan"
       ],
-      "alternatives": [
-        "nano-edit-hosts"
-      ],
+      "alternatives": [],
       "prerequisites": [],
       "troubleshooting": {
         "still_not_resolving": "DNS cache issue. Flush with: sudo systemd-resolve --flush-caches. Or restart DNS: sudo systemctl restart systemd-resolved",
@@ -274,13 +267,9 @@
       ],
       "next_steps": [],
       "alternatives": [
-        "windows-read-file-type",
         "cat-read-file"
       ],
-      "prerequisites": [
-        "linux-privesc-to-root",
-        "sudo-exploit"
-      ],
+      "prerequisites": [],
       "troubleshooting": {
         "permission_denied": "Not root yet. Complete privilege escalation first. Check sudo: sudo -l. Find SUID: find / -perm -4000 2>/dev/null",
         "file_not_found": "May be named differently: cat /root/proof.txt. Or in alternate location: find / -name '*flag*' 2>/dev/null"

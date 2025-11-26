@@ -36,8 +36,9 @@
         "no crontab for <user>",
         "crontab: command not found"
       ],
-      "next_steps": [],
-      "alternatives": [],
+      "next_steps": ["crontab-user-specific", "crontab-system-wide", "cron-directories-list", "pspy-monitor", "suid-find"],
+      "alternatives": ["cron-directories-list", "linux-systemd-timers"],
+      "prerequisites": [],
       "notes": "Cron format:\nminute hour day month weekday command.\n\nOSCP tip:\nCheck if cron scripts are writable - modify to run reverse shell as cron user.\n\nTime estimate:\n<1 second.\n\nSpecial strings:\n@reboot (run at startup), @daily, @hourly, @weekly, @monthly.",
       "methodology_guidance": {
         "after_success": "Check other users' crontabs: crontab-user-specific Check system-wide crontab: crontab-system-wide Look for writable cron scripts: find /etc/cron* -type f -writable Check cron script permissions for privesc"
@@ -84,8 +85,9 @@
         "no crontab for <user>",
         "Permission denied"
       ],
-      "next_steps": [],
-      "alternatives": [],
+      "next_steps": ["cron-directories-list", "crontab-system-wide", "pspy-monitor", "cron-enum"],
+      "alternatives": ["crontab-user-list", "cron-directories-list"],
+      "prerequisites": ["crontab-user-list"],
       "notes": "Root's crontab is high-value target.\n\nIf root cron runs writable script, instant privesc.\n\nCrontab location varies:\n/var/spool/cron/crontabs/ (Debian/Ubuntu), /var/spool/cron/ (RHEL/CentOS).\n\nTime estimate:\n<1 second.",
       "methodology_guidance": {
         "after_success": "Check root's crontab: sudo crontab -l -u root Check if cron scripts are writable by current user Replace script with malicious version if writable Wait for cron to execute for privilege escalation"
@@ -166,8 +168,9 @@
       "failure_indicators": [
         "No such file or directory"
       ],
-      "next_steps": [],
-      "alternatives": [],
+      "next_steps": ["pspy-monitor", "suid-find", "linpeas-run", "cron-enum"],
+      "alternatives": ["crontab-user-list", "crontab-system-wide", "linux-systemd-timers"],
+      "prerequisites": ["crontab-user-list"],
       "notes": "Scripts in these directories run automatically:\ncron.hourly (every hour), cron.daily (daily), cron.weekly (weekly), cron.monthly (monthly).\n\nAll run as root by default.\n\nCRITICAL privesc vector if writable.\n\nTime estimate:\n2 seconds.\n\nCommand to find writable:\nfind /etc/cron* -type f -writable 2>/dev/null",
       "methodology_guidance": {
         "after_success": "Check file permissions: find /etc/cron* -type f -perm -o+w Check for writable scripts: find /etc/cron* -writable 2>/dev/null Modify writable script to add reverse shell",

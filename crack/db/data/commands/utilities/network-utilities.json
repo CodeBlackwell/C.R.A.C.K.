@@ -40,7 +40,10 @@
         "Destination Host Unreachable"
       ],
       "oscp_relevance": "high",
-      "notes": "First test for connectivity - note Windows uses -n instead of -c"
+      "notes": "First test for connectivity - note Windows uses -n instead of -c",
+      "prerequisites": [],
+      "alternatives": ["nmap-ping-sweep", "traceroute-host"],
+      "next_steps": ["nmap-quick-scan", "nmap-service-scan"]
     },
     {
       "id": "traceroute-host",
@@ -329,14 +332,8 @@
       "oscp_relevance": "high",
       "notes": "Essential for catching reverse shells - run before triggering exploit",
       "prerequisites": [],
-      "alternatives": [
-        "pwncat-listener",
-        "msfconsole-handler"
-      ],
-      "next_steps": [
-        "shell-stabilization",
-        "linux-privesc-enumeration"
-      ]
+      "alternatives": ["nc-listener-setup", "msf-handler-setup", "msf-handler-background"],
+      "next_steps": ["python-shell-upgrade", "linpeas-run", "winpeas-run"]
     },
     {
       "id": "nc-connect",
@@ -369,7 +366,10 @@
         "-z": "Zero-I/O mode (port scanning)"
       },
       "oscp_relevance": "high",
-      "notes": "Useful for manual service interaction and banner grabbing"
+      "notes": "Useful for manual service interaction and banner grabbing",
+      "prerequisites": [],
+      "alternatives": ["telnet-connect", "curl-url"],
+      "next_steps": []
     },
     {
       "id": "ssh-connect",
@@ -408,7 +408,10 @@
         "-o": "Set options (e.g., -o StrictHostKeyChecking=no)"
       },
       "oscp_relevance": "high",
-      "notes": "Essential for accessing compromised hosts and port forwarding"
+      "notes": "Essential for accessing compromised hosts and port forwarding",
+      "prerequisites": ["hydra-ssh"],
+      "alternatives": ["evil-winrm-shell"],
+      "next_steps": ["linpeas-run", "linenum-run", "scp-file"]
     },
     {
       "id": "scp-file",
@@ -604,7 +607,10 @@
         "filtered - firewall blocking probes"
       ],
       "notes": "UDP scanning is slower and less reliable than TCP. Use -Pn flag to skip host discovery if needed. Common for verifying Kerberos (88/udp), DNS (53/udp), SNMP (161/udp).",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "prerequisites": ["nmap-quick-scan"],
+      "alternatives": [],
+      "next_steps": ["nmap-service-scan", "snmp-enum"]
     }
   ]
 }

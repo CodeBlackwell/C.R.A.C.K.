@@ -16,7 +16,13 @@
           "description": "Service state to filter by",
           "example": "running",
           "required": false,
-          "common_values": ["running", "failed", "active", "inactive", "all"]
+          "common_values": [
+            "running",
+            "failed",
+            "active",
+            "inactive",
+            "all"
+          ]
         }
       ],
       "flag_explanations": {
@@ -46,15 +52,12 @@
       },
       "prerequisites": [],
       "alternatives": [
-        "service --status-all",
-        "chkconfig --list",
-        "ls-init-d"
+        "service-status-all-sysv"
       ],
       "next_steps": [
-        "systemctl-status-service",
-        "systemctl-show-service",
-        "find-writable-service-files",
-        "linux-process-enumeration"
+        "systemctl-running-services",
+        "systemctl-cat",
+        "linux-service-privesc"
       ],
       "tags": [
         "OSCP:HIGH",
@@ -80,7 +83,11 @@
           "description": "Network protocol to filter by",
           "example": "TCP",
           "required": false,
-          "common_values": ["TCP", "UDP", ""]
+          "common_values": [
+            "TCP",
+            "UDP",
+            ""
+          ]
         },
         {
           "name": "<PORT>",
@@ -122,16 +129,11 @@
       },
       "prerequisites": [],
       "alternatives": [
-        "netstat -tulpn",
-        "ss -tulpn",
-        "ls-proc-fd-all",
-        "netstat-listening-ports"
+        "netstat-listening-tcp",
+        "ss-listening-all"
       ],
       "next_steps": [
-        "curl-local-service",
-        "port-forward-ssh",
-        "chisel-port-forward",
-        "linux-process-enumeration"
+        "ssh-local-port-forward"
       ],
       "tags": [
         "OSCP:HIGH",

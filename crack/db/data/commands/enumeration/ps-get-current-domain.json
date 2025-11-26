@@ -84,7 +84,19 @@
         "InfrastructureRoleOwner": "Infrastructure Master FSMO role holder",
         "Parent": "Parent domain (if child domain)",
         "Children": "Child domains (if any)"
-      }
+      },
+      "prerequisites": [
+        "evil-winrm-shell"
+      ],
+      "alternatives": [
+        "ad-ps-ldap-domain-info",
+        "powerview-get-netdomain"
+      ],
+      "next_steps": [
+        "get-aduser",
+        "powerview-get-netuser-all",
+        "ldapsearch-ad"
+      ]
     }
   ]
 }

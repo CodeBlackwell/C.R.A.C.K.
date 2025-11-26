@@ -73,6 +73,9 @@
         "POST_EXPLOIT",
         "OSCP:HIGH"
       ],
+      "prerequisites": ["ps-reverse-shell-encoder-python", "nc-listener-setup"],
+      "alternatives": ["msfvenom-powershell-reverse", "bash-reverse-shell"],
+      "next_steps": ["mimikatz-sekurlsa-logonpasswords", "systeminfo-windows", "whoami-priv"],
       "related_commands": [
         "ps-reverse-shell-encoder-python",
         "ps-winrm-invoke-command",

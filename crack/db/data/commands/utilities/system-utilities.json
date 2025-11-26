@@ -341,7 +341,11 @@
       },
       "alternatives": [],
       "oscp_relevance": "high",
-      "notes": "Essential for privilege escalation - finding SUID binaries, writable files, config files"
+      "notes": "Essential for privilege escalation - finding SUID binaries, writable files, config files",
+      "prerequisites": [],
+      "next_steps": [
+        "strings-file"
+      ]
     },
     {
       "id": "cat-file",
@@ -405,7 +409,16 @@
         "-o": "Show only matching part of line"
       },
       "oscp_relevance": "high",
-      "notes": "Critical for finding credentials, API keys, sensitive data in files"
+      "notes": "Critical for finding credentials, API keys, sensitive data in files",
+      "prerequisites": [],
+      "alternatives": [
+        "grep-r-etc",
+        "linux-suid-find"
+      ],
+      "next_steps": [
+        "cat-file",
+        "grep-r-etc"
+      ]
     },
     {
       "id": "head-file",

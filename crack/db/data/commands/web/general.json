@@ -59,8 +59,9 @@
         "invalid URL",
         "connection refused"
       ],
-      "next_steps": [],
-      "alternatives": [],
+      "next_steps": ["nikto-scan", "lfi-test", "sqlmap-basic", "whatweb-enum", "web-manual-enumeration"],
+      "alternatives": ["dirbuster", "wfuzz-params", "gobuster-dir-common", "gobuster-dir-custom"],
+      "prerequisites": [],
       "notes": "Adjust extensions based on technology stack",
       "oscp_relevance": "high",
       "methodology_guidance": {
@@ -179,8 +180,9 @@
         "[CRITICAL] no parameter(s) found",
         "connection timed out"
       ],
-      "next_steps": [],
-      "alternatives": [],
+      "next_steps": ["sqlmap-enumerate-databases", "sqlmap-enumerate-tables", "sqlmap-dump-table"],
+      "alternatives": ["sqlmap-from-request", "sqlmap-from-request-level3", "sqli-manual-test"],
+      "prerequisites": ["gobuster-dir", "sqli-manual-test"],
       "notes": "Save Burp request to file for complex requests",
       "oscp_relevance": "high",
       "methodology_guidance": {
@@ -222,8 +224,7 @@
         "Input filtered/escaped"
       ],
       "next_steps": [
-        "sqlmap-from-request-level3",
-        "sqli-union-attack"
+        "sqlmap-from-request-level3"
       ],
       "alternatives": [
         "sqlmap-from-request",
@@ -362,8 +363,9 @@
         "Permission denied",
         "include(): Failed opening"
       ],
-      "next_steps": [],
+      "next_steps": ["bash-reverse-shell", "php-reverse-shell", "nc-listener-setup"],
       "alternatives": [],
+      "prerequisites": ["gobuster-dir"],
       "notes": "Try with null byte (%00) termination\n\nAlternative Techniques:\n- ....//....//etc/passwd\n- ..\\..\\..\\..\\windows\\system32\\drivers\\etc\\hosts\n- file:///etc/passwd",
       "oscp_relevance": "high",
       "methodology_guidance": {
@@ -462,8 +464,9 @@
         "Failed to connect",
         "Timeout"
       ],
-      "next_steps": [],
-      "alternatives": [],
+      "next_steps": ["gobuster-dir", "searchsploit", "searchsploit-service-version"],
+      "alternatives": ["nikto-scan", "curl-post"],
+      "prerequisites": [],
       "notes": "Essential for finding version-specific exploits",
       "oscp_relevance": "high",
       "methodology_guidance": {

@@ -39,10 +39,11 @@
         "No units found",
         "systemctl: command not found"
       ],
-      "next_steps": [],
+      "next_steps": ["systemctl-service-permissions", "systemctl-enabled-services", "journalctl-service-follow", "linpeas-run"],
       "alternatives": [
         "service-status-all-sysv"
       ],
+      "prerequisites": ["ps-aux-full"],
       "notes": "systemd is the init system for most modern Linux distributions (RHEL 7+, Ubuntu 16.04+, Debian 8+).\n\nOSCP tip:\nFocus on custom services (not part of base OS) - often have misconfigurations.\n\nTime estimate:\n2 seconds.\n\nTo see ALL services (including failed):\nsystemctl list-units --type=service --all",
       "methodology_guidance": {
         "after_success": "Check service configuration: systemctl cat <SERVICE> Check service file permissions: systemctl-service-permissions Look for writable service files: find /etc/systemd -writable Identify services running as root: systemctl status <SERVICE>"
@@ -122,8 +123,9 @@
         "No such file or directory",
         "Permission denied"
       ],
-      "next_steps": [],
-      "alternatives": [],
+      "next_steps": ["suid-find", "linpeas-run", "cron-directories-list"],
+      "alternatives": ["service-status-all-sysv", "chkconfig-list-sysv"],
+      "prerequisites": ["ps-aux-full", "systemctl-running-services"],
       "notes": "CRITICAL for OSCP privilege escalation.\n\nWritable service files = instant root if service runs as root.\n\nAlso check /lib/systemd/system/ (system services).\n\nTime estimate:\n2 seconds.\n\nExploit pattern:\n(1) Find writable .service file, (2) Modify ExecStart=/path/to/reverse_shell, (3) sudo systemctl restart <SERVICE>.",
       "methodology_guidance": {
         "after_success": "If writable: Modify service to run payload as root Check ExecStart path in service file: systemctl cat <SERVICE> Check if service binary is writable: ls -la <EXEC_PATH> Restart service to trigger payload: sudo systemctl restart <SERVICE>"

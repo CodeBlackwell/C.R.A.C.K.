@@ -232,11 +232,12 @@
         "netstat: command not found",
         "(No info) in PID column (run as root for PID info)"
       ],
-      "next_steps": [],
+      "next_steps": ["lsof-port-specific", "ps-aux-full", "systemctl-running-services"],
       "alternatives": [
         "ss-listening-all",
         "lsof-listening-ports"
       ],
+      "prerequisites": ["ps-aux-full"],
       "notes": "Classic tool but deprecated in favor of 'ss' on modern systems.\n\nStill widely used in OSCP labs.\n\nMUST run with sudo for PID information, otherwise shows '(No info)'.\n\nOSCP tip:\nFocus on:\n(1) 0.0.0.0:* (externally accessible), (2) 127.0.0.1:* (local only, often weaker auth), (3) Unusual high ports (potential backdoors).\n\nTime estimate:\n2 seconds.",
       "methodology_guidance": {
         "after_success": "Identify unknown services: searchsploit <SERVICE> Check service versions: nmap-service-scan Test for default credentials",
@@ -282,11 +283,12 @@
         "ss: command not found",
         "No process info (need root)"
       ],
-      "next_steps": [],
+      "next_steps": ["lsof-port-specific", "ps-aux-full", "systemctl-running-services", "ss-established-connections"],
       "alternatives": [
         "netstat-listening-tcp",
         "lsof-listening-ports"
       ],
+      "prerequisites": ["ps-aux-full"],
       "notes": "Modern replacement for netstat - 10x faster on systems with many connections.\n\nSame syntax as netstat for easy transition.\n\nOSCP tip:\nUse with grep for specific ports:\nss -tulpn | grep :80.\n\nFor all connections (not just listening):\nss -tupn.\n\nTime estimate:\n<1 second.",
       "methodology_guidance": {
         "after_success": "Compare with external port scan: nmap-service-scan Test accessible ports for vulnerabilities Check firewall rules: iptables -L -n -v",

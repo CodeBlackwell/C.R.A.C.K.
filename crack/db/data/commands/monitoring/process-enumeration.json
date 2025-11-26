@@ -40,12 +40,20 @@
         "ps: command not found",
         "Permission denied"
       ],
-      "next_steps": [],
+      "next_steps": [
+        "ps-auxww-no-truncate",
+        "pgrep-pattern-search",
+        "netstat-listening-tcp",
+        "ss-listening-all",
+        "suid-find",
+        "linpeas-run"
+      ],
       "alternatives": [
         "ps-ef-full",
         "top-snapshot",
         "pstree-hierarchy"
       ],
+      "prerequisites": [],
       "notes": "OSCP Tip:\nLook for (1) processes running as root from writable directories (/tmp, /var/tmp), (2) custom services that might have misconfigurations, (3) database processes (mysql, postgresql) for credential hunting.\n\nCommon manual alternative:\ncat /proc/*/cmdline (view process command lines directly from /proc filesystem).\n\nTime estimate:\n5 seconds.",
       "methodology_guidance": {
         "after_success": "Look for processes running as root with writable binaries Check for unusual processes or services Identify processes listening on network ports: ps-process-to-port Search for specific processes: pgrep-pattern-search"
@@ -255,7 +263,10 @@
         "No processes found",
         "pgrep: command not found"
       ],
-      "next_steps": [],
+      "next_steps": [
+        "lsof-list",
+        "ps-pid-details"
+      ],
       "alternatives": [],
       "notes": "Much faster than 'ps aux | grep' and doesn't show the grep process itself.\n\nUse -i for case-insensitive:\npgrep -afi <PATTERN>.\n\nTime estimate:\n1 second.\n\nOSCP tip:\nSearch for common services:\npgrep -af 'mysql|postgresql|apache|nginx|ssh|vsftpd' to identify attack vectors.",
       "methodology_guidance": {
@@ -341,8 +352,15 @@
       "failure_indicators": [
         "No processes found for user"
       ],
-      "next_steps": [],
-      "alternatives": [],
+      "prerequisites": [],
+      "alternatives": [
+        "ps-aux-full",
+        "get-process-filter"
+      ],
+      "next_steps": [
+        "ps-monitor-loop",
+        "pspy"
+      ],
       "notes": "OSCP tip:\nCheck www-data processes for web vulnerabilities, mysql processes for database attack vectors, root processes for privilege escalation opportunities.\n\nTime estimate:\n2 seconds.",
       "methodology_guidance": {
         "after_success": "Check root processes: ps -u root Look for writable binaries: find / -user <USERNAME> -perm -w -type f 2>/dev/null Check user's cronjobs: crontab -u <USERNAME> -l"

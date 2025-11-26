@@ -429,9 +429,7 @@
         "ad-golden-ticket-psexec-use",
         "windows-net-use-smb-connect"
       ],
-      "alternatives": [
-        "rubeus-klist-display"
-      ],
+      "alternatives": [],
       "tags": [
         "ACTIVE_DIRECTORY",
         "KERBEROS",

@@ -72,9 +72,19 @@
         "Address already in use - port conflict, choose different LOCAL_PORT",
         "Cannot assign requested address - BIND_ADDRESS not valid on this host"
       ],
-      "next_steps": [],
-      "alternatives": [],
-      "prerequisites": [],
+      "prerequisites": [
+        "ssh-connect"
+      ],
+      "alternatives": [
+        "chisel-client",
+        "plink-remote-forward",
+        "ssh-local-forward"
+      ],
+      "next_steps": [
+        "nmap-service-scan",
+        "psql-connect",
+        "smbclient-list-shares"
+      ],
       "troubleshooting": {
         "Port already in use": "Check listening ports: ss -ntplu, choose different port or kill conflicting process",
         "Permission denied for port <1024": "Use port >1024 (e.g., 4455, 8080) or run with sudo (not recommended)",
@@ -94,6 +104,17 @@
       "subcategory": "ssh_tunneling",
       "command": "ssh -N -D <BIND_ADDRESS>:<SOCKS_PORT> <SSH_USER>@<SSH_HOST>",
       "description": "Create SSH dynamic port forward - SOCKS proxy on SSH client for flexible multi-destination tunneling",
+      "prerequisites": [
+        "ssh-key-authentication"
+      ],
+      "alternatives": [
+        "chisel-client",
+        "ligolo-agent"
+      ],
+      "next_steps": [
+        "proxychains-nmap",
+        "proxychains-config"
+      ],
       "tags": [
         "SSH",
         "TUNNELING",
@@ -147,9 +168,6 @@
         "Proxychains shows 'socket error or timeout' - destination unreachable from pivot",
         "Proxychains shows 'DLL init' but no traffic - check /etc/proxychains4.conf configuration"
       ],
-      "next_steps": [],
-      "alternatives": [],
-      "prerequisites": [],
       "troubleshooting": {
         "Proxychains 'can't read configuration file'": "Check file exists: ls -la /etc/proxychains4.conf, verify readable",
         "Static binary incompatible with proxychains": "Proxychains uses LD_PRELOAD (dynamic linking only) - use tools with native SOCKS or recompile dynamically",
@@ -169,6 +187,17 @@
       "subcategory": "ssh_tunneling",
       "command": "ssh -N -R <BIND_ADDRESS>:<REMOTE_PORT>:<DEST_IP>:<DEST_PORT> <SSH_USER>@<SSH_SERVER>",
       "description": "Create SSH remote port forward - reverse tunnel binding port on SSH server, forwarding from compromised client",
+      "prerequisites": [
+        "ssh-key-authentication"
+      ],
+      "alternatives": [
+        "chisel-client",
+        "socat-port-forward"
+      ],
+      "next_steps": [
+        "nc-reverse-shell",
+        "curl-post"
+      ],
       "tags": [
         "SSH",
         "TUNNELING",
@@ -233,9 +262,6 @@
         "bind: Cannot assign requested address - GatewayPorts disabled for 0.0.0.0 binding",
         "Address already in use - port conflict on SSH server"
       ],
-      "next_steps": [],
-      "alternatives": [],
-      "prerequisites": [],
       "troubleshooting": {
         "Connection to SSH server times out": "Check outbound firewall on client, verify SSH server listening: sudo ss -ntplu | grep :22",
         "Permission denied (publickey)": "Password auth disabled - edit /etc/ssh/sshd_config, set PasswordAuthentication yes, restart sshd",
@@ -256,6 +282,17 @@
       "subcategory": "ssh_tunneling",
       "command": "ssh -N -R <SOCKS_PORT> <SSH_USER>@<SSH_SERVER>",
       "description": "Create SSH remote dynamic port forward - reverse SOCKS proxy on SSH server for firewall bypass with multi-destination flexibility",
+      "prerequisites": [
+        "ssh-key-authentication"
+      ],
+      "alternatives": [
+        "ssh-dynamic-port-forward",
+        "chisel-server"
+      ],
+      "next_steps": [
+        "proxychains-nmap",
+        "proxychains-config"
+      ],
       "tags": [
         "SSH",
         "TUNNELING",
@@ -297,20 +334,17 @@
       ],
       "failure_indicators": [
         "Connection refused - SSH server not reachable from client",
-        "OpenSSH version too old - requires ≥7.6 (released October 2017)",
+        "OpenSSH version too old - requires \u22657.6 (released October 2017)",
         "Permission denied - SSH authentication failed",
         "Proxychains socket error - check /etc/proxychains4.conf points to correct port"
       ],
-      "next_steps": [],
-      "alternatives": [],
-      "prerequisites": [],
       "troubleshooting": {
         "OpenSSH version too old": "Upgrade OpenSSH on client, or use alternative: ssh -R port:localhost:socks_port + standalone SOCKS server (microsocks)",
-        "SOCKS port not listening on SSH server": "Verify OpenSSH server version ≥7.6: ssh -V on server, check sshd_config allows tunneling (PermitTunnel yes)",
+        "SOCKS port not listening on SSH server": "Verify OpenSSH server version \u22657.6: ssh -V on server, check sshd_config allows tunneling (PermitTunnel yes)",
         "Proxychains DLL init but no traffic": "Check proxychains4.conf syntax: [ProxyList] section correct, socks5 127.0.0.1 <SOCKS_PORT>",
         "Very slow performance": "Reduce timeouts in proxychains4.conf to 1000ms, use -T2 timing with nmap"
       },
-      "notes": "Remote dynamic forward combines reverse tunnel (firewall bypass) with SOCKS proxy (multi-destination flexibility).\n\nRequires OpenSSH ≥7.6 on compromised client (Windows 1803+ has version 8.1+, most modern Linux has ≥7.6).\n\nSyntax difference:\nNormal remote forward includes destination (-R port:host:hostport), remote dynamic only has port (-R port).\n\nCritical OSCP technique for enumeration through firewalled pivot points.",
+      "notes": "Remote dynamic forward combines reverse tunnel (firewall bypass) with SOCKS proxy (multi-destination flexibility).\n\nRequires OpenSSH \u22657.6 on compromised client (Windows 1803+ has version 8.1+, most modern Linux has \u22657.6).\n\nSyntax difference:\nNormal remote forward includes destination (-R port:host:hostport), remote dynamic only has port (-R port).\n\nCritical OSCP technique for enumeration through firewalled pivot points.",
       "oscp_relevance": "high",
       "methodology_guidance": {
         "after_success": "On SSH server (Kali): Verify SOCKS proxy: ss -ntplu | grep <SOCKS_PORT> Configure Proxychains: Edit /etc/proxychains4.conf, set 'socks5 127.0.0.1 <SOCKS_PORT>' Optimize performance: Set tcp_read_time_out=1000, tcp_connect_time_out=1000 in proxychains4.conf Test with nmap: sudo proxychains nmap -sT --top-ports=20 -Pn <INTERNAL_IP> Access services: proxychains psql -h <INTERNAL_IP>, proxychains smbclient -L //<INTERNAL_IP>/"
@@ -323,6 +357,9 @@
       "subcategory": "port_forwarding",
       "command": "socat -ddd TCP-LISTEN:<LOCAL_PORT>,fork TCP:<DEST_IP>:<DEST_PORT>",
       "description": "Create simple TCP port forward using Socat - no encryption, no authentication, single command relay",
+      "prerequisites": [],
+      "alternatives": [],
+      "next_steps": [],
       "tags": [
         "SOCAT",
         "PORT_FORWARD",
@@ -368,9 +405,6 @@
         "Permission denied - trying to bind privileged port <1024 without root",
         "No output after command - Socat not installed or not in PATH"
       ],
-      "next_steps": [],
-      "alternatives": [],
-      "prerequisites": [],
       "troubleshooting": {
         "Socat not found": "Install Socat: sudo apt install socat, or download static binary: wget https://github.com/andrew-d/static-binaries/raw/master/binaries/linux/x86_64/socat",
         "Address already in use": "Check listening ports: ss -ntplu, kill conflicting process: kill <PID>, or choose different port",

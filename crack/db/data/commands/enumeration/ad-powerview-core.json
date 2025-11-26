@@ -575,9 +575,20 @@
         "Get-NetUser not recognized",
         "Module not imported"
       ],
-      "next_steps": [],
-      "alternatives": [],
-      "prerequisites": [],
+      "next_steps": [
+        "powerview-find-localadminaccess",
+        "powerview-get-domaincomputer",
+        "impacket-getuserspns-kerberoast"
+      ],
+      "alternatives": [
+        "ldapsearch-users-ad",
+        "enum4linux-users-ad",
+        "get-aduser"
+      ],
+      "prerequisites": [
+        "import-powerview",
+        "download-powerview"
+      ],
       "troubleshooting": {
         "Get-NetUser not recognized": "Import PowerView first: . .\\PowerView.ps1 or Import-Module PowerView.psd1"
       },
@@ -699,7 +710,7 @@
       "troubleshooting": {
         "Group not found": "Verify group name: Get-NetGroup | select name"
       },
-      "notes": "Critical for identifying privilege escalation paths.\n\nNested groups often overlooked.\n\nEXAMPLE CHAIN:\nUser → Helpdesk → ServerAdmins → Domain Admins\n\nUSE -RECURSE:\nFinds all effective members through nested groups.",
+      "notes": "Critical for identifying privilege escalation paths.\n\nNested groups often overlooked.\n\nEXAMPLE CHAIN:\nUser \u2192 Helpdesk \u2192 ServerAdmins \u2192 Domain Admins\n\nUSE -RECURSE:\nFinds all effective members through nested groups.",
       "oscp_relevance": "high",
       "methodology_guidance": {
         "after_success": "Check each member's privileges on other systems"

@@ -86,6 +86,9 @@
         "REMOTE_EXECUTION",
         "OSCP:HIGH"
       ],
+      "prerequisites": ["ps-winrm-credential-setup"],
+      "alternatives": ["winrm-invoke-command", "evil-winrm-creds", "wmi-invoke-method"],
+      "next_steps": ["mimikatz-sekurlsa-logonpasswords", "ps-reverse-shell-base64"],
       "related_commands": [
         "ps-winrm-credential-setup",
         "ps-winrm-new-pssession",

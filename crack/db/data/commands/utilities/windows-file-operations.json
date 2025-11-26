@@ -150,7 +150,10 @@
         "CREDENTIAL_DISCOVERY",
         "ENUMERATION",
         "POST_EXPLOITATION"
-      ]
+      ],
+      "prerequisites": [],
+      "alternatives": ["windows-read-file-type"],
+      "next_steps": ["evil-winrm-download-file", "capture-root-flag"]
     }
   ]
 }
