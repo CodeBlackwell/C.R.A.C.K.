@@ -577,7 +577,7 @@
       ],
       "next_steps": [
         "powerview-find-localadminaccess",
-        "powerview-get-domaincomputer",
+        "powerview-get-netcomputer",
         "impacket-getuserspns-kerberoast"
       ],
       "alternatives": [

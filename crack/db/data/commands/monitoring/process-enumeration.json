@@ -355,11 +355,10 @@
       "prerequisites": [],
       "alternatives": [
         "ps-aux-full",
-        "get-process-filter"
+        "ps-user-filter"
       ],
       "next_steps": [
-        "ps-monitor-loop",
-        "pspy"
+        "pspy-monitor"
       ],
       "notes": "OSCP tip:\nCheck www-data processes for web vulnerabilities, mysql processes for database attack vectors, root processes for privilege escalation opportunities.\n\nTime estimate:\n2 seconds.",
       "methodology_guidance": {

@@ -89,7 +89,6 @@
         "evil-winrm-shell"
       ],
       "alternatives": [
-        "ad-ps-ldap-domain-info",
         "powerview-get-netdomain"
       ],
       "next_steps": [

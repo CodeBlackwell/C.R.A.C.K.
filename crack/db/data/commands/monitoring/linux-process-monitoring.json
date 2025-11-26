@@ -56,8 +56,7 @@
       ],
       "next_steps": [
         "systemctl-running-services",
-        "systemctl-cat",
-        "linux-service-privesc"
+        "linux-writable-services"
       ],
       "tags": [
         "OSCP:HIGH",
