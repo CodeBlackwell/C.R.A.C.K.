@@ -15,12 +15,45 @@ import WriteupDetails from './components/WriteupDetails';
 import WriteupControlsPanel from './components/WriteupControlsPanel';
 import GraphView from './components/GraphView';
 import ChainExplorerGraph from './components/ChainExplorerGraph';
+import RelationshipsTree from './components/RelationshipsTree';
 import CommandDetails from './components/CommandDetails';
 import CommandChainGraph from './components/CommandChainGraph';
 import { Command } from './types/command';
 import { Cheatsheet } from './types/cheatsheet';
 
-type ViewMode = 'details' | 'graph';
+type ViewMode = 'details' | 'graph' | 'tree';
+
+// Types for explorer state (shared with ChainExplorerGraph and RelationshipsTree)
+interface GraphNode {
+  data: {
+    id: string;
+    label: string;
+    name?: string;
+    category?: string;
+    subcategory?: string;
+    description?: string;
+    command?: string;
+    tags?: string[];
+    type?: string;
+    hasRelationships?: boolean;
+  };
+}
+
+interface GraphEdge {
+  data: {
+    id: string;
+    source: string;
+    target: string;
+    label: string;
+    type: string;
+  };
+}
+
+interface ExpansionRecord {
+  nodeId: string;
+  parentNodeId: string | null;
+  relationshipType?: string;
+}
 type ChainViewMode = 'graph' | 'list';
 
 function App() {
@@ -38,6 +71,13 @@ function App() {
   const [expandedCommandId, setExpandedCommandId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('details');
   const [chainViewMode, setChainViewMode] = useState<ChainViewMode>('graph');
+
+  // Explorer state (shared between ChainExplorerGraph and RelationshipsTree)
+  const [explorerNodes, setExplorerNodes] = useState<Map<string, GraphNode>>(new Map());
+  const [explorerEdges, setExplorerEdges] = useState<Map<string, GraphEdge>>(new Map());
+  const [explorerExpanded, setExplorerExpanded] = useState<Set<string>>(new Set());
+  const [explorerHistory, setExplorerHistory] = useState<ExpansionRecord[]>([]);
+  const [highlightedNodeId, setHighlightedNodeId] = useState<string | null>(null);
 
   // Debug: Log component mount
   useEffect(() => {
@@ -135,6 +175,94 @@ function App() {
     console.log('[App] Clearing selected step');
     setSelectedStepId(null);
     setChainCommandView(null); // Clear chain command view when clearing step
+  }, []);
+
+  // Explorer state callbacks (for ChainExplorerGraph to emit state changes)
+  const handleExplorerStateChange = useCallback((
+    nodes: Map<string, GraphNode>,
+    edges: Map<string, GraphEdge>,
+    expanded: Set<string>,
+    history: ExpansionRecord[]
+  ) => {
+    console.log('[App] Explorer state updated:', {
+      nodes: nodes.size,
+      edges: edges.size,
+      expanded: expanded.size,
+      history: history.length,
+    });
+    setExplorerNodes(nodes);
+    setExplorerEdges(edges);
+    setExplorerExpanded(expanded);
+    setExplorerHistory(history);
+  }, []);
+
+  // Find descendant nodes for removal
+  const findDescendantNodes = useCallback((nodeId: string, history: ExpansionRecord[]): Set<string> => {
+    const descendants = new Set<string>();
+    const findChildren = (parentId: string) => {
+      history.forEach(record => {
+        if (record.parentNodeId === parentId && !descendants.has(record.nodeId)) {
+          descendants.add(record.nodeId);
+          findChildren(record.nodeId);
+        }
+      });
+    };
+    findChildren(nodeId);
+    return descendants;
+  }, []);
+
+  // Tree callbacks
+  const handleTreeNodeClick = useCallback((nodeId: string) => {
+    console.log('[App] Tree node clicked - highlighting:', nodeId);
+    setHighlightedNodeId(nodeId);
+    // Clear highlight after a short delay
+    setTimeout(() => setHighlightedNodeId(null), 2000);
+  }, []);
+
+  const handleTreeNodeRemove = useCallback((nodeId: string) => {
+    console.log('[App] Removing node from tree:', nodeId);
+
+    // Find all descendants to remove
+    const nodesToRemove = findDescendantNodes(nodeId, explorerHistory);
+    nodesToRemove.add(nodeId);
+
+    // Update nodes
+    const newNodes = new Map(explorerNodes);
+    const newEdges = new Map(explorerEdges);
+    const newExpanded = new Set(explorerExpanded);
+
+    nodesToRemove.forEach(id => {
+      newNodes.delete(id);
+      newExpanded.delete(id);
+    });
+
+    // Remove edges connected to removed nodes
+    newEdges.forEach((edge, key) => {
+      if (nodesToRemove.has(edge.data.source) || nodesToRemove.has(edge.data.target)) {
+        newEdges.delete(key);
+      }
+    });
+
+    // Update history
+    const newHistory = explorerHistory.filter(r => !nodesToRemove.has(r.nodeId));
+
+    setExplorerNodes(newNodes);
+    setExplorerEdges(newEdges);
+    setExplorerExpanded(newExpanded);
+    setExplorerHistory(newHistory);
+  }, [explorerNodes, explorerEdges, explorerExpanded, explorerHistory, findDescendantNodes]);
+
+  const handleTreeNodeSelect = useCallback((nodeId: string) => {
+    console.log('[App] Tree node selected for details:', nodeId);
+    handleCommandSelect(nodeId);
+  }, []);
+
+  const handleClearAllTree = useCallback(() => {
+    console.log('[App] Clearing all tree nodes');
+    setExplorerNodes(new Map());
+    setExplorerEdges(new Map());
+    setExplorerExpanded(new Set());
+    setExplorerHistory([]);
   }, []);
 
   // Debug: Log state changes
@@ -318,11 +446,17 @@ function App() {
                 {selectedCommand ? (
                   <>
                     <div style={{ flex: 1 }}>
-                      {viewMode === 'details' ? (
-                        // Details mode: Show Chain Explorer (interactive relationship graph)
+                      {viewMode === 'details' || viewMode === 'tree' ? (
+                        // Details/Tree mode: Show Chain Explorer (interactive relationship graph)
                         <ChainExplorerGraph
                           initialCommandId={selectedCommand.id}
                           onCommandSelect={handleCommandSelect}
+                          onStateChange={handleExplorerStateChange}
+                          highlightedNodeId={highlightedNodeId}
+                          externalNodes={explorerNodes}
+                          externalEdges={explorerEdges}
+                          externalExpanded={explorerExpanded}
+                          externalHistory={explorerHistory}
                         />
                       ) : (
                         // Graph mode: Show attack chains (larger space)
@@ -330,8 +464,8 @@ function App() {
                       )}
                     </div>
 
-                    {/* Footer: Tags & Output Indicators (only in details mode) */}
-                    {viewMode === 'details' && (
+                    {/* Footer: Tags & Output Indicators (only in details/tree mode) */}
+                    {(viewMode === 'details' || viewMode === 'tree') && (
                       <Paper
                         style={{
                           background: '#25262b',
@@ -466,128 +600,85 @@ function App() {
               </div>
             )}
 
-            {/* Right Panel: Command Details or Graph View based on view mode */}
+            {/* Right Panel: Command Details, Graph View, or Tree based on view mode */}
             <div style={{ width: '450px', height: '100%' }}>
               {selectedCommand ? (
-                viewMode === 'details' ? (
-                  // Details mode: Show command details
-                  <CommandDetails
-                    command={selectedCommand}
-                    viewMode={viewMode}
-                    onViewModeChange={setViewMode}
-                    onCommandSelect={handleCommandSelect}
-                  />
-                ) : (
-                  // Graph mode: Show relationship graph in right panel
-                  <Paper
-                    shadow="sm"
-                    style={{
-                      background: '#25262b',
-                      border: '1px solid #373A40',
-                      height: '100%',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      overflow: 'hidden',
-                    }}
-                  >
-                    {/* Header with view mode toggle */}
-                    <Group gap="xs" p="md" style={{ borderBottom: '1px solid #373A40' }}>
-                      <Button
-                        size="xs"
-                        variant={viewMode === 'details' ? 'filled' : 'subtle'}
-                        color="gray"
-                        onClick={() => {
-                          setViewMode('details');
-                          console.log('[App] View mode changed to: details');
-                        }}
-                      >
-                        Details
-                      </Button>
-                      <Button
-                        size="xs"
-                        variant={viewMode === 'graph' ? 'filled' : 'subtle'}
-                        color="gray"
-                        onClick={() => {
-                          setViewMode('graph');
-                          console.log('[App] View mode changed to: graph');
-                        }}
-                      >
-                        Graph View
-                      </Button>
-                    </Group>
+                <Paper
+                  shadow="sm"
+                  style={{
+                    background: '#25262b',
+                    border: '1px solid #373A40',
+                    height: '100%',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    overflow: 'hidden',
+                  }}
+                >
+                  {/* Header with view mode toggle - 3 tabs */}
+                  <Group gap="xs" p="md" style={{ borderBottom: '1px solid #373A40' }}>
+                    <Button
+                      size="xs"
+                      variant={viewMode === 'details' ? 'filled' : 'subtle'}
+                      color="gray"
+                      onClick={() => {
+                        setViewMode('details');
+                        console.log('[App] View mode changed to: details');
+                      }}
+                    >
+                      Details
+                    </Button>
+                    <Button
+                      size="xs"
+                      variant={viewMode === 'graph' ? 'filled' : 'subtle'}
+                      color="gray"
+                      onClick={() => {
+                        setViewMode('graph');
+                        console.log('[App] View mode changed to: graph');
+                      }}
+                    >
+                      Graph View
+                    </Button>
+                    <Button
+                      size="xs"
+                      variant={viewMode === 'tree' ? 'filled' : 'subtle'}
+                      color="gray"
+                      onClick={() => {
+                        setViewMode('tree');
+                        console.log('[App] View mode changed to: tree');
+                      }}
+                    >
+                      Tree {explorerExpanded.size > 0 && `(${explorerExpanded.size})`}
+                    </Button>
+                  </Group>
 
-                    {/* Relationship graph */}
-                    <div style={{ flex: 1, position: 'relative' }}>
+                  {/* Content based on view mode */}
+                  <div style={{ flex: 1, overflow: 'hidden' }}>
+                    {viewMode === 'details' ? (
+                      <CommandDetails
+                        command={selectedCommand}
+                        viewMode={viewMode}
+                        onViewModeChange={setViewMode}
+                        onCommandSelect={handleCommandSelect}
+                        hideHeader={true}
+                      />
+                    ) : viewMode === 'graph' ? (
                       <GraphView
                         selectedCommandId={selectedCommand.id}
                         onNodeClick={handleCommandSelect}
                       />
-                    </div>
-
-                    {/* Footer: Tags & Output Indicators */}
-                    <Paper
-                      style={{
-                        background: '#25262b',
-                        borderTop: '1px solid #373A40',
-                        padding: '12px 16px',
-                      }}
-                    >
-                      <Stack gap="md">
-                        {/* Tags */}
-                        {selectedCommand.tags && selectedCommand.tags.length > 0 && (
-                          <div>
-                            <Text size="xs" fw={600} mb="xs" c="dimmed">
-                              Tags
-                            </Text>
-                            <Group gap="xs" wrap="wrap">
-                              {selectedCommand.tags.map((tag) => (
-                                <Badge key={tag} variant="light" color="gray" size="sm">
-                                  {tag}
-                                </Badge>
-                              ))}
-                            </Group>
-                          </div>
-                        )}
-
-                        {/* Output Indicators */}
-                        {selectedCommand.indicators && selectedCommand.indicators.length > 0 && (
-                          <>
-                            {selectedCommand.tags && selectedCommand.tags.length > 0 && <Divider />}
-                            <div>
-                              <Text size="xs" fw={600} mb="xs" c="dimmed">
-                                Output Indicators
-                              </Text>
-                              <Group gap="xs" wrap="wrap">
-                                {selectedCommand.indicators.map((indicator, idx) => {
-                                  // Determine color based on indicator type
-                                  const isPositive = ['success', 'positive', 'valid', 'found'].includes(
-                                    indicator.type?.toLowerCase() || ''
-                                  );
-                                  const color = isPositive ? 'green' : 'red';
-
-                                  return (
-                                    <Badge
-                                      key={idx}
-                                      size="sm"
-                                      color={color}
-                                      variant="light"
-                                      style={{
-                                        cursor: 'default',
-                                        fontFamily: 'monospace',
-                                      }}
-                                    >
-                                      {indicator.pattern}
-                                    </Badge>
-                                  );
-                                })}
-                              </Group>
-                            </div>
-                          </>
-                        )}
-                      </Stack>
-                    </Paper>
-                  </Paper>
-                )
+                    ) : (
+                      <RelationshipsTree
+                        nodes={explorerNodes}
+                        expandedNodes={explorerExpanded}
+                        expansionHistory={explorerHistory}
+                        onNodeClick={handleTreeNodeClick}
+                        onNodeRemove={handleTreeNodeRemove}
+                        onNodeSelect={handleTreeNodeSelect}
+                        onClearAll={handleClearAllTree}
+                      />
+                    )}
+                  </div>
+                </Paper>
               ) : selectedCheatsheet ? (
                 <CheatsheetCommandList
                   cheatsheet={selectedCheatsheet}

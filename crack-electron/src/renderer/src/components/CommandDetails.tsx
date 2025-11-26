@@ -4,12 +4,13 @@ import { Command } from '../types/command';
 
 interface CommandDetailsProps {
   command: Command;
-  viewMode: 'details' | 'graph';
-  onViewModeChange: (mode: 'details' | 'graph') => void;
+  viewMode: 'details' | 'graph' | 'tree';
+  onViewModeChange: (mode: 'details' | 'graph' | 'tree') => void;
   onCommandSelect?: (commandId: string) => void;
+  hideHeader?: boolean;
 }
 
-export default function CommandDetails({ command, viewMode, onViewModeChange, onCommandSelect }: CommandDetailsProps) {
+export default function CommandDetails({ command, viewMode, onViewModeChange, onCommandSelect, hideHeader }: CommandDetailsProps) {
   const [copiedRef, setCopiedRef] = useState(false);
   const [copiedCmd, setCopiedCmd] = useState(false);
   const [copiedExampleIdx, setCopiedExampleIdx] = useState<number | null>(null);
@@ -47,31 +48,33 @@ export default function CommandDetails({ command, viewMode, onViewModeChange, on
         flexDirection: 'column',
       }}
     >
-      {/* Navigation Bar */}
-      <Group gap="xs" mb="md" style={{ borderBottom: '1px solid #373A40', paddingBottom: '8px' }}>
-        <Button
-          size="xs"
-          variant={viewMode === 'details' ? 'filled' : 'subtle'}
-          color="gray"
-          onClick={() => {
-            onViewModeChange('details');
-            console.log('[CommandDetails] View mode changed to: details');
-          }}
-        >
-          Details
-        </Button>
-        <Button
-          size="xs"
-          variant={viewMode === 'graph' ? 'filled' : 'subtle'}
-          color="gray"
-          onClick={() => {
-            onViewModeChange('graph');
-            console.log('[CommandDetails] View mode changed to: graph');
-          }}
-        >
-          Graph View
-        </Button>
-      </Group>
+      {/* Navigation Bar - hidden when controlled by parent */}
+      {!hideHeader && (
+        <Group gap="xs" mb="md" style={{ borderBottom: '1px solid #373A40', paddingBottom: '8px' }}>
+          <Button
+            size="xs"
+            variant={viewMode === 'details' ? 'filled' : 'subtle'}
+            color="gray"
+            onClick={() => {
+              onViewModeChange('details');
+              console.log('[CommandDetails] View mode changed to: details');
+            }}
+          >
+            Details
+          </Button>
+          <Button
+            size="xs"
+            variant={viewMode === 'graph' ? 'filled' : 'subtle'}
+            color="gray"
+            onClick={() => {
+              onViewModeChange('graph');
+              console.log('[CommandDetails] View mode changed to: graph');
+            }}
+          >
+            Graph View
+          </Button>
+        </Group>
+      )}
 
       {/* Details View */}
       <ScrollArea

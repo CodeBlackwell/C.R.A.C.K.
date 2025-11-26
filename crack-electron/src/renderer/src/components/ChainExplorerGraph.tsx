@@ -10,7 +10,23 @@ cytoscape.use(coseBilkent);
 interface ChainExplorerGraphProps {
   initialCommandId: string;
   onCommandSelect?: (commandId: string) => void;
+  // Callbacks for state synchronization with App
+  onStateChange?: (
+    nodes: Map<string, GraphNode>,
+    edges: Map<string, GraphEdge>,
+    expanded: Set<string>,
+    history: ExpansionRecord[]
+  ) => void;
+  highlightedNodeId?: string | null;
+  // External state (for when tree modifies state)
+  externalNodes?: Map<string, GraphNode>;
+  externalEdges?: Map<string, GraphEdge>;
+  externalExpanded?: Set<string>;
+  externalHistory?: ExpansionRecord[];
 }
+
+// Export types for use in App.tsx
+export type { GraphNode, GraphEdge, ExpansionRecord };
 
 interface NodeTooltipData {
   name: string;
@@ -53,7 +69,16 @@ interface GraphEdge {
   };
 }
 
-export default function ChainExplorerGraph({ initialCommandId, onCommandSelect }: ChainExplorerGraphProps) {
+export default function ChainExplorerGraph({
+  initialCommandId,
+  onCommandSelect,
+  onStateChange,
+  highlightedNodeId,
+  externalNodes,
+  externalEdges,
+  externalExpanded,
+  externalHistory,
+}: ChainExplorerGraphProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const cyRef = useRef<Core | null>(null);
 
@@ -67,6 +92,9 @@ export default function ChainExplorerGraph({ initialCommandId, onCommandSelect }
   const [tooltip, setTooltip] = useState<NodeTooltipData | null>(null);
   const [nodeCount, setNodeCount] = useState(0);
   const [edgeCount, setEdgeCount] = useState(0);
+
+  // Track previous external state to detect changes from tree
+  const prevExternalNodesRef = useRef<Map<string, GraphNode>>();
 
   // Find descendant nodes for collapse
   const findDescendantNodes = useCallback((nodeId: string, history: ExpansionRecord[]): Set<string> => {
@@ -181,20 +209,36 @@ export default function ChainExplorerGraph({ initialCommandId, onCommandSelect }
       const newUnexplored = new Set(nodesWithUnexploredRels);
       const newHistory = [...expansionHistory];
 
-      // Process new nodes
+      // Find the parent of the node being expanded (for tree hierarchy)
+      // The parent is the node that this node was connected from
+      const currentNode = graphNodes.get(commandId);
+      let parentNodeId: string | null = null;
+
+      // Find which expanded node this one is connected to (for tree hierarchy)
+      graphEdges.forEach((edge) => {
+        if (edge.data.target === commandId && expandedNodes.has(edge.data.source)) {
+          parentNodeId = edge.data.source;
+        } else if (edge.data.source === commandId && expandedNodes.has(edge.data.target)) {
+          parentNodeId = edge.data.target;
+        }
+      });
+
+      // Add the clicked node to expansion history (this is the deliberately expanded node)
+      newHistory.push({
+        nodeId: commandId,
+        parentNodeId: parentNodeId,
+      });
+
+      // Process new nodes (these are connections, not deliberately expanded)
       graphData.elements.nodes.forEach((node: GraphNode) => {
         const nodeId = node.data.id;
         if (!newNodes.has(nodeId)) {
           newNodes.set(nodeId, node);
-          // Track expansion history
-          newHistory.push({
-            nodeId,
-            parentNodeId: commandId,
-          });
-          // Check if node has relationships to explore
+          // Mark as unexplored if it has relationships to explore
           if (node.data.hasRelationships) {
             newUnexplored.add(nodeId);
           }
+          // NOTE: Don't add to history - these are just visible connections
         }
       });
 
@@ -277,6 +321,64 @@ export default function ChainExplorerGraph({ initialCommandId, onCommandSelect }
     // Update visualization
     updateCytoscapeGraph(newNodes, newEdges, newExpanded, newUnexplored);
   }, [expandedNodes, graphNodes, graphEdges, nodesWithUnexploredRels, expansionHistory, findDescendantNodes, updateCytoscapeGraph]);
+
+  // Emit state changes to parent
+  useEffect(() => {
+    if (onStateChange && graphNodes.size > 0) {
+      onStateChange(graphNodes, graphEdges, expandedNodes, expansionHistory);
+    }
+  }, [graphNodes, graphEdges, expandedNodes, expansionHistory, onStateChange]);
+
+  // Sync with external state changes (when tree removes nodes)
+  useEffect(() => {
+    if (externalNodes && externalEdges && externalExpanded && externalHistory) {
+      // Only sync if external state is smaller (nodes were removed)
+      if (externalNodes.size < graphNodes.size) {
+        console.log('[ChainExplorer] Syncing with external state (nodes removed):', {
+          external: externalNodes.size,
+          internal: graphNodes.size,
+        });
+        setGraphNodes(externalNodes);
+        setGraphEdges(externalEdges);
+        setExpandedNodes(externalExpanded);
+        setExpansionHistory(externalHistory);
+
+        // Recalculate unexplored nodes
+        const newUnexplored = new Set<string>();
+        externalNodes.forEach((node, id) => {
+          if (!externalExpanded.has(id) && node.data.hasRelationships) {
+            newUnexplored.add(id);
+          }
+        });
+        setNodesWithUnexploredRels(newUnexplored);
+
+        // Update visualization
+        updateCytoscapeGraph(externalNodes, externalEdges, externalExpanded, newUnexplored);
+      }
+    }
+  }, [externalNodes, externalEdges, externalExpanded, externalHistory]);
+
+  // Handle highlighted node from tree
+  useEffect(() => {
+    if (highlightedNodeId && cyRef.current) {
+      const node = cyRef.current.getElementById(highlightedNodeId);
+      if (node.length > 0) {
+        // Flash the node
+        node.animate({
+          style: { 'border-color': '#ff6b6b', 'border-width': '6px' },
+          duration: 300,
+        }).animate({
+          style: { 'border-color': node.data('expanded') === 'true' ? '#22c1c3' : '#ffd43b', 'border-width': '3px' },
+          duration: 300,
+        });
+        // Center on the node
+        cyRef.current.animate({
+          center: { eles: node },
+          duration: 300,
+        });
+      }
+    }
+  }, [highlightedNodeId]);
 
   // Initialize Cytoscape
   useEffect(() => {
@@ -478,17 +580,18 @@ export default function ChainExplorerGraph({ initialCommandId, onCommandSelect }
             // Process nodes
             graphData.elements.nodes.forEach((node: GraphNode) => {
               newNodes.set(node.data.id, node);
-              // Initial node is marked as center, track others for expansion
+              // Mark related nodes (not the initial command) as unexplored
               if (node.data.id !== initialCommandId && node.data.hasRelationships) {
                 newUnexplored.add(node.data.id);
               }
-              // Track in history (initial nodes have no parent)
-              if (node.data.id !== initialCommandId) {
-                newHistory.push({
-                  nodeId: node.data.id,
-                  parentNodeId: initialCommandId,
-                });
-              }
+              // NOTE: Don't add related nodes to history here - they are just visible connections
+              // Only the initial command and deliberately clicked nodes go in history
+            });
+
+            // Add initial command to history (it's the root, so parentNodeId is null)
+            newHistory.push({
+              nodeId: initialCommandId,
+              parentNodeId: null,
             });
 
             // Process edges
