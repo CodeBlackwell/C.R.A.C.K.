@@ -209,6 +209,12 @@ def _extract_command_prerequisites_rels(commands: List[Dict], chains: List[Dict]
     return extractor.extract_prerequisites(commands)
 
 
+def _extract_command_next_steps_rels(commands: List[Dict], chains: List[Dict], cheatsheets: List[Dict]) -> List[Dict]:
+    """Extract next_steps command relationships using CommandRelationshipsExtractor"""
+    extractor = CommandRelationshipsExtractor()
+    return extractor.extract_next_steps(commands)
+
+
 def _extract_unique_tags_adapted(commands: List[Dict], chains: List[Dict], cheatsheets: List[Dict]) -> List[Dict]:
     """Extract unique tags using TagExtractor"""
     extractor = TagExtractor()

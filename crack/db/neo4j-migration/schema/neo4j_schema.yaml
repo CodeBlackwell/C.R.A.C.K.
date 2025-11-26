@@ -327,6 +327,22 @@ relationships:
       - prerequisite_command_id
     extractor: _extract_command_prerequisites_rels
 
+  command_next_step:
+    name: command_next_step
+    rel_type: NEXT_STEP
+    csv_filename: command_next_step.csv
+    start_label: Command
+    end_label: Command
+    start_id_col: command_id
+    end_id_col: next_step_command_id
+    start_id_field: id
+    end_id_field: id
+    description: Command has logical next step
+    fields:
+      - command_id
+      - next_step_command_id
+    extractor: _extract_command_next_steps_rels
+
   chain_contains_step:
     name: chain_contains_step
     rel_type: HAS_STEP

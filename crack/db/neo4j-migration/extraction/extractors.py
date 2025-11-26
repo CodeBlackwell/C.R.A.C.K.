@@ -251,6 +251,23 @@ class CommandRelationshipsExtractor:
 
         return relationships
 
+    def extract_next_steps(self, commands: List[Dict]) -> List[Dict]:
+        """Extract next_steps command relationships"""
+        relationships = []
+
+        for cmd in commands:
+            cmd_id = cmd.get('id')
+            if not cmd_id:
+                continue
+
+            for next_step in cmd.get('next_steps', []):
+                relationships.append({
+                    'command_id': cmd_id,
+                    'next_step_command_id': next_step
+                })
+
+        return relationships
+
 
 class ChainStepsExtractor:
     """
