@@ -386,6 +386,135 @@ ipcMain.handle('get-graph', async (_event, commandId: string) => {
 });
 logIPC('Registered IPC handler: get-graph');
 
+// IPC Handler: Get command graph with metadata (for Chain Explorer - includes hasRelationships flag)
+ipcMain.handle('get-graph-with-metadata', async (_event, commandId: string) => {
+  logIPC('IPC: get-graph-with-metadata called', { commandId });
+
+  try {
+    // Same query as get-graph to fetch relationships
+    const query = `
+      MATCH (c:Command {id: $commandId})
+      OPTIONAL MATCH (c)-[r:ALTERNATIVE]->(alt:Command)
+      OPTIONAL MATCH (c)-[p:PREREQUISITE]->(pre:Command)
+      OPTIONAL MATCH (c)-[n:NEXT_STEP]->(next:Command)
+      OPTIONAL MATCH (c)<-[ra:ALTERNATIVE]-(altFrom:Command)
+      OPTIONAL MATCH (c)<-[pa:PREREQUISITE]-(preFrom:Command)
+      OPTIONAL MATCH (c)<-[na:NEXT_STEP]-(nextFrom:Command)
+
+      WITH c,
+           collect(DISTINCT {source: c.id, target: alt.id, type: 'ALTERNATIVE', command: alt{.*}}) as alternatives,
+           collect(DISTINCT {source: c.id, target: pre.id, type: 'PREREQUISITE', command: pre{.*}}) as prerequisites,
+           collect(DISTINCT {source: c.id, target: next.id, type: 'NEXT_STEP', command: next{.*}}) as nextSteps,
+           collect(DISTINCT {source: altFrom.id, target: c.id, type: 'ALTERNATIVE', command: altFrom{.*}}) as alternativesFrom,
+           collect(DISTINCT {source: preFrom.id, target: c.id, type: 'PREREQUISITE', command: preFrom{.*}}) as prerequisitesFrom,
+           collect(DISTINCT {source: nextFrom.id, target: c.id, type: 'NEXT_STEP', command: nextFrom{.*}}) as nextStepsFrom
+
+      RETURN c as center,
+             alternatives,
+             prerequisites,
+             nextSteps,
+             alternativesFrom,
+             prerequisitesFrom,
+             nextStepsFrom
+    `;
+
+    const results = await runQuery(query, { commandId });
+    if (results.length > 0) {
+      const data = results[0];
+
+      // Build nodes and edges for Cytoscape
+      const nodes = new Map();
+      const edges: any[] = [];
+
+      // Add center node (being expanded, so hasRelationships = false to prevent re-expansion indicator)
+      nodes.set(commandId, {
+        data: {
+          id: commandId,
+          label: data.center.name,
+          ...data.center,
+          type: 'center',
+          hasRelationships: false
+        }
+      });
+
+      // Process relationships - same as get-graph but include hasRelationships placeholder
+      const processEdges = (rels: any[], reverse = false) => {
+        rels.forEach((rel: any) => {
+          if (rel.command && rel.command.id && rel.source && rel.target) {
+            nodes.set(rel.command.id, {
+              data: {
+                id: rel.command.id,
+                label: rel.command.name,
+                ...rel.command,
+                hasRelationships: true // Default true, will be updated by batch query
+              }
+            });
+            edges.push({
+              data: {
+                id: `${rel.source}-${rel.target}-${rel.type}`,
+                source: reverse ? rel.target : rel.source,
+                target: reverse ? rel.source : rel.target,
+                label: rel.type.replace('_', ' '),
+                type: rel.type.toLowerCase()
+              }
+            });
+          }
+        });
+      };
+
+      processEdges(data.alternatives);
+      processEdges(data.prerequisites);
+      processEdges(data.nextSteps);
+      processEdges(data.alternativesFrom, true);
+      processEdges(data.prerequisitesFrom, true);
+      processEdges(data.nextStepsFrom, true);
+
+      // Batch query to check which nodes have their own relationships
+      const nodeIds = Array.from(nodes.keys()).filter(id => id !== commandId);
+      if (nodeIds.length > 0) {
+        const batchQuery = `
+          UNWIND $nodeIds as nodeId
+          MATCH (c:Command {id: nodeId})
+          OPTIONAL MATCH (c)-[:ALTERNATIVE|PREREQUISITE|NEXT_STEP]->(out:Command)
+          OPTIONAL MATCH (in:Command)-[:ALTERNATIVE|PREREQUISITE|NEXT_STEP]->(c)
+          WITH nodeId, count(DISTINCT out) + count(DISTINCT in) as relCount
+          RETURN nodeId, relCount > 0 as hasRelationships
+        `;
+
+        const relResults = await runQuery(batchQuery, { nodeIds });
+        relResults.forEach((r: any) => {
+          const node = nodes.get(r.nodeId);
+          if (node) {
+            node.data.hasRelationships = r.hasRelationships;
+          }
+        });
+      }
+
+      const graphData = {
+        elements: {
+          nodes: Array.from(nodes.values()),
+          edges: edges
+        }
+      };
+
+      logIPC('IPC: get-graph-with-metadata completed', {
+        nodeCount: graphData.elements.nodes.length,
+        edgeCount: graphData.elements.edges.length,
+      });
+
+      return graphData;
+    }
+
+    logIPC('IPC: get-graph-with-metadata - no data found', { commandId });
+    return { elements: { nodes: [], edges: [] } };
+  } catch (error) {
+    logError('IPC: get-graph-with-metadata failed', error);
+    console.error('Get graph with metadata error:', error);
+    return { elements: { nodes: [], edges: [] } };
+  }
+});
+logIPC('Registered IPC handler: get-graph-with-metadata');
+
 // IPC Handler: Health check
 ipcMain.handle('neo4j-health-check', async () => {
   logIPC('IPC: neo4j-health-check called');

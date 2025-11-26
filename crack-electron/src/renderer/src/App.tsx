@@ -14,6 +14,7 @@ import WriteupView from './components/WriteupView';
 import WriteupDetails from './components/WriteupDetails';
 import WriteupControlsPanel from './components/WriteupControlsPanel';
 import GraphView from './components/GraphView';
+import ChainExplorerGraph from './components/ChainExplorerGraph';
 import CommandDetails from './components/CommandDetails';
 import CommandChainGraph from './components/CommandChainGraph';
 import { Command } from './types/command';
@@ -233,7 +234,13 @@ function App() {
                       size="sm"
                       variant={activeView === 'cheatsheets' ? 'filled' : 'subtle'}
                       color={activeView === 'cheatsheets' ? 'cyan' : 'gray'}
-                      onClick={() => setActiveView('cheatsheets')}
+                      onClick={() => {
+                        setActiveView('cheatsheets');
+                        // Clear other selections so center panel shows cheatsheets view
+                        setSelectedChainId(null);
+                        setSelectedCommand(null);
+                        setSelectedWriteupId(null);
+                      }}
                       style={{ flex: 1 }}
                     >
                       Cheatsheets
@@ -242,7 +249,13 @@ function App() {
                       size="sm"
                       variant={activeView === 'chains' ? 'filled' : 'subtle'}
                       color={activeView === 'chains' ? 'cyan' : 'gray'}
-                      onClick={() => setActiveView('chains')}
+                      onClick={() => {
+                        setActiveView('chains');
+                        // Clear other selections so center panel shows chains view
+                        setSelectedCheatsheet(null);
+                        setSelectedCommand(null);
+                        setSelectedWriteupId(null);
+                      }}
                       style={{ flex: 1 }}
                     >
                       Chains
@@ -251,7 +264,13 @@ function App() {
                       size="sm"
                       variant={activeView === 'commands' ? 'filled' : 'subtle'}
                       color={activeView === 'commands' ? 'cyan' : 'gray'}
-                      onClick={() => setActiveView('commands')}
+                      onClick={() => {
+                        setActiveView('commands');
+                        // Clear other selections so center panel shows commands view
+                        setSelectedChainId(null);
+                        setSelectedCheatsheet(null);
+                        setSelectedWriteupId(null);
+                      }}
                       style={{ flex: 1 }}
                     >
                       Commands
@@ -262,7 +281,13 @@ function App() {
                     size="sm"
                     variant={activeView === 'writeups' ? 'filled' : 'subtle'}
                     color={activeView === 'writeups' ? 'cyan' : 'gray'}
-                    onClick={() => setActiveView('writeups')}
+                    onClick={() => {
+                      setActiveView('writeups');
+                      // Clear other selections so center panel shows writeups view
+                      setSelectedChainId(null);
+                      setSelectedCheatsheet(null);
+                      setSelectedCommand(null);
+                    }}
                     fullWidth
                   >
                     Writeups
@@ -294,10 +319,10 @@ function App() {
                   <>
                     <div style={{ flex: 1 }}>
                       {viewMode === 'details' ? (
-                        // Details mode: Show relationship graph
-                        <GraphView
-                          selectedCommandId={selectedCommand.id}
-                          onNodeClick={handleCommandSelect}
+                        // Details mode: Show Chain Explorer (interactive relationship graph)
+                        <ChainExplorerGraph
+                          initialCommandId={selectedCommand.id}
+                          onCommandSelect={handleCommandSelect}
                         />
                       ) : (
                         // Graph mode: Show attack chains (larger space)

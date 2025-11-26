@@ -11,6 +11,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getGraph: (commandId: string) =>
     ipcRenderer.invoke('get-graph', commandId),
 
+  getGraphWithMetadata: (commandId: string) =>
+    ipcRenderer.invoke('get-graph-with-metadata', commandId),
+
   getCategoryHierarchy: () =>
     ipcRenderer.invoke('get-category-hierarchy'),
 
@@ -59,6 +62,7 @@ export interface ElectronAPI {
   }) => Promise<any[]>;
   getCommand: (commandId: string) => Promise<any>;
   getGraph: (commandId: string) => Promise<any>;
+  getGraphWithMetadata: (commandId: string) => Promise<any>;
   getCategoryHierarchy: () => Promise<any[]>;
   healthCheck: () => Promise<{ connected: boolean; uri?: string; error?: string }>;
   searchCheatsheets: (query: string, filters?: {
