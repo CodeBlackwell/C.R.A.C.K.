@@ -49,8 +49,8 @@
       },
       "prerequisites": [],
       "alternatives": [
-        "ft-php-http-server",
-        "ft-ruby-http-server"
+        "php-http-server",
+        "ruby-http-server"
       ],
       "next_steps": [
         "ft-wget-download",

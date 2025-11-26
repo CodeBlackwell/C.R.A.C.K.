@@ -40,9 +40,7 @@
         "No results found"
       ],
       "next_steps": [
-        "ps-nested-group-check-member-type",
-        "For each member DN, query by distinguishedName to determine if it's a user or nested group",
-        "Build recursive function to traverse nested groups"
+        "ps-nested-group-check-member-type"
       ],
       "alternatives": [
         "powerview-get-netgroupmember"
@@ -56,7 +54,10 @@
         "No results": "Group name incorrect. Try wildcard: (&(objectCategory=group)(name=*<PARTIAL>*))"
       },
       "notes": "FOUNDATION FOR NESTED GROUP ENUMERATION:\nMEMBER ATTRIBUTE FORMAT:\nReturns Distinguished Names:\n  CN=username,CN=Users,DC=corp,DC=com\n\nEACH DN NEEDS INDIVIDUAL QUERY:\n- User (leaf node):\nStop\n- Group (nested):\nRequires recursion\n\nNESTED GROUPS IN ENTERPRISE AD:\nCommon pattern:\nGroup contains groups contains users.\n\nOSCP TARGETS:\nGroups with 'Service', 'IT', 'Admin' in names.\nOften contain privileged accounts buried multiple levels deep.\n\nTime:\n5 seconds per query",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "methodology_guidance": {
+        "after_success": "For each member DN, query by distinguishedName to determine if it's a user or nested group Build recursive function to traverse nested groups"
+      }
     },
     {
       "id": "ps-nested-group-check-member-type",
@@ -96,8 +97,6 @@
         "No results"
       ],
       "next_steps": [
-        "If [GROUP] appears → recursively enumerate that nested group using ps-get-group-members-basic",
-        "If [USER] appears → extract user details, check for flags in description/info attributes",
         "ps-nested-group-recursive-function"
       ],
       "alternatives": [
@@ -113,7 +112,10 @@
         "No color output": "Run in PowerShell console (not ISE with old versions). Colors require ANSI support."
       },
       "notes": "The objectClass attribute is hierarchical - users have ['top', 'person', 'organizationalPerson', 'user'], groups have ['top', 'group'].\n\nUsing '-contains' handles this hierarchy correctly.\n\nDistinguished Names must match exactly - even extra spaces cause query failures.\n\nOSCP:\nThis logic determines whether to recurse (nested group) or record (user).\n\nIn exams, you'll often find users 2-3 levels deep:\n'Service Personnel' → 'IT Support' → 'Developers' → target user.\n\nOBJECTCLASS ATTRIBUTE:\nHierarchical structure - users vs groups.\nUsing '-contains' handles hierarchy correctly.\n\nDN MATCHING:\nMust match exactly - extra spaces cause failures.\n\nOSCP LOGIC:\n- Nested group:\nRecurse deeper\n- User:\nRecord and stop\n\nTYPICAL EXAM:\n3 levels deep\n\nTime:\n2 seconds per member",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "methodology_guidance": {
+        "after_success": "If [GROUP] appears → recursively enumerate that nested group using ps-get-group-members-basic If [USER] appears → extract user details, check for flags in description/info attributes"
+      }
     },
     {
       "id": "ps-nested-group-recursive-function",
@@ -159,10 +161,7 @@
         "Infinite loop"
       ],
       "next_steps": [
-        "Access collected users: $script:AllUsers | foreach { $_.Properties.samaccountname }",
-        "Get last user details: $script:AllUsers[-1]",
-        "ps-get-last-nested-user",
-        "Extract flags from user attributes: $script:AllUsers[-1].Properties.description"
+        "ps-get-last-nested-user"
       ],
       "alternatives": [
         "powerview-get-netgroupmember"
@@ -176,7 +175,10 @@
         "AllUsers array empty": "No users found. Check group name and verify group has members: LDAPSearch -LDAPQuery \"(&(objectCategory=group)(name=<GROUP>))\" | select -ExpandProperty Properties | select cn,member"
       },
       "notes": "This function implements depth-first traversal of the group hierarchy.\n\nThe $Depth parameter creates visual tree output - easier to understand nesting levels during enumeration.\n\n$script:AllUsers uses script scope (not global) to avoid polluting global namespace while remaining accessible across recursive calls.\n\nTree output format:\nTop-level group (no indent) → Level 1 groups (2 spaces) → Level 2 groups (4 spaces) → Users (indented at their level).\n\nOSCP:\nThis is the complete solution for 'unravel nested groups' lab questions.\n\nCopy-paste this entire function, then call with target group name.\n\nTypical exam scenario:\n3 levels deep, 5-10 total users.\n\nTime estimate:\n10-15 seconds for complete enumeration.",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "methodology_guidance": {
+        "after_success": "Access collected users: $script:AllUsers | foreach { $_.Properties.samaccountname } Get last user details: $script:AllUsers[-1] Extract flags from user attributes: $script:AllUsers[-1].Properties.description"
+      }
     },
     {
       "id": "ps-get-last-nested-user",
@@ -211,11 +213,7 @@
         "AllUsers variable not defined",
         "Index was outside the bounds"
       ],
-      "next_steps": [
-        "Search output for flag: Look in 'description', 'info', 'comment', 'adminDescription' fields",
-        "Check for Base64 encoded flags",
-        "Document findings in enumeration.md"
-      ],
+      "next_steps": [],
       "alternatives": [
         "powerview-get-netuser"
       ],
@@ -228,7 +226,10 @@
         "Index out of bounds": "$script:AllUsers is empty. Verify group enumeration completed successfully."
       },
       "notes": "OSCP LAB PATTERN:\nQuestions ask:\n'enumerate nested groups and find the last user' then extract flag.\n\nCOMMON FLAG LOCATIONS:\n- description:\nMost common\n- info:\nSecondary\n- comment:\nTertiary\n- userParameters:\nRare\n\nFLAG FORMATS:\n- flag{...}\n- OS{...}\n- Plaintext hints\n- Base64 encoded\n\nLAST USER DEFINITION:\nLast DIRECT user member discovered during depth-first traversal.\nNot necessarily last alphabetically.\n\nTime:\nInstant after enumeration",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "methodology_guidance": {
+        "after_success": "Search output for flag: Look in 'description', 'info', 'comment', 'adminDescription' fields Check for Base64 encoded flags Document findings in enumeration.md"
+      }
     },
     {
       "id": "ps-find-new-domain-admin",
@@ -263,11 +264,7 @@
         "Cannot index into null array",
         "No results"
       ],
-      "next_steps": [
-        "Identify the NEWEST account (bottom of sorted list)",
-        "Verify it's not built-in: Built-in accounts (Administrator, krbtgt) have older creation dates",
-        "Get full details: LDAPSearch -LDAPQuery \"(samAccountName=<NEW_ADMIN>)\" | select -ExpandProperty Properties"
-      ],
+      "next_steps": [],
       "alternatives": [
         "powerview-get-netgroupmember"
       ],
@@ -280,7 +277,10 @@
         "No results": "Domain Admins group empty or you lack read permissions"
       },
       "notes": "DOMAIN ADMIN ACCOUNT AGES:\nBuilt-in accounts:\n- Administrator, krbtgt, Guest\n- Creation date matches domain creation (years old)\n\nNewly added admins:\n- Recent timestamps (days/weeks old)\n\nOSCP LAB PATTERN:\nQuestion:\n'Which NEW user is part of Domain Admins?'\nAnswer:\nAccount with most recent whencreated date.\n\nEXCLUDE BUILT-INS:\nAdministrator, krbtgt, Guest\n\nALTERNATIVE:\nFilter by whencreated > recent date.\n\nTime:\n10 seconds",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "methodology_guidance": {
+        "after_success": "Identify the NEWEST account (bottom of sorted list) Verify it's not built-in: Built-in accounts (Administrator, krbtgt) have older creation dates Get full details: LDAPSearch -LDAPQuery \"(samAccountName=<NEW_ADMIN>)\" | select -ExpandProperty Properties"
+      }
     },
     {
       "id": "powerview-get-domaingroup-recursive",
@@ -321,9 +321,6 @@
         "Group not found"
       ],
       "next_steps": [
-        "Filter users only: Get-DomainGroupMember -Identity \"<GROUP_NAME>\" -Recurse | Where-Object { $_.MemberObjectClass -eq \"user\" }",
-        "Get last user: ($members | Where-Object { $_.MemberObjectClass -eq \"user\" })[-1]",
-        "Get user details: Get-DomainUser -Identity <USERNAME>",
         "ps-powerview-get-user-details"
       ],
       "alternatives": [
@@ -336,7 +333,10 @@
         "Group not found": "Verify group name: Get-DomainGroup | Select-Object name | Where-Object { $_.name -like \"*<PARTIAL>*\" }"
       },
       "notes": "POWERVIEW 3.0+ CHANGES:\nParameter:\n-GroupName became -Identity\n\nFASTEST METHOD:\nIF PowerView available.\n\nWITHOUT -RECURSE:\nOnly direct members (one level).\n\nWITH -RECURSE:\nFlattens entire hierarchy into single list.\n\nOUTPUT:\nIncludes MemberObjectClass to distinguish users from groups.\n\nOSCP BACKUP:\nPowerView may be blocked by AV.\nKnow manual .NET method:\nps-nested-group-recursive-function\n\nTime:\n3-5 seconds",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "methodology_guidance": {
+        "after_success": "Filter users only: Get-DomainGroupMember -Identity \"<GROUP_NAME>\" -Recurse | Where-Object { $_.MemberObjectClass -eq \"user\" } Get last user: ($members | Where-Object { $_.MemberObjectClass -eq \"user\" })[-1] Get user details: Get-DomainUser -Identity <USERNAME>"
+      }
     },
     {
       "id": "ps-powerview-get-user-details",
@@ -378,11 +378,7 @@
         "User not found",
         "No results"
       ],
-      "next_steps": [
-        "Search output for flags in: description, info, comment, adminDescription, userParameters",
-        "Check group membership: .memberof property",
-        "Check password age: pwdlastset attribute"
-      ],
+      "next_steps": [],
       "alternatives": [
         "ps-get-last-nested-user"
       ],
@@ -394,7 +390,10 @@
         "User not found": "Verify username: Get-DomainUser | Select-Object samaccountname | Where-Object { $_.samaccountname -like \"*<PARTIAL>*\" }"
       },
       "notes": "FORMAT-LIST * DISPLAYS 80+ ATTRIBUTES:\nFlag locations:\n- description:\nCommon\n- info:\nSecondary\n\nAccount info:\n- memberof:\nAll group memberships\n- whencreated:\nAccount age\n- pwdlastset:\nPassword age\n- userAccountControl:\nAccount flags\n- adminCount:\nPrivilege indicator\n- servicePrincipalName:\nKerberoasting target\n\nOSCP WORKFLOW:\n1.\n\nNested group enumeration identifies target user\n\n2.\n\nUse this command for full details\n\n3.\n\nExtract flags from attributes\n\nTime:\n2 seconds",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "methodology_guidance": {
+        "after_success": "Search output for flags in: description, info, comment, adminDescription, userParameters Check group membership: .memberof property Check password age: pwdlastset attribute"
+      }
     },
     {
       "id": "ps-powerview-find-service-accounts",
@@ -435,11 +434,7 @@
         "No results",
         "Group not found"
       ],
-      "next_steps": [
-        "Check for SPNs: Get-DomainUser -Identity <SVC_ACCOUNT> | Select-Object samaccountname,serviceprincipalname",
-        "Test Kerberoasting: Get-DomainUser -SPN | Where-Object { $_.samaccountname -like \"*svc*\" }",
-        "Password spray service accounts (weak passwords common)"
-      ],
+      "next_steps": [],
       "alternatives": [],
       "prerequisites": [
         "verify-powerview-imported"
@@ -448,7 +443,10 @@
         "No results": "Try broader patterns: *sql*, *admin*, *backup*, *sa* (SQL Server default admin)"
       },
       "notes": "SERVICE ACCOUNT NAMING PATTERNS:\n- svc_*, *svc*\n- sql_*, *sql*\n- backup_*, *backup*\n- sa (SQL Server admin)\n\nCHARACTERISTICS:\n- Rarely changed passwords (pwdlastset old)\n- Often have SPNs (Kerberoastable)\n- Frequently over-privileged (Domain Admins)\n- Descriptions often contain passwords/hints\n\nOSCP:\nHigh-value targets.\nWeak passwords common.\nOften reused across services.\n\nTime:\n5 seconds",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "methodology_guidance": {
+        "after_success": "Check for SPNs: Get-DomainUser -Identity <SVC_ACCOUNT> | Select-Object samaccountname,serviceprincipalname Test Kerberoasting: Get-DomainUser -SPN | Where-Object { $_.samaccountname -like \"*svc*\" } Password spray service accounts (weak passwords common)"
+      }
     },
     {
       "id": "ps-extract-flag-from-user",
@@ -490,11 +488,7 @@
         "All attributes empty",
         "Cannot index into null array"
       ],
-      "next_steps": [
-        "If flag is Base64: [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String(\"<BASE64>\"))",
-        "Document in breakthrough.md",
-        "Check other users in same group for additional flags"
-      ],
+      "next_steps": [],
       "alternatives": [
         "ps-get-last-nested-user"
       ],
@@ -506,7 +500,10 @@
         "User not found": "Verify username spelling and case sensitivity"
       },
       "notes": "OSCP FLAG LOCATION FREQUENCY:\n- description:\n70%\n- info:\n15%\n- comment:\n10%\n- adminDescription:\n3%\n- userParameters:\n2%\n\nFLAG FORMATS:\n- flag{...}:\nMost common\n- OS{...}:\nOffSec format\n- Plaintext hints\n- Base64 encoded\n\nRARE LOCATIONS:\n- msDS-CloudExtensionAttribute1-10\n- extensionAttribute1-15\n- otherMailbox\n\nOSCP LAB PATTERN:\n'Enumerate nested groups and extract flag from last user'\n\nTime:\n2 seconds",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "methodology_guidance": {
+        "after_success": "If flag is Base64: [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String(\"<BASE64>\")) Document in breakthrough.md Check other users in same group for additional flags"
+      }
     },
     {
       "id": "ps-nested-group-one-liner",
@@ -544,11 +541,7 @@
         "Function already exists",
         "No users found"
       ],
-      "next_steps": [
-        "Copy flag value from output",
-        "Document enumeration process in enumeration.md",
-        "Create educational writeup for learning"
-      ],
+      "next_steps": [],
       "alternatives": [
         "powerview-get-domaingroup-recursive"
       ],
@@ -558,7 +551,10 @@
         "Syntax error": "Copy entire command as single block. Do not split across multiple lines in terminal."
       },
       "notes": "ULTIMATE OSCP NESTED GROUP SOLUTION:\nONE-LINE EXECUTION:\nCopy entire command → replace <GROUP_NAME> → execute\n\nOUTPUT SHOWS:\n1.\n\nTree structure of group hierarchy\n2.\n\nAll users at all levels\n3.\n\nLast user details\n4.\n\nFlag attributes automatically extracted\n\nNO DEPENDENCIES:\n- No PowerView required\n- No separate function files\n- Single copy-paste execution\n\nOSCP EXAM USE:\nQuestion:\n'enumerate nested groups and find flag in last user'\nSolution:\nPaste this command → done\n\nTime:\n15 seconds total",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "methodology_guidance": {
+        "after_success": "Copy flag value from output Document enumeration process in enumeration.md Create educational writeup for learning"
+      }
     },
     {
       "id": "ps-compare-powerview-versions",
@@ -589,11 +585,7 @@
         "No output (PowerView not loaded)",
         "Command not found"
       ],
-      "next_steps": [
-        "If 'GroupName' appears → PowerView 2.0 → Use: Get-NetGroupMember -GroupName \"<GROUP>\"",
-        "If 'Identity' appears → PowerView 3.0+ → Use: Get-DomainGroupMember -Identity \"<GROUP>\"",
-        "No output → PowerView not loaded → Use manual .NET methods"
-      ],
+      "next_steps": [],
       "alternatives": [],
       "prerequisites": [],
       "troubleshooting": {
@@ -601,7 +593,11 @@
         "Command errors": "Use simpler version check: Get-Command Get-*GroupMember"
       },
       "notes": "POWERVIEW VERSION HISTORY:\nVersion 2.0:\nSpecific parameters:\n- -GroupName\n- -UserName\n- -ComputerName\n\nVersion 3.0+:\nStandardized on -Identity for all commands.\n\nCOMMON ERROR:\n'A parameter cannot be found that matches parameter name GroupName'\n= Using v2.0 syntax on v3.0+ PowerView\n\nOSCP:\n- Most modern distributions:\n3.0+\n- Older lab machines:\nMay have 2.0\n- Know both syntaxes\n\nTime:\n5 seconds",
-      "oscp_relevance": "medium"
+      "oscp_relevance": "medium",
+      "methodology_guidance": {
+        "after_success": "If 'GroupName' appears → PowerView 2.0 → Use: Get-NetGroupMember -GroupName \"<GROUP>\" If 'Identity' appears → PowerView 3.0+ → Use: Get-DomainGroupMember -Identity \"<GROUP>\"",
+        "manual_alternative": "No output → PowerView not loaded → Use manual .NET methods"
+      }
     }
   ]
 }

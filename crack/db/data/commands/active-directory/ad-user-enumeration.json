@@ -56,14 +56,13 @@
       ],
       "next_steps": [
         "kerbrute-passwordspray",
-        "as-rep-roasting",
+        "impacket-getnpusers-asreproast",
         "spray-passwords-ldap",
         "crackmapexec-smb-spray"
       ],
       "alternatives": [
-        "enum4linux-users",
-        "crackmapexec-rid",
-        "ldapsearch-users"
+        "enum4linux-users-ad",
+        "ldapsearch-users-ad"
       ],
       "prerequisites": [],
       "troubleshooting": {
@@ -129,13 +128,12 @@
       ],
       "next_steps": [
         "crackmapexec-smb-spray",
-        "kerbrute-passwordspray",
-        "as-rep-roasting"
+        "kerbrute-passwordspray"
       ],
       "alternatives": [
         "kerbrute-userenum-ad",
-        "enum4linux-users",
-        "ldapsearch-users"
+        "enum4linux-users-ad",
+        "ldapsearch-users-ad"
       ],
       "prerequisites": [],
       "troubleshooting": {
@@ -199,12 +197,11 @@
       ],
       "next_steps": [
         "kerbrute-passwordspray",
-        "spray-passwords-ldap",
-        "as-rep-roasting"
+        "spray-passwords-ldap"
       ],
       "alternatives": [
         "kerbrute-userenum-ad",
-        "enum4linux-users",
+        "enum4linux-users-ad",
         "crackmapexec-rid-cycling"
       ],
       "prerequisites": [],
@@ -259,8 +256,7 @@
       ],
       "next_steps": [
         "kerbrute-passwordspray",
-        "crackmapexec-smb-spray",
-        "as-rep-roasting"
+        "crackmapexec-smb-spray"
       ],
       "alternatives": [
         "kerbrute-userenum-ad",

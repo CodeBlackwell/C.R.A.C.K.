@@ -36,14 +36,12 @@
         "no crontab for <user>",
         "crontab: command not found"
       ],
-      "next_steps": [
-        "Check other users' crontabs: crontab-user-specific",
-        "Check system-wide crontab: crontab-system-wide",
-        "Look for writable cron scripts: find /etc/cron* -type f -writable",
-        "Check cron script permissions for privesc"
-      ],
+      "next_steps": [],
       "alternatives": [],
-      "notes": "Cron format:\nminute hour day month weekday command.\n\nOSCP tip:\nCheck if cron scripts are writable - modify to run reverse shell as cron user.\n\nTime estimate:\n<1 second.\n\nSpecial strings:\n@reboot (run at startup), @daily, @hourly, @weekly, @monthly."
+      "notes": "Cron format:\nminute hour day month weekday command.\n\nOSCP tip:\nCheck if cron scripts are writable - modify to run reverse shell as cron user.\n\nTime estimate:\n<1 second.\n\nSpecial strings:\n@reboot (run at startup), @daily, @hourly, @weekly, @monthly.",
+      "methodology_guidance": {
+        "after_success": "Check other users' crontabs: crontab-user-specific Check system-wide crontab: crontab-system-wide Look for writable cron scripts: find /etc/cron* -type f -writable Check cron script permissions for privesc"
+      }
     },
     {
       "id": "crontab-user-specific",
@@ -86,14 +84,12 @@
         "no crontab for <user>",
         "Permission denied"
       ],
-      "next_steps": [
-        "Check root's crontab: sudo crontab -l -u root",
-        "Check if cron scripts are writable by current user",
-        "Replace script with malicious version if writable",
-        "Wait for cron to execute for privilege escalation"
-      ],
+      "next_steps": [],
       "alternatives": [],
-      "notes": "Root's crontab is high-value target.\n\nIf root cron runs writable script, instant privesc.\n\nCrontab location varies:\n/var/spool/cron/crontabs/ (Debian/Ubuntu), /var/spool/cron/ (RHEL/CentOS).\n\nTime estimate:\n<1 second."
+      "notes": "Root's crontab is high-value target.\n\nIf root cron runs writable script, instant privesc.\n\nCrontab location varies:\n/var/spool/cron/crontabs/ (Debian/Ubuntu), /var/spool/cron/ (RHEL/CentOS).\n\nTime estimate:\n<1 second.",
+      "methodology_guidance": {
+        "after_success": "Check root's crontab: sudo crontab -l -u root Check if cron scripts are writable by current user Replace script with malicious version if writable Wait for cron to execute for privilege escalation"
+      }
     },
     {
       "id": "crontab-system-wide",
@@ -126,16 +122,15 @@
         "No such file",
         "Permission denied"
       ],
-      "next_steps": [
-        "Check cron directories: cron-directories-list",
-        "Look for writable scripts called by cron",
-        "Check PATH for writable directories (PATH hijacking)",
-        "Examine script permissions: ls -la <SCRIPT_PATH>"
-      ],
+      "next_steps": [],
       "alternatives": [
         "less-etc-crontab"
       ],
-      "notes": "/etc/crontab differs from user crontabs - includes username field.\n\nFormat:\nminute hour day month weekday user command.\n\nOSCP tip:\nCheck if PATH includes writable dirs like /tmp - allows command hijacking.\n\nTime estimate:\n<1 second."
+      "notes": "/etc/crontab differs from user crontabs - includes username field.\n\nFormat:\nminute hour day month weekday user command.\n\nOSCP tip:\nCheck if PATH includes writable dirs like /tmp - allows command hijacking.\n\nTime estimate:\n<1 second.",
+      "methodology_guidance": {
+        "after_success": "Check cron directories: cron-directories-list Look for writable scripts called by cron Check PATH for writable directories (PATH hijacking)",
+        "oscp_tips": "Examine script permissions: ls -la <SCRIPT_PATH>"
+      }
     },
     {
       "id": "cron-directories-list",
@@ -171,14 +166,13 @@
       "failure_indicators": [
         "No such file or directory"
       ],
-      "next_steps": [
-        "Check file permissions: find /etc/cron* -type f -perm -o+w",
-        "Check for writable scripts: find /etc/cron* -writable 2>/dev/null",
-        "Examine script contents: cat /etc/cron.daily/<SCRIPT>",
-        "Modify writable script to add reverse shell"
-      ],
+      "next_steps": [],
       "alternatives": [],
-      "notes": "Scripts in these directories run automatically:\ncron.hourly (every hour), cron.daily (daily), cron.weekly (weekly), cron.monthly (monthly).\n\nAll run as root by default.\n\nCRITICAL privesc vector if writable.\n\nTime estimate:\n2 seconds.\n\nCommand to find writable:\nfind /etc/cron* -type f -writable 2>/dev/null"
+      "notes": "Scripts in these directories run automatically:\ncron.hourly (every hour), cron.daily (daily), cron.weekly (weekly), cron.monthly (monthly).\n\nAll run as root by default.\n\nCRITICAL privesc vector if writable.\n\nTime estimate:\n2 seconds.\n\nCommand to find writable:\nfind /etc/cron* -type f -writable 2>/dev/null",
+      "methodology_guidance": {
+        "after_success": "Check file permissions: find /etc/cron* -type f -perm -o+w Check for writable scripts: find /etc/cron* -writable 2>/dev/null Modify writable script to add reverse shell",
+        "oscp_tips": "Examine script contents: cat /etc/cron.daily/<SCRIPT>"
+      }
     },
     {
       "id": "cron-log-recent",
@@ -214,14 +208,12 @@
         "No such file",
         "Permission denied"
       ],
-      "next_steps": [
-        "Identify frequently-run cron jobs",
-        "Check execution times to plan privesc timing",
-        "Look for failed cron jobs (potential misconfigurations)",
-        "Monitor for new cron activity"
-      ],
+      "next_steps": [],
       "alternatives": [],
-      "notes": "Logs show when cron jobs execute and as which user.\n\nUseful for timing privilege escalation attempts.\n\nOn systemd systems:\njournalctl -u cron.\n\nTime estimate:\n3-5 seconds."
+      "notes": "Logs show when cron jobs execute and as which user.\n\nUseful for timing privilege escalation attempts.\n\nOn systemd systems:\njournalctl -u cron.\n\nTime estimate:\n3-5 seconds.",
+      "methodology_guidance": {
+        "after_success": "Identify frequently-run cron jobs Check execution times to plan privesc timing Look for failed cron jobs (potential misconfigurations) Monitor for new cron activity"
+      }
     },
     {
       "id": "win-schtasks-list-all",
@@ -260,17 +252,15 @@
         "ERROR: Access is denied",
         "No tasks scheduled"
       ],
-      "next_steps": [
-        "Look for tasks running as SYSTEM",
-        "Check task executable paths for writable locations",
-        "Identify custom (non-Microsoft) scheduled tasks",
-        "Check task XML for credentials: Get task XML definition"
-      ],
+      "next_steps": [],
       "alternatives": [
         "win-ps-scheduled-tasks",
         "get-scheduledtask"
       ],
-      "notes": "CRITICAL for Windows privesc and persistence detection.\n\nOutput is verbose (20+ properties per task).\n\nOSCP tips:\n(1) Look for tasks with writable executables, (2) Tasks running as SYSTEM with Enabled status, (3) Custom tasks (non-Microsoft) in \\Task Scheduler Library\\.\n\nTime estimate:\n10-30 seconds depending on task count."
+      "notes": "CRITICAL for Windows privesc and persistence detection.\n\nOutput is verbose (20+ properties per task).\n\nOSCP tips:\n(1) Look for tasks with writable executables, (2) Tasks running as SYSTEM with Enabled status, (3) Custom tasks (non-Microsoft) in \\Task Scheduler Library\\.\n\nTime estimate:\n10-30 seconds depending on task count.",
+      "methodology_guidance": {
+        "after_success": "Look for tasks running as SYSTEM Check task executable paths for writable locations Identify custom (non-Microsoft) scheduled tasks Check task XML for credentials: Get task XML definition"
+      }
     },
     {
       "id": "win-ps-scheduled-tasks",
@@ -309,16 +299,14 @@
         "Get-ScheduledTask: command not found",
         "Execution policy blocked"
       ],
-      "next_steps": [
-        "Get task details: win-ps-scheduled-task-info",
-        "Filter non-Microsoft tasks: Where-Object {$_.TaskPath -notlike '\\Microsoft\\*'}",
-        "Check task action/executable: Get-ScheduledTaskInfo",
-        "Look for tasks with writable executables"
-      ],
+      "next_steps": [],
       "alternatives": [
         "win-schtasks-list-all"
       ],
-      "notes": "Modern PowerShell approach - faster and easier to parse than schtasks.\n\nTo see all tasks:\nGet-ScheduledTask (no filter).\n\nTime estimate:\n5 seconds.\n\nOne-liner for custom tasks:\nGet-ScheduledTask | Where-Object {$_.TaskPath -notlike '\\Microsoft\\*' -and $_.State -eq 'Ready'}"
+      "notes": "Modern PowerShell approach - faster and easier to parse than schtasks.\n\nTo see all tasks:\nGet-ScheduledTask (no filter).\n\nTime estimate:\n5 seconds.\n\nOne-liner for custom tasks:\nGet-ScheduledTask | Where-Object {$_.TaskPath -notlike '\\Microsoft\\*' -and $_.State -eq 'Ready'}",
+      "methodology_guidance": {
+        "after_success": "Get task details: win-ps-scheduled-task-info Filter non-Microsoft tasks: Where-Object {$_.TaskPath -notlike '\\Microsoft\\*'} Check task action/executable: Get-ScheduledTaskInfo Look for tasks with writable executables"
+      }
     },
     {
       "id": "win-ps-scheduled-task-info",
@@ -362,14 +350,12 @@
         "No such task",
         "Execution policy blocked"
       ],
-      "next_steps": [
-        "Get task action: (Get-ScheduledTask -TaskName <TASK_NAME>).Actions",
-        "Check executable path permissions: icacls <PATH>",
-        "Export task XML: Export-ScheduledTask -TaskName <TASK_NAME>",
-        "Modify task if writable: Set-ScheduledTask"
-      ],
+      "next_steps": [],
       "alternatives": [],
-      "notes": "Useful for verifying task execution status.\n\nLastTaskResult 0x0 = success, other values indicate errors.\n\nTime estimate:\n1 second."
+      "notes": "Useful for verifying task execution status.\n\nLastTaskResult 0x0 = success, other values indicate errors.\n\nTime estimate:\n1 second.",
+      "methodology_guidance": {
+        "after_success": "Get task action: (Get-ScheduledTask -TaskName <TASK_NAME>).Actions Check executable path permissions: icacls <PATH> Export task XML: Export-ScheduledTask -TaskName <TASK_NAME> Modify task if writable: Set-ScheduledTask"
+      }
     },
     {
       "id": "win-schtasks-task-xml",
@@ -413,14 +399,12 @@
       "failure_indicators": [
         "ERROR: The system cannot find the file specified"
       ],
-      "next_steps": [
-        "Search XML for credentials or sensitive data",
-        "Check <Command> element for executable path",
-        "Verify <UserId> to see which account runs task",
-        "Check <Arguments> for command-line parameters"
-      ],
+      "next_steps": [],
       "alternatives": [],
-      "notes": "XML may contain Base64-encoded credentials or sensitive command arguments.\n\nTime estimate:\n1 second.\n\nSave to file:\nschtasks /query /tn <TASK> /xml > task.xml"
+      "notes": "XML may contain Base64-encoded credentials or sensitive command arguments.\n\nTime estimate:\n1 second.\n\nSave to file:\nschtasks /query /tn <TASK> /xml > task.xml",
+      "methodology_guidance": {
+        "after_success": "Search XML for credentials or sensitive data Check <Command> element for executable path Verify <UserId> to see which account runs task Check <Arguments> for command-line parameters"
+      }
     },
     {
       "id": "win-wmic-scheduled-job",
@@ -455,12 +439,12 @@
         "No instance(s) available",
         "WMIC is deprecated"
       ],
-      "next_steps": [
-        "Check command path permissions if jobs found",
-        "Modern alternative: use schtasks or Get-ScheduledTask"
-      ],
+      "next_steps": [],
       "alternatives": [],
-      "notes": "AT jobs are legacy (Windows NT/2000 era), rarely used in modern systems.\n\nIncluded for completeness in older OSCP labs.\n\nTime estimate:\n1 second."
+      "notes": "AT jobs are legacy (Windows NT/2000 era), rarely used in modern systems.\n\nIncluded for completeness in older OSCP labs.\n\nTime estimate:\n1 second.",
+      "methodology_guidance": {
+        "after_success": "Check command path permissions if jobs found Modern alternative: use schtasks or Get-ScheduledTask"
+      }
     },
     {
       "id": "linux-at-jobs-list",
@@ -491,13 +475,12 @@
         "No jobs",
         "atq: command not found"
       ],
-      "next_steps": [
-        "View job details: at -c <JOB_ID>",
-        "Remove job: atrm <JOB_ID>",
-        "Check /var/spool/at/ for job files"
-      ],
+      "next_steps": [],
       "alternatives": [],
-      "notes": "AT is for one-time scheduled tasks (unlike cron for recurring).\n\nLess common than cron.\n\nView job:\nat -c <JOB_ID>.\n\nTime estimate:\n<1 second."
+      "notes": "AT is for one-time scheduled tasks (unlike cron for recurring).\n\nLess common than cron.\n\nView job:\nat -c <JOB_ID>.\n\nTime estimate:\n<1 second.",
+      "methodology_guidance": {
+        "after_success": "View job details: at -c <JOB_ID> Remove job: atrm <JOB_ID> Check /var/spool/at/ for job files"
+      }
     },
     {
       "id": "linux-systemd-timers",
@@ -535,14 +518,12 @@
         "No timers found",
         "systemctl: command not found"
       ],
-      "next_steps": [
-        "View timer details: systemctl cat <TIMER_NAME>.timer",
-        "Check associated service: systemctl cat <TIMER_NAME>.service",
-        "Look for writable timer or service files: ls -la /etc/systemd/system/*.timer",
-        "Check service executable permissions"
-      ],
+      "next_steps": [],
       "alternatives": [],
-      "notes": "systemd timers are modern replacement for cron on systemd-based Linux.\n\nTimers trigger .service units.\n\nOSCP tip:\nCheck /etc/systemd/system/ for custom timers.\n\nTime estimate:\n2 seconds.\n\nTo see active only:\nsystemctl list-timers (no --all)"
+      "notes": "systemd timers are modern replacement for cron on systemd-based Linux.\n\nTimers trigger .service units.\n\nOSCP tip:\nCheck /etc/systemd/system/ for custom timers.\n\nTime estimate:\n2 seconds.\n\nTo see active only:\nsystemctl list-timers (no --all)",
+      "methodology_guidance": {
+        "after_success": "View timer details: systemctl cat <TIMER_NAME>.timer Check associated service: systemctl cat <TIMER_NAME>.service Look for writable timer or service files: ls -la /etc/systemd/system/*.timer Check service executable permissions"
+      }
     }
   ]
 }

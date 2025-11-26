@@ -494,15 +494,9 @@
         "ad-golden-ticket-verify-klist"
       ],
       "next_steps": [
-        "windows-whoami-groups-verify",
-        "windows-net-user-enumerate",
-        "ad-dcsync-mimikatz-all-users"
+        "ad-dcsync-mimikatz-user"
       ],
-      "alternatives": [
-        "windows-wmic-remote-exec",
-        "windows-winrm-pssession",
-        "windows-smbexec-impacket"
-      ],
+      "alternatives": [],
       "tags": [
         "ACTIVE_DIRECTORY",
         "LATERAL_MOVEMENT",
@@ -542,13 +536,8 @@
         "Tickets reappear after purge": "Normal behavior if actively authenticated. Solution: Close SMB connections: net use * /delete. Tickets will regenerate when accessing domain resources."
       },
       "prerequisites": [],
-      "next_steps": [
-        "windows-event-log-clear",
-        "windows-history-clear"
-      ],
-      "alternatives": [
-        "kerberos-klist-purge"
-      ],
+      "next_steps": [],
+      "alternatives": [],
       "tags": [
         "ACTIVE_DIRECTORY",
         "KERBEROS",

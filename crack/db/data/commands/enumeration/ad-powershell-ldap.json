@@ -33,9 +33,7 @@
       ],
       "next_steps": [
         "ps-get-pdc",
-        "ps-build-ldap-path",
-        "Extract domain name from Name property",
-        "Extract PDC from PdcRoleOwner property"
+        "ps-build-ldap-path"
       ],
       "alternatives": [
         "get-netdomain"
@@ -46,7 +44,10 @@
         "Access is denied": "Not logged in with domain account. Verify: whoami /fqdn"
       },
       "notes": ".NET SYSTEM.DIRECTORYSERVICES:\nAvailable in PowerShell by default (no imports needed).\n\nCOMMAND:\n  [System.DirectoryServices.ActiveDirectory.Domain]::GetCurrentDomain()\n\nRETURNS:\n- PdcRoleOwner:\nPrimary DC for enumeration\n- DomainControllers:\nAll DCs in domain\n- Forest:\nMulti-domain environments\n- Name:\nDomain DNS name\n\nOSCP ADVANTAGE:\nNo PowerView or special tools required.\nWorks on any domain-joined Windows machine with PowerShell.\n\nALTERNATIVE:\n  $env:userdnsdomain\n\nTime:\n<5 seconds",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "methodology_guidance": {
+        "after_success": "Extract domain name from Name property Extract PDC from PdcRoleOwner property"
+      }
     },
     {
       "id": "ps-get-pdc",
@@ -76,9 +77,7 @@
         "Property 'PdcRoleOwner' cannot be found"
       ],
       "next_steps": [
-        "ps-build-ldap-path",
-        "Use PDC hostname in LDAP connection string",
-        "Store in variable: $PDC = [System.DirectoryServices.ActiveDirectory.Domain]::GetCurrentDomain().PdcRoleOwner.Name"
+        "ps-build-ldap-path"
       ],
       "alternatives": [
         "net-domain-controllers"
@@ -90,7 +89,10 @@
         "Property cannot be found": "Domain object not populated. Run full command: [System.DirectoryServices.ActiveDirectory.Domain]::GetCurrentDomain() first"
       },
       "notes": "WHY TARGET THE PDC:\n- Most authoritative and up-to-date AD data\n- Only ONE PDC per domain\n- Non-PDC DCs may have stale replication data\n\nCOMMAND:\n  [System.DirectoryServices.ActiveDirectory.Domain]::GetCurrentDomain().PdcRoleOwner.Name\n\nUSAGE:\nStore in variable:\n  $PDC = [System.DirectoryServices.ActiveDirectory.Domain]::GetCurrentDomain().PdcRoleOwner.Name\n\nOSCP:\nUse this to build LDAP path for DirectorySearcher queries.\n\nTime:\n<5 seconds",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "methodology_guidance": {
+        "after_success": "Use PDC hostname in LDAP connection string Store in variable: $PDC = [System.DirectoryServices.ActiveDirectory.Domain]::GetCurrentDomain().PdcRoleOwner.Name"
+      }
     },
     {
       "id": "ps-get-distinguished-name",
@@ -120,9 +122,7 @@
         "Unable to contact the server"
       ],
       "next_steps": [
-        "ps-build-ldap-path",
-        "Store in variable: $DN = ([adsi]'').distinguishedName",
-        "Use in LDAP path: LDAP://<PDC>/$DN"
+        "ps-build-ldap-path"
       ],
       "alternatives": [],
       "prerequisites": [],
@@ -130,7 +130,10 @@
         "Unable to contact the server": "Not logged in to domain or DC unreachable. Verify: whoami /fqdn"
       },
       "notes": "DISTINGUISHED NAMES (DN):\nUnique identifiers in LDAP.\n\nFORMAT:\nCN=name,OU=container,DC=domain,DC=tld\n\nREAD RIGHT-TO-LEFT:\n- DC components:\nDomain (top of hierarchy)\n- OU/CN components:\nLocation within domain\n\nEXAMPLE:\nDomain 'corp.com' → DN is 'DC=corp,DC=com'\n\nCOMMAND:\n  ([adsi]'').distinguishedName\n\nOSCP:\nRequired for building LDAP connection strings.\n\nTime:\n<5 seconds",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "methodology_guidance": {
+        "after_success": "Store in variable: $DN = ([adsi]'').distinguishedName Use in LDAP path: LDAP://<PDC>/$DN"
+      }
     },
     {
       "id": "ps-build-ldap-path",
@@ -157,9 +160,7 @@
         "Variable is null"
       ],
       "next_steps": [
-        "ps-directorysearcher-users",
-        "Use in DirectoryEntry: New-Object System.DirectoryServices.DirectoryEntry($LDAP)",
-        "Use in DirectorySearcher queries"
+        "ps-directorysearcher-users"
       ],
       "alternatives": [],
       "prerequisites": [
@@ -171,7 +172,10 @@
         "Query fails with invalid path": "Verify DC reachable: ping $PDC"
       },
       "notes": "LDAP PATH FORMAT:\nLDAP://HostName/DistinguishedName\n\nCOMPONENTS:\n- HostName:\nPDC for accuracy\n- DistinguishedName:\nDomain DN (searchbase)\n\nTELLS DIRECTORYSEARCHER:\n- WHERE to search:\nPDC\n- WHAT to search:\nEntire domain from root\n\nCOMMAND:\n  $PDC = [System.DirectoryServices.ActiveDirectory.Domain]::GetCurrentDomain().PdcRoleOwner.Name\n  $DN = ([adsi]'').distinguishedName\n  $LDAP = \"LDAP://$PDC/$DN\"\n  $LDAP\n\nOSCP:\nFoundation for all manual LDAP enumeration.\nMemorize this pattern.\n\nTime:\n5-10 seconds",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "methodology_guidance": {
+        "after_success": "Use in DirectoryEntry: New-Object System.DirectoryServices.DirectoryEntry($LDAP) Use in DirectorySearcher queries"
+      }
     },
     {
       "id": "ps-directorysearcher-users",
@@ -206,11 +210,7 @@
         "Access Denied",
         "Cannot find type"
       ],
-      "next_steps": [
-        "Parse output: $result = $dirsearcher.FindAll(); foreach($obj in $result){$obj.Properties}",
-        "Filter properties: $obj.Properties.samaccountname",
-        "Extract specific users: $dirsearcher.filter=\"name=administrator\""
-      ],
+      "next_steps": [],
       "alternatives": [
         "get-netuser"
       ],
@@ -222,7 +222,10 @@
         "Too much output": "Filter specific attributes: $obj.Properties | select samaccountname,description"
       },
       "notes": "SAMACCOUNTTYPE VALUES:\n- 805306368:\nUsers\n- 805306369:\nComputers  \n- 268435456:\nGroups\n\nLDAP FILTER SYNTAX:\n- (attribute=value):\nEquality\n- (attribute=*value*):\nWildcards\n- (&(filter1)(filter2)):\nAND\n- (|(filter1)(filter2)):\nOR\n\nOUTPUT:\nContains ALL user attributes.\nPipe to select for clean output:\n  | ForEach-Object {$_.Properties.samaccountname}\n\nOSCP:\nPowerView-free enumeration.\nWorks in restricted environments where imports blocked.\n\nTime:\n10-30 seconds",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "methodology_guidance": {
+        "after_success": "Parse output: $result = $dirsearcher.FindAll(); foreach($obj in $result){$obj.Properties} Filter properties: $obj.Properties.samaccountname Extract specific users: $dirsearcher.filter=\"name=administrator\""
+      }
     },
     {
       "id": "ps-directorysearcher-groups",
@@ -256,11 +259,7 @@
         "No results",
         "Access Denied"
       ],
-      "next_steps": [
-        "Filter specific group: $dirsearcher.filter=\"(&(objectClass=group)(cn=Domain Admins))\"",
-        "Check for nested groups in member attribute (starts with CN=)",
-        "Enumerate nested groups recursively"
-      ],
+      "next_steps": [],
       "alternatives": [
         "get-netgroup"
       ],
@@ -272,7 +271,10 @@
         "Output format messy": "Use select-object: $group.properties.member | Format-List"
       },
       "notes": "GROUP MEMBER ATTRIBUTE:\nContains distinguished names (DNs).\n\nFORMAT:\n- Users:\nCN=username,CN=Users,DC=corp,DC=com\n- Nested groups:\nCN=groupname,CN=Users,DC=corp,DC=com\n\nNESTED GROUP DETECTION:\nIf member DN contains 'CN=Users' or 'OU=' → likely a group.\nEnumerate recursively to find all users.\n\nOSCP TARGETS:\nLook for groups with 'Admin', 'IT', 'Service' in CN.\nOften have elevated privileges.\n\nTime:\n10-30 seconds",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "methodology_guidance": {
+        "after_success": "Filter specific group: $dirsearcher.filter=\"(&(objectClass=group)(cn=Domain Admins))\" Check for nested groups in member attribute (starts with CN=) Enumerate nested groups recursively"
+      }
     },
     {
       "id": "ps-directorysearcher-computers",
@@ -307,11 +309,7 @@
         "No results",
         "Access Denied"
       ],
-      "next_steps": [
-        "Target legacy OS: $dirsearcher.filter=\"(&(samAccountType=805306369)(operatingSystem=*Server 2008*))\"; $dirsearcher.FindAll()",
-        "Identify DCs: $dirsearcher.filter=\"(&(samAccountType=805306369)(userAccountControl:1.2.840.113556.1.4.803:=8192))\"; $dirsearcher.FindAll()",
-        "Ping reachable hosts: foreach($computer in $result){Test-Connection -ComputerName $computer.properties.dnshostname -Count 1 -Quiet}"
-      ],
+      "next_steps": [],
       "alternatives": [
         "get-netcomputer",
         "dsquery-computer"
@@ -324,7 +322,10 @@
         "DC not showing": "Use userAccountControl filter for DCs. Flag 8192 = Domain Controller."
       },
       "notes": "COMPUTER OBJECTS:\nReveal network topology without port scanning.\n\nKEY ATTRIBUTES:\n- operatingsystem:\nIdentify legacy systems (Windows 7, Server 2008)\n- operatingsystemversion:\nExact build number\n- lastLogon:\nActive vs dormant computers\n- dnshostname:\nFQDN for connections\n\nOSCP TARGETS:\nFocus on legacy OS versions and servers.\nHigher chance of unpatched vulnerabilities.\n\nTime:\n10-30 seconds",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "methodology_guidance": {
+        "after_success": "Target legacy OS: $dirsearcher.filter=\"(&(samAccountType=805306369)(operatingSystem=*Server 2008*))\"; $dirsearcher.FindAll() Identify DCs: $dirsearcher.filter=\"(&(samAccountType=805306369)(userAccountControl:1.2.840.113556.1.4.803:=8192))\"; $dirsearcher.FindAll() Ping reachable hosts: foreach($computer in $result){Test-Connection -ComputerName $computer.properties.dnshostname -Count 1 -Quiet}"
+      }
     },
     {
       "id": "ps-ldapsearch-function",
@@ -355,13 +356,7 @@
         "Syntax error",
         "Function not recognized"
       ],
-      "next_steps": [
-        "Save to file: function | Out-File LDAPSearch.ps1",
-        "Import: Import-Module .\\LDAPSearch.ps1",
-        "Use: LDAPSearch -LDAPQuery \"(samAccountType=805306368)\"",
-        "Filter users: LDAPSearch -LDAPQuery \"(&(objectCategory=user)(adminCount=1))\"",
-        "Filter groups: LDAPSearch -LDAPQuery \"(objectCategory=group)\" | select -ExpandProperty Properties | select cn,member"
-      ],
+      "next_steps": [],
       "alternatives": [],
       "prerequisites": [
         "ps-build-ldap-path",
@@ -373,7 +368,10 @@
         "No results": "Verify LDAP filter syntax. Common filters: (objectClass=user), (objectCategory=group), (samAccountType=805306368)"
       },
       "notes": "REUSABLE LDAP FUNCTION:\nEncapsulates all previous LDAP steps.\n\nUSAGE EXAMPLES:\n- Users:\nLDAPSearch \"(samAccountType=805306368)\"\n- Groups:\nLDAPSearch \"(objectCategory=group)\"\n- Kerberoastable:\nLDAPSearch \"(&(objectCategory=user)(servicePrincipalName=*))\"\n\nOSCP WORKFLOW:\n1.\n\nSave function to file:\nfunction | Out-File LDAPSearch.ps1\n\n2.\n\nImport at start:\nImport-Module .\\LDAPSearch.ps1\n\n3.\n\nUse throughout enumeration\n\nADVANTAGE:\nPowerView-free, exam-safe enumeration.\nEliminates repetitive typing.\n\nTime:\nFunction creation 10 seconds, usage <5 seconds",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "methodology_guidance": {
+        "after_success": "Save to file: function | Out-File LDAPSearch.ps1 Import: Import-Module .\\LDAPSearch.ps1 Use: LDAPSearch -LDAPQuery \"(samAccountType=805306368)\" Filter users: LDAPSearch -LDAPQuery \"(&(objectCategory=user)(adminCount=1))\" Filter groups: LDAPSearch -LDAPQuery \"(objectCategory=group)\" | select -ExpandProperty Properties | select cn,member"
+      }
     },
     {
       "id": "ps-ldapsearch-users",
@@ -403,9 +401,7 @@
         "Access denied",
         "Cannot contact domain"
       ],
-      "next_steps": [
-        "Filter results: LDAPSearch -LDAPQuery \"(&(objectClass=user)(!(objectClass=computer)))\""
-      ],
+      "next_steps": [],
       "alternatives": [
         "get-netuser"
       ],
@@ -417,7 +413,10 @@
         "Returns computer accounts": "Filter computers: (&(objectClass=user)(!(objectClass=computer)))"
       },
       "notes": "REQUIRES:\nLDAPSearch function defined first.\n\nRETURNS:\nUser AND computer objects (computers inherit from user class).\n\nFILTER COMPUTERS:\n- LDAP:\n(&(objectClass=user)(!(objectClass=computer)))\n- PowerShell:\n| ? {$_.Properties.samaccountname -notmatch '\\$$'}\n\nTime:\n<10 seconds",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "methodology_guidance": {
+        "after_success": "Filter results: LDAPSearch -LDAPQuery \"(&(objectClass=user)(!(objectClass=computer)))\""
+      }
     },
     {
       "id": "ps-ldapsearch-computers",
@@ -444,9 +443,7 @@
       "failure_indicators": [
         "Function not defined"
       ],
-      "next_steps": [
-        "Check OS versions: | select -ExpandProperty Properties | select dnshostname,operatingsystem"
-      ],
+      "next_steps": [],
       "alternatives": [
         "get-netcomputer"
       ],
@@ -455,7 +452,10 @@
       ],
       "troubleshooting": {},
       "notes": "QUERY ALL COMPUTERS:\nRETURNS:\n- DNS hostname\n- OS version\n- Last logon\n- Operating system details\n\nUSAGE:\n  LDAPSearch -LDAPQuery \"(objectClass=computer)\" | select -ExpandProperty Properties | select dnshostname,operatingsystem\n\nTime:\n<10 seconds",
-      "oscp_relevance": "medium"
+      "oscp_relevance": "medium",
+      "methodology_guidance": {
+        "after_success": "Check OS versions: | select -ExpandProperty Properties | select dnshostname,operatingsystem"
+      }
     },
     {
       "id": "ps-ldapsearch-groups",
@@ -482,9 +482,7 @@
       "failure_indicators": [
         "Function not defined"
       ],
-      "next_steps": [
-        "Get group members: $group.Properties.member"
-      ],
+      "next_steps": [],
       "alternatives": [
         "get-netgroup"
       ],
@@ -493,7 +491,10 @@
       ],
       "troubleshooting": {},
       "notes": "QUERY ALL GROUPS:\nFOCUS ON:\n- Domain Admins\n- Enterprise Admins\n- Administrators\n- Custom admin groups\n\nGET MEMBERS:\n  $group.Properties.member\n\nTime:\n<10 seconds",
-      "oscp_relevance": "medium"
+      "oscp_relevance": "medium",
+      "methodology_guidance": {
+        "after_success": "Get group members: $group.Properties.member"
+      }
     },
     {
       "id": "ps-ldapsearch-spns",
@@ -522,9 +523,7 @@
         "Function not defined",
         "No results"
       ],
-      "next_steps": [
-        "Request TGS tickets for discovered accounts"
-      ],
+      "next_steps": [],
       "alternatives": [
         "get-netuser"
       ],
@@ -535,7 +534,10 @@
         "No results": "No SPNs registered. Try PowerView: Get-NetUser -SPN"
       },
       "notes": "KERBEROASTING TARGETS:\nQUERY:\n  LDAPSearch -LDAPQuery \"(&(objectClass=user)(servicePrincipalName=*))\"\n\nWHY THIS MATTERS:\nUser accounts with SPNs → can request TGS tickets.\nTGS encrypted with service account password hash.\nCrack offline, no account lockout.\n\nNEXT STEPS:\n- Request TGS tickets\n- Extract with Rubeus/Mimikatz\n- Crack with hashcat\n\nTime:\n<10 seconds",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "methodology_guidance": {
+        "after_success": "Request TGS tickets for discovered accounts"
+      }
     },
     {
       "id": "ps-ldapsearch-admins",
@@ -562,16 +564,17 @@
       "failure_indicators": [
         "Function not defined"
       ],
-      "next_steps": [
-        "Check group membership for discovered accounts"
-      ],
+      "next_steps": [],
       "alternatives": [],
       "prerequisites": [
         "ps-ldapsearch-function"
       ],
       "troubleshooting": {},
       "notes": "ADMINCOUNT ATTRIBUTE:\nQUERY:\n  LDAPSearch -LDAPQuery \"(adminCount=1)\"\n\nWHAT IT MEANS:\nAccount is/was in privileged group.\n\nADMINSDHOLDER PROCESS:\nSets this flag on:\n- Domain Admins\n- Enterprise Admins  \n- Account Operators\n- Backup Operators\n- Server Operators\n- Other high-privilege groups\n\nOSCP:\nIdentify privileged accounts for targeting.\n\nTime:\n<10 seconds",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "methodology_guidance": {
+        "after_success": "Check group membership for discovered accounts"
+      }
     }
   ]
 }

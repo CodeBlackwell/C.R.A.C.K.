@@ -69,11 +69,7 @@
         "Get-NetDomainController not recognized",
         "Unable to contact domain"
       ],
-      "next_steps": [
-        "Target PDC for accurate enumeration",
-        "Check DC OS version for vulnerabilities",
-        "Identify forest root DC"
-      ],
+      "next_steps": [],
       "alternatives": [
         "ps-get-pdc"
       ],
@@ -85,7 +81,10 @@
         "Unable to contact domain": "DC unreachable. Check network connectivity: ping <DC>"
       },
       "notes": "ENUMERATE ALL DOMAIN CONTROLLERS:\nKEY PROPERTIES:\n- IPAddress:\nDirect targeting\n- OSVersion:\nIdentify legacy DCs (2008, 2012)\n- Forest:\nForest root (multi-domain)\n- PdcRoleOwner:\nPDC identification\n\nOSCP:\nIdentify PDC from PdcRoleOwner field.\nUse PDC for all subsequent enumeration (accuracy).\n\nTime:\n<5 seconds",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "methodology_guidance": {
+        "after_success": "Target PDC for accurate enumeration Check DC OS version for vulnerabilities Identify forest root DC"
+      }
     },
     {
       "id": "powerview-get-netuser",
@@ -115,8 +114,7 @@
       ],
       "next_steps": [
         "powerview-get-netuser-filter",
-        "powerview-get-netuser-spn",
-        "Filter for specific attributes: Get-NetUser | select samaccountname,memberof"
+        "powerview-get-netuser-spn"
       ],
       "alternatives": [
         "net-user-domain-list",
@@ -130,7 +128,10 @@
         "Too much output": "Filter attributes: Get-NetUser | select samaccountname,description,memberof | Format-Table"
       },
       "notes": "ENUMERATE ALL DOMAIN USERS:\nWARNING:\nReturns ALL attributes for ALL users.\nOutput can be overwhelming in large domains.\n\nFILTER WITH SELECT:\n  Get-NetUser | select samaccountname,pwdlastset,lastlogon\n\nLOOK FOR:\n- Dormant accounts:\nOld lastlogon\n- Weak passwords:\nOld pwdlastset\n- Admin accounts:\nmemberof contains Domain Admins\n\nOSCP:\nPipe to select immediately (avoid overload).\n\nTime:\n10-30 seconds",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "methodology_guidance": {
+        "after_success": "Filter for specific attributes: Get-NetUser | select samaccountname,memberof"
+      }
     },
     {
       "id": "powerview-get-netuser-filter",
@@ -165,11 +166,7 @@
         "Get-NetUser not recognized",
         "User not found"
       ],
-      "next_steps": [
-        "Check memberof for Domain Admins membership",
-        "Check admincount=1 for protected accounts",
-        "Check serviceprincipalname for Kerberoastable accounts"
-      ],
+      "next_steps": [],
       "alternatives": [
         "net-user-domain-detail"
       ],
@@ -181,7 +178,10 @@
         "User not found": "Verify spelling. List all users first: Get-NetUser | select samaccountname"
       },
       "notes": "QUERY SPECIFIC USER:\nFaster than Get-NetUser | Where-Object\nQueries AD directly.\n\nKEY ATTRIBUTES:\n- memberof:\nGroup memberships (Domain Admins?)\n- admincount:\n1 = protected admin account\n- pwdlastset:\nPassword age (old = weak)\n- serviceprincipalname:\nKerberoastable?\n- useraccountcontrol:\nAccount flags\n\nOSCP:\nQuickly profile high-value targets.\n\nTime:\n<5 seconds",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "methodology_guidance": {
+        "after_success": "Check memberof for Domain Admins membership Check admincount=1 for protected accounts Check serviceprincipalname for Kerberoastable accounts"
+      }
     },
     {
       "id": "powerview-get-netuser-spn",
@@ -212,11 +212,7 @@
         "No SPNs found",
         "Module not imported"
       ],
-      "next_steps": [
-        "Request Kerberos tickets: Invoke-Kerberoast -Identity <USERNAME>",
-        "Extract tickets for offline cracking",
-        "Identify service type from SPN (HTTP, MSSQLSvc, etc.)"
-      ],
+      "next_steps": [],
       "alternatives": [
         "setspn-query-all"
       ],
@@ -227,7 +223,10 @@
         "krbtgt showing in results": "krbtgt has SPNs but is not Kerberoastable. Filter out: Get-NetUser -SPN | ? {$_.samaccountname -ne 'krbtgt'}"
       },
       "notes": "KERBEROASTING TARGETS:\nSERVICE ACCOUNT CHARACTERISTICS:\n- Elevated privileges (local admin, DB access)\n- Weak passwords (rarely changed)\n\nSPN FORMAT REVEALS SERVICE:\n- HTTP/:\nWeb servers\n- MSSQLSvc/:\nSQL Server\n- TERMSRV/:\nRDP\n\nKERBEROASTING WORKFLOW:\n1.\n\nRequest service ticket (valid domain creds)\n\n2.\n\nExtract ticket (contains password hash)\n\n3.\n\nCrack offline (hashcat/john, no lockout)\n\nOSCP:\nMost reliable privesc technique.\nEnumerate SPNs early.\n\nTime:\n5-10 seconds",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "methodology_guidance": {
+        "after_success": "Request Kerberos tickets: Invoke-Kerberoast -Identity <USERNAME> Extract tickets for offline cracking Identify service type from SPN (HTTP, MSSQLSvc, etc.)"
+      }
     },
     {
       "id": "powerview-get-netgroup",
@@ -258,8 +257,7 @@
       ],
       "next_steps": [
         "powerview-get-netgroup-specific",
-        "powerview-get-netgroupmember",
-        "Prioritize: Domain Admins, Enterprise Admins, Administrators, custom groups (IT, Service, Management)"
+        "powerview-get-netgroupmember"
       ],
       "alternatives": [
         "net-group-domain-list",
@@ -272,7 +270,10 @@
         "Module not imported": "Import-Module .\\PowerView.ps1"
       },
       "notes": "ENUMERATE ALL GROUPS:\nDEFAULT HIGH-PRIVILEGE:\n- Domain Admins:\nDomain-wide admin\n- Enterprise Admins:\nForest-wide admin\n- Administrators:\nLocal admin on computers\n\nCUSTOM GROUPS REVEAL STRUCTURE:\n- IT_Admins\n- SQL_DBAs\n- Service_Accounts\n- Management\n\nOSCP:\nLook for 'Admin', 'IT', 'Service', 'Management' in names.\nOften have elevated privileges.\n\nTime:\n5-10 seconds",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "methodology_guidance": {
+        "after_success": "Prioritize: Domain Admins, Enterprise Admins, Administrators, custom groups (IT, Service, Management)"
+      }
     },
     {
       "id": "powerview-get-netgroup-specific",
@@ -309,9 +310,7 @@
         "Module not imported"
       ],
       "next_steps": [
-        "powerview-get-netgroupmember",
-        "Check for nested groups (member DNs starting with CN=group)",
-        "Enumerate each member: Get-NetUser -Identity <USERNAME>"
+        "powerview-get-netgroupmember"
       ],
       "alternatives": [
         "net-group-domain-members"
@@ -325,7 +324,10 @@
         "Member field shows distinguished names": "Use Get-NetGroupMember for cleaner output with resolved usernames"
       },
       "notes": "MEMBER ATTRIBUTE FORMAT:\nDistinguished names (LDAP), not usernames.\n\nFORMAT:\n- Users:\nCN=username,CN=Users,DC=corp,DC=com\n- Nested groups:\nCN=groupname,CN=Users,DC=corp,DC=com\n\nNESTED GROUP DETECTION:\nDN starts with 'CN=' and contains 'CN=Users' = likely group.\n\nBETTER ALTERNATIVE:\nGet-NetGroupMember -Recurse (auto-resolves nested)\n\nOSCP:\nDomain Admins members = instant win.\n\nTime:\n<5 seconds",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "methodology_guidance": {
+        "after_success": "Check for nested groups (member DNs starting with CN=group) Enumerate each member: Get-NetUser -Identity <USERNAME>"
+      }
     },
     {
       "id": "powerview-get-netgroupmember",
@@ -361,11 +363,7 @@
         "Group not found",
         "Module not imported"
       ],
-      "next_steps": [
-        "Use -Recurse to unravel nested groups",
-        "Enumerate each user member: Get-NetUser -Identity <USERNAME>",
-        "Check for service accounts in privileged groups"
-      ],
+      "next_steps": [],
       "alternatives": [
         "powerview-get-netgroup-specific",
         "net-group-domain-members"
@@ -379,7 +377,10 @@
         "Group not found": "Use quotes for group names with spaces"
       },
       "notes": "CLEANER OUTPUT:\nResolves DNs to usernames.\nShows object types (user vs group).\n\nMEMBEROBJECTCLASS:\n- user:\nobjectClass=user\n- group:\nobjectClass=group (nested)\n\n-RECURSE FLAG:\nAutomatically resolves nested groups.\nEssential for finding all effective members.\n\nOSCP:\nAlways use -Recurse for privileged groups.\nFind hidden admin accounts in subgroups.\n\nTime:\n5-10 seconds",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "methodology_guidance": {
+        "after_success": "Use -Recurse to unravel nested groups Enumerate each user member: Get-NetUser -Identity <USERNAME> Check for service accounts in privileged groups"
+      }
     },
     {
       "id": "powerview-get-netcomputer",
@@ -408,11 +409,7 @@
         "Module not imported",
         "Access Denied"
       ],
-      "next_steps": [
-        "Target legacy OS: Get-NetComputer -OperatingSystem '*Server 2008*'",
-        "Find admin access: Find-LocalAdminAccess",
-        "Test connectivity: Test-Connection -ComputerName <HOST>"
-      ],
+      "next_steps": [],
       "alternatives": [
         "ps-directorysearcher-computers",
         "dsquery-computer"
@@ -425,7 +422,10 @@
         "Output too large": "Filter by OS: Get-NetComputer -OperatingSystem '*Server*' | select dnshostname,operatingsystem"
       },
       "notes": "ALL DOMAIN COMPUTERS:\nNo network scanning required.\n\nKEY FIELDS:\n- operatingsystem:\nIdentify legacy (7, 2008)\n- operatingsystemversion:\nExact build for CVE\n- dnshostname:\nFQDN for connections\n\nFILTER EXAMPLES:\n  Get-NetComputer -OperatingSystem '*Server*'\n  Get-NetComputer -OperatingSystem '*2008*'\n\nOSCP:\nFocus on legacy OS and servers.\nHigher misconfigurations/unpatched vulns.\n\nTime:\n10-30 seconds",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "methodology_guidance": {
+        "after_success": "Target legacy OS: Get-NetComputer -OperatingSystem '*Server 2008*' Find admin access: Find-LocalAdminAccess Test connectivity: Test-Connection -ComputerName <HOST>"
+      }
     },
     {
       "id": "powerview-get-netou",
@@ -453,14 +453,8 @@
       "failure_indicators": [
         "Module not imported"
       ],
-      "next_steps": [
-        "Identify interesting OUs: Servers, Workstations, Service Accounts",
-        "Query objects in specific OU: Get-NetUser -SearchBase 'OU=ServiceAccounts,DC=corp,DC=com'",
-        "Check OU GPO links: Get-NetGPO"
-      ],
-      "alternatives": [
-        "get-adorganizationalunit"
-      ],
+      "next_steps": [],
+      "alternatives": [],
       "prerequisites": [
         "import-powerview"
       ],
@@ -468,7 +462,10 @@
         "Module not imported": "Import-Module .\\PowerView.ps1"
       },
       "notes": "OUs ORGANIZE OBJECTS:\nFor management and GPO application.\n\nCOMMON OUs:\n- Domain Controllers:\nDCs\n- Computers:\nWorkstations\n- Servers:\nServers\n- Custom:\nBy department/function\n\nINTERESTING OUs:\n- Service Accounts\n- Privileged Users\n- Disabled Users\n\nOSCP:\nLess critical than users/groups/computers.\nCan reveal admin practices.\n\nTime:\n5-10 seconds",
-      "oscp_relevance": "medium"
+      "oscp_relevance": "medium",
+      "methodology_guidance": {
+        "after_success": "Identify interesting OUs: Servers, Workstations, Service Accounts Query objects in specific OU: Get-NetUser -SearchBase 'OU=ServiceAccounts,DC=corp,DC=com' Check OU GPO links: Get-NetGPO"
+      }
     },
     {
       "id": "powerview-get-netgpo",
@@ -497,11 +494,7 @@
       "failure_indicators": [
         "Module not imported"
       ],
-      "next_steps": [
-        "Check GPO details: Get-NetGPO -Identity '<DISPLAYNAME>'",
-        "Find vulnerable GPPs: Get-NetGPOGroup (looks for cpassword)",
-        "Check GPO application: Get-NetOU | Get-NetGPOLink"
-      ],
+      "next_steps": [],
       "alternatives": [],
       "prerequisites": [
         "import-powerview"
@@ -510,7 +503,10 @@
         "Module not imported": "Import-Module .\\PowerView.ps1"
       },
       "notes": "GPOs DEFINE SETTINGS:\n- Password policies\n- Software installation\n- Scripts\n- Security settings\n\nDEFAULT DOMAIN POLICY:\nControls password requirements and lockout.\n\nVULNERABILITIES:\n- GPP passwords (cpassword attribute)\n- Startup scripts with hardcoded creds\n- Weak security settings\n\nWHENCHANGED:\nRecent changes = testing/debugging (weak security).\n\nOSCP:\nFind GPP passwords in SYSVOL.\nOld vuln, still present in legacy.\n\nTime:\n5-10 seconds",
-      "oscp_relevance": "medium"
+      "oscp_relevance": "medium",
+      "methodology_guidance": {
+        "after_success": "Check GPO details: Get-NetGPO -Identity '<DISPLAYNAME>' Find vulnerable GPPs: Get-NetGPOGroup (looks for cpassword) Check GPO application: Get-NetOU | Get-NetGPOLink"
+      }
     },
     {
       "id": "powerview-get-netforest",
@@ -537,14 +533,8 @@
         "Module not imported",
         "Access Denied"
       ],
-      "next_steps": [
-        "Enumerate all domains in forest: Get-NetForest | select -ExpandProperty Domains",
-        "Check forest trusts: Get-NetForestTrust",
-        "Target root domain for Enterprise Admins"
-      ],
-      "alternatives": [
-        "get-adforest"
-      ],
+      "next_steps": [],
+      "alternatives": [],
       "prerequisites": [
         "import-powerview"
       ],
@@ -552,7 +542,10 @@
         "Module not imported": "Import-Module .\\PowerView.ps1"
       },
       "notes": "AD FORESTS:\nOne or more domains in trust relationship.\n\nSINGLE DOMAIN:\nForest = Domain (little value).\n\nMULTI-DOMAIN:\nReveals structure and trust relationships.\n\nENTERPRISE ADMINS:\nExists only in root domain.\nAdmin rights across ALL forest domains.\n\nOSCP:\nMost exams are single-domain.\nUse for multi-domain scenarios.\n\nALTERNATIVE:\n  [system.directoryservices.activedirectory.forest]::getcurrentforest()\n\nTime:\n<5 seconds",
-      "oscp_relevance": "medium"
+      "oscp_relevance": "medium",
+      "methodology_guidance": {
+        "after_success": "Enumerate all domains in forest: Get-NetForest | select -ExpandProperty Domains Check forest trusts: Get-NetForestTrust Target root domain for Enterprise Admins"
+      }
     },
     {
       "id": "powerview-get-netuser-all",
@@ -582,16 +575,17 @@
         "Get-NetUser not recognized",
         "Module not imported"
       ],
-      "next_steps": [
-        "Filter for interesting users: | ? {$_.description -match 'password|pwd|pw'}"
-      ],
+      "next_steps": [],
       "alternatives": [],
       "prerequisites": [],
       "troubleshooting": {
         "Get-NetUser not recognized": "Import PowerView first: . .\\PowerView.ps1 or Import-Module PowerView.psd1"
       },
       "notes": "CHECK DESCRIPTION FIELDS:\nAdmins often store passwords there.\n\nCOMMON PATTERNS:\n- 'temp password'\n- 'default password'\n- 'reset to'\n- 'password:\nWinter2023'\n\nFILTER:\n  | ? {$_.description -match 'password|pwd|pw'}",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "methodology_guidance": {
+        "after_success": "Filter for interesting users: | ? {$_.description -match 'password|pwd|pw'}"
+      }
     },
     {
       "id": "powerview-get-netcomputer-all",
@@ -619,16 +613,17 @@
       "failure_indicators": [
         "Get-NetComputer not recognized"
       ],
-      "next_steps": [
-        "Find vulnerable OS: | ? {$_.operatingsystem -match 'Server 2008|XP|Vista'}"
-      ],
+      "next_steps": [],
       "alternatives": [],
       "prerequisites": [
         "import-powerview"
       ],
       "troubleshooting": {},
       "notes": "TARGET OLDER OS:\nServer 2008, 2012 - likely unpatched.\n\nLASTLOGON:\nIdentify active machines.\n\nFILTER:\n  | ? {$_.operatingsystem -match 'Server 2008|2012'}",
-      "oscp_relevance": "medium"
+      "oscp_relevance": "medium",
+      "methodology_guidance": {
+        "after_success": "Find vulnerable OS: | ? {$_.operatingsystem -match 'Server 2008|XP|Vista'}"
+      }
     },
     {
       "id": "powerview-get-netcomputer-ping",
@@ -655,9 +650,7 @@
         "Get-NetComputer not recognized",
         "No pingable hosts"
       ],
-      "next_steps": [
-        "Test admin access: Find-LocalAdminAccess"
-      ],
+      "next_steps": [],
       "alternatives": [],
       "prerequisites": [
         "import-powerview"
@@ -666,7 +659,10 @@
         "No pingable hosts": "ICMP may be blocked. Try without -Ping flag to get all computers."
       },
       "notes": "WARNING:\nSlow on large domains (250+ computers).\n\nUSE FOR:\n- Small environments\n- Need only active targets\n\nALTERNATIVE:\nGet all computers, then port scan.",
-      "oscp_relevance": "medium"
+      "oscp_relevance": "medium",
+      "methodology_guidance": {
+        "after_success": "Test admin access: Find-LocalAdminAccess"
+      }
     },
     {
       "id": "powerview-get-netgroup-recursive",
@@ -695,9 +691,7 @@
         "Get-NetGroupMember not recognized",
         "Group not found"
       ],
-      "next_steps": [
-        "Check each member's privileges on other systems"
-      ],
+      "next_steps": [],
       "alternatives": [],
       "prerequisites": [
         "import-powerview"
@@ -706,7 +700,10 @@
         "Group not found": "Verify group name: Get-NetGroup | select name"
       },
       "notes": "Critical for identifying privilege escalation paths.\n\nNested groups often overlooked.\n\nEXAMPLE CHAIN:\nUser → Helpdesk → ServerAdmins → Domain Admins\n\nUSE -RECURSE:\nFinds all effective members through nested groups.",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "methodology_guidance": {
+        "after_success": "Check each member's privileges on other systems"
+      }
     }
   ]
 }

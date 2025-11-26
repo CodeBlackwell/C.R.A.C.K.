@@ -47,7 +47,7 @@
       ],
       "alternatives": [
         "import-sharphound",
-        "ldapsearch"
+        "ldapsearch-ad"
       ],
       "success_indicators": [
         "No error messages displayed",
@@ -111,7 +111,6 @@
         "get-netcomputer"
       ],
       "alternatives": [
-        "get-addomain-add",
         "ldapsearch-dump"
       ],
       "success_indicators": [
@@ -179,8 +178,7 @@
         "import-powerview"
       ],
       "next_steps": [
-        "get-netgroup",
-        "invoke-kerberoast"
+        "get-netgroup"
       ],
       "alternatives": [
         "net-user-domain-list",
@@ -388,9 +386,7 @@
         "import-powerview"
       ],
       "next_steps": [],
-      "alternatives": [
-        "crackmapexec-check"
-      ],
+      "alternatives": [],
       "success_indicators": [
         "Returns one or more computer hostnames",
         "No access denied errors",
@@ -514,7 +510,7 @@
       ],
       "next_steps": [],
       "alternatives": [
-        "get-gpo"
+        "get-netgpo"
       ],
       "success_indicators": [
         "Returns GPO objects with properties",

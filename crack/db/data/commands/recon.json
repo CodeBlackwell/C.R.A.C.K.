@@ -41,16 +41,13 @@
         "Host seems down",
         "Note: Host seems down"
       ],
-      "next_steps": [
-        "Run full port scan on discovered hosts: nmap -p- <IP>",
-        "Perform service enumeration: nmap -sV -sC <IP>",
-        "Check for specific services (SMB, HTTP, SSH)"
-      ],
-      "alternatives": [
-        "arp-scan-list"
-      ],
+      "next_steps": [],
+      "alternatives": [],
       "notes": "Use -sn for host discovery only, no port scan",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "methodology_guidance": {
+        "after_success": "Run full port scan on discovered hosts: nmap -p- <IP> Perform service enumeration: nmap -sV -sC <IP> Check for specific services (SMB, HTTP, SSH)"
+      }
     },
     {
       "id": "nmap-quick-scan",
@@ -106,14 +103,13 @@
         "All 65535 scanned ports are closed",
         "0 hosts up"
       ],
-      "next_steps": [
-        "Service scan on open ports: nmap -sV -sC -p <PORTS> <TARGET>",
-        "UDP scan if needed: nmap -sU --top-ports 20 <TARGET>",
-        "Vulnerability scripts: nmap --script vuln -p <PORTS> <TARGET>"
-      ],
+      "next_steps": [],
       "alternatives": [],
       "notes": "Adjust --min-rate based on network stability",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "methodology_guidance": {
+        "after_success": "Service scan on open ports: nmap -sV -sC -p <PORTS> <TARGET> UDP scan if needed: nmap -sU --top-ports 20 <TARGET> Vulnerability scripts: nmap --script vuln -p <PORTS> <TARGET>"
+      }
     },
     {
       "id": "nmap-service-scan",
@@ -170,15 +166,13 @@
         "Service scan Timing",
         "0 services on 0 hosts"
       ],
-      "next_steps": [
-        "Research service versions for vulnerabilities: searchsploit <service>",
-        "Web enumeration if HTTP found: gobuster dir -u http://<IP>",
-        "SMB enumeration if 445 open: enum4linux -a <IP>",
-        "SSH brute if 22 open: hydra -L users -P pass ssh://<IP>"
-      ],
+      "next_steps": [],
       "alternatives": [],
       "notes": "Use after quick scan to investigate open ports",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "methodology_guidance": {
+        "after_success": "Research service versions for vulnerabilities: searchsploit <service> Web enumeration if HTTP found: gobuster dir -u http://<IP> SMB enumeration if 445 open: enum4linux -a <IP> SSH brute if 22 open: hydra -L users -P pass ssh://<IP>"
+      }
     },
     {
       "id": "nmap-vuln-scan",
@@ -224,17 +218,16 @@
         "Could not find",
         "No vulnerabilities found"
       ],
-      "next_steps": [
-        "Research found CVEs: searchsploit <CVE>",
-        "Check Metasploit: msfconsole; search <vulnerability>",
-        "Manual verification of vulnerabilities",
-        "Try specific vuln scripts: --script smb-vuln-ms17-010"
-      ],
+      "next_steps": [],
       "alternatives": [
         "nessus-scan"
       ],
       "notes": "Can be slow, use specific scripts for better performance",
-      "oscp_relevance": "medium"
+      "oscp_relevance": "medium",
+      "methodology_guidance": {
+        "after_success": "Research found CVEs: searchsploit <CVE> Check Metasploit: msfconsole; search <vulnerability> Try specific vuln scripts: --script smb-vuln-ms17-010",
+        "manual_alternative": "Manual verification of vulnerabilities"
+      }
     },
     {
       "id": "dns-enum",
@@ -273,17 +266,15 @@
         "SERVFAIL",
         "NXDOMAIN"
       ],
-      "next_steps": [
-        "Try zone transfer: dnsrecon -d <DOMAIN> -t axfr",
-        "Subdomain brute: gobuster dns -d <DOMAIN> -w wordlist",
-        "Check for virtual hosts on discovered IPs",
-        "Reverse DNS on IP ranges: dnsrecon -r <RANGE>"
-      ],
+      "next_steps": [],
       "alternatives": [
         "dnsenum-domain"
       ],
       "notes": "Try zone transfer with -t axfr if allowed",
-      "oscp_relevance": "medium"
+      "oscp_relevance": "medium",
+      "methodology_guidance": {
+        "after_success": "Try zone transfer: dnsrecon -d <DOMAIN> -t axfr Subdomain brute: gobuster dns -d <DOMAIN> -w wordlist Check for virtual hosts on discovered IPs Reverse DNS on IP ranges: dnsrecon -r <RANGE>"
+      }
     },
     {
       "id": "smb-enum",
@@ -328,15 +319,13 @@
         "Connection refused",
         "Could not connect"
       ],
-      "next_steps": [
-        "Try null session: smbclient -L //<IP> -N",
-        "Mount shares: mount -t cifs //<IP>/<share> /mnt",
-        "Check write access: smbmap -H <IP> -u guest",
-        "Brute force: hydra -L users -P pass smb://<IP>"
-      ],
+      "next_steps": [],
       "alternatives": [],
       "notes": "Check for null sessions and guest access",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "methodology_guidance": {
+        "after_success": "Try null session: smbclient -L //<IP> -N Mount shares: mount -t cifs //<IP>/<share> /mnt Check write access: smbmap -H <IP> -u guest Brute force: hydra -L users -P pass smb://<IP>"
+      }
     },
     {
       "id": "snmp-enum",
@@ -381,15 +370,13 @@
         "No Response",
         "Unknown community"
       ],
-      "next_steps": [
-        "Extract user accounts: snmpwalk -c <SNMP_COMMUNITY> -v2c <IP> 1.3.6.1.4.1.77.1.2.25",
-        "Get running processes: snmpwalk -c <SNMP_COMMUNITY> -v2c <IP> 1.3.6.1.2.1.25.4.2.1.2",
-        "Try snmp-check for formatted output: snmp-check <IP>",
-        "Brute community strings: onesixtyone -c wordlist <IP>"
-      ],
+      "next_steps": [],
       "alternatives": [],
       "notes": "Try 'public' and 'private' as default community strings",
-      "oscp_relevance": "medium"
+      "oscp_relevance": "medium",
+      "methodology_guidance": {
+        "after_success": "Extract user accounts: snmpwalk -c <SNMP_COMMUNITY> -v2c <IP> 1.3.6.1.4.1.77.1.2.25 Get running processes: snmpwalk -c <SNMP_COMMUNITY> -v2c <IP> 1.3.6.1.2.1.25.4.2.1.2 Try snmp-check for formatted output: snmp-check <IP> Brute community strings: onesixtyone -c wordlist <IP>"
+      }
     },
     {
       "id": "smb-null-session-shares",
@@ -647,12 +634,7 @@
         "Connection to <TARGET> failed",
         "tree connect failed"
       ],
-      "next_steps": [
-        "Use 'ls' to list files",
-        "Use 'get <FILE>' to download files",
-        "Use 'put <FILE>' to upload files",
-        "Search for sensitive files: passwords.txt, config files, SSH keys"
-      ],
+      "next_steps": [],
       "alternatives": [
         "smb-mount-share",
         "smb-smbmap-recursive"
@@ -668,7 +650,10 @@
         "Cannot access subdirectories": "Use 'cd <DIR>' to change directories. Use 'recurse ON' + 'prompt OFF' + 'mget *' for bulk download"
       },
       "notes": "Interactive mode allows manual exploration which may reveal files missed by automated tools.\n\nCommon useful commands:\nls, cd, get, put, mget, mput, recurse, prompt.\n\nTime estimate:\n5-15 minutes for manual exploration.\n\nOSCP tips:\n(1) Check for readable files in Users directories - look for Desktop, Documents, Downloads.\n\n(2) Check for writable directories - potential for malware upload.\n\n(3) Look for configuration files, scripts, passwords in plaintext.\n\n(4) For null session:\nsmbclient //<TARGET>/<SHARE> -N.\n\n(5) For scripting:\nsmbclient //<TARGET>/<SHARE> -U <USER>%<PASS> -c 'ls;get file.txt'",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "methodology_guidance": {
+        "after_success": "Use 'ls' to list files Use 'get <FILE>' to download files Use 'put <FILE>' to upload files Search for sensitive files: passwords.txt, config files, SSH keys"
+      }
     },
     {
       "id": "smb-smbmap-recursive",
@@ -736,11 +721,7 @@
         "Unable to connect",
         "SMB SessionError"
       ],
-      "next_steps": [
-        "Download interesting files: smbmap -H <TARGET> -u <USER> -p <PASS> --download '<SHARE>\\path\\file.txt'",
-        "Search for specific files: smbmap -H <TARGET> -u <USER> -p <PASS> -r <SHARE> -A password",
-        "Look for writable directories for potential payload upload"
-      ],
+      "next_steps": [],
       "alternatives": [
         "smb-smbclient-connect",
         "smb-mount-share"
@@ -755,7 +736,10 @@
         "Cannot find sensitive files": "Use search pattern: smbmap -H <TARGET> -u <USER> -p <PASS> -R <SHARE> -A '.txt|.xml|.config|.ps1'"
       },
       "notes": "smbmap shows file sizes and permissions which helps prioritize targets.\n\nUse -A flag with patterns to search for specific file types.\n\nTime estimate:\n2-5 minutes depending on share size.\n\nOSCP tips:\n(1) Look for READ/WRITE directories - potential pivot points.\n\n(2) Common sensitive files:\npasswords.txt, users.txt, config.xml, web.config, *.ps1, *.kdbx (KeePass), id_rsa (SSH keys).\n\n(3) Use download:\nsmbmap -H <TARGET> -u <USER> -p <PASS> --download '<SHARE>\\full\\path\\file.txt'.\n\n(4) For null session:\nsmbmap -H <TARGET> -u '' -p ''.\n\n(5) Recursively list ALL shares:\nsmbmap -H <TARGET> -u <USER> -p <PASS> -R (no share specified)",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "methodology_guidance": {
+        "after_success": "Download interesting files: smbmap -H <TARGET> -u <USER> -p <PASS> --download '<SHARE>\\path\\file.txt' Search for specific files: smbmap -H <TARGET> -u <USER> -p <PASS> -r <SHARE> -A password Look for writable directories for potential payload upload"
+      }
     },
     {
       "id": "smb-mount-share",
@@ -825,12 +809,7 @@
         "mount error(6): No such device or address",
         "Host is down"
       ],
-      "next_steps": [
-        "Browse share: ls -la <MOUNT_POINT>",
-        "Search for files: find <MOUNT_POINT> -type f -name '*password*'",
-        "Copy files: cp <MOUNT_POINT>/path/file.txt ~/loot/",
-        "Unmount when done: sudo umount <MOUNT_POINT>"
-      ],
+      "next_steps": [],
       "alternatives": [
         "smb-smbclient-connect",
         "smb-smbmap-recursive"
@@ -845,7 +824,10 @@
         "Password visible in mount output": "Use credentials file: Create /tmp/smbcreds with 'username=<USER>\\npassword=<PASS>', then mount -o credentials=/tmp/smbcreds"
       },
       "notes": "Mounting allows using standard Linux tools (grep, find, cat, cp) instead of SMB-specific commands.\n\nMuch faster for bulk file operations.\n\nTime estimate:\n1 minute to mount.\n\nOSCP tips:\n(1) Always create mount point first:\nsudo mkdir -p /mnt/smb.\n\n(2) For null session:\nusername=guest,password='' or username='',password=''.\n\n(3) For guest:\nusername=guest,password=guest.\n\n(4) Unmount when done:\nsudo umount <MOUNT_POINT>.\n\n(5) Check what's mounted:\ndf -h | grep cifs.\n\n(6) Force unmount if stuck:\nsudo umount -f <MOUNT_POINT>.\n\n(7) Use find for sensitive files:\nfind /mnt/smb -iname '*password*' -o -iname '*.config' -o -iname 'id_rsa'",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "methodology_guidance": {
+        "after_success": "Browse share: ls -la <MOUNT_POINT> Search for files: find <MOUNT_POINT> -type f -name '*password*' Copy files: cp <MOUNT_POINT>/path/file.txt ~/loot/ Unmount when done: sudo umount <MOUNT_POINT>"
+      }
     },
     {
       "id": "curl-header-enum",
@@ -909,9 +891,6 @@
         "HTTP/1.1 403"
       ],
       "next_steps": [
-        "Research server version for vulnerabilities: searchsploit <SERVER_VERSION>",
-        "Test for HTTP method vulnerabilities: curl -I -X OPTIONS http://<TARGET>",
-        "Check for information disclosure in headers: X-Powered-By, Server",
         "whatweb-technology-detection"
       ],
       "alternatives": [
@@ -926,7 +905,10 @@
         "SSL error for https": "Self-signed cert. Use: curl -I -k https://<TARGET> (-k to ignore cert errors)"
       },
       "notes": "Headers often reveal:\nServer version (Apache/2.4.41), Backend technology (X-Powered-By:\nPHP/7.4.3, ASP.NET), Framework (X-AspNet-Version), WAF presence (X-Sucuri-ID).\n\nTime estimate:\n10 seconds.\n\nOSCP tips:\n(1) Look for outdated versions - searchsploit material.\n\n(2) X-Powered-By reveals backend language - useful for payload selection.\n\n(3) Test OPTIONS method:\ncurl -I -X OPTIONS http://<TARGET> - may reveal PUT/DELETE allowed.\n\n(4) Missing security headers = potential vulnerabilities:\nX-Frame-Options, X-XSS-Protection, Content-Security-Policy.\n\n(5) For HTTPS:\ncurl -I -k https://<TARGET> (bypass cert verification).\n\n(6) Verbose for debugging:\ncurl -I -v http://<TARGET>",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "methodology_guidance": {
+        "after_success": "Research server version for vulnerabilities: searchsploit <SERVER_VERSION> Test for HTTP method vulnerabilities: curl -I -X OPTIONS http://<TARGET> Check for information disclosure in headers: X-Powered-By, Server"
+      }
     },
     {
       "id": "whatweb-technology-detection",
@@ -979,12 +961,7 @@
         "Connection refused",
         "[404 Not Found]"
       ],
-      "next_steps": [
-        "If WordPress: wpscan --url http://<TARGET> --enumerate u,vp,tt",
-        "If Joomla: joomscan -u http://<TARGET>",
-        "If Drupal: droopescan scan drupal -u http://<TARGET>",
-        "Research detected versions: searchsploit <CMS> <VERSION>"
-      ],
+      "next_steps": [],
       "alternatives": [
         "curl-header-enum",
         "nmap-service-scan"
@@ -997,7 +974,10 @@
         "SSL certificate error": "Use -k flag: whatweb -v -a 3 https://<TARGET> (bypass cert verification)"
       },
       "notes": "whatweb identifies:\nCMS (WordPress, Joomla, Drupal), Web servers (Apache, nginx, IIS), Languages (PHP, ASP.NET, Python), Frameworks (Laravel, Django, Rails), JavaScript libraries (jQuery, Bootstrap), WAFs, Analytics.\n\nTime estimate:\n30-60 seconds.\n\nOSCP tips:\n(1) Prioritize CMS detection - WordPress/Joomla often have known vulns.\n\n(2) Version numbers critical - check searchsploit immediately.\n\n(3) For multiple URLs:\nwhatweb -i urls.txt.\n\n(4) Check both HTTP and HTTPS:\nwhatweb http://<TARGET> https://<TARGET>.\n\n(5) Look for development/staging indicators:\nX-Debug, X-Error, verbose error messages.\n\n(6) Admin panels:\n/wp-admin (WordPress), /administrator (Joomla), /admin",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "methodology_guidance": {
+        "after_success": "If WordPress: wpscan --url http://<TARGET> --enumerate u,vp,tt If Joomla: joomscan -u http://<TARGET> If Drupal: droopescan scan drupal -u http://<TARGET> Research detected versions: searchsploit <CMS> <VERSION>"
+      }
     },
     {
       "id": "vhost-fuzzing-gobuster",
@@ -1056,12 +1036,7 @@
         "[-] Unable to connect",
         "context deadline exceeded"
       ],
-      "next_steps": [
-        "Add discovered vhosts to /etc/hosts: echo '<IP> vhost.example.com' | sudo tee -a /etc/hosts",
-        "Browse discovered vhosts: http://vhost.example.com",
-        "Run technology detection: whatweb http://vhost.example.com",
-        "Directory enumeration on new vhosts: gobuster dir -u http://vhost.example.com -w <WORDLIST>"
-      ],
+      "next_steps": [],
       "alternatives": [],
       "prerequisites": [],
       "troubleshooting": {
@@ -1071,7 +1046,11 @@
         "Need to scan IP address": "Use: gobuster vhost -u http://<IP> -w <WORDLIST> --domain <DOMAIN> --append-domain"
       },
       "notes": "Virtual hosts allow multiple websites on one IP address by routing based on Host header.\n\nOften reveals development/staging environments with weaker security.\n\nTime estimate:\n2-5 minutes depending on wordlist size.\n\nOSCP tips:\n(1) Always try vhost fuzzing on web servers - hidden apps common in CTFs.\n\n(2) Use quality wordlists:\n/usr/share/seclists/Discovery/DNS/subdomains-top1million-20000.txt.\n\n(3) After finding vhosts, add to /etc/hosts for browsing:\n<IP> subdomain.domain.com.\n\n(4) Common vhosts in OSCP:\ndev, staging, admin, api, internal, vpn, mail, blog.\n\n(5) Compare response sizes - identical sizes across all attempts = wildcard response (filter with --exclude-length).\n\n(6) For IP-based scanning:\ngobuster vhost -u http://<IP> -w <WORDLIST> --domain target.com --append-domain",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "methodology_guidance": {
+        "oscp_tips": "Add discovered vhosts to /etc/hosts: echo '<IP> vhost.example.com' | sudo tee -a /etc/hosts Browse discovered vhosts: http://vhost.example.com Directory enumeration on new vhosts: gobuster dir -u http://vhost.example.com -w <WORDLIST>",
+        "after_success": "Run technology detection: whatweb http://vhost.example.com"
+      }
     },
     {
       "id": "dns-zone-transfer-dig",
@@ -1121,12 +1100,7 @@
         "XFR size: 0 records",
         "communications error"
       ],
-      "next_steps": [
-        "If successful: Extract all subdomains and IPs from output",
-        "Enumerate discovered hosts: sudo nmap -Pn -p- <DISCOVERED_IP>",
-        "Add subdomains to /etc/hosts for further testing",
-        "If failed: Try subdomain brute force: gobuster dns -d <DOMAIN> -w <WORDLIST>"
-      ],
+      "next_steps": [],
       "alternatives": [],
       "prerequisites": [],
       "troubleshooting": {
@@ -1136,7 +1110,11 @@
         "Don't know nameserver": "Find nameservers first: dig NS <DOMAIN> or host -t ns <DOMAIN>"
       },
       "notes": "Zone transfers should be restricted to authorized secondary nameservers only, but misconfigurations still exist.\n\nSuccessful transfer provides complete DNS records - massive information disclosure.\n\nTime estimate:\n30 seconds.\n\nOSCP tips:\n(1) Always try zone transfer first - when it works, it's instant enumeration.\n\n(2) Find nameservers:\ndig NS <DOMAIN> then try AXFR on each.\n\n(3) Parse output for subdomains:\ndig axfr @<NS> <DOMAIN> | grep -E '^[a-zA-Z0-9]' | awk '{print $1}'.\n\n(4) Look for:\ninternal hosts, dev/staging servers, admin interfaces, mail servers, database servers.\n\n(5) If transfer fails (common), fallback to:\ngobuster dns, dnsrecon -t brt, fierce --domain <DOMAIN>.\n\n(6) UDP port 53 required - check firewall:\nsudo nmap -p 53 -sU -Pn <NS>",
-      "oscp_relevance": "medium"
+      "oscp_relevance": "medium",
+      "methodology_guidance": {
+        "after_success": "If successful: Extract all subdomains and IPs from output Enumerate discovered hosts: sudo nmap -Pn -p- <DISCOVERED_IP> Add subdomains to /etc/hosts for further testing",
+        "on_failure": "If failed: Try subdomain brute force: gobuster dns -d <DOMAIN> -w <WORDLIST>"
+      }
     }
   ]
 }

@@ -92,12 +92,11 @@
       ],
       "next_steps": [
         "windows-hashcat-crack-ntlm",
-        "ad-pass-the-hash-psexec",
+        "ad-pass-the-hash-crackmapexec",
         "ad-golden-ticket-dcsync-krbtgt"
       ],
       "alternatives": [
-        "ad-dcsync-secretsdump-user",
-        "ad-lsa-dump-krbtgt"
+        "ad-dcsync-secretsdump-user"
       ],
       "tags": [
         "ACTIVE_DIRECTORY",
@@ -157,8 +156,7 @@
         "ad-golden-ticket-mimikatz-create"
       ],
       "alternatives": [
-        "ad-dcsync-secretsdump-user",
-        "ad-lsa-dump-krbtgt"
+        "ad-dcsync-secretsdump-user"
       ],
       "tags": [
         "ACTIVE_DIRECTORY",
@@ -212,12 +210,11 @@
       ],
       "next_steps": [
         "windows-hashcat-crack-ntlm",
-        "ad-pass-the-hash-psexec",
-        "ad-rdp-pass-the-hash"
+        "ad-pass-the-hash-crackmapexec"
       ],
       "alternatives": [
         "ad-dcsync-secretsdump-user",
-        "ad-dcsync-mimikatz-all-users"
+        "ad-dcsync-mimikatz-user"
       ],
       "tags": [
         "ACTIVE_DIRECTORY",

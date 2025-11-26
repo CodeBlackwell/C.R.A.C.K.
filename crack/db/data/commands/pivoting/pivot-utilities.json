@@ -77,13 +77,7 @@
         "Remote port forwarding failed - port already in use on SSH server",
         "Network error: Software caused connection abort - firewall blocking outbound SSH"
       ],
-      "next_steps": [
-        "On SSH server (Kali): Verify listening port: ss -ntplu | grep <REMOTE_PORT>",
-        "Test connection from Kali: nc -zv 127.0.0.1 <REMOTE_PORT>",
-        "Access forwarded service: xfreerdp /v:127.0.0.1:<REMOTE_PORT> (if forwarding RDP)",
-        "Keep Plink window open (closing terminates tunnel)",
-        "For background execution: Use cmd.exe /c start /B plink.exe ..."
-      ],
+      "next_steps": [],
       "alternatives": [
         "chisel-http-tunneling"
       ],
@@ -95,7 +89,10 @@
         "Plink window closes immediately": "Add cmd.exe pause or run interactively to see error messages"
       },
       "notes": "Plink is PuTTY's command-line interface - ideal for Windows hosts without OpenSSH.\n\nUnlike OpenSSH's ssh.exe, Plink supports password on command line with -pw (bad OPSEC but useful for scripts).\n\nCritical OSCP technique:\nReverse tunnel allows pivot through firewall blocking inbound connections.\n\nAlternative authentication:\nUse -i <keyfile.ppk> for Putty private key (convert from OpenSSH with puttygen).\n\nProduction:\nUse SSH keys, not passwords.\n\nTime estimate:\n3-5 minutes including file transfer.",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "methodology_guidance": {
+        "after_success": "On SSH server (Kali): Verify listening port: ss -ntplu | grep <REMOTE_PORT> Test connection from Kali: nc -zv 127.0.0.1 <REMOTE_PORT> Access forwarded service: xfreerdp /v:127.0.0.1:<REMOTE_PORT> (if forwarding RDP) Keep Plink window open (closing terminates tunnel) For background execution: Use cmd.exe /c start /B plink.exe ..."
+      }
     },
     {
       "id": "xfreerdp-connect",
@@ -159,13 +156,7 @@
         "Certificate verification failed - use /cert-ignore flag",
         "CredSSP encryption error - downgrade CredSSP with /sec:rdp or update system"
       ],
-      "next_steps": [
-        "Open cmd.exe or PowerShell in RDP session",
-        "Transfer files via clipboard or shared drive: +drive:share,/tmp",
-        "Check user privileges: whoami /priv",
-        "Enumerate network interfaces: ipconfig /all",
-        "Set up port forwarding if multi-homed: ssh.exe, plink, or netsh"
-      ],
+      "next_steps": [],
       "alternatives": [],
       "prerequisites": [],
       "troubleshooting": {
@@ -175,7 +166,10 @@
         "Clipboard not working": "Ensure +clipboard flag present, some Windows policies disable clipboard sharing"
       },
       "notes": "xFreeRDP is the standard Linux RDP client for OSCP.\n\nClipboard sharing critical for file transfer when no other options available.\n\nDrive sharing with +drive:share,/path mounts local directory as \\\\tsclient\\share in Windows - alternative to SMB/HTTP servers.\n\nCommon OSCP pattern:\nRDP into dual-homed Windows host, then set up SSH/Plink tunnel to access internal network.\n\nTime estimate:\n1-2 minutes for connection.",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "methodology_guidance": {
+        "after_success": "Open cmd.exe or PowerShell in RDP session Transfer files via clipboard or shared drive: +drive:share,/tmp Check user privileges: whoami /priv Enumerate network interfaces: ipconfig /all Set up port forwarding if multi-homed: ssh.exe, plink, or netsh"
+      }
     },
     {
       "id": "ssh-version",
@@ -314,12 +308,7 @@
         "Permission denied - SSH authentication failed",
         "Fatal: server died - Python not available on pivot host"
       ],
-      "next_steps": [
-        "Verify routing: ip route | grep tun",
-        "Test connectivity: ping <INTERNAL_IP>",
-        "Scan internal network: nmap -sT <INTERNAL_SUBNET>/24 (no proxychains needed)",
-        "Access services directly: psql -h <INTERNAL_IP>, smbclient //<INTERNAL_IP>/share"
-      ],
+      "next_steps": [],
       "alternatives": [],
       "prerequisites": [],
       "troubleshooting": {
@@ -329,7 +318,10 @@
         "Very slow performance": "Add --no-latency-control flag, or exclude pivot IP with -x to prevent routing loops"
       },
       "notes": "SSHuttle creates transparent proxy - tools work normally without proxychains prefix.\n\nAdvantage over SOCKS:\nUDP support, transparent to applications, easier syntax.\n\nDisadvantage:\nRequires Python on pivot, modifies local routing table (iptables), less stealthy than SOCKS.\n\nOSCP use case:\nWhen proxychains causes issues with specific tools (e.g., Metasploit, Responder).\n\nTime estimate:\n2-3 minutes for setup, ~30 seconds per subnet route.",
-      "oscp_relevance": "medium"
+      "oscp_relevance": "medium",
+      "methodology_guidance": {
+        "after_success": "Verify routing: ip route | grep tun Test connectivity: ping <INTERNAL_IP> Scan internal network: nmap -sT <INTERNAL_SUBNET>/24 (no proxychains needed) Access services directly: psql -h <INTERNAL_IP>, smbclient //<INTERNAL_IP>/share"
+      }
     }
   ]
 }

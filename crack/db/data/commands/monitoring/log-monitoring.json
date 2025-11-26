@@ -40,17 +40,15 @@
         "Permission denied",
         "tail: command not found"
       ],
-      "next_steps": [
-        "Watch for authentication attempts: tail -f /var/log/auth.log",
-        "Monitor system messages: tail -f /var/log/syslog",
-        "Watch web server logs: tail -f /var/log/apache2/access.log",
-        "Filter with grep: tail-follow-filter"
-      ],
+      "next_steps": [],
       "alternatives": [
         "tail-follow-multiple",
         "journalctl-follow"
       ],
-      "notes": "CRITICAL for OSCP defense monitoring and troubleshooting.\n\nPress Ctrl+C to exit.\n\nCommon logs:\n/var/log/auth.log (authentication), /var/log/syslog (system), /var/log/apache2/access.log (web).\n\nTime estimate:\nruns continuously until stopped.\n\nManual alternative:\nwhile true; do tail -n 1 <FILE>; sleep 1; done"
+      "notes": "CRITICAL for OSCP defense monitoring and troubleshooting.\n\nPress Ctrl+C to exit.\n\nCommon logs:\n/var/log/auth.log (authentication), /var/log/syslog (system), /var/log/apache2/access.log (web).\n\nTime estimate:\nruns continuously until stopped.\n\nManual alternative:\nwhile true; do tail -n 1 <FILE>; sleep 1; done",
+      "methodology_guidance": {
+        "after_success": "Watch for authentication attempts: tail -f /var/log/auth.log Monitor system messages: tail -f /var/log/syslog Watch web server logs: tail -f /var/log/apache2/access.log Filter with grep: tail-follow-filter"
+      }
     },
     {
       "id": "tail-follow-filter",
@@ -97,14 +95,12 @@
         "No matching entries",
         "Permission denied"
       ],
-      "next_steps": [
-        "Monitor failed SSH attempts: tail -f /var/log/auth.log | grep 'Failed password'",
-        "Watch for root logins: tail -f /var/log/auth.log | grep 'session opened.*root'",
-        "Monitor sudo usage: tail -f /var/log/auth.log | grep 'sudo.*COMMAND'",
-        "Track user activity: tail -f /var/log/auth.log | grep <USERNAME>"
-      ],
+      "next_steps": [],
       "alternatives": [],
-      "notes": "--line-buffered is REQUIRED or grep will buffer output and display will be delayed.\n\nOSCP defense patterns:\n'Failed password' (brute force), 'Invalid user' (enumeration), 'Accepted publickey' (successful login), 'sudo.*COMMAND' (privilege usage).\n\nTime estimate:\nruns continuously."
+      "notes": "--line-buffered is REQUIRED or grep will buffer output and display will be delayed.\n\nOSCP defense patterns:\n'Failed password' (brute force), 'Invalid user' (enumeration), 'Accepted publickey' (successful login), 'sudo.*COMMAND' (privilege usage).\n\nTime estimate:\nruns continuously.",
+      "methodology_guidance": {
+        "after_success": "Monitor failed SSH attempts: tail -f /var/log/auth.log | grep 'Failed password' Watch for root logins: tail -f /var/log/auth.log | grep 'session opened.*root' Monitor sudo usage: tail -f /var/log/auth.log | grep 'sudo.*COMMAND' Track user activity: tail -f /var/log/auth.log | grep <USERNAME>"
+      }
     },
     {
       "id": "tail-follow-multiple",
@@ -149,13 +145,12 @@
         "No such file or directory",
         "Permission denied"
       ],
-      "next_steps": [
-        "Monitor system and auth logs: tail -f /var/log/syslog /var/log/auth.log",
-        "Watch application logs together",
-        "Use multitail for better multi-log display (if installed)"
-      ],
+      "next_steps": [],
       "alternatives": [],
-      "notes": "File headers show which file each line comes from:\n==> /var/log/syslog <==.\n\nUseful for correlating events across logs.\n\nTime estimate:\nruns continuously."
+      "notes": "File headers show which file each line comes from:\n==> /var/log/syslog <==.\n\nUseful for correlating events across logs.\n\nTime estimate:\nruns continuously.",
+      "methodology_guidance": {
+        "after_success": "Monitor system and auth logs: tail -f /var/log/syslog /var/log/auth.log Watch application logs together Use multitail for better multi-log display (if installed)"
+      }
     },
     {
       "id": "journalctl-follow",
@@ -188,16 +183,15 @@
         "journalctl: command not found",
         "Failed to access journal"
       ],
-      "next_steps": [
-        "Follow specific service: journalctl-service-follow",
-        "Filter by priority: journalctl -f -p err (errors only)",
-        "Filter by time: journalctl --since \"5 minutes ago\"",
-        "Combine filters: journalctl -f -u ssh -p warning"
-      ],
+      "next_steps": [],
       "alternatives": [
         "tail-follow-log"
       ],
-      "notes": "systemd journal is unified log system on modern Linux.\n\nCombines all system and service logs.\n\nOSCP tip:\nGreat for monitoring service failures, authentication attempts, and system events.\n\nTime estimate:\nruns continuously.\n\nFor systems without systemd:\nfall back to tail -f /var/log/syslog"
+      "notes": "systemd journal is unified log system on modern Linux.\n\nCombines all system and service logs.\n\nOSCP tip:\nGreat for monitoring service failures, authentication attempts, and system events.\n\nTime estimate:\nruns continuously.\n\nFor systems without systemd:\nfall back to tail -f /var/log/syslog",
+      "methodology_guidance": {
+        "after_success": "Follow specific service: journalctl-service-follow Filter by priority: journalctl -f -p err (errors only) Combine filters: journalctl -f -u ssh -p warning",
+        "time_estimate": "Filter by time: journalctl --since \"5 minutes ago\""
+      }
     },
     {
       "id": "journalctl-service-follow",
@@ -237,14 +231,12 @@
         "No entries found",
         "Unit not found"
       ],
-      "next_steps": [
-        "Monitor SSH: journalctl -u ssh -f",
-        "Monitor web server: journalctl -u apache2 -f or nginx",
-        "Monitor database: journalctl -u postgresql -f",
-        "Add priority filter: journalctl -u <SERVICE> -f -p err"
-      ],
+      "next_steps": [],
       "alternatives": [],
-      "notes": "Service-specific monitoring helps troubleshoot issues.\n\nCommon services:\nssh, apache2, nginx, mysql, postgresql, cron.\n\nCan monitor multiple:\njournalctl -u ssh -u apache2 -f.\n\nTime estimate:\nruns continuously."
+      "notes": "Service-specific monitoring helps troubleshoot issues.\n\nCommon services:\nssh, apache2, nginx, mysql, postgresql, cron.\n\nCan monitor multiple:\njournalctl -u ssh -u apache2 -f.\n\nTime estimate:\nruns continuously.",
+      "methodology_guidance": {
+        "after_success": "Monitor SSH: journalctl -u ssh -f Monitor web server: journalctl -u apache2 -f or nginx Monitor database: journalctl -u postgresql -f Add priority filter: journalctl -u <SERVICE> -f -p err"
+      }
     },
     {
       "id": "journalctl-priority-filter",
@@ -283,14 +275,12 @@
         "No entries found",
         "Invalid priority"
       ],
-      "next_steps": [
-        "View errors only: journalctl -p err",
-        "View critical and above: journalctl -p crit",
-        "Combine with follow: journalctl -f -p err",
-        "Combine with service: journalctl -u ssh -p warning"
-      ],
+      "next_steps": [],
       "alternatives": [],
-      "notes": "Priority levels (lowest to highest):\n0=emerg, 1=alert, 2=crit, 3=err, 4=warning, 5=notice, 6=info, 7=debug.\n\n-p err shows errors, critical, alert, and emergency.\n\nFor errors only (not above):\njournalctl PRIORITY=3.\n\nTime estimate:\n1-5 seconds."
+      "notes": "Priority levels (lowest to highest):\n0=emerg, 1=alert, 2=crit, 3=err, 4=warning, 5=notice, 6=info, 7=debug.\n\n-p err shows errors, critical, alert, and emergency.\n\nFor errors only (not above):\njournalctl PRIORITY=3.\n\nTime estimate:\n1-5 seconds.",
+      "methodology_guidance": {
+        "after_success": "View errors only: journalctl -p err View critical and above: journalctl -p crit Combine with follow: journalctl -f -p err Combine with service: journalctl -u ssh -p warning"
+      }
     },
     {
       "id": "journalctl-time-range",
@@ -330,14 +320,13 @@
         "No entries found",
         "Invalid time format"
       ],
-      "next_steps": [
-        "Last 10 minutes: journalctl --since \"10 minutes ago\"",
-        "Last hour: journalctl --since \"1 hour ago\"",
-        "Today: journalctl --since today",
-        "Yesterday: journalctl --since yesterday --until today"
-      ],
+      "next_steps": [],
       "alternatives": [],
-      "notes": "Time formats:\n'YYYY-MM-DD HH:MM:SS', 'yesterday', 'today', '1 hour ago', '30 minutes ago', '2 days ago'.\n\nSupports natural language.\n\nFor recent events:\njournalctl --since \"5 minutes ago\".\n\nTime estimate:\n1-10 seconds."
+      "notes": "Time formats:\n'YYYY-MM-DD HH:MM:SS', 'yesterday', 'today', '1 hour ago', '30 minutes ago', '2 days ago'.\n\nSupports natural language.\n\nFor recent events:\njournalctl --since \"5 minutes ago\".\n\nTime estimate:\n1-10 seconds.",
+      "methodology_guidance": {
+        "time_estimate": "Last 10 minutes: journalctl --since \"10 minutes ago\" Last hour: journalctl --since \"1 hour ago\"",
+        "after_success": "Today: journalctl --since today Yesterday: journalctl --since yesterday --until today"
+      }
     },
     {
       "id": "dmesg-kernel-messages",
@@ -368,14 +357,12 @@
         "dmesg: command not found",
         "Permission denied"
       ],
-      "next_steps": [
-        "Follow kernel messages: dmesg-follow",
-        "Filter errors: dmesg | grep -i error",
-        "Check USB devices: dmesg | grep -i usb",
-        "Check disk errors: dmesg | grep -i \"I/O error\""
-      ],
+      "next_steps": [],
       "alternatives": [],
-      "notes": "Kernel ring buffer shows hardware events, driver loading, errors.\n\nUseful for hardware troubleshooting and detecting inserted USB devices.\n\nOutput can be large - pipe to less:\ndmesg | less.\n\nTime estimate:\n1-2 seconds."
+      "notes": "Kernel ring buffer shows hardware events, driver loading, errors.\n\nUseful for hardware troubleshooting and detecting inserted USB devices.\n\nOutput can be large - pipe to less:\ndmesg | less.\n\nTime estimate:\n1-2 seconds.",
+      "methodology_guidance": {
+        "after_success": "Follow kernel messages: dmesg-follow Filter errors: dmesg | grep -i error Check USB devices: dmesg | grep -i usb Check disk errors: dmesg | grep -i \"I/O error\""
+      }
     },
     {
       "id": "dmesg-follow",
@@ -408,14 +395,12 @@
         "dmesg: invalid option -- 'w'",
         "Permission denied"
       ],
-      "next_steps": [
-        "Watch for USB insertion events",
-        "Monitor disk errors",
-        "Check for out-of-memory events",
-        "Detect network interface changes"
-      ],
+      "next_steps": [],
       "alternatives": [],
-      "notes": "-w flag requires dmesg from util-linux 2.21+ (2012+).\n\nOlder systems:\nuse watch -n 1 'dmesg | tail -20'.\n\nUseful for detecting hardware insertion (USB drives).\n\nTime estimate:\nruns continuously."
+      "notes": "-w flag requires dmesg from util-linux 2.21+ (2012+).\n\nOlder systems:\nuse watch -n 1 'dmesg | tail -20'.\n\nUseful for detecting hardware insertion (USB drives).\n\nTime estimate:\nruns continuously.",
+      "methodology_guidance": {
+        "after_success": "Watch for USB insertion events Monitor disk errors Check for out-of-memory events Detect network interface changes"
+      }
     },
     {
       "id": "grep-auth-failed",
@@ -448,16 +433,14 @@
         "No such file",
         "Permission denied"
       ],
-      "next_steps": [
-        "Count failed attempts: grep -c \"Failed password\" /var/log/auth.log",
-        "Extract IPs: grep \"Failed password\" /var/log/auth.log | grep -oP '\\d+\\.\\d+\\.\\d+\\.\\d+' | sort | uniq -c",
-        "Block attacking IPs: iptables -A INPUT -s <IP> -j DROP",
-        "Check for username enumeration: grep \"Invalid user\" /var/log/auth.log"
-      ],
+      "next_steps": [],
       "alternatives": [
         "lastb-failed-logins"
       ],
-      "notes": "CRITICAL for OSCP defense.\n\nPatterns:\n'Failed password for <USER>' (wrong password), 'Invalid user <USER>' (enumeration), 'Failed publickey for <USER>' (SSH key failed).\n\nMultiple failures from same IP = brute force attack.\n\nTime estimate:\n1-3 seconds.\n\nLog location varies:\n/var/log/auth.log (Debian/Ubuntu), /var/log/secure (RHEL/CentOS)."
+      "notes": "CRITICAL for OSCP defense.\n\nPatterns:\n'Failed password for <USER>' (wrong password), 'Invalid user <USER>' (enumeration), 'Failed publickey for <USER>' (SSH key failed).\n\nMultiple failures from same IP = brute force attack.\n\nTime estimate:\n1-3 seconds.\n\nLog location varies:\n/var/log/auth.log (Debian/Ubuntu), /var/log/secure (RHEL/CentOS).",
+      "methodology_guidance": {
+        "after_success": "Count failed attempts: grep -c \"Failed password\" /var/log/auth.log Extract IPs: grep \"Failed password\" /var/log/auth.log | grep -oP '\\d+\\.\\d+\\.\\d+\\.\\d+' | sort | uniq -c Block attacking IPs: iptables -A INPUT -s <IP> -j DROP Check for username enumeration: grep \"Invalid user\" /var/log/auth.log"
+      }
     },
     {
       "id": "grep-sudo-commands",
@@ -491,14 +474,12 @@
         "No matches found",
         "Permission denied"
       ],
-      "next_steps": [
-        "Identify privilege escalation attempts",
-        "Track which users use sudo: grep \"sudo.*COMMAND\" /var/log/auth.log | grep -oP 'USER=\\w+' | sort | uniq -c",
-        "Find specific command: grep \"sudo.*COMMAND=/usr/bin/bash\" /var/log/auth.log",
-        "Check for sudo failures: grep \"sudo.*incorrect password\" /var/log/auth.log"
-      ],
+      "next_steps": [],
       "alternatives": [],
-      "notes": "CRITICAL for defense auditing.\n\nEach sudo execution is logged with:\ntimestamp, user, command, working directory.\n\nOSCP tip:\nLook for suspicious commands:\nbash, sh, vi, less, find, python (all can spawn shells).\n\nTime estimate:\n2-5 seconds depending on log size."
+      "notes": "CRITICAL for defense auditing.\n\nEach sudo execution is logged with:\ntimestamp, user, command, working directory.\n\nOSCP tip:\nLook for suspicious commands:\nbash, sh, vi, less, find, python (all can spawn shells).\n\nTime estimate:\n2-5 seconds depending on log size.",
+      "methodology_guidance": {
+        "after_success": "Identify privilege escalation attempts Track which users use sudo: grep \"sudo.*COMMAND\" /var/log/auth.log | grep -oP 'USER=\\w+' | sort | uniq -c Find specific command: grep \"sudo.*COMMAND=/usr/bin/bash\" /var/log/auth.log Check for sudo failures: grep \"sudo.*incorrect password\" /var/log/auth.log"
+      }
     },
     {
       "id": "lastb-failed-logins",
@@ -533,16 +514,14 @@
         "btmp: No such file",
         "Permission denied (need root)"
       ],
-      "next_steps": [
-        "Count attempts per IP: lastb | awk '{print $3}' | sort | uniq -c | sort -rn",
-        "Block attacker IPs: iptables -A INPUT -s <IP> -j DROP",
-        "Check for username patterns (enumeration)",
-        "Clear btmp after review: sudo truncate -s 0 /var/log/btmp"
-      ],
+      "next_steps": [],
       "alternatives": [
         "grep-auth-failed"
       ],
-      "notes": "Reads /var/log/btmp (bad login log).\n\nMUST run as root.\n\nOSCP defense tip:\nMultiple failures = brute force.\n\nLook for:\n(1) Same IP, multiple users (enumeration), (2) Same user, many attempts (password guessing), (3) Many IPs, same user (distributed attack).\n\nTime estimate:\n1-5 seconds depending on attack history."
+      "notes": "Reads /var/log/btmp (bad login log).\n\nMUST run as root.\n\nOSCP defense tip:\nMultiple failures = brute force.\n\nLook for:\n(1) Same IP, multiple users (enumeration), (2) Same user, many attempts (password guessing), (3) Many IPs, same user (distributed attack).\n\nTime estimate:\n1-5 seconds depending on attack history.",
+      "methodology_guidance": {
+        "after_success": "Count attempts per IP: lastb | awk '{print $3}' | sort | uniq -c | sort -rn Block attacker IPs: iptables -A INPUT -s <IP> -j DROP Check for username patterns (enumeration) Clear btmp after review: sudo truncate -s 0 /var/log/btmp"
+      }
     },
     {
       "id": "journalctl-boot-messages",
@@ -575,16 +554,14 @@
         "No entries found",
         "journalctl: command not found"
       ],
-      "next_steps": [
-        "View previous boot: journalctl -b -1",
-        "List all boots: journalctl --list-boots",
-        "Check for boot errors: journalctl -b -p err",
-        "Check service failures: journalctl -b | grep -i failed"
-      ],
+      "next_steps": [],
       "alternatives": [
         "dmesg-kernel-messages"
       ],
-      "notes": "Shows everything from current boot:\nkernel, systemd, services.\n\nPrevious boot:\n-b -1, boot before that:\n-b -2, etc.\n\nList boots:\njournalctl --list-boots.\n\nTime estimate:\n2-10 seconds depending on boot log size."
+      "notes": "Shows everything from current boot:\nkernel, systemd, services.\n\nPrevious boot:\n-b -1, boot before that:\n-b -2, etc.\n\nList boots:\njournalctl --list-boots.\n\nTime estimate:\n2-10 seconds depending on boot log size.",
+      "methodology_guidance": {
+        "after_success": "View previous boot: journalctl -b -1 List all boots: journalctl --list-boots Check for boot errors: journalctl -b -p err Check service failures: journalctl -b | grep -i failed"
+      }
     }
   ]
 }

@@ -22,14 +22,14 @@
         "pivoting",
         "server"
       ],
-      "next_steps": [
-        "Run chisel client on compromised host",
-        "Configure proxychains"
-      ],
+      "next_steps": [],
       "flag_explanations": {
         "-p": "Server listening port",
         "--reverse": "Enable reverse tunneling",
         "--socks5": "Enable SOCKS5 proxy"
+      },
+      "methodology_guidance": {
+        "after_success": "Run chisel client on compromised host Configure proxychains"
       }
     },
     {
@@ -78,9 +78,10 @@
         "pivoting",
         "client"
       ],
-      "next_steps": [
-        "Access service at localhost:<LPORT>"
-      ]
+      "next_steps": [],
+      "methodology_guidance": {
+        "after_success": "Access service at localhost:<LPORT>"
+      }
     },
     {
       "id": "chisel-socks",
@@ -110,10 +111,10 @@
         "proxy"
       ],
       "prerequisites": [],
-      "next_steps": [
-        "Configure proxychains",
-        "Scan internal network"
-      ]
+      "next_steps": [],
+      "methodology_guidance": {
+        "after_success": "Configure proxychains Scan internal network"
+      }
     },
     {
       "id": "ssh-local-forward",
@@ -161,13 +162,14 @@
         "port-forwarding",
         "local"
       ],
-      "next_steps": [
-        "Access service at localhost:<LPORT>"
-      ],
+      "next_steps": [],
       "flag_explanations": {
         "-L": "Local port forwarding",
         "-N": "No command execution (tunnel only)",
         "-f": "Background process"
+      },
+      "methodology_guidance": {
+        "after_success": "Access service at localhost:<LPORT>"
       }
     },
     {
@@ -210,12 +212,13 @@
         "port-forwarding",
         "remote"
       ],
-      "next_steps": [
-        "Service accessible on SSH host at <RPORT>"
-      ],
+      "next_steps": [],
       "flag_explanations": {
         "-R": "Remote port forwarding",
         "-N": "No command execution"
+      },
+      "methodology_guidance": {
+        "after_success": "Service accessible on SSH host at <RPORT>"
       }
     },
     {
@@ -252,14 +255,14 @@
         "socks",
         "dynamic"
       ],
-      "next_steps": [
-        "Configure proxychains.conf",
-        "Route traffic through SOCKS"
-      ],
+      "next_steps": [],
       "flag_explanations": {
         "-D": "Dynamic port forwarding (SOCKS)",
         "-N": "No command execution",
         "-f": "Background process"
+      },
+      "methodology_guidance": {
+        "after_success": "Configure proxychains.conf Route traffic through SOCKS"
       }
     },
     {
@@ -276,10 +279,10 @@
         "server"
       ],
       "prerequisites": [],
-      "next_steps": [
-        "Run ligolo agent on target",
-        "Add routes"
-      ]
+      "next_steps": [],
+      "methodology_guidance": {
+        "after_success": "Run ligolo agent on target Add routes"
+      }
     },
     {
       "id": "ligolo-agent",
@@ -302,10 +305,10 @@
         "pivoting",
         "agent"
       ],
-      "next_steps": [
-        "Start session",
-        "Add route to internal network"
-      ]
+      "next_steps": [],
+      "methodology_guidance": {
+        "after_success": "Start session Add route to internal network"
+      }
     }
   ]
 }

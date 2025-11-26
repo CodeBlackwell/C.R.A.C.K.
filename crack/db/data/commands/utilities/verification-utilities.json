@@ -671,7 +671,7 @@
       },
       "next_steps": [
         "import-powerview",
-        "invoke-mimikatz"
+        "invoke-mimikatz-remote"
       ],
       "oscp_relevance": "high",
       "notes": "PowerShell v2+ on Windows 7+, v5.1 on Windows 10/Server 2016+.\n\nRequired for most Windows enumeration and exploitation scripts."
@@ -832,8 +832,7 @@
         "Alternative check": "nmap -p <PORT> -Pn <TARGET>"
       },
       "alternatives": [
-        "nmap-port-check",
-        "telnet-check"
+        "nmap-port-check"
       ],
       "next_steps": [],
       "oscp_relevance": "high",
@@ -944,7 +943,7 @@
         "smb-crackmapexec-shares"
       ],
       "next_steps": [
-        "smbmap-enumerate"
+        "smbmap-enumerate-auth"
       ],
       "oscp_relevance": "high",
       "flag_explanations": {

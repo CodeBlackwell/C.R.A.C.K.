@@ -15,15 +15,14 @@
         "find"
       ],
       "alternatives": [],
-      "next_steps": [
-        "Check unusual binaries",
-        "Search GTFOBins",
-        "Test exploits"
-      ],
+      "next_steps": [],
       "flag_explanations": {
         "-perm -u=s": "Find SUID bit set",
         "-type f": "Files only",
         "2>/dev/null": "Suppress errors"
+      },
+      "methodology_guidance": {
+        "after_success": "Check unusual binaries Search GTFOBins Test exploits"
       }
     },
     {
@@ -49,10 +48,10 @@
         "gtfobins"
       ],
       "prerequisites": [],
-      "next_steps": [
-        "Execute exploitation steps",
-        "Verify root access"
-      ]
+      "next_steps": [],
+      "methodology_guidance": {
+        "after_success": "Execute exploitation steps Verify root access"
+      }
     },
     {
       "id": "cap-find",
@@ -67,14 +66,13 @@
         "linux",
         "privesc"
       ],
-      "next_steps": [
-        "Check for cap_setuid",
-        "Search GTFOBins",
-        "Test exploits"
-      ],
+      "next_steps": [],
       "flag_explanations": {
         "-r": "Recursive search",
         "2>/dev/null": "Suppress errors"
+      },
+      "methodology_guidance": {
+        "after_success": "Check for cap_setuid Search GTFOBins Test exploits"
       }
     },
     {
@@ -100,10 +98,10 @@
         "gtfobins"
       ],
       "prerequisites": [],
-      "next_steps": [
-        "Use capability to escalate",
-        "Get root shell"
-      ]
+      "next_steps": [],
+      "methodology_guidance": {
+        "after_success": "Use capability to escalate Get root shell"
+      }
     },
     {
       "id": "cron-enum",
@@ -120,11 +118,10 @@
         "enumeration"
       ],
       "alternatives": [],
-      "next_steps": [
-        "Check script permissions",
-        "Test path hijacking",
-        "Monitor with pspy"
-      ]
+      "next_steps": [],
+      "methodology_guidance": {
+        "after_success": "Check script permissions Test path hijacking Monitor with pspy"
+      }
     },
     {
       "id": "kernel-exploit-search",
@@ -139,13 +136,12 @@
         "linux",
         "privesc"
       ],
-      "next_steps": [
-        "Run linux-exploit-suggester",
-        "Search exploit-db",
-        "Compile exploit"
-      ],
+      "next_steps": [],
       "flag_explanations": {
         "-a": "All system information"
+      },
+      "methodology_guidance": {
+        "after_success": "Run linux-exploit-suggester Search exploit-db Compile exploit"
       }
     },
     {
@@ -162,11 +158,10 @@
         "privesc",
         "reference"
       ],
-      "next_steps": [
-        "Search for binary",
-        "Follow exploitation steps",
-        "Test on target"
-      ]
+      "next_steps": [],
+      "methodology_guidance": {
+        "after_success": "Search for binary Follow exploitation steps Test on target"
+      }
     },
     {
       "id": "lolbas-lookup",
@@ -182,11 +177,10 @@
         "privesc",
         "reference"
       ],
-      "next_steps": [
-        "Search for binary",
-        "Follow exploitation steps",
-        "Test on target"
-      ]
+      "next_steps": [],
+      "methodology_guidance": {
+        "after_success": "Search for binary Follow exploitation steps Test on target"
+      }
     }
   ]
 }

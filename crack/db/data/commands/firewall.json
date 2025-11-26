@@ -23,11 +23,7 @@
         "Permission denied",
         "command not found"
       ],
-      "next_steps": [
-        "Identify blocked ports",
-        "Check for DROP/REJECT rules",
-        "Add rules to allow traffic"
-      ],
+      "next_steps": [],
       "alternatives": [
         "ufw-status",
         "firewalld-list-all"
@@ -40,7 +36,10 @@
         "oscp"
       ],
       "oscp_relevance": "high",
-      "notes": "Run with sudo.\n\nUse -t <table> to specify table (filter, nat, mangle, raw)"
+      "notes": "Run with sudo.\n\nUse -t <table> to specify table (filter, nat, mangle, raw)",
+      "methodology_guidance": {
+        "after_success": "Identify blocked ports Check for DROP/REJECT rules Add rules to allow traffic"
+      }
     },
     {
       "id": "iptables-allow-port",
@@ -78,11 +77,7 @@
         "Bad argument"
       ],
       "prerequisites": [],
-      "next_steps": [
-        "Verify rule: sudo iptables -L INPUT -v -n",
-        "Test connectivity: nc -lvnp <PORT>",
-        "Make persistent: sudo iptables-save > /etc/iptables/rules.v4"
-      ],
+      "next_steps": [],
       "alternatives": [
         "ufw-allow-port"
       ],
@@ -94,7 +89,10 @@
         "oscp"
       ],
       "oscp_relevance": "high",
-      "notes": "Rule is not persistent by default.\n\nUse iptables-save to persist across reboots."
+      "notes": "Rule is not persistent by default.\n\nUse iptables-save to persist across reboots.",
+      "methodology_guidance": {
+        "after_success": "Verify rule: sudo iptables -L INPUT -v -n Test connectivity: nc -lvnp <PORT> Make persistent: sudo iptables-save > /etc/iptables/rules.v4"
+      }
     },
     {
       "id": "iptables-port-forward",
@@ -139,11 +137,7 @@
         "Bad argument"
       ],
       "prerequisites": [],
-      "next_steps": [
-        "Verify rule: sudo iptables -t nat -L PREROUTING -v -n",
-        "Test port forward: nc -lvnp <DST_PORT>",
-        "Connect from remote: nc <TARGET> <SRC_PORT>"
-      ],
+      "next_steps": [],
       "tags": [
         "linux",
         "firewall",
@@ -152,7 +146,10 @@
         "oscp"
       ],
       "oscp_relevance": "high",
-      "notes": "Useful for bypassing firewall restrictions or redirecting traffic through allowed ports"
+      "notes": "Useful for bypassing firewall restrictions or redirecting traffic through allowed ports",
+      "methodology_guidance": {
+        "after_success": "Verify rule: sudo iptables -t nat -L PREROUTING -v -n Test port forward: nc -lvnp <DST_PORT> Connect from remote: nc <TARGET> <SRC_PORT>"
+      }
     },
     {
       "id": "iptables-delete-rule",
@@ -181,9 +178,7 @@
         "<RULE_NUMBER>": "Position of rule to delete"
       },
       "prerequisites": [],
-      "next_steps": [
-        "Verify deletion: sudo iptables -L -v -n"
-      ],
+      "next_steps": [],
       "tags": [
         "linux",
         "firewall",
@@ -191,7 +186,10 @@
         "oscp"
       ],
       "oscp_relevance": "medium",
-      "notes": "Use --line-numbers to see rule numbers before deleting"
+      "notes": "Use --line-numbers to see rule numbers before deleting",
+      "methodology_guidance": {
+        "after_success": "Verify deletion: sudo iptables -L -v -n"
+      }
     },
     {
       "id": "iptables-flush-all",
@@ -211,10 +209,7 @@
       "failure_indicators": [
         "Permission denied"
       ],
-      "next_steps": [
-        "Verify flush: sudo iptables -L -v -n",
-        "Set default policy: sudo iptables -P INPUT ACCEPT"
-      ],
+      "next_steps": [],
       "tags": [
         "linux",
         "firewall",
@@ -222,7 +217,10 @@
         "oscp"
       ],
       "oscp_relevance": "medium",
-      "notes": "WARNING:\nMay lose SSH access if default policy is DROP.\n\nUse with caution."
+      "notes": "WARNING:\nMay lose SSH access if default policy is DROP.\n\nUse with caution.",
+      "methodology_guidance": {
+        "after_success": "Verify flush: sudo iptables -L -v -n Set default policy: sudo iptables -P INPUT ACCEPT"
+      }
     },
     {
       "id": "ufw-status",
@@ -243,10 +241,7 @@
       "failure_indicators": [
         "command not found"
       ],
-      "next_steps": [
-        "If active, check blocked ports",
-        "Add allow rules if needed"
-      ],
+      "next_steps": [],
       "alternatives": [
         "iptables-list-rules",
         "firewalld-list-all"
@@ -260,7 +255,10 @@
         "oscp"
       ],
       "oscp_relevance": "high",
-      "notes": "UFW is the default firewall on Ubuntu/Debian systems"
+      "notes": "UFW is the default firewall on Ubuntu/Debian systems",
+      "methodology_guidance": {
+        "after_success": "If active, check blocked ports Add allow rules if needed"
+      }
     },
     {
       "id": "ufw-allow-port",
@@ -295,11 +293,7 @@
         "Permission denied"
       ],
       "prerequisites": [],
-      "next_steps": [
-        "Reload UFW: sudo ufw reload",
-        "Verify rule: sudo ufw status verbose",
-        "Test connectivity: nc -lvnp <PORT>"
-      ],
+      "next_steps": [],
       "alternatives": [
         "iptables-allow-port"
       ],
@@ -310,7 +304,10 @@
         "ubuntu",
         "oscp"
       ],
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "methodology_guidance": {
+        "after_success": "Reload UFW: sudo ufw reload Verify rule: sudo ufw status verbose Test connectivity: nc -lvnp <PORT>"
+      }
     },
     {
       "id": "ufw-disable",
@@ -329,10 +326,7 @@
       "failure_indicators": [
         "Permission denied"
       ],
-      "next_steps": [
-        "Verify: sudo ufw status",
-        "Test connectivity to previously blocked ports"
-      ],
+      "next_steps": [],
       "tags": [
         "linux",
         "firewall",
@@ -340,7 +334,10 @@
         "oscp"
       ],
       "oscp_relevance": "high",
-      "notes": "Rules are preserved but not enforced.\n\nUse 'sudo ufw enable' to re-enable."
+      "notes": "Rules are preserved but not enforced.\n\nUse 'sudo ufw enable' to re-enable.",
+      "methodology_guidance": {
+        "after_success": "Verify: sudo ufw status Test connectivity to previously blocked ports"
+      }
     },
     {
       "id": "firewalld-list-all",
@@ -362,11 +359,7 @@
         "command not found",
         "FirewallD is not running"
       ],
-      "next_steps": [
-        "Identify active zone",
-        "Check blocked ports",
-        "Add port rules if needed"
-      ],
+      "next_steps": [],
       "alternatives": [
         "iptables-list-rules",
         "ufw-status"
@@ -381,7 +374,10 @@
         "oscp"
       ],
       "oscp_relevance": "medium",
-      "notes": "Firewalld is default on RHEL/CentOS/Fedora systems"
+      "notes": "Firewalld is default on RHEL/CentOS/Fedora systems",
+      "methodology_guidance": {
+        "after_success": "Identify active zone Check blocked ports Add port rules if needed"
+      }
     },
     {
       "id": "firewalld-add-port",
@@ -417,11 +413,7 @@
         "INVALID_PORT"
       ],
       "prerequisites": [],
-      "next_steps": [
-        "Reload firewall: sudo firewall-cmd --reload",
-        "Verify rule: sudo firewall-cmd --list-ports",
-        "Test connectivity: nc -lvnp <PORT>"
-      ],
+      "next_steps": [],
       "tags": [
         "linux",
         "firewall",
@@ -429,7 +421,10 @@
         "rhel",
         "oscp"
       ],
-      "oscp_relevance": "medium"
+      "oscp_relevance": "medium",
+      "methodology_guidance": {
+        "after_success": "Reload firewall: sudo firewall-cmd --reload Verify rule: sudo firewall-cmd --list-ports Test connectivity: nc -lvnp <PORT>"
+      }
     },
     {
       "id": "firewalld-port-forward",
@@ -469,11 +464,7 @@
         "success"
       ],
       "prerequisites": [],
-      "next_steps": [
-        "Reload: sudo firewall-cmd --reload",
-        "Test: nc -lvnp <DST_PORT>",
-        "Connect: nc <TARGET> <SRC_PORT>"
-      ],
+      "next_steps": [],
       "tags": [
         "linux",
         "firewall",
@@ -481,7 +472,10 @@
         "firewalld",
         "oscp"
       ],
-      "oscp_relevance": "medium"
+      "oscp_relevance": "medium",
+      "methodology_guidance": {
+        "after_success": "Reload: sudo firewall-cmd --reload Test: nc -lvnp <DST_PORT> Connect: nc <TARGET> <SRC_PORT>"
+      }
     },
     {
       "id": "netsh-firewall-show",
@@ -505,11 +499,7 @@
       "failure_indicators": [
         "Access denied"
       ],
-      "next_steps": [
-        "Check if firewall is ON or OFF",
-        "Identify blocked ports",
-        "Add allow rules if needed"
-      ],
+      "next_steps": [],
       "alternatives": [
         "netsh-firewall-show-state"
       ],
@@ -521,7 +511,10 @@
         "oscp"
       ],
       "oscp_relevance": "high",
-      "notes": "Requires Administrator privileges"
+      "notes": "Requires Administrator privileges",
+      "methodology_guidance": {
+        "after_success": "Check if firewall is ON or OFF Identify blocked ports Add allow rules if needed"
+      }
     },
     {
       "id": "netsh-firewall-show-state",
@@ -600,10 +593,7 @@
         "already exists"
       ],
       "prerequisites": [],
-      "next_steps": [
-        "Verify rule: netsh advfirewall firewall show rule name=\"<RULE_NAME>\"",
-        "Test connectivity: nc.exe -lvnp <PORT>"
-      ],
+      "next_steps": [],
       "tags": [
         "windows",
         "firewall",
@@ -611,7 +601,10 @@
         "oscp"
       ],
       "oscp_relevance": "high",
-      "notes": "Requires Administrator privileges.\n\nRule persists across reboots."
+      "notes": "Requires Administrator privileges.\n\nRule persists across reboots.",
+      "methodology_guidance": {
+        "after_success": "Verify rule: netsh advfirewall firewall show rule name=\"<RULE_NAME>\" Test connectivity: nc.exe -lvnp <PORT>"
+      }
     },
     {
       "id": "netsh-firewall-port-forward",
@@ -661,10 +654,7 @@
         "Access denied"
       ],
       "prerequisites": [],
-      "next_steps": [
-        "Add actual port forward: netsh interface portproxy add v4tov4 listenport=<SRC_PORT> listenaddress=<LOCAL_IP> connectport=<DST_PORT> connectaddress=<DST_IP>",
-        "Verify: netsh interface portproxy show all"
-      ],
+      "next_steps": [],
       "tags": [
         "windows",
         "firewall",
@@ -673,7 +663,10 @@
         "oscp"
       ],
       "oscp_relevance": "high",
-      "notes": "This allows firewall rule.\n\nUse 'netsh interface portproxy' for actual port forwarding."
+      "notes": "This allows firewall rule.\n\nUse 'netsh interface portproxy' for actual port forwarding.",
+      "methodology_guidance": {
+        "after_success": "Add actual port forward: netsh interface portproxy add v4tov4 listenport=<SRC_PORT> listenaddress=<LOCAL_IP> connectport=<DST_PORT> connectaddress=<DST_IP> Verify: netsh interface portproxy show all"
+      }
     },
     {
       "id": "netsh-portproxy-add",
@@ -725,11 +718,7 @@
         "parameter is incorrect"
       ],
       "prerequisites": [],
-      "next_steps": [
-        "Verify: netsh interface portproxy show all",
-        "Test connectivity: nc <LISTEN_IP> <SRC_PORT>",
-        "Delete if needed: netsh interface portproxy delete v4tov4 listenport=<SRC_PORT> listenaddress=<LISTEN_IP>"
-      ],
+      "next_steps": [],
       "tags": [
         "windows",
         "firewall",
@@ -739,7 +728,10 @@
         "oscp"
       ],
       "oscp_relevance": "high",
-      "notes": "Useful for pivoting through compromised Windows hosts.\n\nFirewall rule must be added separately."
+      "notes": "Useful for pivoting through compromised Windows hosts.\n\nFirewall rule must be added separately.",
+      "methodology_guidance": {
+        "after_success": "Verify: netsh interface portproxy show all Test connectivity: nc <LISTEN_IP> <SRC_PORT> Delete if needed: netsh interface portproxy delete v4tov4 listenport=<SRC_PORT> listenaddress=<LISTEN_IP>"
+      }
     },
     {
       "id": "netsh-portproxy-show",
@@ -760,10 +752,7 @@
       "failure_indicators": [
         "Access denied"
       ],
-      "next_steps": [
-        "Test each forwarding rule",
-        "Delete unwanted rules"
-      ],
+      "next_steps": [],
       "tags": [
         "windows",
         "firewall",
@@ -771,7 +760,10 @@
         "netsh",
         "oscp"
       ],
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "methodology_guidance": {
+        "after_success": "Test each forwarding rule Delete unwanted rules"
+      }
     },
     {
       "id": "netsh-firewall-disable",
@@ -791,10 +783,7 @@
       "failure_indicators": [
         "Access denied"
       ],
-      "next_steps": [
-        "Verify: netsh advfirewall show allprofiles",
-        "Test previously blocked connections"
-      ],
+      "next_steps": [],
       "tags": [
         "windows",
         "firewall",
@@ -802,7 +791,10 @@
         "oscp"
       ],
       "oscp_relevance": "high",
-      "notes": "Requires Administrator privileges.\n\nVery obvious IoC - use with caution."
+      "notes": "Requires Administrator privileges.\n\nVery obvious IoC - use with caution.",
+      "methodology_guidance": {
+        "after_success": "Verify: netsh advfirewall show allprofiles Test previously blocked connections"
+      }
     },
     {
       "id": "netsh-firewall-delete-rule",
@@ -831,9 +823,7 @@
         "No rules match"
       ],
       "prerequisites": [],
-      "next_steps": [
-        "Verify deletion: netsh advfirewall firewall show rule name=\"<RULE_NAME>\""
-      ],
+      "next_steps": [],
       "tags": [
         "windows",
         "firewall",
@@ -841,7 +831,10 @@
         "oscp"
       ],
       "oscp_relevance": "medium",
-      "notes": "Use to clean up custom rules after exploitation"
+      "notes": "Use to clean up custom rules after exploitation",
+      "methodology_guidance": {
+        "after_success": "Verify deletion: netsh advfirewall firewall show rule name=\"<RULE_NAME>\""
+      }
     }
   ]
 }

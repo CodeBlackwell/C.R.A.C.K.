@@ -38,13 +38,8 @@
         "RPC server unavailable",
         "No sessions found"
       ],
-      "next_steps": [
-        "Identify high-value logged-on users (Domain Admins)",
-        "Target computers where admins are logged in for credential theft",
-        "Use Get-NetLoggedon for alternative enumeration method"
-      ],
+      "next_steps": [],
       "alternatives": [
-        "get-netloggedon",
         "psloggedon"
       ],
       "prerequisites": [
@@ -56,7 +51,11 @@
         "No sessions found": "No active sessions OR permissions issue. Try PsLoggedOn if you have admin access."
       },
       "notes": "NetSessionEnum API queries SrvsvcSessionInfo registry key on target.\n\nWindows 11/Server 2022+ restrict access by default (only SYSTEM/Administrators can read).\n\nReturns sessions created via SMB/file shares.\n\nCName = source computer establishing the session, UserName = user account.\n\nIf you see admin sessions, target that source computer for credential theft (mimikatz, lsass dump).\n\nOSCP:\nWorks on legacy systems (Windows 7, Server 2008-2016) but often fails on modern Windows.\n\nHave alternatives ready.",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "methodology_guidance": {
+        "after_success": "Identify high-value logged-on users (Domain Admins) Target computers where admins are logged in for credential theft",
+        "on_failure": "Use Get-NetLoggedon for alternative enumeration method"
+      }
     },
     {
       "id": "powerview-get-netloggedon",
@@ -93,14 +92,9 @@
         "RPC server unavailable",
         "Remote Registry service not running"
       ],
-      "next_steps": [
-        "Identify domain admin sessions",
-        "Target systems where privileged users are logged in",
-        "Attempt credential theft if admin access available"
-      ],
+      "next_steps": [],
       "alternatives": [
-        "psloggedon",
-        "get-netsession"
+        "psloggedon"
       ],
       "prerequisites": [
         "import-powerview"
@@ -111,7 +105,11 @@
         "RPC server unavailable": "Target firewall blocking RPC or system offline"
       },
       "notes": "Uses Remote Registry service to query HKEY_USERS hive and enumerate loaded user profiles (= logged-on users).\n\nRemote Registry is disabled by default on Windows 8+ workstations but enabled on servers (2012+).\n\nRequires local admin OR Remote Registry service explicitly enabled.\n\nMore reliable than Get-NetSession on modern Windows.\n\nReturns interactive logons (RDP, console) and service logons.\n\nOSCP:\nIf you have local admin, this works.\n\nIf not, it likely fails.",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "methodology_guidance": {
+        "after_success": "Identify domain admin sessions Target systems where privileged users are logged in",
+        "oscp_tips": "Attempt credential theft if admin access available"
+      }
     },
     {
       "id": "powerview-find-localadminaccess",
@@ -138,11 +136,7 @@
         "Module not imported",
         "Timeout errors"
       ],
-      "next_steps": [
-        "Access identified systems: Enter-PSSession -ComputerName <FOUND_COMPUTER>",
-        "Enumerate logged-on users: Get-NetLoggedon -ComputerName <FOUND_COMPUTER>",
-        "Search for credentials: Invoke-Mimikatz, lsass dumps"
-      ],
+      "next_steps": [],
       "alternatives": [],
       "prerequisites": [
         "import-powerview"
@@ -153,7 +147,10 @@
         "No systems found": "Your user has no local admin rights. Check group memberships: Get-NetUser -Identity <YOU> | select memberof"
       },
       "notes": "Connects to each domain computer's Service Control Manager (OpenServiceW function) with SC_MANAGER_ALL_ACCESS rights.\n\nIf connection succeeds, you have local admin.\n\nScans entire domain (slow in large environments - may take 5-15 minutes).\n\nResults reveal lateral movement opportunities:\ncomputers where you can execute code as admin, dump credentials, install backdoors.\n\nOSCP:\nRun this early to map attack surface.\n\nAny system with admin access is a potential pivot point for credential theft.",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "methodology_guidance": {
+        "after_success": "Access identified systems: Enter-PSSession -ComputerName <FOUND_COMPUTER> Enumerate logged-on users: Get-NetLoggedon -ComputerName <FOUND_COMPUTER> Search for credentials: Invoke-Mimikatz, lsass dumps"
+      }
     },
     {
       "id": "powerview-find-domainshare",
@@ -186,11 +183,7 @@
         "No shares found",
         "Access Denied"
       ],
-      "next_steps": [
-        "Check accessible shares: Find-DomainShare -CheckShareAccess",
-        "Search for sensitive files: Invoke-ShareFinder -ShareList <LIST> -Terms passwords,config,backup",
-        "Check SYSVOL for GPP passwords: ls \\\\<DC>\\SYSVOL\\<DOMAIN>\\Policies\\ -Recurse"
-      ],
+      "next_steps": [],
       "alternatives": [],
       "prerequisites": [
         "import-powerview"
@@ -201,7 +194,10 @@
         "Long execution time": "Scans entire domain. Specify -ComputerName for specific targets."
       },
       "notes": "Returns all shares from all domain computers:\ndefault shares (ADMIN$, C$, IPC$, NETLOGON, SYSVOL) and custom shares (data, backups, users).\n\nCustom shares often contain sensitive data:\ncredentials in scripts, configuration files, password databases, backup files.\n\nSYSVOL share always accessible (domain-wide readable) - search for GPP passwords (cpassword attribute in Groups.xml, ScheduledTasks.xml).\n\nOSCP:\nAlways enumerate shares - common source of credentials and sensitive information.",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "methodology_guidance": {
+        "after_success": "Check accessible shares: Find-DomainShare -CheckShareAccess Search for sensitive files: Invoke-ShareFinder -ShareList <LIST> -Terms passwords,config,backup Check SYSVOL for GPP passwords: ls \\\\<DC>\\SYSVOL\\<DOMAIN>\\Policies\\ -Recurse"
+      }
     },
     {
       "id": "powerview-find-domainshare-accessible",
@@ -229,11 +225,7 @@
         "No accessible shares",
         "Module not imported"
       ],
-      "next_steps": [
-        "Manually browse accessible shares: ls \\\\<COMPUTER>\\<SHARE>",
-        "Search for sensitive files: findstr /S /I password *.txt *.xml *.config",
-        "Check for writable shares: test write access with New-Item"
-      ],
+      "next_steps": [],
       "alternatives": [],
       "prerequisites": [
         "import-powerview"
@@ -244,7 +236,11 @@
         "No accessible shares": "Your user has minimal permissions. Check group memberships for share access."
       },
       "notes": "Automatically tests read access to every discovered share.\n\nMuch faster than manually testing each share.\n\nResults are immediately actionable - you can access these shares.\n\nFocus on non-standard shares (not ADMIN$, C$, IPC$).\n\nCommon findings:\nuser home directories, department shares (HR, Finance, IT), backup shares, application config shares.\n\nOSCP:\nUse this to quickly identify where you can read sensitive data.\n\nLook for config files, scripts, and credentials.",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "methodology_guidance": {
+        "manual_alternative": "Manually browse accessible shares: ls \\\\<COMPUTER>\\<SHARE>",
+        "after_success": "Search for sensitive files: findstr /S /I password *.txt *.xml *.config Check for writable shares: test write access with New-Item"
+      }
     },
     {
       "id": "sysinternals-psloggedon",
@@ -279,11 +275,7 @@
         "Access Denied",
         "No one is logged on"
       ],
-      "next_steps": [
-        "Target systems where admin users are logged in",
-        "Attempt credential theft if you have admin access",
-        "Check other systems: loop through computer list"
-      ],
+      "next_steps": [],
       "alternatives": [
         "powerview-get-netloggedon"
       ],
@@ -294,7 +286,10 @@
         "Tool not found": "Download Sysinternals Suite: https://live.sysinternals.com/PsLoggedon.exe"
       },
       "notes": "More reliable than PowerView's Get-NetLoggedon/Get-NetSession on modern Windows.\n\nUses two methods:\n(1) Remote Registry (queries HKEY_USERS for loaded profiles), (2) NetSessionEnum (lists resource share sessions).\n\nRemote Registry auto-starts when you connect if service is set to 'Manual' (default on servers).\n\nReturns both interactive logons (RDP, console) and resource share logons (file shares).\n\nOSCP:\nKeep this in your toolkit - works when PowerView fails.\n\nEspecially useful on Windows Server targets.",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "methodology_guidance": {
+        "after_success": "Target systems where admin users are logged in Attempt credential theft if you have admin access Check other systems: loop through computer list"
+      }
     },
     {
       "id": "net-view-shares",
@@ -330,11 +325,7 @@
         "Network path was not found",
         "System error 5"
       ],
-      "next_steps": [
-        "Test access: dir \\\\<TARGET>\\<SHARE>",
-        "Search for sensitive files",
-        "Mount share: net use Z: \\\\<TARGET>\\<SHARE>"
-      ],
+      "next_steps": [],
       "alternatives": [
         "powerview-find-domainshare"
       ],
@@ -344,7 +335,10 @@
         "Network path was not found": "Target unreachable or SMB disabled. Check connectivity: ping <TARGET>"
       },
       "notes": "Built-in Windows tool, available on all systems.\n\nLists both default shares (ADMIN$, C$, IPC$) and custom shares.\n\nDoes not test access - just lists share names.\n\nFaster than PowerView for single-target enumeration.\n\nType field shows Disk (file share), Print (printer share), IPC (inter-process communication).\n\nOSCP:\nUse this for quick manual share enumeration when PowerView is unavailable or restricted.",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "methodology_guidance": {
+        "after_success": "Test access: dir \\\\<TARGET>\\<SHARE> Search for sensitive files Mount share: net use Z: \\\\<TARGET>\\<SHARE>"
+      }
     },
     {
       "id": "test-share-access",
@@ -383,11 +377,7 @@
         "Logon failure",
         "Network path was not found"
       ],
-      "next_steps": [
-        "Recursively search for files: dir \\\\<TARGET>\\<SHARE> /s /b",
-        "Search for sensitive patterns: findstr /S /I password *.txt *.config *.xml",
-        "Download interesting files: copy \\\\<TARGET>\\<SHARE>\\<FILE> ."
-      ],
+      "next_steps": [],
       "alternatives": [],
       "prerequisites": [],
       "troubleshooting": {
@@ -395,7 +385,10 @@
         "Logon failure": "Invalid credentials. Re-authenticate: net use \\\\<TARGET>\\<SHARE> /user:<DOMAIN>\\<USERNAME>"
       },
       "notes": "Simple test for share accessibility.\n\nIf dir succeeds, you have at least read access.\n\nRecurse with /s to list all subdirectories and files.\n\nPipe to findstr to search for interesting files:\ndir /s /b | findstr /I password config backup.\n\nCheck file timestamps to identify recently modified files (may contain current credentials).\n\nOSCP:\nAlways test SYSVOL share first - domain-wide readable, often contains GPP passwords in Policies folder.",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "methodology_guidance": {
+        "after_success": "Recursively search for files: dir \\\\<TARGET>\\<SHARE> /s /b Search for sensitive patterns: findstr /S /I password *.txt *.config *.xml Download interesting files: copy \\\\<TARGET>\\<SHARE>\\<FILE> ."
+      }
     },
     {
       "id": "search-share-files",
@@ -445,11 +438,7 @@
         "Access is denied",
         "File not found"
       ],
-      "next_steps": [
-        "Review found files: type \\\\<TARGET>\\<SHARE>\\<FOUND_FILE>",
-        "Download for offline analysis: copy \\\\<TARGET>\\<SHARE>\\<FOUND_FILE> .",
-        "Search for multiple patterns: findstr /S /I /M \"password config backup credential\" *.*"
-      ],
+      "next_steps": [],
       "alternatives": [],
       "prerequisites": [],
       "troubleshooting": {
@@ -458,7 +447,10 @@
         "Too many false positives": "Refine pattern: findstr /S /I \"password =\" *.config"
       },
       "notes": "Common search patterns:\npassword, pwd, pass, credential, key, secret, token, api_key, backup, config, admin.\n\nInteresting file extensions:\n.txt, .xml, .config, .ini, .bat, .ps1, .sql, .bak, .old.\n\nCheck SYSVOL\\Policies for GPP passwords in Groups.xml and ScheduledTasks.xml.\n\nSearch for cpassword attribute.\n\nOSCP:\nThis is how you find credentials in shares - systematic search beats manual browsing.",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "methodology_guidance": {
+        "after_success": "Review found files: type \\\\<TARGET>\\<SHARE>\\<FOUND_FILE> Download for offline analysis: copy \\\\<TARGET>\\<SHARE>\\<FOUND_FILE> . Search for multiple patterns: findstr /S /I /M \"password config backup credential\" *.*"
+      }
     },
     {
       "id": "gpp-password-decrypt",
@@ -490,11 +482,7 @@
         "Invalid cpassword",
         "gpp-decrypt: command not found"
       ],
-      "next_steps": [
-        "Test credentials: crackmapexec smb <TARGET> -u <USER> -p <DECRYPTED_PASSWORD>",
-        "Try password against local admin accounts",
-        "Check password age and reuse across systems"
-      ],
+      "next_steps": [],
       "alternatives": [],
       "prerequisites": [],
       "troubleshooting": {
@@ -502,7 +490,10 @@
         "Invalid cpassword": "Corrupted value. Re-extract from XML: cat \\\\<DC>\\SYSVOL\\<DOMAIN>\\Policies\\<GUID>\\*.xml | findstr cpassword"
       },
       "notes": "GPP (Group Policy Preferences) passwords were stored AES-256 encrypted in SYSVOL.\n\nMicrosoft published the AES key on MSDN (MS14-025), allowing anyone to decrypt.\n\nCommon locations:\nGroups.xml (local admin password), ScheduledTasks.xml (scheduled task credentials), Services.xml (service account passwords).\n\nSYSVOL is domain-wide readable - all users can access.\n\nSearch pattern:\nfindstr /S /I cpassword \\\\<DC>\\SYSVOL\\<DOMAIN>\\Policies\\*.xml.\n\nMicrosoft patched the ability to SET new GPP passwords (2014) but old passwords remain.\n\nOSCP:\nStill found in legacy labs - always check SYSVOL.",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "methodology_guidance": {
+        "after_success": "Test credentials: crackmapexec smb <TARGET> -u <USER> -p <DECRYPTED_PASSWORD> Try password against local admin accounts Check password age and reuse across systems"
+      }
     },
     {
       "id": "powerview-find-domainshare-exclude",
@@ -532,9 +523,7 @@
         "Find-DomainShare not recognized",
         "No shares found"
       ],
-      "next_steps": [
-        "Mount accessible shares: net use Z: \\\\<COMPUTER>\\<SHARE>"
-      ],
+      "next_steps": [],
       "alternatives": [],
       "prerequisites": [
         "import-powerview"
@@ -543,7 +532,10 @@
         "No shares found": "Remove -CheckShareAccess to see all shares (including non-accessible)"
       },
       "notes": "Focus on non-standard shares.\n\nCommon finds:\nSYSVOL (GPP passwords), NETLOGON (login scripts), Users (SSH keys, .rdp files), IT (tools/scripts).",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "methodology_guidance": {
+        "after_success": "Mount accessible shares: net use Z: \\\\<COMPUTER>\\<SHARE>"
+      }
     },
     {
       "id": "psloggedon",
@@ -579,19 +571,18 @@
         "Network path not found",
         "RPC server unavailable"
       ],
-      "next_steps": [
-        "If Domain Admin logged on, target that machine for credential dumping"
-      ],
-      "alternatives": [
-        "get-netloggedon"
-      ],
+      "next_steps": [],
+      "alternatives": [],
       "prerequisites": [],
       "troubleshooting": {
         "Access denied": "Requires local admin on target. Try alternative: Get-NetLoggedon",
         "RPC server unavailable": "Remote Registry service disabled. Common on modern Windows."
       },
       "notes": "Alternative to Get-NetLoggedon when PowerView not available.\n\nWorks even when NetSessionEnum API is restricted.\n\nRequires Remote Registry service enabled (disabled by default on Server 2019+/Windows 11+).",
-      "oscp_relevance": "medium"
+      "oscp_relevance": "medium",
+      "methodology_guidance": {
+        "after_success": "If Domain Admin logged on, target that machine for credential dumping"
+      }
     },
     {
       "id": "gpp-password-files",
@@ -631,9 +622,7 @@
         "Access denied",
         "No matches"
       ],
-      "next_steps": [
-        "Decrypt found passwords: gpp-decrypt <CPASSWORD>"
-      ],
+      "next_steps": [],
       "alternatives": [
         "get-gpppassword"
       ],
@@ -642,7 +631,10 @@
         "No matches": "No GPP passwords in SYSVOL. Try other credential sources (KeePass, web.config, etc.)"
       },
       "notes": "CRITICAL OSCP technique.\n\nCommon files:\nGroups.xml (local admin password), ScheduledTasks.xml (task credentials), Services.xml (service accounts).\n\nAll authenticated users can read SYSVOL.",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "methodology_guidance": {
+        "after_success": "Decrypt found passwords: gpp-decrypt <CPASSWORD>"
+      }
     }
   ]
 }

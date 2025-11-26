@@ -31,15 +31,15 @@
         "gobuster-dir-basic",
         "wfuzz-dir"
       ],
-      "next_steps": [
-        "Inspect discovered directories",
-        "Check for upload functionality"
-      ],
+      "next_steps": [],
       "flag_explanations": {
         "-u": "Target URL (FUZZ keyword for injection point)",
         "-w": "Wordlist file",
         "-fc": "Filter HTTP status codes",
         "-fs": "Filter response size"
+      },
+      "methodology_guidance": {
+        "after_success": "Inspect discovered directories Check for upload functionality"
       }
     },
     {
@@ -75,13 +75,13 @@
         "vhost",
         "fuzzing"
       ],
-      "next_steps": [
-        "Add discovered vhosts to /etc/hosts",
-        "Enumerate each vhost"
-      ],
+      "next_steps": [],
       "flag_explanations": {
         "-H": "Custom header (Host header here)",
         "-fs": "Filter by response size"
+      },
+      "methodology_guidance": {
+        "after_success": "Add discovered vhosts to /etc/hosts Enumerate each vhost"
       }
     },
     {
@@ -117,12 +117,13 @@
         "parameters",
         "fuzzing"
       ],
-      "next_steps": [
-        "Test discovered parameters for injection"
-      ],
+      "next_steps": [],
       "flag_explanations": {
         "-X": "HTTP method (POST for POST params)",
         "-d": "POST data (use with -X POST)"
+      },
+      "methodology_guidance": {
+        "after_success": "Test discovered parameters for injection"
       }
     },
     {
@@ -145,14 +146,14 @@
         "web",
         "http"
       ],
-      "next_steps": [
-        "Inspect response",
-        "Check headers"
-      ],
+      "next_steps": [],
       "flag_explanations": {
         "-v": "Verbose output",
         "-i": "Include response headers",
         "-L": "Follow redirects"
+      },
+      "methodology_guidance": {
+        "after_success": "Inspect response Check headers"
       }
     },
     {
@@ -176,12 +177,12 @@
         "http",
         "headers"
       ],
-      "next_steps": [
-        "Check server version",
-        "Look for security headers"
-      ],
+      "next_steps": [],
       "flag_explanations": {
         "-I": "Fetch headers only (HEAD request)"
+      },
+      "methodology_guidance": {
+        "after_success": "Check server version Look for security headers"
       }
     },
     {
@@ -215,16 +216,16 @@
         "ffuf-dir-fuzz",
         "wfuzz-dir"
       ],
-      "next_steps": [
-        "Inspect discovered directories",
-        "Check for sensitive files"
-      ],
+      "next_steps": [],
       "flag_explanations": {
         "dir": "Directory/file enumeration mode",
         "-u": "Target URL",
         "-w": "Wordlist",
         "-x": "File extensions to search (php,txt,html)",
         "-t": "Number of threads (default 10)"
+      },
+      "methodology_guidance": {
+        "after_success": "Inspect discovered directories Check for sensitive files"
       }
     },
     {
@@ -258,14 +259,15 @@
         "gobuster-dir-basic",
         "ffuf-dir-fuzz"
       ],
-      "next_steps": [
-        "Enumerate discovered paths"
-      ],
+      "next_steps": [],
       "flag_explanations": {
         "-w": "Wordlist",
         "--hc": "Hide HTTP status codes",
         "--hl": "Hide by line count",
         "--hw": "Hide by word count"
+      },
+      "methodology_guidance": {
+        "after_success": "Enumerate discovered paths"
       }
     },
     {
@@ -295,9 +297,10 @@
         "web",
         "parameters"
       ],
-      "next_steps": [
-        "Test parameters for injection"
-      ]
+      "next_steps": [],
+      "methodology_guidance": {
+        "after_success": "Test parameters for injection"
+      }
     },
     {
       "id": "nikto-web-scan",
@@ -320,15 +323,15 @@
         "web",
         "vulnerability-scan"
       ],
-      "next_steps": [
-        "Review findings",
-        "Test identified vulnerabilities"
-      ],
+      "next_steps": [],
       "flag_explanations": {
         "-h": "Target host",
         "-p": "Port (default 80)",
         "-ssl": "Force SSL mode",
         "-o": "Output file"
+      },
+      "methodology_guidance": {
+        "after_success": "Review findings Test identified vulnerabilities"
       }
     },
     {
@@ -352,14 +355,14 @@
         "wordpress",
         "cms"
       ],
-      "next_steps": [
-        "Brute force found users",
-        "Check for vulnerable plugins"
-      ],
+      "next_steps": [],
       "flag_explanations": {
         "--url": "Target WordPress site",
         "--enumerate": "Enumerate users(u), plugins(p), themes(t)",
         "--api-token": "WPVulnDB API token for vulnerability data"
+      },
+      "methodology_guidance": {
+        "after_success": "Brute force found users Check for vulnerable plugins"
       }
     },
     {
@@ -383,13 +386,13 @@
         "joomla",
         "cms"
       ],
-      "next_steps": [
-        "Check for vulnerable components",
-        "Test admin panel"
-      ],
+      "next_steps": [],
       "flag_explanations": {
         "-u": "Target URL",
         "-ec": "Enumerate components"
+      },
+      "methodology_guidance": {
+        "after_success": "Check for vulnerable components Test admin panel"
       }
     },
     {
@@ -419,14 +422,14 @@
         "cms",
         "drupal"
       ],
-      "next_steps": [
-        "Check version for exploits",
-        "Enumerate plugins/modules"
-      ],
+      "next_steps": [],
       "flag_explanations": {
         "scan": "CMS to scan",
         "-u": "Target URL",
         "-t": "Number of threads"
+      },
+      "methodology_guidance": {
+        "after_success": "Check version for exploits Enumerate plugins/modules"
       }
     },
     {
@@ -450,15 +453,15 @@
         "web",
         "download"
       ],
-      "next_steps": [
-        "Analyze downloaded files",
-        "Search for credentials/comments"
-      ],
+      "next_steps": [],
       "flag_explanations": {
         "-r": "Recursive download",
         "-np": "No parent (don't ascend to parent directory)",
         "-nH": "No host directories",
         "--cut-dirs": "Ignore N directory levels"
+      },
+      "methodology_guidance": {
+        "after_success": "Analyze downloaded files Search for credentials/comments"
       }
     },
     {
@@ -488,17 +491,16 @@
         "sql-injection",
         "web"
       ],
-      "next_steps": [
-        "Enumerate databases",
-        "Dump credentials",
-        "OS command execution"
-      ],
+      "next_steps": [],
       "flag_explanations": {
         "-u": "Target URL",
         "-p": "Testable parameter",
         "--batch": "Non-interactive mode",
         "--dbs": "Enumerate databases",
         "--dump": "Dump table data"
+      },
+      "methodology_guidance": {
+        "after_success": "Enumerate databases Dump credentials OS command execution"
       }
     }
   ]

@@ -39,16 +39,14 @@
         "No units found",
         "systemctl: command not found"
       ],
-      "next_steps": [
-        "Check service configuration: systemctl cat <SERVICE>",
-        "Check service file permissions: systemctl-service-permissions",
-        "Look for writable service files: find /etc/systemd -writable",
-        "Identify services running as root: systemctl status <SERVICE>"
-      ],
+      "next_steps": [],
       "alternatives": [
         "service-status-all-sysv"
       ],
-      "notes": "systemd is the init system for most modern Linux distributions (RHEL 7+, Ubuntu 16.04+, Debian 8+).\n\nOSCP tip:\nFocus on custom services (not part of base OS) - often have misconfigurations.\n\nTime estimate:\n2 seconds.\n\nTo see ALL services (including failed):\nsystemctl list-units --type=service --all"
+      "notes": "systemd is the init system for most modern Linux distributions (RHEL 7+, Ubuntu 16.04+, Debian 8+).\n\nOSCP tip:\nFocus on custom services (not part of base OS) - often have misconfigurations.\n\nTime estimate:\n2 seconds.\n\nTo see ALL services (including failed):\nsystemctl list-units --type=service --all",
+      "methodology_guidance": {
+        "after_success": "Check service configuration: systemctl cat <SERVICE> Check service file permissions: systemctl-service-permissions Look for writable service files: find /etc/systemd -writable Identify services running as root: systemctl status <SERVICE>"
+      }
     },
     {
       "id": "systemctl-enabled-services",
@@ -83,14 +81,13 @@
         "No unit files found",
         "systemctl: command not found"
       ],
-      "next_steps": [
-        "Check custom enabled services for persistence mechanisms",
-        "Examine service file contents: systemctl cat <SERVICE>",
-        "Disable suspicious services: sudo systemctl disable <SERVICE>",
-        "Check service executable permissions"
-      ],
+      "next_steps": [],
       "alternatives": [],
-      "notes": "Enabled services persist across reboots - key for persistence/backdoor detection.\n\nOSCP tip:\nCustom services in /etc/systemd/system are often exploit targets.\n\nTime estimate:\n3 seconds."
+      "notes": "Enabled services persist across reboots - key for persistence/backdoor detection.\n\nOSCP tip:\nCustom services in /etc/systemd/system are often exploit targets.\n\nTime estimate:\n3 seconds.",
+      "methodology_guidance": {
+        "after_success": "Check custom enabled services for persistence mechanisms Disable suspicious services: sudo systemctl disable <SERVICE> Check service executable permissions",
+        "oscp_tips": "Examine service file contents: systemctl cat <SERVICE>"
+      }
     },
     {
       "id": "systemctl-service-permissions",
@@ -125,14 +122,12 @@
         "No such file or directory",
         "Permission denied"
       ],
-      "next_steps": [
-        "If writable: Modify service to run payload as root",
-        "Check ExecStart path in service file: systemctl cat <SERVICE>",
-        "Check if service binary is writable: ls -la <EXEC_PATH>",
-        "Restart service to trigger payload: sudo systemctl restart <SERVICE>"
-      ],
+      "next_steps": [],
       "alternatives": [],
-      "notes": "CRITICAL for OSCP privilege escalation.\n\nWritable service files = instant root if service runs as root.\n\nAlso check /lib/systemd/system/ (system services).\n\nTime estimate:\n2 seconds.\n\nExploit pattern:\n(1) Find writable .service file, (2) Modify ExecStart=/path/to/reverse_shell, (3) sudo systemctl restart <SERVICE>."
+      "notes": "CRITICAL for OSCP privilege escalation.\n\nWritable service files = instant root if service runs as root.\n\nAlso check /lib/systemd/system/ (system services).\n\nTime estimate:\n2 seconds.\n\nExploit pattern:\n(1) Find writable .service file, (2) Modify ExecStart=/path/to/reverse_shell, (3) sudo systemctl restart <SERVICE>.",
+      "methodology_guidance": {
+        "after_success": "If writable: Modify service to run payload as root Check ExecStart path in service file: systemctl cat <SERVICE> Check if service binary is writable: ls -la <EXEC_PATH> Restart service to trigger payload: sudo systemctl restart <SERVICE>"
+      }
     },
     {
       "id": "service-status-all-sysv",
@@ -163,16 +158,15 @@
       "failure_indicators": [
         "service: command not found"
       ],
-      "next_steps": [
-        "Check specific service: service <NAME> status",
-        "Examine service init script: cat /etc/init.d/<SERVICE>",
-        "Check init script permissions: ls -la /etc/init.d/<SERVICE>",
-        "Look for writable init scripts for privilege escalation"
-      ],
+      "next_steps": [],
       "alternatives": [
         "systemctl-running-services"
       ],
-      "notes": "SysV init used on older Linux (pre-systemd).\n\nStill found in OSCP labs.\n\n[+] = running, [-] = stopped, [?] = status unknown.\n\nTime estimate:\n3 seconds.\n\nService scripts in /etc/init.d/ - check permissions for privesc."
+      "notes": "SysV init used on older Linux (pre-systemd).\n\nStill found in OSCP labs.\n\n[+] = running, [-] = stopped, [?] = status unknown.\n\nTime estimate:\n3 seconds.\n\nService scripts in /etc/init.d/ - check permissions for privesc.",
+      "methodology_guidance": {
+        "after_success": "Check specific service: service <NAME> status Check init script permissions: ls -la /etc/init.d/<SERVICE> Look for writable init scripts for privilege escalation",
+        "oscp_tips": "Examine service init script: cat /etc/init.d/<SERVICE>"
+      }
     },
     {
       "id": "chkconfig-list-sysv",
@@ -203,13 +197,12 @@
       "failure_indicators": [
         "chkconfig: command not found"
       ],
-      "next_steps": [
-        "Check service script: cat /etc/init.d/<SERVICE>",
-        "Disable malicious service: sudo chkconfig <SERVICE> off",
-        "Check service script permissions for privesc"
-      ],
+      "next_steps": [],
       "alternatives": [],
-      "notes": "RHEL/CentOS specific.\n\nRunlevels:\n0=halt, 1=single-user, 3=multi-user, 5=graphical, 6=reboot.\n\nTime estimate:\n2 seconds."
+      "notes": "RHEL/CentOS specific.\n\nRunlevels:\n0=halt, 1=single-user, 3=multi-user, 5=graphical, 6=reboot.\n\nTime estimate:\n2 seconds.",
+      "methodology_guidance": {
+        "after_success": "Check service script: cat /etc/init.d/<SERVICE> Disable malicious service: sudo chkconfig <SERVICE> off Check service script permissions for privesc"
+      }
     },
     {
       "id": "win-sc-query-services",
@@ -242,17 +235,15 @@
       "failure_indicators": [
         "ERROR: Access denied"
       ],
-      "next_steps": [
-        "Query specific service: win-sc-query-config",
-        "Check service permissions: win-accesschk-service",
-        "Look for unquoted service paths: win-wmic-service-path",
-        "Check service binary permissions: icacls <PATH>"
-      ],
+      "next_steps": [],
       "alternatives": [
         "win-wmic-service-full",
         "win-ps-get-service"
       ],
-      "notes": "Service Control (sc.exe) is built-in Windows service management tool.\n\nOSCP tip:\nFocus on services with STATE=RUNNING and user-created services (non-Microsoft).\n\nTime estimate:\n5 seconds."
+      "notes": "Service Control (sc.exe) is built-in Windows service management tool.\n\nOSCP tip:\nFocus on services with STATE=RUNNING and user-created services (non-Microsoft).\n\nTime estimate:\n5 seconds.",
+      "methodology_guidance": {
+        "after_success": "Query specific service: win-sc-query-config Check service permissions: win-accesschk-service Look for unquoted service paths: win-wmic-service-path Check service binary permissions: icacls <PATH>"
+      }
     },
     {
       "id": "win-sc-query-all",
@@ -284,17 +275,15 @@
       "failure_indicators": [
         "ERROR: Invalid parameter"
       ],
-      "next_steps": [
-        "Check stopped service configurations (may auto-start)",
-        "Query service details: sc qc <SERVICE_NAME>",
-        "Check service binary permissions",
-        "Look for services with weak permissions"
-      ],
+      "next_steps": [],
       "alternatives": [
         "win-wmic-service-full",
         "get-service"
       ],
-      "notes": "Space after '=' is REQUIRED:\n'state= all' not 'state=all'.\n\nShows stopped services which may have weak permissions or unquoted paths.\n\nTime estimate:\n10 seconds."
+      "notes": "Space after '=' is REQUIRED:\n'state= all' not 'state=all'.\n\nShows stopped services which may have weak permissions or unquoted paths.\n\nTime estimate:\n10 seconds.",
+      "methodology_guidance": {
+        "after_success": "Check stopped service configurations (may auto-start) Query service details: sc qc <SERVICE_NAME> Check service binary permissions Look for services with weak permissions"
+      }
     },
     {
       "id": "win-sc-query-config",
@@ -335,16 +324,14 @@
         "FAILED 1060",
         "The specified service does not exist"
       ],
-      "next_steps": [
-        "Check if BINARY_PATH_NAME has unquoted spaces: win-unquoted-service-path-check",
-        "Check binary permissions: icacls \"<BINARY_PATH>\"",
-        "Check if SERVICE_START_NAME is LocalSystem (high privileges)",
-        "Modify service binary if writable: win-sc-config-binpath"
-      ],
+      "next_steps": [],
       "alternatives": [
         "win-wmic-service-path"
       ],
-      "notes": "CRITICAL for Windows privilege escalation.\n\nCheck for:\n(1) Unquoted service paths with spaces, (2) Writable service binaries, (3) Services running as LocalSystem/SYSTEM.\n\nTime estimate:\n1 second.\n\nCommon privesc:\nUnquoted path 'C:\\Program Files\\My Service\\service.exe' → Place malicious 'C:\\Program.exe'."
+      "notes": "CRITICAL for Windows privilege escalation.\n\nCheck for:\n(1) Unquoted service paths with spaces, (2) Writable service binaries, (3) Services running as LocalSystem/SYSTEM.\n\nTime estimate:\n1 second.\n\nCommon privesc:\nUnquoted path 'C:\\Program Files\\My Service\\service.exe' → Place malicious 'C:\\Program.exe'.",
+      "methodology_guidance": {
+        "after_success": "Check if BINARY_PATH_NAME has unquoted spaces: win-unquoted-service-path-check Check binary permissions: icacls \"<BINARY_PATH>\" Check if SERVICE_START_NAME is LocalSystem (high privileges) Modify service binary if writable: win-sc-config-binpath"
+      }
     },
     {
       "id": "win-wmic-service-full",
@@ -380,17 +367,15 @@
         "ERROR: Access denied",
         "WMIC is deprecated"
       ],
-      "next_steps": [
-        "Get full service details: win-wmic-service-path",
-        "Filter running services: wmic service where \"State='Running'\" list brief",
-        "Check for non-standard services (not from Microsoft)",
-        "PowerShell alternative: win-ps-get-service"
-      ],
+      "next_steps": [],
       "alternatives": [
         "win-sc-query-all",
         "win-ps-get-service"
       ],
-      "notes": "WMIC deprecated in Windows 11+ but still in OSCP labs.\n\nFor specific properties:\nwmic service get Name,PathName,StartMode,State.\n\nTime estimate:\n5 seconds."
+      "notes": "WMIC deprecated in Windows 11+ but still in OSCP labs.\n\nFor specific properties:\nwmic service get Name,PathName,StartMode,State.\n\nTime estimate:\n5 seconds.",
+      "methodology_guidance": {
+        "after_success": "Get full service details: win-wmic-service-path Filter running services: wmic service where \"State='Running'\" list brief Check for non-standard services (not from Microsoft) PowerShell alternative: win-ps-get-service"
+      }
     },
     {
       "id": "win-wmic-service-path",
@@ -429,17 +414,15 @@
       "failure_indicators": [
         "ERROR: Access denied"
       ],
-      "next_steps": [
-        "Identify unquoted paths with spaces: PathName without quotes and containing spaces",
-        "Check directory permissions: icacls \"C:\\Program Files\\<DIR>\"",
-        "Place malicious executable in exploitable path",
-        "Restart service: sc stop <SERVICE> && sc start <SERVICE>"
-      ],
+      "next_steps": [],
       "alternatives": [
         "win-sc-query-config",
         "win-unquoted-service-paths"
       ],
-      "notes": "CRITICAL Windows privesc technique.\n\nUnquoted path 'C:\\Program Files\\My App\\service.exe' allows placing 'C:\\Program.exe' or 'C:\\Program Files\\My.exe'.\n\nTime estimate:\n5 seconds.\n\nFilter for unquoted:\nwmic service get Name,PathName | findstr /v /i \"C:\\Windows\" | findstr /i /v '\"'."
+      "notes": "CRITICAL Windows privesc technique.\n\nUnquoted path 'C:\\Program Files\\My App\\service.exe' allows placing 'C:\\Program.exe' or 'C:\\Program Files\\My.exe'.\n\nTime estimate:\n5 seconds.\n\nFilter for unquoted:\nwmic service get Name,PathName | findstr /v /i \"C:\\Windows\" | findstr /i /v '\"'.",
+      "methodology_guidance": {
+        "after_success": "Identify unquoted paths with spaces: PathName without quotes and containing spaces Check directory permissions: icacls \"C:\\Program Files\\<DIR>\" Place malicious executable in exploitable path Restart service: sc stop <SERVICE> && sc start <SERVICE>"
+      }
     },
     {
       "id": "win-ps-get-service",
@@ -474,17 +457,15 @@
         "Get-Service: command not found",
         "Execution policy blocked"
       ],
-      "next_steps": [
-        "Get service details: win-ps-get-service-details",
-        "Check service binary paths: Get-WmiObject win32_service",
-        "Filter non-Microsoft services: Where-Object {$_.Name -notlike 'Microsoft*'}",
-        "Check service permissions with AccessChk"
-      ],
+      "next_steps": [],
       "alternatives": [
         "win-sc-query-services",
         "win-wmic-service-full"
       ],
-      "notes": "Modern PowerShell approach.\n\nFor all services:\nGet-Service (no filter).\n\nFor stopped:\nWhere-Object {$_.Status -eq 'Stopped'}.\n\nTime estimate:\n3 seconds."
+      "notes": "Modern PowerShell approach.\n\nFor all services:\nGet-Service (no filter).\n\nFor stopped:\nWhere-Object {$_.Status -eq 'Stopped'}.\n\nTime estimate:\n3 seconds.",
+      "methodology_guidance": {
+        "after_success": "Get service details: win-ps-get-service-details Check service binary paths: Get-WmiObject win32_service Filter non-Microsoft services: Where-Object {$_.Name -notlike 'Microsoft*'} Check service permissions with AccessChk"
+      }
     },
     {
       "id": "win-ps-get-service-details",
@@ -522,17 +503,15 @@
         "Access denied",
         "Execution policy blocked"
       ],
-      "next_steps": [
-        "Filter for unquoted paths: Where-Object {$_.PathName -notlike '\"*' -and $_.PathName -like '* *'}",
-        "Check path permissions: Get-Acl <PATH>",
-        "Search for writable service binaries",
-        "Modern alternative: Get-CimInstance win32_service"
-      ],
+      "next_steps": [],
       "alternatives": [
         "win-wmic-service-path",
         "win-sc-query-config"
       ],
-      "notes": "PowerShell WMI approach (modern).\n\nTime estimate:\n5 seconds.\n\nOne-liner for unquoted path detection:\nGet-WmiObject win32_service | Where-Object {$_.PathName -notlike '\"*' -and $_.PathName -like '* *' -and $_.PathName -like 'C:\\Program*'} | Select Name,PathName"
+      "notes": "PowerShell WMI approach (modern).\n\nTime estimate:\n5 seconds.\n\nOne-liner for unquoted path detection:\nGet-WmiObject win32_service | Where-Object {$_.PathName -notlike '\"*' -and $_.PathName -like '* *' -and $_.PathName -like 'C:\\Program*'} | Select Name,PathName",
+      "methodology_guidance": {
+        "after_success": "Filter for unquoted paths: Where-Object {$_.PathName -notlike '\"*' -and $_.PathName -like '* *'} Check path permissions: Get-Acl <PATH> Search for writable service binaries Modern alternative: Get-CimInstance win32_service"
+      }
     }
   ]
 }

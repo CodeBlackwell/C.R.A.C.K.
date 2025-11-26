@@ -1,0 +1,513 @@
+"id","name","description","version","category","platform","difficulty","time_estimate","oscp_relevant","notes"
+"ad-bloodhound-guided-privesc","BloodHound-Guided Privilege Escalation","Complete BloodHound workflow from data collection to privilege escalation exploitation using graph analysis and custom Cypher queries.
+
+This chain demonstrates the COMPLETE BloodHound methodology for discovering privilege escalation paths in Active Directory. Starts with data collection using bloodhound-python or SharpHound, imports data into Neo4j via BloodHound GUI, runs pre-built queries to find paths to Domain Admins, and when those fail (COMMON scenario), uses custom Cypher queries to discover non-obvious attack paths through AdminTo, HasSession, and group membership relationships.
+
+CRITICAL OSCP PATTERN: Pre-built queries often return 'No paths found' for standard domain users. This does NOT mean no path exists - it means you need custom Cypher queries to find intermediate pivots. The writeup demonstrates: pete (standard user) had no direct path, but mike (another standard user) had AdminTo relationship with CLIENT75, which had Domain Admin service session. This path is INVISIBLE to pre-built queries but DISCOVERABLE with custom Cypher.
+
+WHY THIS MATTERS: BloodHound is MANDATORY for OSCP AD sets. Understanding custom Cypher queries is the difference between 'no paths found' (dead end) vs finding the attack chain (domain compromise). Time investment: 20 minutes BloodHound analysis can save 2+ hours of trial-and-error lateral movement attempts.
+
+SUCCESS RATE: High in corporate and OSCP lab environments (70-80% of AD domains have exploitable BloodHound paths). The key is knowing WHEN to use custom queries (after pre-built fail) and WHICH queries to run (AdminTo for lateral movement, HasSession for credential harvest, MemberOf for privilege escalation).","1.0.0","","","intermediate","20 minutes","True","OSCP BLOODHOUND METHODOLOGY: BloodHound is the FIRST enumeration step for AD environments. Provides complete domain relationship map in 5 minutes vs hours of manual enumeration. CRITICAL LESSON from Corp-DCSync writeup: Pre-built query 'Shortest Paths to Domain Admins' returned 'No paths found' for pete. Custom Cypher query revealed mike had AdminTo on CLIENT75, which had Domain Admin service session. This pattern is COMMON in OSCP labs - standard users don't have direct paths, but INTERMEDIATE systems do. TIME BUDGET: 5 min data collection + 5 min upload/ingest + 10 min analysis = 20 minutes MAXIMUM. If no clear path after 20 min, proceed with what you have and revisit after compromising additional accounts. EXAM TIP: Clear old BloodHound data before each new domain (Database Info → Clear Database). Cross-contamination from previous labs causes wrong attack paths. MANUAL ALTERNATIVE: If BloodHound GUI fails, parse JSON with jq: jq '.data[] | select(.Properties.name==""USER@DOMAIN.COM"")' users.json. COMPLEMENTARY TO: CrackMapExec enumeration (provides user lists for BloodHound targeting), Kerberoasting (service accounts found via BloodHound SPN queries), AS-REP roasting (pre-auth disabled users found via BloodHound)."
+"ad-password-spray-safe","Safe Lockout-Aware Password Spraying","Ultra-safe password spraying attack chain with strict lockout avoidance. Discovers password policy, calculates safe spray limits, implements time-delayed spraying with observation window tracking, and maintains spray logs to prevent accidental lockouts. Critical for OSCP exam where account lockouts can fail objectives.","1.0.0","","","intermediate","90 minutes","True","OSCP EXAM CRITICAL: This chain is designed for ZERO LOCKOUT RISK. Use when: (1) OSCP exam environment (lockouts = failed objective). (2) Red team engagement with strict ROE (no disruption). (3) High-value target where stealth is paramount. (4) Strict password policy (3 attempt threshold or below). KEY DIFFERENCES from normal spray: (1) Conservative attempt limit (threshold - 2 instead of threshold - 1). (2) Extended wait time (observation window + 5 minutes buffer). (3) Spray logging to track attempts per user. (4) Single-password rounds (not batch). (5) Validation after each round. TRADE-OFF: SLOWER (requires wait periods) but ZERO RISK. TIME COMMITMENT: With 30min observation window and 5 passwords, total time = 5 passwords × 30min wait = 2.5 hours minimum. Plan accordingly for exam time management."
+"ad-dcsync-linux-workflow","DCSync Linux-Only Workflow - Kali-Based Full Domain Compromise","Advanced attack chain for complete Active Directory compromise using only Kali Linux tools (no Windows host required).
+
+Executes full DCSync attack, credential cracking, lateral movement, and Golden Ticket persistence entirely from Kali using Impacket suite. IDEAL for OSCP exam scenarios where no Windows access available or Windows AV/EDR blocking tools. RECOMMENDED approach for exam efficiency - all tools pre-installed on Kali, no file transfers needed, no AV concerns.
+
+DETECTION RISK: Medium. Impacket generates same network signatures as native Windows tools (DRSUAPI replication, SMB/RPC traffic), but attacker-side execution means no host-based AV/EDR alerts. All forensic artifacts on DC only (no attacker machine compromise risk).","1.0.0","","","advanced","90 minutes","True","OSCP LINUX-ONLY STRATEGY: This chain demonstrates COMPLETE Active Directory compromise without touching Windows. EXAM ADVANTAGES: (1) No Windows VM needed (save resources), (2) No AV/EDR bypass required (tools run on Kali), (3) No file transfers between systems (all tools local), (4) Consistent toolset (Impacket API uniformity), (5) Faster execution (no RDP latency). IMPACKET SUITE COVERAGE: secretsdump (DCSync), ticketer (Golden Ticket), psexec/wmiexec/smbexec (lateral movement), GetNPUsers/GetUserSPNs (Kerberoasting/AS-REP roasting), all using same Python library. KERBEROS CONFIGURATION: Critical for Golden Ticket validation - must configure /etc/krb5.conf for ticket operations. EXAM REALITY CHECK: Most OSCP exam AD chains can be solved 100% from Kali - Windows access is convenience, not requirement. DETECTION PROFILE: Network-based detection same as Windows tools (DRSUAPI, SMB, Kerberos), but NO host-based forensics on attacker machine (Python process on Kali vs Mimikatz on Windows). ALTERNATIVE WORKFLOWS: If Impacket unavailable, use native Linux Kerberos tools (kinit, klist, MIT Kerberos) + CrackMapExec + custom scripts."
+"ad-dcsync-mass-extraction","DCSync Mass Credential Harvesting for Lateral Movement","Advanced attack chain for comprehensive domain credential extraction and mass lateral movement.
+
+Extracts ALL domain user hashes via DCSync full dump, performs batch password cracking with rule-based attacks, sprays Pass-the-Hash across subnet to discover local admin access, and establishes lateral movement to high-value targets. IDEAL for OSCP exam scenarios requiring domain-wide compromise.
+
+DETECTION RISK: High. Full DCSync generates significant replication traffic (EventID 4662), PTH spray creates multiple failed logon events (EventID 4625) if unsuccessful, lateral movement triggers process creation events (EventID 4688). TRADEOFF: Speed and coverage vs stealth.","1.0.0","","","advanced","120 minutes","True","OSCP MASS EXTRACTION STRATEGY: This chain prioritizes SPEED and COVERAGE over stealth. Goal: Compromise maximum systems in minimum time. EXAM SCENARIO: Often needed when specific privilege escalation path unclear - cast wide net to find alternate routes. EXPECTED RESULTS: Enterprise domains (500-5000 users) → 20-40% password crack rate with rockyou.txt + rules, 5-15% local admin access across subnet. Small domains (50-500 users) → 40-70% crack rate (weaker passwords), 15-30% local admin. DETECTION TRADE-OFF: Full DCSync + PTH spray = HIGHLY DETECTABLE in production (blue team will notice). Acceptable for OSCP exam (no active defense). AVOID in real penetration tests unless specifically authorized for aggressive tactics. TIME BREAKDOWN: DCSync full dump (5-20 min depending on domain size), Hash transfer (1-2 min), Hashcat cracking (10-120 min depending on wordlist/rules), PTH spray (5-15 min for /24 subnet), Lateral movement (5-10 min per target). HASH MANAGEMENT: Full domain dump generates 500-5000+ NTLM hashes. CRITICAL: Organize by username, filter for valuable accounts (admin groups, service accounts), prioritize cracking efforts. ALTERNATIVE APPROACHES: If DCSync unavailable, try (1) NTDS.dit extraction via VSS shadow copy, (2) Kerberoasting for service accounts, (3) AS-REP roasting for pre-auth disabled users."
+"ad-dcsync-golden-ticket","DCSync to Golden Ticket - Persistent Domain Access Chain","Advanced attack chain for achieving persistent domain-wide access via Golden Ticket forgery.
+
+Extracts krbtgt account hash using DCSync attack (requires Domain Admin or replication rights), creates forged Kerberos TGT with Impacket ticketer.py, and validates persistent access across the domain. RECOMMENDED for OSCP exam persistence - works from Kali without Windows access.
+
+DETECTION RISK: Medium-High. DCSync triggers replication events (EventID 4662), Golden Ticket usage harder to detect (no AS-REQ to KDC). LIFESPAN: 10 years default (krbtgt password rarely changes).","1.0.0","","","advanced","45 minutes","True","OSCP GOLDEN TICKET STRATEGY: This chain focuses on PERSISTENCE, not initial access. Golden Ticket is the END GAME after obtaining Domain Admin or replication rights. LIFESPAN: Ticket valid for 10 years by default (krbtgt NTLM hash rarely changes - often never). STEALTH: Once created, Golden Ticket allows domain-wide access WITHOUT contacting DC for authentication (no AS-REQ to KDC) - harder to detect than standard Kerberos auth. DETECTION INDICATORS: (1) DCSync phase triggers EventID 4662 (replication request from non-DC), (2) Golden Ticket usage may trigger abnormal TGS-REQ patterns, abnormal ticket lifetimes (10 years vs 10 hours), or tickets for disabled accounts. OPSEC CONSIDERATIONS: (1) Use realistic ticket lifetime (10 hours, not 10 years) to evade detection, (2) Forge ticket for existing user (not disabled/deleted accounts), (3) Execute DCSync during business hours (blend with legitimate replication), (4) Use encrypted C2 channel for hash exfiltration. EXAM TIP: Practice this chain MULTIPLE times - Golden Ticket is common OSCP persistence requirement. Time pressure = 30 minutes under exam stress. ALTERNATIVES: If DCSync unavailable, try (1) NTDS.dit extraction via VSS shadow copy, (2) Credential dumping from compromised DC (Mimikatz sekurlsa::logonpasswords), (3) Kerberoasting Domain Admin accounts. IMPACKET vs MIMIKATZ: Impacket ticketer.py RECOMMENDED for OSCP (runs on Kali, no AV concerns, seamless integration with psexec/wmiexec). Mimikatz requires Windows host and may trigger AV/EDR."
+"ad-service-session-credential-harvest","Service Session Credential Harvesting","Exploit Domain Admin service sessions cached on workstations to escalate privileges from local admin to Domain Admin.
+
+This chain demonstrates a CRITICAL OSCP pattern: Local admin access on ANY workstation is a PIVOT OPPORTUNITY, not a dead end. Domain Admins frequently run services (monitoring agents, backup clients, scheduled tasks) on workstations, which cache their credentials in LSASS memory until reboot. These 'service sessions' are identified by 'Session: Service from 0' in mimikatz output.
+
+WHY THIS MATTERS: Service sessions are a GOLDMINE. Unlike interactive sessions (which log out), service sessions persist until reboot - often for days/weeks. A single compromised workstation with local admin + DA service session = instant domain compromise. This is MORE COMMON than you think: monitoring agents (SCOM, Nagios), backup clients (Veeam, Commvault), and scheduled tasks frequently run as Domain Admin.
+
+CRITICAL PREREQUISITE: You MUST run 'privilege::debug' before 'sekurlsa::logonpasswords'. Even local administrators don't automatically have SeDebugPrivilege enabled. Without this, mimikatz returns 'ERROR 0x00000005 Access Denied'. This is the #1 mimikatz failure in OSCP exams.
+
+OSCP SUCCESS RATE: High (60-70% of AD labs have exploitable service sessions). Time investment: 15 minutes from local admin to Domain Admin if service session exists. Alternative if no service sessions: pivot to more systems, check BloodHound for AdminTo relationships on additional computers.
+
+LESSON FROM CORP-DCSYNC WRITEUP: 'Service sessions are GOLDMINE - Domain Admins running services on workstations is common misconfiguration. Local admin on workstation is PIVOT OPPORTUNITY, not dead end.'","1.0.0","","","intermediate","15 minutes (5 min lateral movement, 5 min credential dump, 5 min validation)","True","This chain targets the common misconfiguration where Domain Admin accounts run services on workstations. Service sessions cache credentials in LSASS until reboot - often for days or weeks.
+
+CRITICAL SUCCESS FACTORS:
+1. privilege::debug BEFORE sekurlsa commands (mandatory prerequisite)
+2. Look for 'Session: Service from 0' in mimikatz output (not interactive sessions)
+3. Verify extracted credentials belong to Domain Admins group
+4. Service sessions persist until reboot (more reliable than interactive sessions)
+
+COMMON FAILURES:
+- Mimikatz without privilege::debug: Returns ERROR 0x00000005 Access Denied
+- Targeting interactive sessions: These log out quickly, service sessions persist
+- Not verifying group membership: Extract ALL credentials, then map to Domain Admins
+- Antivirus detection: Use obfuscated mimikatz or alternative (pypykatz, procdump+offline parsing)
+
+ALTERNATIVES IF NO SERVICE SESSIONS:
+- Pivot to additional workstations (check BloodHound AdminTo relationships)
+- Target servers instead of workstations (higher likelihood of service sessions)
+- Use Kerberoasting for service accounts
+- Check for cached credentials in registry (reg save HKLM\SAM, reg save HKLM\SECURITY)
+
+TIME ESTIMATES FOR OSCP:
+- Lateral movement to target system: 5 minutes
+- Mimikatz upload and execution: 3 minutes
+- Credential dump and parsing: 2 minutes
+- Validation with crackmapexec: 3 minutes
+- Escalation to Domain Admin: 2 minutes
+- TOTAL: 15 minutes if service session exists
+
+WHY THIS WORKS:
+- Windows caches credentials in LSASS for SSO (Single Sign-On)
+- Service accounts run persistently, credentials cached persistently
+- Local admins can read LSASS memory (with SeDebugPrivilege)
+- NTLM hashes sufficient for Pass-the-Hash (no plaintext password needed)"
+"ad-attack-asreproast-full","Active Directory AS-REP Roasting Full Attack Chain","Complete AS-REP roasting attack chain from enumeration to credential validation.
+
+Identifies users with Kerberos preauthentication disabled, extracts offline-crackable AS-REP hashes, cracks passwords with Hashcat, validates credentials, and checks for local admin rights for lateral movement opportunities.","1.0.0","","","beginner","90 minutes","True","OSCP QUICK WIN: AS-REP roasting is fast reconnaissance attack (30 seconds to identify vulnerable users, 1-60 minutes to crack). NO LOCKOUT RISK - safe to attempt even on sensitive domains. SUCCESS RATE: Variable - depends on misconfigurations (0-10% of domains have vulnerable users). DEFAULT AD SETTING: Preauthentication ENABLED (secure). Vulnerable users are rare - typically legacy service accounts or misconfigurations. LINUX vs WINDOWS: Linux (impacket-GetNPUsers) requires valid credentials. Windows (Rubeus) uses current user context (no credential entry needed). TIME SYNC CRITICAL: Kerberos requires <5 minute clock difference. Use ntpdate or rdate if KRB_AP_ERR_SKEW errors occur. HASH FORMAT: $krb5asrep$23$ = Hashcat mode 18200 (Kerberos 5 AS-REP etype 23). CRACKING SPEED: RC4-HMAC is fast - rockyou.txt straight dictionary <1 second on GPU, 1-5 minutes with rule-based attack. COMPLEMENTARY TO PASSWORD SPRAYING: Different attack surface - may find credentials password spraying misses."
+"ad-password-spray-external","Active Directory External Password Spray Attack","External password spraying attack chain from no credentials to valid domain access using Kerberos pre-authentication.
+
+Enumerates valid usernames, sprays common passwords, validates credentials, and identifies local admin access - all from external network position with only UDP 88 access to domain controller.","1.0.0","","","intermediate","15 minutes","True","OSCP CRITICAL: This is the PRIMARY method for external password spraying. Requires ONLY UDP 88 access to DC - no SMB, LDAP, or internal network needed. Generates minimal noise (Event ID 4768/4771 - normal Kerberos traffic). SPEED: Fastest password attack method - 2 UDP packets per attempt, hundreds of attempts per second. STEALTH: Extremely low detection risk - appears as normal authentication traffic. EXAM STRATEGY: Use this when you've identified AD but have no credentials. Success rate highest with common passwords (Welcome2023!, Password123!, CompanyName2023!). CRITICAL WARNING: Does NOT check password policy - you must manually calculate safe spray limits to avoid lockouts. Recommended: max 3-4 password attempts per user per 30 minutes."
+"ad-dcsync-lateral-movement","DCSync Targeted Extraction for Surgical Lateral Movement","Advanced attack chain for surgical credential extraction and precision lateral movement to high-value targets.
+
+Identifies and prioritizes specific high-value user accounts (Domain Admins, service accounts, IT admins), extracts their credentials via targeted DCSync, validates access, and executes lateral movement to critical systems. IDEAL for OSCP scenarios requiring specific target compromise with minimal noise.
+
+DETECTION RISK: Low-Medium. Targeted DCSync (10-50 users) generates far less replication traffic than full dump, surgical PTH validation avoids spray detection, PSExec provides SYSTEM shells for privilege escalation. TRADEOFF: Precision and stealth vs broad coverage.","1.0.0","","","advanced","60 minutes","True","OSCP TARGETED EXTRACTION STRATEGY: This chain focuses on PRECISION over coverage. Use when: (1) Exam objective specifies particular system or data, (2) Full domain dump excessive or time-constrained, (3) Stealth important (minimize detection), (4) Known high-value accounts identified through enumeration. TARGET PRIORITIZATION: (1) Domain Admins (unrestricted domain access), (2) Local Administrators on target system (direct access), (3) Service accounts with elevated privileges (SQL, Exchange, backup services), (4) IT administrators (likely admin on multiple systems). EXPECTED RESULTS: 10-20 targeted users → 50-80% crack rate (admin accounts often have stronger passwords but still vulnerable), 30-60% local admin access on target systems. TIME ADVANTAGE: Targeted approach 3-5x faster than full domain dump (5-10 min DCSync vs 20-60 min full dump). DETECTION ADVANTAGE: Targeted DCSync generates 10-50 EventID 4662 events vs thousands for full dump, surgical PTH validation avoids failed logon spam. OSCP EXAM TIP: Map user-to-system access before DCSync - enumerate local admin group membership on targets to identify which users to extract. ALTERNATIVE APPROACHES: If specific users unknown, try (1) AS-REP roasting (pre-auth disabled users), (2) Kerberoasting (service accounts), (3) Local SAM dumps from compromised workstations (may contain cached domain credentials)."
+"ad-password-spray-internal","Active Directory Internal Password Spray Attack","Comprehensive internal password spraying attack chain from domain-joined Windows or internal Linux position.
+
+Discovers password policy, enumerates users, sprays passwords using optimal method (LDAP/SMB/Kerberos), validates credentials, identifies local admin rights, and establishes lateral movement path to domain compromise.","1.0.0","","","intermediate","30 minutes","True","OSCP CRITICAL: This chain demonstrates COMPLETE internal password spraying workflow. Key decision point: Step 3 (choose-spray-method) branches into 3 parallel paths based on your position and requirements. Windows + policy-aware → PowerShell LDAP (spray-passwords-ldap). Linux + need admin detection → CrackMapExec SMB (crackmapexec-smb-spray). Linux + maximum speed/stealth → Kerbrute (kerbrute-passwordspray). ALL METHODS WORK but have different trade-offs. EXAM STRATEGY: If on Windows, use PowerShell LDAP (automatic policy compliance). If on Linux, use Kerbrute for initial spray (fast), then CrackMapExec for admin validation. TIMING: Policy check (5s) + user enum (30s) + spray (1-3min) + validation (30s) = 3-5 minutes per password. CRITICAL: ALWAYS check policy first (step 1) to avoid lockouts."
+"ad-attack-kerberoasting-full","Active Directory Kerberoasting Full Attack Chain","Complete Kerberoasting attack chain from SPN enumeration to credential validation.
+
+Identifies service accounts with registered SPNs, requests TGS tickets, extracts offline-crackable TGS-REP hashes, cracks service account passwords with Hashcat, validates credentials, and checks for lateral movement opportunities.","1.0.0","","","beginner","120 minutes","True","OSCP HIGH-PRIORITY: Kerberoasting is one of the most successful AD attacks. SUCCESS RATE: High in corporate environments (60-80% of domains have service accounts with weak passwords). WHY IT WORKS: ANY authenticated domain user can request TGS for ANY SPN - no permission checks at TGS request time. The TGS is encrypted with service account password hash, allowing offline cracking. TARGET ACCOUNTS: Service accounts with SPNs (SQL Server, IIS, custom services). CRITICAL: Computer accounts (MACHINE$) and Managed Service Accounts (MSAs) have 120-character random passwords - UNCRACKABLE. Focus on USER accounts with SPNs (sql_service, iis_service, svc_backup, etc.). ENCRYPTION TYPES: Modern domains use AES (slower to crack). Use Rubeus /tgtdeleg flag to downgrade to RC4 (10x faster cracking). TIME ESTIMATE: SPN enum (10 sec) + TGS request (10 sec) + cracking (1 min - 2 hours depending on password strength and wordlist). NO LOCKOUT RISK: Requesting TGS doesn't trigger account lockout. STEALTH: Event ID 4769 (TGS request) - normal Kerberos traffic, difficult to distinguish from legitimate service access. COMPLEMENTARY TO AS-REP ROASTING: Different attack surface - Kerberoasting targets service accounts, AS-REP targets misconfigured user accounts."
+"windows-mimikatz-operational","Mimikatz Complete Operational Workflow","Complete operational guide for mimikatz credential dumping from upload to credential extraction and validation.
+
+This chain covers the ENTIRE mimikatz workflow for OSCP: upload binary, enable required privileges, dump credentials, parse output, extract high-value credentials, validate with Pass-the-Hash, and troubleshoot common failures. Focus on OPERATIONAL usage, not theory.
+
+CRITICAL PREREQUISITE: 'privilege::debug' is MANDATORY before ANY sekurlsa commands. Even local administrators don't automatically have SeDebugPrivilege ENABLED. Without this step, mimikatz returns 'ERROR 0x00000005 Access Denied'. This is the #1 mimikatz failure in OSCP exams.
+
+WHY THIS MATTERS: Mimikatz is ESSENTIAL for OSCP credential harvesting. You need to know:
+- How to upload and execute mimikatz
+- WHAT privilege::debug does and WHY it's required
+- HOW to parse output for different credential types
+- WHICH credentials are high-value (Domain Admins, service accounts)
+- HOW to troubleshoot when it fails (AV blocks, access denied, empty output)
+
+SUCCESS RATE: Very high (90%+) IF you follow correct procedure. Most failures are due to:
+1. Forgetting privilege::debug (50% of failures)
+2. AV detection (30% of failures)
+3. No credentials cached (15% of failures)
+4. UAC/insufficient privileges (5% of failures)
+
+LESSON FROM CORP-DCSYNC WRITEUP: 'Mimikatz privilege::debug is MANDATORY before sekurlsa commands - even local admins don't automatically have SeDebugPrivilege enabled. Without this: ERROR 0x00000005 Access Denied.'","1.0.0","","","beginner","10 minutes (2 min upload, 3 min execution, 5 min parsing/validation)","True","This chain focuses on OPERATIONAL usage - getting mimikatz working in real scenarios with real failures. Not theory, but practice.
+
+CRITICAL SUCCESS FACTORS:
+1. privilege::debug BEFORE sekurlsa commands (mandatory, non-negotiable)
+2. Verify 'Privilege '20' OK' output (confirms SeDebugPrivilege enabled)
+3. Redirect output to file (mimikatz output too long for terminal)
+4. Parse for NTLM hashes (32 hex characters) - these work for Pass-the-Hash
+5. Identify session types: 'Service from 0' = persistent, 'Interactive from 2' = temporary
+
+COMMON FAILURES AND SOLUTIONS:
+
+1. ERROR 0x00000005 Access Denied:
+   - Cause: Forgot privilege::debug OR not local admin
+   - Solution: Run privilege::debug first, or get SYSTEM shell (PSExec)
+
+2. AV Quarantines mimikatz.exe:
+   - Cause: Windows Defender or third-party AV detection
+   - Solution: Use obfuscated mimikatz, Invoke-Mimikatz (in-memory), or procdump+pypykatz
+
+3. Empty NTLM Fields:
+   - Cause: WDigest disabled (Windows 8.1+ default)
+   - Solution: Use sekurlsa::tickets for Kerberos tickets, or enable WDigest (reg add)
+
+4. No Credentials Cached:
+   - Cause: System recently rebooted, no user logins yet
+   - Solution: Wait for user logins, target different system, check registry for cached creds
+
+5. Privilege '20' KO (failed):
+   - Cause: UAC blocking, not local admin, or restricted token
+   - Solution: Get SYSTEM shell, disable UAC, or use alternative method
+
+ALTERNATIVE METHODS (If mimikatz fails):
+- pypykatz: Python implementation (lsadump.py)
+- Invoke-Mimikatz: PowerShell in-memory (no disk write)
+- procdump + offline parsing: procdump -ma lsass.exe lsass.dmp && pypykatz lsa minidump lsass.dmp
+- Task Manager: Dump LSASS process → transfer .dmp → parse locally
+- Comsvcs.dll: rundll32.exe C:\Windows\System32\comsvcs.dll MiniDump <lsass_pid> C:\temp\lsass.dmp full
+
+OUTPUT PARSING GUIDE:
+
+Credential Types:
+- NTLM hash: 32 hex chars (a-f0-9) - USE THIS for Pass-the-Hash
+- LM hash: 32 hex chars (usually aad3b435... = empty) - ignore this
+- SHA1: 40 hex chars - not useful for PTH
+- Plaintext: Rare but gold when found - direct password
+- Kerberos tickets: .kirbi files - use for pass-the-ticket
+
+Session Types:
+- 'Service from 0': Cached until reboot (GOLDMINE - check these first)
+- 'Interactive from 2': Current logged-in user (may log out soon)
+- 'RemoteInteractive from 10': RDP session (similar to interactive)
+- 'NetworkCleartext from 8': Network logon with cleartext (rare)
+
+TIME ESTIMATES FOR OSCP:
+- Upload mimikatz: 1 minute
+- Enable privilege::debug: 30 seconds
+- Dump credentials: 2 minutes (depends on system memory)
+- Parse output: 2 minutes
+- Extract NTLM hashes: 1 minute
+- Validate with crackmapexec: 3 minutes
+- TOTAL: 10 minutes from upload to validated credentials
+
+EXAM TIPS:
+- Always redirect output to file (too long for screen buffer)
+- Check service sessions FIRST (more persistent)
+- Domain Admins may use alternative names (admin, svc_admin, etc.)
+- Validate ALL extracted hashes (some may be stale)
+- Document credentials immediately (easy to lose track)"
+"web-sqli-postgres-fileretrieve","PostgreSQL Error-Based SQLi to File Retrieval","Exploit error-based SQL injection to extract database credentials, establish direct PostgreSQL connection, and leverage superuser file functions to retrieve sensitive files when shell access is restricted by network policies.
+
+This technique is particularly useful when traditional shell methods fail due to network restrictions.","1.0.0","","","intermediate","45 minutes","True","This chain demonstrates critical OSCP skills: (1) Adapting when standard shell methods fail, (2) Leveraging service-specific capabilities, (3) Understanding database privilege models. Particularly useful when: network egress/ingress filtered, web shell write permissions denied, or COPY FROM PROGRAM hangs. Key insight: Database superuser ≠ OS root, but provides powerful file system access within postgres user permissions. Real-world scenario from OSCP Capstone 3: strict firewall blocked ALL reverse/bind shells but PostgreSQL port 5432 was selectively allowed."
+"ad-bloodhound-custom-cypher","BloodHound Custom Cypher Query Workflow","Advanced BloodHound enumeration using custom Cypher queries when pre-built queries return 'No paths found'.
+
+This chain focuses specifically on the CRITICAL scenario: You've collected BloodHound data, imported it, marked your compromised user as owned, run 'Shortest Paths to Domain Admins' query, and got 'No paths found'. This does NOT mean no path exists - it means you need custom Cypher queries to discover non-obvious attack paths.
+
+WHY THIS MATTERS: Pre-built BloodHound queries are optimized for DIRECT paths (user → DA in 1-3 hops). Real-world AD environments have INDIRECT paths that require intermediate pivots: compromise user A → discover user A has AdminTo on system B → discover system B has DA service session → harvest DA credentials. These multi-stage paths are INVISIBLE to pre-built queries but DISCOVERABLE with custom Cypher.
+
+CRITICAL OSCP PATTERN: When BloodHound says 'no paths found', students often give up and pivot to different attack vectors. WRONG. The correct approach: iterate through ALL compromised users with custom Cypher queries checking AdminTo, HasSession, and MemberOf relationships. The writeup demonstrates: pete (no path) → mike (AdminTo CLIENT75) → CLIENT75 (has DA session) → domain compromise.
+
+SUCCESS RATE: Very high (70-80% of 'no paths found' scenarios CAN find paths with custom queries). The key is knowing WHICH queries to run and WHEN to run them.
+
+LESSON FROM CORP-DCSYNC WRITEUP: 'BloodHound no paths found doesn't mean no path exists - means you need to compromise intermediate accounts first. Custom Cypher queries reveal paths that pre-built queries miss.'","1.0.0","","","intermediate","10 minutes (5 min pre-built queries, 5 min custom queries)","True","This chain is CRITICAL when pre-built queries fail. It teaches systematic enumeration of attack paths using custom Cypher queries.
+
+CRITICAL SUCCESS FACTORS:
+1. Mark ALL compromised users as owned (not just first user)
+2. Test custom queries for EACH compromised user individually
+3. Look for AdminTo relationships first (lateral movement opportunities)
+4. Check HasSession on systems where you have AdminTo (credential harvest opportunities)
+5. Iterate - finding one intermediate user may unlock paths for others
+
+COMMON FAILURES:
+- Only testing one compromised user: Test ALL users, some have paths others don't
+- Giving up after pre-built queries fail: This is when custom queries become critical
+- Wrong Cypher syntax: Username format is 'USER@DOMAIN.COM' (uppercase, with domain)
+- Not marking users as owned: Query results won't show paths FROM owned principals
+- Searching for paths TO wrong target: Use 'DOMAIN ADMINS@DOMAIN.COM' (group name with space)
+
+CYPHER QUERY PATTERNS:
+
+AdminTo enumeration:
+MATCH (u:User {name:'USER@DOMAIN.COM'})-[:AdminTo]->(c:Computer) RETURN u,c
+
+HasSession on specific computer:
+MATCH (c:Computer {name:'SYSTEM.DOMAIN.COM'})<-[:HasSession]-(u:User) RETURN c,u
+
+Paths to Domain Admins (custom depth):
+MATCH p=(u:User {name:'USER@DOMAIN.COM'})-[*1..3]->(g:Group {name:'DOMAIN ADMINS@DOMAIN.COM'}) RETURN p
+
+Find high-value targets (DA sessions):
+MATCH (u:User)-[:MemberOf*1..]->(g:Group {name:'DOMAIN ADMINS@DOMAIN.COM'})
+MATCH (u)-[:HasSession]->(c:Computer)
+RETURN u.name, c.name
+
+ALTERNATIVE METHODS:
+- Manual JSON parsing: jq '.data[] | select(.Properties.name==""USER@DOMAIN.COM"")' users.json
+- Neo4j Browser: Direct Neo4j web interface (http://localhost:7474) for advanced queries
+- Command-line cypher-shell: cypher-shell -u neo4j -p password < queries.cypher
+
+TIME ESTIMATES:
+- Mark users as owned: 1 minute per user
+- Run pre-built queries: 2 minutes
+- Custom AdminTo queries: 2 minutes (test all users)
+- Custom HasSession queries: 2 minutes
+- Path validation: 3 minutes
+- TOTAL: 10 minutes from 'no paths' to identified attack path
+
+WHY CUSTOM QUERIES WORK:
+- Pre-built queries optimize for DIRECT paths (shortest distance)
+- Real attacks use INDIRECT paths (compromise intermediate accounts)
+- Custom queries let you ask specific questions: 'Which systems can THIS user admin?'
+- Iterative approach: Each discovered relationship unlocks new query possibilities"
+"web-exploit-sqli-union","SQL Injection UNION-Based Data Extraction","Detect SQL injection vulnerability, enumerate database structure using UNION SELECT technique, and extract credentials through branching database-specific exploitation paths","1.0.0","","","advanced","30 minutes","True","This chain demonstrates branching logic required for multi-database SQLi exploitation. After detecting database type in step 4, the chain branches into 3 parallel paths (MySQL/PostgreSQL/MSSQL enumeration). Each database path then proceeds to credential extraction. OSCP CRITICAL: Always attempt manual exploitation BEFORE sqlmap. Document column count and displayed column positions for exam report. Use next_steps field to implement conditional branching based on database detection results."
+"windows-lateral-wmi-full","WMI Lateral Movement - Full Attack Chain","Complete WMI lateral movement from Kali to Windows: verify admin access, encode payload, execute WMI, obtain reverse shell.
+
+This chain demonstrates fileless remote code execution using Windows Management Instrumentation.","1.0.0","","","intermediate","15 minutes","True","WMI (Windows Management Instrumentation) provides remote execution via DCOM over RPC. This chain demonstrates lateral movement from Kali using impacket-wmiexec for fileless remote code execution. ADVANTAGES: Fileless (no binary written to disk), uses legitimate Windows service, supports pass-the-hash. DISADVANTAGES: Creates WMI event logs, slower than PSExec for interactive use. OSCP RELEVANCE: High - frequently available when WinRM blocked, pass-the-hash compatible."
+"windows-lateral-overpass-hash","Overpass-the-Hash Attack Chain (NTLM to Kerberos)","Complete overpass-the-hash workflow: convert NTLM hash to Kerberos TGT, use for tools requiring Kerberos authentication (Microsoft PsExec).
+
+This technique upgrades NTLM authentication to Kerberos when tools only support Kerberos tickets.","1.0.0","","","advanced","20 minutes","True","Overpass-the-Hash upgrades NTLM hash to Kerberos TGT for tools that only support Kerberos authentication. WHY NEEDED: Some Windows tools (Microsoft PsExec, certain COM objects) require Kerberos tickets, won't work with NTLM. HOW IT WORKS: Mimikatz injects NTLM hash into LSASS, requests TGT from KDC using hash for pre-authentication, resulting TGT can be used like normal Kerberos ticket. ADVANTAGES: Enables Kerberos-only tools with just hash, more compatible than pure pass-the-hash. DISADVANTAGES: Requires compromised Windows host (can't do from Kali), more complex than straightforward pass-the-hash. OSCP RELEVANCE: High - needed when Impacket tools fail but Microsoft tools available."
+"windows-lateral-psexec-full","PSExec Lateral Movement - Full Attack Chain","Complete PSExec attack from Kali: verify ADMIN$ share, authenticate with Impacket PSExec, obtain SYSTEM shell.
+
+This is the most reliable lateral movement technique for OSCP, providing immediate SYSTEM-level access.","1.0.0","","","beginner","10 minutes","True","PSExec is the most reliable lateral movement technique for OSCP - provides SYSTEM-level access immediately. Works by uploading binary to ADMIN$ share, creating Windows service, executing payload. ADVANTAGES: Spawns SYSTEM shell, most stable, widely documented. DISADVANTAGES: Writes binary to disk (forensics), creates service (event logs), easier to detect than WMI. OSCP RELEVANCE: Very high - first technique to try when credentials available."
+"linux-exploit-cred-reuse","Credential Reuse Attack Chain","Chain credential reuse across SSH, database, and web admin interfaces for lateral movement and privilege escalation.
+
+Systematically test discovered credentials against all available services to maximize access.","1.0.0","","","intermediate","20 minutes","True","Credential reuse is extremely common in OSCP environments. Database credentials found in web config files are often reused for SSH access. This chain demonstrates systematic credential testing across multiple services. Always test discovered credentials against all enumerated users and services. Time-efficient approach: discover once, test everywhere."
+"windows-evil-winrm-operational","Evil-WinRM Complete Operational Workflow","Complete operational guide for Evil-WinRM lateral movement including connection, file transfers, tool deployment, and credential exfiltration.
+
+This chain covers the ENTIRE Evil-WinRM workflow for OSCP lateral movement: connection establishment (password and Pass-the-Hash), environment verification, file upload/download, tool execution, credential exfiltration, and session management. Focus on OPERATIONAL usage in real engagements.
+
+WHY EVIL-WINRM IS PREFERRED FOR OSCP:
+1. Interactive PowerShell shell (not cmd.exe like PSExec)
+2. Built-in file upload/download (no SMB server needed)
+3. No service creation (stealthier than PSExec)
+4. Supports Pass-the-Hash natively (-H flag)
+5. Works over WinRM (port 5985/5986) when SMB blocked
+6. Automatic handling of PS remoting restrictions
+
+CRITICAL SYNTAX: Evil-WinRM requires 'DOMAIN\user' format for domain accounts. There is NO -d flag for domain (common mistake). Use single quotes to escape backslash in bash.
+
+SUCCESS RATE: Very high (85-90%) IF WinRM is enabled. Most OSCP lab systems have WinRM enabled by default. Failures usually due to:
+1. WinRM not enabled (15% of systems) - fallback to PSExec/WMI
+2. Wrong credential syntax (domain\user vs user@domain)
+3. Firewall blocking ports 5985/5986
+4. Certificate validation issues (HTTPS WinRM)
+
+LESSON FROM CORP-DCSYNC WRITEUP: 'Evil-WinRM superior to PSExec for lateral movement (no service creation, file transfer built-in). Critical syntax: domain\user format (NOT -d flag - doesn't exist).'","1.0.0","","","beginner","10 minutes (2 min connection, 3 min upload, 3 min execution, 2 min download)","True","This chain focuses on OPERATIONAL Evil-WinRM usage for OSCP lateral movement and post-exploitation. Not theory, but practical workflow.
+
+CRITICAL SUCCESS FACTORS:
+1. Correct credential syntax: 'DOMAIN\user' (single quotes, backslash separator)
+2. Verify WinRM enabled: nmap -p 5985,5986 <target> before attempting connection
+3. Use absolute paths for file operations (C:\temp\file.txt, not relative paths)
+4. Redirect command output to files for large results (mimikatz, whoami /all)
+5. Download evidence files for writeup documentation
+
+COMMON FAILURES AND SOLUTIONS:
+
+1. Connection Refused / Timeout:
+   - Cause: WinRM not enabled, firewall blocking ports
+   - Solution: Check nmap for ports 5985/5986, try PSExec/WMI instead
+
+2. Authentication Failed:
+   - Cause: Wrong credential format, incorrect password/hash
+   - Solution: Verify syntax (domain\user), test with crackmapexec first
+
+3. Access Denied After Login:
+   - Cause: User not in Remote Management Users or Administrators
+   - Solution: Verify group membership, try different user
+
+4. Upload/Download Fails:
+   - Cause: Permissions, path doesn't exist, AV blocking
+   - Solution: Use writable directory (C:\temp, C:\Users\Public), check AV logs
+
+5. Certificate Validation Errors (HTTPS WinRM):
+   - Cause: Self-signed cert, hostname mismatch
+   - Solution: Use -S flag for SSL but skip validation
+
+EVIL-WINRM ADVANTAGES OVER ALTERNATIVES:
+
+vs PSExec:
+- No service creation (stealthier)
+- Interactive PowerShell (not cmd.exe)
+- Built-in file transfer (no SMB server)
+- Cleaner process execution
+
+vs WMI:
+- Interactive shell (WMI is non-interactive)
+- Easier file operations
+- PowerShell integration
+
+vs RDP:
+- Command-line based (no GUI needed)
+- Scriptable and automatable
+- Lower bandwidth requirements
+
+vs SSH:
+- Native Windows remoting (not third-party)
+- Better PowerShell integration
+- More common in Windows environments
+
+FILE TRANSFER OPERATIONS:
+
+Upload Files:
+- Syntax: upload <local_path> <remote_path>
+- Example: upload /opt/mimikatz.exe C:\temp\mimikatz.exe
+- Supports: Executables, scripts, text files, compressed archives
+- Size limit: Generally no limit, but large files (>100MB) may be slow
+
+Download Files:
+- Syntax: download <remote_path> <local_path>
+- Example: download C:\temp\credentials.txt /tmp/creds.txt
+- Use for: Credential dumps, enumeration results, flags, screenshots
+
+Batch Operations:
+- Upload multiple files: Use menu command or script
+- Download directory: Requires PowerShell copy commands first
+
+COMMAND EXECUTION PATTERNS:
+
+Interactive Commands:
+- whoami, hostname, ipconfig (immediate output)
+- dir, ls (PowerShell aliases work)
+- Get-* PowerShell cmdlets
+
+Long-Running Commands:
+- Redirect output: mimikatz.exe ""commands"" > output.txt
+- Background execution: Start-Process (for GUI tools)
+- Check running: Get-Process
+
+Credential Harvesting:
+- Upload mimikatz.exe
+- Execute: .\mimikatz.exe ""privilege::debug"" ""sekurlsa::logonpasswords"" ""exit"" > creds.txt
+- Download: download C:\temp\creds.txt /tmp/creds.txt
+
+TIME ESTIMATES FOR OSCP:
+- Connection establishment: 30 seconds - 2 minutes (depends on network)
+- Environment verification: 1 minute (whoami, hostname, ipconfig)
+- Upload tools (mimikatz ~1.2MB): 30 seconds - 2 minutes
+- Execute credential dump: 2-3 minutes
+- Download results: 30 seconds - 1 minute
+- TOTAL: 5-10 minutes for complete lateral movement + credential harvest
+
+EXAM TIPS:
+- Always test connection with whoami first (verify access)
+- Create C:\temp directory if it doesn't exist (mkdir C:\temp)
+- Use absolute paths (C:\temp\file.txt, not .\file.txt)
+- Redirect long output to files (> output.txt)
+- Download ALL evidence for writeup (credentials, flags, enumeration)
+- Document exact commands used (for reproducibility)
+- Keep session active (don't close terminal accidentally)"
+"windows-lateral-winrm-full","WinRM Lateral Movement - Full Attack Chain","Complete WinRM/PowerShell remoting attack: verify WinRM enabled, authenticate with Evil-WinRM, obtain interactive PowerShell shell.
+
+This chain demonstrates the preferred method for Windows lateral movement from Kali.","1.0.0","","","beginner","10 minutes","True","WinRM (Windows Remote Management) is Microsoft's official remote administration protocol based on WS-Management. Evil-WinRM provides robust PowerShell remoting from Kali with file upload/download capabilities. ADVANTAGES: Interactive PowerShell, file transfer built-in, cleaner than WMI, supports pass-the-hash. DISADVANTAGES: Creates WinRM event logs, requires WinRM enabled. OSCP RELEVANCE: Very high - preferred method for Windows lateral movement from Kali."
+"windows-lateral-dcom-exploitation","DCOM Lateral Movement Attack Chain (MMC20)","Complete DCOM exploitation: verify RPC access, instantiate remote COM object, execute reverse shell via MMC20.Application.
+
+This technique provides an alternative when WMI and WinRM are blocked or unavailable.","1.0.0","","","advanced","20 minutes","True","DCOM (Distributed Component Object Model) lateral movement via MMC20.Application is alternative when WMI/WinRM blocked. Discovered by Matt Nelson (@enigma0x3) in 2017. HOW IT WORKS: Instantiate remote MMC COM object via DCOM, call ExecuteShellCommand method to run arbitrary commands. ADVANTAGES: Uses same RPC port as WMI (135) but different protocol, bypasses WMI-specific restrictions, fileless execution (no binary drop). DISADVANTAGES: Requires PowerShell on compromised host (can't execute from Kali), complex syntax, processes run in Session 0 (invisible). OSCP RELEVANCE: High - critical fallback when primary techniques blocked."
+"windows-lateral-pth-impacket","Pass-the-Hash Attack Chain (Impacket)","Complete pass-the-hash workflow: dump hashes, verify hash format, test hash validity, execute lateral movement without cracking password.
+
+Leverage NTLM hashes for authentication without requiring plaintext passwords.","1.0.0","","","intermediate","15 minutes","True","Pass-the-Hash (PtH) leverages NTLM hashes for authentication without cracking passwords. Critical for OSCP lateral movement when only hashes available. NTLM authentication uses hash directly in challenge-response, making plaintext password unnecessary. ADVANTAGES: No password cracking needed (saves hours), works across network, supports multiple protocols (SMB/WMI/WinRM). DISADVANTAGES: UAC blocks non-RID-500 local admin hashes (2014 patch), creates authentication logs. OSCP RELEVANCE: Very high - frequently the only path forward when credentials unknown."
+"ad-pth-to-dcsync-escalation","Pass-the-Hash to DCSync Full Domain Compromise","Complete privilege escalation chain from NTLM hash extraction to full domain compromise via DCSync, WITHOUT password cracking.
+
+This chain demonstrates the CRITICAL OSCP concept: You don't need plaintext passwords for domain compromise - NTLM hashes are sufficient. The complete attack flow: compromised system → mimikatz credential dump → extract NTLM hashes → Pass-the-Hash validation → DCSync to extract ALL domain credentials → Pass-the-Hash to Domain Controller → full domain compromise.
+
+WHY THIS MATTERS: Password cracking takes HOURS (hashcat with rockyou.txt = 30-120 minutes per hash). Pass-the-Hash takes SECONDS. In OSCP exam, you have 24 hours for 3 machines - every minute counts. This chain gets you from local admin to Domain Admin in 15 minutes WITHOUT waiting for password cracks.
+
+CRITICAL PATTERN: This chain connects THREE techniques:
+1. Credential Harvesting (mimikatz) - Extract NTLM hashes from compromised system
+2. Pass-the-Hash (crackmapexec, evil-winrm) - Authenticate using hash instead of password
+3. DCSync (impacket-secretsdump) - Extract ALL domain hashes using replication rights
+
+SUCCESS RATE: Very high in AD environments (80-90%) IF you have local admin on domain-joined system. The chain works because:
+- Windows accepts NTLM hashes for authentication (no plaintext needed)
+- Domain Admins frequently have cached credentials on workstations
+- DCSync uses legitimate replication protocol (hard to detect)
+- Administrator account exists in every domain (guaranteed target)
+
+LESSON FROM CORP-DCSYNC WRITEUP: 'Pass-the-Hash works without plaintext passwords - faster than cracking. No password cracking needed - PTH sufficient for domain compromise.'","1.0.0","","","intermediate","15 minutes (5 min credential harvest, 3 min DCSync, 2 min DC access, 5 min flag retrieval)","True","This chain is FASTER than password cracking and MORE RELIABLE than exploit attempts. It leverages Windows built-in authentication (NTLM) and AD replication protocol (DCSync) - both are legitimate features, making detection difficult.
+
+CRITICAL SUCCESS FACTORS:
+1. Mimikatz privilege::debug BEFORE sekurlsa commands (mandatory)
+2. Extract NTLM hash correctly (32 hex characters)
+3. Validate hash with crackmapexec BEFORE attempting DCSync
+4. Use correct syntax for Pass-the-Hash tools (: prefix for impacket, -H flag for evil-winrm)
+5. Target correct Domain Controller (check with 'nltest /dclist:DOMAIN')
+
+COMMON FAILURES:
+- Mimikatz without privilege::debug: ERROR 0x00000005 Access Denied
+- Wrong hash format: Ensure NTLM (32 chars), not LM or SHA1
+- DCSync requires DA privileges: Validate credentials are Domain Admin BEFORE attempting
+- Network connectivity: Ensure routing to DC (check with ping, test SMB with crackmapexec)
+- Impacket syntax errors: Hash format is ':<NTLM>' (colon prefix), not standalone hash
+
+ALTERNATIVES IF CHAIN FAILS:
+- No DA credentials cached: Target more systems, use Kerberoasting for service accounts
+- DCSync blocked by firewall: Use alternative exfiltration (volume shadow copy, ntdsutil)
+- AV blocks mimikatz: Use pypykatz, Invoke-Mimikatz, or procdump+offline parsing
+- Domain Admin disabled: Target Enterprise Admins or Backup Operators (also have replication rights)
+
+TIME ESTIMATES FOR OSCP:
+- Mimikatz upload and credential dump: 5 minutes
+- Parse output and extract NTLM hashes: 2 minutes
+- Validate hash with crackmapexec: 1 minute
+- DCSync execution: 3 minutes (depends on domain size)
+- Extract Administrator hash from DCSync output: 2 minutes
+- Pass-the-Hash to DC and flag retrieval: 2 minutes
+- TOTAL: 15 minutes from local admin to domain compromise
+
+WHY PASS-THE-HASH WORKS:
+- Windows NTLM authentication: Hash IS the password (challenge-response protocol)
+- Server never sees plaintext password (only hash)
+- Pass-the-Hash tools (impacket, evil-winrm) implement NTLM authentication correctly
+- No password cracking needed (saves hours of computation time)
+
+WHY DCSYNC WORKS:
+- Simulates Domain Controller replication protocol (MS-DRSR)
+- Domain Admins have 'Replicating Directory Changes All' permission by default
+- DC treats request as legitimate replication (hard to detect without SIEM)
+- Returns NTLM hashes for ALL domain users (including Administrator, krbtgt)"
+"linux-privesc-docker-mount","Docker Group Privilege Escalation","Exploit Docker group membership to escalate privileges from low-privilege user to root via container filesystem mounting.
+
+Docker group membership is equivalent to root access on the host system.","1.0.0","","","beginner","5 minutes","True","Docker group membership is equivalent to root access. This is one of the fastest privilege escalation paths in OSCP labs. The mount escape technique is preferred over privileged mode as it's cleaner and more reliable. If no images are available, alpine can be pulled (5MB, fast download). Alternative techniques include socket mounting and pid namespace abuse, but direct mount escape is simplest. Always verify root access by reading /etc/shadow and /root directory after escalation."
+"linux-privesc-suid-basic","SUID Binary Privilege Escalation (Basic)","Quick wins check (sudo) followed by SUID binary exploitation using GTFOBins to gain root shell.
+
+This chain includes prerequisite quick-wins validation before time-intensive SUID enumeration.","1.0.0","","","beginner","20 minutes","True","SUID binaries with setuid bit set run with owner's privileges (usually root). Misconfigured binaries like find, vim, nmap, base64 can be exploited for privilege escalation. GTFOBins provides exploitation techniques. This chain covers the most common OSCP scenario: finding SUID binary and exploiting it for root shell.
+
+OSCP Time-Saving Tip: This chain includes a prerequisite quick-wins check (Step 0) that tests for sudo access before running full SUID enumeration. If Step 0 finds NOPASSWD sudo access, consider switching to the linux-privesc-sudo chain for faster exploitation. SUID enumeration can take 2-5 minutes on large filesystems, while sudo check takes <5 seconds."
+"linux-privesc-sudo-nopasswd","Sudo Privilege Escalation (Quick Win)","Rapid privilege escalation via sudo misconfigurations - NOPASSWD entries and GTFOBins-exploitable commands.
+
+This is the fastest privilege escalation path for Linux systems in OSCP environments.","1.0.0","","","beginner","5 minutes","True","Sudo misconfigurations are the #1 quick win for Linux privilege escalation in OSCP. NOPASSWD entries allow running commands as root without password. Many binaries (find, vim, nmap, less, python) can spawn root shells when run with sudo. This chain should ALWAYS be run first before attempting SUID or other techniques."
+"linux-privesc-capabilities-enum","Linux Capabilities Privilege Escalation","Enumerate and exploit Linux file capabilities to escalate privileges.
+
+Capabilities are a modern alternative to SUID binaries that grant specific elevated permissions.
+
+Dangerous capabilities like cap_setuid, cap_dac_override, and cap_dac_read_search enable privilege escalation through various exploitation techniques.","1.0.0","","","intermediate","10 minutes","True","Capabilities are less common than SUID but critical to check during enumeration. Network capabilities (cap_net_raw, cap_net_admin) are non-exploitable for privilege escalation. cap_setuid provides instant root shell similar to SUID but cleaner. cap_dac_override allows read/write to any file (edit /etc/passwd for UID 0). cap_dac_read_search allows reading sensitive files (shadow, SSH keys). Always check GTFOBins capabilities section for exploitation techniques. Multiple capabilities on single binary may provide multiple exploitation paths. Capabilities persist after file execution unlike SUID."
+"windows-privesc-enumeration-exploitation","Windows Privilege Escalation - Full Methodology","Comprehensive Windows privilege escalation workflow from initial shell to SYSTEM/Administrator.
+
+This chain covers the complete attack path:
+1. Gain initial shell (limited user privileges)
+2. Enumerate system for privilege escalation vectors
+3. Identify exploitable misconfigurations or vulnerabilities
+4. Execute exploitation technique
+5. Verify elevated privileges obtained
+6. Interact with elevated shell for post-exploitation
+
+Designed for OSCP exam methodology - prioritizes quick wins (Potato exploits, AlwaysInstallElevated) before complex techniques.","1.0.0","","","intermediate","10-30 minutes","True","WINDOWS PRIVILEGE ESCALATION METHODOLOGY FOR OSCP:
+
+THIS IS THE MOST CRITICAL SKILL FOR WINDOWS TARGETS IN OSCP.
+
+PRIORITY ORDER (FASTEST TO SLOWEST):
+1. Token Impersonation (SeImpersonate/SeAssignPrimaryToken) - 2 minutes
+2. AlwaysInstallElevated - 3 minutes
+3. Unquoted Service Paths - 5 minutes
+4. Weak Service Permissions - 5 minutes
+5. Registry AutoLogon Credentials - 3 minutes
+6. Scheduled Tasks (writable scripts) - 10 minutes
+7. Kernel Exploits - 15 minutes (last resort)
+
+COMMON EXAM SCENARIOS:
+- Web shell as IIS APPPOOL\DefaultAppPool (SeImpersonate = instant win)
+- RDP as standard user in Administrators group (UAC bypass needed)
+- Service account with saved credentials (runas /savecred)
+- Misconfigured service running as SYSTEM
+
+AUTOMATED VS MANUAL:
+- Use WinPEAS/PowerUp for initial enumeration (fast, comprehensive)
+- Manually verify findings before exploitation (avoid rabbit holes)
+- Know how to do everything manually (tools may be blocked by AV)
+
+TIME MANAGEMENT:
+- Spend 5 minutes on quick wins (whoami /priv, AlwaysInstallElevated)
+- Spend 10 minutes on automated enumeration (WinPEAS)
+- Spend 15 minutes on manual verification and exploitation
+- If nothing found in 30 minutes, revisit initial access vector
+
+STEALTH CONSIDERATIONS:
+- Automated tools trigger AV (encode/obfuscate if needed)
+- Service restarts logged in Event Viewer (Event ID 7045)
+- Registry modifications tracked (Event ID 4657)
+- Process creation audited (Event ID 4688)
+- For exam: stealth doesn't matter, focus on speed
+
+CONDITIONAL LOGIC SUMMARY:
+This chain uses decision points at each step:
+- IF SeImpersonate privilege → Potato exploit (immediate win)
+- IF AlwaysInstallElevated enabled → MSI payload (3 min to root)
+- IF unquoted service paths found → Path hijacking (5 min)
+- IF weak service permissions → Binary replacement (5 min)
+- ELSE → Manual enumeration for credentials, scheduled tasks, kernel exploits
+
+Each step includes failure conditions and alternative paths to avoid getting stuck."

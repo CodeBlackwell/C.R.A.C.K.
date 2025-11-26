@@ -39,13 +39,10 @@
         "Object not found"
       ],
       "next_steps": [
-        "powerview-convert-sidtoname",
-        "Filter for dangerous permissions: Get-ObjectAcl -Identity <OBJECT> | ? {$_.ActiveDirectoryRights -match 'GenericAll'}",
-        "Check who has rights: Convert-SidToName <SID>"
+        "powerview-convert-sidtoname"
       ],
       "alternatives": [
-        "get-acl",
-        "dsacls"
+        "get-acl"
       ],
       "prerequisites": [
         "import-powerview"
@@ -55,7 +52,10 @@
         "Too much output": "Filter specific fields: Get-ObjectAcl -Identity <OBJECT> | select SecurityIdentifier,ActiveDirectoryRights"
       },
       "notes": "Returns ACL (Access Control List) - all permissions applied to an object.\n\nEACH ACE (ACCESS CONTROL ENTRY) DEFINES:\n1.\n\nSecurityIdentifier:\nWho has access (as SID)\n2.\n\nActiveDirectoryRights:\nWhat access they have (GenericAll, WriteDACL, etc.)\n\nOUTPUT ANALYSIS:\nOutput is verbose - use Convert-SidToName to resolve SIDs.\nFilter for dangerous rights.\n\nOSCP PRIVESC:\nLook for GenericAll, WriteDACL, WriteOwner on privileged groups/users.",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "methodology_guidance": {
+        "after_success": "Filter for dangerous permissions: Get-ObjectAcl -Identity <OBJECT> | ? {$_.ActiveDirectoryRights -match 'GenericAll'} Check who has rights: Convert-SidToName <SID>"
+      }
     },
     {
       "id": "powerview-get-objectacl-genericall",
@@ -95,9 +95,7 @@
         "Module not imported"
       ],
       "next_steps": [
-        "powerview-convert-sidtoname",
-        "Convert all SIDs: Get-ObjectAcl -Identity \"<OBJECT>\" | ? {$_.ActiveDirectoryRights -eq \"GenericAll\"} | select -ExpandProperty SecurityIdentifier | Convert-SidToName",
-        "Abuse GenericAll: Add-DomainGroupMember, Set-DomainUserPassword"
+        "powerview-convert-sidtoname"
       ],
       "alternatives": [],
       "prerequisites": [
@@ -108,7 +106,10 @@
         "No results": "No GenericAll permissions found. Try other dangerous rights: WriteDACL, WriteOwner, ForceChangePassword"
       },
       "notes": "GENERICALL = FULL CONTROL\n\nON USER OBJECTS:\n- Reset their password\n- Modify attributes\n- Read all properties\n\nON GROUP OBJECTS:\n- Add/remove members (add yourself to Domain Admins!)\n- Modify group attributes\n\nON COMPUTER OBJECTS:\n- Modify servicePrincipalName (Kerberoasting)\n- Access LAPS password\n\nOSCP:\nMost powerful ACL for privilege escalation.\nIf you have GenericAll on privileged group → add yourself to group.",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "methodology_guidance": {
+        "after_success": "Convert all SIDs: Get-ObjectAcl -Identity \"<OBJECT>\" | ? {$_.ActiveDirectoryRights -eq \"GenericAll\"} | select -ExpandProperty SecurityIdentifier | Convert-SidToName Abuse GenericAll: Add-DomainGroupMember, Set-DomainUserPassword"
+      }
     },
     {
       "id": "powerview-convert-sidtoname",
@@ -140,10 +141,7 @@
         "Module not imported",
         "SID not found"
       ],
-      "next_steps": [
-        "Use with ACL enumeration: Get-ObjectAcl | select -ExpandProperty SecurityIdentifier | Convert-SidToName",
-        "Identify object type: Get-NetUser -Identity <NAME> or Get-NetGroup -Identity <NAME>"
-      ],
+      "next_steps": [],
       "alternatives": [],
       "prerequisites": [
         "import-powerview"
@@ -153,7 +151,10 @@
         "SID not found": "SID may be from external domain, deleted object, or invalid format"
       },
       "notes": "SIDs (SECURITY IDENTIFIERS):\nUnique identifiers for AD objects.\n\nFORMAT:\nS-1-5-21-<domain>-<RID>\n\nCOMMON RIDS:\n- 500:\nAdministrator\n- 512:\nDomain Admins\n- 513:\nDomain Users\n\nGet-ObjectAcl returns SIDs in SecurityIdentifier field.\nMust convert to names for analysis.\n\nBATCH CONVERSION:\n  Get-ObjectAcl | select -ExpandProperty SecurityIdentifier | Convert-SidToName\n\nALTERNATIVE:\n  [system.security.principal.securityidentifier]::new('<sid>').translate([system.security.principal.ntaccount]).value\n\nOSCP:\nSIDs are useless until converted to names.",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "methodology_guidance": {
+        "after_success": "Use with ACL enumeration: Get-ObjectAcl | select -ExpandProperty SecurityIdentifier | Convert-SidToName Identify object type: Get-NetUser -Identity <NAME> or Get-NetGroup -Identity <NAME>"
+      }
     },
     {
       "id": "powerview-get-objectacl-writedacl",
@@ -191,11 +192,7 @@
         "No matching ACEs",
         "Module not imported"
       ],
-      "next_steps": [
-        "Convert SIDs to names",
-        "Abuse WriteDACL: Add-DomainObjectAcl -TargetIdentity <OBJECT> -Rights All -PrincipalIdentity <YOUR_USER>",
-        "Grant yourself GenericAll, then add to group or reset password"
-      ],
+      "next_steps": [],
       "alternatives": [],
       "prerequisites": [
         "import-powerview",
@@ -205,7 +202,10 @@
         "No results": "Try WriteOwner instead - allows changing object owner to yourself, then modifying permissions"
       },
       "notes": "WRITEDACL = MODIFY ACL PERMISSIONS\n\nATTACK PATH:\n1.\n\nYou have WriteDACL on target object\n2.\n\nGrant yourself GenericAll on that object\n3.\n\nNow you have full control\n\nEXAMPLE:\nWriteDACL on 'Domain Admins' → Grant GenericAll → Add yourself to Domain Admins\n\nSIMILAR POWERFUL RIGHTS:\n- WriteOwner:\nChange owner, then modify ACL\n- WriteProperty:\nModify attributes\n\nOSCP:\nWriteDACL is as powerful as GenericAll - just requires one extra step.",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "methodology_guidance": {
+        "after_success": "Convert SIDs to names Abuse WriteDACL: Add-DomainObjectAcl -TargetIdentity <OBJECT> -Rights All -PrincipalIdentity <YOUR_USER> Grant yourself GenericAll, then add to group or reset password"
+      }
     },
     {
       "id": "powerview-get-objectacl-forcechangepassword",
@@ -244,11 +244,7 @@
         "No matching ACEs",
         "Module not imported"
       ],
-      "next_steps": [
-        "Convert SIDs to names",
-        "Abuse: Set-DomainUserPassword -Identity <USERNAME> -Password (ConvertTo-SecureString 'NewPass123!' -AsPlainText -Force)",
-        "Authenticate as target user with new password"
-      ],
+      "next_steps": [],
       "alternatives": [],
       "prerequisites": [
         "import-powerview",
@@ -258,7 +254,10 @@
         "No results": "User may be protected by AdminSDHolder. Check admincount attribute: Get-NetUser -Identity <USERNAME> | select admincount"
       },
       "notes": "USER-FORCE-CHANGE-PASSWORD:\nCan reset user's password without knowing current password.\n\nATTACK PATH:\n1.\n\nYou have ForceChangePassword on target user\n2.\n\nReset their password\n3.\n\nAuthenticate as them\n\nNO CURRENT PASSWORD NEEDED.\nNO ACCOUNT LOCKOUT.\n\nSIMILAR RIGHTS:\nAllExtendedRights (includes password reset + other extended rights)\n\nPROTECTED ACCOUNTS:\nadmincount=1 may have this right restricted by AdminSDHolder.\n\nOSCP:\nIf you can reset Domain Admin password → domain compromised.",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "methodology_guidance": {
+        "after_success": "Convert SIDs to names Abuse: Set-DomainUserPassword -Identity <USERNAME> -Password (ConvertTo-SecureString 'NewPass123!' -AsPlainText -Force) Authenticate as target user with new password"
+      }
     },
     {
       "id": "powerview-get-objectacl-writeowner",
@@ -296,10 +295,7 @@
         "No matching ACEs",
         "Module not imported"
       ],
-      "next_steps": [
-        "Convert SIDs to names",
-        "Abuse WriteOwner: (1) Set-DomainObjectOwner -Identity <OBJECT> -OwnerIdentity <YOUR_USER>, (2) Grant yourself GenericAll, (3) Abuse full control"
-      ],
+      "next_steps": [],
       "alternatives": [],
       "prerequisites": [
         "import-powerview",
@@ -309,7 +305,10 @@
         "No results": "Try WriteDACL or GenericAll instead"
       },
       "notes": "WRITEOWNER = CHANGE OBJECT OWNER\nObject owners have implicit rights to modify the object's ACL.\n\nATTACK PATH:\n1.\n\nYou have WriteOwner on target object\n2.\n\nChange owner to yourself:\nSet-DomainObjectOwner\n3.\n\nAs owner, grant yourself GenericAll\n4.\n\nAbuse full control (add to group, reset password, etc.)\n\nCOMPARISON:\nSimilar to WriteDACL but requires two steps instead of one.\n\nOSCP:\nWriteOwner on privileged group = privilege escalation path.",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "methodology_guidance": {
+        "after_success": "Convert SIDs to names Abuse WriteOwner: (1) Set-DomainObjectOwner -Identity <OBJECT> -OwnerIdentity <YOUR_USER>, (2) Grant yourself GenericAll, (3) Abuse full control"
+      }
     },
     {
       "id": "powerview-find-interestingdomainacl",
@@ -349,11 +348,7 @@
         "No interesting ACLs found",
         "Module not imported"
       ],
-      "next_steps": [
-        "Review ActiveDirectoryRights for exploitation opportunities",
-        "Check ObjectDN to identify high-value targets",
-        "Abuse identified permissions with Add-DomainGroupMember or Set-DomainUserPassword"
-      ],
+      "next_steps": [],
       "alternatives": [],
       "prerequisites": [
         "import-powerview"
@@ -363,7 +358,10 @@
         "Long execution time": "Command queries entire domain. For faster results, query specific objects with Get-ObjectAcl"
       },
       "notes": "AUTOMATED ACL ENUMERATION:\nScans entire domain for dangerous permissions.\n\nRETURNS INTERESTING RIGHTS:\n- GenericAll\n- WriteDACL\n- WriteOwner\n- ForceChangePassword\n\nKEY FIELDS:\n- IdentityReferenceName:\nWho has the permission (filter for your user)\n- ObjectDN:\nWhat object they have permission on (look for privileged groups/users)\n\nPERFORMANCE:\nSlow in large domains - consider manual enumeration of specific high-value targets.\n\nOSCP:\nRun this early to identify all potential privilege escalation paths via ACL abuse.",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "methodology_guidance": {
+        "after_success": "Review ActiveDirectoryRights for exploitation opportunities Check ObjectDN to identify high-value targets Abuse identified permissions with Add-DomainGroupMember or Set-DomainUserPassword"
+      }
     },
     {
       "id": "powerview-get-pathacl",
@@ -405,11 +403,7 @@
         "Path not found",
         "Module not imported"
       ],
-      "next_steps": [
-        "Check for writable shares: FullControl, Modify, Write",
-        "Look for sensitive data in accessible shares",
-        "Check SYSVOL for GPP passwords"
-      ],
+      "next_steps": [],
       "alternatives": [],
       "prerequisites": [
         "import-powerview"
@@ -419,7 +413,10 @@
         "Access Denied": "No read permissions on share. Try other shares: Find-DomainShare -CheckShareAccess"
       },
       "notes": "NTFS PERMISSIONS ON NETWORK SHARES\n\nFILESYSTEMRIGHTS:\n- FullControl:\nread/write/delete\n- Modify:\nread/write\n- ReadAndExecute:\nread/execute\n\nIDENTITYREFERENCE:\nShows who has access (users/groups).\n\nCOMMON MISCONFIGURATION:\nEveryone or Authenticated Users with Modify/FullControl on sensitive shares.\n\nSYSVOL SHARE:\nDomain-wide readable.\nMay contain GPP passwords (cpassword attribute).\n\nOSCP:\nCheck all discovered shares for misconfigurations and sensitive data.",
-      "oscp_relevance": "medium"
+      "oscp_relevance": "medium",
+      "methodology_guidance": {
+        "after_success": "Check for writable shares: FullControl, Modify, Write Look for sensitive data in accessible shares Check SYSVOL for GPP passwords"
+      }
     },
     {
       "id": "powerview-get-objectacl-user",
@@ -454,9 +451,7 @@
         "Get-ObjectAcl not recognized",
         "Object not found"
       ],
-      "next_steps": [
-        "Convert SID to name: Convert-SidToName <SID>"
-      ],
+      "next_steps": [],
       "alternatives": [],
       "prerequisites": [
         "import-powerview"
@@ -465,7 +460,10 @@
         "Object not found": "Verify username: Get-NetUser -Identity <USERNAME>"
       },
       "notes": "IDENTIFIES WHO CAN MODIFY USER ACCOUNT\n\nLOOK FOR:\n- GenericAll:\nFull control\n- WriteDACL:\nCan change permissions\n- ForceChangePassword:\nCan reset password",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "methodology_guidance": {
+        "after_success": "Convert SID to name: Convert-SidToName <SID>"
+      }
     },
     {
       "id": "powerview-get-objectacl-group",
@@ -500,16 +498,17 @@
         "Get-ObjectAcl not recognized",
         "Group not found"
       ],
-      "next_steps": [
-        "Check if you can add members: if GenericAll or WriteProperty on 'member' attribute"
-      ],
+      "next_steps": [],
       "alternatives": [],
       "prerequisites": [
         "import-powerview"
       ],
       "troubleshooting": {},
       "notes": "CRITICAL FOR PRIVILEGE ESCALATION\n\nGenericAll on Domain Admins = you can add yourself to the group.\n\nCOMMON MISCONFIGURATION:\nCheck this early in enumeration.",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "methodology_guidance": {
+        "after_success": "Check if you can add members: if GenericAll or WriteProperty on 'member' attribute"
+      }
     }
   ]
 }

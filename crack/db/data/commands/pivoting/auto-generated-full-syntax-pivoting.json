@@ -36,7 +36,7 @@
       "description": "Scan localhost to verify which ports are externally accessible",
       "variables": [],
       "alternatives": [
-        "netstat-listening-list",
+        "netstat-listening-tcp",
         "ss-listening-all"
       ],
       "notes": "Verifies ports are listening AND accessible (firewall allows).\n\nInternal verification:\nuse netstat/ss.\n\nUseful after setting up tunnels or forwarding to confirm external accessibility.",

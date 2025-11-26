@@ -79,14 +79,14 @@
       "oscp_relevance": "high",
       "alternatives": [
         "ad-dcsync-impacket-secretsdump-user",
-        "ad-dcsync-mimikatz-all-users"
+        "ad-dcsync-mimikatz-user"
       ],
       "next_steps": [
         "ad-golden-ticket-mimikatz-create",
-        "hashcat-crack-ntlm"
+        "hashcat-crack"
       ],
       "prerequisites": [
-        "ad-check-domain-admin",
+        "ad-dcsync-check-domain-admins",
         "ad-dcsync-check-permissions"
       ]
     },
@@ -169,15 +169,15 @@
       "oscp_relevance": "high",
       "alternatives": [
         "ad-dcsync-mimikatz-single-user",
-        "ad-dcsync-impacket-secretsdump-domain"
+        "ad-dcsync-impacket-secretsdump-user"
       ],
       "next_steps": [
-        "hashcat-crack-ntlm",
-        "crackmapexec-smb-pth"
+        "hashcat-crack",
+        "crackmapexec-smb-spray"
       ],
       "prerequisites": [
-        "ad-check-domain-admin",
-        "crackmapexec-smb-validate"
+        "ad-dcsync-check-domain-admins",
+        "crackmapexec-validate-admin"
       ]
     },
     {
@@ -245,8 +245,7 @@
         "ad-dcsync-impacket-secretsdump-user"
       ],
       "prerequisites": [
-        "powerview-import-module",
-        "ad-check-domain-admin"
+        "ad-dcsync-check-domain-admins"
       ]
     }
   ]

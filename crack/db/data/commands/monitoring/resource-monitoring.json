@@ -36,14 +36,12 @@
       "failure_indicators": [
         "ps: command not found"
       ],
-      "next_steps": [
-        "Investigate high-memory processes: ps-pid-details",
-        "Check if process is legitimate or malicious",
-        "Monitor memory over time: free-memory-human",
-        "Kill memory-hogging process if needed: kill <PID>"
-      ],
+      "next_steps": [],
       "alternatives": [],
-      "notes": "OSCP defense tip:\nUnexpected high-memory processes may indicate cryptominers, memory scrapers, or DoS attacks.\n\nFor top CPU:\nps aux --sort=-%cpu | head -10.\n\nTime estimate:\n2 seconds."
+      "notes": "OSCP defense tip:\nUnexpected high-memory processes may indicate cryptominers, memory scrapers, or DoS attacks.\n\nFor top CPU:\nps aux --sort=-%cpu | head -10.\n\nTime estimate:\n2 seconds.",
+      "methodology_guidance": {
+        "after_success": "Investigate high-memory processes: ps-pid-details Check if process is legitimate or malicious Monitor memory over time: free-memory-human Kill memory-hogging process if needed: kill <PID>"
+      }
     },
     {
       "id": "ps-sort-cpu",
@@ -78,14 +76,12 @@
       "failure_indicators": [
         "ps: command not found"
       ],
-      "next_steps": [
-        "Investigate high-CPU process: ps-pid-details",
-        "Check process legitimacy",
-        "Monitor CPU over time: vmstat-cpu-monitoring",
-        "Kill rogue process: kill <PID>"
-      ],
+      "next_steps": [],
       "alternatives": [],
-      "notes": "OSCP defense tip:\nUnexpected 100% CPU usage may indicate cryptominers, brute-force attacks, or fork bombs.\n\nTime estimate:\n2 seconds."
+      "notes": "OSCP defense tip:\nUnexpected 100% CPU usage may indicate cryptominers, brute-force attacks, or fork bombs.\n\nTime estimate:\n2 seconds.",
+      "methodology_guidance": {
+        "after_success": "Investigate high-CPU process: ps-pid-details Check process legitimacy Monitor CPU over time: vmstat-cpu-monitoring Kill rogue process: kill <PID>"
+      }
     },
     {
       "id": "free-memory-human",
@@ -119,16 +115,15 @@
       "failure_indicators": [
         "free: command not found"
       ],
-      "next_steps": [
-        "If low memory: identify top consumers with ps-sort-memory",
-        "Check swap usage - high swap = potential performance issue",
-        "Monitor memory over time: free -h -s 5 (every 5 seconds)",
-        "Clear cache if needed: sudo sync && sudo echo 3 > /proc/sys/vm/drop_caches"
-      ],
+      "next_steps": [],
       "alternatives": [
         "cat-proc-meminfo"
       ],
-      "notes": "'available' is key metric - memory available for starting new applications (includes reclaimable cache).\n\nLow available memory = system under pressure.\n\nSwap usage (high) = memory exhaustion.\n\nTime estimate:\n<1 second."
+      "notes": "'available' is key metric - memory available for starting new applications (includes reclaimable cache).\n\nLow available memory = system under pressure.\n\nSwap usage (high) = memory exhaustion.\n\nTime estimate:\n<1 second.",
+      "methodology_guidance": {
+        "after_success": "If low memory: identify top consumers with ps-sort-memory Check swap usage - high swap = potential performance issue Clear cache if needed: sudo sync && sudo echo 3 > /proc/sys/vm/drop_caches",
+        "time_estimate": "Monitor memory over time: free -h -s 5 (every 5 seconds)"
+      }
     },
     {
       "id": "vmstat-cpu-monitoring",
@@ -162,14 +157,12 @@
       "failure_indicators": [
         "vmstat: command not found"
       ],
-      "next_steps": [
-        "Monitor CPU idle (id column) - low idle = high CPU usage",
-        "Check swap in/out (si/so) - high values = memory pressure",
-        "Monitor blocked processes (b column) - indicates I/O wait",
-        "Use iostat for detailed I/O statistics"
-      ],
+      "next_steps": [],
       "alternatives": [],
-      "notes": "Key columns:\nr (processes waiting for CPU), b (blocked on I/O), si/so (swap in/out), us (user CPU%), sy (system CPU%), id (idle CPU%), wa (I/O wait%).\n\nHigh 'wa' = disk bottleneck.\n\nFor continuous:\nvmstat 1.\n\nTime estimate:\n5 seconds for 5 samples."
+      "notes": "Key columns:\nr (processes waiting for CPU), b (blocked on I/O), si/so (swap in/out), us (user CPU%), sy (system CPU%), id (idle CPU%), wa (I/O wait%).\n\nHigh 'wa' = disk bottleneck.\n\nFor continuous:\nvmstat 1.\n\nTime estimate:\n5 seconds for 5 samples.",
+      "methodology_guidance": {
+        "after_success": "Monitor CPU idle (id column) - low idle = high CPU usage Check swap in/out (si/so) - high values = memory pressure Monitor blocked processes (b column) - indicates I/O wait Use iostat for detailed I/O statistics"
+      }
     },
     {
       "id": "iostat-disk-stats",
@@ -203,14 +196,13 @@
       "failure_indicators": [
         "iostat: command not found"
       ],
-      "next_steps": [
-        "High %util (>80%) = disk bottleneck",
-        "High await = slow disk response time",
-        "Identify I/O-heavy processes: iotop (if installed)",
-        "Check disk health: smartctl -a /dev/sda"
-      ],
+      "next_steps": [],
       "alternatives": [],
-      "notes": "Key metrics:\nr/s (reads/sec), w/s (writes/sec), %util (disk busy %), await (average I/O wait time in ms).\n\n%util >80% consistently = disk bottleneck.\n\nTime estimate:\n5 seconds for 5 samples.\n\nPart of sysstat package."
+      "notes": "Key metrics:\nr/s (reads/sec), w/s (writes/sec), %util (disk busy %), await (average I/O wait time in ms).\n\n%util >80% consistently = disk bottleneck.\n\nTime estimate:\n5 seconds for 5 samples.\n\nPart of sysstat package.",
+      "methodology_guidance": {
+        "after_success": "High %util (>80%) = disk bottleneck Identify I/O-heavy processes: iotop (if installed) Check disk health: smartctl -a /dev/sda",
+        "time_estimate": "High await = slow disk response time"
+      }
     },
     {
       "id": "uptime-load-average",
@@ -239,16 +231,14 @@
       "failure_indicators": [
         "uptime: command not found"
       ],
-      "next_steps": [
-        "Interpret load average: <1.0 per CPU core = healthy, >2.0 per core = overloaded",
-        "Check CPU count: nproc or grep -c processor /proc/cpuinfo",
-        "If high load: investigate with top-snapshot or ps-sort-cpu",
-        "Check for runaway processes"
-      ],
+      "next_steps": [],
       "alternatives": [
         "cat-proc-loadavg"
       ],
-      "notes": "Load average shows average number of processes in run queue.\n\nOn 4-core system:\nload of 4.0 = 100% CPU utilization, 8.0 = 200% (overloaded).\n\nThree numbers:\n1-min, 5-min, 15-min averages.\n\nTime estimate:\n<1 second."
+      "notes": "Load average shows average number of processes in run queue.\n\nOn 4-core system:\nload of 4.0 = 100% CPU utilization, 8.0 = 200% (overloaded).\n\nThree numbers:\n1-min, 5-min, 15-min averages.\n\nTime estimate:\n<1 second.",
+      "methodology_guidance": {
+        "after_success": "Interpret load average: <1.0 per CPU core = healthy, >2.0 per core = overloaded Check CPU count: nproc or grep -c processor /proc/cpuinfo If high load: investigate with top-snapshot or ps-sort-cpu Check for runaway processes"
+      }
     },
     {
       "id": "df-disk-usage",
@@ -282,14 +272,12 @@
       "failure_indicators": [
         "df: command not found"
       ],
-      "next_steps": [
-        "If >90% used: find large files with du-directory-usage",
-        "Check for log file bloat: du -sh /var/log/*",
-        "Find large files: find / -type f -size +100M 2>/dev/null",
-        "Clear space if needed"
-      ],
+      "next_steps": [],
       "alternatives": [],
-      "notes": "OSCP tip:\nFull disk can prevent logging, break services, and stop reverse shells.\n\nCheck Use% column.\n\nFor specific directory:\ndf -h /var.\n\nTime estimate:\n1 second."
+      "notes": "OSCP tip:\nFull disk can prevent logging, break services, and stop reverse shells.\n\nCheck Use% column.\n\nFor specific directory:\ndf -h /var.\n\nTime estimate:\n1 second.",
+      "methodology_guidance": {
+        "after_success": "If >90% used: find large files with du-directory-usage Check for log file bloat: du -sh /var/log/* Find large files: find / -type f -size +100M 2>/dev/null Clear space if needed"
+      }
     },
     {
       "id": "du-directory-usage",
@@ -329,14 +317,12 @@
         "du: cannot access",
         "Permission denied"
       ],
-      "next_steps": [
-        "Find large subdirectories: du -h <DIR> --max-depth=1 | sort -hr",
-        "Find large files in directory: find <DIR> -type f -size +100M",
-        "Check log rotation: ls -lh /var/log/",
-        "Clear old logs or temporary files"
-      ],
+      "next_steps": [],
       "alternatives": [],
-      "notes": "Useful for finding what's consuming disk space.\n\nTo see subdirectories:\ndu -h <DIR> --max-depth=1 | sort -hr.\n\nTime estimate:\n1-10 seconds depending on directory size."
+      "notes": "Useful for finding what's consuming disk space.\n\nTo see subdirectories:\ndu -h <DIR> --max-depth=1 | sort -hr.\n\nTime estimate:\n1-10 seconds depending on directory size.",
+      "methodology_guidance": {
+        "after_success": "Find large subdirectories: du -h <DIR> --max-depth=1 | sort -hr Find large files in directory: find <DIR> -type f -size +100M Check log rotation: ls -lh /var/log/ Clear old logs or temporary files"
+      }
     },
     {
       "id": "lsof-user-files",
@@ -378,14 +364,12 @@
         "lsof: command not found",
         "Permission denied"
       ],
-      "next_steps": [
-        "Identify active processes for user",
-        "Check network connections: lsof -u <USER> -i",
-        "Look for suspicious file access",
-        "Check deleted files still held open: lsof -u <USER> | grep deleted"
-      ],
+      "next_steps": [],
       "alternatives": [],
-      "notes": "Shows everything a user has open:\nregular files, directories, network sockets, devices.\n\nUseful for investigating compromised accounts.\n\nTime estimate:\n2-5 seconds."
+      "notes": "Shows everything a user has open:\nregular files, directories, network sockets, devices.\n\nUseful for investigating compromised accounts.\n\nTime estimate:\n2-5 seconds.",
+      "methodology_guidance": {
+        "after_success": "Identify active processes for user Check network connections: lsof -u <USER> -i Look for suspicious file access Check deleted files still held open: lsof -u <USER> | grep deleted"
+      }
     },
     {
       "id": "lsof-directory-usage",
@@ -424,15 +408,14 @@
         "No output (no processes using directory)",
         "lsof: command not found"
       ],
-      "next_steps": [
-        "Identify processes before unmounting filesystem",
-        "Kill processes if needed: kill <PID>",
-        "Use fuser for simpler output: fuser-directory-processes"
-      ],
+      "next_steps": [],
       "alternatives": [
         "fuser-directory-processes"
       ],
-      "notes": "Useful before unmounting filesystems or deleting directories.\n\n+D is recursive (slow), +d is non-recursive (fast).\n\nTime estimate:\n5-30 seconds depending on directory size."
+      "notes": "Useful before unmounting filesystems or deleting directories.\n\n+D is recursive (slow), +d is non-recursive (fast).\n\nTime estimate:\n5-30 seconds depending on directory size.",
+      "methodology_guidance": {
+        "after_success": "Identify processes before unmounting filesystem Kill processes if needed: kill <PID> Use fuser for simpler output: fuser-directory-processes"
+      }
     },
     {
       "id": "fuser-directory-processes",
@@ -471,15 +454,14 @@
         "No processes found",
         "fuser: command not found"
       ],
-      "next_steps": [
-        "Kill processes: fuser -k <DIRECTORY> (kills all processes using dir)",
-        "Unmount filesystem after clearing processes",
-        "Use -m flag for mounted filesystems: fuser -vm <MOUNT_POINT>"
-      ],
+      "next_steps": [],
       "alternatives": [
         "lsof-directory-usage"
       ],
-      "notes": "Lighter weight than lsof.\n\nUseful before unmounting.\n\nACCESS types:\nc (current directory), e (executable), f (open file), r (root directory).\n\nTime estimate:\n1 second."
+      "notes": "Lighter weight than lsof.\n\nUseful before unmounting.\n\nACCESS types:\nc (current directory), e (executable), f (open file), r (root directory).\n\nTime estimate:\n1 second.",
+      "methodology_guidance": {
+        "after_success": "Kill processes: fuser -k <DIRECTORY> (kills all processes using dir) Unmount filesystem after clearing processes Use -m flag for mounted filesystems: fuser -vm <MOUNT_POINT>"
+      }
     },
     {
       "id": "w-user-activity",
@@ -514,16 +496,12 @@
       "failure_indicators": [
         "w: command not found"
       ],
-      "next_steps": [
-        "Identify unauthorized users",
-        "Check suspicious commands in WHAT column",
-        "View login history: last-login-history",
-        "Monitor for new logins in real-time"
-      ],
-      "alternatives": [
-        "user"
-      ],
-      "notes": "CRITICAL for defense monitoring.\n\nShows active users, their terminal, source IP (FROM), login time, idle time, and current command.\n\nOSCP tip:\nCheck FROM column for unexpected IPs, WHAT column for suspicious commands (shells, persistence scripts).\n\nTime estimate:\n<1 second."
+      "next_steps": [],
+      "alternatives": [],
+      "notes": "CRITICAL for defense monitoring.\n\nShows active users, their terminal, source IP (FROM), login time, idle time, and current command.\n\nOSCP tip:\nCheck FROM column for unexpected IPs, WHAT column for suspicious commands (shells, persistence scripts).\n\nTime estimate:\n<1 second.",
+      "methodology_guidance": {
+        "after_success": "Identify unauthorized users Check suspicious commands in WHAT column View login history: last-login-history Monitor for new logins in real-time"
+      }
     },
     {
       "id": "who-logged-in",
@@ -554,16 +532,14 @@
       "failure_indicators": [
         "who: command not found"
       ],
-      "next_steps": [
-        "Check for unauthorized sessions",
-        "View full login history: last-login-history",
-        "Simple user list: users"
-      ],
+      "next_steps": [],
       "alternatives": [
-        "w-user-activity",
-        "user"
+        "w-user-activity"
       ],
-      "notes": "More detailed than 'users' command but less info than 'w'.\n\nShows boot time, runlevel, login processes.\n\nTime estimate:\n<1 second."
+      "notes": "More detailed than 'users' command but less info than 'w'.\n\nShows boot time, runlevel, login processes.\n\nTime estimate:\n<1 second.",
+      "methodology_guidance": {
+        "after_success": "Check for unauthorized sessions View full login history: last-login-history Simple user list: users"
+      }
     },
     {
       "id": "last-login-history",
@@ -597,14 +573,12 @@
         "last: command not found",
         "wtmp begins"
       ],
-      "next_steps": [
-        "Look for logins from unexpected IPs",
-        "Check login times (unusual hours = suspicious)",
-        "View failed login attempts: lastb-failed-logins",
-        "View last login per user: lastlog-user-last"
-      ],
+      "next_steps": [],
       "alternatives": [],
-      "notes": "Reads /var/log/wtmp.\n\nOSCP defense tip:\nLook for (1) Logins from unexpected IPs, (2) Short-lived sessions (in/out quickly = potential intrusion), (3) Logins at unusual hours.\n\nFor specific user:\nlast -a <USERNAME>.\n\nTime estimate:\n1-3 seconds."
+      "notes": "Reads /var/log/wtmp.\n\nOSCP defense tip:\nLook for (1) Logins from unexpected IPs, (2) Short-lived sessions (in/out quickly = potential intrusion), (3) Logins at unusual hours.\n\nFor specific user:\nlast -a <USERNAME>.\n\nTime estimate:\n1-3 seconds.",
+      "methodology_guidance": {
+        "after_success": "Look for logins from unexpected IPs Check login times (unusual hours = suspicious) View failed login attempts: lastb-failed-logins View last login per user: lastlog-user-last"
+      }
     },
     {
       "id": "lastlog-user-last",
@@ -635,15 +609,14 @@
         "**Never logged in**",
         "lastlog: command not found"
       ],
-      "next_steps": [
-        "Identify dormant accounts (never logged in)",
-        "Check service accounts for unexpected logins",
-        "View specific user: lastlog -u <USERNAME>"
-      ],
+      "next_steps": [],
       "alternatives": [
         "last-login-history"
       ],
-      "notes": "Shows one entry per user (most recent login).\n\nReads /var/log/lastlog.\n\n'**Never logged in**' is normal for service accounts.\n\nTime estimate:\n1 second."
+      "notes": "Shows one entry per user (most recent login).\n\nReads /var/log/lastlog.\n\n'**Never logged in**' is normal for service accounts.\n\nTime estimate:\n1 second.",
+      "methodology_guidance": {
+        "after_success": "Identify dormant accounts (never logged in) Check service accounts for unexpected logins View specific user: lastlog -u <USERNAME>"
+      }
     }
   ]
 }

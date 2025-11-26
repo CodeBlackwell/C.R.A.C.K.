@@ -60,7 +60,7 @@
         "ad-golden-ticket-mimikatz-create"
       ],
       "prerequisites": [
-        "crackmapexec-smb-validate"
+        "crackmapexec-validate-admin"
       ]
     },
     {
@@ -112,9 +112,7 @@
         "ad-silver-ticket-mimikatz-create",
         "ad-golden-ticket-mimikatz-create"
       ],
-      "prerequisites": [
-        "powerview-import-module"
-      ]
+      "prerequisites": []
     },
     {
       "id": "ad-sid-wmic-extract",

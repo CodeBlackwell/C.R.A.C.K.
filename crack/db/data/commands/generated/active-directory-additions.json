@@ -14,10 +14,10 @@
         "gui"
       ],
       "prerequisites": [],
-      "next_steps": [
-        "Run pre-built queries",
-        "Find attack paths"
-      ]
+      "next_steps": [],
+      "methodology_guidance": {
+        "after_success": "Run pre-built queries Find attack paths"
+      }
     },
     {
       "id": "bloodhound-query",
@@ -32,10 +32,10 @@
         "active-directory",
         "analysis"
       ],
-      "next_steps": [
-        "Follow path steps",
-        "Test exploits"
-      ]
+      "next_steps": [],
+      "methodology_guidance": {
+        "after_success": "Follow path steps Test exploits"
+      }
     },
     {
       "id": "cme-smb-users",
@@ -70,13 +70,13 @@
         "active-directory",
         "enumeration"
       ],
-      "next_steps": [
-        "Build user list",
-        "Password spray"
-      ],
+      "next_steps": [],
       "flag_explanations": {
         "--users": "Enumerate domain users",
         "--groups": "Enumerate domain groups"
+      },
+      "methodology_guidance": {
+        "after_success": "Build user list Password spray"
       }
     },
     {
@@ -120,9 +120,10 @@
         "lateral-movement"
       ],
       "prerequisites": [],
-      "next_steps": [
-        "Execute commands as SYSTEM"
-      ]
+      "next_steps": [],
+      "methodology_guidance": {
+        "after_success": "Execute commands as SYSTEM"
+      }
     },
     {
       "id": "smbexec-shell",
@@ -168,9 +169,10 @@
         "psexec-shell",
         "wmiexec-shell"
       ],
-      "next_steps": [
-        "Execute commands"
-      ]
+      "next_steps": [],
+      "methodology_guidance": {
+        "after_success": "Execute commands"
+      }
     },
     {
       "id": "wmiexec-shell",
@@ -212,9 +214,10 @@
         "active-directory",
         "lateral-movement"
       ],
-      "next_steps": [
-        "Execute commands"
-      ]
+      "next_steps": [],
+      "methodology_guidance": {
+        "after_success": "Execute commands"
+      }
     },
     {
       "id": "secretsdump-hashes",
@@ -261,12 +264,12 @@
         "LINUX"
       ],
       "prerequisites": [
-        "ad-check-domain-admin",
-        "crackmapexec-smb-validate"
+        "ad-dcsync-check-domain-admins",
+        "crackmapexec-validate-admin"
       ],
       "next_steps": [
-        "hashcat-crack-ntlm",
-        "crackmapexec-smb-pth",
+        "hashcat-crack",
+        "crackmapexec-smb-spray",
         "ad-golden-ticket-mimikatz-create"
       ],
       "alternatives": [
@@ -343,13 +346,14 @@
         "kerberos",
         "active-directory"
       ],
-      "next_steps": [
-        "Crack AS-REP hashes with hashcat/john"
-      ],
+      "next_steps": [],
       "flag_explanations": {
         "-dc-ip": "Domain controller IP",
         "-usersfile": "File containing usernames",
         "-request": "Request TGT for users"
+      },
+      "methodology_guidance": {
+        "after_success": "Crack AS-REP hashes with hashcat/john"
       }
     },
     {
@@ -393,13 +397,14 @@
         "active-directory"
       ],
       "prerequisites": [],
-      "next_steps": [
-        "Crack TGS hashes with hashcat mode 13100"
-      ],
+      "next_steps": [],
       "flag_explanations": {
         "-request": "Request TGS tickets",
         "-dc-ip": "Domain controller IP",
         "-outputfile": "Save hashes to file"
+      },
+      "methodology_guidance": {
+        "after_success": "Crack TGS hashes with hashcat mode 13100"
       }
     },
     {
@@ -437,15 +442,15 @@
         "powershell"
       ],
       "prerequisites": [],
-      "next_steps": [
-        "Upload files",
-        "Execute PowerShell commands"
-      ],
+      "next_steps": [],
       "flag_explanations": {
         "-i": "Target IP",
         "-u": "Username",
         "-p": "Password",
         "-H": "NTLM hash (pass-the-hash)"
+      },
+      "methodology_guidance": {
+        "after_success": "Upload files Execute PowerShell commands"
       }
     },
     {
@@ -482,11 +487,10 @@
         "enumeration",
         "active-directory"
       ],
-      "next_steps": [
-        "enumdomusers (list users)",
-        "enumdomgroups (list groups)",
-        "queryuser <RID>"
-      ]
+      "next_steps": [],
+      "methodology_guidance": {
+        "after_success": "enumdomusers (list users) enumdomgroups (list groups) queryuser <RID>"
+      }
     },
     {
       "id": "smbclient-connect",
@@ -522,15 +526,14 @@
         "active-directory",
         "shares"
       ],
-      "next_steps": [
-        "ls (list files)",
-        "get <FILE> (download)",
-        "put <FILE> (upload)"
-      ],
+      "next_steps": [],
       "flag_explanations": {
         "-U": "Username",
         "-N": "No password (null session)",
         "-L": "List shares"
+      },
+      "methodology_guidance": {
+        "after_success": "ls (list files) get <FILE> (download) put <FILE> (upload)"
       }
     },
     {
@@ -567,15 +570,15 @@
         "active-directory",
         "shares"
       ],
-      "next_steps": [
-        "Access writable shares",
-        "Download sensitive files"
-      ],
+      "next_steps": [],
       "flag_explanations": {
         "-H": "Target host",
         "-u": "Username",
         "-p": "Password",
         "-R": "Recursively list shares"
+      },
+      "methodology_guidance": {
+        "after_success": "Access writable shares Download sensitive files"
       }
     },
     {
@@ -624,11 +627,10 @@
         "active-directory",
         "enumeration"
       ],
-      "next_steps": [
-        "Extract users",
-        "Find service accounts",
-        "Check descriptions for passwords"
-      ]
+      "next_steps": [],
+      "methodology_guidance": {
+        "after_success": "Extract users Find service accounts Check descriptions for passwords"
+      }
     },
     {
       "id": "rubeus-asreproast",
@@ -646,14 +648,14 @@
         "windows"
       ],
       "prerequisites": [],
-      "next_steps": [
-        "Transfer hashes to attacker",
-        "Crack with hashcat"
-      ],
+      "next_steps": [],
       "flag_explanations": {
         "/format:hashcat": "Output format for hashcat",
         "/outfile": "Output file for hashes",
         "/user:<USER>": "Target specific user"
+      },
+      "methodology_guidance": {
+        "after_success": "Transfer hashes to attacker Crack with hashcat"
       }
     },
     {
@@ -672,13 +674,14 @@
         "windows"
       ],
       "prerequisites": [],
-      "next_steps": [
-        "Crack TGS hashes with hashcat mode 13100"
-      ],
+      "next_steps": [],
       "flag_explanations": {
         "/format:hashcat": "Output format for hashcat",
         "/outfile": "Output file for hashes",
         "/user:<USER>": "Target specific SPN account"
+      },
+      "methodology_guidance": {
+        "after_success": "Crack TGS hashes with hashcat mode 13100"
       }
     }
   ]

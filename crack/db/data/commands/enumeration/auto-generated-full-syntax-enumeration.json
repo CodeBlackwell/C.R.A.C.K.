@@ -134,7 +134,7 @@
         }
       ],
       "alternatives": [
-        "john-list"
+        "john-show-cracked"
       ],
       "notes": "Bash one-liner for educational purposes or when hashcat/john unavailable.\n\nExtremely slow compared to dedicated tools.\n\nChange md5sum to sha1sum, sha256sum, etc.\n\nfor other algorithms.\n\nNot recommended for production use.",
       "oscp_relevance": "low",

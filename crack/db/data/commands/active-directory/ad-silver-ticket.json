@@ -281,7 +281,7 @@
         "ad-silver-ticket-rubeus-create"
       ],
       "prerequisites": [
-        "crackmapexec-smb-validate"
+        "crackmapexec-validate-admin"
       ]
     },
     {
@@ -338,8 +338,6 @@
       "oscp_relevance": "high",
       "alternatives": [],
       "next_steps": [
-        "psexec-lateral-movement",
-        "crackmapexec-smb-exec",
         "evil-winrm-creds"
       ],
       "prerequisites": [
