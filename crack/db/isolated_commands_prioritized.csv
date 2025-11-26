@@ -1,189 +1,26 @@
 command_id,name,category,subcategory,oscp_priority,used_in_writeups,tool_family,priority_tier,source_file
-apache2-start,Start Apache Web Server,pivoting,file-transfer,HIGH,False,other,2,commands/pivoting/linux-utilities.json
-attack-mode-decision,Choose Attack Mode Strategy,enumeration,N/A,HIGH,False,other,2,commands/enumeration/password-attacks-methodology.json
-base64-transfer,Base64 Encoding Transfer,post-exploit,general-transfer,HIGH,False,other,2,commands/post-exploit/general-transfer.json
-bash-dev-tcp-download,Bash /dev/tcp Download,post-exploit,data-exfiltration,HIGH,False,other,2,commands/post-exploit/auto-generated-full-syntax-post-exploit.json
-calculate-keyspace,Calculate Password Keyspace,enumeration,N/A,HIGH,False,other,2,commands/enumeration/password-attacks-methodology.json
-cat-etc-group,Cat Etc Group,post-exploit,privilege-escalation,HIGH,False,other,2,commands/post-exploit/auto-generated-full-syntax-post-exploit.json
-cat-etc-shadow,Cat Etc Shadow,post-exploit,credential-dumping,HIGH,False,other,2,commands/post-exploit/auto-generated-full-syntax-post-exploit.json
-cat-etc-shadow-2,Cat Etc Shadow 2,post-exploit,credential-dumping,HIGH,False,other,2,commands/post-exploit/auto-generated-full-syntax-post-exploit.json
-cat-etc-sudoers,Cat Etc Sudoers,post-exploit,privilege-escalation,HIGH,False,other,2,commands/post-exploit/auto-generated-full-syntax-post-exploit.json
-cat-etc-sudoers-2,Cat Etc Sudoers 2,post-exploit,privilege-escalation,HIGH,False,other,2,commands/post-exploit/auto-generated-full-syntax-post-exploit.json
-cat-mnt-etc,Cat Mnt Etc,post-exploit,general,HIGH,False,other,2,commands/post-exploit/auto-generated-full-syntax-post-exploit.json
-certutil-download,Certutil Windows Download,post-exploit,general-transfer,HIGH,False,other,2,commands/post-exploit/general-transfer.json
-check-remote-registry-service,Check Remote Registry Service Status,enumeration,N/A,HIGH,False,other,2,commands/enumeration/ad-os-enumeration.json
-create-policy-rules,Generate Rules from Password Policy,enumeration,N/A,HIGH,False,other,2,commands/enumeration/password-attacks-wordlist-rules.json
-cron-directories-list,List Cron Directories,monitoring,scheduled-tasks,HIGH,False,other,2,commands/monitoring/scheduled-tasks.json
-crontab-user-list,List User Cron Jobs,monitoring,scheduled-tasks,HIGH,False,other,2,commands/monitoring/scheduled-tasks.json
-crontab-user-specific,List Another User's Cron Jobs,monitoring,scheduled-tasks,HIGH,False,other,2,commands/monitoring/scheduled-tasks.json
-curl-upload,Curl File Upload,post-exploit,general-transfer,HIGH,False,curl,2,commands/post-exploit/general-transfer.json
-curl-web-server-verify,Verify Web Server Status,exploitation,web-exploitation,HIGH,False,curl,2,commands/exploitation/auto-generated-full-syntax-exploitation.json
-dir-admin-share,List Administrative Share Contents,enumeration,N/A,HIGH,False,other,2,commands/active-directory/ad-powershell-remoting.json
-docker-run-pid,Docker Nsenter Container Escape,post-exploit,privilege-escalation,HIGH,False,other,2,commands/post-exploit/auto-generated-full-syntax-post-exploit.json
-docker-run-pid-2,Docker Nsenter Container Escape,post-exploit,privilege-escalation,HIGH,False,other,2,commands/post-exploit/auto-generated-full-syntax-post-exploit.json
-docker-run-v,Docker Run V,post-exploit,privilege-escalation,HIGH,False,other,2,commands/post-exploit/auto-generated-full-syntax-post-exploit.json
-dsquery-admins,Query Domain Admins Group (dsquery),enumeration,N/A,HIGH,False,other,2,commands/enumeration/ad-legacy-enumeration.json
-echo-newroot-salt,Echo Newroot Salt,post-exploit,credential-dumping,HIGH,False,other,2,commands/post-exploit/auto-generated-full-syntax-post-exploit.json
-edit-etc-shadow,Edit Etc Shadow,post-exploit,credential-dumping,HIGH,False,other,2,commands/post-exploit/auto-generated-full-syntax-post-exploit.json
-enable-remote-registry,Enable Remote Registry Service,enumeration,N/A,HIGH,False,other,2,commands/enumeration/ad-os-enumeration.json
-file-transfer-curl,Linux: curl Download,post-exploit,exfiltration,HIGH,False,other,2,commands/post-exploit/exfiltration.json
-file-transfer-nc-push,Netcat: Push File to Target,post-exploit,exfiltration,HIGH,False,other,2,commands/post-exploit/exfiltration.json
-file-transfer-powershell-download,Windows: PowerShell Download File,post-exploit,exfiltration,HIGH,False,other,2,commands/post-exploit/exfiltration.json
-file-transfer-python-http,Python HTTP Server (Download from Target),post-exploit,exfiltration,HIGH,False,other,2,commands/post-exploit/exfiltration.json
-file-transfer-smb,Windows: SMB Transfer,post-exploit,exfiltration,HIGH,False,other,2,commands/post-exploit/exfiltration.json
-file-transfer-wget,Linux: wget Download,post-exploit,exfiltration,HIGH,False,other,2,commands/post-exploit/exfiltration.json
-find-files,Find Files by Pattern,enumeration,N/A,HIGH,False,other,2,commands/utilities/system-utilities.json
-find-name-authorized,Find Name Authorized,post-exploit,credential-dumping,HIGH,False,other,2,commands/post-exploit/auto-generated-full-syntax-post-exploit.json
-get-acl,Get Access Control List,enumeration,N/A,HIGH,False,other,2,commands/post-exploit/windows-powershell-cmdlets.json
-get-itemproperty,Get Registry Item Property,enumeration,N/A,HIGH,False,other,2,commands/post-exploit/windows-powershell-cmdlets.json
-get-scheduledtask,Get Scheduled Tasks,enumeration,N/A,HIGH,False,other,2,commands/post-exploit/windows-powershell-cmdlets.json
-get-service,Get Windows Services,enumeration,N/A,HIGH,False,other,2,commands/post-exploit/windows-powershell-cmdlets.json
-getcap-bin-systemctl,Getcap Bin Systemctl,post-exploit,privilege-escalation,HIGH,False,other,2,commands/post-exploit/auto-generated-full-syntax-post-exploit.json
-gobuster-dir,Directory Bruteforce,web,N/A,HIGH,False,gobuster,2,commands/web/general.json
-gpp-password-decrypt,Decrypt GPP Password,enumeration,N/A,HIGH,False,other,2,commands/enumeration/ad-session-share-enum.json
-grep-file,Search File Contents,enumeration,N/A,HIGH,False,other,2,commands/utilities/system-utilities.json
-grep-r-etc,Grep R Etc,post-exploit,enumeration,HIGH,False,other,2,commands/post-exploit/auto-generated-full-syntax-post-exploit.json
-grep-r-private,Grep R Private,post-exploit,credential-dumping,HIGH,False,other,2,commands/post-exploit/auto-generated-full-syntax-post-exploit.json
-grep-sudo-commands,Search for Sudo Command Usage,monitoring,log-monitoring,HIGH,False,other,2,commands/monitoring/log-monitoring.json
-hash-rate-benchmark,Benchmark Hash Cracking Speed,enumeration,N/A,HIGH,False,other,2,commands/enumeration/password-attacks-methodology.json
-hashcat-ntlm-crack,Crack NTLM Hash (Mode 1000),enumeration,N/A,HIGH,False,hashcat,2,commands/enumeration/password-attacks-hashcat.json
-hashcat-sha256-crack,Crack SHA256 Hash (Mode 1400),enumeration,N/A,HIGH,False,hashcat,2,commands/enumeration/password-attacks-hashcat.json
-hashcat-show-cracked,Show Cracked Passwords,enumeration,N/A,HIGH,False,hashcat,2,commands/enumeration/password-attacks-hashcat.json
-hashcat-test-rules,Test Hashcat Rules with Stdout,enumeration,N/A,HIGH,False,hashcat,2,commands/enumeration/password-attacks-wordlist-rules.json
-hashid,Hashid - Modern Hash Identifier,enumeration,N/A,HIGH,False,other,2,commands/enumeration/password-attacks-hash-formatting.json
-hydra-http-post-form,HTTP POST Login Form Attack,enumeration,N/A,HIGH,False,hydra,2,commands/enumeration/password-attacks-hydra.json
-hydra-rdp-spray,RDP Password Spraying,enumeration,N/A,HIGH,False,hydra,2,commands/enumeration/password-attacks-hydra.json
-hydra-ssh-single-user,SSH Dictionary Attack - Single User,enumeration,N/A,HIGH,False,hydra,2,commands/enumeration/password-attacks-hydra.json
-ip-addr,Display Network Interfaces,pivoting,enumeration,HIGH,False,other,2,commands/pivoting/linux-utilities.json
-ipconfig-all,IP Configuration All,pivoting,enumeration,HIGH,False,other,2,commands/pivoting/windows-utilities.json
-john-show-cracked,Show Cracked Passwords,enumeration,N/A,HIGH,False,john,2,commands/enumeration/password-attacks-john.json
-john-test-rules,Test John Rules with Stdout,enumeration,N/A,HIGH,False,john,2,commands/enumeration/password-attacks-wordlist-rules.json
-john-wordlist-attack,John Wordlist Attack,enumeration,N/A,HIGH,False,john,2,commands/enumeration/password-attacks-john.json
-journalctl-service-follow,Follow Specific Service Logs,monitoring,log-monitoring,HIGH,False,other,2,commands/monitoring/log-monitoring.json
-lfi-test,LFI Basic Test,web,N/A,HIGH,False,other,2,commands/web/general.json
-linux-cron-enum,Enumerate Cron Jobs,post-exploit,linux,HIGH,False,other,2,commands/post-exploit/linux.json
-linux-cron-jobs,Enumerate Cron Jobs,post-exploit,linux,HIGH,False,other,2,commands/post-exploit/linux.json
-linux-docker-escape,Check Docker Group Membership,post-exploit,linux,HIGH,False,other,2,commands/post-exploit/linux.json
-linux-kernel-version,Check Kernel Version,post-exploit,linux,HIGH,False,other,2,commands/post-exploit/linux.json
-linux-linpeas,Run LinPEAS Enumeration,post-exploit,linux,HIGH,False,other,2,commands/post-exploit/linux.json
-linux-path-hijack,PATH Hijacking,post-exploit,linux,HIGH,False,other,2,commands/post-exploit/linux.json
-linux-privesc-linenum,LinEnum - Basic Enumeration,post-exploit,linux,HIGH,False,other,2,commands/post-exploit/linux.json
-linux-privesc-linpeas,LinPEAS - Automated Enumeration,post-exploit,linux,HIGH,False,other,2,commands/post-exploit/linux.json
-linux-sudo-check,Check Sudo Privileges,post-exploit,linux,HIGH,False,other,2,commands/post-exploit/linux.json
-linux-sudo-list,Check Sudo Permissions,post-exploit,linux,HIGH,False,other,2,commands/post-exploit/linux.json
-linux-suid-find,Find SUID Binaries,post-exploit,linux,HIGH,False,other,2,commands/post-exploit/linux.json
-linux-wildcard-injection,Wildcard Injection in Scripts,post-exploit,linux,HIGH,False,other,2,commands/post-exploit/linux.json
-linux-writable-etc-passwd,Check Writable /etc/passwd,post-exploit,linux,HIGH,False,other,2,commands/post-exploit/linux.json
-linux-writable-passwd,Check /etc/passwd Permissions,post-exploit,linux,HIGH,False,other,2,commands/post-exploit/linux.json
-ls-la-bin,Ls La Bin,post-exploit,privilege-escalation,HIGH,False,other,2,commands/post-exploit/auto-generated-full-syntax-post-exploit.json
-nc-connect,Netcat Connection,exploitation,N/A,HIGH,False,nc,2,commands/utilities/network-utilities.json
-nc-file-transfer,Netcat File Transfer,post-exploit,general-transfer,HIGH,False,nc,2,commands/post-exploit/general-transfer.json
-nc-reverse-shell,Netcat Reverse Shell,exploitation,N/A,HIGH,False,nc,2,commands/exploitation/general.json
-net-accounts-domain,Get Domain Password Policy,enumeration,N/A,HIGH,False,other,2,commands/enumeration/ad-legacy-enumeration.json
-net-use-admin-share,Map Administrative Share with Credentials,post-exploit,N/A,HIGH,False,other,2,commands/active-directory/ad-powershell-remoting.json
-netstat-windows,Netstat Network Connections,pivoting,enumeration,HIGH,False,other,2,commands/pivoting/windows-utilities.json
-nmap-ping-sweep,Network Ping Sweep,recon,N/A,HIGH,False,nmap,2,commands/recon.json
-nmap-udp-scan,Nmap UDP Port Scan,enumeration,N/A,HIGH,False,nmap,2,commands/utilities/network-utilities.json
-pgrep-pattern-search,Find Processes by Name Pattern,monitoring,process-enumeration,HIGH,False,other,2,commands/monitoring/process-enumeration.json
-php-download,PHP Download Script,post-exploit,general-transfer,HIGH,False,other,2,commands/post-exploit/general-transfer.json
-ping-host,Ping Host,recon,N/A,HIGH,False,other,2,commands/utilities/network-utilities.json
-powershell-download,PowerShell Download Methods,post-exploit,general-transfer,HIGH,False,powershell,2,commands/post-exploit/general-transfer.json
-powershell-get-content,PowerShell Read File with Get-Content,utilities,file-operations,HIGH,False,powershell,2,commands/utilities/windows-file-operations.json
-powershell-reverse-shell,PowerShell Reverse Shell,exploitation,N/A,HIGH,False,powershell,2,commands/exploitation/general.json
-powerview-get-netuser-all,Enumerate All Domain Users (PowerView),enumeration,N/A,HIGH,False,other,2,commands/enumeration/ad-powerview-core.json
-proxychains-config,Configure Proxychains,pivoting,proxychains,HIGH,False,other,2,commands/pivoting/proxychains-utilities.json
-proxychains-nmap,Nmap Through Proxychains,pivoting,proxychains,HIGH,False,other,2,commands/pivoting/proxychains-utilities.json
-ps-get-current-domain,PowerShell Get Current Domain Information,ENUMERATION,ACTIVE_DIRECTORY,HIGH,False,ps,2,commands/enumeration/ps-get-current-domain.json
-ps-ldap-directorysearcher,PowerShell .NET DirectorySearcher LDAP Query,ENUMERATION,ACTIVE_DIRECTORY,HIGH,False,ps,2,commands/enumeration/ps-ldap-directorysearcher.json
-ps-reverse-shell-base64,PowerShell Base64 Encoded Reverse Shell,SHELLS,REVERSE_SHELL,HIGH,False,ps,2,commands/shells/ps-reverse-shell-base64.json
-ps-reverse-shell-encoder-python,Python Script - PowerShell Reverse Shell Base64 Encoder,SHELLS,PAYLOAD_GENERATION,HIGH,False,ps,2,commands/shells/ps-reverse-shell-encoder-python.json
-ps-search-desktop-flags,PowerShell Search Desktop for Flags,POST_EXPLOIT,FLAG_RETRIEVAL,HIGH,False,ps,2,commands/post-exploit/ps-search-desktop-flags.json
-ps-user-filter,Processes by User,monitoring,process-enumeration,HIGH,False,ps,2,commands/monitoring/process-enumeration.json
-ps-winrm-credential-setup,PowerShell WinRM Credential Object Setup,LATERAL_MOVEMENT,WINRM,HIGH,False,ps,2,commands/lateral-movement/ps-winrm-credential-setup.json
-ps-winrm-invoke-command,PowerShell WinRM Invoke-Command Remote Execution,LATERAL_MOVEMENT,WINRM,HIGH,False,ps,2,commands/lateral-movement/ps-winrm-invoke-command.json
-psql-connect,PostgreSQL Client Connection,pivoting,database-access,HIGH,False,ps,2,commands/pivoting/linux-utilities.json
-rubeus-ptt,Rubeus Pass-the-Ticket,exploitation,active-directory,HIGH,False,rubeus,2,commands/exploitation/auto-generated-full-syntax-exploitation.json
-rule-append-digit,Append Single Digit Rule,enumeration,N/A,HIGH,False,other,2,commands/enumeration/password-attacks-wordlist-rules.json
-rule-capitalize-append,Capitalize + Append Special Char Rule,enumeration,N/A,HIGH,False,other,2,commands/enumeration/password-attacks-wordlist-rules.json
-rule-prepend-year,Prepend Year Rule,enumeration,N/A,HIGH,False,other,2,commands/enumeration/password-attacks-wordlist-rules.json
-search-share-files,Search Share for Sensitive Files,enumeration,N/A,HIGH,False,other,2,commands/enumeration/ad-session-share-enum.json
-searchsploit,Searchsploit Exploit Search,exploitation,N/A,HIGH,False,other,2,commands/exploitation/general.json
-searchsploit-linux-capability,SearchSploit Linux Capability Exploits,post-exploit,privilege-escalation,HIGH,False,other,2,commands/post-exploit/auto-generated-full-syntax-post-exploit.json
-smb-enum,SMB Enumeration,recon,N/A,HIGH,False,other,2,commands/recon.json
-smb-server,Impacket SMB Server,post-exploit,general-transfer,HIGH,False,other,2,commands/post-exploit/general-transfer.json
-smbclient-list-shares,SMB Share Enumeration (No Auth),pivoting,smb-enumeration,HIGH,False,smbclient,2,commands/pivoting/linux-utilities.json
-sqlmap-basic,SQLMap Basic Scan,web,N/A,HIGH,False,sqlmap,2,commands/web/general.json
-ssh-connect,SSH Connection,exploitation,N/A,HIGH,False,ssh,2,commands/utilities/network-utilities.json
-ssh-dynamic-port-forward,SSH Dynamic Port Forward (SOCKS Proxy),pivoting,ssh_tunneling,HIGH,False,ssh,2,commands/pivoting/ssh-tunneling.json
-ssh-local-port-forward,SSH Local Port Forward,pivoting,ssh_tunneling,HIGH,False,ssh,2,commands/pivoting/ssh-tunneling.json
-ssh-remote-dynamic-port-forward,SSH Remote Dynamic Port Forward (Reverse SOCKS),pivoting,ssh_tunneling,HIGH,False,ssh,2,commands/pivoting/ssh-tunneling.json
-ssh-remote-port-forward,SSH Remote Port Forward (Reverse Tunnel),pivoting,ssh_tunneling,HIGH,False,ssh,2,commands/pivoting/ssh-tunneling.json
-stat-var-run,Stat Var Run,post-exploit,privilege-escalation,HIGH,False,other,2,commands/post-exploit/auto-generated-full-syntax-post-exploit.json
-strings-file,Extract Strings,enumeration,N/A,HIGH,False,other,2,commands/utilities/text-processing-utilities.json
-systemctl-service-permissions,Check systemd Service File Permissions,monitoring,service-enumeration,HIGH,False,other,2,commands/monitoring/service-enumeration.json
-systeminfo-windows,System Information,pivoting,enumeration,HIGH,False,other,2,commands/pivoting/windows-utilities.json
-tail-follow-filter,Follow Log with Grep Filter,monitoring,log-monitoring,HIGH,False,other,2,commands/monitoring/log-monitoring.json
-test-shadow-file,Test Shadow File,post-exploit,credential-dumping,HIGH,False,other,2,commands/post-exploit/auto-generated-full-syntax-post-exploit.json
-test-share-access,Test Share Access,enumeration,N/A,HIGH,False,other,2,commands/enumeration/ad-session-share-enum.json
-test-sudo-without,Test Sudo Without,post-exploit,privilege-escalation,HIGH,False,other,2,commands/post-exploit/auto-generated-full-syntax-post-exploit.json
-test-wsman-connectivity,Test WinRM Connectivity,enumeration,N/A,HIGH,False,other,2,commands/active-directory/ad-powershell-remoting.json
-use-cp-command,Use Cp Command,post-exploit,general,HIGH,False,other,2,commands/post-exploit/auto-generated-full-syntax-post-exploit.json
-vhost-fuzzing-gobuster,Virtual Host Discovery with Gobuster,recon,N/A,HIGH,False,other,2,commands/recon.json
-web-shell-php,Simple PHP Web Shell,exploitation,N/A,HIGH,False,other,2,commands/exploitation/general.json
-wget-download,Wget Download,post-exploit,general-transfer,HIGH,False,wget,2,commands/post-exploit/general-transfer.json
-wget-o-https,Wget O Https,post-exploit,data-exfiltration,HIGH,False,wget,2,commands/post-exploit/auto-generated-full-syntax-post-exploit.json
-whatweb-enum,Technology Stack Identification,web,N/A,HIGH,False,other,2,commands/web/general.json
-whoami-priv,Whoami Privileges,pivoting,enumeration,HIGH,False,other,2,commands/pivoting/windows-utilities.json
-win-always-install-elevated,Check AlwaysInstallElevated,post-exploit,windows,HIGH,False,other,2,commands/post-exploit/windows.json
-win-group-membership,Check Privileged Group Membership,post-exploit,windows,HIGH,False,other,2,commands/post-exploit/windows.json
-win-potato-exploits,Check for Potato Exploit Eligibility,post-exploit,windows,HIGH,False,other,2,commands/post-exploit/windows.json
-win-privesc-powerup,PowerUp - PowerShell Enumeration,post-exploit,windows,HIGH,False,other,2,commands/post-exploit/windows.json
-win-privesc-winpeas,WinPEAS - Automated Enumeration,post-exploit,windows,HIGH,False,other,2,commands/post-exploit/windows.json
-win-sam-system-backup,Check for SAM/SYSTEM Backups,post-exploit,windows,HIGH,False,other,2,commands/post-exploit/windows.json
-win-systeminfo,System Information Gathering,post-exploit,windows,HIGH,False,other,2,commands/post-exploit/windows.json
-windows-alwaysinstallelevated,Check AlwaysInstallElevated,post-exploit,windows,HIGH,False,other,2,commands/post-exploit/windows.json
-windows-autologon,AutoLogon Credentials,post-exploit,windows,HIGH,False,other,2,commands/post-exploit/windows.json
-windows-pass-the-hash,Pass the Hash Attack,post-exploit,windows,HIGH,False,other,2,commands/post-exploit/windows.json
-windows-potato-attacks,Potato Attacks (JuicyPotato),post-exploit,windows,HIGH,False,other,2,commands/post-exploit/windows.json
-windows-sam-system-backup,SAM/SYSTEM Backup Files,post-exploit,windows,HIGH,False,other,2,commands/post-exploit/windows.json
-windows-scheduled-tasks,Enumerate Scheduled Tasks,post-exploit,windows,HIGH,False,other,2,commands/post-exploit/windows.json
-windows-stored-credentials,Search for Stored Credentials,post-exploit,windows,HIGH,False,other,2,commands/post-exploit/windows.json
-windows-unquoted-service,Find Unquoted Service Paths,post-exploit,windows,HIGH,False,other,2,commands/post-exploit/windows.json
-wordpress-xmlrpc-enum,WordPress XML-RPC Enumeration,web,wordpress,HIGH,False,other,2,commands/web/wordpress.json
-xfreerdp-connect,xFreeRDP Connection,pivoting,remote-access,HIGH,False,other,2,commands/pivoting/pivot-utilities.json
-hashcat-bcrypt-crack,Crack bcrypt Hash (Mode 3200),enumeration,N/A,MEDIUM,False,hashcat,3,commands/enumeration/password-attacks-hashcat.json
-hashcat-benchmark,Hashcat Benchmark Hash Rates,enumeration,N/A,MEDIUM,False,hashcat,3,commands/enumeration/password-attacks-hashcat.json
 hashcat-combination-attack,Hashcat Combination Attack,enumeration,N/A,MEDIUM,False,hashcat,3,commands/enumeration/password-attacks-hashcat.json
 hashcat-debug-mode,Hashcat Debug Mode (Test Rules),enumeration,N/A,MEDIUM,False,hashcat,3,commands/enumeration/password-attacks-hashcat.json
-hashcat-hybrid-attack,Hashcat Hybrid Attack (Wordlist + Mask),enumeration,N/A,MEDIUM,False,hashcat,3,commands/enumeration/password-attacks-hashcat.json
 hashcat-optimized-kernel,Hashcat Optimized Kernel,enumeration,N/A,MEDIUM,False,hashcat,3,commands/enumeration/password-attacks-hashcat.json
 hashcat-output-format,Hashcat Output Format Control,enumeration,N/A,MEDIUM,False,hashcat,3,commands/enumeration/password-attacks-hashcat.json
 hashcat-status-timer,Hashcat Auto-Status Updates,enumeration,N/A,MEDIUM,False,hashcat,3,commands/enumeration/password-attacks-hashcat.json
 hashcat-username-format,Hashcat Username:Hash Format,enumeration,N/A,MEDIUM,False,hashcat,3,commands/enumeration/password-attacks-hashcat.json
-hydra-combo-attack,Hydra Credential Pair Attack,enumeration,N/A,MEDIUM,False,hydra,3,commands/enumeration/password-attacks-hydra.json
-hydra-custom-port,Hydra Custom Port,enumeration,N/A,MEDIUM,False,hydra,3,commands/enumeration/password-attacks-hydra.json
-hydra-ftp-attack,FTP Dictionary Attack,enumeration,N/A,MEDIUM,False,hydra,3,commands/enumeration/password-attacks-hydra.json
 hydra-mysql-attack,MySQL Dictionary Attack,enumeration,N/A,MEDIUM,False,hydra,3,commands/enumeration/password-attacks-hydra.json
 hydra-output-file,Hydra Save Output to File,enumeration,N/A,MEDIUM,False,hydra,3,commands/enumeration/password-attacks-hydra.json
 hydra-parallel-tasks,Hydra Parallel Tasks Configuration,enumeration,N/A,MEDIUM,False,hydra,3,commands/enumeration/password-attacks-hydra.json
 hydra-show-attempts,Hydra Show Attempt Progress,enumeration,N/A,MEDIUM,False,hydra,3,commands/enumeration/password-attacks-hydra.json
 hydra-ssh,SSH Brute Force,exploitation,N/A,MEDIUM,False,hydra,3,commands/exploitation/general.json
-hydra-ssh-user-list,SSH Dictionary Attack - User List,enumeration,N/A,MEDIUM,False,hydra,3,commands/enumeration/password-attacks-hydra.json
 john-custom-rules-conf,Add Custom Rules to john.conf,enumeration,N/A,MEDIUM,False,john,3,commands/enumeration/password-attacks-wordlist-rules.json
 john-format-specify,John Specify Hash Format,enumeration,N/A,MEDIUM,False,john,3,commands/enumeration/password-attacks-john.json
 john-list-formats,List All Supported Formats,enumeration,N/A,MEDIUM,False,john,3,commands/enumeration/password-attacks-john.json
 john-restore-session,John Restore Session,enumeration,N/A,MEDIUM,False,john,3,commands/enumeration/password-attacks-john.json
 john-status,John Show Status,enumeration,N/A,MEDIUM,False,john,3,commands/enumeration/password-attacks-john.json
 nmap-script-nfs,Nmap Script Nfs,post-exploit,enumeration,MEDIUM,False,nmap,3,commands/post-exploit/auto-generated-full-syntax-post-exploit.json
-hashcat-custom-charset,Hashcat Custom Character Set,enumeration,N/A,LOW,False,hashcat,3,commands/enumeration/password-attacks-hashcat.json
 hashcat-dive-rules,Hashcat Dive Rules,enumeration,N/A,LOW,False,hashcat,3,commands/enumeration/password-attacks-wordlist-rules.json
-hashcat-increment,Hashcat Increment Mode (Progressive Length),enumeration,N/A,LOW,False,hashcat,3,commands/enumeration/password-attacks-hashcat.json
-hashcat-mask-attack,Hashcat Mask Attack (Brute-Force Pattern),enumeration,N/A,LOW,False,hashcat,3,commands/enumeration/password-attacks-hashcat.json
 hashcat-potfile-disable,Hashcat Disable Potfile,enumeration,N/A,LOW,False,hashcat,3,commands/enumeration/password-attacks-hashcat.json
 hydra-resume-session,Hydra Resume Session,enumeration,N/A,LOW,False,hydra,3,commands/enumeration/password-attacks-hydra.json
 hydra-verbose,Hydra Verbose Output,enumeration,N/A,LOW,False,hydra,3,commands/enumeration/password-attacks-hydra.json
 hydra-wait-time,Hydra Wait Time Between Attempts,enumeration,N/A,LOW,False,hydra,3,commands/enumeration/password-attacks-hydra.json
-john-incremental-mode,John Incremental Mode (Brute-Force),enumeration,N/A,LOW,False,john,3,commands/enumeration/password-attacks-john.json
 nmap-msf-import,Nmap to Metasploit Database Import,exploitation,metasploit,LOW,False,nmap,3,commands/exploitation/auto-generated-full-syntax-exploitation.json
 hashcat-crack,Hashcat - Crack Hashes,password-attacks,hash-cracking,UNKNOWN,False,hashcat,3,commands/generated/password-attacks-additions.json
 hashcat-kerberos-aes256-cbc,Hashcat Kerberos AES256-CBC Mode,enumeration,password-cracking,UNKNOWN,False,hashcat,3,commands/enumeration/auto-generated-full-syntax-enumeration.json
@@ -199,27 +36,18 @@ proxychains-psql,PostgreSQL Through Proxychains,pivoting,proxychains,MEDIUM,Fals
 socat-port-forward,Socat TCP Port Forward,pivoting,port_forwarding,MEDIUM,False,other,4,commands/pivoting/ssh-tunneling.json
 ssh-debug-verbose,SSH Verbose Debugging,pivoting,ssh-tunneling,MEDIUM,False,ssh,4,commands/pivoting/pivot-utilities.json
 ssh-version,SSH Version Check,pivoting,ssh-tunneling,MEDIUM,False,ssh,4,commands/pivoting/pivot-utilities.json
-sshuttle-vpn,SSHuttle VPN over SSH,pivoting,ssh-tunneling,MEDIUM,False,ssh,4,commands/pivoting/pivot-utilities.json
 where-windows,Where - Find Executable,pivoting,enumeration,MEDIUM,False,other,4,commands/pivoting/windows-utilities.json
 check-processor-count,Processor Count Check,heuristic-evasion,N/A,UNKNOWN,False,other,4,commands/av-evasion/heuristic-evasion.json
 check-recent-files,Recent Files Check,heuristic-evasion,N/A,UNKNOWN,False,other,4,commands/av-evasion/heuristic-evasion.json
 check-uptime,System Uptime Check,heuristic-evasion,N/A,UNKNOWN,False,other,4,commands/av-evasion/heuristic-evasion.json
 check-username-environment,Username/Hostname Check,heuristic-evasion,N/A,UNKNOWN,False,other,4,commands/av-evasion/heuristic-evasion.json
-chisel-client,Chisel - Client Mode,tunneling,port-forwarding,UNKNOWN,False,chisel,4,commands/generated/tunneling-additions.json
-chisel-server,Chisel - Server Mode,tunneling,port-forwarding,UNKNOWN,False,chisel,4,commands/generated/tunneling-additions.json
-chisel-socks,Chisel - SOCKS Proxy,tunneling,socks-proxy,UNKNOWN,False,chisel,4,commands/generated/tunneling-additions.json
 curl-http-service-verification,Verify HTTP Service Accessibility,pivoting,service-verification,UNKNOWN,False,curl,4,commands/pivoting/auto-generated-full-syntax-pivoting.json
 ip-route-ping-verification,Verify Pivot Routing Capability,pivoting,network-verification,UNKNOWN,False,other,4,commands/pivoting/auto-generated-full-syntax-pivoting.json
 large-memory-allocation,Large Memory Allocation Check,heuristic-evasion,N/A,UNKNOWN,False,other,4,commands/av-evasion/heuristic-evasion.json
-ligolo-agent,Ligolo-ng - Agent,tunneling,pivoting,UNKNOWN,False,other,4,commands/generated/tunneling-additions.json
-ligolo-server,Ligolo-ng - Server,tunneling,pivoting,UNKNOWN,False,other,4,commands/generated/tunneling-additions.json
 netstat-routing-table,View Routing Table with Netstat,pivoting,network-reconnaissance,UNKNOWN,False,other,4,commands/pivoting/auto-generated-full-syntax-pivoting.json
 non-emulated-api-numa,Non-Emulated API (VirtualAllocExNuma),heuristic-evasion,N/A,UNKNOWN,False,other,4,commands/av-evasion/heuristic-evasion.json
 plink-remote-forward-microsocks,Plink Remote Forward with Microsocks,pivoting,socks-proxy,UNKNOWN,False,other,4,commands/pivoting/auto-generated-full-syntax-pivoting.json
 sleep-timer-validation,Sleep Timer with Validation,heuristic-evasion,N/A,UNKNOWN,False,other,4,commands/av-evasion/heuristic-evasion.json
-ssh-dynamic-forward,SSH - Dynamic Port Forwarding (SOCKS),tunneling,ssh-tunneling,UNKNOWN,False,ssh,4,commands/generated/tunneling-additions.json
-ssh-local-forward,SSH - Local Port Forwarding,tunneling,ssh-tunneling,UNKNOWN,False,ssh,4,commands/generated/tunneling-additions.json
-ssh-remote-forward,SSH - Remote Port Forwarding,tunneling,ssh-tunneling,UNKNOWN,False,ssh,4,commands/generated/tunneling-additions.json
 test-netconnection-ssh-port,Test Outbound SSH Connectivity (PowerShell),pivoting,connectivity-testing,UNKNOWN,False,other,4,commands/pivoting/auto-generated-full-syntax-pivoting.json
 ad-golden-ticket-cleanup,Remove Golden Ticket (Cleanup),post-exploit,active-directory,MEDIUM,False,other,5,commands/active-directory/ad-golden-ticket.json
 cat-proc-version,Cat Proc Version,post-exploit,enumeration,MEDIUM,False,other,5,commands/post-exploit/auto-generated-full-syntax-post-exploit.json
@@ -256,14 +84,7 @@ hash-identifier,Identify Hash Type,enumeration,N/A,MEDIUM,False,other,5,commands
 journalctl-priority-filter,Filter Journal by Priority,monitoring,log-monitoring,MEDIUM,False,other,5,commands/monitoring/log-monitoring.json
 journalctl-time-range,View Journal by Time Range,monitoring,log-monitoring,MEDIUM,False,other,5,commands/monitoring/log-monitoring.json
 last-login-history,Login History,monitoring,resource-monitoring,MEDIUM,False,other,5,commands/monitoring/resource-monitoring.json
-linux-capabilities,Enumerate File Capabilities,post-exploit,linux,MEDIUM,False,other,5,commands/post-exploit/linux.json
-linux-ld-preload,LD_PRELOAD Privilege Escalation,post-exploit,linux,MEDIUM,False,other,5,commands/post-exploit/linux.json
-linux-mysql-root,MySQL Running as Root,post-exploit,linux,MEDIUM,False,other,5,commands/post-exploit/linux.json
-linux-nfs-no-root-squash,Check NFS for no_root_squash,post-exploit,linux,MEDIUM,False,other,5,commands/post-exploit/linux.json
-linux-pspy,Monitor Processes with pspy,post-exploit,linux,MEDIUM,False,other,5,commands/post-exploit/linux.json
-linux-ssh-keys,Search for SSH Private Keys,post-exploit,linux,MEDIUM,False,other,5,commands/post-exploit/linux.json
 linux-systemd-timers,List systemd Timers,monitoring,scheduled-tasks,MEDIUM,False,other,5,commands/monitoring/scheduled-tasks.json
-linux-writable-services,Find Writable Service Files,post-exploit,linux,MEDIUM,False,other,5,commands/post-exploit/linux.json
 ln-symbolic,Create Symbolic Link,custom,N/A,MEDIUM,True,other,5,commands/utilities/system-utilities.json
 lsof-user-files,Files Opened by User,monitoring,resource-monitoring,MEDIUM,False,other,5,commands/monitoring/resource-monitoring.json
 mimikatz-sekurlsa-tickets-export,Mimikatz Export Kerberos Tickets,post-exploit,credential-harvesting,MEDIUM,False,mimikatz,5,commands/active-directory/mimikatz-credential-dump.json
@@ -281,8 +102,6 @@ ps-registry-autologon,PowerShell Registry AutoLogon Credential Extraction,POST_E
 ps-search-credentials,PowerShell Search Files for Credentials,POST_EXPLOIT,CREDENTIAL_HARVESTING,MEDIUM,False,ps,5,commands/post-exploit/ps-search-credentials.json
 ps-sort-cpu,Top CPU Consumers,monitoring,resource-monitoring,MEDIUM,False,ps,5,commands/monitoring/resource-monitoring.json
 ps-sort-memory,Top Memory Consumers,monitoring,resource-monitoring,MEDIUM,False,ps,5,commands/monitoring/resource-monitoring.json
-ps-wmi-cimsession-setup,PowerShell WMI CIM Session Creation,LATERAL_MOVEMENT,WMI,MEDIUM,False,ps,5,commands/lateral-movement/ps-wmi-cimsession-setup.json
-ps-wmi-invoke-method,PowerShell WMI Remote Process Creation,LATERAL_MOVEMENT,WMI,MEDIUM,False,ps,5,commands/lateral-movement/ps-wmi-invoke-method.json
 psloggedon,Enumerate Logged-On Users (PsLoggedOn),enumeration,N/A,MEDIUM,False,ps,5,commands/enumeration/ad-session-share-enum.json
 python-m-simplehttpserver,Python Simple HTTP Server,post-exploit,data-exfiltration,MEDIUM,False,other,5,commands/post-exploit/auto-generated-full-syntax-post-exploit.json
 python-m-simplehttpserver-2,Python Simple HTTP Server,post-exploit,data-exfiltration,MEDIUM,False,other,5,commands/post-exploit/auto-generated-full-syntax-post-exploit.json
@@ -315,6 +134,7 @@ win-scheduled-tasks,Enumerate Scheduled Tasks,post-exploit,windows,MEDIUM,False,
 win-schtasks-task-xml,Export Scheduled Task XML,monitoring,scheduled-tasks,MEDIUM,False,other,5,commands/monitoring/scheduled-tasks.json
 windows-dll-hijacking,DLL Hijacking Check,post-exploit,windows,MEDIUM,False,other,5,commands/post-exploit/windows.json
 windows-dpapi-masterkeys,DPAPI Master Keys,post-exploit,windows,MEDIUM,False,other,5,commands/post-exploit/windows.json
+windows-screenshot-capture,Capture Screenshot (RDP/GUI Session),post-exploit,situational-awareness,MEDIUM,False,other,5,commands/post-exploit/windows-post-exploitation.json
 wordlist-effectiveness,Estimate Wordlist Effectiveness,enumeration,N/A,MEDIUM,False,other,5,commands/enumeration/password-attacks-methodology.json
 xss-test,XSS Basic Test,web,N/A,MEDIUM,False,other,5,commands/web/general.json
 7zip-listfile-research,Research 7zip listfile Option,utilities,machine-specific,LOW,True,other,5,commands/utilities/basic-commands.json
@@ -332,7 +152,6 @@ dns-exfiltration,DNS Exfiltration,post-exploit,general-transfer,LOW,False,other,
 file-transfer-ftp,FTP Transfer,post-exploit,exfiltration,LOW,False,other,5,commands/post-exploit/exfiltration.json
 iostat-disk-stats,I/O Statistics (Disk Activity),monitoring,resource-monitoring,LOW,False,other,5,commands/monitoring/resource-monitoring.json
 linux-at-jobs-list,List Linux AT Jobs,monitoring,scheduled-tasks,LOW,False,other,5,commands/monitoring/scheduled-tasks.json
-linux-mysql-udf,MySQL User Defined Function Exploit,post-exploit,linux,LOW,False,other,5,commands/post-exploit/linux.json
 npm-install,Install Node Package,custom,N/A,LOW,False,other,5,commands/utilities/package-utilities.json
 pdf2john-extract,Extract PDF Password Hash,enumeration,N/A,LOW,False,other,5,commands/enumeration/password-attacks-hash-formatting.json
 python-hash-generator,Generate Hash for Testing,enumeration,N/A,LOW,False,other,5,commands/enumeration/password-attacks-hash-formatting.json
