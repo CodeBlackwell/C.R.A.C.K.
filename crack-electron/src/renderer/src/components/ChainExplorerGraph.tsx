@@ -96,6 +96,9 @@ export default function ChainExplorerGraph({
   // Track previous external state to detect changes from tree
   const prevExternalNodesRef = useRef<Map<string, GraphNode>>();
 
+  // Ref to always have latest expandNode function (fixes stale closure in Cytoscape events)
+  const expandNodeRef = useRef<(commandId: string) => void>(() => {});
+
   // Find descendant nodes for collapse
   const findDescendantNodes = useCallback((nodeId: string, history: ExpansionRecord[]): Set<string> => {
     const descendants = new Set<string>();
@@ -270,6 +273,11 @@ export default function ChainExplorerGraph({
       setLoading(false);
     }
   }, [expandedNodes, graphNodes, graphEdges, nodesWithUnexploredRels, expansionHistory, updateCytoscapeGraph]);
+
+  // Keep ref updated with latest expandNode function (fixes stale closure)
+  useEffect(() => {
+    expandNodeRef.current = expandNode;
+  }, [expandNode]);
 
   // Collapse a node (remove its descendants)
   const collapseNode = useCallback((commandId: string) => {
@@ -504,10 +512,11 @@ export default function ChainExplorerGraph({
     });
 
     // Node click handler - expand/collapse
+    // Uses ref to always call latest expandNode (avoids stale closure)
     cyRef.current.on('tap', 'node', (event) => {
       const nodeId = event.target.data('id');
       console.log('[ChainExplorer] Node clicked:', nodeId);
-      expandNode(nodeId);
+      expandNodeRef.current(nodeId);
     });
 
     // Double-click to select command for details panel
@@ -548,80 +557,80 @@ export default function ChainExplorerGraph({
     };
   }, []);
 
-  // Load initial command when component mounts or initialCommandId changes
+  // Load initial command - smart behavior based on context
+  // If the command is already visible in graph (as a connection), ACCUMULATE
+  // If the command is new (from search), RESET and start fresh
   useEffect(() => {
-    console.log('[ChainExplorer] Initial command changed:', initialCommandId);
+    if (!initialCommandId || !cyRef.current) return;
 
-    // Reset state for new initial command
-    setExpandedNodes(new Set());
-    setGraphNodes(new Map());
-    setGraphEdges(new Map());
-    setNodesWithUnexploredRels(new Set());
-    setExpansionHistory([]);
-    setNodeCount(0);
-    setEdgeCount(0);
+    // Skip if already expanded (don't reload same command)
+    if (expandedNodes.has(initialCommandId)) {
+      console.log('[ChainExplorer] Command already expanded, skipping:', initialCommandId);
+      return;
+    }
 
-    if (initialCommandId && cyRef.current) {
-      // Clear existing graph
-      cyRef.current.elements().remove();
+    // Check if this command is already visible as a connection in the graph
+    const isVisibleConnection = graphNodes.has(initialCommandId);
 
-      // Load initial command
-      const loadInitial = async () => {
+    if (isVisibleConnection) {
+      // ACCUMULATE: Command is a visible connection, just expand it
+      console.log('[ChainExplorer] Expanding visible connection:', initialCommandId);
+      expandNode(initialCommandId);
+    } else {
+      // RESET: New command from search, start fresh
+      console.log('[ChainExplorer] New command from search, resetting graph:', initialCommandId);
+
+      // Clear all state
+      setExpandedNodes(new Set());
+      setGraphNodes(new Map());
+      setGraphEdges(new Map());
+      setNodesWithUnexploredRels(new Set());
+      setExpansionHistory([]);
+
+      // Clear cytoscape
+      cyRef.current?.elements().remove();
+
+      // Load fresh
+      (async () => {
         setLoading(true);
         try {
           const graphData = await window.electronAPI.getGraphWithMetadata(initialCommandId);
+          if (!graphData?.elements) return;
 
-          if (graphData?.elements) {
-            const newNodes = new Map<string, GraphNode>();
-            const newEdges = new Map<string, GraphEdge>();
-            const newUnexplored = new Set<string>();
-            const newHistory: ExpansionRecord[] = [];
+          const newNodes = new Map<string, GraphNode>();
+          const newEdges = new Map<string, GraphEdge>();
+          const newUnexplored = new Set<string>();
+          const newExpanded = new Set([initialCommandId]);
+          const newHistory: ExpansionRecord[] = [{ nodeId: initialCommandId, parentNodeId: null }];
 
-            // Process nodes
-            graphData.elements.nodes.forEach((node: GraphNode) => {
-              newNodes.set(node.data.id, node);
-              // Mark related nodes (not the initial command) as unexplored
-              if (node.data.id !== initialCommandId && node.data.hasRelationships) {
-                newUnexplored.add(node.data.id);
-              }
-              // NOTE: Don't add related nodes to history here - they are just visible connections
-              // Only the initial command and deliberately clicked nodes go in history
-            });
+          // Add nodes
+          graphData.elements.nodes.forEach((node: GraphNode) => {
+            newNodes.set(node.data.id, node);
+            if (node.data.hasRelationships && node.data.id !== initialCommandId) {
+              newUnexplored.add(node.data.id);
+            }
+          });
 
-            // Add initial command to history (it's the root, so parentNodeId is null)
-            newHistory.push({
-              nodeId: initialCommandId,
-              parentNodeId: null,
-            });
+          // Add edges
+          graphData.elements.edges.forEach((edge: GraphEdge) => {
+            newEdges.set(edge.data.id, edge);
+          });
 
-            // Process edges
-            graphData.elements.edges.forEach((edge: GraphEdge) => {
-              newEdges.set(edge.data.id, edge);
-            });
+          // Update state
+          setGraphNodes(newNodes);
+          setGraphEdges(newEdges);
+          setExpandedNodes(newExpanded);
+          setNodesWithUnexploredRels(newUnexplored);
+          setExpansionHistory(newHistory);
 
-            // Initial command is expanded
-            const newExpanded = new Set([initialCommandId]);
-
-            // Update state
-            setGraphNodes(newNodes);
-            setGraphEdges(newEdges);
-            setExpandedNodes(newExpanded);
-            setNodesWithUnexploredRels(newUnexplored);
-            setExpansionHistory(newHistory);
-
-            // Update visualization
-            updateCytoscapeGraph(newNodes, newEdges, newExpanded, newUnexplored);
-          }
-        } catch (error) {
-          console.error('[ChainExplorer] Error loading initial graph:', error);
+          // Update visualization
+          updateCytoscapeGraph(newNodes, newEdges, newExpanded, newUnexplored);
         } finally {
           setLoading(false);
         }
-      };
-
-      loadInitial();
+      })();
     }
-  }, [initialCommandId, updateCytoscapeGraph]);
+  }, [initialCommandId]);
 
   return (
     <Paper
