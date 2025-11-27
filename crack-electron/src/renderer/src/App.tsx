@@ -14,7 +14,7 @@ import WriteupView from './components/WriteupView';
 import WriteupDetails from './components/WriteupDetails';
 import WriteupControlsPanel from './components/WriteupControlsPanel';
 import GraphView from './components/GraphView';
-import ChainExplorerGraph from './components/ChainExplorerGraph';
+import ChainExplorerGraph, { LayoutType, Orientation } from './components/ChainExplorerGraph';
 import RelationshipsTree from './components/RelationshipsTree';
 import CommandDetails from './components/CommandDetails';
 import CommandChainGraph from './components/CommandChainGraph';
@@ -85,6 +85,9 @@ function App() {
   const [explorerExpanded, setExplorerExpanded] = useState<Set<string>>(new Set());
   const [explorerHistory, setExplorerHistory] = useState<ExpansionRecord[]>([]);
   const [highlightedNodeId, setHighlightedNodeId] = useState<string | null>(null);
+  const [cleanMode, setCleanMode] = useState(true);
+  const [graphLayout, setGraphLayout] = useState<LayoutType>('dagre');
+  const [layoutOrientation, setLayoutOrientation] = useState<Orientation>('horizontal');
 
   // Debug: Log component mount
   useEffect(() => {
@@ -273,7 +276,7 @@ function App() {
     setTimeout(() => setHighlightedNodeId(null), 2000);
   }, []);
 
-  const handleTreeNodeRemove = useCallback((nodeId: string) => {
+  const handleTreeNodeRemove = useCallback(async (nodeId: string) => {
     console.log('[App] ========== REMOVING NODE ==========');
     console.log('[App] Removing node from tree:', nodeId);
     console.log('[App] Current state before removal:', {
@@ -291,52 +294,99 @@ function App() {
     nodesToRemove.forEach(id => {
       newExpanded.delete(id);
     });
-    const newHistory = explorerHistory.filter(r => !nodesToRemove.has(r.nodeId));
+    let newHistory = explorerHistory.filter(r => !nodesToRemove.has(r.nodeId));
 
-    // Now find all nodes reachable from remaining expanded nodes
-    // This ensures we keep connection nodes that are still reachable
-    const reachableNodes = new Set<string>();
-    const newEdges = new Map(explorerEdges);
+    // Track if we're promoting a new root (need to load its relationships)
+    let newRootId: string | null = null;
+    let newRootGraphData: any = null;
 
-    // Remove edges connected to removed expanded nodes
-    newEdges.forEach((edge, key) => {
-      if (nodesToRemove.has(edge.data.source) || nodesToRemove.has(edge.data.target)) {
-        newEdges.delete(key);
-      }
-    });
-
-    // BFS to find all nodes reachable from remaining expanded nodes
-    const toVisit = Array.from(newExpanded);
-    while (toVisit.length > 0) {
-      const current = toVisit.pop()!;
-      if (reachableNodes.has(current)) continue;
-      reachableNodes.add(current);
-
-      // Find connected nodes via remaining edges
-      newEdges.forEach((edge) => {
-        if (edge.data.source === current && !reachableNodes.has(edge.data.target)) {
-          toVisit.push(edge.data.target);
+    // If no expanded nodes remain, promote a connected node as new root
+    if (newExpanded.size === 0) {
+      // Find direct connections of the removed node that are still visible
+      const connectedNodes: string[] = [];
+      explorerEdges.forEach((edge) => {
+        if (edge.data.source === nodeId && explorerNodes.has(edge.data.target) && !nodesToRemove.has(edge.data.target)) {
+          connectedNodes.push(edge.data.target);
         }
-        if (edge.data.target === current && !reachableNodes.has(edge.data.source)) {
-          toVisit.push(edge.data.source);
+        if (edge.data.target === nodeId && explorerNodes.has(edge.data.source) && !nodesToRemove.has(edge.data.source)) {
+          connectedNodes.push(edge.data.source);
+        }
+      });
+
+      // Promote the first connected node as new root
+      if (connectedNodes.length > 0) {
+        newRootId = connectedNodes[0];
+        newExpanded.add(newRootId);
+        newHistory = [{ nodeId: newRootId, parentNodeId: null }];
+        console.log('[App] Promoted new root:', newRootId);
+
+        // Fetch the new root's relationships
+        try {
+          newRootGraphData = await window.electronAPI.getGraphWithMetadata(newRootId);
+          console.log('[App] Fetched new root relationships:', newRootGraphData);
+        } catch (error) {
+          console.error('[App] Error fetching new root relationships:', error);
+        }
+      }
+    }
+
+    // Build new nodes and edges
+    let newNodes = new Map<string, GraphNode>();
+    let newEdges = new Map<string, GraphEdge>();
+
+    // If we have a new root with data, build from that
+    if (newRootId && newRootGraphData?.elements) {
+      // Add all nodes from new root's graph
+      newRootGraphData.elements.nodes.forEach((node: GraphNode) => {
+        newNodes.set(node.data.id, node);
+      });
+      // Add all edges from new root's graph
+      newRootGraphData.elements.edges.forEach((edge: GraphEdge) => {
+        newEdges.set(edge.data.id, edge);
+      });
+    } else {
+      // No new root promotion - use BFS from remaining expanded nodes
+      newEdges = new Map(explorerEdges);
+      newEdges.forEach((edge, key) => {
+        if (nodesToRemove.has(edge.data.source) || nodesToRemove.has(edge.data.target)) {
+          newEdges.delete(key);
+        }
+      });
+
+      // BFS to find all nodes reachable from remaining expanded nodes
+      const reachableNodes = new Set<string>();
+      const toVisit = Array.from(newExpanded);
+      while (toVisit.length > 0) {
+        const current = toVisit.pop()!;
+        if (reachableNodes.has(current)) continue;
+        reachableNodes.add(current);
+
+        // Find connected nodes via remaining edges
+        newEdges.forEach((edge) => {
+          if (edge.data.source === current && !reachableNodes.has(edge.data.target)) {
+            toVisit.push(edge.data.target);
+          }
+          if (edge.data.target === current && !reachableNodes.has(edge.data.source)) {
+            toVisit.push(edge.data.source);
+          }
+        });
+      }
+
+      // Keep only reachable nodes
+      newNodes = new Map(explorerNodes);
+      newNodes.forEach((_, id) => {
+        if (!reachableNodes.has(id)) {
+          newNodes.delete(id);
         }
       });
     }
 
-    // Keep only reachable nodes
-    const newNodes = new Map(explorerNodes);
-    newNodes.forEach((_, id) => {
-      if (!reachableNodes.has(id)) {
-        newNodes.delete(id);
-      }
-    });
-
     console.log('[App] Node removal complete:', {
       removed: nodesToRemove.size,
       remaining: newNodes.size,
-      reachable: reachableNodes.size,
       newExpandedSize: newExpanded.size,
       newHistoryLength: newHistory.length,
+      newRoot: newRootId,
     });
     console.log('[App] ========== SETTING NEW STATE ==========');
 
@@ -551,6 +601,12 @@ function App() {
                           externalEdges={explorerEdges}
                           externalExpanded={explorerExpanded}
                           externalHistory={explorerHistory}
+                          cleanMode={cleanMode}
+                          onCleanModeChange={setCleanMode}
+                          layout={graphLayout}
+                          orientation={layoutOrientation}
+                          onLayoutChange={setGraphLayout}
+                          onOrientationChange={setLayoutOrientation}
                         />
                       ) : (
                         // Graph mode: Show attack chains (larger space)

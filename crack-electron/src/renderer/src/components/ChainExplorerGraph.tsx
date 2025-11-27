@@ -1,11 +1,47 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { Paper, Text, Loader, Center, Group, Badge, Box, Stack } from '@mantine/core';
+import { Paper, Text, Loader, Center, Group, Badge, Box, Stack, Button, SegmentedControl } from '@mantine/core';
 import cytoscape, { Core, EventObject } from 'cytoscape';
 // @ts-ignore
 import coseBilkent from 'cytoscape-cose-bilkent';
+// @ts-ignore
+import dagre from 'cytoscape-dagre';
+// @ts-ignore
+import elk from 'cytoscape-elk';
 
-// Register layout
+// Register layouts
 cytoscape.use(coseBilkent);
+cytoscape.use(dagre);
+cytoscape.use(elk);
+
+// Layout types
+export type LayoutType = 'grid' | 'bfs' | 'concentric' | 'dagre' | 'elk';
+export type Orientation = 'horizontal' | 'vertical';
+
+// DRY: Single config object for all layouts
+const LAYOUT_CONFIGS: Record<LayoutType, (orientation: Orientation) => any> = {
+  grid: () => ({ name: 'grid', rows: 3, cols: 3, fit: true, padding: 50 }),
+  bfs: () => ({ name: 'breadthfirst', directed: true, spacingFactor: 1.5, fit: true, padding: 50 }),
+  concentric: () => ({ name: 'concentric', minNodeSpacing: 50, fit: true, padding: 50 }),
+  dagre: (o) => ({
+    name: 'dagre',
+    rankDir: o === 'horizontal' ? 'LR' : 'TB',
+    nodeSep: 50,
+    rankSep: 100,
+    fit: true,
+    padding: 50,
+  }),
+  elk: (o) => ({
+    name: 'elk',
+    elk: {
+      algorithm: 'layered',
+      'elk.direction': o === 'horizontal' ? 'RIGHT' : 'DOWN',
+    },
+    fit: true,
+    padding: 50,
+  }),
+};
+
+const DIRECTIONAL_LAYOUTS = new Set<LayoutType>(['dagre', 'elk']);
 
 interface ChainExplorerGraphProps {
   initialCommandId: string;
@@ -23,6 +59,14 @@ interface ChainExplorerGraphProps {
   externalEdges?: Map<string, GraphEdge>;
   externalExpanded?: Set<string>;
   externalHistory?: ExpansionRecord[];
+  // Clean mode: only show chain path + last node's connections
+  cleanMode?: boolean;
+  onCleanModeChange?: (cleanMode: boolean) => void;
+  // Layout controls
+  layout?: LayoutType;
+  orientation?: Orientation;
+  onLayoutChange?: (layout: LayoutType) => void;
+  onOrientationChange?: (orientation: Orientation) => void;
 }
 
 // Export types for use in App.tsx
@@ -78,6 +122,12 @@ export default function ChainExplorerGraph({
   externalEdges,
   externalExpanded,
   externalHistory,
+  cleanMode = false,
+  onCleanModeChange,
+  layout = 'dagre',
+  orientation = 'horizontal',
+  onLayoutChange,
+  onOrientationChange,
 }: ChainExplorerGraphProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const cyRef = useRef<Core | null>(null);
@@ -87,14 +137,15 @@ export default function ChainExplorerGraph({
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
   const [graphNodes, setGraphNodes] = useState<Map<string, GraphNode>>(new Map());
   const [graphEdges, setGraphEdges] = useState<Map<string, GraphEdge>>(new Map());
-  const [nodesWithUnexploredRels, setNodesWithUnexploredRels] = useState<Set<string>>(new Set());
+  // Full state - tracks ALL fetched nodes/edges (before clean mode filtering)
+  const [fullGraphNodes, setFullGraphNodes] = useState<Map<string, GraphNode>>(new Map());
+  const [fullGraphEdges, setFullGraphEdges] = useState<Map<string, GraphEdge>>(new Map());
+  const [, setNodesWithUnexploredRels] = useState<Set<string>>(new Set());
   const [expansionHistory, setExpansionHistory] = useState<ExpansionRecord[]>([]);
   const [tooltip, setTooltip] = useState<NodeTooltipData | null>(null);
   const [nodeCount, setNodeCount] = useState(0);
   const [edgeCount, setEdgeCount] = useState(0);
 
-  // Track previous external state to detect changes from tree
-  const prevExternalNodesRef = useRef<Map<string, GraphNode>>();
   // Track internal state size for sync comparison (avoids stale closure)
   const graphNodesSizeRef = useRef(0);
 
@@ -171,26 +222,110 @@ export default function ChainExplorerGraph({
     setNodeCount(nodes.size);
     setEdgeCount(edges.size);
 
-    // Apply layout with animation
-    const layout = cyRef.current.layout({
-      name: 'cose-bilkent',
-      nodeDimensionsIncludeLabels: true,
-      idealEdgeLength: 150,
-      nodeRepulsion: 4500,
-      gravity: 0.25,
-      randomize: false,
+    // Apply layout with animation using config
+    const layoutConfig = LAYOUT_CONFIGS[layout](orientation);
+    const layoutInstance = cyRef.current.layout({
+      ...layoutConfig,
       animate: true,
-      animationDuration: 500,
-      fit: true,
-      padding: 50,
+      animationDuration: 300,
     } as any);
 
-    layout.run();
-  }, []);
+    layoutInstance.run();
+  }, [layout, orientation]);
+
+  // Rebuild visible graph from full state based on cleanMode
+  const rebuildVisibleGraph = useCallback((
+    fullNodes: Map<string, GraphNode>,
+    fullEdges: Map<string, GraphEdge>,
+    expanded: Set<string>,
+    history: ExpansionRecord[],
+    isCleanMode: boolean
+  ) => {
+    console.log('[ChainExplorer] rebuildVisibleGraph:', { isCleanMode, historyLength: history.length });
+
+    let visibleNodes: Map<string, GraphNode>;
+    let visibleEdges: Map<string, GraphEdge>;
+
+    if (isCleanMode && history.length > 1) {
+      // CLEAN MODE: Only show chain path + last node's connections
+      const chainPath = new Set<string>();
+      history.forEach(record => chainPath.add(record.nodeId));
+
+      // Get the last expanded node (tip of the chain)
+      const lastExpandedNode = history[history.length - 1].nodeId;
+
+      visibleNodes = new Map<string, GraphNode>();
+      visibleEdges = new Map<string, GraphEdge>();
+
+      // Add all chain path nodes
+      chainPath.forEach(id => {
+        if (fullNodes.has(id)) {
+          visibleNodes.set(id, fullNodes.get(id)!);
+        }
+      });
+
+      // Add edges between chain path nodes
+      fullEdges.forEach((edge, key) => {
+        if (chainPath.has(edge.data.source) && chainPath.has(edge.data.target)) {
+          visibleEdges.set(key, edge);
+        }
+      });
+
+      // Add all connections from the last expanded node
+      fullEdges.forEach((edge, key) => {
+        if (edge.data.source === lastExpandedNode || edge.data.target === lastExpandedNode) {
+          visibleEdges.set(key, edge);
+          // Also add the connected node
+          const connectedId = edge.data.source === lastExpandedNode ? edge.data.target : edge.data.source;
+          if (fullNodes.has(connectedId)) {
+            visibleNodes.set(connectedId, fullNodes.get(connectedId)!);
+          }
+        }
+      });
+
+      console.log('[ChainExplorer] Clean mode visible:', {
+        chainPath: Array.from(chainPath),
+        lastExpanded: lastExpandedNode,
+        visibleNodes: visibleNodes.size,
+        visibleEdges: visibleEdges.size,
+      });
+    } else {
+      // NORMAL MODE: Show all nodes/edges
+      visibleNodes = new Map(fullNodes);
+      visibleEdges = new Map(fullEdges);
+    }
+
+    // Calculate unexplored nodes for visible set
+    const visibleUnexplored = new Set<string>();
+    visibleNodes.forEach((node, id) => {
+      if (!expanded.has(id) && node.data.hasRelationships) {
+        visibleUnexplored.add(id);
+      }
+    });
+
+    // Update visible state
+    setGraphNodes(visibleNodes);
+    setGraphEdges(visibleEdges);
+    setNodesWithUnexploredRels(visibleUnexplored);
+
+    // Update visualization
+    updateCytoscapeGraph(visibleNodes, visibleEdges, expanded, visibleUnexplored);
+  }, [updateCytoscapeGraph]);
+
+  // Re-render when cleanMode toggles (use refs to avoid other deps triggering this)
+  const prevCleanModeRef = useRef(cleanMode);
+  useEffect(() => {
+    if (fullGraphNodes.size === 0) return;
+    if (prevCleanModeRef.current !== cleanMode) {
+      console.log('[ChainExplorer] cleanMode toggled:', prevCleanModeRef.current, '->', cleanMode);
+      prevCleanModeRef.current = cleanMode;
+      rebuildVisibleGraph(fullGraphNodes, fullGraphEdges, expandedNodes, expansionHistory, cleanMode);
+    }
+  }, [cleanMode, fullGraphNodes, fullGraphEdges, expandedNodes, expansionHistory, rebuildVisibleGraph]);
 
   // Expand a node to show its relationships
   const expandNode = useCallback(async (commandId: string) => {
-    console.log('[ChainExplorer] expandNode called:', commandId);
+    console.log('[ChainExplorer] expandNode called:', commandId, 'cleanMode:', cleanMode);
 
     // If already expanded, collapse instead
     if (expandedNodes.has(commandId)) {
@@ -209,18 +344,8 @@ export default function ChainExplorerGraph({
         return;
       }
 
-      // Create new state copies
-      const newNodes = new Map(graphNodes);
-      const newEdges = new Map(graphEdges);
-      const newUnexplored = new Set(nodesWithUnexploredRels);
-      const newHistory = [...expansionHistory];
-
       // Find the parent of the node being expanded (for tree hierarchy)
-      // The parent is the node that this node was connected from
-      const currentNode = graphNodes.get(commandId);
       let parentNodeId: string | null = null;
-
-      // Find which expanded node this one is connected to (for tree hierarchy)
       graphEdges.forEach((edge) => {
         if (edge.data.target === commandId && expandedNodes.has(edge.data.source)) {
           parentNodeId = edge.data.source;
@@ -229,53 +354,46 @@ export default function ChainExplorerGraph({
         }
       });
 
-      // Add the clicked node to expansion history (this is the deliberately expanded node)
-      newHistory.push({
-        nodeId: commandId,
-        parentNodeId: parentNodeId,
-      });
-
-      // Process new nodes (these are connections, not deliberately expanded)
-      graphData.elements.nodes.forEach((node: GraphNode) => {
-        const nodeId = node.data.id;
-        if (!newNodes.has(nodeId)) {
-          newNodes.set(nodeId, node);
-          // Mark as unexplored if it has relationships to explore
-          if (node.data.hasRelationships) {
-            newUnexplored.add(nodeId);
-          }
-          // NOTE: Don't add to history - these are just visible connections
-        }
-      });
-
-      // Process new edges
-      graphData.elements.edges.forEach((edge: GraphEdge) => {
-        const edgeKey = edge.data.id;
-        if (!newEdges.has(edgeKey)) {
-          newEdges.set(edgeKey, edge);
-        }
-      });
+      // Build the new history with this node added
+      const newHistory = [...expansionHistory, { nodeId: commandId, parentNodeId }];
 
       // Mark this node as expanded
-      newUnexplored.delete(commandId);
       const newExpanded = new Set(expandedNodes);
       newExpanded.add(commandId);
 
-      // Update state
-      setGraphNodes(newNodes);
-      setGraphEdges(newEdges);
+      // ALWAYS update full state (accumulate all fetched data)
+      const newFullNodes = new Map(fullGraphNodes);
+      const newFullEdges = new Map(fullGraphEdges);
+
+      // Add new nodes to full state
+      graphData.elements.nodes.forEach((node: GraphNode) => {
+        newFullNodes.set(node.data.id, node);
+      });
+
+      // Add new edges to full state
+      graphData.elements.edges.forEach((edge: GraphEdge) => {
+        newFullEdges.set(edge.data.id, edge);
+      });
+
+      console.log('[ChainExplorer] Updated full state:', {
+        fullNodes: newFullNodes.size,
+        fullEdges: newFullEdges.size,
+      });
+
+      // Update full state
+      setFullGraphNodes(newFullNodes);
+      setFullGraphEdges(newFullEdges);
       setExpandedNodes(newExpanded);
-      setNodesWithUnexploredRels(newUnexplored);
       setExpansionHistory(newHistory);
 
-      // Update visualization
-      updateCytoscapeGraph(newNodes, newEdges, newExpanded, newUnexplored);
+      // Rebuild visible graph based on cleanMode
+      rebuildVisibleGraph(newFullNodes, newFullEdges, newExpanded, newHistory, cleanMode);
     } catch (error) {
       console.error('[ChainExplorer] Error expanding node:', error);
     } finally {
       setLoading(false);
     }
-  }, [expandedNodes, graphNodes, graphEdges, nodesWithUnexploredRels, expansionHistory, updateCytoscapeGraph]);
+  }, [expandedNodes, graphEdges, fullGraphNodes, fullGraphEdges, expansionHistory, rebuildVisibleGraph, cleanMode]);
 
   // Keep refs updated with latest functions (fixes stale closure)
   useEffect(() => {
@@ -291,8 +409,21 @@ export default function ChainExplorerGraph({
     graphNodesSizeRef.current = graphNodes.size;
   }, [graphNodes]);
 
+  // Re-apply layout when layout/orientation changes
+  useEffect(() => {
+    if (!cyRef.current || cyRef.current.nodes().length === 0) return;
+    const layoutConfig = LAYOUT_CONFIGS[layout](orientation);
+    const layoutInstance = cyRef.current.layout({
+      ...layoutConfig,
+      animate: true,
+      animationDuration: 300,
+    } as any);
+    layoutInstance.run();
+  }, [layout, orientation]);
+
   // Collapse a node (remove its descendants and orphaned connections)
-  const collapseNode = useCallback((commandId: string) => {
+  // If collapsing would leave no expanded nodes, promote a connected node to be new root
+  const collapseNode = useCallback(async (commandId: string) => {
     console.log('[ChainExplorer] collapseNode called:', commandId);
 
     // Find all descendant nodes (from expansion history)
@@ -305,42 +436,100 @@ export default function ChainExplorerGraph({
     nodesToRemove.forEach(id => {
       newExpanded.delete(id);
     });
-    const newHistory = expansionHistory.filter(r => !nodesToRemove.has(r.nodeId));
+    let newHistory = expansionHistory.filter(r => !nodesToRemove.has(r.nodeId));
 
     // Remove edges connected to collapsed nodes
-    const newEdges = new Map(graphEdges);
+    let newEdges = new Map(fullGraphEdges);
     newEdges.forEach((edge, key) => {
       if (nodesToRemove.has(edge.data.source) || nodesToRemove.has(edge.data.target)) {
         newEdges.delete(key);
       }
     });
 
-    // BFS to find all nodes reachable from remaining expanded nodes
-    const reachableNodes = new Set<string>();
-    const toVisit = Array.from(newExpanded);
-    while (toVisit.length > 0) {
-      const current = toVisit.pop()!;
-      if (reachableNodes.has(current)) continue;
-      reachableNodes.add(current);
+    // Track if we're promoting a new root (need to load its relationships)
+    let newRootId: string | null = null;
+    let newRootGraphData: any = null;
 
-      // Find connected nodes via remaining edges
-      newEdges.forEach((edge) => {
-        if (edge.data.source === current && !reachableNodes.has(edge.data.target)) {
-          toVisit.push(edge.data.target);
+    // If no expanded nodes remain, promote a connected node as new root
+    if (newExpanded.size === 0) {
+      // Find direct connections of the collapsed node that are still visible
+      const connectedNodes: string[] = [];
+      fullGraphEdges.forEach((edge) => {
+        if (edge.data.source === commandId && fullGraphNodes.has(edge.data.target) && !nodesToRemove.has(edge.data.target)) {
+          connectedNodes.push(edge.data.target);
         }
-        if (edge.data.target === current && !reachableNodes.has(edge.data.source)) {
-          toVisit.push(edge.data.source);
+        if (edge.data.target === commandId && fullGraphNodes.has(edge.data.source) && !nodesToRemove.has(edge.data.source)) {
+          connectedNodes.push(edge.data.source);
+        }
+      });
+
+      // Promote the first connected node as new root
+      if (connectedNodes.length > 0) {
+        newRootId = connectedNodes[0];
+        newExpanded.add(newRootId);
+        newHistory = [{ nodeId: newRootId, parentNodeId: null }];
+        console.log('[ChainExplorer] Promoted new root:', newRootId);
+
+        // Fetch the new root's relationships
+        try {
+          newRootGraphData = await window.electronAPI.getGraphWithMetadata(newRootId);
+          console.log('[ChainExplorer] Fetched new root relationships:', newRootGraphData);
+        } catch (error) {
+          console.error('[ChainExplorer] Error fetching new root relationships:', error);
+        }
+      }
+    }
+
+    // Start with nodes/edges we want to keep
+    let newNodes = new Map<string, GraphNode>();
+    newEdges = new Map<string, GraphEdge>();
+
+    // If we have a new root with data, build from that
+    if (newRootId && newRootGraphData?.elements) {
+      // Add all nodes from new root's graph
+      newRootGraphData.elements.nodes.forEach((node: GraphNode) => {
+        newNodes.set(node.data.id, node);
+      });
+      // Add all edges from new root's graph
+      newRootGraphData.elements.edges.forEach((edge: GraphEdge) => {
+        newEdges.set(edge.data.id, edge);
+      });
+    } else {
+      // No new root promotion - use BFS from remaining expanded nodes
+      newEdges = new Map(fullGraphEdges);
+      newEdges.forEach((edge, key) => {
+        if (nodesToRemove.has(edge.data.source) || nodesToRemove.has(edge.data.target)) {
+          newEdges.delete(key);
+        }
+      });
+
+      // BFS to find all nodes reachable from remaining expanded nodes
+      const reachableNodes = new Set<string>();
+      const toVisit = Array.from(newExpanded);
+      while (toVisit.length > 0) {
+        const current = toVisit.pop()!;
+        if (reachableNodes.has(current)) continue;
+        reachableNodes.add(current);
+
+        // Find connected nodes via remaining edges
+        newEdges.forEach((edge) => {
+          if (edge.data.source === current && !reachableNodes.has(edge.data.target)) {
+            toVisit.push(edge.data.target);
+          }
+          if (edge.data.target === current && !reachableNodes.has(edge.data.source)) {
+            toVisit.push(edge.data.source);
+          }
+        });
+      }
+
+      // Keep only reachable nodes
+      newNodes = new Map(fullGraphNodes);
+      newNodes.forEach((_, id) => {
+        if (!reachableNodes.has(id)) {
+          newNodes.delete(id);
         }
       });
     }
-
-    // Keep only reachable nodes
-    const newNodes = new Map(graphNodes);
-    newNodes.forEach((_, id) => {
-      if (!reachableNodes.has(id)) {
-        newNodes.delete(id);
-      }
-    });
 
     // Recalculate unexplored nodes
     const newUnexplored = new Set<string>();
@@ -351,21 +540,20 @@ export default function ChainExplorerGraph({
     });
 
     console.log('[ChainExplorer] Collapse complete:', {
-      removed: graphNodes.size - newNodes.size,
+      removed: fullGraphNodes.size - newNodes.size,
       remaining: newNodes.size,
-      reachable: reachableNodes.size,
+      newRoot: newRootId,
     });
 
-    // Update state
-    setGraphNodes(newNodes);
-    setGraphEdges(newEdges);
+    // Update full state (collapse truly removes from full state)
+    setFullGraphNodes(newNodes);
+    setFullGraphEdges(newEdges);
     setExpandedNodes(newExpanded);
-    setNodesWithUnexploredRels(newUnexplored);
     setExpansionHistory(newHistory);
 
-    // Update visualization
-    updateCytoscapeGraph(newNodes, newEdges, newExpanded, newUnexplored);
-  }, [expandedNodes, graphNodes, graphEdges, nodesWithUnexploredRels, expansionHistory, findDescendantNodes, updateCytoscapeGraph]);
+    // Rebuild visible graph based on cleanMode
+    rebuildVisibleGraph(newNodes, newEdges, newExpanded, newHistory, cleanMode);
+  }, [expandedNodes, fullGraphNodes, fullGraphEdges, expansionHistory, findDescendantNodes, rebuildVisibleGraph, cleanMode]);
 
   // Emit state changes to parent
   useEffect(() => {
@@ -620,7 +808,7 @@ export default function ChainExplorerGraph({
     }
 
     // Check if this command is already visible as a connection in the graph
-    const isVisibleConnection = graphNodes.has(initialCommandId);
+    const isVisibleConnection = fullGraphNodes.has(initialCommandId);
 
     if (isVisibleConnection) {
       // ACCUMULATE: Command is a visible connection, just expand it
@@ -630,8 +818,10 @@ export default function ChainExplorerGraph({
       // RESET: New command from search, start fresh
       console.log('[ChainExplorer] New command from search, resetting graph:', initialCommandId);
 
-      // Clear all state
+      // Clear all state (both full and visible)
       setExpandedNodes(new Set());
+      setFullGraphNodes(new Map());
+      setFullGraphEdges(new Map());
       setGraphNodes(new Map());
       setGraphEdges(new Map());
       setNodesWithUnexploredRels(new Set());
@@ -647,40 +837,35 @@ export default function ChainExplorerGraph({
           const graphData = await window.electronAPI.getGraphWithMetadata(initialCommandId);
           if (!graphData?.elements) return;
 
-          const newNodes = new Map<string, GraphNode>();
-          const newEdges = new Map<string, GraphEdge>();
-          const newUnexplored = new Set<string>();
+          const newFullNodes = new Map<string, GraphNode>();
+          const newFullEdges = new Map<string, GraphEdge>();
           const newExpanded = new Set([initialCommandId]);
           const newHistory: ExpansionRecord[] = [{ nodeId: initialCommandId, parentNodeId: null }];
 
-          // Add nodes
+          // Add nodes to full state
           graphData.elements.nodes.forEach((node: GraphNode) => {
-            newNodes.set(node.data.id, node);
-            if (node.data.hasRelationships && node.data.id !== initialCommandId) {
-              newUnexplored.add(node.data.id);
-            }
+            newFullNodes.set(node.data.id, node);
           });
 
-          // Add edges
+          // Add edges to full state
           graphData.elements.edges.forEach((edge: GraphEdge) => {
-            newEdges.set(edge.data.id, edge);
+            newFullEdges.set(edge.data.id, edge);
           });
 
-          // Update state
-          setGraphNodes(newNodes);
-          setGraphEdges(newEdges);
+          // Update full state
+          setFullGraphNodes(newFullNodes);
+          setFullGraphEdges(newFullEdges);
           setExpandedNodes(newExpanded);
-          setNodesWithUnexploredRels(newUnexplored);
           setExpansionHistory(newHistory);
 
-          // Update visualization
-          updateCytoscapeGraph(newNodes, newEdges, newExpanded, newUnexplored);
+          // Rebuild visible graph (respects cleanMode)
+          rebuildVisibleGraph(newFullNodes, newFullEdges, newExpanded, newHistory, cleanMode);
         } finally {
           setLoading(false);
         }
       })();
     }
-  }, [initialCommandId]);
+  }, [initialCommandId, expandedNodes, fullGraphNodes, expandNode, rebuildVisibleGraph, cleanMode]);
 
   return (
     <Paper
@@ -695,9 +880,42 @@ export default function ChainExplorerGraph({
       }}
     >
       <Group mb="md" justify="space-between">
-        <Text size="lg" fw={600}>
-          Relationship Explorer
-        </Text>
+        <Group gap="sm">
+          <Text size="lg" fw={600}>
+            Relationship Explorer
+          </Text>
+          <Button
+            size="xs"
+            variant={cleanMode ? 'filled' : 'subtle'}
+            color={cleanMode ? 'cyan' : 'gray'}
+            onClick={() => onCleanModeChange?.(!cleanMode)}
+          >
+            Clean
+          </Button>
+          <SegmentedControl
+            size="xs"
+            value={layout}
+            onChange={(value) => onLayoutChange?.(value as LayoutType)}
+            data={[
+              { label: 'Grid', value: 'grid' },
+              { label: 'BFS', value: 'bfs' },
+              { label: 'Ring', value: 'concentric' },
+              { label: 'Dagre', value: 'dagre' },
+              { label: 'Elk', value: 'elk' },
+            ]}
+          />
+          {DIRECTIONAL_LAYOUTS.has(layout) && (
+            <SegmentedControl
+              size="xs"
+              value={orientation}
+              onChange={(value) => onOrientationChange?.(value as Orientation)}
+              data={[
+                { label: '↔', value: 'horizontal' },
+                { label: '↕', value: 'vertical' },
+              ]}
+            />
+          )}
+        </Group>
         {nodeCount > 0 && (
           <Group gap="xs">
             <Badge variant="light" color="cyan" size="sm">
