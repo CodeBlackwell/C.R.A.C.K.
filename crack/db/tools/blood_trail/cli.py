@@ -137,6 +137,11 @@ Supported Edge Types:
         action="store_true",
         help="Validate data and show summary without importing",
     )
+    parser.add_argument(
+        "--no-report",
+        action="store_true",
+        help="Skip automatic report generation after edge enhancement",
+    )
 
     # Query library options
     query_group = parser.add_argument_group("Query Library")
@@ -658,6 +663,67 @@ def main():
         dry_run=args.dry_run,
         verbose=args.verbose,
     )
+
+    # Check if we should run the report
+    # Run if: edges were processed (new or existed), not dry-run, not --no-report
+    total_processed = stats.edges_imported + stats.edges_already_existed
+    should_run_report = (
+        total_processed > 0
+        and not args.dry_run
+        and not args.no_report
+        and not stats.errors
+    )
+
+    if should_run_report:
+        # Generate report - run all queries against the enhanced Neo4j database
+        print()
+        print(f"{C}{B}╔══════════════════════════════════════════════════════════════════════╗{R}")
+        print(f"{C}{B}║{R}   {Y}📊{R} {B}Running Attack Path Queries{R} - Generating Report              {C}{B}║{R}")
+        print(f"{C}{B}╚══════════════════════════════════════════════════════════════════════╝{R}")
+        print()
+
+        runner = QueryRunner(config)
+        if runner.connect():
+            try:
+                report_path = args.report_path or (args.bh_data_dir / "blood-trail.md")
+                report_stats = run_all_queries(
+                    runner,
+                    output_path=report_path,
+                    skip_variable_queries=True,
+                    oscp_high_only=False
+                )
+
+                # Final summary
+                print(f"{C}{B}╔══════════════════════════════════════════════════════════════════════╗{R}")
+                print(f"{C}{B}║{R}   {G}✓{R} {B}BloodHound Trail Complete{R}                                     {C}{B}║{R}")
+                print(f"{C}{B}╚══════════════════════════════════════════════════════════════════════╝{R}")
+                print()
+                print(f"  {D}Edges processed:{R}    {B}{total_processed}{R} ({stats.edges_imported} new, {stats.edges_already_existed} existed)")
+                print(f"  {D}Queries with hits:{R}  {B}{report_stats['with_results']}{R} / {report_stats['total_queries']}")
+                print(f"  {D}Report saved:{R}       {B}{report_path}{R}")
+                print()
+
+                if report_stats['findings']:
+                    high_findings = [f for f in report_stats['findings'] if f['relevance'] == 'high']
+                    if high_findings:
+                        print(f"  {G}{B}🎯 Top Attack Paths Discovered:{R}")
+                        for f in sorted(high_findings, key=lambda x: -x['count'])[:5]:
+                            print(f"     {Y}►{R} {f['query']}: {B}{f['count']}{R} results")
+                        print()
+
+            finally:
+                runner.close()
+        else:
+            print(f"{Y}[!]{R} Could not connect to Neo4j for report generation")
+            print(f"    Run manually: crack blood-trail --run-all")
+
+    elif args.dry_run:
+        print(f"{D}[*] Dry run - skipping report generation{R}")
+    elif args.no_report:
+        print(f"{D}[*] Report generation skipped (--no-report){R}")
+    elif total_processed == 0 and not stats.errors:
+        # No edges processed but no errors either - weird state
+        print(f"{Y}[!]{R} No edges were processed. Run with --verbose for details.")
 
     # Return code based on errors
     if stats.errors:
