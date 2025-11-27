@@ -1,5 +1,5 @@
 """
-BloodHound Edge Enhancement Utility
+BloodHound Trail - Edge Enhancement & Query Analysis
 
 Dynamically populates missing Neo4j edges from BloodHound JSON exports,
 enabling complete attack path discovery via Cypher queries.
@@ -15,12 +15,12 @@ Credentials (for reference):
 
 Usage:
     # Edge enhancement
-    python -m bh_enhancer /path/to/bh/json/ --preset attack-paths
+    crack blood-trail /path/to/bh/json/ --preset attack-paths
 
     # Query library
-    python -m bh_enhancer --list-queries
-    python -m bh_enhancer --run-query lateral-adminto-nonpriv
-    python -m bh_enhancer --search-query DCSync
+    crack blood-trail --list-queries
+    crack blood-trail --run-query lateral-adminto-nonpriv
+    crack blood-trail --search-query DCSync
 """
 
 __version__ = "1.1.0"

@@ -1,5 +1,5 @@
 """
-Entry point for python -m bh_enhancer
+Entry point for python -m blood_trail (or crack blood-trail)
 """
 from .cli import main
 

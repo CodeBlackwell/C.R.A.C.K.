@@ -1,24 +1,24 @@
 #!/usr/bin/env python3
 """
-BloodHound Query Runner - Standalone Tool
+BloodHound Trail - Query Runner
 
 Interactive Cypher query execution for BloodHound attack path discovery.
 
 Usage:
-    # Interactive mode
-    python -m bh_enhancer.bh_query
+    # List all queries
+    crack blood-trail --list-queries
 
-    # Quick query by ID
-    python -m bh_enhancer.bh_query lateral-adminto-nonpriv
+    # Run query by ID
+    crack blood-trail --run-query lateral-adminto-nonpriv
 
     # With variables
-    python -m bh_enhancer.bh_query owned-what-can-access USER=PETE@CORP.COM
+    crack blood-trail --run-query owned-what-can-access --var USER=PETE@CORP.COM
 
     # Search queries
-    python -m bh_enhancer.bh_query --search DCSync
+    crack blood-trail --search-query DCSync
 
     # Export for BloodHound
-    python -m bh_enhancer.bh_query --export lateral-adminto-nonpriv
+    crack blood-trail --export-query lateral-adminto-nonpriv
 """
 
 import sys
@@ -34,7 +34,7 @@ def print_banner():
     """Print tool banner"""
     print("""
 ╔═══════════════════════════════════════════════════════════╗
-║           BloodHound Query Runner (bh-query)              ║
+║              BloodHound Trail (blood-trail)               ║
 ║                                                           ║
 ║  63+ pre-built Cypher queries for attack path discovery   ║
 ║  Credentials: neo4j/Neo4j123 | admin/1PlaySmarter*        ║

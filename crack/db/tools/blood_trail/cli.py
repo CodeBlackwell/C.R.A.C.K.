@@ -1,20 +1,20 @@
 #!/usr/bin/env python3
 """
-BloodHound Edge Enhancer - Command Line Interface
+BloodHound Trail - Command Line Interface
 
 Usage:
     # Edge enhancement
-    python -m bh_enhancer /path/to/bh/json/
-    python -m bh_enhancer /path/to/bh/json/ --preset attack-paths
-    python -m bh_enhancer /path/to/bh/json/ --dry-run --verbose
+    crack blood-trail /path/to/bh/json/
+    crack blood-trail /path/to/bh/json/ --preset attack-paths
+    crack blood-trail /path/to/bh/json/ --dry-run --verbose
 
     # Query library
-    python -m bh_enhancer --list-queries
-    python -m bh_enhancer --list-queries --category lateral_movement
-    python -m bh_enhancer --run-query lateral-adminto-nonpriv
-    python -m bh_enhancer --run-query owned-what-can-access --var USER=PETE@CORP.COM
-    python -m bh_enhancer --search-query DCSync
-    python -m bh_enhancer --export-query lateral-adminto-nonpriv
+    crack blood-trail --list-queries
+    crack blood-trail --list-queries --category lateral_movement
+    crack blood-trail --run-query lateral-adminto-nonpriv
+    crack blood-trail --run-query owned-what-can-access --var USER=PETE@CORP.COM
+    crack blood-trail --search-query DCSync
+    crack blood-trail --export-query lateral-adminto-nonpriv
 
 Credentials (defaults):
     - Neo4j: neo4j / Neo4j123
@@ -39,25 +39,25 @@ from .query_runner import (
 
 def create_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="bh-enhance",
-        description="Enhance BloodHound Neo4j graph with missing edges",
+        prog="blood-trail",
+        description="BloodHound Trail - Edge enhancement and Neo4j query analysis",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
   # Attack-path focused edges (recommended)
-  python -m bh_enhancer /path/to/bh/json/ --preset attack-paths
+  crack blood-trail /path/to/bh/json/ --preset attack-paths
 
   # All supported edges
-  python -m bh_enhancer /path/to/bh/json/
+  crack blood-trail /path/to/bh/json/
 
   # Dry run (validate without importing)
-  python -m bh_enhancer /path/to/bh/json/ --dry-run --verbose
+  crack blood-trail /path/to/bh/json/ --dry-run --verbose
 
   # Specific edge types only
-  python -m bh_enhancer /path/to/bh/json/ --edges AdminTo,GenericAll,GetChanges
+  crack blood-trail /path/to/bh/json/ --edges AdminTo,GenericAll,GetChanges
 
   # Custom Neo4j credentials
-  python -m bh_enhancer /path/to/bh/json/ --uri bolt://host:7687 --user neo4j --password pass
+  crack blood-trail /path/to/bh/json/ --uri bolt://host:7687 --user neo4j --password pass
 
 Supported Edge Types:
   Computer Access: AdminTo, CanPSRemote, CanRDP, ExecuteDCOM, HasSession
@@ -212,12 +212,12 @@ Supported Edge Types:
     query_group.add_argument(
         "--run-all",
         action="store_true",
-        help="Run all queries and generate enhanced_bh_report.md",
+        help="Run all queries and generate blood-trail.md",
     )
     query_group.add_argument(
         "--report-path",
         type=Path,
-        help="Custom path for report output (default: ./enhanced_bh_report.md)",
+        help="Custom path for report output (default: ./blood-trail.md)",
     )
 
     return parser
@@ -634,10 +634,23 @@ def main():
         preset = "attack-paths"
     # else: preset=None means all edges
 
-    # Run enhancement
-    print(f"[*] BloodHound Edge Enhancer")
-    print(f"[*] Data directory: {args.bh_data_dir}")
-    print(f"[*] Neo4j: {args.uri}")
+    # Run enhancement with colorized banner
+    C = "\033[96m"  # Cyan
+    G = "\033[92m"  # Green
+    Y = "\033[93m"  # Yellow
+    B = "\033[1m"   # Bold
+    D = "\033[2m"   # Dim
+    R = "\033[0m"   # Reset
+
+    print()
+    print(f"{C}{B}╔══════════════════════════════════════════════════════════════════════╗{R}")
+    print(f"{C}{B}║{R}   {Y}🩸{R} {B}BloodHound Trail{R} - Edge Enhancement & Attack Path Discovery   {C}{B}║{R}")
+    print(f"{C}{B}╚══════════════════════════════════════════════════════════════════════╝{R}")
+    print()
+    print(f"  {D}Data directory:{R}  {B}{args.bh_data_dir}{R}")
+    print(f"  {D}Neo4j endpoint:{R}  {B}{args.uri}{R}")
+    print(f"  {D}JSON files:{R}      {B}{len(json_files)}{R} files found")
+    print()
 
     stats = enhancer.run(
         preset=preset,

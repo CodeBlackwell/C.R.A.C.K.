@@ -77,7 +77,7 @@ class QueryResult:
 
 class QueryRunner:
     """
-    Runs Cypher queries from the bh_enhancer query library.
+    Runs Cypher queries from the BloodHound Trail query library.
 
     Example:
         runner = QueryRunner()
@@ -447,7 +447,7 @@ def run_all_queries(
 
     Args:
         runner: QueryRunner instance
-        output_path: Path for markdown report (default: ./enhanced_bh_report.md)
+        output_path: Path for markdown report (default: ./blood-trail.md)
         skip_variable_queries: Skip queries requiring variables (default: True)
         oscp_high_only: Only run OSCP:HIGH queries
 
@@ -642,7 +642,7 @@ def run_all_queries(
 
     # Write report
     if output_path is None:
-        output_path = Path.cwd() / "enhanced_bh_report.md"
+        output_path = Path.cwd() / "blood-trail.md"
     else:
         output_path = Path(output_path)
 
@@ -770,7 +770,7 @@ def export_to_bloodhound_customqueries(
             existing_queries = [
                 q for q in existing.get("queries", [])
                 if not q.get("category", "").startswith("[CRACK]")
-                and not q.get("category", "").startswith("bh_enhancer/")  # Legacy cleanup
+                and not q.get("category", "").startswith("blood_trail/")  # Legacy cleanup
             ]
             output["queries"] = existing_queries + bh_queries
             print(f"[*] Merged with existing {len(existing_queries)} custom queries")

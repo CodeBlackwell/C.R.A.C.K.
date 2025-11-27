@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "BloodHound Cypher Query Library Schema",
-  "description": "Schema for modular Cypher query files used with bh_enhancer for Active Directory attack path discovery",
+  "description": "Schema for modular Cypher query files used with BloodHound Trail for Active Directory attack path discovery",
   "version": "1.0.0",
   "type": "object",
   "required": ["category", "description", "queries"],
@@ -60,7 +60,7 @@
           "edge_types_used": {
             "type": "array",
             "items": { "type": "string" },
-            "description": "Neo4j relationship types this query depends on (imported by bh_enhancer)"
+            "description": "Neo4j relationship types this query depends on (imported by blood-trail)"
           },
           "oscp_relevance": {
             "type": "string",
@@ -111,7 +111,7 @@
   },
   "usage_notes": {
     "variable_substitution": "Placeholders like <USER> should be replaced with actual values (e.g., PETE@CORP.COM). The QueryRunner handles this automatically.",
-    "edge_dependencies": "Queries depend on edge types imported by bh_enhancer. Run 'python -m bh_enhancer /path/to/bh/json/' first to ensure edges exist.",
+    "edge_dependencies": "Queries depend on edge types imported by blood-trail. Run 'crack blood-trail /path/to/bh/json/' first to ensure edges exist.",
     "neo4j_credentials": "Default: neo4j/Neo4j123. BloodHound: admin/1PlaySmarter*",
     "query_categories": {
       "lateral_movement": "AdminTo, CanRDP, CanPSRemote, ExecuteDCOM, HasSession edges for finding movement paths",

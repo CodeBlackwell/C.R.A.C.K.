@@ -399,6 +399,12 @@ def ports_command(args):
     sys.argv = ['ports'] + args
     ports.main()
 
+def blood_trail_command(args):
+    """Execute BloodHound Trail - Edge enhancement and Neo4j query analysis"""
+    from db.tools.blood_trail.cli import main as bt_main
+    sys.argv = ['crack-blood-trail'] + args
+    bt_main()
+
 def config_command(args):
     """Execute configuration management"""
     from crack.config import ConfigManager
@@ -657,6 +663,9 @@ def main():
   ├─ linpeas         LinPEAS helper with 8 execution methods + AV bypass
   └─ airgeddon       Airgeddon helper - WiFi security auditing (OSWP)
 
+{Colors.YELLOW}▶ Active Directory{Colors.END}
+  └─ blood-trail     BloodHound Trail - Edge enhancement and Neo4j query analysis
+
 {Colors.YELLOW}▶ Session Management{Colors.END}
   └─ session         Reverse shell session management (TCP/HTTP/DNS)
 
@@ -886,6 +895,12 @@ def main():
                                          help='Port Reference - Quick lookup of common ports and attack tools',
                                          add_help=False)
     ports_parser.set_defaults(func=ports_command)
+
+    # BloodHound Trail subcommand
+    blood_trail_parser = subparsers.add_parser('blood-trail',
+                                               help='BloodHound Trail - Edge enhancement and Neo4j query analysis',
+                                               add_help=False)
+    blood_trail_parser.set_defaults(func=blood_trail_command)
 
     # Parse known args to allow passing through tool-specific args
     args, remaining = parser.parse_known_args()
