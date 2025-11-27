@@ -67,7 +67,14 @@ function App() {
     connected: boolean;
     uri?: string;
   }>({ connected: false });
-  const [activeView, setActiveView] = useState<'commands' | 'cheatsheets' | 'chains' | 'writeups'>('chains');
+  const [activeView, setActiveView] = useState<'commands' | 'cheatsheets' | 'chains' | 'writeups'>(() => {
+    // Load persisted view from localStorage, default to 'chains'
+    const saved = localStorage.getItem('crack-activeView');
+    if (saved && ['commands', 'cheatsheets', 'chains', 'writeups'].includes(saved)) {
+      return saved as 'commands' | 'cheatsheets' | 'chains' | 'writeups';
+    }
+    return 'chains';
+  });
   const [expandedCommandId, setExpandedCommandId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('details');
   const [chainViewMode, setChainViewMode] = useState<ChainViewMode>('graph');
@@ -135,9 +142,10 @@ function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  // Debug: Log active view changes
+  // Debug: Log active view changes and persist to localStorage
   useEffect(() => {
     console.log('[App] Active view changed:', activeView);
+    localStorage.setItem('crack-activeView', activeView);
   }, [activeView]);
 
   useEffect(() => {
