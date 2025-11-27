@@ -96,8 +96,9 @@ export default function ChainExplorerGraph({
   // Track previous external state to detect changes from tree
   const prevExternalNodesRef = useRef<Map<string, GraphNode>>();
 
-  // Ref to always have latest expandNode function (fixes stale closure in Cytoscape events)
+  // Refs to always have latest functions (fixes stale closure in Cytoscape events)
   const expandNodeRef = useRef<(commandId: string) => void>(() => {});
+  const onCommandSelectRef = useRef<((commandId: string) => void) | undefined>(onCommandSelect);
 
   // Find descendant nodes for collapse
   const findDescendantNodes = useCallback((nodeId: string, history: ExpansionRecord[]): Set<string> => {
@@ -274,10 +275,14 @@ export default function ChainExplorerGraph({
     }
   }, [expandedNodes, graphNodes, graphEdges, nodesWithUnexploredRels, expansionHistory, updateCytoscapeGraph]);
 
-  // Keep ref updated with latest expandNode function (fixes stale closure)
+  // Keep refs updated with latest functions (fixes stale closure)
   useEffect(() => {
     expandNodeRef.current = expandNode;
   }, [expandNode]);
+
+  useEffect(() => {
+    onCommandSelectRef.current = onCommandSelect;
+  }, [onCommandSelect]);
 
   // Collapse a node (remove its descendants)
   const collapseNode = useCallback((commandId: string) => {
@@ -511,12 +516,16 @@ export default function ChainExplorerGraph({
       maxZoom: 3,
     });
 
-    // Node click handler - expand/collapse
-    // Uses ref to always call latest expandNode (avoids stale closure)
+    // Node click handler - expand/collapse AND update details
+    // Uses refs to always call latest functions (avoids stale closure)
     cyRef.current.on('tap', 'node', (event) => {
       const nodeId = event.target.data('id');
       console.log('[ChainExplorer] Node clicked:', nodeId);
       expandNodeRef.current(nodeId);
+      // Also update details view with clicked node
+      if (onCommandSelectRef.current) {
+        onCommandSelectRef.current(nodeId);
+      }
     });
 
     // Double-click to select command for details panel

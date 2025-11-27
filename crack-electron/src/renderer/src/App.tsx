@@ -89,6 +89,52 @@ function App() {
     console.log('[App] electronAPI available:', !!window.electronAPI);
   }, []);
 
+  // Keyboard shortcuts for view navigation
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Only trigger on Ctrl+Shift combinations
+      if (!e.ctrlKey || !e.shiftKey) return;
+
+      switch (e.key.toLowerCase()) {
+        case 'c': // CTRL+SHIFT+C → Commands
+          e.preventDefault();
+          console.log('[App] Keyboard shortcut: Commands');
+          setActiveView('commands');
+          setSelectedChainId(null);
+          setSelectedCheatsheet(null);
+          setSelectedWriteupId(null);
+          break;
+        case 'x': // CTRL+SHIFT+X → Chains
+          e.preventDefault();
+          console.log('[App] Keyboard shortcut: Chains');
+          setActiveView('chains');
+          setSelectedCheatsheet(null);
+          setSelectedCommand(null);
+          setSelectedWriteupId(null);
+          break;
+        case 'z': // CTRL+SHIFT+Z → Cheatsheets
+          e.preventDefault();
+          console.log('[App] Keyboard shortcut: Cheatsheets');
+          setActiveView('cheatsheets');
+          setSelectedChainId(null);
+          setSelectedCommand(null);
+          setSelectedWriteupId(null);
+          break;
+        case 'w': // CTRL+SHIFT+W → Writeups
+          e.preventDefault();
+          console.log('[App] Keyboard shortcut: Writeups');
+          setActiveView('writeups');
+          setSelectedChainId(null);
+          setSelectedCheatsheet(null);
+          setSelectedCommand(null);
+          break;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   // Debug: Log active view changes
   useEffect(() => {
     console.log('[App] Active view changed:', activeView);
