@@ -95,6 +95,8 @@ export default function ChainExplorerGraph({
 
   // Track previous external state to detect changes from tree
   const prevExternalNodesRef = useRef<Map<string, GraphNode>>();
+  // Track internal state size for sync comparison (avoids stale closure)
+  const graphNodesSizeRef = useRef(0);
 
   // Refs to always have latest functions (fixes stale closure in Cytoscape events)
   const expandNodeRef = useRef<(commandId: string) => void>(() => {});
@@ -284,45 +286,75 @@ export default function ChainExplorerGraph({
     onCommandSelectRef.current = onCommandSelect;
   }, [onCommandSelect]);
 
-  // Collapse a node (remove its descendants)
+  // Keep graphNodes size ref updated
+  useEffect(() => {
+    graphNodesSizeRef.current = graphNodes.size;
+  }, [graphNodes]);
+
+  // Collapse a node (remove its descendants and orphaned connections)
   const collapseNode = useCallback((commandId: string) => {
     console.log('[ChainExplorer] collapseNode called:', commandId);
 
-    // Find all descendant nodes
+    // Find all descendant nodes (from expansion history)
     const nodesToRemove = findDescendantNodes(commandId, expansionHistory);
-    console.log('[ChainExplorer] Nodes to remove:', Array.from(nodesToRemove));
+    nodesToRemove.add(commandId); // Include the collapsed node itself
+    console.log('[ChainExplorer] Nodes to collapse:', Array.from(nodesToRemove));
 
-    const newNodes = new Map(graphNodes);
-    const newEdges = new Map(graphEdges);
+    // Update expanded set and history first
     const newExpanded = new Set(expandedNodes);
-    const newUnexplored = new Set(nodesWithUnexploredRels);
-
-    // Remove descendant nodes
-    nodesToRemove.forEach(nodeId => {
-      newNodes.delete(nodeId);
-      newExpanded.delete(nodeId);
-      newUnexplored.delete(nodeId);
+    nodesToRemove.forEach(id => {
+      newExpanded.delete(id);
     });
+    const newHistory = expansionHistory.filter(r => !nodesToRemove.has(r.nodeId));
 
-    // Remove edges connected to removed nodes
+    // Remove edges connected to collapsed nodes
+    const newEdges = new Map(graphEdges);
     newEdges.forEach((edge, key) => {
       if (nodesToRemove.has(edge.data.source) || nodesToRemove.has(edge.data.target)) {
         newEdges.delete(key);
       }
     });
 
-    // Mark collapsed node as unexplored again
-    newExpanded.delete(commandId);
-    // Check if the node has relationships (it should, since it was expanded)
-    const node = newNodes.get(commandId);
-    if (node) {
-      newUnexplored.add(commandId);
+    // BFS to find all nodes reachable from remaining expanded nodes
+    const reachableNodes = new Set<string>();
+    const toVisit = Array.from(newExpanded);
+    while (toVisit.length > 0) {
+      const current = toVisit.pop()!;
+      if (reachableNodes.has(current)) continue;
+      reachableNodes.add(current);
+
+      // Find connected nodes via remaining edges
+      newEdges.forEach((edge) => {
+        if (edge.data.source === current && !reachableNodes.has(edge.data.target)) {
+          toVisit.push(edge.data.target);
+        }
+        if (edge.data.target === current && !reachableNodes.has(edge.data.source)) {
+          toVisit.push(edge.data.source);
+        }
+      });
     }
 
-    // Clean expansion history
-    const newHistory = expansionHistory.filter(r =>
-      !nodesToRemove.has(r.nodeId) && r.nodeId !== commandId
-    );
+    // Keep only reachable nodes
+    const newNodes = new Map(graphNodes);
+    newNodes.forEach((_, id) => {
+      if (!reachableNodes.has(id)) {
+        newNodes.delete(id);
+      }
+    });
+
+    // Recalculate unexplored nodes
+    const newUnexplored = new Set<string>();
+    newNodes.forEach((node, id) => {
+      if (!newExpanded.has(id) && node.data.hasRelationships) {
+        newUnexplored.add(id);
+      }
+    });
+
+    console.log('[ChainExplorer] Collapse complete:', {
+      removed: graphNodes.size - newNodes.size,
+      remaining: newNodes.size,
+      reachable: reachableNodes.size,
+    });
 
     // Update state
     setGraphNodes(newNodes);
@@ -344,13 +376,22 @@ export default function ChainExplorerGraph({
 
   // Sync with external state changes (when tree removes nodes)
   useEffect(() => {
+    console.log('[ChainExplorer] Sync effect triggered:', {
+      hasExternalNodes: !!externalNodes,
+      externalSize: externalNodes?.size,
+      internalRefSize: graphNodesSizeRef.current,
+    });
     if (externalNodes && externalEdges && externalExpanded && externalHistory) {
       // Only sync if external state is smaller (nodes were removed)
-      if (externalNodes.size < graphNodes.size) {
-        console.log('[ChainExplorer] Syncing with external state (nodes removed):', {
-          external: externalNodes.size,
-          internal: graphNodes.size,
-        });
+      // Use ref to get current internal size (avoids stale closure)
+      const internalSize = graphNodesSizeRef.current;
+      console.log('[ChainExplorer] Comparing sizes:', {
+        external: externalNodes.size,
+        internal: internalSize,
+        shouldSync: externalNodes.size < internalSize,
+      });
+      if (externalNodes.size < internalSize) {
+        console.log('[ChainExplorer] ========== SYNCING (nodes removed) ==========');
         setGraphNodes(externalNodes);
         setGraphEdges(externalEdges);
         setExpandedNodes(externalExpanded);
@@ -369,7 +410,7 @@ export default function ChainExplorerGraph({
         updateCytoscapeGraph(externalNodes, externalEdges, externalExpanded, newUnexplored);
       }
     }
-  }, [externalNodes, externalEdges, externalExpanded, externalHistory]);
+  }, [externalNodes, externalEdges, externalExpanded, externalHistory, updateCytoscapeGraph]);
 
   // Handle highlighted node from tree
   useEffect(() => {

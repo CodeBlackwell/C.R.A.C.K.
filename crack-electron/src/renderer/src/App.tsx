@@ -274,31 +274,71 @@ function App() {
   }, []);
 
   const handleTreeNodeRemove = useCallback((nodeId: string) => {
+    console.log('[App] ========== REMOVING NODE ==========');
     console.log('[App] Removing node from tree:', nodeId);
+    console.log('[App] Current state before removal:', {
+      nodesCount: explorerNodes.size,
+      expandedCount: explorerExpanded.size,
+      historyCount: explorerHistory.length,
+    });
 
-    // Find all descendants to remove
+    // Find all descendants to remove (nodes in expansion history)
     const nodesToRemove = findDescendantNodes(nodeId, explorerHistory);
     nodesToRemove.add(nodeId);
 
-    // Update nodes
-    const newNodes = new Map(explorerNodes);
-    const newEdges = new Map(explorerEdges);
+    // Update expanded set and history first
     const newExpanded = new Set(explorerExpanded);
-
     nodesToRemove.forEach(id => {
-      newNodes.delete(id);
       newExpanded.delete(id);
     });
+    const newHistory = explorerHistory.filter(r => !nodesToRemove.has(r.nodeId));
 
-    // Remove edges connected to removed nodes
+    // Now find all nodes reachable from remaining expanded nodes
+    // This ensures we keep connection nodes that are still reachable
+    const reachableNodes = new Set<string>();
+    const newEdges = new Map(explorerEdges);
+
+    // Remove edges connected to removed expanded nodes
     newEdges.forEach((edge, key) => {
       if (nodesToRemove.has(edge.data.source) || nodesToRemove.has(edge.data.target)) {
         newEdges.delete(key);
       }
     });
 
-    // Update history
-    const newHistory = explorerHistory.filter(r => !nodesToRemove.has(r.nodeId));
+    // BFS to find all nodes reachable from remaining expanded nodes
+    const toVisit = Array.from(newExpanded);
+    while (toVisit.length > 0) {
+      const current = toVisit.pop()!;
+      if (reachableNodes.has(current)) continue;
+      reachableNodes.add(current);
+
+      // Find connected nodes via remaining edges
+      newEdges.forEach((edge) => {
+        if (edge.data.source === current && !reachableNodes.has(edge.data.target)) {
+          toVisit.push(edge.data.target);
+        }
+        if (edge.data.target === current && !reachableNodes.has(edge.data.source)) {
+          toVisit.push(edge.data.source);
+        }
+      });
+    }
+
+    // Keep only reachable nodes
+    const newNodes = new Map(explorerNodes);
+    newNodes.forEach((_, id) => {
+      if (!reachableNodes.has(id)) {
+        newNodes.delete(id);
+      }
+    });
+
+    console.log('[App] Node removal complete:', {
+      removed: nodesToRemove.size,
+      remaining: newNodes.size,
+      reachable: reachableNodes.size,
+      newExpandedSize: newExpanded.size,
+      newHistoryLength: newHistory.length,
+    });
+    console.log('[App] ========== SETTING NEW STATE ==========');
 
     setExplorerNodes(newNodes);
     setExplorerEdges(newEdges);
