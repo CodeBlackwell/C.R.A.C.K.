@@ -440,7 +440,8 @@ def run_all_queries(
     runner: 'QueryRunner',
     output_path: Optional[Path] = None,
     skip_variable_queries: bool = True,
-    oscp_high_only: bool = False
+    oscp_high_only: bool = False,
+    verbose: bool = False
 ) -> dict:
     """
     Run all queries and generate colorized console output + markdown report.
@@ -450,6 +451,7 @@ def run_all_queries(
         output_path: Path for markdown report (default: ./blood-trail.md)
         skip_variable_queries: Skip queries requiring variables (default: True)
         oscp_high_only: Only run OSCP:HIGH queries
+        verbose: Show full query results in console (no truncation)
 
     Returns:
         Dict with summary statistics
@@ -554,6 +556,23 @@ def run_all_queries(
                     print(f"  {Colors.GREEN}●{Colors.RESET} {rel_color}{rel_badge}{Colors.RESET} {Colors.BOLD}{query.name}{Colors.RESET}")
                     print(f"    {Colors.GREEN}└─ {result.record_count} results{Colors.RESET}")
 
+                    # Verbose: show full table in console
+                    if verbose and result.records:
+                        headers = list(result.records[0].keys())
+                        # Calculate column widths (no truncation in verbose)
+                        widths = {h: len(h) for h in headers}
+                        for record in result.records:
+                            for h in headers:
+                                widths[h] = max(widths[h], len(str(record.get(h, ""))))
+                        # Print table
+                        header_line = " | ".join(h.ljust(widths[h]) for h in headers)
+                        print(f"    {Colors.DIM}{header_line}{Colors.RESET}")
+                        print(f"    {Colors.DIM}{'-' * len(header_line)}{Colors.RESET}")
+                        for record in result.records:
+                            row = " | ".join(str(record.get(h, "")).ljust(widths[h]) for h in headers)
+                            print(f"    {row}")
+                        print()
+
                     # Add to findings
                     stats["findings"].append({
                         "query": query.name,
@@ -562,23 +581,21 @@ def run_all_queries(
                         "relevance": query.oscp_relevance
                     })
 
-                    # Markdown
+                    # Markdown (always full output in report)
                     report_lines.append(f"### ✅ {query.name}")
                     report_lines.append(f"**OSCP Relevance:** {query.oscp_relevance.upper()} | **Results:** {result.record_count}")
                     report_lines.append("")
                     report_lines.append(f"> {query.description}")
                     report_lines.append("")
 
-                    # Format results as table
+                    # Format results as table (full output in markdown)
                     if result.records:
                         headers = list(result.records[0].keys())
                         report_lines.append("| " + " | ".join(headers) + " |")
                         report_lines.append("| " + " | ".join(["---"] * len(headers)) + " |")
-                        for record in result.records[:25]:  # Limit to 25 rows
-                            row = [str(record.get(h, ""))[:50] for h in headers]
+                        for record in result.records:
+                            row = [str(record.get(h, "")).replace("|", "\\|") for h in headers]
                             report_lines.append("| " + " | ".join(row) + " |")
-                        if result.record_count > 25:
-                            report_lines.append(f"*... and {result.record_count - 25} more rows*")
                     report_lines.append("")
 
                 else:

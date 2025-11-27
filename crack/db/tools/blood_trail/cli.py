@@ -690,7 +690,8 @@ def main():
                     runner,
                     output_path=report_path,
                     skip_variable_queries=True,
-                    oscp_high_only=False
+                    oscp_high_only=False,
+                    verbose=args.verbose
                 )
 
                 # Final summary
