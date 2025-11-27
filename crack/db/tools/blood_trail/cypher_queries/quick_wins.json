@@ -136,6 +136,47 @@
       "example_output": "ANONYMOUS LOGON, Authenticated Users",
       "next_steps": [],
       "tags": ["OSCP:LOW", "quick_win", "legacy", "compatibility"]
+    },
+    {
+      "id": "quick-gmsa-password",
+      "name": "ReadGMSAPassword Rights",
+      "description": "Find principals who can read Group Managed Service Account passwords. Direct credential access without cracking.",
+      "cypher": "MATCH (attacker)-[:ReadGMSAPassword]->(gmsa:User)\nWHERE NOT attacker.admincount = true\nRETURN attacker.name AS Attacker,\n       labels(attacker) AS AttackerType,\n       gmsa.name AS GMSAAccount,\n       gmsa.description AS Description",
+      "variables": {},
+      "edge_types_used": ["ReadGMSAPassword"],
+      "oscp_relevance": "high",
+      "expected_results": "Non-privileged principals who can read gMSA passwords",
+      "example_output": "WEB_SERVERS@CORP.COM -[ReadGMSAPassword]-> GMSA_IIS$@CORP.COM",
+      "next_steps": ["lateral-adminto-nonpriv"],
+      "attack_technique": "T1555",
+      "tags": ["OSCP:HIGH", "quick_win", "gMSA", "credential_access"]
+    },
+    {
+      "id": "quick-laps-readers",
+      "name": "ReadLAPSPassword Rights",
+      "description": "Find non-privileged principals who can read LAPS passwords. Direct local admin credential access.",
+      "cypher": "MATCH (attacker)-[:ReadLAPSPassword]->(c:Computer)\nWHERE NOT attacker.admincount = true\nRETURN attacker.name AS Attacker,\n       labels(attacker) AS AttackerType,\n       collect(c.name) AS Computers,\n       count(c) AS ComputerCount\nORDER BY ComputerCount DESC",
+      "variables": {},
+      "edge_types_used": ["ReadLAPSPassword"],
+      "oscp_relevance": "high",
+      "expected_results": "Non-privileged principals with LAPS read access",
+      "example_output": "HELPDESK@CORP.COM -> [CLIENT01, CLIENT02, CLIENT03] (3 computers)",
+      "next_steps": ["lateral-sessions-on-computer"],
+      "attack_technique": "T1555",
+      "tags": ["OSCP:HIGH", "quick_win", "LAPS", "credential_access"]
+    },
+    {
+      "id": "quick-gmsa-all",
+      "name": "All gMSA Accounts",
+      "description": "Enumerate all Group Managed Service Accounts. gMSAs often have elevated privileges and their passwords can be retrieved if you have ReadGMSAPassword.",
+      "cypher": "MATCH (gmsa:User)\nWHERE gmsa.gmsa = true\n   OR gmsa.name ENDS WITH '$'\nRETURN gmsa.name AS GMSAAccount,\n       gmsa.description AS Description,\n       gmsa.admincount AS IsPrivileged,\n       gmsa.enabled AS Enabled",
+      "variables": {},
+      "edge_types_used": [],
+      "oscp_relevance": "high",
+      "expected_results": "All gMSA accounts in the domain",
+      "example_output": "GMSA_SQL$@CORP.COM (admincount=false), GMSA_IIS$@CORP.COM",
+      "next_steps": ["quick-gmsa-password"],
+      "tags": ["OSCP:HIGH", "quick_win", "gMSA", "enumeration"]
     }
   ]
 }

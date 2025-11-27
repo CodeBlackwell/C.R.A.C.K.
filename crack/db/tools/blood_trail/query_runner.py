@@ -461,7 +461,12 @@ def run_all_queries(
 
     # Initialize command suggester for attack recommendations
     try:
-        from .command_suggester import CommandSuggester, CommandSuggestion, AttackSequence
+        from .command_suggester import CommandSuggester, CommandTable
+        from .display_commands import (
+            print_command_tables_by_phase,
+            format_tables_markdown,
+            get_table_stats,
+        )
         suggester = CommandSuggester()
         suggestions_enabled = bool(suggester.commands)
     except ImportError:
@@ -491,7 +496,7 @@ def run_all_queries(
 
     # Results storage
     all_results = {}
-    all_suggestions = {}  # query_id -> list of suggestions
+    all_tables = []       # DRY command tables
     all_sequences = []    # attack sequences from chain queries
     stats = {
         "total_queries": 0,
@@ -500,7 +505,8 @@ def run_all_queries(
         "skipped": 0,
         "failed": 0,
         "findings": [],
-        "suggestions_generated": 0,
+        "tables_generated": 0,
+        "total_targets": 0,
         "sequences_generated": 0,
     }
 
@@ -587,31 +593,23 @@ def run_all_queries(
                             print(f"    {row}")
                         print()
 
-                    # Generate attack command suggestions
+                    # Generate attack command tables (DRY approach)
                     if suggestions_enabled and suggester:
-                        suggestions = suggester.suggest_for_query(query.id, result.records)
-                        if suggestions:
-                            # Check if these are sequences or regular suggestions
-                            if suggestions and hasattr(suggestions[0], 'steps'):
-                                # Attack sequences
-                                all_sequences.extend(suggestions)
-                                stats["sequences_generated"] += len(suggestions)
-                            else:
-                                # Regular suggestions
-                                all_suggestions[query.id] = suggestions
-                                stats["suggestions_generated"] += len(suggestions)
-                                result.suggestions = suggestions
+                        # Build DRY command tables
+                        tables = suggester.build_command_tables(query.id, result.records)
+                        if tables:
+                            all_tables.extend(tables)
+                            stats["tables_generated"] += len(tables)
+                            stats["total_targets"] += sum(len(t.targets) for t in tables)
 
-                                # Inline suggestion display (max 2)
-                                if verbose:
-                                    print(f"    {Colors.CYAN}Suggested Commands:{Colors.RESET}")
-                                    for s in suggestions[:2]:
-                                        print(f"      {Colors.DIM}# {s.context}{Colors.RESET}")
-                                        print(f"      {Colors.DIM}{s.template}{Colors.RESET}")
-                                        print(f"      {Colors.GREEN}{s.ready_to_run}{Colors.RESET}")
-                                        if s.variables_needed:
-                                            print(f"      {Colors.YELLOW}↳ Need: {', '.join(s.variables_needed)}{Colors.RESET}")
-                                    print()
+                        # Also check for attack sequences (chain queries)
+                        from .command_mappings import QUERY_COMMAND_MAPPINGS
+                        mapping = QUERY_COMMAND_MAPPINGS.get(query.id)
+                        if mapping == "BUILD_SEQUENCE":
+                            sequences = suggester.suggest_for_query(query.id, result.records)
+                            if sequences:
+                                all_sequences.extend(sequences)
+                                stats["sequences_generated"] += len(sequences)
 
                     # Add to findings
                     stats["findings"].append({
@@ -697,75 +695,35 @@ def run_all_queries(
             report_lines.append(f"- **{f['query']}**: {f['count']} results ({f['category']})")
         report_lines.append("")
 
-    # Attack Commands Section (Console + Report)
-    if all_suggestions or all_sequences:
+    # Attack Commands Section (Console + Report) - DRY tabular output
+    if all_tables or all_sequences:
         print(f"\n{Colors.BOLD}{Colors.HEADER}{'='*70}")
-        print(f"  ATTACK COMMANDS")
-        print(f"{'='*70}{Colors.RESET}\n")
+        print(f"  ATTACK COMMANDS (DRY TABULAR FORMAT)")
+        print(f"{'='*70}{Colors.RESET}")
 
-        report_lines.append("## Attack Commands")
-        report_lines.append("")
+        # Print DRY command tables grouped by phase
+        if all_tables:
+            print_command_tables_by_phase(all_tables, use_colors=True)
 
-        # Group suggestions by attack phase
-        phases = {
-            "Quick Wins": ["quick-"],
-            "Lateral Movement": ["lateral-"],
-            "Privilege Escalation": ["privesc-"],
-            "Owned Principal": ["owned-"],
-        }
+            # Add to report
+            report_lines.append(format_tables_markdown(all_tables))
 
-        for phase_name, prefixes in phases.items():
-            phase_suggestions = []
-            for qid, slist in all_suggestions.items():
-                if any(qid.startswith(p) for p in prefixes):
-                    phase_suggestions.extend(slist)
-
-            if phase_suggestions:
-                print(f"  {Colors.BOLD}{Colors.CYAN}{phase_name}{Colors.RESET}")
-                report_lines.append(f"### {phase_name}")
-                report_lines.append("")
-
-                # Deduplicate by command_id + ready_to_run
-                seen = set()
-                for s in phase_suggestions:
-                    key = (s.command_id, s.ready_to_run)
-                    if key in seen:
-                        continue
-                    seen.add(key)
-
-                    print(f"    {Colors.BOLD}{s.name}{Colors.RESET}")
-                    print(f"    {Colors.DIM}# {s.context}{Colors.RESET}")
-                    print(f"    {Colors.DIM}Template: {s.template}{Colors.RESET}")
-                    print(f"    {Colors.GREEN}Ready:    {s.ready_to_run}{Colors.RESET}")
-                    if s.variables_needed:
-                        print(f"    {Colors.YELLOW}↳ Need: {', '.join(s.variables_needed)}{Colors.RESET}")
-                    print()
-
-                    report_lines.append(f"#### {s.name}")
-                    report_lines.append(f"**Context:** {s.context}")
-                    report_lines.append("")
-                    report_lines.append(f"- **Template:** `{s.template}`")
-                    report_lines.append(f"- **Ready:** `{s.ready_to_run}`")
-                    if s.variables_needed:
-                        report_lines.append(f"- **Need:** {', '.join(s.variables_needed)}")
-                    report_lines.append("")
-
-        # Attack Sequences
+        # Attack Sequences (chain queries)
         if all_sequences:
-            print(f"  {Colors.BOLD}{Colors.HEADER}Multi-Step Attack Chains{Colors.RESET}")
+            print(f"\n{Colors.BOLD}{Colors.HEADER}Multi-Step Attack Chains{Colors.RESET}")
             report_lines.append("### Multi-Step Attack Chains")
             report_lines.append("")
 
             for seq in all_sequences:
-                print(f"    {Colors.BOLD}{Colors.HEADER}{seq.name}{Colors.RESET}")
-                print(f"    {Colors.DIM}{seq.description}{Colors.RESET}")
+                print(f"  {Colors.BOLD}{Colors.HEADER}{seq.name}{Colors.RESET}")
+                print(f"  {Colors.DIM}{seq.description}{Colors.RESET}")
                 report_lines.append(f"#### {seq.name}")
                 report_lines.append(f"*{seq.description}*")
                 report_lines.append("")
 
                 for i, step in enumerate(seq.steps, 1):
-                    print(f"      {i}. {Colors.DIM}{step.template}{Colors.RESET}")
-                    print(f"         {Colors.GREEN}{step.ready_to_run}{Colors.RESET}")
+                    print(f"    {i}. {Colors.DIM}{step.template}{Colors.RESET}")
+                    print(f"       {Colors.GREEN}{step.ready_to_run}{Colors.RESET}")
                     report_lines.append(f"{i}. **{step.context}**")
                     report_lines.append(f"   - Template: `{step.template}`")
                     report_lines.append(f"   - Ready: `{step.ready_to_run}`")
@@ -773,8 +731,9 @@ def run_all_queries(
                 print()
 
         # Stats
-        print(f"  {Colors.DIM}Commands suggested: {stats['suggestions_generated']}")
-        print(f"  Attack chains: {stats['sequences_generated']}{Colors.RESET}")
+        table_stats = get_table_stats(all_tables) if all_tables else {}
+        print(f"\n{Colors.DIM}Command tables: {stats['tables_generated']} | Targets: {stats['total_targets']}")
+        print(f"Attack chains: {stats['sequences_generated']}{Colors.RESET}")
         print()
 
     # Write report

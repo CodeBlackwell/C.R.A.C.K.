@@ -92,6 +92,7 @@ ACE_EDGE_MAPPINGS: Dict[str, str] = {
     # Generic permissions
     "GenericAll": "GenericAll",
     "GenericWrite": "GenericWrite",
+    "WriteProperty": "WriteProperty",  # GPO/object property modification
 
     # ACL modification
     "WriteDacl": "WriteDacl",
@@ -111,12 +112,28 @@ ACE_EDGE_MAPPINGS: Dict[str, str] = {
     "AddMember": "AddMember",
     "AddSelf": "AddSelf",
 
-    # Other
+    # LAPS/GMSA credential access
     "ReadLAPSPassword": "ReadLAPSPassword",
     "ReadGMSAPassword": "ReadGMSAPassword",
+    "SyncLAPSPassword": "SyncLAPSPassword",
+    "DumpSMSAPassword": "DumpSMSAPassword",
+
+    # Kerberos/SPN manipulation
+    "WriteSPN": "WriteSPN",
+    "WriteAccountRestrictions": "WriteAccountRestrictions",  # RBCD
+
+    # Certificate Services
     "Enroll": "Enroll",
     "ManageCA": "ManageCA",
     "ManageCertificates": "ManageCertificates",
+    "WritePKIEnrollmentFlag": "WritePKIEnrollmentFlag",
+    "WritePKINameFlag": "WritePKINameFlag",
+
+    # GPO manipulation
+    "WriteGPLink": "WriteGPLink",
+
+    # RBCD
+    "AddAllowedToAct": "AddAllowedToAct",
 }
 
 # Attack-path focused edge types (--preset attack-paths)
@@ -131,11 +148,14 @@ ATTACK_PATH_EDGES: Set[str] = {
     # ACL abuse
     "GenericAll",
     "GenericWrite",
+    "WriteProperty",
     "WriteDacl",
     "WriteOwner",
     "Owns",
+    "AllExtendedRights",
     "ForceChangePassword",
     "AddKeyCredentialLink",
+    "AddMember",
 
     # DCSync
     "GetChanges",
@@ -147,6 +167,67 @@ ATTACK_PATH_EDGES: Set[str] = {
     # Delegation
     "AllowedToDelegate",
     "AllowedToAct",
+
+    # Credential access
+    "ReadLAPSPassword",
+    "ReadGMSAPassword",
+
+    # Kerberos manipulation
+    "WriteSPN",
+    "WriteAccountRestrictions",
+}
+
+# ADCS-focused edge types (--preset adcs)
+ADCS_EDGES: Set[str] = {
+    # Certificate enrollment
+    "Enroll",
+    "ManageCA",
+    "ManageCertificates",
+    "WritePKIEnrollmentFlag",
+    "WritePKINameFlag",
+
+    # BloodHound CE ESC edges (computed by BH, not extracted)
+    "ADCSESC1",
+    "ADCSESC3",
+    "ADCSESC4",
+    "ADCSESC5",
+    "ADCSESC6a",
+    "ADCSESC6b",
+    "ADCSESC7",
+    "ADCSESC9a",
+    "ADCSESC9b",
+    "ADCSESC10a",
+    "ADCSESC10b",
+    "ADCSESC13",
+    "GoldenCert",
+    "EnrollOnBehalfOf",
+}
+
+# Coercion and trust edges
+COERCION_EDGES: Set[str] = {
+    "CoerceToTGT",
+    "TrustedBy",
+    "HasSIDHistory",
+    "DCSync",  # Computed edge
+}
+
+# All supported edge types
+ALL_EDGES: Set[str] = ATTACK_PATH_EDGES | ADCS_EDGES | COERCION_EDGES | {
+    "AddSelf",
+    "GetChangesInFilteredSet",
+    "SyncLAPSPassword",
+    "DumpSMSAPassword",
+    "WriteGPLink",
+    "AddAllowedToAct",
+}
+
+# Preset configurations
+EDGE_PRESETS: Dict[str, Set[str]] = {
+    "attack-paths": ATTACK_PATH_EDGES,
+    "adcs": ADCS_EDGES,
+    "coercion": COERCION_EDGES,
+    "all": ALL_EDGES,
+    "minimal": {"AdminTo", "MemberOf", "HasSession", "GenericAll"},
 }
 
 

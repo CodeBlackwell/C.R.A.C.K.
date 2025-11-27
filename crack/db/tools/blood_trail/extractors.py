@@ -320,6 +320,203 @@ class DelegationExtractor(BaseExtractor):
         return result
 
 
+class TrustExtractor(BaseExtractor):
+    """
+    Extracts domain trust relationships from domains.json:
+    - TrustedBy: Domain trust relationships
+    """
+
+    edge_types = {"TrustedBy"}
+    source_files = {"domains"}
+
+    def extract(self, data: dict, filename: str) -> ExtractionResult:
+        result = ExtractionResult()
+
+        for domain in data.get("data", []):
+            source_name = domain.get("Properties", {}).get("name")
+            if not source_name:
+                continue
+
+            # Process Trusts array
+            trusts = domain.get("Trusts", [])
+            for trust in trusts:
+                if not isinstance(trust, dict):
+                    continue
+
+                target_domain = trust.get("TargetDomainName")
+                if not target_domain:
+                    continue
+
+                trust_direction = trust.get("TrustDirection", 0)
+                trust_type = trust.get("TrustType", "Unknown")
+                is_transitive = trust.get("IsTransitive", False)
+                sid_filtering = trust.get("SidFilteringEnabled", True)
+
+                # TrustDirection: 0=Disabled, 1=Inbound, 2=Outbound, 3=Bidirectional
+                # TrustedBy: source trusts target (outbound from source perspective)
+                if trust_direction in (2, 3):  # Outbound or Bidirectional
+                    edge = Edge(
+                        source=source_name,
+                        target=target_domain,
+                        edge_type="TrustedBy",
+                        properties={
+                            "trust_type": trust_type,
+                            "transitive": is_transitive,
+                            "sid_filtering": sid_filtering,
+                            "direction": trust_direction,
+                        }
+                    )
+                    result.add_edge(edge)
+
+                # Also add reverse for bidirectional
+                if trust_direction == 3:  # Bidirectional
+                    edge = Edge(
+                        source=target_domain,
+                        target=source_name,
+                        edge_type="TrustedBy",
+                        properties={
+                            "trust_type": trust_type,
+                            "transitive": is_transitive,
+                            "sid_filtering": sid_filtering,
+                            "direction": trust_direction,
+                        }
+                    )
+                    result.add_edge(edge)
+
+        return result
+
+
+class CoercionExtractor(BaseExtractor):
+    """
+    Extracts coercion-related edges:
+    - HasSIDHistory: SID history relationships for token manipulation
+    - CoerceToTGT: Computed for unconstrained delegation (requires post-processing)
+    """
+
+    edge_types = {"HasSIDHistory"}
+    source_files = {"users", "computers"}
+
+    def extract(self, data: dict, filename: str) -> ExtractionResult:
+        result = ExtractionResult()
+
+        for obj in data.get("data", []):
+            source_name = obj.get("Properties", {}).get("name")
+            if not source_name:
+                continue
+
+            # Process SIDHistory array
+            sid_history = obj.get("Properties", {}).get("sidhistory", [])
+            if not sid_history:
+                sid_history = obj.get("SIDHistory", [])
+
+            for hist_sid in sid_history:
+                if not hist_sid:
+                    continue
+
+                # Resolve historical SID
+                target_name, target_type = self.resolver.resolve(hist_sid)
+
+                # Create edge: Source -[:HasSIDHistory]-> Target (historical identity)
+                edge = Edge(
+                    source=source_name,
+                    target=target_name,
+                    edge_type="HasSIDHistory",
+                    properties={
+                        "source_type": obj.get("Properties", {}).get("objecttype", "Unknown"),
+                        "target_type": target_type,
+                    }
+                )
+                result.add_edge(edge)
+
+        return result
+
+
+class ADCSExtractor(BaseExtractor):
+    """
+    Extracts ADCS-related edges from BloodHound CE data:
+    - Processes cas.json (Certificate Authorities)
+    - Processes certtemplates.json (Certificate Templates)
+
+    Note: ESC1-13 edges are computed by BloodHound CE and should be
+    directly imported if present in the data, not extracted from raw ACLs.
+    """
+
+    edge_types = {
+        "ADCSESC1", "ADCSESC3", "ADCSESC4", "ADCSESC5",
+        "ADCSESC6a", "ADCSESC6b", "ADCSESC7",
+        "ADCSESC9a", "ADCSESC9b", "ADCSESC10a", "ADCSESC10b", "ADCSESC13",
+        "GoldenCert", "EnrollOnBehalfOf",
+    }
+    source_files = {"cas", "certtemplates", "enterprisecas", "rootcas", "aiacas", "ntauthstores"}
+
+    def extract(self, data: dict, filename: str) -> ExtractionResult:
+        """
+        Extract ADCS edges from BloodHound CE ADCS JSON exports.
+
+        BloodHound CE computes ESC edges during processing, so we look for
+        pre-computed edges in the data rather than calculating them.
+        """
+        result = ExtractionResult()
+
+        for obj in data.get("data", []):
+            target_name = obj.get("Properties", {}).get("name")
+            if not target_name:
+                continue
+
+            # Process pre-computed ESC edges if present
+            # BloodHound CE includes these in specific relationship arrays
+            for edge_type in self.edge_types:
+                edge_array = obj.get(edge_type, [])
+                if not edge_array:
+                    continue
+
+                for item in edge_array:
+                    if isinstance(item, dict):
+                        source_sid = item.get("ObjectIdentifier")
+                        source_type = item.get("ObjectType", "Unknown")
+                    elif isinstance(item, str):
+                        source_sid = item
+                        source_type = "Unknown"
+                    else:
+                        continue
+
+                    if not source_sid:
+                        continue
+
+                    source_name, resolved_type = self.resolver.resolve(source_sid)
+
+                    edge = Edge(
+                        source=source_name,
+                        target=target_name,
+                        edge_type=edge_type,
+                        properties={
+                            "source_type": source_type or resolved_type,
+                        }
+                    )
+                    result.add_edge(edge)
+
+            # Also check for EnrollOnBehalfOf which links templates
+            enroll_behalf = obj.get("EnrollOnBehalfOf", [])
+            for template in enroll_behalf:
+                if isinstance(template, dict):
+                    template_name = template.get("Name") or template.get("ObjectIdentifier")
+                elif isinstance(template, str):
+                    template_name = template
+                else:
+                    continue
+
+                if template_name:
+                    edge = Edge(
+                        source=target_name,
+                        target=template_name,
+                        edge_type="EnrollOnBehalfOf",
+                        properties={}
+                    )
+                    result.add_edge(edge)
+
+        return result
+
+
 class EdgeExtractorRegistry:
     """
     Registry of all edge extractors.
@@ -330,10 +527,16 @@ class EdgeExtractorRegistry:
     def __init__(self, resolver: SIDResolver):
         self.resolver = resolver
         self.extractors: List[BaseExtractor] = [
+            # Core extractors
             ComputerEdgeExtractor(resolver),
             ACEExtractor(resolver),
             GroupMembershipExtractor(resolver),
             DelegationExtractor(resolver),
+            # Trust and coercion
+            TrustExtractor(resolver),
+            CoercionExtractor(resolver),
+            # ADCS (BloodHound CE)
+            ADCSExtractor(resolver),
         ]
 
     def extract_from_file(self, json_path: Path) -> ExtractionResult:

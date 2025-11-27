@@ -1,104 +1,188 @@
 """
-Blood-trail Query to Attack Command Mappings
+Blood-trail Query to Attack Command Mappings v2
 
-Maps blood-trail query IDs to CRACK command database IDs for automated
-attack command suggestions based on BloodHound analysis results.
+DRY mapping system that:
+- Maps blood-trail query IDs to CRACK command database IDs
+- Specifies which result fields contain arrays vs single values
+- Defines access types for conditional command filtering
+- Filters out invalid targets (groups misused as computers)
 """
 
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
 
-# Query ID -> List of command suggestions
-# Each suggestion has: command_id (from CRACK db), context (why this command)
+
+# =============================================================================
+# QUERY MAPPINGS - DRY structure with array/field awareness
+# =============================================================================
+
+# Each mapping defines:
+#   commands:      List of CRACK command IDs to suggest
+#   access_type:   Edge type for conditional filtering (AdminTo, CanRDP, etc.)
+#   array_field:   Result field containing array of targets (for expansion)
+#   user_field:    Result field containing the user principal
+#   target_field:  For single-target queries (user IS the target)
+#   filter_groups: Skip group names that aren't valid computer targets
+#   domain_level:  True for domain-wide commands (DCSync, etc.)
+
 QUERY_COMMAND_MAPPINGS: Dict[str, Any] = {
-    # ==================== QUICK WINS ====================
-    "quick-asrep-roastable": [
-        {"command_id": "impacket-getnpusers-asreproast", "context": "Extract AS-REP hash for offline cracking"},
-        {"command_id": "rubeus-asreproast", "context": "Windows: AS-REP roast from domain-joined host"},
-    ],
-    "quick-kerberoastable": [
-        {"command_id": "impacket-getuserspns-kerberoast", "context": "Request TGS tickets for service accounts"},
-        {"command_id": "rubeus-kerberoast", "context": "Windows: Kerberoast from domain-joined host"},
-    ],
-    "quick-kerberoastable-privileged": [
-        {"command_id": "impacket-getuserspns-kerberoast", "context": "Priority target - privileged account with SPN"},
-    ],
-    "quick-unconstrained-delegation": [
-        # TODO: Add coercer commands when available
-        {"command_id": "rubeus-kerberoast", "context": "Monitor for TGT capture after coercion"},
-    ],
-    "quick-constrained-delegation": [
-        # S4U2Self/S4U2Proxy attack commands
-        {"command_id": "rubeus-kerberoast", "context": "Request impersonation ticket via S4U2Self"},
-    ],
-    "quick-password-in-description": [
-        # Direct credential - try lateral movement
-        {"command_id": "crackmapexec-smb-spray", "context": "Validate discovered password"},
-        {"command_id": "evil-winrm-shell", "context": "Test WinRM access with discovered creds"},
-    ],
+    # ==================== LATERAL MOVEMENT (Array fields) ====================
+    "lateral-adminto-nonpriv": {
+        "commands": ["psexec-shell", "wmiexec-shell", "smbexec-shell"],
+        "access_type": "AdminTo",
+        "array_field": "AdminOnComputers",
+        "user_field": "User",
+    },
+    "lateral-all-admins-per-computer": {
+        "commands": ["psexec-shell"],
+        "access_type": "AdminTo",
+        "array_field": "LocalAdmins",  # Users who can admin
+        "target_field": "Computer",     # Single computer per row
+        "filter_groups": True,          # Filter out "DOMAIN ADMINS@..." etc.
+    },
+    "lateral-rdp-targets": {
+        "commands": ["xfreerdp-connect"],
+        "access_type": "CanRDP",
+        "array_field": "RDPTargets",
+        "user_field": "User",
+    },
+    "lateral-psremote-targets": {
+        "commands": ["evil-winrm-shell"],
+        "access_type": "CanPSRemote",
+        "array_field": "PSRemoteTargets",
+        "user_field": "User",
+    },
+    "lateral-dcom-targets": {
+        "commands": ["wmiexec-shell"],
+        "access_type": "ExecuteDCOM",
+        "array_field": "DCOMTargets",
+        "user_field": "User",
+    },
+    "lateral-da-sessions-workstations": {
+        "commands": ["psexec-shell"],
+        "access_type": "HasSession",
+        "target_field": "Workstation",
+        "array_field": "PrivilegedSessions",  # Who's logged in
+        "context": "Credential harvest - privileged session on target",
+    },
+    "lateral-sessions-on-computer": {
+        "commands": ["psexec-shell"],
+        "access_type": "HasSession",
+        "target_field": "Computer",
+        "user_field": "LoggedOnUser",
+        "context": "Credential harvest opportunity",
+    },
+    "lateral-user-access-all": {
+        "commands": ["psexec-shell", "evil-winrm-shell", "xfreerdp-connect"],
+        "target_field": "Target",
+        "access_type_field": "AccessType",  # Dynamic: AdminTo|CanRDP|CanPSRemote
+    },
+    "lateral-domain-users-admin": {
+        "commands": ["psexec-shell"],
+        "access_type": "AdminTo",
+        "target_field": "Computer",
+        "context": "Domain Users = local admin (any user can compromise)",
+    },
+    "lateral-da-sessions": {
+        "commands": ["psexec-shell"],
+        "access_type": "HasSession",
+        "target_field": "Computer",
+        "context": "DA session - prime mimikatz target",
+    },
 
-    # ==================== LATERAL MOVEMENT ====================
-    "lateral-adminto-nonpriv": [
-        {"command_id": "psexec-shell", "context": "Get SYSTEM shell via SMB (creates service)"},
-        {"command_id": "wmiexec-shell", "context": "Semi-interactive shell via WMI (stealthier)"},
-        {"command_id": "smbexec-shell", "context": "Shell via SMB without service creation"},
-        {"command_id": "evil-winrm-shell", "context": "PowerShell remoting (if WinRM enabled)"},
-    ],
-    "lateral-all-admins-per-computer": [
-        {"command_id": "psexec-shell", "context": "Target high-value system with admin access"},
-    ],
-    "lateral-rdp-targets": [
-        {"command_id": "xfreerdp-connect", "context": "RDP connection (GUI access)"},
-    ],
-    "lateral-psremote-targets": [
-        {"command_id": "evil-winrm-shell", "context": "PowerShell remoting via WinRM"},
-        {"command_id": "ps-winrm-invoke-command", "context": "Windows: Invoke-Command to target"},
-    ],
-    "lateral-dcom-targets": [
-        {"command_id": "wmiexec-shell", "context": "DCOM execution via WMI"},
-    ],
-    "lateral-sessions-on-computer": [
-        # Credential harvest opportunity
-        {"command_id": "psexec-shell", "context": "Get shell to dump credentials"},
-    ],
-    "lateral-user-access-all": [
-        {"command_id": "psexec-shell", "context": "Lateral movement to accessible systems"},
-    ],
-    "lateral-da-sessions": [
-        {"command_id": "psexec-shell", "context": "Target system with DA session for cred theft"},
-    ],
+    # ==================== QUICK WINS (Single value targets) ====================
+    "quick-asrep-roastable": {
+        "commands": ["impacket-getnpusers-asreproast"],
+        "access_type": None,  # No lateral access check
+        "target_is_user": True,
+        "user_field": "User",
+        "context": "AS-REP roast - no auth required",
+    },
+    "quick-kerberoastable": {
+        "commands": ["impacket-getuserspns-kerberoast"],
+        "access_type": None,
+        "target_is_user": True,
+        "user_field": "ServiceAccount",
+        "context": "Kerberoast - request TGS for offline cracking",
+    },
+    "quick-kerberoastable-privileged": {
+        "commands": ["impacket-getuserspns-kerberoast"],
+        "access_type": None,
+        "target_is_user": True,
+        "user_field": "HighValueTarget",
+        "context": "Priority Kerberoast - privileged account",
+    },
+    "quick-unconstrained-delegation": {
+        "commands": ["rubeus-monitor"],
+        "access_type": None,
+        "target_field": "Computer",
+        "context": "Unconstrained delegation - monitor for TGT capture",
+    },
+    "quick-constrained-delegation": {
+        "commands": ["rubeus-s4u"],
+        "access_type": None,
+        "target_field": "Principal",
+        "context": "Constrained delegation - S4U2Self/S4U2Proxy",
+    },
+    "quick-password-in-description": {
+        "commands": ["crackmapexec-smb-spray", "evil-winrm-shell"],
+        "access_type": None,
+        "user_field": "User",
+        "context": "Password in description - validate and use",
+    },
 
     # ==================== PRIVILEGE ESCALATION ====================
-    "privesc-dcsync-rights": [
-        {"command_id": "ad-dcsync-impacket-secretsdump-user", "context": "DCSync via Impacket secretsdump"},
-        {"command_id": "ad-dcsync-mimikatz-user", "context": "Windows: DCSync via Mimikatz"},
-        {"command_id": "secretsdump-hashes", "context": "Dump all domain hashes"},
-    ],
-    "privesc-genericall-highvalue": [
-        # ACL abuse - reset password or add to group
-        {"command_id": "crackmapexec-smb-spray", "context": "After password reset, validate new creds"},
-    ],
-    "privesc-shadow-admins": [
-        # Control over DA users
-        {"command_id": "ad-dcsync-impacket-secretsdump-user", "context": "DCSync after gaining control"},
-    ],
-    "privesc-force-change-password": [
-        # Password reset rights
-        {"command_id": "crackmapexec-smb-spray", "context": "Validate after password reset"},
-        {"command_id": "evil-winrm-shell", "context": "Access target after password change"},
-    ],
-    "privesc-genericwrite": [
-        # Modify user attributes
-        {"command_id": "impacket-getuserspns-kerberoast", "context": "After adding SPN - Kerberoast target"},
-    ],
-    "privesc-add-member": [
-        {"command_id": "psexec-shell", "context": "After adding to admin group - lateral move"},
-    ],
-    "privesc-readgmsapassword": [
-        {"command_id": "evil-winrm-shell", "context": "Use GMSA password for access"},
-    ],
+    "privesc-dcsync-rights": {
+        "commands": ["ad-dcsync-impacket-secretsdump-user"],
+        "access_type": "DCSync",
+        "principal_field": "Principal",
+        "filter_groups": True,  # Filter "DOMAIN CONTROLLERS@..." etc.
+        "domain_level": True,
+        "context": "DCSync - dump domain hashes",
+    },
+    "privesc-genericall-highvalue": {
+        "commands": ["bloodyad-genericall", "crackmapexec-smb-spray"],
+        "access_type": "GenericAll",
+        "user_field": "Attacker",
+        "target_field": "Target",
+        "context": "GenericAll - reset password or add to group",
+    },
+    "privesc-shadow-admins": {
+        "commands": ["ad-dcsync-impacket-secretsdump-user"],
+        "access_type": "GenericAll",
+        "user_field": "Attacker",
+        "target_field": "Victim",
+        "context": "Shadow admin - control over DA",
+    },
+    "privesc-force-change-password": {
+        "commands": ["rpcclient-setuserinfo", "crackmapexec-smb-spray"],
+        "access_type": "ForceChangePassword",
+        "user_field": "Attacker",
+        "target_field": "Victim",
+        "context": "ForceChangePassword - reset and use",
+    },
+    "privesc-genericwrite": {
+        "commands": ["impacket-getuserspns-kerberoast"],
+        "access_type": "GenericWrite",
+        "user_field": "Attacker",
+        "target_field": "Victim",
+        "context": "GenericWrite - add SPN then Kerberoast",
+    },
+    "privesc-add-member": {
+        "commands": ["psexec-shell"],
+        "access_type": "AddMember",
+        "user_field": "Attacker",
+        "target_field": "Group",
+        "context": "AddMember - add self to admin group",
+    },
+    "privesc-readgmsapassword": {
+        "commands": ["gmsadumper", "evil-winrm-shell"],
+        "access_type": "ReadGMSAPassword",
+        "user_field": "Reader",
+        "target_field": "GMSA",
+        "context": "Read GMSA password - use for access",
+    },
 
     # ==================== ATTACK CHAINS ====================
-    # These trigger sequence building from path data
     "chain-shortest-to-da": "BUILD_SEQUENCE",
     "chain-all-paths-to-da": "BUILD_SEQUENCE",
     "chain-owned-to-pivot-to-da": "BUILD_SEQUENCE",
@@ -107,41 +191,51 @@ QUERY_COMMAND_MAPPINGS: Dict[str, Any] = {
     "chain-lateral-to-privilege": "BUILD_SEQUENCE",
 
     # ==================== OWNED PRINCIPAL ====================
-    "owned-what-can-access": [
-        {"command_id": "psexec-shell", "context": "Access systems owned user can reach"},
-    ],
+    "owned-what-can-access": {
+        "commands": ["psexec-shell", "evil-winrm-shell", "xfreerdp-connect"],
+        "target_field": "Target",
+        "access_type_field": "AccessType",  # Dynamic from query result
+    },
     "owned-path-to-da": "BUILD_SEQUENCE",
-    "owned-first-hop": [
-        {"command_id": "psexec-shell", "context": "First lateral movement hop"},
-        {"command_id": "evil-winrm-shell", "context": "Alternative: WinRM access"},
-    ],
-    "owned-admin-on": [
-        {"command_id": "psexec-shell", "context": "Access admin targets"},
-    ],
-    "owned-cred-harvest-targets": [
-        {"command_id": "psexec-shell", "context": "Harvest credentials from DA session"},
-    ],
+    "owned-first-hop": {
+        "commands": ["psexec-shell", "evil-winrm-shell"],
+        "target_field": "Target",
+        "access_type_field": "AccessType",
+    },
+    "owned-admin-on": {
+        "commands": ["psexec-shell", "wmiexec-shell"],
+        "access_type": "AdminTo",
+        "target_field": "Target",
+    },
+    "owned-cred-harvest-targets": {
+        "commands": ["psexec-shell"],
+        "access_type": "HasSession",
+        "target_field": "Computer",
+        "context": "Credential harvest from DA session",
+    },
 }
 
 
-# Edge type -> Command mappings for building attack sequences
-# Maps BloodHound relationship types to exploitation commands
+# =============================================================================
+# EDGE TYPE -> COMMAND MAPPINGS (for attack sequence building)
+# =============================================================================
+
 EDGE_COMMAND_MAPPINGS: Dict[str, List[str]] = {
     # Access Edges
     "AdminTo": ["psexec-shell", "wmiexec-shell", "smbexec-shell"],
     "CanRDP": ["xfreerdp-connect"],
-    "CanPSRemote": ["evil-winrm-shell", "ps-winrm-invoke-command"],
+    "CanPSRemote": ["evil-winrm-shell"],
     "ExecuteDCOM": ["wmiexec-shell"],
     "HasSession": ["psexec-shell"],  # Get shell to harvest creds
 
     # Permission Edges (ACL abuse)
-    "GenericAll": ["crackmapexec-smb-spray"],  # After password reset
-    "GenericWrite": ["impacket-getuserspns-kerberoast"],  # After adding SPN
-    "WriteDacl": ["crackmapexec-smb-spray"],  # After granting permissions
-    "WriteOwner": ["crackmapexec-smb-spray"],  # After taking ownership
-    "ForceChangePassword": ["crackmapexec-smb-spray"],  # After reset
-    "AddMember": ["psexec-shell"],  # After adding to group
-    "Owns": ["crackmapexec-smb-spray"],  # Full control
+    "GenericAll": ["bloodyad-genericall", "crackmapexec-smb-spray"],
+    "GenericWrite": ["impacket-getuserspns-kerberoast"],
+    "WriteDacl": ["dacledit"],
+    "WriteOwner": ["owneredit"],
+    "ForceChangePassword": ["rpcclient-setuserinfo", "crackmapexec-smb-spray"],
+    "AddMember": ["net-group-add"],
+    "Owns": ["bloodyad-genericall"],
 
     # Privilege Edges
     "GetChanges": ["ad-dcsync-impacket-secretsdump-user"],
@@ -149,73 +243,105 @@ EDGE_COMMAND_MAPPINGS: Dict[str, List[str]] = {
     "AllExtendedRights": ["ad-dcsync-impacket-secretsdump-user"],
 
     # Credential Edges
-    "ReadGMSAPassword": ["evil-winrm-shell"],
+    "ReadGMSAPassword": ["gmsadumper", "evil-winrm-shell"],
     "ReadLAPSPassword": ["crackmapexec-smb-spray"],
-    "AddKeyCredentialLink": ["evil-winrm-shell"],  # Shadow credentials
+    "AddKeyCredentialLink": ["pywhisker"],
 
     # Delegation Edges
-    "AllowedToDelegate": ["psexec-shell"],  # After S4U2Proxy
-    "AllowedToAct": ["psexec-shell"],  # After RBCD
+    "AllowedToDelegate": ["rubeus-s4u"],
+    "AllowedToAct": ["rbcd-attack"],
 
-    # Membership
-    "MemberOf": [],  # Informational - no direct command
+    # Membership (informational)
+    "MemberOf": [],
 }
 
 
-# Variable extraction patterns
-# Maps query result field names to command placeholder names
-VARIABLE_MAPPINGS: Dict[str, str] = {
-    # User fields
-    "User": "<USERNAME>",
-    "user": "<USERNAME>",
-    "Principal": "<USERNAME>",
-    "principal": "<USERNAME>",
-    "Attacker": "<USERNAME>",
-    "ServiceAccount": "<USERNAME>",
-    "HighValueTarget": "<USERNAME>",
+# =============================================================================
+# HELPER FUNCTIONS
+# =============================================================================
 
-    # Computer/Target fields
-    "Computer": "<TARGET>",
-    "computer": "<TARGET>",
-    "Target": "<TARGET>",
-    "target": "<TARGET>",
-    "Victim": "<TARGET>",
-    "Machine": "<TARGET>",
-
-    # Domain fields
-    "Domain": "<DOMAIN>",
-    "domain": "<DOMAIN>",
-
-    # Other
-    "DC": "<DC_IP>",
-    "DomainController": "<DC_IP>",
-    "SPNs": "<SPN>",
-    "SPN": "<SPN>",
-}
+def extract_domain(upn: str) -> str:
+    """Extract domain from UPN format. MIKE@CORP.COM -> CORP.COM"""
+    if "@" in upn:
+        return upn.split("@")[1]
+    return ""
 
 
-# Context templates for attack phases
-# Used to generate descriptive context for each command
-ATTACK_PHASE_CONTEXT = {
-    "quick_wins": "Quick win - {vulnerability}",
-    "lateral_movement": "Lateral movement via {edge_type}",
-    "privilege_escalation": "Privilege escalation - {technique}",
-    "credential_access": "Credential access - {method}",
-    "persistence": "Establish persistence via {technique}",
-}
+def extract_username(upn: str) -> str:
+    """Extract username from UPN format. MIKE@CORP.COM -> MIKE"""
+    if "@" in upn:
+        return upn.split("@")[0]
+    return upn
 
 
-# Commands that should always show the template (learning mode)
-EDUCATIONAL_COMMANDS = {
-    "impacket-getnpusers-asreproast",
-    "impacket-getuserspns-kerberoast",
-    "ad-dcsync-impacket-secretsdump-user",
-    "psexec-shell",
-    "evil-winrm-shell",
-}
+def infer_dc_hostname(domain: str) -> str:
+    """
+    Infer DC hostname from domain name.
+    CORP.COM -> DC01.CORP.COM (common pattern)
+
+    Note: This is best-effort. User may need to adjust for non-standard DC names.
+    """
+    if not domain:
+        return "<DC_IP>"
+    # Try common DC naming patterns
+    return f"DC01.{domain}"
 
 
-# Sensitive placeholders that should NOT be auto-filled
+# =============================================================================
+# GROUP NAME DETECTION (for filtering invalid targets)
+# =============================================================================
+
+# Common AD group patterns that should NOT be used as computer targets
+GROUP_NAME_PATTERNS = [
+    "DOMAIN CONTROLLERS",
+    "DOMAIN ADMINS",
+    "ENTERPRISE ADMINS",
+    "ADMINISTRATORS",
+    "SCHEMA ADMINS",
+    "DNSADMINS",
+    "CLONEABLE DOMAIN CONTROLLERS",
+    "ENTERPRISE READ-ONLY DOMAIN CONTROLLERS",
+    "PROTECTED USERS",
+    "KEY ADMINS",
+    "ENTERPRISE KEY ADMINS",
+    "CERT PUBLISHERS",
+    "RAS AND IAS SERVERS",
+    "ALLOWED RODC PASSWORD REPLICATION GROUP",
+    "DENIED RODC PASSWORD REPLICATION GROUP",
+    "READ-ONLY DOMAIN CONTROLLERS",
+    "GROUP POLICY CREATOR OWNERS",
+    "DOMAIN COMPUTERS",
+    "DOMAIN GUESTS",
+    "DOMAIN USERS",
+    "ACCOUNT OPERATORS",
+    "SERVER OPERATORS",
+    "PRINT OPERATORS",
+    "BACKUP OPERATORS",
+    "REPLICATOR",
+]
+
+
+def is_group_name(name: str) -> bool:
+    """
+    Detect if a name is a group (not a valid computer target).
+
+    Groups like "DOMAIN CONTROLLERS@CORP.COM" should not be used
+    as <TARGET> in attack commands.
+    """
+    if not name:
+        return False
+    upper = name.upper()
+    # Check against known patterns
+    for pattern in GROUP_NAME_PATTERNS:
+        if pattern in upper:
+            return True
+    return False
+
+
+# =============================================================================
+# SENSITIVE PLACEHOLDERS (never auto-fill)
+# =============================================================================
+
 SENSITIVE_PLACEHOLDERS = {
     "<PASSWORD>",
     "<HASH>",
@@ -223,4 +349,36 @@ SENSITIVE_PLACEHOLDERS = {
     "<LM_HASH>",
     "<TICKET>",
     "<PRIVATE_KEY>",
+    "<TARGET_USER>",  # User to DCSync - needs manual selection
+}
+
+
+# =============================================================================
+# ACCESS TYPE -> PHASE MAPPING (for output grouping)
+# =============================================================================
+
+ACCESS_TYPE_PHASES = {
+    # Quick Wins
+    None: "Quick Wins",
+
+    # Lateral Movement
+    "AdminTo": "Lateral Movement",
+    "CanRDP": "Lateral Movement",
+    "CanPSRemote": "Lateral Movement",
+    "ExecuteDCOM": "Lateral Movement",
+    "HasSession": "Lateral Movement",
+
+    # Privilege Escalation
+    "DCSync": "Privilege Escalation",
+    "GenericAll": "Privilege Escalation",
+    "GenericWrite": "Privilege Escalation",
+    "WriteDacl": "Privilege Escalation",
+    "WriteOwner": "Privilege Escalation",
+    "ForceChangePassword": "Privilege Escalation",
+    "AddMember": "Privilege Escalation",
+    "ReadGMSAPassword": "Privilege Escalation",
+    "ReadLAPSPassword": "Privilege Escalation",
+    "AddKeyCredentialLink": "Privilege Escalation",
+    "AllowedToDelegate": "Privilege Escalation",
+    "AllowedToAct": "Privilege Escalation",
 }
