@@ -1,0 +1,636 @@
+{
+  "metadata": {
+    "file_purpose": "BloodHound.py - Python-based remote Active Directory data collector for BloodHound analysis",
+    "oscp_relevance": "HIGH - Enables AD enumeration from Linux attack box without code execution on target. Critical for OSCP AD sets when SharpHound cannot be deployed.",
+    "educational_context": "BloodHound.py is a Python reimplementation of SharpHound that collects AD data remotely via LDAP/SMB. Unlike SharpHound which runs ON the target, bloodhound-python runs FROM Kali and queries AD remotely. ADVANTAGES: (1) No binary dropped on target, (2) Works from Kali without Windows access, (3) Supports pass-the-hash. LIMITATIONS: (1) Cannot collect local admin sessions (requires SMB admin access), (2) LoggedOn collection requires local admin rights, (3) Slower than SharpHound for large domains.",
+    "prerequisites": [
+      "Valid domain credentials (password, hash, or Kerberos ticket)",
+      "Network access to Domain Controller (LDAP 389/636, SMB 445)",
+      "Domain name and DC IP address known",
+      "BloodHound GUI installed for data analysis"
+    ],
+    "related_techniques": [
+      "BloodHound GUI analysis (bloodhound-upload-data, bloodhound-analyze-paths)",
+      "LDAP enumeration (ldapsearch-users-ad)",
+      "SMB enumeration (crackmapexec-smb-enum)",
+      "Pass-the-hash attacks (impacket-pth)"
+    ],
+    "attack_chain": [
+      "1. Obtain valid AD credentials (password spraying, credential dump, etc.)",
+      "2. Run bloodhound-python: bloodhound-python -u <USER> -p <PASS> -d <DOMAIN> -ns <DC_IP> -c All --zip",
+      "3. Transfer ZIP to BloodHound GUI: Click 'Upload Data' → select ZIP",
+      "4. Analyze attack paths in BloodHound",
+      "5. Execute identified privilege escalation path"
+    ],
+    "manual_alternatives": [
+      "ldapsearch: Manual LDAP queries for users, groups, computers",
+      "rpcclient: RPC-based enumeration (lookupsids, enumdomusers)",
+      "PowerView: Get-DomainUser, Get-DomainComputer, Get-ObjectAcl (requires Windows)",
+      "ADExplorer: Sysinternals LDAP browser (requires Windows)"
+    ]
+  },
+  "commands": [
+    {
+      "id": "bloodhound-python-all-collection",
+      "name": "BloodHound.py - Full AD Collection (All Methods)",
+      "category": "enumeration",
+      "subcategory": "active-directory",
+      "command": "bloodhound-python -u '<USERNAME>' -p '<PASSWORD>' -d <DOMAIN> -ns <DC_IP> -c All --zip",
+      "description": "Collect all Active Directory data remotely from Kali using bloodhound-python. Creates ZIP file for BloodHound GUI import containing users, groups, computers, ACLs, trusts, and sessions.",
+      "variables": [
+        {
+          "name": "<USERNAME>",
+          "description": "Domain username for authentication (format: user or user@domain.com)",
+          "example": "pete",
+          "required": true
+        },
+        {
+          "name": "<PASSWORD>",
+          "description": "Password for domain user authentication",
+          "example": "Password123!",
+          "required": true
+        },
+        {
+          "name": "<DOMAIN>",
+          "description": "Active Directory domain name (FQDN)",
+          "example": "corp.com",
+          "required": true
+        },
+        {
+          "name": "<DC_IP>",
+          "description": "Domain Controller IP address (used as DNS and LDAP server)",
+          "example": "192.168.50.70",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "-u / --username": "Domain username for authentication. Supports formats: 'username' (uses -d domain), 'username@domain.com' (explicit domain), 'DOMAIN\\username' (NetBIOS). WHY REQUIRED: AD requires authentication for most queries. Anonymous LDAP rarely enabled. OSCP TIP: Use any compromised domain user - even low-privilege accounts can enumerate AD.",
+        "-p / --password": "Password for the specified user. Use quotes if password contains special characters: -p 'P@$$w0rd!'. WHY PLAINTEXT: Bloodhound-python uses password to authenticate via NTLM or request Kerberos TGT. ALTERNATIVE: Use --hashes for pass-the-hash or -k for Kerberos ccache.",
+        "-d / --domain": "Active Directory domain name (FQDN like corp.com). WHY REQUIRED: Identifies target AD environment. Used for DNS lookups, LDAP base DN calculation, and Kerberos realm. TROUBLESHOOTING: If DNS fails, use -ns to specify DC as nameserver.",
+        "-ns / --nameserver": "Alternative DNS server for domain queries (typically the DC IP). WHY CRITICAL: Bloodhound-python resolves DC hostname via DNS. Kali's default DNS likely can't resolve internal AD names. Solution: Use DC IP as nameserver. EXAMPLE: -ns 192.168.50.70 tells bloodhound-python to query DC for DNS resolution.",
+        "-c / --collectionmethod": "Specify which data to collect. 'All' collects: Group (memberships), LocalAdmin (local admin rights), Session (logged-on sessions), Trusts (domain trusts), DCOM, RDP, PSRemote, Container, ObjectProps, ACL. EXCLUDES: LoggedOn (requires local admin). WHY ALL: Comprehensive data enables BloodHound to find all possible attack paths. Use 'DCOnly' for stealth.",
+        "--zip": "Compress output JSON files into single ZIP archive. WHY USE: BloodHound GUI accepts ZIP directly - one-click upload vs selecting 8+ JSON files. Creates timestamped file: YYYYMMDDHHMMSS_bloodhound.zip. OSCP TIP: Always use --zip for cleaner workflow."
+      },
+      "success_indicators": [
+        "INFO: Found AD domain: corp.com",
+        "INFO: Connecting to LDAP server: dc01.corp.com",
+        "INFO: Found XXX users",
+        "INFO: Found XXX groups",
+        "INFO: Found XXX computers",
+        "INFO: Done in 00mXXs",
+        "INFO: Compressing output into YYYYMMDDHHMMSS_bloodhound.zip"
+      ],
+      "failure_indicators": [
+        "ERROR: Could not connect to LDAP",
+        "ERROR: Failed to authenticate",
+        "ERROR: Could not resolve domain",
+        "CRITICAL: Unable to find DC for domain",
+        "Kerberos SessionError: KDC_ERR_PREAUTH_FAILED",
+        "ldap3.core.exceptions.LDAPBindError"
+      ],
+      "troubleshooting": {
+        "Could not resolve domain": "DNS resolution failed. Causes: (1) Kali DNS can't resolve internal domain, (2) Wrong domain name. SOLUTION: Add DC as nameserver: -ns <DC_IP>. Verify domain: nslookup <DOMAIN> <DC_IP>. If still failing, check domain spelling and try: bloodhound-python -u <USER> -p <PASS> -d <DOMAIN> -ns <DC_IP> -dc <DC_HOSTNAME>.",
+        "Failed to authenticate / KDC_ERR_PREAUTH_FAILED": "Invalid credentials. SOLUTION: Verify credentials work: crackmapexec smb <DC_IP> -u <USER> -p <PASS>. Check username format (try user@domain.com vs just user). Password special characters may need quotes: -p 'P@ss!'.",
+        "Could not connect to LDAP": "LDAP port blocked or DC hostname unresolved. SOLUTION: Test connectivity: nc -zv <DC_IP> 389. If blocked, try LDAPS: --use-ldaps (port 636). If hostname issue, use -dc to specify DC explicitly.",
+        "Connection reset / timeout": "Network issues or firewall blocking. SOLUTION: Verify LDAP port open: nmap -p 389,636,445 <DC_IP>. Try fewer workers: -w 5. Use TCP for DNS: --dns-tcp. Increase DNS timeout: --dns-timeout 10.",
+        "No sessions collected": "Sessions require SMB enumeration which may need local admin. NOTE: bloodhound-python collects fewer sessions than SharpHound (can't access LSASS). Session data from bloodhound-python is limited to NetSessionEnum - less complete than SharpHound running ON target.",
+        "SSL certificate errors": "LDAPS certificate validation failed. SOLUTION: Python SSL verification issue. Try without LDAPS first. If LDAPS required (channel binding), may need to trust DC certificate or disable verification (not recommended for prod, fine for OSCP labs)."
+      },
+      "notes": "OSCP METHODOLOGY: bloodhound-python is your PRIMARY AD enumeration tool when you cannot deploy SharpHound on Windows.\n\nTIME ESTIMATE: 30 seconds to 5 minutes depending on domain size.\n\nWHEN TO USE:\n- You have credentials but no Windows shell\n- SharpHound blocked by AV/EDR\n- Prefer to work from Kali\n- Pass-the-hash scenario (use --hashes)\n\nWHEN TO USE SHARPHOUND INSTEAD:\n- You have Windows shell access\n- Need local admin session data (LoggedOn collection)\n- Large domain (SharpHound faster)\n- Need most complete data\n\nCOMPLETE WORKFLOW:\n1. Verify credentials work:\n   crackmapexec smb <DC_IP> -u <USER> -p <PASS>\n   \n2. Run bloodhound-python:\n   bloodhound-python -u '<USER>' -p '<PASS>' -d <DOMAIN> -ns <DC_IP> -c All --zip\n   \n3. Verify output:\n   ls -la *bloodhound.zip\n   unzip -l *bloodhound.zip  # Should contain: computers.json, users.json, groups.json, etc.\n   \n4. Upload to BloodHound GUI:\n   - Start Neo4j: sudo neo4j console\n   - Start BloodHound: bloodhound\n   - Click 'Upload Data' → select ZIP\n   \n5. Analyze paths:\n   - Search compromised user → Mark as Owned\n   - Run 'Shortest Paths to Domain Admins from Owned Principals'\n\nDATA COLLECTED (-c All):\n- users.json: All domain users with properties (admincount, pwdlastset, SPN, description)\n- groups.json: All groups with memberships\n- computers.json: All computers with OS, delegation settings\n- domains.json: Domain trusts and properties\n- gpos.json: Group Policy Objects\n- ous.json: Organizational Units\n- containers.json: AD containers\n\nDATA LIMITATIONS vs SharpHound:\n- No LSASS session data (LoggedOn)\n- Limited local admin enumeration (requires SMB access)\n- No scheduled task/service enumeration (Experimental in SharpHound)\n\nOUTPUT FILES:\n- Default: Individual JSON files in current directory\n- With --zip: Single YYYYMMDDHHMMSS_bloodhound.zip\n- Custom prefix: -op custom_ creates custom_*.json\n\nEXAM TIP: Always use --zip and verify ZIP contents before uploading. Corrupted or empty JSONs will cause BloodHound import failures.",
+      "oscp_relevance": "high",
+      "tags": [
+        "OSCP:HIGH",
+        "BLOODHOUND",
+        "ACTIVE_DIRECTORY",
+        "ENUMERATION",
+        "LDAP",
+        "PYTHON",
+        "LINUX",
+        "REMOTE_COLLECTION",
+        "KALI"
+      ],
+      "prerequisites": [],
+      "alternatives": [
+        "sharphound-collect-all",
+        "ldapsearch-users-ad",
+        "crackmapexec-ldap-bloodhound"
+      ],
+      "next_steps": [
+        "bloodhound-upload-data",
+        "bloodhound-analyze-paths",
+        "impacket-getuserspns-kerberoast",
+        "impacket-getnpusers-asreproast"
+      ]
+    },
+    {
+      "id": "bloodhound-python-dconly",
+      "name": "BloodHound.py - DC-Only Stealthy Collection",
+      "category": "enumeration",
+      "subcategory": "active-directory",
+      "command": "bloodhound-python -u '<USERNAME>' -p '<PASSWORD>' -d <DOMAIN> -ns <DC_IP> -c DCOnly --zip",
+      "description": "Collect Active Directory data using only Domain Controller queries (no SMB connections to member computers). Stealthier than full collection but misses local admin and session data.",
+      "variables": [
+        {
+          "name": "<USERNAME>",
+          "description": "Domain username for authentication",
+          "example": "pete",
+          "required": true
+        },
+        {
+          "name": "<PASSWORD>",
+          "description": "Password for domain user authentication",
+          "example": "Password123!",
+          "required": true
+        },
+        {
+          "name": "<DOMAIN>",
+          "description": "Active Directory domain name (FQDN)",
+          "example": "corp.com",
+          "required": true
+        },
+        {
+          "name": "<DC_IP>",
+          "description": "Domain Controller IP address",
+          "example": "192.168.50.70",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "-c DCOnly": "Collect only from Domain Controller via LDAP. COLLECTS: Group memberships, Trusts, ACLs, ObjectProps, Container. SKIPS: LocalAdmin, Session, DCOM, RDP, PSRemote (all require SMB to member computers). WHY USE: (1) Stealthier - no SMB connections to workstations, (2) Faster - fewer network connections, (3) Works when SMB blocked to clients. TRADEOFF: Missing session and local admin data reduces attack path discovery.",
+        "--exclude-dcs": "Optional flag to skip Domain Controllers during computer enumeration. WHY USE: DCs often have additional monitoring. Reduces noise. Use with -c All when you want computer enumeration but want to avoid DC connections."
+      },
+      "success_indicators": [
+        "INFO: Found AD domain: corp.com",
+        "INFO: Found XXX users",
+        "INFO: Found XXX groups",
+        "INFO: Skipping computer enumeration",
+        "INFO: Done in 00mXXs"
+      ],
+      "failure_indicators": [
+        "ERROR: Could not connect to LDAP",
+        "ERROR: Failed to authenticate"
+      ],
+      "troubleshooting": {
+        "Missing attack paths": "DCOnly collection doesn't include local admin or session data. If BloodHound shows fewer paths than expected, run full collection: -c All. DCOnly is for initial recon or when network restrictions prevent SMB to clients.",
+        "No local admin edges": "Expected behavior with DCOnly. LocalAdmin collection requires SMB queries to each computer. Use -c All or -c LocalAdmin for this data."
+      },
+      "notes": "OSCP METHODOLOGY: Use DCOnly for initial stealthy recon, then -c All if more data needed.\n\nTIME ESTIMATE: 10-30 seconds (much faster than -c All).\n\nWHEN TO USE:\n- Initial recon before full enumeration\n- Network segmentation blocks SMB to workstations\n- Concerned about EDR detection on workstation SMB queries\n- Only need user/group/ACL data (no sessions)\n\nWHAT'S COLLECTED (DCOnly):\n- Group: All group memberships\n- Trusts: Domain trust relationships\n- ACL: Object permissions (GenericAll, WriteDacl, etc.)\n- ObjectProps: User/computer properties (admincount, SPN, delegation)\n- Container: GPOs, OUs, Containers\n\nWHAT'S MISSING (DCOnly):\n- LocalAdmin: Which users are local admins on which computers\n- Session: Which users are logged into which computers\n- DCOM/RDP/PSRemote: Remote access permissions\n\nATTACK PATH IMPACT:\nWithout LocalAdmin and Session edges, BloodHound can't show:\n- 'User X is local admin on Computer Y where User Z has session'\n- 'AdminTo' edges between users and computers\n\nYou'll still see:\n- Group membership paths (MemberOf)\n- ACL abuse paths (GenericAll, ForceChangePassword)\n- Kerberoastable/AS-REP roastable users\n- DCSync rights\n\nOSCP TIP: Start with DCOnly to quickly identify Kerberoastable users and ACL misconfigs. If you need session/admin paths for lateral movement, run -c All.",
+      "oscp_relevance": "high",
+      "tags": [
+        "OSCP:HIGH",
+        "BLOODHOUND",
+        "ACTIVE_DIRECTORY",
+        "ENUMERATION",
+        "STEALTH",
+        "LDAP",
+        "DCONLY"
+      ],
+      "prerequisites": [],
+      "alternatives": [
+        "bloodhound-python-all-collection"
+      ],
+      "next_steps": [
+        "bloodhound-upload-data",
+        "bloodhound-python-all-collection"
+      ]
+    },
+    {
+      "id": "bloodhound-python-pth",
+      "name": "BloodHound.py - Pass-the-Hash Collection",
+      "category": "enumeration",
+      "subcategory": "active-directory",
+      "command": "bloodhound-python -u '<USERNAME>' --hashes '<LM_HASH>:<NT_HASH>' -d <DOMAIN> -ns <DC_IP> -c All --zip",
+      "description": "Collect Active Directory data using NTLM hash instead of password (Pass-the-Hash). Essential when you have credential dump but no plaintext passwords.",
+      "variables": [
+        {
+          "name": "<USERNAME>",
+          "description": "Domain username for authentication",
+          "example": "pete",
+          "required": true
+        },
+        {
+          "name": "<LM_HASH>",
+          "description": "LM hash (use empty string 'aad3b435b51404eeaad3b435b51404ee' if not available)",
+          "example": "aad3b435b51404eeaad3b435b51404ee",
+          "required": true
+        },
+        {
+          "name": "<NT_HASH>",
+          "description": "NTLM hash from credential dump (32 hex characters)",
+          "example": "a87f3a337d73085c45f9416be5787d86",
+          "required": true
+        },
+        {
+          "name": "<DOMAIN>",
+          "description": "Active Directory domain name",
+          "example": "corp.com",
+          "required": true
+        },
+        {
+          "name": "<DC_IP>",
+          "description": "Domain Controller IP address",
+          "example": "192.168.50.70",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "--hashes": "NTLM hash in LM:NT format. LM hash is legacy (pre-Vista), usually empty (aad3b435b51404eeaad3b435b51404ee). NT hash is the actual password hash. FORMAT: 'aad3b435b51404eeaad3b435b51404ee:a87f3a337d73085c45f9416be5787d86'. WHY USE: Pass-the-Hash when you have hash but not plaintext password. Common after mimikatz dump, SAM extraction, or NTDS.dit extraction. OSCP CRITICAL: Master PTH - many exam scenarios give hashes, not passwords.",
+        "--auth-method ntlm": "Optional: Force NTLM authentication (skip Kerberos). Use if Kerberos auth fails with hashes. Default is 'auto' which tries Kerberos first, falls back to NTLM."
+      },
+      "success_indicators": [
+        "INFO: Found AD domain: corp.com",
+        "INFO: Connecting to LDAP server",
+        "INFO: Found XXX users"
+      ],
+      "failure_indicators": [
+        "ERROR: Failed to authenticate",
+        "STATUS_LOGON_FAILURE",
+        "Invalid hash format"
+      ],
+      "troubleshooting": {
+        "Invalid hash format": "Hash must be in LM:NT format with 32 hex chars each. CORRECT: 'aad3b435b51404eeaad3b435b51404ee:a87f3a337d73085c45f9416be5787d86'. WRONG: 'a87f3a337d73085c45f9416be5787d86' (missing LM). If you only have NT hash, use empty LM: 'aad3b435b51404eeaad3b435b51404ee:<NT_HASH>'.",
+        "Authentication failed with valid hash": "Hash may be for wrong user or expired. Verify hash works: crackmapexec smb <DC_IP> -u <USER> -H <NT_HASH>. If CME works but bloodhound-python fails, try --auth-method ntlm to force NTLM.",
+        "Kerberos errors with hash": "Bloodhound-python may try Kerberos first. Force NTLM: --auth-method ntlm. Or use -k with Kerberos ticket instead."
+      },
+      "notes": "OSCP METHODOLOGY: Pass-the-Hash is FUNDAMENTAL technique. bloodhound-python fully supports PTH for AD enumeration.\n\nTIME ESTIMATE: Same as password auth (30s-5min).\n\nHASH SOURCES (OSCP scenarios):\n- Mimikatz: sekurlsa::logonpasswords → NTLM hash\n- SAM dump: secretsdump.py LOCAL → SAM hashes\n- NTDS.dit: secretsdump.py -ntds → All domain hashes\n- Cached creds: mimikatz lsadump::cache → DCC2 (need crack first)\n- Responder: NTLM relay captures → NetNTLMv2 (need crack first)\n\nHASH FORMAT:\n- LM:NT format required\n- LM hash usually empty: aad3b435b51404eeaad3b435b51404ee\n- NT hash is 32 hex characters\n- Example: aad3b435b51404eeaad3b435b51404ee:a87f3a337d73085c45f9416be5787d86\n\nVERIFY HASH BEFORE USE:\ncrackmapexec smb <DC_IP> -u <USER> -H '<NT_HASH>'\n\nIf CME shows [+] (Pwn3d!), hash is valid and user has admin rights.\nIf CME shows [+] without Pwn3d, hash valid but user is not admin.\nIf CME shows [-], hash is invalid or expired.\n\nCOMBINE WITH OTHER PTH TOOLS:\nAfter bloodhound-python reveals attack path, use PTH for exploitation:\n- Evil-WinRM: evil-winrm -i <TARGET> -u <USER> -H <NT_HASH>\n- PSExec: impacket-psexec <DOMAIN>/<USER>@<TARGET> -hashes <LM>:<NT>\n- WMIExec: impacket-wmiexec <DOMAIN>/<USER>@<TARGET> -hashes <LM>:<NT>\n\nOSCP TIP: Always try PTH when you have hashes. Even if password cracking fails, PTH may succeed.",
+      "oscp_relevance": "high",
+      "tags": [
+        "OSCP:HIGH",
+        "BLOODHOUND",
+        "ACTIVE_DIRECTORY",
+        "PASS_THE_HASH",
+        "PTH",
+        "NTLM",
+        "ENUMERATION"
+      ],
+      "prerequisites": [
+        "mimikatz-sekurlsa-logonpasswords",
+        "secretsdump-local-sam"
+      ],
+      "alternatives": [
+        "bloodhound-python-all-collection",
+        "bloodhound-python-kerberos"
+      ],
+      "next_steps": [
+        "bloodhound-upload-data",
+        "evil-winrm-pth",
+        "impacket-psexec-pth"
+      ]
+    },
+    {
+      "id": "bloodhound-python-kerberos",
+      "name": "BloodHound.py - Kerberos Ticket Collection",
+      "category": "enumeration",
+      "subcategory": "active-directory",
+      "command": "bloodhound-python -k -d <DOMAIN> -ns <DC_IP> -c All --zip -no-pass",
+      "description": "Collect Active Directory data using existing Kerberos ticket (ccache file) instead of password. Useful after Kerberos ticket extraction or when password/hash unavailable.",
+      "variables": [
+        {
+          "name": "<DOMAIN>",
+          "description": "Active Directory domain name",
+          "example": "corp.com",
+          "required": true
+        },
+        {
+          "name": "<DC_IP>",
+          "description": "Domain Controller IP address",
+          "example": "192.168.50.70",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "-k / --kerberos": "Use Kerberos ccache file for authentication. Reads from KRB5CCNAME environment variable or default location (/tmp/krb5cc_*). WHY USE: (1) After obtaining ticket via impacket-getTGT, (2) After extracting ticket from compromised system, (3) Pass-the-Ticket attacks. Requires valid TGT in ccache.",
+        "-no-pass": "Don't prompt for password. Use with -k when authenticating via ccache. Required because -u not specified (username comes from ticket).",
+        "KRB5CCNAME": "Environment variable specifying ccache file path. Set before running: export KRB5CCNAME=/path/to/ticket.ccache. If not set, bloodhound-python checks default locations."
+      },
+      "success_indicators": [
+        "INFO: Using Kerberos Cache:",
+        "INFO: Found AD domain:",
+        "INFO: Connecting to LDAP server"
+      ],
+      "failure_indicators": [
+        "ERROR: No valid Kerberos ticket found",
+        "KRB_AP_ERR_TKT_EXPIRED",
+        "KRB_AP_ERR_SKEW"
+      ],
+      "troubleshooting": {
+        "No valid Kerberos ticket found": "Ccache file not found or empty. SOLUTION: Set KRB5CCNAME: export KRB5CCNAME=/path/to/ticket.ccache. Verify ticket exists: klist -c /path/to/ticket.ccache. Obtain ticket: impacket-getTGT <DOMAIN>/<USER>:<PASS>",
+        "KRB_AP_ERR_TKT_EXPIRED": "Ticket has expired (default 10 hours). SOLUTION: Request new ticket: impacket-getTGT <DOMAIN>/<USER>:<PASS>. Note ticket lifetime in output.",
+        "KRB_AP_ERR_SKEW": "Time difference between Kali and DC too large (>5 min). SOLUTION: Sync time: sudo ntpdate <DC_IP> or timedatectl set-ntp true. Kerberos requires <5 minute time skew."
+      },
+      "notes": "OSCP METHODOLOGY: Kerberos authentication is stealthier than NTLM and required for some attacks.\n\nTIME ESTIMATE: Same as password auth, plus ticket acquisition.\n\nWORKFLOW:\n1. Request TGT (if you have password):\n   impacket-getTGT corp.com/pete:'Password123!' -dc-ip 192.168.50.70\n   \n2. Set ccache:\n   export KRB5CCNAME=pete.ccache\n   \n3. Verify ticket:\n   klist\n   \n4. Run bloodhound-python:\n   bloodhound-python -k -d corp.com -ns 192.168.50.70 -c All --zip -no-pass\n\nTICKET SOURCES:\n- impacket-getTGT: Request with password or hash\n- Rubeus: Extract from Windows memory (ticket.kirbi → convert to ccache)\n- mimikatz: kerberos::list /export (ticket.kirbi → convert)\n- ticketConverter.py: Convert .kirbi to .ccache\n\nCONVERTING KIRBI TO CCACHE:\nimpacket-ticketConverter ticket.kirbi ticket.ccache\n\nTIME SYNC CRITICAL:\nKerberos requires time sync within 5 minutes. Before using -k:\nsudo ntpdate <DC_IP>\n\nWHY KERBEROS OVER NTLM:\n- Stealthier (Kerberos is expected AD traffic)\n- Required for certain attacks (delegation abuse)\n- May bypass NTLM restrictions (EPA, channel binding)\n\nOSCP TIP: If password known, use password auth (simpler). Kerberos auth mainly needed for Pass-the-Ticket scenarios or when NTLM blocked.",
+      "oscp_relevance": "medium",
+      "tags": [
+        "OSCP:MEDIUM",
+        "BLOODHOUND",
+        "ACTIVE_DIRECTORY",
+        "KERBEROS",
+        "PASS_THE_TICKET",
+        "CCACHE",
+        "ENUMERATION"
+      ],
+      "prerequisites": [
+        "impacket-getTGT"
+      ],
+      "alternatives": [
+        "bloodhound-python-all-collection",
+        "bloodhound-python-pth"
+      ],
+      "next_steps": [
+        "bloodhound-upload-data"
+      ]
+    },
+    {
+      "id": "bloodhound-python-specific-collection",
+      "name": "BloodHound.py - Targeted Collection Methods",
+      "category": "enumeration",
+      "subcategory": "active-directory",
+      "command": "bloodhound-python -u '<USERNAME>' -p '<PASSWORD>' -d <DOMAIN> -ns <DC_IP> -c <METHODS> --zip",
+      "description": "Run bloodhound-python with specific collection methods instead of All. Enables targeted data collection for speed or stealth.",
+      "variables": [
+        {
+          "name": "<USERNAME>",
+          "description": "Domain username for authentication",
+          "example": "pete",
+          "required": true
+        },
+        {
+          "name": "<PASSWORD>",
+          "description": "Password for domain user authentication",
+          "example": "Password123!",
+          "required": true
+        },
+        {
+          "name": "<DOMAIN>",
+          "description": "Active Directory domain name",
+          "example": "corp.com",
+          "required": true
+        },
+        {
+          "name": "<DC_IP>",
+          "description": "Domain Controller IP address",
+          "example": "192.168.50.70",
+          "required": true
+        },
+        {
+          "name": "<METHODS>",
+          "description": "Comma-separated collection methods (Group,LocalAdmin,Session,Trusts,ACL,ObjectProps,Container,DCOM,RDP,PSRemote)",
+          "example": "Group,ACL,ObjectProps",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "Group": "Collect group memberships. LDAP query for all groups and their members. Enables 'MemberOf' edges in BloodHound. REQUIRED for group-based privilege escalation paths. STEALTH: Low (normal LDAP).",
+        "LocalAdmin": "Enumerate local administrators on computers via SMB. Creates 'AdminTo' edges. REQUIRED for lateral movement paths. STEALTH: Medium (SMB connections to each computer). TIME: Slow on large domains.",
+        "Session": "Enumerate logged-on sessions via NetSessionEnum SMB call. Creates 'HasSession' edges. CRITICAL for credential theft paths (users with sessions have creds in memory). STEALTH: Medium. LIMITATION: Less complete than SharpHound.",
+        "Trusts": "Enumerate domain trusts. Creates trust edges between domains. REQUIRED for multi-domain environments. STEALTH: Low (LDAP query). TIME: Fast.",
+        "ACL": "Collect Access Control Lists on AD objects. Creates permission edges (GenericAll, WriteDacl, ForceChangePassword). CRITICAL for ACL abuse paths. STEALTH: Low (LDAP). TIME: Medium (many objects).",
+        "ObjectProps": "Collect object properties (admincount, SPN, delegation settings, password age). Enables filtering by properties. REQUIRED for Kerberoasting (needs SPN) and AS-REP roasting (needs DONT_REQ_PREAUTH). STEALTH: Low.",
+        "Container": "Collect GPOs, OUs, and Containers. Shows GPO links and OU structure. Useful for GPO abuse paths. STEALTH: Low. TIME: Fast.",
+        "DCOM": "Enumerate Distributed COM permissions. Creates 'ExecuteDCOM' edges. Lateral movement via DCOM. STEALTH: Medium. TIME: Slow.",
+        "RDP": "Enumerate Remote Desktop Users. Creates 'CanRDP' edges. STEALTH: Medium. TIME: Slow.",
+        "PSRemote": "Enumerate PowerShell Remoting permissions. Creates 'CanPSRemote' edges. STEALTH: Medium. TIME: Slow.",
+        "LoggedOn": "Privileged session enumeration via remote registry. REQUIRES local admin on target computers. More accurate than Session but noisier. Default: EXCLUDED from 'All'."
+      },
+      "success_indicators": [
+        "INFO: Running collection method:",
+        "INFO: Found XXX",
+        "INFO: Done"
+      ],
+      "failure_indicators": [
+        "ERROR: Access denied during collection method",
+        "ERROR: Collection method failed"
+      ],
+      "troubleshooting": {
+        "Access denied on computer methods": "LocalAdmin, Session, DCOM, RDP, PSRemote require SMB access to computers. If access denied: (1) Try DCOnly methods instead, (2) Check if SMB (445) open to targets, (3) Some methods need local admin (LoggedOn).",
+        "Slow collection": "Computer-based methods (LocalAdmin, Session) query each computer individually. Reduce scope: --computerfile targets.txt to limit to specific computers. Increase workers: -w 20 for faster parallel queries."
+      },
+      "notes": "OSCP METHODOLOGY: Targeted collection for specific attack vectors.\n\nCOLLECTION METHOD GUIDE:\n\n**MINIMUM VIABLE (Fast, Stealthy):**\n-c Group,ObjectProps,Trusts\n- Gets: Memberships, Kerberoastable users, AS-REP roastable, trusts\n- Misses: Local admin paths, session paths, ACL abuse\n- Time: ~10-30 seconds\n- Use when: Quick initial recon, stealth critical\n\n**KERBEROASTING FOCUS:**\n-c ObjectProps\n- Gets: SPNs for Kerberoastable users, password ages\n- Misses: Most attack paths\n- Time: ~10 seconds\n- Use when: Only need Kerberoasting targets\n\n**ACL ABUSE FOCUS:**\n-c Group,ACL,ObjectProps\n- Gets: Group memberships, ACL edges, object properties\n- Misses: Session/local admin data\n- Time: ~1-2 minutes\n- Use when: Looking for ACL misconfigurations\n\n**LATERAL MOVEMENT FOCUS:**\n-c Session,LocalAdmin,RDP,PSRemote\n- Gets: All remote access edges\n- Misses: Group/ACL data\n- Time: ~3-10 minutes (queries all computers)\n- Use when: Planning lateral movement\n\n**FULL COLLECTION (Default recommendation):**\n-c All\n- Gets: Everything except LoggedOn\n- Time: 1-5 minutes\n- Use when: Comprehensive enumeration\n\n**EVERYTHING INCLUDING LOGGEDON:**\n-c All,LoggedOn\n- Gets: Complete data including privileged sessions\n- Requires: Local admin on target computers\n- Time: 5-15 minutes\n- Use when: You have admin access and need complete session data\n\nOSCP TIP: Start with -c DCOnly for quick wins (Kerberoasting, ACL), then -c All for full paths.",
+      "oscp_relevance": "medium",
+      "tags": [
+        "OSCP:MEDIUM",
+        "BLOODHOUND",
+        "ACTIVE_DIRECTORY",
+        "ENUMERATION",
+        "COLLECTION_METHODS",
+        "TARGETED"
+      ],
+      "prerequisites": [],
+      "alternatives": [
+        "bloodhound-python-all-collection",
+        "bloodhound-python-dconly"
+      ],
+      "next_steps": [
+        "bloodhound-upload-data"
+      ]
+    },
+    {
+      "id": "bloodhound-python-ldaps",
+      "name": "BloodHound.py - LDAPS Encrypted Collection",
+      "category": "enumeration",
+      "subcategory": "active-directory",
+      "command": "bloodhound-python -u '<USERNAME>' -p '<PASSWORD>' -d <DOMAIN> -ns <DC_IP> --use-ldaps -c All --zip",
+      "description": "Collect AD data over LDAPS (LDAP over TLS/SSL on port 636). Required when LDAP signing or channel binding is enforced.",
+      "variables": [
+        {
+          "name": "<USERNAME>",
+          "description": "Domain username for authentication",
+          "example": "pete",
+          "required": true
+        },
+        {
+          "name": "<PASSWORD>",
+          "description": "Password for domain user authentication",
+          "example": "Password123!",
+          "required": true
+        },
+        {
+          "name": "<DOMAIN>",
+          "description": "Active Directory domain name",
+          "example": "corp.com",
+          "required": true
+        },
+        {
+          "name": "<DC_IP>",
+          "description": "Domain Controller IP address",
+          "example": "192.168.50.70",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "--use-ldaps": "Use LDAP over TLS (port 636) instead of plain LDAP (389). WHY NEEDED: (1) LDAP signing required (Group Policy 'Domain controller: LDAP server signing requirements'), (2) LDAP channel binding enforced (modern Windows security), (3) Network inspection blocks plain LDAP. OSCP NOTE: Most exam environments allow plain LDAP, but LDAPS may be required in hardened scenarios.",
+        "--ldap-channel-binding": "Enable LDAP channel binding. Automatically enables LDAPS. WHY NEEDED: Windows security feature binding TLS channel to LDAP bind. If you see 'data 80090346' errors, this is channel binding rejection. Use this flag to comply."
+      },
+      "success_indicators": [
+        "INFO: Connecting to LDAPS",
+        "INFO: Found AD domain"
+      ],
+      "failure_indicators": [
+        "SSL: CERTIFICATE_VERIFY_FAILED",
+        "ERROR: Could not connect to LDAPS",
+        "data 80090346 (channel binding)"
+      ],
+      "troubleshooting": {
+        "SSL CERTIFICATE_VERIFY_FAILED": "Python SSL certificate validation failed. Causes: (1) Self-signed DC certificate, (2) CA not trusted. SOLUTIONS: In OSCP labs, this is expected. Workaround: Set environment variable before running: export PYTHONHTTPSVERIFY=0 (disables verification). Not recommended for production.",
+        "data 80090346 (channel binding)": "LDAP channel binding enforced but not provided. SOLUTION: Use --ldap-channel-binding flag. This requires LDAPS automatically.",
+        "Connection refused on 636": "LDAPS not enabled on DC. Verify: nmap -p 636 <DC_IP>. If closed, use plain LDAP (port 389) without --use-ldaps.",
+        "Timeout on LDAPS": "TLS handshake issue. May be firewall or certificate problem. Try: openssl s_client -connect <DC_IP>:636 to debug TLS."
+      },
+      "notes": "OSCP METHODOLOGY: Most exam environments use plain LDAP. LDAPS needed only in hardened environments.\n\nWHEN LDAPS REQUIRED:\n- 'LDAP signing required' Group Policy enabled\n- 'LDAP channel binding' enforced (recent Windows updates)\n- Network IDS blocks plain LDAP\n- Compliance requirements\n\nDETECTING LDAPS REQUIREMENT:\nPlain LDAP fails with: 'data 52e' (invalid creds format) or 'Strong auth required'\n\nVERIFY LDAPS AVAILABLE:\nnmap -p 636 -sV <DC_IP>\nopenssl s_client -connect <DC_IP>:636\n\nCERTIFICATE ERRORS:\nOSCP lab DCs may have self-signed certs. Quick bypass:\nexport LDAPTLS_REQCERT=never\nexport PYTHONHTTPSVERIFY=0\n\nThen run bloodhound-python --use-ldaps\n\nOSCP TIP: Try plain LDAP first. Only use --use-ldaps if plain fails with signing/binding errors.",
+      "oscp_relevance": "low",
+      "tags": [
+        "OSCP:LOW",
+        "BLOODHOUND",
+        "ACTIVE_DIRECTORY",
+        "LDAPS",
+        "TLS",
+        "ENCRYPTED",
+        "CHANNEL_BINDING"
+      ],
+      "prerequisites": [],
+      "alternatives": [
+        "bloodhound-python-all-collection"
+      ],
+      "next_steps": [
+        "bloodhound-upload-data"
+      ]
+    },
+    {
+      "id": "bloodhound-python-computerfile",
+      "name": "BloodHound.py - Targeted Computer Enumeration",
+      "category": "enumeration",
+      "subcategory": "active-directory",
+      "command": "bloodhound-python -u '<USERNAME>' -p '<PASSWORD>' -d <DOMAIN> -ns <DC_IP> -c Session,LocalAdmin --computerfile <COMPUTER_FILE> --zip",
+      "description": "Limit computer-based enumeration (Session, LocalAdmin) to specific computers listed in a file. Faster and stealthier than querying all domain computers.",
+      "variables": [
+        {
+          "name": "<USERNAME>",
+          "description": "Domain username for authentication",
+          "example": "pete",
+          "required": true
+        },
+        {
+          "name": "<PASSWORD>",
+          "description": "Password for domain user authentication",
+          "example": "Password123!",
+          "required": true
+        },
+        {
+          "name": "<DOMAIN>",
+          "description": "Active Directory domain name",
+          "example": "corp.com",
+          "required": true
+        },
+        {
+          "name": "<DC_IP>",
+          "description": "Domain Controller IP address",
+          "example": "192.168.50.70",
+          "required": true
+        },
+        {
+          "name": "<COMPUTER_FILE>",
+          "description": "File containing FQDNs of computers to enumerate (one per line)",
+          "example": "targets.txt",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "--computerfile": "Path to file containing computer FQDNs (one per line). Only these computers will be queried for Session, LocalAdmin, DCOM, RDP, PSRemote methods. FILE FORMAT: dc01.corp.com\\nclient01.corp.com\\nserver02.corp.com. WHY USE: (1) Large domains with 1000+ computers - full enum takes forever, (2) Target specific high-value systems, (3) Reduce network noise, (4) Scope limited engagement.",
+        "-w / --workers": "Number of parallel worker threads for computer enumeration (default: 10). Increase for faster collection: -w 20. Decrease if causing network issues: -w 5. Each worker queries one computer at a time."
+      },
+      "success_indicators": [
+        "INFO: Using computer list from",
+        "INFO: Enumerating XXX computers"
+      ],
+      "failure_indicators": [
+        "ERROR: Could not read computer file",
+        "ERROR: Computer not found"
+      ],
+      "troubleshooting": {
+        "Computer not found": "Computer FQDN in file doesn't resolve. Verify: nslookup dc01.corp.com <DC_IP>. File must contain FQDNs (dc01.corp.com), not hostnames (dc01) or IPs.",
+        "Permission denied reading file": "Check file permissions. File must be readable by current user."
+      },
+      "notes": "OSCP METHODOLOGY: Use computerfile to target high-value systems identified during recon.\n\nWORKFLOW:\n1. Identify high-value targets from initial DCOnly collection:\n   - Domain Controllers\n   - Servers with 'admin' or 'sql' in name\n   - Computers with unconstrained delegation\n   \n2. Create target file:\n   echo 'dc01.corp.com' > targets.txt\n   echo 'sql01.corp.com' >> targets.txt\n   echo 'admin-ws.corp.com' >> targets.txt\n   \n3. Run targeted collection:\n   bloodhound-python -u user -p pass -d corp.com -ns <DC> \\\n     -c Session,LocalAdmin --computerfile targets.txt --zip\n\nFILE FORMAT:\nOne FQDN per line, no quotes:\ndc01.corp.com\nclient01.corp.com\nserver02.corp.com\n\nGENERATING COMPUTER LIST:\nFrom BloodHound Cypher query:\nMATCH (c:Computer) WHERE c.unconstraineddelegation = true RETURN c.name\n\nFrom ldapsearch:\nldapsearch -x -H ldap://<DC> -D user@domain -w pass -b 'DC=corp,DC=com' \\\n  '(objectClass=computer)' dNSHostName | grep dNSHostName | awk '{print $2}'\n\nOSCP TIP: In time-limited exams, target DCs and a few workstations rather than enumerating all computers.",
+      "oscp_relevance": "medium",
+      "tags": [
+        "OSCP:MEDIUM",
+        "BLOODHOUND",
+        "ACTIVE_DIRECTORY",
+        "TARGETED",
+        "ENUMERATION",
+        "COMPUTER_SCOPE"
+      ],
+      "prerequisites": [
+        "bloodhound-python-dconly"
+      ],
+      "alternatives": [
+        "bloodhound-python-all-collection"
+      ],
+      "next_steps": [
+        "bloodhound-upload-data"
+      ]
+    },
+    {
+      "id": "bloodhound-python-output-prefix",
+      "name": "BloodHound.py - Custom Output Naming",
+      "category": "enumeration",
+      "subcategory": "active-directory",
+      "command": "bloodhound-python -u '<USERNAME>' -p '<PASSWORD>' -d <DOMAIN> -ns <DC_IP> -c All -op <PREFIX> --zip",
+      "description": "Customize output file naming with prefix. Useful for organizing data from multiple domains or collection runs.",
+      "variables": [
+        {
+          "name": "<USERNAME>",
+          "description": "Domain username for authentication",
+          "example": "pete",
+          "required": true
+        },
+        {
+          "name": "<PASSWORD>",
+          "description": "Password for domain user authentication",
+          "example": "Password123!",
+          "required": true
+        },
+        {
+          "name": "<DOMAIN>",
+          "description": "Active Directory domain name",
+          "example": "corp.com",
+          "required": true
+        },
+        {
+          "name": "<DC_IP>",
+          "description": "Domain Controller IP address",
+          "example": "192.168.50.70",
+          "required": true
+        },
+        {
+          "name": "<PREFIX>",
+          "description": "Prefix string for output files",
+          "example": "corp_exam",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "-op / --outputprefix": "Prepend string to output filenames. DEFAULT OUTPUT: YYYYMMDDHHMMSS_bloodhound.zip. WITH PREFIX: <PREFIX>_YYYYMMDDHHMMSS_bloodhound.zip. WHY USE: (1) Organize multi-domain collections, (2) Track exam machine outputs, (3) Prevent accidental overwrites."
+      },
+      "success_indicators": [
+        "INFO: Compressing output into <PREFIX>_*_bloodhound.zip"
+      ],
+      "failure_indicators": [],
+      "troubleshooting": {},
+      "notes": "OSCP METHODOLOGY: Keep outputs organized for multi-machine exams.\n\nNAMING CONVENTION:\n-op oscp_machine1  → oscp_machine1_YYYYMMDDHHMMSS_bloodhound.zip\n-op corp_initial   → corp_initial_YYYYMMDDHHMMSS_bloodhound.zip\n-op after_creds    → after_creds_YYYYMMDDHHMMSS_bloodhound.zip\n\nOSCP EXAM ORGANIZATION:\nmkdir -p ~/oscp_exam/{ad_set1,ad_set2}\ncd ~/oscp_exam/ad_set1\nbloodhound-python ... -op ad_set1 --zip\n\nThis creates ad_set1_*_bloodhound.zip in the ad_set1 directory.",
+      "oscp_relevance": "low",
+      "tags": [
+        "OSCP:LOW",
+        "BLOODHOUND",
+        "ACTIVE_DIRECTORY",
+        "OUTPUT",
+        "ORGANIZATION"
+      ],
+      "prerequisites": [],
+      "alternatives": [],
+      "next_steps": [
+        "bloodhound-upload-data"
+      ]
+    }
+  ]
+}
