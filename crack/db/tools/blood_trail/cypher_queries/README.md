@@ -1,18 +1,20 @@
 # BloodHound Cypher Query Library
 
-A curated collection of 63 Cypher queries for Active Directory attack path discovery using BloodHound data in Neo4j.
+A curated collection of **104 Cypher queries** for Active Directory attack path discovery using BloodHound data in Neo4j.
 
 ## Table of Contents
 
 - [Cypher Fundamentals](#cypher-fundamentals)
 - [BloodHound Data Model](#bloodhound-data-model)
 - [Query Categories](#query-categories)
-  - [Quick Wins](#1-quick-wins-10-queries)
-  - [Lateral Movement](#2-lateral-movement-12-queries)
-  - [Privilege Escalation](#3-privilege-escalation-15-queries)
-  - [Attack Chains](#4-attack-chains-8-queries)
-  - [Owned Principal](#5-owned-principal-10-queries)
-  - [Operational](#6-operational-8-queries)
+  - [Quick Wins](#1-quick-wins-13-queries)
+  - [Lateral Movement](#2-lateral-movement-16-queries)
+  - [Privilege Escalation](#3-privilege-escalation-21-queries)
+  - [Delegation](#4-delegation-10-queries)
+  - [ADCS](#5-adcs-20-queries)
+  - [Attack Chains](#6-attack-chains-8-queries)
+  - [Owned Principal](#7-owned-principal-10-queries)
+  - [Operational](#8-operational-8-queries)
 - [Learning Path](#learning-path)
 - [Query Index](#complete-query-index)
 
@@ -150,12 +152,41 @@ u.highvalue         -- Marked as high-value target
 | `GetChangesAll` | Full replication | DCSync |
 | `MemberOf` | Group membership | Inherited privileges |
 | `TrustedBy` | Domain trust | Cross-domain attacks |
+| `WriteSPN` | Write SPN attribute | Targeted Kerberoasting |
+| `WriteAccountRestrictions` | Modify delegation settings | RBCD attacks |
+| `SyncLAPSPassword` | LAPS sync rights | Domain-wide LAPS access |
+| `AddAllowedToAct` | Add RBCD entries | Resource-Based Constrained Delegation |
+
+#### Delegation Edges
+| Edge | Meaning | Attack |
+|------|---------|--------|
+| `AllowedToAct` | RBCD configured | S4U2Proxy impersonation |
+| `AllowedToDelegate` | Constrained delegation | S4U2Self/S4U2Proxy |
+| `CoerceToTGT` | Unconstrained + coercion | PetitPotam/PrinterBug TGT capture |
+| `HasSIDHistory` | SID history present | Token manipulation |
+
+#### ADCS Edges (Certificate Services)
+| Edge | Meaning | Attack |
+|------|---------|--------|
+| `ADCSESC1` | Misconfigured template | Request cert as any user |
+| `ADCSESC3` | Enrollment agent abuse | Issue certs on behalf of |
+| `ADCSESC4` | Template write access | Modify template for ESC1 |
+| `ADCSESC6a/b` | EDITF flag enabled | SAN manipulation |
+| `ADCSESC7` | CA ACL abuse | ManageCA exploitation |
+| `ADCSESC9a/b` | No security extension | Certificate mapping bypass |
+| `ADCSESC10a/b` | Weak cert binding | Impersonation via certs |
+| `ADCSESC13` | OID group link | Group membership via cert |
+| `GoldenCert` | CA key access | Forge any certificate |
+| `Enroll` | Enrollment rights | Request certificates |
+| `ManageCA` | CA administration | Modify CA configuration |
+| `ManageCertificates` | Certificate management | Approve pending requests |
+| `EnrollOnBehalfOf` | Enrollment agent | Issue certs for others |
 
 ---
 
 ## Query Categories
 
-### 1. Quick Wins (10 queries)
+### 1. Quick Wins (13 queries)
 
 **Purpose**: Fast compromise opportunities requiring minimal effort.
 
@@ -173,6 +204,9 @@ u.highvalue         -- Marked as high-value target
 | `quick-never-logged-in` | Never Logged In | Unused accounts | May have default credentials |
 | `quick-laps-gaps` | Computers Without LAPS | No local admin rotation | Password reuse potential |
 | `quick-prewin2000-accounts` | Pre-Win2000 Compatibility | Legacy access groups | Anonymous enumeration |
+| `quick-gmsa-password` | ReadGMSAPassword Rights | gMSA credential access | Direct service account compromise |
+| `quick-laps-readers` | ReadLAPSPassword Rights | LAPS credential access | Local admin without cracking |
+| `quick-gmsa-all` | All gMSA Accounts | gMSA enumeration | Identify high-value targets |
 
 **Example - AS-REP Roasting Query Explained**:
 
@@ -193,7 +227,7 @@ ORDER BY u.admincount DESC        -- Show privileged accounts first
 
 ---
 
-### 2. Lateral Movement (12 queries)
+### 2. Lateral Movement (16 queries)
 
 **Purpose**: Find paths to move between systems.
 
@@ -213,6 +247,9 @@ ORDER BY u.admincount DESC        -- Show privileged accounts first
 | `lateral-multi-path-computers` | Multiple Admin Paths | Computers with many admins | More options |
 | `lateral-da-sessions-workstations` | DA Sessions on Workstations | Privileged sessions to harvest | Mimikatz targets |
 | `lateral-cross-trust` | Cross-Trust Lateral Movement | Foreign domain access | Trust abuse |
+| `lateral-coerce-to-tgt` | Coercion Targets | Unconstrained delegation + coercion | PetitPotam/PrinterBug |
+| `lateral-sid-history` | SID History Abuse | Principals with inherited SIDs | Token manipulation |
+| `lateral-trust-abuse` | Domain Trust Relationships | Trust mapping | Cross-domain paths |
 
 **Example - Finding Credential Harvest Targets**:
 
@@ -233,7 +270,7 @@ ORDER BY SessionCount DESC                  -- Most valuable targets first
 
 ---
 
-### 3. Privilege Escalation (15 queries)
+### 3. Privilege Escalation (21 queries)
 
 **Purpose**: Find ACL abuse paths to Domain Admin.
 
@@ -256,6 +293,11 @@ ORDER BY SessionCount DESC                  -- Most valuable targets first
 | `privesc-read-laps` | Read LAPS Password | Local admin access | - |
 | `privesc-domain-admins` | List Domain Admins | Target identification | - |
 | `privesc-genericwrite-users` | GenericWrite on Users | Targeted Kerberoast | T1134 |
+| `privesc-write-spn` | WriteSPN for Kerberoast | SPN manipulation | T1558.003 |
+| `privesc-write-account-restrictions` | WriteAccountRestrictions | RBCD abuse | T1550.003 |
+| `privesc-sync-laps` | SyncLAPSPassword | Domain-wide LAPS | T1555 |
+| `privesc-add-allowed-to-act` | AddAllowedToAct | RBCD configuration | T1550.003 |
+| `privesc-dcsync-composite` | DCSync Composite Check | Full DCSync rights | T1003.006 |
 
 **Example - Shadow Admins Query Explained**:
 
@@ -275,7 +317,101 @@ Shadow admins don't appear in privileged groups but have paths to compromise pri
 
 ---
 
-### 4. Attack Chains (8 queries)
+### 4. Delegation (10 queries)
+
+**Purpose**: Kerberos delegation abuse - RBCD, constrained, and unconstrained delegation attacks.
+
+**File**: `delegation.json`
+
+| ID | Name | Attack Type | MITRE |
+|----|------|-------------|-------|
+| `delegation-rbcd-targets` | RBCD Attack Targets | AllowedToAct abuse | T1550.003 |
+| `delegation-rbcd-writers` | RBCD Writers | WriteAccountRestrictions | T1550.003 |
+| `delegation-constrained-abuse` | Constrained Delegation Abuse | S4U2Proxy | T1558.001 |
+| `delegation-constrained-to-dc` | Constrained to DC | Direct DC access | T1558.001 |
+| `delegation-unconstrained` | Unconstrained Delegation | TGT capture | T1558.001 |
+| `delegation-unconstrained-nondc` | Non-DC Unconstrained | Prime coercion targets | T1558.001 |
+| `delegation-user-unconstrained` | Users with Unconstrained | Service account abuse | T1558.001 |
+| `delegation-rbcd-chain` | RBCD Attack Chain | Full attack path | T1550.003 |
+| `delegation-add-allowed-to-act` | AddAllowedToAct Rights | Direct RBCD config | T1550.003 |
+| `delegation-protocol-transition` | Protocol Transition | S4U2Self abuse | T1558.001 |
+
+**Example - RBCD Attack Chain Query**:
+
+```cypher
+-- Find complete RBCD chains: write access -> computer with privileged sessions
+MATCH (attacker)-[r:WriteAccountRestrictions|GenericAll|GenericWrite]->(c:Computer)
+      <-[:HasSession]-(priv:User {admincount:true})
+WHERE NOT attacker.admincount = true
+RETURN attacker.name AS Attacker,
+       type(r) AS Permission,
+       c.name AS TargetComputer,
+       collect(priv.name) AS PrivilegedSessions
+```
+
+**Attack Flow**:
+1. Compromise attacker account with WriteAccountRestrictions
+2. Configure RBCD on target computer (add machine account)
+3. Use S4U2Self/S4U2Proxy to impersonate privileged user
+4. Access computer as Domain Admin and harvest credentials
+
+---
+
+### 5. ADCS (20 queries)
+
+**Purpose**: AD Certificate Services attack paths (ESC1-ESC13). Critical for modern AD attacks.
+
+**File**: `adcs.json`
+
+| ID | Name | ESC Type | Description |
+|----|------|----------|-------------|
+| `adcs-esc1-vulnerable` | Misconfigured Templates | ESC1 | Request certs as any user |
+| `adcs-esc3-enrollment-agents` | Enrollment Agent Abuse | ESC3 | Issue certs on behalf of |
+| `adcs-esc4-template-write` | Template Write Access | ESC4 | Modify templates |
+| `adcs-esc5-pki-object-acls` | PKI Object ACLs | ESC5 | NTAuth control |
+| `adcs-esc6a-editf-flag` | EDITF Flag Enabled | ESC6a | SAN manipulation |
+| `adcs-esc6b-issuance-requirements` | Weak Issuance | ESC6b | Policy bypass |
+| `adcs-esc7-ca-acls` | CA ACL Abuse | ESC7 | ManageCA rights |
+| `adcs-esc9a-no-security-extension` | No Security Extension | ESC9a | Mapping bypass |
+| `adcs-esc9b-weak-mapping` | Weak Cert Mapping | ESC9b | Impersonation |
+| `adcs-esc10a-weak-cert-binding` | Weak Cert Binding | ESC10a | Auth bypass |
+| `adcs-esc10b-shadow-credentials` | Shadow Creds via ADCS | ESC10b | Combined attack |
+| `adcs-esc13-oid-group` | OID Group Link | ESC13 | Group membership |
+| `adcs-golden-cert` | Golden Certificate | - | Forge any cert |
+| `adcs-enroll-on-behalf` | EnrollOnBehalfOf | - | Agent impersonation |
+| `adcs-enrollment-targets` | Enrollment Rights | - | Who can enroll |
+| `adcs-manage-ca` | CA Management Rights | - | CA admin access |
+| `adcs-ca-servers` | CA Server Enumeration | - | Discovery |
+| `adcs-certificate-templates` | Template Enumeration | - | Discovery |
+| `adcs-all-esc-paths` | All ESC Paths Summary | All | Combined view |
+| `adcs-ntauth-store` | NTAuth Store Access | - | Trust manipulation |
+
+**ESC Attack Taxonomy**:
+- **ESC1-3**: Template misconfigurations (most common)
+- **ESC4-5**: PKI object ACL abuse
+- **ESC6-7**: CA server misconfigurations
+- **ESC9-10**: Certificate mapping weaknesses
+- **ESC13**: OID group link abuse (newest)
+- **GoldenCert**: CA private key compromise
+
+**Example - ESC1 Detection**:
+
+```cypher
+-- Find ESC1 vulnerable templates accessible by non-privileged principals
+MATCH (n)-[:ADCSESC1]->(ct)
+WHERE n.admincount = false
+RETURN n.name AS Attacker,
+       labels(n) AS AttackerType,
+       ct.name AS VulnerableTemplate
+```
+
+**Tools for ADCS Exploitation**:
+- Certipy: `certipy find -u user@domain -p pass -vulnerable`
+- Certify.exe: `Certify.exe find /vulnerable`
+
+---
+
+### 6. Attack Chains (8 queries)
 
 **Purpose**: Multi-hop path reconstruction from owned user to Domain Admin.
 
@@ -313,7 +449,7 @@ LIMIT 10
 
 ---
 
-### 5. Owned Principal (10 queries)
+### 7. Owned Principal (10 queries)
 
 **Purpose**: What can I do from my compromised user?
 
@@ -351,7 +487,7 @@ ORDER BY AccessType
 
 ---
 
-### 6. Operational (8 queries)
+### 8. Operational (8 queries)
 
 **Purpose**: Domain reconnaissance and situational awareness.
 
@@ -506,31 +642,50 @@ ORDER BY c.operatingsystem
 
 ---
 
-## Usage with blood-trail
+## Usage with bloodtrail
 
 ```bash
 # Import BloodHound data and run queries
-crack blood-trail /path/to/bloodhound/json/
+crack bloodtrail /path/to/bloodhound/json/
 
 # Run specific query by ID
-crack blood-trail --query lateral-adminto-nonpriv
+crack bloodtrail --query lateral-adminto-nonpriv
 
 # Run category
-crack blood-trail --category quick_wins
+crack bloodtrail --category quick_wins
 
 # Verbose output with full query
-crack blood-trail --query chain-shortest-to-da -v
+crack bloodtrail --query chain-shortest-to-da -v
 ```
 
 ---
 
 ## Validation
 
-All 63 queries have been validated against Neo4j 5.x using `EXPLAIN`:
+All queries have been validated against Neo4j 5.x using `EXPLAIN`:
 
 ```
-Passed: 63/63
+Total Queries: 104
+Passed: 104/104
 Failed: 0
+```
+
+Run validation manually:
+```bash
+# Validate all query files
+for f in db/tools/blood_trail/cypher_queries/*.json; do
+  echo "Validating $f..."
+  python3 -c "
+import json, subprocess
+with open('$f') as fh:
+    data = json.load(fh)
+for q in data.get('queries', []):
+    cypher = q['cypher'].replace('<USER>', 'TEST@CORP.COM').replace('<COMPUTER>', 'TEST.CORP.COM')
+    result = subprocess.run(['cypher-shell', '-u', 'neo4j', '-p', 'Neo4j123', '--format', 'plain'],
+                           input=f'EXPLAIN {cypher}', capture_output=True, text=True)
+    status = '✓' if result.returncode == 0 else '✗'
+    print(f'{status} {q[\"id\"]}')"
+done
 ```
 
 ---

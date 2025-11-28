@@ -402,7 +402,7 @@ def ports_command(args):
 def blood_trail_command(args):
     """Execute BloodHound Trail - Edge enhancement and Neo4j query analysis"""
     from db.tools.blood_trail.cli import main as bt_main
-    sys.argv = ['crack-blood-trail'] + args
+    sys.argv = ['crack-bloodtrail'] + args
     bt_main()
 
 def config_command(args):
@@ -664,7 +664,7 @@ def main():
   └─ airgeddon       Airgeddon helper - WiFi security auditing (OSWP)
 
 {Colors.YELLOW}▶ Active Directory{Colors.END}
-  └─ blood-trail     BloodHound Trail - Edge enhancement and Neo4j query analysis
+  └─ bloodtrail     BloodHound Trail - Edge enhancement and Neo4j query analysis
 
 {Colors.YELLOW}▶ Session Management{Colors.END}
   └─ session         Reverse shell session management (TCP/HTTP/DNS)
@@ -897,7 +897,7 @@ def main():
     ports_parser.set_defaults(func=ports_command)
 
     # BloodHound Trail subcommand
-    blood_trail_parser = subparsers.add_parser('blood-trail',
+    blood_trail_parser = subparsers.add_parser('bloodtrail',
                                                help='BloodHound Trail - Edge enhancement and Neo4j query analysis',
                                                add_help=False)
     blood_trail_parser.set_defaults(func=blood_trail_command)

@@ -6,19 +6,19 @@ Interactive Cypher query execution for BloodHound attack path discovery.
 
 Usage:
     # List all queries
-    crack blood-trail --list-queries
+    crack bloodtrail --list-queries
 
     # Run query by ID
-    crack blood-trail --run-query lateral-adminto-nonpriv
+    crack bloodtrail --run-query lateral-adminto-nonpriv
 
     # With variables
-    crack blood-trail --run-query owned-what-can-access --var USER=PETE@CORP.COM
+    crack bloodtrail --run-query owned-what-can-access --var USER=PETE@CORP.COM
 
     # Search queries
-    crack blood-trail --search-query DCSync
+    crack bloodtrail --search-query DCSync
 
     # Export for BloodHound
-    crack blood-trail --export-query lateral-adminto-nonpriv
+    crack bloodtrail --export-query lateral-adminto-nonpriv
 """
 
 import sys
@@ -34,7 +34,7 @@ def print_banner():
     """Print tool banner"""
     print("""
 ╔═══════════════════════════════════════════════════════════╗
-║              BloodHound Trail (blood-trail)               ║
+║              BloodHound Trail (bloodtrail)               ║
 ║                                                           ║
 ║  63+ pre-built Cypher queries for attack path discovery   ║
 ║  Credentials: neo4j/Neo4j123 | admin/1PlaySmarter*        ║

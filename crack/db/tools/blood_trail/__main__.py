@@ -1,5 +1,5 @@
 """
-Entry point for python -m blood_trail (or crack blood-trail)
+Entry point for python -m blood_trail (or crack bloodtrail)
 """
 from .cli import main
 

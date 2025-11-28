@@ -2,11 +2,12 @@
 BloodHound Trail - Main Orchestration
 
 Coordinates edge extraction from BloodHound JSON and batch import to Neo4j.
+Supports both directory and ZIP file data sources.
 """
 
 import time
 from pathlib import Path
-from typing import Dict, List, Optional, Set
+from typing import Dict, List, Optional, Set, Union
 from dataclasses import dataclass, field
 
 from neo4j import GraphDatabase
@@ -20,6 +21,7 @@ from .extractors import (
     Edge,
     deduplicate_edges,
 )
+from .data_source import DataSource, create_data_source
 
 
 class Colors:
@@ -266,20 +268,35 @@ class BHEnhancer:
     """
     Main orchestrator for BloodHound edge enhancement.
 
+    Supports both directory and ZIP file data sources.
+
     Example:
         enhancer = BHEnhancer(
             bh_data_dir=Path("/path/to/bh/json"),
             neo4j_config=Neo4jConfig()
         )
         stats = enhancer.run(preset="attack-paths", verbose=True)
+
+        # Or with ZIP file:
+        enhancer = BHEnhancer(
+            bh_data_dir=Path("/path/to/sharphound_output.zip"),
+            neo4j_config=Neo4jConfig()
+        )
     """
 
     def __init__(
         self,
-        bh_data_dir: Path,
+        bh_data_dir: Union[Path, DataSource],
         neo4j_config: Optional[Neo4jConfig] = None
     ):
-        self.bh_data_dir = Path(bh_data_dir)
+        # Store original path for display
+        if isinstance(bh_data_dir, DataSource):
+            self.data_source = bh_data_dir
+            self.bh_data_dir = bh_data_dir.source_path
+        else:
+            self.bh_data_dir = Path(bh_data_dir)
+            self.data_source = None  # Created lazily in initialize()
+
         self.config = neo4j_config or Neo4jConfig()
         self.driver = None
         self.resolver = None
@@ -408,11 +425,18 @@ class BHEnhancer:
         return None
 
     def initialize(self) -> bool:
-        """Initialize resolver and registry"""
+        """Initialize data source, resolver and registry"""
         C = Colors
         try:
-            print(f"{C.CYAN}[*]{C.RESET} Loading SIDs from {C.BOLD}{self.bh_data_dir}{C.RESET}...")
-            self.resolver = SIDResolver(self.bh_data_dir)
+            # Create data source if not already provided
+            if self.data_source is None:
+                self.data_source = create_data_source(self.bh_data_dir)
+
+            source_type = self.data_source.source_type
+            source_label = "ZIP file" if source_type == "zip" else "directory"
+
+            print(f"{C.CYAN}[*]{C.RESET} Loading SIDs from {source_label} {C.BOLD}{self.bh_data_dir}{C.RESET}...")
+            self.resolver = SIDResolver(self.data_source)
             print(f"{C.GREEN}[+]{C.RESET} Loaded {C.BOLD}{len(self.resolver)}{C.RESET} SID mappings")
 
             self.registry = EdgeExtractorRegistry(self.resolver)
@@ -460,9 +484,10 @@ class BHEnhancer:
             filter_set = None  # All edges
 
         # Extract edges
-        print(f"{C.CYAN}[*]{C.RESET} Extracting edges from {C.BOLD}{self.bh_data_dir}{C.RESET}...")
-        result = self.registry.extract_from_directory(
-            self.bh_data_dir,
+        source_label = "ZIP" if self.data_source.source_type == "zip" else "directory"
+        print(f"{C.CYAN}[*]{C.RESET} Extracting edges from {source_label} {C.BOLD}{self.bh_data_dir}{C.RESET}...")
+        result = self.registry.extract_from_source(
+            self.data_source,
             edge_filter=filter_set
         )
 
@@ -588,8 +613,8 @@ class BHEnhancer:
     3. Verify data loaded:
        cypher-shell -u neo4j -p Neo4j123 "MATCH (n) RETURN count(n)"
 
-    4. Re-run blood-trail:
-       crack blood-trail /path/to/bh/json/ --preset attack-paths
+    4. Re-run bloodtrail:
+       crack bloodtrail /path/to/bh/json/ --preset attack-paths
 """)
         elif diag.total_nodes > 0 and diag.users == 0 and diag.computers == 0:
             print(f"""
@@ -609,8 +634,8 @@ class BHEnhancer:
     2. Start BloodHound and import your collection:
        bloodhound
 
-    3. Re-run blood-trail:
-       crack blood-trail /path/to/bh/json/ --preset attack-paths
+    3. Re-run bloodtrail:
+       crack bloodtrail /path/to/bh/json/ --preset attack-paths
 """)
         elif diag.is_bloodhound_ce:
             print("""
@@ -622,7 +647,7 @@ class BHEnhancer:
     📋 OPTIONS:
     1. Use BloodHound Legacy (4.x) instead of CE
     2. Query directly with CE-compatible Cypher:
-       crack blood-trail --list-queries
+       crack bloodtrail --list-queries
        (Then manually adapt queries for CE schema)
 """)
         elif diag.sample_user and not diag.sample_user.endswith(("@" + diag.sample_user.split("@")[-1] if "@" in (diag.sample_user or "") else "")):
@@ -655,8 +680,8 @@ class BHEnhancer:
     3. If using different collections, re-import matching data to BloodHound
 
     📋 QUICK TEST:
-       crack blood-trail --validate
-       crack blood-trail /path/to/json --dry-run --verbose
+       crack bloodtrail --validate
+       crack bloodtrail /path/to/json --dry-run --verbose
 """)
 
     def validate(self, verbose: bool = False) -> Dict:
@@ -668,7 +693,7 @@ class BHEnhancer:
         if not self.initialize():
             return {"error": "Failed to initialize"}
 
-        result = self.registry.extract_from_directory(self.bh_data_dir)
+        result = self.registry.extract_from_source(self.data_source)
 
         # Count by type
         edge_counts: Dict[str, int] = {}

@@ -20,6 +20,322 @@ from neo4j.exceptions import ServiceUnavailable, AuthError
 from .config import Neo4jConfig
 
 
+# =============================================================================
+# TIMESTAMP FORMATTING HELPERS
+# =============================================================================
+
+# Field names that contain timestamps (case-insensitive matching)
+TIMESTAMP_FIELDS = {
+    'passwordlastset', 'pwdlastset', 'lastlogon', 'lastlogontimestamp',
+    'lastlogoff', 'whencreated', 'whenchanged', 'accountexpires',
+    'badpasswordtime', 'lastpasswordset', 'pwdlastchange'
+}
+
+
+def format_timestamp_ago(timestamp: Any) -> str:
+    """
+    Convert a timestamp to human-readable "X time ago" format.
+
+    Args:
+        timestamp: Unix epoch in seconds or milliseconds, or None/0
+
+    Returns:
+        Human-readable string like "3 months ago" or "Never"
+    """
+    if timestamp is None or timestamp == 0 or timestamp == -1:
+        return "Never"
+
+    try:
+        ts = int(timestamp)
+    except (ValueError, TypeError):
+        return str(timestamp)
+
+    # BloodHound timestamps can be in milliseconds or seconds
+    # If > year 3000 in seconds, it's probably milliseconds
+    if ts > 32503680000:  # Year 3000 in seconds
+        ts = ts // 1000
+
+    # Handle Windows FILETIME (100-nanosecond intervals since 1601)
+    # These are huge numbers > 100000000000000
+    if ts > 100000000000000:
+        # Convert FILETIME to Unix timestamp
+        ts = (ts // 10000000) - 11644473600
+
+    from datetime import datetime
+    try:
+        dt = datetime.fromtimestamp(ts)
+        now = datetime.now()
+        delta = now - dt
+
+        seconds = int(delta.total_seconds())
+        if seconds < 0:
+            return "In the future"
+        if seconds < 60:
+            return f"{seconds} seconds ago"
+        if seconds < 3600:
+            mins = seconds // 60
+            return f"{mins} minute{'s' if mins != 1 else ''} ago"
+        if seconds < 86400:
+            hours = seconds // 3600
+            return f"{hours} hour{'s' if hours != 1 else ''} ago"
+        if seconds < 2592000:  # 30 days
+            days = seconds // 86400
+            return f"{days} day{'s' if days != 1 else ''} ago"
+        if seconds < 31536000:  # 365 days
+            months = seconds // 2592000
+            return f"{months} month{'s' if months != 1 else ''} ago"
+
+        years = seconds // 31536000
+        return f"{years} year{'s' if years != 1 else ''} ago"
+    except (ValueError, OSError, OverflowError):
+        return str(timestamp)
+
+
+def is_timestamp_field(field_name: str) -> bool:
+    """Check if a field name represents a timestamp."""
+    return field_name.lower().replace('_', '') in TIMESTAMP_FIELDS
+
+
+# =============================================================================
+# NEO4J PATH FORMATTING
+# =============================================================================
+
+def is_neo4j_path(value: Any) -> bool:
+    """Check if value is a Neo4j Path object."""
+    # Check by type name since we may not have the exact import
+    type_name = type(value).__name__
+    return type_name == 'Path' or 'graph.Path' in str(type(value))
+
+
+def get_node_name(node: Any) -> str:
+    """Extract readable name from Neo4j Node object."""
+    # Try common name properties in order of preference
+    for prop in ['name', 'samaccountname', 'distinguishedname']:
+        try:
+            val = node.get(prop) or node.get(prop.upper())
+            if val:
+                return str(val)
+        except (AttributeError, TypeError):
+            pass
+    # Fallback: try to get labels
+    try:
+        labels = list(node.labels) if hasattr(node, 'labels') else []
+        if labels:
+            return f"[{':'.join(labels)}]"
+    except:
+        pass
+    return "<?>"
+
+
+def format_neo4j_path(path: Any) -> Dict[str, Any]:
+    """
+    Parse a Neo4j Path object into structured data.
+
+    Returns:
+        {
+            'start': str,       # Start node name
+            'end': str,         # End node name
+            'hops': int,        # Number of relationships
+            'nodes': [str],     # All node names in order
+            'edges': [str],     # All relationship types in order
+            'steps': [(node, edge, node), ...]  # Step-by-step breakdown
+        }
+    """
+    try:
+        nodes = list(path.nodes)
+        rels = list(path.relationships)
+
+        node_names = [get_node_name(n) for n in nodes]
+        edge_types = [r.type for r in rels]
+
+        # Build steps: (from_node, edge, to_node)
+        steps = []
+        for i, rel in enumerate(rels):
+            steps.append({
+                'from': node_names[i],
+                'edge': edge_types[i],
+                'to': node_names[i + 1]
+            })
+
+        return {
+            'start': node_names[0] if node_names else '?',
+            'end': node_names[-1] if node_names else '?',
+            'hops': len(rels),
+            'nodes': node_names,
+            'edges': edge_types,
+            'steps': steps
+        }
+    except Exception as e:
+        return {
+            'start': '?',
+            'end': '?',
+            'hops': 0,
+            'nodes': [],
+            'edges': [],
+            'steps': [],
+            'error': str(e)
+        }
+
+
+def format_path_oneline(path: Any) -> str:
+    """Format path as single-line summary for tables."""
+    parsed = format_neo4j_path(path)
+    if parsed.get('error'):
+        return str(path)[:50]
+
+    # Short format: START -[E1,E2,E3]-> END (N hops)
+    edges_str = ','.join(parsed['edges'][:5])
+    if len(parsed['edges']) > 5:
+        edges_str += '...'
+    return f"{parsed['start']} -[{edges_str}]-> {parsed['end']} ({parsed['hops']} hops)"
+
+
+def print_attack_paths(
+    records: List[Dict],
+    query_name: str = "Attack Paths",
+    use_colors: bool = True,
+    max_paths: int = 10
+) -> None:
+    """
+    Print attack paths in a visual, digestible format.
+
+    Displays each path as a chain showing:
+    - Start and end nodes
+    - Each hop with edge type
+    - Total hop count
+
+    Args:
+        records: Query results containing path objects
+        query_name: Display name for the section header
+        use_colors: Enable ANSI colors
+        max_paths: Maximum number of paths to display
+    """
+    # Find path column(s)
+    if not records:
+        return
+
+    path_columns = []
+    for key, val in records[0].items():
+        if is_neo4j_path(val):
+            path_columns.append(key)
+
+    if not path_columns:
+        return  # No path objects found
+
+    # Color setup
+    if use_colors:
+        BOLD = '\033[1m'
+        DIM = '\033[2m'
+        CYAN = '\033[96m'
+        GREEN = '\033[92m'
+        YELLOW = '\033[93m'
+        RED = '\033[91m'
+        RESET = '\033[0m'
+    else:
+        BOLD = DIM = CYAN = GREEN = YELLOW = RED = RESET = ''
+
+    # Group paths by destination for deduplication summary
+    paths_by_dest = {}
+    all_parsed = []
+
+    for record in records:
+        for col in path_columns:
+            path_obj = record.get(col)
+            if path_obj and is_neo4j_path(path_obj):
+                parsed = format_neo4j_path(path_obj)
+                if not parsed.get('error'):
+                    all_parsed.append(parsed)
+                    dest = parsed['end']
+                    if dest not in paths_by_dest:
+                        paths_by_dest[dest] = []
+                    paths_by_dest[dest].append(parsed)
+
+    if not all_parsed:
+        return
+
+    # Print summary header
+    unique_starts = len(set(p['start'] for p in all_parsed))
+    unique_ends = len(set(p['end'] for p in all_parsed))
+    print(f"\n  {BOLD}Found {len(all_parsed)} path(s){RESET}")
+    print(f"  {DIM}From {unique_starts} user(s) to {unique_ends} target(s){RESET}")
+    print()
+
+    # Print each path visually
+    displayed = 0
+    for i, parsed in enumerate(all_parsed[:max_paths], 1):
+        hops = parsed['hops']
+        start = parsed['start']
+        end = parsed['end']
+
+        # Path header
+        print(f"  {BOLD}{CYAN}Path {i}{RESET}: {GREEN}{start}{RESET} → {RED}{end}{RESET} ({hops} hop{'s' if hops != 1 else ''})")
+
+        # Show each step
+        for step in parsed['steps']:
+            edge = step['edge']
+            to_node = step['to']
+            # Colorize edge types
+            if edge in ('MemberOf',):
+                edge_color = DIM
+            elif edge in ('AdminTo', 'CanRDP', 'CanPSRemote'):
+                edge_color = GREEN
+            elif edge in ('GenericAll', 'GenericWrite', 'WriteDacl', 'WriteOwner', 'ForceChangePassword'):
+                edge_color = RED
+            elif edge in ('HasSession',):
+                edge_color = YELLOW
+            else:
+                edge_color = CYAN
+
+            print(f"      ↓ {edge_color}[{edge}]{RESET}")
+            print(f"      {to_node}")
+
+        print()  # Space between paths
+        displayed += 1
+
+    # Truncation notice
+    if len(all_parsed) > max_paths:
+        remaining = len(all_parsed) - max_paths
+        print(f"  {DIM}... and {remaining} more path(s){RESET}")
+        print()
+
+    # Quick reference: paths grouped by start user
+    paths_by_start = {}
+    for p in all_parsed:
+        start = p['start']
+        if start not in paths_by_start:
+            paths_by_start[start] = []
+        paths_by_start[start].append(p)
+
+    if len(paths_by_start) > 1:
+        print(f"  {BOLD}Summary by Starting User:{RESET}")
+        for start, paths in sorted(paths_by_start.items(), key=lambda x: -len(x[1])):
+            targets = set(p['end'] for p in paths)
+            min_hops = min(p['hops'] for p in paths)
+            print(f"    {YELLOW}►{RESET} {start}: {len(paths)} path(s), min {min_hops} hops → {', '.join(list(targets)[:3])}")
+        print()
+
+
+def has_path_results(records: List[Dict]) -> bool:
+    """Check if query results contain Neo4j Path objects."""
+    if not records:
+        return False
+    for key, val in records[0].items():
+        if is_neo4j_path(val):
+            return True
+    return False
+
+
+def format_field_value(field_name: str, value: Any) -> str:
+    """Format a field value, applying timestamp/path formatting if appropriate."""
+    if value is None:
+        return ""
+    if is_timestamp_field(field_name):
+        return format_timestamp_ago(value)
+    if is_neo4j_path(value):
+        return format_path_oneline(value)
+    return str(value)
+
+
 @dataclass
 class Query:
     """Represents a single Cypher query from the library"""
@@ -172,6 +488,108 @@ class QueryRunner:
         """Close Neo4j connection"""
         if self.driver:
             self.driver.close()
+
+    def get_inventory(self) -> Dict[str, Any]:
+        """
+        Get BloodHound data inventory summary.
+
+        Returns dict with counts and samples of:
+        - domains, users, computers, groups
+        - key relationships (AdminTo, CanRDP, etc.)
+        """
+        if not self.driver:
+            return {}
+
+        inventory = {
+            "domains": [],
+            "users": {"count": 0, "enabled": 0, "samples": []},
+            "computers": {"count": 0, "samples": []},
+            "groups": {"count": 0, "samples": []},
+            "relationships": {},
+        }
+
+        try:
+            with self.driver.session() as session:
+                # Domains
+                result = session.run(
+                    "MATCH (d:Domain) RETURN d.name as name ORDER BY d.name"
+                )
+                inventory["domains"] = [r["name"] for r in result]
+
+                # Users
+                result = session.run("""
+                    MATCH (u:User)
+                    RETURN count(u) as total,
+                           sum(CASE WHEN u.enabled = true THEN 1 ELSE 0 END) as enabled
+                """)
+                row = result.single()
+                if row:
+                    inventory["users"]["count"] = row["total"]
+                    inventory["users"]["enabled"] = row["enabled"]
+
+                # User samples (enabled, high value first)
+                result = session.run("""
+                    MATCH (u:User)
+                    WHERE u.enabled = true
+                    RETURN u.name as name, u.admincount as admincount
+                    ORDER BY u.admincount DESC, u.name
+                    LIMIT 10
+                """)
+                inventory["users"]["samples"] = [r["name"] for r in result]
+
+                # Computers
+                result = session.run("MATCH (c:Computer) RETURN count(c) as total")
+                row = result.single()
+                if row:
+                    inventory["computers"]["count"] = row["total"]
+
+                result = session.run("""
+                    MATCH (c:Computer)
+                    RETURN c.name as name
+                    ORDER BY c.name
+                    LIMIT 10
+                """)
+                inventory["computers"]["samples"] = [r["name"] for r in result]
+
+                # Groups
+                result = session.run("MATCH (g:Group) RETURN count(g) as total")
+                row = result.single()
+                if row:
+                    inventory["groups"]["count"] = row["total"]
+
+                result = session.run("""
+                    MATCH (g:Group)
+                    WHERE g.highvalue = true OR g.name CONTAINS 'ADMIN'
+                    RETURN g.name as name
+                    ORDER BY g.name
+                    LIMIT 10
+                """)
+                inventory["groups"]["samples"] = [r["name"] for r in result]
+
+                # Key relationships
+                rel_queries = {
+                    "AdminTo": "MATCH ()-[r:AdminTo]->() RETURN count(r) as c",
+                    "CanRDP": "MATCH ()-[r:CanRDP]->() RETURN count(r) as c",
+                    "CanPSRemote": "MATCH ()-[r:CanPSRemote]->() RETURN count(r) as c",
+                    "HasSession": "MATCH ()-[r:HasSession]->() RETURN count(r) as c",
+                    "MemberOf": "MATCH ()-[r:MemberOf]->() RETURN count(r) as c",
+                    "GenericAll": "MATCH ()-[r:GenericAll]->() RETURN count(r) as c",
+                    "WriteDacl": "MATCH ()-[r:WriteDacl]->() RETURN count(r) as c",
+                    "DCSync": "MATCH (n)-[:GetChanges|GetChangesAll]->() RETURN count(DISTINCT n) as c",
+                }
+                for rel_type, query in rel_queries.items():
+                    try:
+                        result = session.run(query)
+                        row = result.single()
+                        if row and row["c"] > 0:
+                            inventory["relationships"][rel_type] = row["c"]
+                    except:
+                        pass
+
+        except Exception as e:
+            inventory["error"] = str(e)
+
+        return inventory
 
     def list_queries(
         self,
@@ -392,11 +810,19 @@ class QueryRunner:
         # Get column headers from first record
         headers = list(result.records[0].keys())
 
-        # Calculate column widths
+        # Pre-format all values (applies timestamp formatting)
+        formatted_records = []
+        for record in result.records:
+            formatted = {}
+            for h in headers:
+                formatted[h] = format_field_value(h, record.get(h, ""))
+            formatted_records.append(formatted)
+
+        # Calculate column widths using formatted values
         widths = {}
         for h in headers:
             max_val_len = max(
-                len(str(r.get(h, ""))[:max_width]) for r in result.records
+                len(formatted[h][:max_width]) for formatted in formatted_records
             )
             widths[h] = min(
                 max(len(str(h)), max_val_len),
@@ -412,10 +838,10 @@ class QueryRunner:
         lines.append("-" * len(header_line))
 
         # Rows
-        for record in result.records:
+        for formatted in formatted_records:
             row = []
             for h in headers:
-                val = str(record.get(h, ""))[:max_width]
+                val = formatted[h][:max_width]
                 row.append(val.ljust(widths[h])[:widths[h]])
             lines.append(" | ".join(row))
 
@@ -442,21 +868,29 @@ def run_all_queries(
     output_path: Optional[Path] = None,
     skip_variable_queries: bool = True,
     oscp_high_only: bool = False,
-    verbose: bool = False
+    verbose: bool = False,
+    show_commands: bool = False,
+    show_data: bool = False,
 ) -> dict:
     """
     Run all queries and generate colorized console output + markdown report.
 
     Args:
         runner: QueryRunner instance
-        output_path: Path for markdown report (default: ./blood-trail.md)
+        output_path: Path for markdown report (default: ./bloodtrail.md)
         skip_variable_queries: Skip queries requiring variables (default: True)
         oscp_high_only: Only run OSCP:HIGH queries
         verbose: Show full query results in console (no truncation)
+        show_commands: Only show command suggestions in console (-c flag)
+        show_data: Only show raw query data in console (-d flag)
 
     Returns:
         Dict with summary statistics
     """
+    # Determine what to show in console (default: both)
+    # If neither flag set, show everything
+    # If one flag set, show only that section
+    show_all = not show_commands and not show_data
     from datetime import datetime
 
     # Initialize command suggester for attack recommendations
@@ -464,6 +898,7 @@ def run_all_queries(
         from .command_suggester import CommandSuggester, CommandTable
         from .display_commands import (
             print_command_tables_by_phase,
+            print_post_success,
             format_tables_markdown,
             get_table_stats,
         )
@@ -520,15 +955,87 @@ def run_all_queries(
         "",
     ]
 
-    # Print header
-    print(f"\n{Colors.BOLD}{Colors.HEADER}{'='*70}")
-    print(f"  BLOODHOUND ENHANCED REPORT")
-    print(f"  {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    print(f"{'='*70}{Colors.RESET}\n")
+    # Print header (always show if any console output)
+    if show_all or show_commands or show_data:
+        print(f"\n{Colors.BOLD}{Colors.HEADER}{'='*70}")
+        print(f"  BLOODHOUND ENHANCED REPORT")
+        print(f"  {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        print(f"{'='*70}{Colors.RESET}\n")
 
-    # Process each category
+    # Get and display inventory
+    inventory = runner.get_inventory()
+    if inventory and not inventory.get("error"):
+        # Console output (only if showing data or all)
+        if show_all or show_data:
+            print(f"{Colors.BOLD}{Colors.CYAN}┌{'─'*68}┐")
+            print(f"│  {'DATA INVENTORY':64} │")
+            print(f"└{'─'*68}┘{Colors.RESET}")
+
+            # Domain info
+            if inventory["domains"]:
+                print(f"  {Colors.BOLD}Domains:{Colors.RESET} {', '.join(inventory['domains'])}")
+
+            # Counts table
+            u = inventory["users"]
+            c = inventory["computers"]
+            g = inventory["groups"]
+            print(f"\n  {Colors.BOLD}{'Type':<12} {'Count':>8}  {'Details':<45}{Colors.RESET}")
+            print(f"  {'-'*12} {'-'*8}  {'-'*45}")
+            print(f"  {'Users':<12} {u['count']:>8}  {Colors.GREEN}{u['enabled']} enabled{Colors.RESET}")
+            print(f"  {'Computers':<12} {c['count']:>8}  {', '.join(c['samples'][:3]) if c['samples'] else '-'}")
+            print(f"  {'Groups':<12} {g['count']:>8}  {', '.join(g['samples'][:3]) if g['samples'] else '-'}")
+
+            # Relationships
+            rels = inventory.get("relationships", {})
+            if rels:
+                print(f"\n  {Colors.BOLD}Relationships:{Colors.RESET}")
+                rel_items = [f"{k}: {v}" for k, v in sorted(rels.items(), key=lambda x: -x[1])]
+                print(f"  {Colors.DIM}{' | '.join(rel_items)}{Colors.RESET}")
+
+            # User samples
+            if u["samples"]:
+                print(f"\n  {Colors.BOLD}Key Users:{Colors.RESET}")
+                for user in u["samples"][:5]:
+                    print(f"    {Colors.YELLOW}►{Colors.RESET} {user}")
+
+            # Computer samples
+            if c["samples"]:
+                print(f"\n  {Colors.BOLD}Computers:{Colors.RESET}")
+                for comp in c["samples"][:5]:
+                    print(f"    {Colors.CYAN}►{Colors.RESET} {comp}")
+
+            print()
+        else:
+            # Need these for report even if not printing
+            u = inventory["users"]
+            c = inventory["computers"]
+            g = inventory["groups"]
+            rels = inventory.get("relationships", {})
+            rel_items = [f"{k}: {v}" for k, v in sorted(rels.items(), key=lambda x: -x[1])] if rels else []
+
+        # Add to report (always)
+        report_lines.append("## Data Inventory")
+        report_lines.append("")
+        report_lines.append(f"**Domains:** {', '.join(inventory['domains'])}")
+        report_lines.append("")
+        report_lines.append("| Type | Count | Details |")
+        report_lines.append("|------|-------|---------|")
+        report_lines.append(f"| Users | {u['count']} | {u['enabled']} enabled |")
+        report_lines.append(f"| Computers | {c['count']} | {', '.join(c['samples'][:3]) if c['samples'] else '-'} |")
+        report_lines.append(f"| Groups | {g['count']} | {', '.join(g['samples'][:3]) if g['samples'] else '-'} |")
+        report_lines.append("")
+        if rels:
+            report_lines.append(f"**Relationships:** {' | '.join(rel_items)}")
+            report_lines.append("")
+
+    # =========================================================================
+    # PHASE 1: Run all queries and collect results (no printing yet)
+    # =========================================================================
     category_order = ["quick_wins", "lateral_movement", "privilege_escalation",
                       "attack_chains", "owned_principal", "operational"]
+
+    # Storage for deferred output
+    category_outputs = {}  # category -> list of (query, result, status) tuples
 
     for category in category_order:
         if category not in by_category:
@@ -536,14 +1043,7 @@ def run_all_queries(
 
         cat_queries = by_category[category]
         cat_display = cat_names.get(category, category.replace("_", " ").title())
-
-        # Category header
-        print(f"{Colors.BOLD}{Colors.CYAN}┌{'─'*68}┐")
-        print(f"│  {cat_display.upper():64} │")
-        print(f"└{'─'*68}┘{Colors.RESET}")
-
-        report_lines.append(f"## {cat_display}")
-        report_lines.append("")
+        category_outputs[category] = {"display": cat_display, "queries": []}
 
         for query in cat_queries:
             stats["total_queries"] += 1
@@ -551,20 +1051,13 @@ def run_all_queries(
             # Skip variable queries if requested
             if skip_variable_queries and query.has_variables():
                 stats["skipped"] += 1
-                print(f"  {Colors.DIM}○ {query.name} (skipped - requires variables){Colors.RESET}")
-                report_lines.append(f"### {query.name}")
-                report_lines.append(f"*Skipped - requires variables: {', '.join(query.variables.keys())}*")
-                report_lines.append("")
+                category_outputs[category]["queries"].append({
+                    "query": query, "result": None, "status": "skipped"
+                })
                 continue
 
             # Run query
             result = runner.run_query(query.id)
-
-            # Relevance indicator
-            rel_color = Colors.RED if query.oscp_relevance == "high" else (
-                Colors.YELLOW if query.oscp_relevance == "medium" else Colors.DIM
-            )
-            rel_badge = f"[{query.oscp_relevance.upper()}]"
 
             if result.success:
                 stats["successful"] += 1
@@ -572,30 +1065,9 @@ def run_all_queries(
 
                 if result.record_count > 0:
                     stats["with_results"] += 1
-                    # Console output - has findings
-                    print(f"  {Colors.GREEN}●{Colors.RESET} {rel_color}{rel_badge}{Colors.RESET} {Colors.BOLD}{query.name}{Colors.RESET}")
-                    print(f"    {Colors.GREEN}└─ {result.record_count} results{Colors.RESET}")
-
-                    # Verbose: show full table in console
-                    if verbose and result.records:
-                        headers = list(result.records[0].keys())
-                        # Calculate column widths (no truncation in verbose)
-                        widths = {h: len(h) for h in headers}
-                        for record in result.records:
-                            for h in headers:
-                                widths[h] = max(widths[h], len(str(record.get(h, ""))))
-                        # Print table
-                        header_line = " | ".join(h.ljust(widths[h]) for h in headers)
-                        print(f"    {Colors.DIM}{header_line}{Colors.RESET}")
-                        print(f"    {Colors.DIM}{'-' * len(header_line)}{Colors.RESET}")
-                        for record in result.records:
-                            row = " | ".join(str(record.get(h, "")).ljust(widths[h]) for h in headers)
-                            print(f"    {row}")
-                        print()
 
                     # Generate attack command tables (DRY approach)
                     if suggestions_enabled and suggester:
-                        # Build DRY command tables
                         tables = suggester.build_command_tables(query.id, result.records)
                         if tables:
                             all_tables.extend(tables)
@@ -619,39 +1091,192 @@ def run_all_queries(
                         "relevance": query.oscp_relevance
                     })
 
-                    # Markdown (always full output in report)
-                    report_lines.append(f"### ✅ {query.name}")
-                    report_lines.append(f"**OSCP Relevance:** {query.oscp_relevance.upper()} | **Results:** {result.record_count}")
-                    report_lines.append("")
-                    report_lines.append(f"> {query.description}")
-                    report_lines.append("")
+                    category_outputs[category]["queries"].append({
+                        "query": query, "result": result, "status": "results"
+                    })
+                else:
+                    category_outputs[category]["queries"].append({
+                        "query": query, "result": result, "status": "no_results"
+                    })
+            else:
+                stats["failed"] += 1
+                category_outputs[category]["queries"].append({
+                    "query": query, "result": result, "status": "failed"
+                })
 
-                    # Format results as table (full output in markdown)
-                    if result.records:
+    # =========================================================================
+    # PHASE 2: Print ATTACK COMMANDS first (actionable items at top)
+    # =========================================================================
+    if all_tables or all_sequences:
+        # Console output (only if showing commands or all)
+        if show_all or show_commands:
+            print(f"\n{Colors.BOLD}{Colors.HEADER}{'='*70}")
+            print(f"  ATTACK COMMANDS")
+            print(f"{'='*70}{Colors.RESET}")
+
+            # Print DRY command tables grouped by phase
+            if all_tables:
+                print_command_tables_by_phase(all_tables, use_colors=True)
+
+                # Print post-success suggestions for tables that have them
+                for table in all_tables:
+                    if table.post_success and table.targets:
+                        domain = table.targets[0].domain if table.targets else ""
+                        print_post_success(table.post_success, domain=domain, use_colors=True)
+
+            # Attack Sequences (chain queries)
+            if all_sequences:
+                print(f"\n{Colors.BOLD}{Colors.HEADER}Multi-Step Attack Chains{Colors.RESET}")
+                for seq in all_sequences:
+                    print(f"  {Colors.BOLD}{Colors.HEADER}{seq.name}{Colors.RESET}")
+                    print(f"  {Colors.DIM}{seq.description}{Colors.RESET}")
+                    for i, step in enumerate(seq.steps, 1):
+                        print(f"    {i}. {Colors.DIM}{step.template}{Colors.RESET}")
+                        print(f"       {Colors.GREEN}{step.ready_to_run}{Colors.RESET}")
+                    print()
+
+            # Stats
+            print(f"\n{Colors.DIM}Command tables: {stats['tables_generated']} | Targets: {stats['total_targets']}")
+            print(f"Attack chains: {stats['sequences_generated']}{Colors.RESET}")
+            print()
+
+        # Add to report (always)
+        if all_tables:
+            report_lines.append("## Attack Commands")
+            report_lines.append("")
+            report_lines.append(format_tables_markdown(all_tables))
+
+        if all_sequences:
+            report_lines.append("### Multi-Step Attack Chains")
+            report_lines.append("")
+            for seq in all_sequences:
+                report_lines.append(f"#### {seq.name}")
+                report_lines.append(f"*{seq.description}*")
+                report_lines.append("")
+                for i, step in enumerate(seq.steps, 1):
+                    report_lines.append(f"{i}. **{step.context}**")
+                    report_lines.append(f"   - Template: `{step.template}`")
+                    report_lines.append(f"   - Ready: `{step.ready_to_run}`")
+                report_lines.append("")
+
+        report_lines.append("---")
+        report_lines.append("")
+
+    # =========================================================================
+    # PHASE 3: Print query results (raw data at bottom)
+    # =========================================================================
+    if show_all or show_data:
+        print(f"\n{Colors.BOLD}{Colors.HEADER}{'='*70}")
+        print(f"  QUERY RESULTS (RAW DATA)")
+        print(f"{'='*70}{Colors.RESET}\n")
+
+    for category in category_order:
+        if category not in category_outputs:
+            continue
+
+        cat_data = category_outputs[category]
+        cat_display = cat_data["display"]
+
+        # Category header (console only if showing data)
+        if show_all or show_data:
+            print(f"{Colors.BOLD}{Colors.CYAN}┌{'─'*68}┐")
+            print(f"│  {cat_display.upper():64} │")
+            print(f"└{'─'*68}┘{Colors.RESET}")
+
+        report_lines.append(f"## {cat_display}")
+        report_lines.append("")
+
+        for item in cat_data["queries"]:
+            query = item["query"]
+            result = item["result"]
+            status = item["status"]
+
+            rel_color = Colors.RED if query.oscp_relevance == "high" else (
+                Colors.YELLOW if query.oscp_relevance == "medium" else Colors.DIM
+            )
+            rel_badge = f"[{query.oscp_relevance.upper()}]"
+
+            if status == "skipped":
+                if show_all or show_data:
+                    print(f"  {Colors.DIM}○ {query.name} (skipped - requires variables){Colors.RESET}")
+                report_lines.append(f"### {query.name}")
+                report_lines.append(f"*Skipped - requires variables: {', '.join(query.variables.keys())}*")
+                report_lines.append("")
+
+            elif status == "results":
+                if show_all or show_data:
+                    print(f"  {Colors.GREEN}●{Colors.RESET} {rel_color}{rel_badge}{Colors.RESET} {Colors.BOLD}{query.name}{Colors.RESET}")
+                    print(f"    {Colors.GREEN}└─ {result.record_count} results{Colors.RESET}")
+
+                    # Check if results contain path objects
+                    if result.records and has_path_results(result.records):
+                        # Use visual path display for attack paths
+                        print_attack_paths(result.records, query.name, use_colors=True)
+                    # Verbose: show full table in console (non-path results)
+                    elif verbose and result.records:
+                        headers = list(result.records[0].keys())
+                        widths = {h: len(h) for h in headers}
+                        for record in result.records:
+                            for h in headers:
+                                val = format_field_value(h, record.get(h, ""))
+                                widths[h] = max(widths[h], len(val))
+                        header_line = " | ".join(h.ljust(widths[h]) for h in headers)
+                        print(f"    {Colors.DIM}{header_line}{Colors.RESET}")
+                        print(f"    {Colors.DIM}{'-' * len(header_line)}{Colors.RESET}")
+                        for record in result.records:
+                            row = " | ".join(format_field_value(h, record.get(h, "")).ljust(widths[h]) for h in headers)
+                            print(f"    {row}")
+                        print()
+
+                # Markdown (always)
+                report_lines.append(f"### ✅ {query.name}")
+                report_lines.append(f"**OSCP Relevance:** {query.oscp_relevance.upper()} | **Results:** {result.record_count}")
+                report_lines.append("")
+                report_lines.append(f"> {query.description}")
+                report_lines.append("")
+
+                if result.records:
+                    # Format paths nicely in markdown too
+                    if has_path_results(result.records):
+                        report_lines.append("**Attack Paths:**")
+                        report_lines.append("")
+                        for i, record in enumerate(result.records[:15], 1):
+                            for key, val in record.items():
+                                if is_neo4j_path(val):
+                                    parsed = format_neo4j_path(val)
+                                    if not parsed.get('error'):
+                                        edges_str = ' → '.join(parsed['edges'])
+                                        report_lines.append(f"{i}. **{parsed['start']}** → **{parsed['end']}** ({parsed['hops']} hops)")
+                                        report_lines.append(f"   - Path: {' → '.join(parsed['nodes'])}")
+                                        report_lines.append(f"   - Edges: {edges_str}")
+                                        report_lines.append("")
+                        if len(result.records) > 15:
+                            report_lines.append(f"*... and {len(result.records) - 15} more paths*")
+                    else:
                         headers = list(result.records[0].keys())
                         report_lines.append("| " + " | ".join(headers) + " |")
                         report_lines.append("| " + " | ".join(["---"] * len(headers)) + " |")
                         for record in result.records:
-                            row = [str(record.get(h, "")).replace("|", "\\|") for h in headers]
+                            row = [format_field_value(h, record.get(h, "")).replace("|", "\\|") for h in headers]
                             report_lines.append("| " + " | ".join(row) + " |")
-                    report_lines.append("")
+                report_lines.append("")
 
-                else:
-                    # Console output - no findings
+            elif status == "no_results":
+                if show_all or show_data:
                     print(f"  {Colors.DIM}○ {rel_badge} {query.name} (no results){Colors.RESET}")
+                report_lines.append(f"### ⚪ {query.name}")
+                report_lines.append(f"**OSCP Relevance:** {query.oscp_relevance.upper()} | **Results:** None")
+                report_lines.append("")
 
-                    # Markdown
-                    report_lines.append(f"### ⚪ {query.name}")
-                    report_lines.append(f"**OSCP Relevance:** {query.oscp_relevance.upper()} | **Results:** None")
-                    report_lines.append("")
-            else:
-                stats["failed"] += 1
-                print(f"  {Colors.RED}✗ {rel_badge} {query.name} (failed: {result.error[:40]}){Colors.RESET}")
+            elif status == "failed":
+                if show_all or show_data:
+                    print(f"  {Colors.RED}✗ {rel_badge} {query.name} (failed: {result.error[:40]}){Colors.RESET}")
                 report_lines.append(f"### ❌ {query.name}")
                 report_lines.append(f"**Error:** {result.error}")
                 report_lines.append("")
 
-        print()  # Space between categories
+        if show_all or show_data:
+            print()  # Space between categories
         report_lines.append("---")
         report_lines.append("")
 
@@ -695,50 +1320,9 @@ def run_all_queries(
             report_lines.append(f"- **{f['query']}**: {f['count']} results ({f['category']})")
         report_lines.append("")
 
-    # Attack Commands Section (Console + Report) - DRY tabular output
-    if all_tables or all_sequences:
-        print(f"\n{Colors.BOLD}{Colors.HEADER}{'='*70}")
-        print(f"  ATTACK COMMANDS (DRY TABULAR FORMAT)")
-        print(f"{'='*70}{Colors.RESET}")
-
-        # Print DRY command tables grouped by phase
-        if all_tables:
-            print_command_tables_by_phase(all_tables, use_colors=True)
-
-            # Add to report
-            report_lines.append(format_tables_markdown(all_tables))
-
-        # Attack Sequences (chain queries)
-        if all_sequences:
-            print(f"\n{Colors.BOLD}{Colors.HEADER}Multi-Step Attack Chains{Colors.RESET}")
-            report_lines.append("### Multi-Step Attack Chains")
-            report_lines.append("")
-
-            for seq in all_sequences:
-                print(f"  {Colors.BOLD}{Colors.HEADER}{seq.name}{Colors.RESET}")
-                print(f"  {Colors.DIM}{seq.description}{Colors.RESET}")
-                report_lines.append(f"#### {seq.name}")
-                report_lines.append(f"*{seq.description}*")
-                report_lines.append("")
-
-                for i, step in enumerate(seq.steps, 1):
-                    print(f"    {i}. {Colors.DIM}{step.template}{Colors.RESET}")
-                    print(f"       {Colors.GREEN}{step.ready_to_run}{Colors.RESET}")
-                    report_lines.append(f"{i}. **{step.context}**")
-                    report_lines.append(f"   - Template: `{step.template}`")
-                    report_lines.append(f"   - Ready: `{step.ready_to_run}`")
-                report_lines.append("")
-                print()
-
-        # Stats
-        table_stats = get_table_stats(all_tables) if all_tables else {}
-        print(f"\n{Colors.DIM}Command tables: {stats['tables_generated']} | Targets: {stats['total_targets']}")
-        print(f"Attack chains: {stats['sequences_generated']}{Colors.RESET}")
-        print()
-
     # Write report
     if output_path is None:
-        output_path = Path.cwd() / "blood-trail.md"
+        output_path = Path.cwd() / "bloodtrail.md"
     else:
         output_path = Path(output_path)
 

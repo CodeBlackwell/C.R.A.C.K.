@@ -20,10 +20,12 @@ from .command_mappings import (
     EDGE_COMMAND_MAPPINGS,
     SENSITIVE_PLACEHOLDERS,
     ACCESS_TYPE_PHASES,
+    ACCESS_TYPE_REWARDS,
     extract_domain,
     extract_username,
     infer_dc_hostname,
     is_group_name,
+    get_reason,
 )
 
 
@@ -39,6 +41,8 @@ class TargetEntry:
     ready_command: str                 # Copy-paste ready command
     domain: str                        # Extracted domain
     access_type: Optional[str] = None  # AdminTo, CanRDP, etc.
+    reason: str = ""                   # Why this command is suggested
+    warnings: List[str] = field(default_factory=list)  # Validation warnings
 
     def to_dict(self) -> Dict:
         return {
@@ -47,6 +51,8 @@ class TargetEntry:
             "ready_command": self.ready_command,
             "domain": self.domain,
             "access_type": self.access_type,
+            "reason": self.reason,
+            "warnings": self.warnings,
         }
 
 
@@ -61,6 +67,12 @@ class CommandTable:
     variables_needed: List[str] = field(default_factory=list)
     context: str = ""                  # Why this command
     domain_level: bool = False         # True for DCSync, etc.
+    example: str = ""                  # Complete example with filled variables
+    objective: str = ""                # What the command intends to achieve
+    rewards: str = ""                  # Practical applications of data acquired
+    post_success: List[Dict] = field(default_factory=list)  # Next steps after success
+    permissions_required: str = ""     # What permissions needed to run command
+    is_discovery: bool = False         # True for Kerberoast, AS-REP, etc.
 
     @property
     def phase(self) -> str:
@@ -76,12 +88,18 @@ class CommandTable:
             "command_id": self.command_id,
             "name": self.name,
             "template": self.template,
+            "example": self.example,
+            "objective": self.objective,
+            "rewards": self.rewards,
             "access_type": self.access_type,
             "targets": [t.to_dict() for t in self.targets],
             "variables_needed": self.variables_needed,
             "context": self.context,
             "phase": self.phase,
             "target_count": self.target_count,
+            "post_success": self.post_success,
+            "permissions_required": self.permissions_required,
+            "is_discovery": self.is_discovery,
         }
 
 
@@ -136,12 +154,111 @@ class AttackSequence:
 
 
 # =============================================================================
+# VALIDATION HELPERS - Check conditions that may cause command failure
+# =============================================================================
+
+def is_stale_password(timestamp: Any, years: int = 2) -> bool:
+    """
+    Check if password is older than specified years.
+
+    Args:
+        timestamp: Unix epoch (seconds/milliseconds) or Windows FILETIME
+        years: Threshold in years (default: 2)
+
+    Returns:
+        True if password is stale
+    """
+    if timestamp is None or timestamp == 0 or timestamp == -1:
+        return False
+
+    from datetime import datetime
+    try:
+        ts = int(timestamp)
+        # Handle milliseconds
+        if ts > 32503680000:  # Year 3000 in seconds
+            ts = ts // 1000
+        # Handle Windows FILETIME
+        if ts > 100000000000000:
+            ts = (ts // 10000000) - 11644473600
+
+        age_seconds = datetime.now().timestamp() - ts
+        return age_seconds > (years * 365 * 24 * 3600)
+    except (ValueError, TypeError, OverflowError):
+        return False
+
+
+def has_both_dcsync_rights(record: Dict) -> bool:
+    """
+    Check if DCSync principal has BOTH GetChanges AND GetChangesAll.
+
+    Some queries return individual rights; both are required for DCSync.
+    """
+    # Check if Rights field exists (some queries aggregate rights)
+    rights = record.get("Rights", [])
+    if isinstance(rights, list) and len(rights) > 0:
+        has_gc = any("GetChanges" in str(r) and "All" not in str(r) for r in rights)
+        has_gca = any("GetChangesAll" in str(r) for r in rights)
+        return has_gc and has_gca
+
+    # Check individual right fields
+    right = record.get("Right", "")
+    if right:
+        # Single right query - can't validate both, assume partial
+        # Return True only if we see evidence of both
+        return False
+
+    # Can't determine, assume OK to avoid false warnings
+    return True
+
+
+def validate_target_entry(record: Dict, access_type: Optional[str]) -> List[str]:
+    """
+    Check for conditions that may cause command failure.
+
+    Args:
+        record: Query result record with user/target data
+        access_type: Edge type (AdminTo, DCSync, ADCSESC1, etc.)
+
+    Returns:
+        List of warning strings to display
+    """
+    warnings = []
+
+    # Check account disabled
+    enabled = record.get("enabled")
+    if enabled is False:  # Explicitly False, not None
+        warnings.append("[DISABLED]")
+
+    # Check password age (stale if > 2 years)
+    pwdlastset = (
+        record.get("pwdlastset") or
+        record.get("PasswordLastSet") or
+        record.get("passwordlastset")
+    )
+    if pwdlastset and is_stale_password(pwdlastset):
+        warnings.append("[STALE CRED]")
+
+    # Check DCSync has both rights
+    if access_type == "DCSync":
+        if not has_both_dcsync_rights(record):
+            warnings.append("[PARTIAL RIGHTS]")
+
+    # Check ESC1 properties (enrolleesuppliessubject must be true)
+    if access_type and "ADCSESC1" in str(access_type):
+        ess = record.get("enrolleesuppliessubject")
+        if ess is False:  # Explicitly False
+            warnings.append("[NOT ESC1]")
+
+    return warnings
+
+
+# =============================================================================
 # COMMAND SUGGESTER - Main engine
 # =============================================================================
 
 class CommandSuggester:
     """
-    Generates attack command suggestions from blood-trail query results.
+    Generates attack command suggestions from bloodtrail query results.
 
     v2 Features:
     - DRY tabular output via build_command_tables()
@@ -229,6 +346,9 @@ class CommandSuggester:
         context = mapping.get("context", "")
         domain_level = mapping.get("domain_level", False)
 
+        # Check if this is a discovery command (Kerberoast, AS-REP, etc.)
+        is_discovery = mapping.get("discovery_command", False)
+
         for record in records:
             # Handle principal field for privesc queries (DCSync, etc.)
             principal = self._get_field(record, mapping, "principal_field", None)
@@ -236,18 +356,29 @@ class CommandSuggester:
                 if is_group_name(principal):
                     continue  # Skip groups like DOMAIN CONTROLLERS@...
 
-            # Get user principal - check principal_field first if no user_field
-            user = self._get_field(record, mapping, "user_field", None)
-            if not user and principal:
-                user = principal  # For DCSync, principal IS the user with the right
-            if not user:
-                user = self._get_field(record, mapping, "user_field", "User")
+            # For discovery commands, target_field holds what we discovered
+            # The command needs attacker creds (not from BloodHound)
+            if is_discovery:
+                discovered = self._get_field(record, mapping, "target_field", None)
+                if not discovered:
+                    continue
+                domain = extract_domain(discovered) if discovered else ""
+                user = "<USER>"  # Placeholder - attacker provides their own creds
+                targets = [discovered]  # What we found
+            else:
+                # Standard command: user has access to target
+                # Get user principal - check principal_field first if no user_field
+                user = self._get_field(record, mapping, "user_field", None)
+                if not user and principal:
+                    user = principal  # For DCSync, principal IS the user with the right
+                if not user:
+                    user = self._get_field(record, mapping, "user_field", "User")
 
-            # Extract domain from UPN
-            domain = extract_domain(user) if user else ""
+                # Extract domain from UPN
+                domain = extract_domain(user) if user else ""
 
-            # Get targets - expand array fields or use single target
-            targets = self._get_targets(record, mapping, user)
+                # Get targets - expand array fields or use single target
+                targets = self._get_targets(record, mapping, user)
 
             # For domain_level commands, target is the domain DC
             if mapping.get("domain_level") and not targets:
@@ -265,6 +396,11 @@ class CommandSuggester:
                     cmd = self.commands.get(cmd_id, {})
                     if not cmd:
                         continue
+                    # Get rewards: use context if available, else lookup by access type
+                    rewards = context if context else ACCESS_TYPE_REWARDS.get(
+                        record_access_type,
+                        ACCESS_TYPE_REWARDS.get(None, "")
+                    )
                     tables[cmd_id] = CommandTable(
                         command_id=cmd_id,
                         name=cmd.get("name", cmd_id),
@@ -274,6 +410,12 @@ class CommandSuggester:
                         variables_needed=self._get_sensitive_placeholders(cmd),
                         context=context,
                         domain_level=domain_level,
+                        example=self._build_example(cmd),
+                        objective=cmd.get("description", ""),
+                        rewards=rewards,
+                        post_success=mapping.get("post_success", []),
+                        permissions_required=mapping.get("permissions_required", ""),
+                        is_discovery=is_discovery,
                     )
 
                 # Add target entries
@@ -291,12 +433,33 @@ class CommandSuggester:
                         target=target,
                         domain=domain
                     )
+
+                    # Generate reason for this command suggestion
+                    if is_discovery:
+                        # For discovery commands, reason explains what was found
+                        reason = context if context else "Discovered target"
+                    else:
+                        reason = get_reason(
+                            access_type=record_access_type,
+                            user=user,
+                            target=target,
+                            context=context
+                        )
+
+                    # Validate target entry for potential issues
+                    warnings = validate_target_entry(record, record_access_type)
+
+                    # For discovery commands, show discovered target in user column
+                    display_user = target if is_discovery else user
+
                     tables[cmd_id].targets.append(TargetEntry(
-                        user=user,
-                        target=target,
+                        user=display_user,
+                        target=target if not is_discovery else domain,  # Domain for discovery
                         ready_command=ready,
                         domain=domain,
                         access_type=record_access_type,
+                        reason=reason,
+                        warnings=warnings,
                     ))
 
         # Deduplicate targets within each table
@@ -366,16 +529,16 @@ class CommandSuggester:
         """Fill command template with extracted values"""
         result = template
 
-        # User-related placeholders
-        result = result.replace("<USERNAME>", user)
+        # User-related placeholders - use just username (not full UPN)
+        result = result.replace("<USERNAME>", extract_username(user))
         result = result.replace("<USER>", extract_username(user))
 
         # Target-related placeholders
         result = result.replace("<TARGET>", target)
         result = result.replace("<COMPUTER>", target)
 
-        # Domain-related placeholders
-        result = result.replace("<DOMAIN>", domain)
+        # Domain-related placeholders - lowercase for tool compatibility
+        result = result.replace("<DOMAIN>", domain.lower() if domain else "")
 
         # DC inference
         dc_host = infer_dc_hostname(domain)
@@ -389,6 +552,30 @@ class CommandSuggester:
         template = cmd.get("command", "")
         remaining = re.findall(r'<[A-Z_]+>', template)
         return [p for p in remaining if p in SENSITIVE_PLACEHOLDERS]
+
+    def _build_example(self, cmd: Dict) -> str:
+        """
+        Build complete example command from variable examples.
+
+        Uses the 'example' field from each variable definition to create
+        a fully populated command example.
+        """
+        template = cmd.get("command", "")
+        if not template:
+            return ""
+
+        variables = cmd.get("variables", [])
+        if not variables:
+            return template  # No variables to fill
+
+        result = template
+        for var in variables:
+            var_name = var.get("name", "")
+            var_example = var.get("example", "")
+            if var_name and var_example:
+                result = result.replace(var_name, str(var_example))
+
+        return result
 
     def _deduplicate_targets(self, targets: List[TargetEntry]) -> List[TargetEntry]:
         """Remove duplicate user+target combinations"""

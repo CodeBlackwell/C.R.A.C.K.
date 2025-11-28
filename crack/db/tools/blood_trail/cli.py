@@ -3,18 +3,19 @@
 BloodHound Trail - Command Line Interface
 
 Usage:
-    # Edge enhancement
-    crack blood-trail /path/to/bh/json/
-    crack blood-trail /path/to/bh/json/ --preset attack-paths
-    crack blood-trail /path/to/bh/json/ --dry-run --verbose
+    # Edge enhancement (directory or ZIP file)
+    crack bloodtrail /path/to/bh/json/
+    crack bloodtrail /path/to/sharphound_output.zip
+    crack bloodtrail /path/to/bh/json/ --preset attack-paths
+    crack bloodtrail /path/to/bh/json/ --dry-run --verbose
 
     # Query library
-    crack blood-trail --list-queries
-    crack blood-trail --list-queries --category lateral_movement
-    crack blood-trail --run-query lateral-adminto-nonpriv
-    crack blood-trail --run-query owned-what-can-access --var USER=PETE@CORP.COM
-    crack blood-trail --search-query DCSync
-    crack blood-trail --export-query lateral-adminto-nonpriv
+    crack bloodtrail --list-queries
+    crack bloodtrail --list-queries --category lateral_movement
+    crack bloodtrail --run-query lateral-adminto-nonpriv
+    crack bloodtrail --run-query owned-what-can-access --var USER=PETE@CORP.COM
+    crack bloodtrail --search-query DCSync
+    crack bloodtrail --export-query lateral-adminto-nonpriv
 
 Credentials (defaults):
     - Neo4j: neo4j / Neo4j123
@@ -35,29 +36,30 @@ from .query_runner import (
     export_to_bloodhound_ce,
     run_all_queries,
 )
+from .data_source import is_valid_bloodhound_source, create_data_source
 
 
 def create_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="blood-trail",
+        prog="bloodtrail",
         description="BloodHound Trail - Edge enhancement and Neo4j query analysis",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
   # Attack-path focused edges (recommended)
-  crack blood-trail /path/to/bh/json/ --preset attack-paths
+  crack bloodtrail /path/to/bh/json/ --preset attack-paths
 
   # All supported edges
-  crack blood-trail /path/to/bh/json/
+  crack bloodtrail /path/to/bh/json/
 
   # Dry run (validate without importing)
-  crack blood-trail /path/to/bh/json/ --dry-run --verbose
+  crack bloodtrail /path/to/bh/json/ --dry-run --verbose
 
   # Specific edge types only
-  crack blood-trail /path/to/bh/json/ --edges AdminTo,GenericAll,GetChanges
+  crack bloodtrail /path/to/bh/json/ --edges AdminTo,GenericAll,GetChanges
 
   # Custom Neo4j credentials
-  crack blood-trail /path/to/bh/json/ --uri bolt://host:7687 --user neo4j --password pass
+  crack bloodtrail /path/to/bh/json/ --uri bolt://host:7687 --user neo4j --password pass
 
 Supported Edge Types:
   Computer Access: AdminTo, CanPSRemote, CanRDP, ExecuteDCOM, HasSession
@@ -74,7 +76,7 @@ Supported Edge Types:
         type=Path,
         nargs="?",
         default=None,
-        help="Directory containing BloodHound JSON exports (required for edge enhancement)",
+        help="Directory or ZIP file containing BloodHound JSON exports (required for edge enhancement)",
     )
 
     # Preset/Filter options
@@ -217,12 +219,22 @@ Supported Edge Types:
     query_group.add_argument(
         "--run-all",
         action="store_true",
-        help="Run all queries and generate blood-trail.md",
+        help="Run all queries and generate bloodtrail.md",
     )
     query_group.add_argument(
         "--report-path",
         type=Path,
-        help="Custom path for report output (default: ./blood-trail.md)",
+        help="Custom path for report output (default: ./bloodtrail.md)",
+    )
+    query_group.add_argument(
+        "--commands", "-c",
+        action="store_true",
+        help="Only print command suggestions to console (report still generated)",
+    )
+    query_group.add_argument(
+        "--data", "-d",
+        action="store_true",
+        help="Only print raw query data to console (report still generated)",
     )
 
     return parser
@@ -475,7 +487,9 @@ def handle_run_all(args):
             runner,
             output_path=args.report_path,
             skip_variable_queries=True,
-            oscp_high_only=high_only
+            oscp_high_only=high_only,
+            show_commands=getattr(args, 'commands', False),
+            show_data=getattr(args, 'data', False),
         )
     finally:
         runner.close()
@@ -575,19 +589,19 @@ def main():
         parser.print_help()
         return 0
 
-    # Validate data directory
-    if not args.bh_data_dir.exists():
-        print(f"[!] Directory not found: {args.bh_data_dir}")
+    # Validate data source (directory or ZIP file)
+    is_valid, message = is_valid_bloodhound_source(args.bh_data_dir)
+    if not is_valid:
+        print(f"[!] {message}")
         return 1
 
-    if not args.bh_data_dir.is_dir():
-        print(f"[!] Not a directory: {args.bh_data_dir}")
-        return 1
-
-    # Check for JSON files
-    json_files = list(args.bh_data_dir.glob("*.json"))
-    if not json_files:
-        print(f"[!] No JSON files found in: {args.bh_data_dir}")
+    # Create data source to get file count for display
+    try:
+        data_source = create_data_source(args.bh_data_dir)
+        json_files = data_source.list_json_files()
+        source_type = data_source.source_type
+    except Exception as e:
+        print(f"[!] Failed to read data source: {e}")
         return 1
 
     # Create config
@@ -652,7 +666,8 @@ def main():
     print(f"{C}{B}║{R}   {Y}🩸{R} {B}BloodHound Trail{R} - Edge Enhancement & Attack Path Discovery   {C}{B}║{R}")
     print(f"{C}{B}╚══════════════════════════════════════════════════════════════════════╝{R}")
     print()
-    print(f"  {D}Data directory:{R}  {B}{args.bh_data_dir}{R}")
+    source_label = "ZIP file:" if source_type == "zip" else "Data directory:"
+    print(f"  {D}{source_label:16}{R} {B}{args.bh_data_dir}{R}")
     print(f"  {D}Neo4j endpoint:{R}  {B}{args.uri}{R}")
     print(f"  {D}JSON files:{R}      {B}{len(json_files)}{R} files found")
     print()
@@ -685,13 +700,21 @@ def main():
         runner = QueryRunner(config)
         if runner.connect():
             try:
-                report_path = args.report_path or (args.bh_data_dir / "blood-trail.md")
+                # For ZIP files, put report next to ZIP; for directories, inside
+                if args.report_path:
+                    report_path = args.report_path
+                elif source_type == "zip":
+                    report_path = args.bh_data_dir.parent / "bloodtrail.md"
+                else:
+                    report_path = args.bh_data_dir / "bloodtrail.md"
                 report_stats = run_all_queries(
                     runner,
                     output_path=report_path,
                     skip_variable_queries=True,
                     oscp_high_only=False,
-                    verbose=args.verbose
+                    verbose=args.verbose,
+                    show_commands=getattr(args, 'commands', False),
+                    show_data=getattr(args, 'data', False),
                 )
 
                 # Final summary
@@ -716,7 +739,7 @@ def main():
                 runner.close()
         else:
             print(f"{Y}[!]{R} Could not connect to Neo4j for report generation")
-            print(f"    Run manually: crack blood-trail --run-all")
+            print(f"    Run manually: crack bloodtrail --run-all")
 
     elif args.dry_run:
         print(f"{D}[*] Dry run - skipping report generation{R}")
