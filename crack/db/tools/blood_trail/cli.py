@@ -23,9 +23,12 @@ Credentials (defaults):
 """
 
 import argparse
+import getpass
 import json
 import sys
 from pathlib import Path
+
+from neo4j import GraphDatabase
 
 from .config import Neo4jConfig, ATTACK_PATH_EDGES
 from .main import BHEnhancer
@@ -37,6 +40,18 @@ from .query_runner import (
     run_all_queries,
 )
 from .data_source import is_valid_bloodhound_source, create_data_source
+from .pwned_tracker import (
+    PwnedTracker,
+    DiscoveryError,
+    discover_dc_ip,
+    discover_dc_hostname,
+    update_etc_hosts,
+)
+from .display_commands import (
+    print_pwned_followup_commands,
+    print_pwned_users_table,
+    print_cred_harvest_targets,
+)
 
 
 def create_parser() -> argparse.ArgumentParser:
@@ -237,6 +252,97 @@ Supported Edge Types:
         help="Only print raw query data to console (report still generated)",
     )
 
+    # Pwned user tracking options
+    pwned_group = parser.add_argument_group("Pwned User Tracking")
+    pwned_group.add_argument(
+        "--pwn-interactive", "-pi",
+        action="store_true",
+        help="Interactively input credential information",
+    )
+    pwned_group.add_argument(
+        "--pwn",
+        type=str,
+        metavar="USER",
+        help="Mark user as pwned (e.g., PETE@CORP.COM)",
+    )
+    pwned_group.add_argument(
+        "--unpwn",
+        type=str,
+        metavar="USER",
+        help="Unmark user as pwned",
+    )
+    pwned_group.add_argument(
+        "--list-pwned",
+        action="store_true",
+        help="List all pwned users with access paths",
+    )
+    pwned_group.add_argument(
+        "--cred-type",
+        type=str,
+        choices=["password", "ntlm-hash", "kerberos-ticket", "certificate"],
+        help="Credential type for --pwn",
+    )
+    pwned_group.add_argument(
+        "--cred-value",
+        type=str,
+        metavar="VALUE",
+        help="Credential value for --pwn (password, hash, etc.)",
+    )
+    pwned_group.add_argument(
+        "--source-machine",
+        type=str,
+        metavar="MACHINE",
+        help="Machine where credential was obtained",
+    )
+    pwned_group.add_argument(
+        "--pwn-notes",
+        type=str,
+        metavar="NOTES",
+        help="Notes about compromise method",
+    )
+    pwned_group.add_argument(
+        "--cred-targets",
+        action="store_true",
+        help="Show high-value credential harvest targets from pwned users",
+    )
+    pwned_group.add_argument(
+        "--pwned-user",
+        type=str,
+        metavar="USER",
+        help="Show details for specific pwned user",
+    )
+
+    # Domain configuration options
+    config_group = parser.add_argument_group("Domain Configuration")
+    config_group.add_argument(
+        "--set-dc-ip",
+        type=str,
+        metavar="IP",
+        help="Store DC IP address for command auto-population (e.g., 192.168.50.70)",
+    )
+    config_group.add_argument(
+        "--set-dc-hostname",
+        type=str,
+        metavar="HOSTNAME",
+        help="Store DC hostname (optional, auto-detected from BloodHound)",
+    )
+    config_group.add_argument(
+        "--show-config",
+        action="store_true",
+        help="Show stored domain configuration (domain, DC IP, DC hostname)",
+    )
+    config_group.add_argument(
+        "--clear-config",
+        action="store_true",
+        help="Clear stored domain configuration",
+    )
+    config_group.add_argument(
+        "--discover-dc",
+        nargs='*',
+        metavar=('USER', 'PASSWORD'),
+        help="Discover DC IP using BloodHound + crackmapexec. Usage: --discover-dc [USER PASSWORD]",
+    )
+
     return parser
 
 
@@ -285,6 +391,163 @@ def parse_variables(var_list):
         else:
             print(f"[!] Invalid variable format: {var} (expected NAME=VALUE)")
     return variables
+
+
+# =============================================================================
+# INTERACTIVE CREDENTIAL INPUT
+# =============================================================================
+
+def _fetch_neo4j_list(config: Neo4jConfig, query: str) -> list:
+    """Fetch a list from Neo4j. Returns empty list on failure."""
+    try:
+        driver = GraphDatabase.driver(config.uri, auth=(config.user, config.password))
+        with driver.session() as session:
+            result = session.run(query)
+            items = [r["name"] for r in result]
+        driver.close()
+        return items
+    except Exception:
+        return []
+
+
+def _select_from_list(items: list, prompt: str, allow_manual: bool = True) -> str:
+    """
+    Present numbered list for selection.
+
+    Args:
+        items: List of items to choose from
+        prompt: Header prompt to display
+        allow_manual: If True, show [M] manual entry option
+
+    Returns:
+        Selected item or empty string if cancelled
+    """
+    if not items:
+        if allow_manual:
+            return input(f"{prompt} (manual): ").strip()
+        return ""
+
+    print(f"\n{prompt}:")
+    for i, item in enumerate(items, 1):
+        print(f"  [{i}] {item}")
+    if allow_manual:
+        print(f"  [M] Enter manually")
+
+    choice = input("Choice: ").strip()
+
+    if allow_manual and choice.upper() == "M":
+        return input("  Enter value: ").strip()
+
+    try:
+        idx = int(choice) - 1
+        if 0 <= idx < len(items):
+            return items[idx]
+    except ValueError:
+        pass
+
+    # If invalid, treat as manual entry
+    if choice:
+        return choice.upper()
+    return ""
+
+
+def interactive_pwn(config: Neo4jConfig, prefill_user: str = None) -> dict:
+    """
+    Interactively collect credential information with selection menus.
+
+    Args:
+        config: Neo4j connection config for fetching users/computers
+        prefill_user: Optional user to pre-fill (for "same user" loop)
+
+    Returns:
+        dict with keys: user, cred_type, cred_value, source_machine, notes
+        Returns empty dict if user cancels (Ctrl+C)
+    """
+    CRED_TYPES = ["password", "ntlm-hash", "kerberos-ticket", "certificate"]
+
+    print("\n🩸 Mark User as Pwned")
+
+    try:
+        # Fetch users and computers from Neo4j
+        users = _fetch_neo4j_list(config, """
+            MATCH (u:User)
+            WHERE u.enabled = true AND NOT u.name STARTS WITH 'KRBTGT'
+            RETURN u.name AS name
+            ORDER BY u.name
+            LIMIT 50
+        """)
+
+        computers = _fetch_neo4j_list(config, """
+            MATCH (c:Computer)
+            WHERE c.enabled = true
+            RETURN c.name AS name
+            ORDER BY c.name
+            LIMIT 30
+        """)
+
+        # 1. User selection (required) - skip if pre-filled
+        if prefill_user:
+            print(f"\nUser: {prefill_user}")
+            user = prefill_user
+        else:
+            user = _select_from_list(users, "Select user to mark as pwned")
+        if not user:
+            print("[!] User is required")
+            return {}
+
+        # 2. Credential type (required, with default)
+        print("\nCredential type:")
+        for i, ct in enumerate(CRED_TYPES, 1):
+            print(f"  [{i}] {ct}")
+
+        choice = input("Choice [1]: ").strip() or "1"
+        try:
+            cred_type = CRED_TYPES[int(choice) - 1]
+        except (ValueError, IndexError):
+            print("[!] Invalid choice, using 'password'")
+            cred_type = "password"
+
+        # 3. Credential value (required - always manual)
+        cred_value = input(f"\n{cred_type.replace('-', ' ').title()}: ").strip()
+        if not cred_value:
+            print("[!] Credential value is required")
+            return {}
+
+        # 4. Source machine selection (optional)
+        print("\nSource machine (where credential was obtained):")
+        print("  [S] Skip")
+        if computers:
+            for i, comp in enumerate(computers, 1):
+                print(f"  [{i}] {comp}")
+        print("  [M] Enter manually")
+
+        source_choice = input("Choice [S]: ").strip() or "S"
+        source = None
+        if source_choice.upper() == "M":
+            source = input("  Enter machine: ").strip() or None
+        elif source_choice.upper() != "S":
+            try:
+                idx = int(source_choice) - 1
+                if 0 <= idx < len(computers):
+                    source = computers[idx]
+            except ValueError:
+                if source_choice:
+                    source = source_choice.upper()
+
+        # 5. Notes (optional - always manual)
+        notes = input("\nNotes (optional): ").strip() or None
+
+        return {
+            "user": user,
+            "cred_type": cred_type,
+            "cred_value": cred_value,
+            "source_machine": source,
+            "notes": notes,
+        }
+
+    except (KeyboardInterrupt, EOFError):
+        print("\n[*] Cancelled")
+        return {}
 
 
 def handle_list_queries(args):
@@ -553,6 +816,333 @@ def handle_export_ce(args):
     return 0
 
 
+def handle_pwn_user(args):
+    """Handle --pwn command"""
+    config = Neo4jConfig(uri=args.uri, user=args.user, password=args.password)
+    tracker = PwnedTracker(config)
+
+    if not tracker.connect():
+        print("[!] Could not connect to Neo4j")
+        return 1
+
+    try:
+        result = tracker.mark_pwned(
+            user=args.pwn,
+            cred_type=args.cred_type,
+            cred_value=args.cred_value,
+            source_machine=args.source_machine,
+            notes=args.pwn_notes,
+        )
+
+        if not result.success:
+            print(f"[!] Failed to mark {args.pwn} as pwned: {result.error}")
+            return 1
+
+        # Get domain config for DC IP auto-population
+        domain_config = tracker.get_domain_config()
+        dc_ip = domain_config.get("dc_ip") if domain_config else None
+        dc_hostname = domain_config.get("dc_hostname") if domain_config else None
+
+        # Show success with follow-up commands
+        print_pwned_followup_commands(
+            user_name=result.user,
+            cred_type=args.cred_type,
+            cred_value=args.cred_value,
+            access=result.access,
+            domain_level_access=result.domain_level_access,
+            dc_ip=dc_ip,
+            dc_hostname=dc_hostname,
+        )
+        return 0
+
+    finally:
+        tracker.close()
+
+
+def handle_unpwn_user(args):
+    """Handle --unpwn command"""
+    config = Neo4jConfig(uri=args.uri, user=args.user, password=args.password)
+    tracker = PwnedTracker(config)
+
+    if not tracker.connect():
+        print("[!] Could not connect to Neo4j")
+        return 1
+
+    try:
+        result = tracker.unmark_pwned(args.unpwn)
+
+        if not result.success:
+            print(f"[!] Failed to unmark {args.unpwn}: {result.error}")
+            return 1
+
+        print(f"[+] Removed pwned status from: {args.unpwn}")
+        return 0
+
+    finally:
+        tracker.close()
+
+
+def handle_list_pwned(args):
+    """Handle --list-pwned command"""
+    config = Neo4jConfig(uri=args.uri, user=args.user, password=args.password)
+    tracker = PwnedTracker(config)
+
+    if not tracker.connect():
+        print("[!] Could not connect to Neo4j")
+        return 1
+
+    try:
+        pwned_users = tracker.list_pwned_users()
+
+        if not pwned_users:
+            print("[*] No pwned users found")
+            return 0
+
+        print_pwned_users_table(pwned_users)
+        return 0
+
+    finally:
+        tracker.close()
+
+
+def handle_pwned_user_detail(args):
+    """Handle --pwned-user command"""
+    config = Neo4jConfig(uri=args.uri, user=args.user, password=args.password)
+    tracker = PwnedTracker(config)
+
+    if not tracker.connect():
+        print("[!] Could not connect to Neo4j")
+        return 1
+
+    try:
+        pwned_user = tracker.get_pwned_user(args.pwned_user)
+
+        if not pwned_user:
+            print(f"[!] User not found or not pwned: {args.pwned_user}")
+            return 1
+
+        machine_access = tracker.get_pwned_user_access(args.pwned_user)
+
+        # Get domain config for DC IP auto-population
+        domain_config = tracker.get_domain_config()
+        dc_ip = domain_config.get("dc_ip") if domain_config else None
+        dc_hostname = domain_config.get("dc_hostname") if domain_config else None
+
+        print_pwned_followup_commands(
+            user_name=pwned_user.name,
+            access=machine_access,
+            domain_level_access=pwned_user.domain_level_access,
+            cred_types=pwned_user.cred_types,
+            cred_values=pwned_user.cred_values,
+            dc_ip=dc_ip,
+            dc_hostname=dc_hostname,
+        )
+        return 0
+
+    finally:
+        tracker.close()
+
+
+def handle_cred_targets(args):
+    """Handle --cred-targets command"""
+    config = Neo4jConfig(uri=args.uri, user=args.user, password=args.password)
+    tracker = PwnedTracker(config)
+
+    if not tracker.connect():
+        print("[!] Could not connect to Neo4j")
+        return 1
+
+    try:
+        targets = tracker.get_cred_harvest_targets()
+
+        if not targets:
+            print("[*] No credential harvest targets found")
+            print("    Mark users as pwned first: --pwn USER@DOMAIN.COM")
+            return 0
+
+        print_cred_harvest_targets(targets)
+        return 0
+
+    finally:
+        tracker.close()
+
+
+def handle_set_dc_ip(args):
+    """Handle --set-dc-ip command"""
+    config = Neo4jConfig(uri=args.uri, user=args.user, password=args.password)
+    tracker = PwnedTracker(config)
+
+    if not tracker.connect():
+        print("[!] Could not connect to Neo4j")
+        return 1
+
+    try:
+        result = tracker.set_dc_ip(
+            dc_ip=args.set_dc_ip,
+            dc_hostname=getattr(args, 'set_dc_hostname', None)
+        )
+
+        if not result.success:
+            print(f"[!] Failed to set DC IP: {result.error}")
+            return 1
+
+        print(f"[+] DC IP set: {args.set_dc_ip}")
+        if args.set_dc_hostname:
+            print(f"[+] DC hostname set: {args.set_dc_hostname}")
+
+        # Show full config
+        domain_config = tracker.get_domain_config()
+        if domain_config:
+            print()
+            print(f"  Domain:      {domain_config['domain']}")
+            print(f"  DC Hostname: {domain_config['dc_hostname'] or '(auto-detected)'}")
+            print(f"  DC IP:       {domain_config['dc_ip']}")
+
+        return 0
+
+    finally:
+        tracker.close()
+
+
+def handle_show_config(args):
+    """Handle --show-config command"""
+    config = Neo4jConfig(uri=args.uri, user=args.user, password=args.password)
+    tracker = PwnedTracker(config)
+
+    if not tracker.connect():
+        print("[!] Could not connect to Neo4j")
+        return 1
+
+    try:
+        domain_config = tracker.get_domain_config()
+
+        if not domain_config:
+            print("[*] No domain found in BloodHound data")
+            print("    Import BloodHound data first: crack bloodtrail /path/to/bh/json/")
+            return 0
+
+        print()
+        print("🩸 Domain Configuration")
+        print("=" * 40)
+        print(f"  Domain:      {domain_config['domain']}")
+        print(f"  DC Hostname: {domain_config['dc_hostname'] or '(not set)'}")
+        print(f"  DC IP:       {domain_config['dc_ip'] or '(not set)'}")
+        print()
+
+        if not domain_config['dc_ip']:
+            print("  Set DC IP:   crack bloodtrail --set-dc-ip 192.168.50.70")
+            print()
+
+        return 0
+
+    finally:
+        tracker.close()
+
+
+def handle_clear_config(args):
+    """Handle --clear-config command"""
+    config = Neo4jConfig(uri=args.uri, user=args.user, password=args.password)
+    tracker = PwnedTracker(config)
+
+    if not tracker.connect():
+        print("[!] Could not connect to Neo4j")
+        return 1
+
+    try:
+        result = tracker.clear_domain_config()
+
+        if not result.success:
+            print(f"[!] Failed to clear config: {result.error}")
+            return 1
+
+        print(f"[+] Domain configuration cleared")
+        return 0
+
+    finally:
+        tracker.close()
+
+
+def handle_discover_dc(args):
+    """Handle --discover-dc command - auto-discover DC IP using crackmapexec"""
+    config = Neo4jConfig(uri=args.uri, user=args.user, password=args.password)
+    tracker = PwnedTracker(config)
+
+    if not tracker.connect():
+        print("[!] Could not connect to Neo4j")
+        return 1
+
+    try:
+        # 1. Get domain from BloodHound
+        domain_config = tracker.get_domain_config()
+
+        if not domain_config or not domain_config.get('domain'):
+            print("[!] No domain found in BloodHound data")
+            print("    Import BloodHound data first: crack bloodtrail /path/to/bh/json/")
+            return 1
+
+        domain = domain_config['domain']
+
+        # 2. Get credentials (from args or prompt)
+        if args.discover_dc and len(args.discover_dc) >= 2:
+            ad_user, ad_password = args.discover_dc[0], args.discover_dc[1]
+        else:
+            print(f"[*] Discovering DC for {domain}")
+            ad_user = input("    Username: ").strip()
+            ad_password = getpass.getpass("    Password: ")
+
+        if not ad_user or not ad_password:
+            print("[!] Username and password required")
+            return 1
+
+        # 3. Discover DC IP
+        print(f"[*] Discovering DC for {domain}...")
+
+        try:
+            dc_ip = discover_dc_ip(domain, ad_user, ad_password)
+            print(f"[+] DC IP:       {dc_ip}")
+        except DiscoveryError as e:
+            print(f"[!] {e}")
+            return 1
+
+        # 4. Discover DC hostname
+        try:
+            dc_hostname = discover_dc_hostname(dc_ip, ad_user, ad_password)
+            print(f"[+] DC Hostname: {dc_hostname}")
+        except DiscoveryError as e:
+            print(f"[!] {e}")
+            # Still store IP even if hostname discovery fails
+            dc_hostname = None
+
+        # 5. Store in Neo4j
+        result = tracker.set_dc_ip(dc_ip, dc_hostname)
+        if result.success:
+            print(f"[+] Stored in Neo4j")
+        else:
+            print(f"[!] Failed to store: {result.error}")
+
+        # 6. Ask user about /etc/hosts
+        entry = f"{dc_ip} {dc_hostname.lower() if dc_hostname else 'dc'}.{domain.lower()} {dc_hostname.lower() if dc_hostname else 'dc'} {domain.lower()}"
+        print()
+        print(f"[?] Add to /etc/hosts?")
+        print(f"    {entry}")
+        response = input("    [Y/n]: ").strip().lower()
+
+        if response != 'n':
+            update_etc_hosts(entry)
+
+        # 7. Print summary
+        print()
+        print(f"[+] DC discovery complete")
+        print(f"    Domain:   {domain}")
+        print(f"    DC:       {dc_hostname or '(unknown)'}")
+        print(f"    IP:       {dc_ip}")
+
+        return 0
+
+    finally:
+        tracker.close()
+
+
 def main():
     parser = create_parser()
     args = parser.parse_args()
@@ -583,6 +1173,68 @@ def main():
 
     if args.run_all:
         return handle_run_all(args)
+
+    # Handle pwned user tracking commands
+    if args.pwn_interactive:
+        config = Neo4jConfig(uri=args.uri, user=args.user, password=args.password)
+        prefill_user = None
+
+        while True:
+            creds = interactive_pwn(config, prefill_user=prefill_user)
+            if not creds:
+                return 0  # User cancelled
+
+            # Populate args and mark user as pwned
+            args.pwn = creds["user"]
+            args.cred_type = creds["cred_type"]
+            args.cred_value = creds["cred_value"]
+            args.source_machine = creds["source_machine"]
+            args.pwn_notes = creds["notes"]
+            handle_pwn_user(args)
+
+            # Ask to continue
+            print("\nAdd another credential?")
+            print("  [Enter] Done")
+            print("  [1] Same user (different cred)")
+            print("  [2] Different user")
+            choice = input("Choice [Enter]: ").strip()
+
+            if choice == "1":
+                prefill_user = creds["user"]  # Pre-fill same user
+            elif choice == "2":
+                prefill_user = None  # Fresh selection
+            else:
+                break  # Done
+
+        return 0
+
+    if args.pwn:
+        return handle_pwn_user(args)
+
+    if args.unpwn:
+        return handle_unpwn_user(args)
+
+    if args.list_pwned:
+        return handle_list_pwned(args)
+
+    if args.pwned_user:
+        return handle_pwned_user_detail(args)
+
+    if args.cred_targets:
+        return handle_cred_targets(args)
+
+    # Handle domain configuration commands
+    if args.set_dc_ip:
+        return handle_set_dc_ip(args)
+
+    if args.show_config:
+        return handle_show_config(args)
+
+    if args.clear_config:
+        return handle_clear_config(args)
+
+    if args.discover_dc is not None:
+        return handle_discover_dc(args)
 
     # Edge enhancement requires bh_data_dir
     if not hasattr(args, 'bh_data_dir') or args.bh_data_dir is None:

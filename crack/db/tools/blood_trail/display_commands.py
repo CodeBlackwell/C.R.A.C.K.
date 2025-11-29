@@ -368,29 +368,51 @@ def print_post_success(
 
 def print_pwned_followup_commands(
     user_name: str,
-    cred_type: str,
-    cred_value: str,
-    access: List,  # List[MachineAccess]
+    cred_type: str = None,
+    cred_value: str = None,
+    access: List = None,  # List[MachineAccess]
     domain_level_access: str = None,
-    use_colors: bool = True
+    use_colors: bool = True,
+    cred_types: List[str] = None,
+    cred_values: List[str] = None,
+    dc_ip: str = None,
+    dc_hostname: str = None,
 ) -> None:
     """
     Print follow-up commands after marking a user as pwned.
 
-    Commands are auto-filled with the stored credential value.
-    Grouped by privilege level (local-admin, user-level).
+    Commands are auto-filled with stored credential values.
+    Shows ALL available techniques per target for easy copy-paste.
+    Supports multiple credential types per user.
 
     Args:
         user_name: User UPN (USER@DOMAIN.COM)
-        cred_type: password, ntlm-hash, kerberos-ticket, certificate
-        cred_value: The actual credential value
+        cred_type: Single credential type (backward compat, use cred_types instead)
+        cred_value: Single credential value (backward compat, use cred_values instead)
         access: List of MachineAccess objects
         domain_level_access: 'domain-admin' if user has DA-level rights
         use_colors: Enable ANSI colors
+        cred_types: List of credential types (password, ntlm-hash, etc.)
+        cred_values: List of corresponding credential values (parallel arrays)
+        dc_ip: Domain Controller IP address (stored in bloodtrail config)
+        dc_hostname: Domain Controller hostname (stored or auto-detected)
     """
-    from .command_mappings import CRED_TYPE_TEMPLATES, fill_pwned_command, infer_dc_hostname
+    from .command_mappings import (
+        CRED_TYPE_TEMPLATES,
+        LATERAL_TECHNIQUES,
+        fill_pwned_command,
+        infer_dc_hostname,
+        get_techniques_for_access,
+    )
 
     c = Colors if use_colors else _NoColors
+    access = access or []
+
+    # Handle backward compatibility: single cred_type/cred_value -> arrays
+    if cred_types is None:
+        cred_types = [cred_type] if cred_type else ["password"]
+    if cred_values is None:
+        cred_values = [cred_value] if cred_value else [""]
 
     # Extract username and domain
     if "@" in user_name:
@@ -399,28 +421,42 @@ def print_pwned_followup_commands(
         username = user_name
         domain = ""
 
+    # Use primary credential for main command generation
+    primary_cred_type = cred_types[0] if cred_types else "password"
+    primary_cred_value = cred_values[0] if cred_values else ""
+
+    # Determine DC target - use stored config or infer from domain
+    dc_target = dc_hostname or dc_ip or infer_dc_hostname(domain)
+
     # Header
     print()
     print(f"{c.BOLD}{'='*70}{c.RESET}")
     print(f"  {c.CYAN}FOLLOW-UP COMMANDS{c.RESET} ({c.BOLD}{user_name}{c.RESET})")
     print(f"{'='*70}")
-    print(f"  Credential: {c.YELLOW}{cred_type}{c.RESET} (stored - auto-filled)")
+
+    # Show all credentials
+    if len(cred_types) > 1:
+        creds_display = ", ".join(f"{c.YELLOW}{ct}{c.RESET}" for ct in cred_types)
+        print(f"  Credentials: {creds_display}")
+    else:
+        print(f"  Credential: {c.YELLOW}{primary_cred_type}{c.RESET} (stored - auto-filled)")
     print()
 
     # Domain-level access (DCSync)
     if domain_level_access == "domain-admin":
-        print(f"{c.RED}{c.BOLD}DOMAIN ADMIN ACCESS{c.RESET} [DCSync] ⚡")
+        print(f"👑 {c.RED}{c.BOLD}DOMAIN ADMIN ACCESS{c.RESET} [DCSync]")
         print()
         print(f"  {'Attack':<22} {'Reason':<40} {'Ready Command'}")
         print(f"  {'-'*22} {'-'*40} {'-'*60}")
-        template = CRED_TYPE_TEMPLATES.get(cred_type, {}).get("DCSync")
+        template = CRED_TYPE_TEMPLATES.get(primary_cred_type, {}).get("DCSync")
         if template:
             cmd = fill_pwned_command(
                 template,
                 username=username,
                 domain=domain,
-                target=infer_dc_hostname(domain),
-                cred_value=cred_value
+                target=dc_target,
+                cred_value=primary_cred_value,
+                dc_ip=dc_ip
             )
             print(
                 f"  {c.BOLD}{'DCSync':<22}{c.RESET} "
@@ -434,144 +470,147 @@ def print_pwned_followup_commands(
     user_access = [a for a in access if a.privilege_level == "user-level"]
     dcom_access = [a for a in access if a.privilege_level == "dcom-exec"]
 
-    # Local Admin access
+    # Credential type display names
+    CRED_TYPE_LABELS = {
+        "password": "password",
+        "ntlm-hash": "ntlm-hash (Pass-the-Hash)",
+        "kerberos-ticket": "kerberos-ticket (Pass-the-Ticket)",
+        "certificate": "certificate",
+    }
+
+    # Local Admin access - per-target technique list, grouped by credential type
     if admin_access:
-        print(f"{c.RED}{c.BOLD}LOCAL ADMIN ACCESS{c.RESET} ({len(admin_access)} machines)")
-        print()
-        print(f"  {'Target':<25} {'Access Path':<35} {'Ready Command'}")
-        print(f"  {'-'*25} {'-'*35} {'-'*60}")
+        print(f"🩸 {c.RED}{c.BOLD}LOCAL ADMIN ACCESS{c.RESET} ({len(admin_access)} machines)")
 
         priority_targets = []
+        techniques = get_techniques_for_access("AdminTo")
 
-        for ma in admin_access[:10]:  # Limit to first 10
-            access_path = "direct AdminTo"
-            template = CRED_TYPE_TEMPLATES.get(cred_type, {}).get("AdminTo")
-            if template:
-                cmd = fill_pwned_command(
-                    template,
-                    username=username,
-                    domain=domain,
-                    target=ma.computer,
-                    cred_value=cred_value
-                )
-                target_display = _truncate(ma.computer, 23)
-                path_display = _truncate(access_path, 33)
-                print(
-                    f"  {c.BOLD}{target_display:<25}{c.RESET} "
-                    f"{c.YELLOW}{path_display:<35}{c.RESET} "
-                    f"{c.GREEN}{cmd}{c.RESET}"
-                )
+        # Generate commands for each credential type
+        for cred_idx, (ct, cv) in enumerate(zip(cred_types, cred_values)):
+            print()
+            label = CRED_TYPE_LABELS.get(ct, ct)
+            print(f"  {c.CYAN}Using: {label}{c.RESET}")
+            print()
 
-            # Track priority targets with sessions
-            if ma.sessions:
-                priority_targets.append((ma, ma.sessions))
+            for ma in admin_access[:10]:  # Limit to first 10
+                print(f"  {c.BOLD}{ma.computer}{c.RESET}")
 
-        if len(admin_access) > 10:
-            print(f"  {c.DIM}... and {len(admin_access) - 10} more machines{c.RESET}")
+                # Show all available techniques for this target
+                for tech in techniques:
+                    template = tech.command_templates.get(ct)
+                    if template:
+                        cmd = fill_pwned_command(
+                            template,
+                            username=username,
+                            domain=domain,
+                            target=ma.computer,
+                            cred_value=cv
+                        )
+                        # Short name for technique
+                        tech_short = tech.name.split()[0].lower()
+                        print(f"    {c.DIM}{tech_short:>10}:{c.RESET}  {c.GREEN}{cmd}{c.RESET}")
 
-        # Priority targets with sessions (secretsdump)
+                # Track priority targets with sessions (only on first cred type)
+                if cred_idx == 0 and ma.sessions:
+                    priority_targets.append((ma, ma.sessions))
+
+                print()  # Space between targets
+
+            if len(admin_access) > 10:
+                print(f"  {c.DIM}... and {len(admin_access) - 10} more machines{c.RESET}")
+
+        # Priority targets with sessions (secretsdump) - show for primary credential
         if priority_targets:
             print()
             print(f"  {c.YELLOW}⚠ PRIORITY TARGETS (privileged sessions detected){c.RESET}")
-            print(f"  {'Target':<25} {'Sessions':<35} {'SecretsDump Command'}")
-            print(f"  {'-'*25} {'-'*35} {'-'*60}")
+            print()
 
             for ma, sessions in priority_targets[:5]:
                 sessions_str = ", ".join(sessions[:2])
-                sd_template = CRED_TYPE_TEMPLATES.get(cred_type, {}).get("secretsdump")
-                if sd_template:
-                    sd_cmd = fill_pwned_command(
-                        sd_template,
-                        username=username,
-                        domain=domain,
-                        target=ma.computer,
-                        cred_value=cred_value
-                    )
-                    target_display = _truncate(ma.computer, 23)
-                    sessions_display = _truncate(sessions_str, 33)
-                    print(
-                        f"  {c.BOLD}{target_display:<25}{c.RESET} "
-                        f"{c.YELLOW}{sessions_display:<35}{c.RESET} "
-                        f"{c.GREEN}{sd_cmd}{c.RESET}"
-                    )
-        print()
+                print(f"  {c.BOLD}{ma.computer}{c.RESET}")
+                print(f"    {c.YELLOW}Sessions: {sessions_str}{c.RESET}")
 
-    # User-level access (RDP, PSRemote)
+                # Show secretsdump for each credential type
+                for ct, cv in zip(cred_types, cred_values):
+                    sd_template = CRED_TYPE_TEMPLATES.get(ct, {}).get("secretsdump")
+                    if sd_template:
+                        sd_cmd = fill_pwned_command(
+                            sd_template,
+                            username=username,
+                            domain=domain,
+                            target=ma.computer,
+                            cred_value=cv
+                        )
+                        label_short = "PtH" if ct == "ntlm-hash" else ct[:4]
+                        print(f"    {c.DIM}secretsdump ({label_short}):{c.RESET}  {c.GREEN}{sd_cmd}{c.RESET}")
+                print()
+
+    # User-level access (RDP, PSRemote) - per-target technique list
     if user_access:
-        print(f"{c.BLUE}{c.BOLD}USER-LEVEL ACCESS{c.RESET} ({len(user_access)} machines)")
-        print()
-        print(f"  {'Target':<25} {'Access Type':<20} {'Ready Command'}")
-        print(f"  {'-'*25} {'-'*20} {'-'*60}")
+        print(f"🔵 {c.BLUE}{c.BOLD}USER-LEVEL ACCESS{c.RESET} ({len(user_access)} machines)")
 
-        for ma in user_access[:10]:
-            # Determine template based on access type
-            if "CanRDP" in ma.access_types:
-                template = CRED_TYPE_TEMPLATES.get(cred_type, {}).get("CanRDP")
-                access_type = "RDP"
-            elif "CanPSRemote" in ma.access_types:
-                template = CRED_TYPE_TEMPLATES.get(cred_type, {}).get("CanPSRemote")
-                access_type = "WinRM"
-            else:
-                template = None
-                access_type = ", ".join(ma.access_types)
+        # Generate commands for each credential type
+        for ct, cv in zip(cred_types, cred_values):
+            print()
+            label = CRED_TYPE_LABELS.get(ct, ct)
+            print(f"  {c.CYAN}Using: {label}{c.RESET}")
+            print()
 
-            if template:
-                cmd = fill_pwned_command(
-                    template,
-                    username=username,
-                    domain=domain,
-                    target=ma.computer,
-                    cred_value=cred_value
-                )
-                target_display = _truncate(ma.computer, 23)
-                print(
-                    f"  {c.BOLD}{target_display:<25}{c.RESET} "
-                    f"{c.YELLOW}{access_type:<20}{c.RESET} "
-                    f"{c.GREEN}{cmd}{c.RESET}"
-                )
+            for ma in user_access[:10]:
+                print(f"  {c.BOLD}{ma.computer}{c.RESET}")
 
-        if len(user_access) > 10:
-            print(f"  {c.DIM}... and {len(user_access) - 10} more machines{c.RESET}")
-        print()
+                # Show techniques based on access types
+                for access_type in ma.access_types:
+                    if access_type in ("CanRDP", "CanPSRemote"):
+                        techniques = get_techniques_for_access(access_type)
+                        for tech in techniques:
+                            template = tech.command_templates.get(ct)
+                            if template:
+                                cmd = fill_pwned_command(
+                                    template,
+                                    username=username,
+                                    domain=domain,
+                                    target=ma.computer,
+                                    cred_value=cv
+                                )
+                                tech_short = tech.name.split()[0].lower()
+                                print(f"    {c.DIM}{tech_short:>10}:{c.RESET}  {c.GREEN}{cmd}{c.RESET}")
 
-    # DCOM access
+                print()  # Space between targets
+
+            if len(user_access) > 10:
+                print(f"  {c.DIM}... and {len(user_access) - 10} more machines{c.RESET}")
+
+    # DCOM access - per-target technique list
     if dcom_access:
-        print(f"{c.BLUE}{c.BOLD}DCOM ACCESS{c.RESET} ({len(dcom_access)} machines)")
-        print()
-        print(f"  {'Target':<25} {'Access Type':<20} {'Ready Command'}")
-        print(f"  {'-'*25} {'-'*20} {'-'*60}")
+        print(f"\n⚙️  {c.BLUE}{c.BOLD}DCOM ACCESS{c.RESET} ({len(dcom_access)} machines)")
 
-        for ma in dcom_access[:5]:
-            template = CRED_TYPE_TEMPLATES.get(cred_type, {}).get("ExecuteDCOM")
-            if template:
-                cmd = fill_pwned_command(
-                    template,
-                    username=username,
-                    domain=domain,
-                    target=ma.computer,
-                    cred_value=cred_value
-                )
-                target_display = _truncate(ma.computer, 23)
-                print(
-                    f"  {c.BOLD}{target_display:<25}{c.RESET} "
-                    f"{c.YELLOW}{'DCOM':<20}{c.RESET} "
-                    f"{c.GREEN}{cmd}{c.RESET}"
-                )
-            else:
-                print(f"  {c.DIM}{ma.computer:<25} DCOM{c.RESET}")
-        print()
+        techniques = get_techniques_for_access("ExecuteDCOM")
 
-    # ALWAYS show authenticated user attacks (regardless of edges)
-    # Any domain user can run AS-REP Roasting, Kerberoasting, enumeration, etc.
-    auth_console, _ = _generate_authenticated_attacks(
-        username=username,
-        domain=domain,
-        cred_type=cred_type,
-        cred_value=cred_value,
-        use_colors=use_colors
-    )
-    for line in auth_console:
-        print(line)
+        # Generate commands for each credential type
+        for ct, cv in zip(cred_types, cred_values):
+            print()
+            label = CRED_TYPE_LABELS.get(ct, ct)
+            print(f"  {c.CYAN}Using: {label}{c.RESET}")
+            print()
+
+            for ma in dcom_access[:5]:
+                print(f"  {c.BOLD}{ma.computer}{c.RESET}")
+
+                for tech in techniques:
+                    template = tech.command_templates.get(ct)
+                    if template:
+                        cmd = fill_pwned_command(
+                            template,
+                            username=username,
+                            domain=domain,
+                            target=ma.computer,
+                            cred_value=cv
+                        )
+                        tech_short = tech.name.split()[0].lower()
+                        print(f"    {c.DIM}{tech_short:>10}:{c.RESET}  {c.GREEN}{cmd}{c.RESET}")
+
+                print()
 
     # No edge-based access found
     if not admin_access and not user_access and not dcom_access and not domain_level_access:
@@ -579,7 +618,10 @@ def print_pwned_followup_commands(
         print()
 
     print(f"{'='*70}")
-    print()
+
+    # Show authenticated user attacks ONCE at the bottom (template form)
+    # These are generic - same for any domain user
+    print_authenticated_attacks_template(use_colors=use_colors, dc_ip=dc_ip)
 
 
 def print_pwned_users_table(
@@ -628,7 +670,12 @@ def print_pwned_users_table(
         else:
             name_color = c.RESET
 
-        print(f"  {name_color}{user.name:<30}{c.RESET} {user.cred_type:<15} {admin_count:<10} {user_count:<10} {domain_marker:<8} {pwned_at_str}")
+        # Show credential types (comma-separated if multiple)
+        cred_display = ",".join(user.cred_types) if user.cred_types else "password"
+        if len(cred_display) > 15:
+            cred_display = cred_display[:12] + "..."
+
+        print(f"  {name_color}{user.name:<30}{c.RESET} {cred_display:<15} {admin_count:<10} {user_count:<10} {domain_marker:<8} {pwned_at_str}")
 
     print()
     print(f"{c.DIM}Run: bloodtrail --pwn USER -v  to see detailed access for a user{c.RESET}")
@@ -732,6 +779,7 @@ def generate_pwned_attack_paths(driver, use_colors: bool = True) -> tuple:
 
     Queries Neo4j for pwned users and their access paths, generates
     credential-type-aware commands based on each user's specific privileges.
+    Shows ALL available techniques per target for easy copy-paste.
 
     Args:
         driver: Neo4j driver instance
@@ -741,7 +789,13 @@ def generate_pwned_attack_paths(driver, use_colors: bool = True) -> tuple:
         Tuple of (console_output: str, markdown_output: str)
         Returns ("", "") if no pwned users
     """
-    from .command_mappings import CRED_TYPE_TEMPLATES, fill_pwned_command, infer_dc_hostname
+    from .command_mappings import (
+        CRED_TYPE_TEMPLATES,
+        LATERAL_TECHNIQUES,
+        fill_pwned_command,
+        infer_dc_hostname,
+        get_techniques_for_access,
+    )
 
     c = Colors if use_colors else _NoColors
 
@@ -795,7 +849,7 @@ def generate_pwned_attack_paths(driver, use_colors: bool = True) -> tuple:
         if domain_access in ("DCSync", "DomainAdmin", "GenericAll"):
             console_lines.append("")
             access_label = "DOMAIN ADMIN" if domain_access == "DomainAdmin" else domain_access
-            console_lines.append(f"{c.RED}{c.BOLD}DOMAIN ADMIN ACCESS{c.RESET} [{access_label}] ⚡")
+            console_lines.append(f"👑 {c.RED}{c.BOLD}DOMAIN ADMIN ACCESS{c.RESET} [{access_label}]")
             console_lines.append("")
             console_lines.append(f"  {'Attack':<22} {'Reason':<40} {'Ready Command'}")
             console_lines.append(f"  {'-'*22} {'-'*40} {'-'*60}")
@@ -819,37 +873,42 @@ def generate_pwned_attack_paths(driver, use_colors: bool = True) -> tuple:
                 markdown_lines.append(f"| DCSync | {reason} | `{cmd}` |")
             markdown_lines.append("")
 
-        # Local Admin access
+        # Local Admin access - per-target technique list
         admin_machines = access_by_priv.get("local-admin", [])
         if admin_machines:
             console_lines.append("")
-            console_lines.append(f"{c.RED}{c.BOLD}LOCAL ADMIN ACCESS{c.RESET} ({len(admin_machines)} machines)")
+            console_lines.append(f"🩸 {c.RED}{c.BOLD}LOCAL ADMIN ACCESS{c.RESET} ({len(admin_machines)} machines)")
             console_lines.append("")
-            console_lines.append(f"  {'Target':<25} {'Access Path':<35} {'Ready Command'}")
-            console_lines.append(f"  {'-'*25} {'-'*35} {'-'*60}")
 
             markdown_lines.append(f"#### Local Admin Access ({len(admin_machines)} machines)")
-            markdown_lines.append(f"| Target | Access Path | Command |")
-            markdown_lines.append(f"|--------|-------------|---------|")
+            markdown_lines.append("")
 
             priority_targets = []
+            techniques = get_techniques_for_access("AdminTo")
 
             for ma in admin_machines[:10]:
                 has_sessions = bool(ma.get("privileged_sessions"))
                 inherited_from = ma.get("inherited_from")
-                access_path = f"via {inherited_from}" if inherited_from else "direct AdminTo"
+                access_note = f" (via {inherited_from})" if inherited_from else ""
 
-                template = CRED_TYPE_TEMPLATES.get(cred_type, {}).get("AdminTo")
-                if template and cred_value:
-                    cmd = fill_pwned_command(template, username, domain, ma['computer'], cred_value)
-                    target_display = _truncate(ma['computer'], 23)
-                    path_display = _truncate(access_path, 33)
-                    console_lines.append(
-                        f"  {c.BOLD}{target_display:<25}{c.RESET} "
-                        f"{c.YELLOW}{path_display:<35}{c.RESET} "
-                        f"{c.GREEN}{cmd}{c.RESET}"
-                    )
-                    markdown_lines.append(f"| {ma['computer']} | {access_path} | `{cmd}` |")
+                console_lines.append(f"  {c.BOLD}{ma['computer']}{c.RESET}{c.DIM}{access_note}{c.RESET}")
+
+                markdown_lines.append(f"**{ma['computer']}**{access_note}")
+                markdown_lines.append("")
+                markdown_lines.append("| Technique | Command |")
+                markdown_lines.append("|-----------|---------|")
+
+                # Show all available techniques for this target
+                for tech in techniques:
+                    template = tech.command_templates.get(cred_type)
+                    if template and cred_value:
+                        cmd = fill_pwned_command(template, username, domain, ma['computer'], cred_value)
+                        tech_short = tech.name.split()[0].lower()
+                        console_lines.append(f"    {c.DIM}{tech_short:>10}:{c.RESET}  {c.GREEN}{cmd}{c.RESET}")
+                        markdown_lines.append(f"| {tech_short} | `{cmd}` |")
+
+                console_lines.append("")  # Space between targets
+                markdown_lines.append("")
 
                 # Track priority targets for separate display
                 if has_sessions:
@@ -858,117 +917,94 @@ def generate_pwned_attack_paths(driver, use_colors: bool = True) -> tuple:
             if len(admin_machines) > 10:
                 console_lines.append(f"  {c.DIM}... and {len(admin_machines) - 10} more machines{c.RESET}")
 
-            markdown_lines.append("")
-
             # Priority targets with sessions (secretsdump)
             if priority_targets:
                 console_lines.append("")
                 console_lines.append(f"  {c.YELLOW}⚠ PRIORITY TARGETS (privileged sessions detected){c.RESET}")
-                console_lines.append(f"  {'Target':<25} {'Sessions':<35} {'SecretsDump Command'}")
-                console_lines.append(f"  {'-'*25} {'-'*35} {'-'*60}")
+                console_lines.append("")
 
                 markdown_lines.append(f"**Priority Targets (Active Sessions)**")
-                markdown_lines.append(f"| Target | Sessions | SecretsDump Command |")
-                markdown_lines.append(f"|--------|----------|---------------------|")
+                markdown_lines.append("")
 
                 for ma, sessions in priority_targets[:5]:
                     sessions_str = ", ".join(sessions[:2])
+                    console_lines.append(f"  {c.BOLD}{ma['computer']}{c.RESET}")
+                    console_lines.append(f"    {c.YELLOW}Sessions: {sessions_str}{c.RESET}")
+
+                    markdown_lines.append(f"**{ma['computer']}** - Sessions: {sessions_str}")
+                    markdown_lines.append("")
+
                     sd_template = CRED_TYPE_TEMPLATES.get(cred_type, {}).get("secretsdump")
                     if sd_template and cred_value:
                         sd_cmd = fill_pwned_command(sd_template, username, domain, ma['computer'], cred_value)
-                        target_display = _truncate(ma['computer'], 23)
-                        sessions_display = _truncate(sessions_str, 33)
-                        console_lines.append(
-                            f"  {c.BOLD}{target_display:<25}{c.RESET} "
-                            f"{c.YELLOW}{sessions_display:<35}{c.RESET} "
-                            f"{c.GREEN}{sd_cmd}{c.RESET}"
-                        )
-                        markdown_lines.append(f"| {ma['computer']} | {sessions_str} | `{sd_cmd}` |")
+                        console_lines.append(f"    {c.DIM}secretsdump:{c.RESET}  {c.GREEN}{sd_cmd}{c.RESET}")
+                        markdown_lines.append(f"```bash\n{sd_cmd}\n```")
+                    console_lines.append("")
+                    markdown_lines.append("")
 
-                markdown_lines.append("")
-
-        # User-level access (RDP, WinRM)
+        # User-level access (RDP, WinRM) - per-target technique list
         user_machines = access_by_priv.get("user-level", [])
         if user_machines:
             console_lines.append("")
-            console_lines.append(f"{c.BLUE}{c.BOLD}USER-LEVEL ACCESS{c.RESET} ({len(user_machines)} machines)")
+            console_lines.append(f"🔵 {c.BLUE}{c.BOLD}USER-LEVEL ACCESS{c.RESET} ({len(user_machines)} machines)")
             console_lines.append("")
-            console_lines.append(f"  {'Target':<25} {'Access Type':<20} {'Ready Command'}")
-            console_lines.append(f"  {'-'*25} {'-'*20} {'-'*60}")
 
             markdown_lines.append(f"#### User-Level Access ({len(user_machines)} machines)")
-            markdown_lines.append(f"| Target | Access Type | Command |")
-            markdown_lines.append(f"|--------|-------------|---------|")
+            markdown_lines.append("")
 
             for ma in user_machines[:5]:
                 access_types = ma.get("access_types", [])
+                console_lines.append(f"  {c.BOLD}{ma['computer']}{c.RESET}")
 
-                if "CanRDP" in access_types:
-                    template = CRED_TYPE_TEMPLATES.get(cred_type, {}).get("CanRDP")
-                    if template and cred_value:
-                        cmd = fill_pwned_command(template, username, domain, ma['computer'], cred_value)
-                        target_display = _truncate(ma['computer'], 23)
-                        console_lines.append(
-                            f"  {c.BOLD}{target_display:<25}{c.RESET} "
-                            f"{c.YELLOW}{'RDP':<20}{c.RESET} "
-                            f"{c.GREEN}{cmd}{c.RESET}"
-                        )
-                        markdown_lines.append(f"| {ma['computer']} | RDP | `{cmd}` |")
+                markdown_lines.append(f"**{ma['computer']}**")
+                markdown_lines.append("")
+                markdown_lines.append("| Technique | Command |")
+                markdown_lines.append("|-----------|---------|")
 
-                elif "CanPSRemote" in access_types:
-                    template = CRED_TYPE_TEMPLATES.get(cred_type, {}).get("CanPSRemote")
-                    if template and cred_value:
-                        cmd = fill_pwned_command(template, username, domain, ma['computer'], cred_value)
-                        target_display = _truncate(ma['computer'], 23)
-                        console_lines.append(
-                            f"  {c.BOLD}{target_display:<25}{c.RESET} "
-                            f"{c.YELLOW}{'WinRM':<20}{c.RESET} "
-                            f"{c.GREEN}{cmd}{c.RESET}"
-                        )
-                        markdown_lines.append(f"| {ma['computer']} | WinRM | `{cmd}` |")
+                for access_type in access_types:
+                    if access_type in ("CanRDP", "CanPSRemote"):
+                        techniques = get_techniques_for_access(access_type)
+                        for tech in techniques:
+                            template = tech.command_templates.get(cred_type)
+                            if template and cred_value:
+                                cmd = fill_pwned_command(template, username, domain, ma['computer'], cred_value)
+                                tech_short = tech.name.split()[0].lower()
+                                console_lines.append(f"    {c.DIM}{tech_short:>10}:{c.RESET}  {c.GREEN}{cmd}{c.RESET}")
+                                markdown_lines.append(f"| {tech_short} | `{cmd}` |")
 
-            markdown_lines.append("")
+                console_lines.append("")
+                markdown_lines.append("")
 
-        # DCOM access
+        # DCOM access - per-target technique list
         dcom_machines = access_by_priv.get("dcom-exec", [])
         if dcom_machines:
             console_lines.append("")
-            console_lines.append(f"{c.BLUE}{c.BOLD}DCOM ACCESS{c.RESET} ({len(dcom_machines)} machines)")
+            console_lines.append(f"⚙️  {c.BLUE}{c.BOLD}DCOM ACCESS{c.RESET} ({len(dcom_machines)} machines)")
             console_lines.append("")
-            console_lines.append(f"  {'Target':<25} {'Access Type':<20} {'Ready Command'}")
-            console_lines.append(f"  {'-'*25} {'-'*20} {'-'*60}")
 
             markdown_lines.append(f"#### DCOM Access ({len(dcom_machines)} machines)")
-            markdown_lines.append(f"| Target | Access Type | Command |")
-            markdown_lines.append(f"|--------|-------------|---------|")
-
-            for ma in dcom_machines[:3]:
-                template = CRED_TYPE_TEMPLATES.get(cred_type, {}).get("ExecuteDCOM")
-                if template and cred_value:
-                    cmd = fill_pwned_command(template, username, domain, ma['computer'], cred_value)
-                    target_display = _truncate(ma['computer'], 23)
-                    console_lines.append(
-                        f"  {c.BOLD}{target_display:<25}{c.RESET} "
-                        f"{c.YELLOW}{'DCOM':<20}{c.RESET} "
-                        f"{c.GREEN}{cmd}{c.RESET}"
-                    )
-                    markdown_lines.append(f"| {ma['computer']} | DCOM | `{cmd}` |")
-                else:
-                    console_lines.append(f"  {c.DIM}{ma['computer']:<25} DCOM{c.RESET}")
-                    markdown_lines.append(f"| {ma['computer']} | DCOM | - |")
-
             markdown_lines.append("")
 
-        # ALWAYS show authenticated user attacks (regardless of edges)
-        auth_console, auth_markdown = _generate_authenticated_attacks(
-            username=username,
-            domain=domain,
-            cred_type=cred_type,
-            cred_value=cred_value,
-            use_colors=use_colors
-        )
-        console_lines.extend(auth_console)
-        markdown_lines.extend(auth_markdown)
+            techniques = get_techniques_for_access("ExecuteDCOM")
+
+            for ma in dcom_machines[:3]:
+                console_lines.append(f"  {c.BOLD}{ma['computer']}{c.RESET}")
+
+                markdown_lines.append(f"**{ma['computer']}**")
+                markdown_lines.append("")
+                markdown_lines.append("| Technique | Command |")
+                markdown_lines.append("|-----------|---------|")
+
+                for tech in techniques:
+                    template = tech.command_templates.get(cred_type)
+                    if template and cred_value:
+                        cmd = fill_pwned_command(template, username, domain, ma['computer'], cred_value)
+                        tech_short = tech.name.split()[0].lower()
+                        console_lines.append(f"    {c.DIM}{tech_short:>10}:{c.RESET}  {c.GREEN}{cmd}{c.RESET}")
+                        markdown_lines.append(f"| {tech_short} | `{cmd}` |")
+
+                console_lines.append("")
+                markdown_lines.append("")
 
         # No edge-based access found
         if not admin_machines and not user_machines and not dcom_machines and not domain_access:
@@ -977,6 +1013,31 @@ def generate_pwned_attack_paths(driver, use_colors: bool = True) -> tuple:
             markdown_lines.append("")
 
         console_lines.append("")
+
+    # Show authenticated user attacks ONCE at the end (template form)
+    # These are generic - same for any domain user
+    console_lines.append("")
+    console_lines.append(f"{c.CYAN}{c.BOLD}AUTHENTICATED USER ATTACKS{c.RESET} (Any domain user can run these)")
+    console_lines.append(f"{c.DIM}Replace placeholders with your credentials:{c.RESET}")
+    console_lines.append("")
+
+    from .command_mappings import AUTHENTICATED_USER_TEMPLATES, AUTHENTICATED_ATTACKS
+    templates = AUTHENTICATED_USER_TEMPLATES.get("password", {})
+
+    console_lines.append(f"  {'Attack':<25} {'Command Template'}")
+    console_lines.append(f"  {'-'*25} {'-'*80}")
+
+    for attack in AUTHENTICATED_ATTACKS:
+        template = templates.get(attack["id"])
+        if template:
+            priority = " ⚡" if attack.get("priority") == "high" else ""
+            name_display = f"{attack['name']}{priority}"
+            console_lines.append(f"  {c.BOLD}{name_display:<25}{c.RESET} {c.GREEN}{template}{c.RESET}")
+
+    console_lines.append("")
+
+    # Markdown version
+    markdown_lines.append(generate_authenticated_attacks_template_markdown())
 
     return "\n".join(console_lines), "\n".join(markdown_lines)
 
@@ -1252,3 +1313,65 @@ def _generate_authenticated_attacks(
     markdown_lines.append("")
 
     return console_lines, markdown_lines
+
+
+def print_authenticated_attacks_template(use_colors: bool = True, dc_ip: str = None) -> None:
+    """
+    Print authenticated user attacks in template form (once, at end of output).
+
+    Shows placeholders instead of filled credentials since these attacks
+    are generic and work for ANY authenticated domain user.
+
+    Args:
+        use_colors: Enable ANSI colors
+        dc_ip: Domain Controller IP (replaces <DC_IP> placeholder if provided)
+    """
+    from .command_mappings import AUTHENTICATED_USER_TEMPLATES, AUTHENTICATED_ATTACKS
+
+    c = Colors if use_colors else _NoColors
+
+    print(f"\n{c.CYAN}{c.BOLD}AUTHENTICATED USER ATTACKS{c.RESET} (Any domain user can run these)")
+    print(f"{c.DIM}Replace placeholders with your credentials:{c.RESET}")
+    print()
+
+    # Show password templates (most common)
+    templates = AUTHENTICATED_USER_TEMPLATES.get("password", {})
+
+    print(f"  {'Attack':<25} {'Command Template'}")
+    print(f"  {'-'*25} {'-'*80}")
+
+    for attack in AUTHENTICATED_ATTACKS:
+        template = templates.get(attack["id"])
+        if template:
+            # Replace DC_IP if stored
+            if dc_ip:
+                template = template.replace("<DC_IP>", dc_ip)
+            priority = " ⚡" if attack.get("priority") == "high" else ""
+            name_display = f"{attack['name']}{priority}"
+            print(f"  {c.BOLD}{name_display:<25}{c.RESET} {c.GREEN}{template}{c.RESET}")
+
+    print()
+
+
+def generate_authenticated_attacks_template_markdown() -> str:
+    """Generate markdown version of authenticated attacks template."""
+    from .command_mappings import AUTHENTICATED_USER_TEMPLATES, AUTHENTICATED_ATTACKS
+
+    lines = []
+    lines.append("#### Authenticated User Attacks (Any Domain User)")
+    lines.append("")
+    lines.append("Replace placeholders with your credentials:")
+    lines.append("")
+    lines.append("| Attack | Command Template |")
+    lines.append("|--------|------------------|")
+
+    templates = AUTHENTICATED_USER_TEMPLATES.get("password", {})
+
+    for attack in AUTHENTICATED_ATTACKS:
+        template = templates.get(attack["id"])
+        if template:
+            priority = " ⚡" if attack.get("priority") == "high" else ""
+            lines.append(f"| {attack['name']}{priority} | `{template}` |")
+
+    lines.append("")
+    return "\n".join(lines)
