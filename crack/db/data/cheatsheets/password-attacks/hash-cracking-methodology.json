@@ -24,7 +24,7 @@
         {
           "title": "Scenario 1: Linux /etc/shadow Hash Cracking",
           "context": "You've compromised a Linux web server via file upload vulnerability. You exfiltrated /etc/shadow and discovered user 'john' with hash: john:$6$salt$long_hash. The $6$ prefix indicates sha512crypt. Hash rate benchmark shows 10,000 H/s on your GPU. You have 4 hours of exam time remaining. Goal: Crack john's password for privilege escalation.",
-          "approach": "1. Identify hash type: $6$ = sha512crypt (Linux default since 2011). 2. Benchmark: hashcat -b -m 1800 (mode 1800 = sha512crypt). Result: 10 kH/s. 3. Calculate time: rockyou.txt (14M) ÷ 10,000 H/s = 1,400 seconds = 23 minutes (straight wordlist). 4. Strategy: Start with straight rockyou, then rockyou + best64.rule. 5. Extract hash to file (john.hash). 6. Run: hashcat -m 1800 john.hash rockyou.txt. 7. Monitor progress with status updates. 8. If straight fails, escalate to rules.",
+          "approach": "1. Identify hash type: $6$ = sha512crypt (Linux default since 2011). 2. Benchmark: hashcat -b -m 1800 (mode 1800 = sha512crypt). Result: 10 kH/s. 3. Calculate time: rockyou.txt (14M) \u00f7 10,000 H/s = 1,400 seconds = 23 minutes (straight wordlist). 4. Strategy: Start with straight rockyou, then rockyou + best64.rule. 5. Extract hash to file (john.hash). 6. Run: hashcat -m 1800 john.hash rockyou.txt. 7. Monitor progress with status updates. 8. If straight fails, escalate to rules.",
           "commands": [
             "hash-rate-benchmark",
             "calculate-crack-time",
@@ -33,13 +33,13 @@
             "hashcat-status-timer",
             "hashcat-rule-attack"
           ],
-          "expected_outcome": "Hashcat tests rockyou.txt passwords against sha512crypt hash at ~10,000 H/s. Progress: 0% → 50% (7M tested) → CRACKED after 15 minutes. Output: john:$6$salt$hash:password123. Verification: su john (enter password123, gain shell). Time saved: Straight wordlist faster than rules (no extra time for exam). Next: Check john's sudo privileges, enumerate cron jobs, search for credentials in john's home directory.",
-          "why_this_works": "sha512crypt is SLOW by design (key derivation function with 5,000 rounds by default). Slows down brute-force but also dictionary attacks. Hashcat uses GPU acceleration (10,000 H/s vs CPU: 1,000 H/s). rockyou.txt contains real passwords from RockYou breach (32M users). Sorted by frequency - most common passwords tested first. Password123 is in top 1,000 (high probability). Success because: 1) User chose common password, 2) Wordlist contains password, 3) Time estimate aligned with exam constraints. If straight fails: Add rules (best64 = 14M × 64 = 896M candidates, ~24 hours)."
+          "expected_outcome": "Hashcat tests rockyou.txt passwords against sha512crypt hash at ~10,000 H/s. Progress: 0% \u2192 50% (7M tested) \u2192 CRACKED after 15 minutes. Output: john:$6$salt$hash:password123. Verification: su john (enter password123, gain shell). Time saved: Straight wordlist faster than rules (no extra time for exam). Next: Check john's sudo privileges, enumerate cron jobs, search for credentials in john's home directory.",
+          "why_this_works": "sha512crypt is SLOW by design (key derivation function with 5,000 rounds by default). Slows down brute-force but also dictionary attacks. Hashcat uses GPU acceleration (10,000 H/s vs CPU: 1,000 H/s). rockyou.txt contains real passwords from RockYou breach (32M users). Sorted by frequency - most common passwords tested first. Password123 is in top 1,000 (high probability). Success because: 1) User chose common password, 2) Wordlist contains password, 3) Time estimate aligned with exam constraints. If straight fails: Add rules (best64 = 14M \u00d7 64 = 896M candidates, ~24 hours)."
         },
         {
           "title": "Scenario 2: NTLM Hash Cracking with Rules",
           "context": "You've dumped NTLM hashes from Windows domain controller using secretsdump.py: Administrator:500:aad3b435b51404eeaad3b435b51404ee:31d6cfe0d16ae931b73c59d7e0c089c0:::. The second hash (31d6...) is LM, third is NTLM. You need Administrator plaintext for RDP access. NTLM cracks MUCH faster than LM. Benchmark: 50 GH/s (50 billion H/s). Current time: 1 hour into exam.",
-          "approach": "1. Extract NTLM hash (after third colon): 31d6cfe0d16ae931b73c59d7e0c089c0. 2. Save to file: admin.ntlm. 3. Identify: 32 hex chars = MD5 or NTLM (use hashid to confirm). Mode 1000 for NTLM. 4. Benchmark: hashcat -b -m 1000 → 50 GH/s. 5. Time estimate: rockyou (14M) ÷ 50B H/s = 0.28 seconds (straight). Rules: 14M × 64 ÷ 50B = 18 seconds (best64). 6. Strategy: Straight first, then best64, then rockyou-30000 if needed. 7. Run with session management for resume capability.",
+          "approach": "1. Extract NTLM hash (after third colon): 31d6cfe0d16ae931b73c59d7e0c089c0. 2. Save to file: admin.ntlm. 3. Identify: 32 hex chars = MD5 or NTLM (use hashid to confirm). Mode 1000 for NTLM. 4. Benchmark: hashcat -b -m 1000 \u2192 50 GH/s. 5. Time estimate: rockyou (14M) \u00f7 50B H/s = 0.28 seconds (straight). Rules: 14M \u00d7 64 \u00f7 50B = 18 seconds (best64). 6. Strategy: Straight first, then best64, then rockyou-30000 if needed. 7. Run with session management for resume capability.",
           "commands": [
             "hashid",
             "hash-rate-benchmark",
@@ -54,7 +54,7 @@
         {
           "title": "Scenario 3: Time-Constrained Bcrypt Cracking",
           "context": "You've dumped bcrypt hashes from web application database (WordPress): admin:$2b$10$salt$hash. bcrypt is SLOW (designed to resist GPU cracking). Benchmark shows 100 H/s (100 attempts per second). Exam has 3 hours remaining. You need to crack this or find alternative. Calculate if attack is viable.",
-          "approach": "1. Identify: $2b$ = bcrypt, $10$ = cost factor (2^10 = 1,024 rounds). 2. Benchmark: hashcat -b -m 3200 → 100 H/s. 3. Calculate keyspace: rockyou.txt = 14M passwords. Time: 14M ÷ 100 = 140,000 seconds = 39 hours. 4. Decision: Full rockyou NOT viable in exam. 5. Alternative strategy: Top 10,000 rockyou (head -10000 rockyou.txt > top10k.txt). Time: 10k ÷ 100 = 100 seconds = 1.6 minutes. 6. If fails: Try top 100k (17 minutes). 7. If still fails: ABANDON - find alternative (password reset, SQL injection, RCE).",
+          "approach": "1. Identify: $2b$ = bcrypt, $10$ = cost factor (2^10 = 1,024 rounds). 2. Benchmark: hashcat -b -m 3200 \u2192 100 H/s. 3. Calculate keyspace: rockyou.txt = 14M passwords. Time: 14M \u00f7 100 = 140,000 seconds = 39 hours. 4. Decision: Full rockyou NOT viable in exam. 5. Alternative strategy: Top 10,000 rockyou (head -10000 rockyou.txt > top10k.txt). Time: 10k \u00f7 100 = 100 seconds = 1.6 minutes. 6. If fails: Try top 100k (17 minutes). 7. If still fails: ABANDON - find alternative (password reset, SQL injection, RCE).",
           "commands": [
             "hashid",
             "hash-rate-benchmark",
@@ -69,7 +69,7 @@
         {
           "title": "Scenario 4: Custom Rule Creation Based on Policy",
           "context": "You've obtained NTLM hash from Windows workstation. Active Directory password policy discovered via LDAP query: Minimum 10 characters, 1 uppercase, 1 digit, 1 special character, No dictionary words allowed. Observed pattern from other systems: Company name (Contoso) + Season + Year + special char. You have 2 hours to crack.",
-          "approach": "1. Create custom wordlist: Seasons (Spring, Summer, Fall, Winter), Years (2020-2024), Company (Contoso, Contoso123). Total: ~50 words. 2. Create custom rule: c $2 $0 $2 $4 $! (Capitalize + append 2024!). 3. Test rule with --stdout: hashcat wordlist.txt -r custom.rule --stdout | head. Verify: Contoso → Contoso2024! 4. Calculate: 50 words × 1 rule = 50 candidates ÷ 50 GH/s = instantaneous. 5. Expand rules: Try all years (2020-2024), Try special chars (!@#$), Total: 50 words × 5 years × 4 special = 1,000 candidates. 6. Run attack with custom wordlist + custom rules.",
+          "approach": "1. Create custom wordlist: Seasons (Spring, Summer, Fall, Winter), Years (2020-2024), Company (Contoso, Contoso123). Total: ~50 words. 2. Create custom rule: c $2 $0 $2 $4 $! (Capitalize + append 2024!). 3. Test rule with --stdout: hashcat wordlist.txt -r custom.rule --stdout | head. Verify: Contoso \u2192 Contoso2024! 4. Calculate: 50 words \u00d7 1 rule = 50 candidates \u00f7 50 GH/s = instantaneous. 5. Expand rules: Try all years (2020-2024), Try special chars (!@#$), Total: 50 words \u00d7 5 years \u00d7 4 special = 1,000 candidates. 6. Run attack with custom wordlist + custom rules.",
           "commands": [
             "create-policy-rules",
             "hashcat-test-rules",
@@ -78,12 +78,12 @@
             "hashcat-show-cracked"
           ],
           "expected_outcome": "Custom attack completes in <1 second (NTLM speed + small wordlist). Success: Contoso:31d6...:Contoso2024! Hit rate: 60-70% (targeted attack based on intelligence). Verification: Use credential for SMB shares, RDP access, lateral movement. Key insight: Intelligence-driven attack (policy + patterns) beats brute force. 1,000 targeted candidates > 14M generic candidates. Time to craft rules: 10 minutes. Time to crack: <1 second. Total: 10 minutes vs 39 hours (brute force).",
-          "why_this_works": "Humans are predictable. Password policies force patterns: Policy requires special char → Users append ! (easiest key). Policy requires digit → Users append year (easy to remember). Policy requires uppercase → Users capitalize first letter. Policy bans dictionary words → Users modify existing words (Contoso not in dict). Custom rules exploit psychology: c = capitalize (first letter easiest), $ = append (path of least resistance), Year = memorable (current year), Special = minimal effort (!). Success rate: Targeted attack (60%) vs Generic attack (15%) for policy-compliant passwords. Lesson: Gather intelligence (policy, patterns, company info) BEFORE attacking."
+          "why_this_works": "Humans are predictable. Password policies force patterns: Policy requires special char \u2192 Users append ! (easiest key). Policy requires digit \u2192 Users append year (easy to remember). Policy requires uppercase \u2192 Users capitalize first letter. Policy bans dictionary words \u2192 Users modify existing words (Contoso not in dict). Custom rules exploit psychology: c = capitalize (first letter easiest), $ = append (path of least resistance), Year = memorable (current year), Special = minimal effort (!). Success rate: Targeted attack (60%) vs Generic attack (15%) for policy-compliant passwords. Lesson: Gather intelligence (policy, patterns, company info) BEFORE attacking."
         },
         {
           "title": "Scenario 5: Incremental Mode and Mask Attack for Unknown Password",
           "context": "You've exhausted wordlists against MD5 hash from PHP web app. Straight rockyou failed, rules failed. You KNOW password exists (critical for exam point). Last resort: Brute force with masks. You observed: Username format is 'firstlast', Password pattern might be: firstlast + digits (john1234). Hash type: MD5 (fast, 20 GH/s). Time remaining: 8 hours.",
-          "approach": "1. Extract username from hash file: john. 2. Create mask based on hypothesis: john?d?d?d?d (john + 4 digits). Charset: ?d = digit (0-9). 3. Calculate keyspace: 4-digit = 10^4 = 10,000 combinations. Time: 10,000 ÷ 20B H/s = 0.0005 seconds. 4. Expand if failed: john?d?d?d?d?d?d (6 digits = 1M combinations, 0.05 seconds). 5. Try variations: John?d?d?d?d (capitalized), JOHN?d?d?d?d (uppercase). 6. If still fails: Try incremental: ?l?l?l?l?l?l?l?l (8 lowercase letters = 208B combinations, 2.9 hours).",
+          "approach": "1. Extract username from hash file: john. 2. Create mask based on hypothesis: john?d?d?d?d (john + 4 digits). Charset: ?d = digit (0-9). 3. Calculate keyspace: 4-digit = 10^4 = 10,000 combinations. Time: 10,000 \u00f7 20B H/s = 0.0005 seconds. 4. Expand if failed: john?d?d?d?d?d?d (6 digits = 1M combinations, 0.05 seconds). 5. Try variations: John?d?d?d?d (capitalized), JOHN?d?d?d?d (uppercase). 6. If still fails: Try incremental: ?l?l?l?l?l?l?l?l (8 lowercase letters = 208B combinations, 2.9 hours).",
           "commands": [
             "calculate-keyspace",
             "hashcat-mask-attack",
@@ -93,7 +93,7 @@
             "session-management"
           ],
           "expected_outcome": "Mask john?d?d?d?d tests in <1 second (10k combinations). Success: john:5f4dcc3b5aa765d61d8327deb882cf99:john1234. If failed, expand to 6 digits (1M combinations, still <1 second). Capitalization variations add 3x multiplier (still fast). Incremental mode (8 lowercase) = 2.9 hours (viable if exam time allows). Key: Start specific (mask based on pattern), expand gradually (more characters/positions). Avoid: Full brute force (8-char alphanumeric = 62^8 = 218T combinations = 3 hours even on MD5).",
-          "why_this_works": "Mask attack targets KNOWN patterns (username-based common). Keyspace reduction: 62^8 (218T) → 10^4 (10k) = 21.8 million times smaller. MD5 speed enables brute-force for small keyspaces. Pattern recognition: Developers/admins use: Username + digits (easy to remember), Keyboard patterns (qwerty123), Repeated characters (aaaa1111). Incremental mode: Hashcat/John try SHORT passwords first (length 1, 2, 3...), Most passwords 8-12 chars, Starting from 1 optimizes discovery. Success factors: 1) Fast hash (MD5), 2) Pattern hypothesis (username-based), 3) Small keyspace (4-6 digits). Lesson: When wordlists fail, think patterns before full brute-force."
+          "why_this_works": "Mask attack targets KNOWN patterns (username-based common). Keyspace reduction: 62^8 (218T) \u2192 10^4 (10k) = 21.8 million times smaller. MD5 speed enables brute-force for small keyspaces. Pattern recognition: Developers/admins use: Username + digits (easy to remember), Keyboard patterns (qwerty123), Repeated characters (aaaa1111). Incremental mode: Hashcat/John try SHORT passwords first (length 1, 2, 3...), Most passwords 8-12 chars, Starting from 1 optimizes discovery. Success factors: 1) Fast hash (MD5), 2) Pattern hypothesis (username-based), 3) Small keyspace (4-6 digits). Lesson: When wordlists fail, think patterns before full brute-force."
         }
       ],
       "sections": [
@@ -101,75 +101,222 @@
           "title": "Phase 1: Hash Identification and Analysis",
           "notes": "First step: Identify hash type correctly. Use hashid for automated detection (shows Hashcat/John modes). Manually verify: Length (32=MD5/NTLM, 40=SHA1, 64=SHA256), Prefix ($6$=sha512crypt, $2b$=bcrypt, $1$=md5crypt), Format (hex vs base64 vs custom). Extract hash cleanly: Remove usernames, salts handled by tools. Understand algorithm speed: Fast (MD5, NTLM, SHA1) = Aggressive attacks viable. Slow (bcrypt, scrypt, PBKDF2) = Targeted attacks only.",
           "commands": [
-            "hashid",
-            "hash-identifier",
-            "hash-rate-benchmark"
+            {
+              "id": "hashid",
+              "example": "hashid '5f4dcc3b5aa765d61d8327deb882cf99' -m",
+              "shows": "[+] MD5"
+            },
+            {
+              "id": "hash-identifier",
+              "example": "hash-identifier",
+              "shows": "Possible Hashs:"
+            },
+            {
+              "id": "hash-rate-benchmark",
+              "example": "hashcat -b -m 1000 | grep -A3 'Hashmode:'",
+              "shows": "Hash rate displayed (H/s, kH/s, MH/s, GH/s)"
+            }
           ]
         },
         {
           "title": "Phase 2: Benchmark and Time Estimation",
-          "notes": "Before attacking, estimate time investment. Run benchmark for EXACT hash type (don't assume). Calculate crack time: Total passwords ÷ Hash rate ÷ Parallel tasks. Create decision matrix: <1 hour = Proceed immediately, 1-4 hours = Consider exam time constraints, 4-24 hours = Overnight only, >24 hours = Alternative strategy. Factor in: GPU temperature (throttling reduces speed), Other processes (reduce GPU availability), Exam time remaining (critical constraint).",
+          "notes": "Before attacking, estimate time investment. Run benchmark for EXACT hash type (don't assume). Calculate crack time: Total passwords \u00f7 Hash rate \u00f7 Parallel tasks. Create decision matrix: <1 hour = Proceed immediately, 1-4 hours = Consider exam time constraints, 4-24 hours = Overnight only, >24 hours = Alternative strategy. Factor in: GPU temperature (throttling reduces speed), Other processes (reduce GPU availability), Exam time remaining (critical constraint).",
           "commands": [
-            "hash-rate-benchmark",
-            "calculate-keyspace",
-            "calculate-crack-time",
-            "wordlist-effectiveness",
-            "attack-mode-decision"
+            {
+              "id": "hash-rate-benchmark",
+              "example": "hashcat -b -m 1000 | grep -A3 'Hashmode:'",
+              "shows": "Hash rate displayed (H/s, kH/s, MH/s, GH/s)"
+            },
+            {
+              "id": "calculate-keyspace",
+              "example": "python3 -c \"import math; charset=62; length=8; print(f'Keyspace: {charset**length:,} combinations')\"",
+              "shows": "Keyspace displayed"
+            },
+            {
+              "id": "calculate-crack-time",
+              "example": "python3 -c \"keyspace=218340105584896; hash_rate=1000000000; seconds=keyspace/hash_rate; hours=seconds/3600; print(f'Time: {hours:.2f} hours ({hours/24:.2f} days)')\"",
+              "shows": "Time estimate displayed"
+            },
+            {
+              "id": "wordlist-effectiveness",
+              "example": "wc -l /usr/share/wordlists/rockyou.txt && echo 'With rules: ' && python3 -c \"lines=14344391; rules=64; print(f'{lines * rules:,} total candidates')\"",
+              "shows": "Line count displayed"
+            },
+            {
+              "id": "attack-mode-decision",
+              "example": "echo 'Attack Mode Decision Tree:\\n1. Straight Wordlist (fastest, try first)\\n2. Wordlist + Rules (best balance)\\n3. Combinator (merge wordlists)\\n4. Mask Attack (known pattern)\\n5. Brute Force (last resort)'",
+              "shows": "Decision tree displayed"
+            }
           ]
         },
         {
           "title": "Phase 3: Attack Strategy Selection",
-          "notes": "Choose attack mode based on hash speed + time available. FAST hashes (MD5, NTLM, SHA1): Try straight wordlist → rules (best64) → rules (rockyou-30000) → mask attack. SLOW hashes (bcrypt, sha512crypt): Try top 10k → top 100k → custom targeted wordlist → ABANDON if exceeds time. PATTERN-BASED: Known policy/pattern → Create custom rules → Targeted wordlist. Session management critical: Save session for pause/resume, Monitor progress regularly, Adjust strategy based on ETA.",
+          "notes": "Choose attack mode based on hash speed + time available. FAST hashes (MD5, NTLM, SHA1): Try straight wordlist \u2192 rules (best64) \u2192 rules (rockyou-30000) \u2192 mask attack. SLOW hashes (bcrypt, sha512crypt): Try top 10k \u2192 top 100k \u2192 custom targeted wordlist \u2192 ABANDON if exceeds time. PATTERN-BASED: Known policy/pattern \u2192 Create custom rules \u2192 Targeted wordlist. Session management critical: Save session for pause/resume, Monitor progress regularly, Adjust strategy based on ETA.",
           "commands": [
-            "attack-mode-decision",
-            "hashcat-md5-crack",
-            "hashcat-ntlm-crack",
-            "hashcat-sha256-crack",
-            "hashcat-bcrypt-crack",
-            "hashcat-sha512crypt-crack",
-            "john-wordlist-attack",
-            "john-rules-attack"
+            {
+              "id": "attack-mode-decision",
+              "example": "echo 'Attack Mode Decision Tree:\\n1. Straight Wordlist (fastest, try first)\\n2. Wordlist + Rules (best balance)\\n3. Combinator (merge wordlists)\\n4. Mask Attack (known pattern)\\n5. Brute Force (last resort)'",
+              "shows": "Decision tree displayed"
+            },
+            {
+              "id": "hashcat-md5-crack",
+              "example": "hashcat -m 0 md5_hashes.txt /usr/share/wordlists/rockyou.txt --force",
+              "shows": "Cracked"
+            },
+            {
+              "id": "hashcat-ntlm-crack",
+              "example": "hashcat -m 1000 ntlm_hashes.txt /usr/share/wordlists/rockyou.txt --force",
+              "shows": "Cracked"
+            },
+            {
+              "id": "hashcat-sha256-crack",
+              "example": "hashcat -m 1400 sha256_hashes.txt /usr/share/wordlists/rockyou.txt --force",
+              "shows": "Status...........: Cracked"
+            },
+            {
+              "id": "hashcat-bcrypt-crack",
+              "example": "hashcat -m 3200 bcrypt_hashes.txt /usr/share/wordlists/rockyou.txt --force",
+              "shows": "Cracked"
+            },
+            {
+              "id": "hashcat-sha512crypt-crack",
+              "example": "[Command hashcat-sha512crypt-crack not found in database]",
+              "shows": "See command documentation"
+            },
+            {
+              "id": "john-wordlist-attack",
+              "example": "john --wordlist=/usr/share/wordlists/rockyou.txt hashes.txt",
+              "shows": "Loaded X password hash"
+            },
+            {
+              "id": "john-rules-attack",
+              "example": "john --wordlist=/usr/share/wordlists/rockyou.txt --rules=sshRules ssh.hash",
+              "shows": "guesses: X"
+            }
           ]
         },
         {
           "title": "Phase 4: Rule-Based Attacks",
           "notes": "Rules multiply wordlist effectiveness. Start conservative (best64 = 64 rules, fast), escalate to aggressive (rockyou-30000, slow). Test rules first with --stdout (verify mutations match expectations). Custom rules for intelligence-driven attacks: Create rules matching discovered policy, Use company-specific patterns (names, products), Target seasonal/year patterns (Spring2024!). Rule syntax: $ (append), ^ (prepend), c (capitalize), s (substitute), d (duplicate). Combine operators: c $2 $0 $2 $4 $! = Capitalize + append 2024!",
           "commands": [
-            "hashcat-best64-rules",
-            "hashcat-rockyou-rules",
-            "hashcat-rule-attack",
-            "hashcat-test-rules",
-            "john-rules-attack",
-            "john-test-rules",
-            "create-policy-rules",
-            "rule-capitalize-append",
-            "rule-leet-speak"
+            {
+              "id": "hashcat-best64-rules",
+              "example": "hashcat -m 0 hash.txt /usr/share/wordlists/rockyou.txt -r /usr/share/hashcat/rules/best64.rule --force",
+              "shows": "Session started"
+            },
+            {
+              "id": "hashcat-rockyou-rules",
+              "example": "hashcat -m 1000 ntlm.txt /usr/share/wordlists/rockyou.txt -r /usr/share/hashcat/rules/rockyou-30000.rule --force",
+              "shows": "Session started"
+            },
+            {
+              "id": "hashcat-rule-attack",
+              "example": "hashcat -m 0 hashes.txt /usr/share/wordlists/rockyou.txt -r /usr/share/hashcat/rules/best64.rule --force",
+              "shows": "Guess.Mod........: Rules"
+            },
+            {
+              "id": "hashcat-test-rules",
+              "example": "hashcat passwords.txt -r custom.rule --stdout | head -20",
+              "shows": "Mutated passwords displayed"
+            },
+            {
+              "id": "john-rules-attack",
+              "example": "john --wordlist=/usr/share/wordlists/rockyou.txt --rules=sshRules ssh.hash",
+              "shows": "guesses: X"
+            },
+            {
+              "id": "john-test-rules",
+              "example": "john --wordlist=passwords.txt --rules=KoreLogic --stdout | head -20",
+              "shows": "Mutated passwords displayed"
+            },
+            {
+              "id": "create-policy-rules",
+              "example": "echo -e 'c $2024 $!\\nc $2024 $@\\nc $2024 $#' > policy.rule",
+              "shows": "Rule file created"
+            },
+            {
+              "id": "rule-capitalize-append",
+              "example": "echo 'c $!' > cap-special.rule",
+              "shows": "Rule file created"
+            },
+            {
+              "id": "rule-leet-speak",
+              "example": "echo -e 'sa@\\nse3\\nsi1\\nso0\\nss$' > leet.rule",
+              "shows": "Rule file created"
+            }
           ]
         },
         {
           "title": "Phase 5: Advanced Techniques and Fallback",
           "notes": "If standard attacks fail, use advanced techniques: Mask attacks for known patterns (username?d?d?d?d), Hybrid attacks (wordlist + mask: rockyou.txt ?d?d?d), Combinator attacks (merge two wordlists), Incremental mode (John's smart brute-force). Fallback strategies when cracking fails: Look for password reset functionality, Search for configuration files with plaintext passwords, Check for default credentials (admin:admin), Attempt SQL injection for password change, Find alternative exploitation paths (RCE, file upload, XXE).",
           "commands": [
-            "hashcat-mask-attack",
-            "hashcat-hybrid-attack",
-            "hashcat-combination-attack",
-            "hashcat-increment",
-            "john-incremental-mode",
-            "calculate-keyspace"
+            {
+              "id": "hashcat-mask-attack",
+              "example": "hashcat -m 0 -a 3 hashes.txt ?u?l?l?l?l?d?d?d?s --force",
+              "shows": "Guess.Mask.......: <MASK>"
+            },
+            {
+              "id": "hashcat-hybrid-attack",
+              "example": "hashcat -m 0 -a 6 hashes.txt /usr/share/wordlists/rockyou.txt ?d?d?s --force",
+              "shows": "Guess.Base.......: File, Mask"
+            },
+            {
+              "id": "hashcat-combination-attack",
+              "example": "hashcat -m 0 -a 1 hashes.txt words1.txt words2.txt --force",
+              "shows": "Guess.Base.......: File, File (combination)"
+            },
+            {
+              "id": "hashcat-increment",
+              "example": "hashcat -m 0 -a 3 hashes.txt ?a?a?a?a?a?a --increment --increment-min=4 --increment-max=8 --force",
+              "shows": "Shows discovered services/users/shares"
+            },
+            {
+              "id": "john-incremental-mode",
+              "example": "john --incremental hashes.txt",
+              "shows": "Proceeding with incremental mode"
+            },
+            {
+              "id": "calculate-keyspace",
+              "example": "python3 -c \"import math; charset=62; length=8; print(f'Keyspace: {charset**length:,} combinations')\"",
+              "shows": "Keyspace displayed"
+            }
           ]
         },
         {
           "title": "Phase 6: Results Management and Documentation",
           "notes": "When hash cracks: Verify immediately (attempt authentication with plaintext), Document in notes (hash, plaintext, service, timestamp), Test password reuse (same password on other services), Check hashcat.potfile for persistent storage. Session management: Use --session for named sessions, Resume with --restore, Check status without interrupting (--status). Output management: Save to file with -o, Use --outfile-format=2 for plaintext only, Review hashcat.potfile for all historical cracks.",
           "commands": [
-            "hashcat-show-cracked",
-            "session-management",
-            "monitor-crack-progress",
-            "optimize-crack-performance"
+            {
+              "id": "hashcat-show-cracked",
+              "example": "hashcat -m 0 hashes.txt --show",
+              "shows": "<HASH>:<PASSWORD>"
+            },
+            {
+              "id": "session-management",
+              "example": "hashcat -m 1000 ntlm.txt /usr/share/wordlists/rockyou.txt --session=exam-target1 -o cracked.txt --outfile-format=2",
+              "shows": "Session started"
+            },
+            {
+              "id": "monitor-crack-progress",
+              "example": "watch -n 5 'hashcat --session=exam-target1 --status 2>&1 | grep -E \"Progress|Speed|Recovered|Time\"'",
+              "shows": "Progress percentage increasing"
+            },
+            {
+              "id": "optimize-crack-performance",
+              "example": "hashcat -m 1000 ntlm.txt /usr/share/wordlists/rockyou.txt -w 3 -O --force",
+              "shows": "Higher H/s rate vs. default"
+            }
           ]
         }
       ],
-      "tags": ["PASSWORD_ATTACKS", "HASH_CRACKING", "HASHCAT", "JOHN", "METHODOLOGY", "OSCP:HIGH"]
+      "tags": [
+        "PASSWORD_ATTACKS",
+        "HASH_CRACKING",
+        "HASHCAT",
+        "JOHN",
+        "METHODOLOGY",
+        "OSCP:HIGH"
+      ]
     }
   ]
 }

@@ -1,6 +1,8 @@
 {
-  "id": "ad-silver-ticket-methodology",
-  "name": "Silver Ticket Attack Methodology",
+  "cheatsheets": [
+    {
+      "id": "ad-silver-ticket-methodology",
+      "name": "Silver Ticket Attack Methodology",
   "description": "Complete workflow for forging Kerberos service tickets using service account password hashes. Silver tickets provide service-specific access with lower detection risk than Golden tickets.",
   "category": "active-directory",
   "subcategory": "kerberos-attacks",
@@ -318,5 +320,7 @@
     "Rubeus Silver Ticket: https://github.com/GhostPack/Rubeus#silver",
     "Sean Metcalf's Silver Ticket research: https://adsecurity.org/?p=2011",
     "MITRE ATT&CK T1558.002: https://attack.mitre.org/techniques/T1558/002/"
+  ]
+    }
   ]
 }

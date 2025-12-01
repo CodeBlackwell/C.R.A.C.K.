@@ -32,13 +32,13 @@
             "calculate-crack-time",
             "john-ssh-key-crack"
           ],
-          "expected_outcome": "ssh2john outputs: id_rsa:$sshng$0$8$salt$1184$encrypted_data. Grep shows: Cipher: aes-128-cbc. Tool choice: John the Ripper (supports all ciphers). Benchmark: john --test --format=SSH → ~5,000 c/s (candidates per second). Time: rockyou (14M) ÷ 5,000 c/s = 2,800 seconds = 47 minutes. Strategy: Straight rockyou first. Success: id_rsa:$sshng$...:summer2023. Verification: chmod 600 id_rsa; ssh -i id_rsa developer@192.168.45.100 (enter passphrase 'summer2023', gain shell).",
+          "expected_outcome": "ssh2john outputs: id_rsa:$sshng$0$8$salt$1184$encrypted_data. Grep shows: Cipher: aes-128-cbc. Tool choice: John the Ripper (supports all ciphers). Benchmark: john --test --format=SSH \u2192 ~5,000 c/s (candidates per second). Time: rockyou (14M) \u00f7 5,000 c/s = 2,800 seconds = 47 minutes. Strategy: Straight rockyou first. Success: id_rsa:$sshng$...:summer2023. Verification: chmod 600 id_rsa; ssh -i id_rsa developer@192.168.45.100 (enter passphrase 'summer2023', gain shell).",
           "why_this_works": "SSH private keys can be passphrase-protected (encrypts key with user password). Common ciphers: aes-128-cbc, aes-256-cbc, aes-256-ctr. John the Ripper supports ALL OpenSSH ciphers (broader compatibility). Hashcat limited to aes-256-cbc only (mode 22921). Users often choose WEAK passphrases (defeats purpose of encryption). Common passphrase patterns: Season + year (summer2023), Same as login password, Simple words (password, qwerty). Success because: User chose common passphrase, Passphrase in rockyou wordlist, Tools can extract and test passphrases. Speed: SSH hash cracking moderate (5k c/s typical), faster than KeePass, slower than NTLM."
         },
         {
           "title": "Scenario 2: Modern SSH Key with aes-256-ctr Cipher",
           "context": "Git repository enumeration reveals accidentally committed SSH key: .git/objects/.../id_rsa_backup. Key generated with modern OpenSSH (version 7.8+). Extract hash with ssh2john and notice cipher: $sshng$2$ (aes-256-ctr). Attempt Hashcat mode 22921 fails with error: 'Token length exception'. Modern keys use aes-256-ctr which Hashcat does NOT support. Must use John the Ripper instead.",
-          "approach": "1. Extract hash: ssh2john id_rsa_backup > ssh.hash. 2. Identify cipher: $sshng$2$ indicates aes-256-ctr (modern OpenSSH default). 3. Test Hashcat compatibility: hashcat -m 22921 ssh.hash rockyou.txt → ERROR: Token length exception. 4. Switch to John: john --wordlist=rockyou.txt ssh.hash. 5. Use rules for better coverage: john --wordlist=rockyou.txt --rules=Wordlist ssh.hash. 6. Monitor progress: john --show ssh.hash (displays cracked passwords). 7. Check status: john --status (shows progress and ETA).",
+          "approach": "1. Extract hash: ssh2john id_rsa_backup > ssh.hash. 2. Identify cipher: $sshng$2$ indicates aes-256-ctr (modern OpenSSH default). 3. Test Hashcat compatibility: hashcat -m 22921 ssh.hash rockyou.txt \u2192 ERROR: Token length exception. 4. Switch to John: john --wordlist=rockyou.txt ssh.hash. 5. Use rules for better coverage: john --wordlist=rockyou.txt --rules=Wordlist ssh.hash. 6. Monitor progress: john --show ssh.hash (displays cracked passwords). 7. Check status: john --status (shows progress and ETA).",
           "commands": [
             "ssh2john-extract",
             "hashid",
@@ -47,23 +47,23 @@
             "john-show-cracked",
             "john-status"
           ],
-          "expected_outcome": "Hashcat fails with token error. John successfully processes hash. With rules, cracking completes: id_rsa_backup:$sshng$2$...:Welcome2024! (capitalized + year + special char). Time: Straight rockyou = 50 minutes (no hit). With Wordlist rules (~1,600 rules) = 20 hours (overnight job). Success on rule variation: welcome → Welcome2024! Verification: ssh -i id_rsa_backup user@target. Key insight: Modern SSH keys require John (NOT Hashcat). Rules critical for policy-compliant passphrases.",
+          "expected_outcome": "Hashcat fails with token error. John successfully processes hash. With rules, cracking completes: id_rsa_backup:$sshng$2$...:Welcome2024! (capitalized + year + special char). Time: Straight rockyou = 50 minutes (no hit). With Wordlist rules (~1,600 rules) = 20 hours (overnight job). Success on rule variation: welcome \u2192 Welcome2024! Verification: ssh -i id_rsa_backup user@target. Key insight: Modern SSH keys require John (NOT Hashcat). Rules critical for policy-compliant passphrases.",
           "why_this_works": "OpenSSH 7.8+ defaults to aes-256-ctr cipher (more secure than CBC modes). Hashcat development focused on common formats (didn't implement all SSH ciphers). John the Ripper supports: aes-128-cbc, aes-192-cbc, aes-256-cbc, aes-128-ctr, aes-192-ctr, aes-256-ctr, 3des-cbc. Modern environments generate keys with: ssh-keygen -t rsa (defaults to aes-256-ctr since OpenSSH 7.8). Rules increase success for policy-compliant passphrases: Capitalization, Year appending, Special char requirements. Success factors: Tool compatibility (John only), Rule-based mutations, Patience (overnight cracking). Lesson: Check cipher BEFORE choosing tool (avoid wasted time)."
         },
         {
           "title": "Scenario 3: Unencrypted SSH Key - Direct Usage",
-          "context": "File transfer directory enumeration reveals: backup_keys.tar.gz. Extract archive and find: id_rsa_prod, id_rsa_dev, id_rsa_staging. Test encryption status: grep ENCRYPTED id_rsa_prod → No results. Key has NO passphrase (unencrypted private key). Can use directly without cracking. Goal: Determine which systems accept this key and gain access.",
+          "context": "File transfer directory enumeration reveals: backup_keys.tar.gz. Extract archive and find: id_rsa_prod, id_rsa_dev, id_rsa_staging. Test encryption status: grep ENCRYPTED id_rsa_prod \u2192 No results. Key has NO passphrase (unencrypted private key). Can use directly without cracking. Goal: Determine which systems accept this key and gain access.",
           "approach": "1. Verify key is unencrypted: ssh2john id_rsa_prod (outputs 'Not an encrypted key' error). 2. Set correct permissions: chmod 600 id_rsa_prod (SSH requires strict permissions). 3. Test key on known hosts: ssh -i id_rsa_prod user@target (if no passphrase prompt = unencrypted). 4. Enumerate potential usernames: Common (root, admin, developer, ubuntu, ec2-user), From web app (database users, config files), From /etc/passwd (if previously enumerated). 5. Test combinations: for user in root admin developer; do ssh -i id_rsa_prod $user@target; done. 6. Check authorized_keys for clues: Public key comment often contains username.",
           "commands": [
             "ssh2john-extract"
           ],
-          "expected_outcome": "ssh2john reports: 'Not an encrypted key' (indicates no passphrase). Direct SSH attempt: ssh -i id_rsa_prod developer@192.168.45.100 → Immediate login (no passphrase prompt). Gained shell as 'developer' user. No cracking needed - unencrypted keys provide immediate access. Security finding: Unencrypted SSH key = severe vulnerability (anyone with file has access). Check key usage: ls -la ~/.ssh/authorized_keys (see which systems trust this key). Enumerate: sudo -l (check sudo privileges), cron jobs (scheduled tasks), Network connections (lateral movement).",
+          "expected_outcome": "ssh2john reports: 'Not an encrypted key' (indicates no passphrase). Direct SSH attempt: ssh -i id_rsa_prod developer@192.168.45.100 \u2192 Immediate login (no passphrase prompt). Gained shell as 'developer' user. No cracking needed - unencrypted keys provide immediate access. Security finding: Unencrypted SSH key = severe vulnerability (anyone with file has access). Check key usage: ls -la ~/.ssh/authorized_keys (see which systems trust this key). Enumerate: sudo -l (check sudo privileges), cron jobs (scheduled tasks), Network connections (lateral movement).",
           "why_this_works": "SSH keys can be generated without passphrase: ssh-keygen -t rsa (press Enter when prompted for passphrase = no encryption). Unencrypted keys stored in plaintext (base64-encoded but NOT encrypted). File possession = authentication capability (no password needed). Use cases: Automation scripts (cron, CI/CD), Service accounts, Lazy administrators. Detection: ssh2john fails on unencrypted keys, No 'ENCRYPTED' header in key file, SSH doesn't prompt for passphrase. Success immediate: chmod 600 + ssh -i <key> = access. Risk: Keys often more powerful than passwords (service accounts, root access, trusted systems). Document finding for report: Critical vulnerability."
         },
         {
           "title": "Scenario 4: Custom Wordlist Based on Key Context",
           "context": "Backup directory contains: developer_id_rsa (encrypted SSH key), developer_notes.txt (text file with: 'SSH key passphrase: my cat's name + birth year'). Intelligence gathered: Developer has cat photos on desktop (filename: Whiskers_2019.jpg). Hypothesis: Passphrase is 'Whiskers2019' or variations. Create targeted wordlist instead of blind rockyou attack.",
-          "approach": "1. Extract hash: ssh2john developer_id_rsa > dev.hash. 2. Create custom wordlist from intelligence: Cat name variations (Whiskers, whiskers, WHISKERS), Years (2015-2024 for birth years), Combinations (Whiskers2019, whiskers2019, Whiskers19). 3. Add common patterns: CatName + Year, catname + Year, CATNAME + YEAR, Cat + year + special (Whiskers2019!). 4. Generate: echo -e 'Whiskers2019\\nwhiskers2019\\nWhiskers19\\nWhiskers2019!' > custom.txt. 5. Calculate: ~50 candidates ÷ 5,000 c/s = instant. 6. Run: john --wordlist=custom.txt dev.hash.",
+          "approach": "1. Extract hash: ssh2john developer_id_rsa > dev.hash. 2. Create custom wordlist from intelligence: Cat name variations (Whiskers, whiskers, WHISKERS), Years (2015-2024 for birth years), Combinations (Whiskers2019, whiskers2019, Whiskers19). 3. Add common patterns: CatName + Year, catname + Year, CATNAME + YEAR, Cat + year + special (Whiskers2019!). 4. Generate: echo -e 'Whiskers2019\\nwhiskers2019\\nWhiskers19\\nWhiskers2019!' > custom.txt. 5. Calculate: ~50 candidates \u00f7 5,000 c/s = instant. 6. Run: john --wordlist=custom.txt dev.hash.",
           "commands": [
             "ssh2john-extract",
             "create-policy-rules",
@@ -72,7 +72,7 @@
             "john-show-cracked"
           ],
           "expected_outcome": "Custom wordlist attack completes instantly (<1 second). Success: developer_id_rsa:$sshng$...:Whiskers2019! (capitalized name + year + special char). Intelligence-driven attack: 10 minutes (wordlist creation) + 1 second (cracking) vs 47 minutes (blind rockyou). Verification: ssh -i developer_id_rsa developer@target. Key insight: Context clues (notes, files, usernames) create effective custom wordlists. 50 targeted candidates > 14M generic candidates. Time savings critical in exam scenarios.",
-          "why_this_works": "Humans choose memorable passphrases (personal significance). Common sources: Pet names, Family members, Important dates, Hobbies/interests. Context clues reveal patterns: Notes/documentation (explicit hints), File names (Whiskers_2019.jpg), User profiles (social media, employee directory). Small targeted wordlist advantages: Fast creation (manual), Instant cracking (small keyspace), High success rate (intelligence-driven). Math: 50 candidates ÷ 5,000 c/s = 0.01 seconds vs rockyou 14M ÷ 5,000 = 47 minutes. Success because: User followed common pattern, Intelligence provided key variables, Custom wordlist captured variations. Methodology: Always search for context BEFORE attacking."
+          "why_this_works": "Humans choose memorable passphrases (personal significance). Common sources: Pet names, Family members, Important dates, Hobbies/interests. Context clues reveal patterns: Notes/documentation (explicit hints), File names (Whiskers_2019.jpg), User profiles (social media, employee directory). Small targeted wordlist advantages: Fast creation (manual), Instant cracking (small keyspace), High success rate (intelligence-driven). Math: 50 candidates \u00f7 5,000 c/s = 0.01 seconds vs rockyou 14M \u00f7 5,000 = 47 minutes. Success because: User followed common pattern, Intelligence provided key variables, Custom wordlist captured variations. Methodology: Always search for context BEFORE attacking."
         },
         {
           "title": "Scenario 5: Multiple Keys - Prioritization Strategy",
@@ -98,51 +98,126 @@
           "title": "Phase 2: Encryption Status Verification",
           "notes": "Determine if key is encrypted before attempting extraction. Encrypted indicators: Header 'Proc-Type: 4,ENCRYPTED', Header 'DEK-Info: AES-256-CBC,...', ssh2john succeeds (outputs hash). Unencrypted indicators: No ENCRYPTED header, ssh2john fails with 'Not an encrypted key', SSH accepts key without passphrase prompt. Quick test: ssh -i <KEY> user@target (no passphrase prompt = unencrypted). Unencrypted keys: Use immediately (no cracking needed), Document as critical finding (security vulnerability). Encrypted keys: Proceed to hash extraction (requires passphrase cracking).",
           "commands": [
-            "ssh2john-extract"
+            {
+              "id": "ssh2john-extract",
+              "example": "ssh2john id_rsa > ssh.hash",
+              "shows": "$sshng$"
+            }
           ]
         },
         {
           "title": "Phase 3: Hash Extraction and Tool Selection",
           "notes": "Extract passphrase hash using ssh2john. Syntax: ssh2john <KEYFILE> > hash.txt. Clean hash: Remove 'filename:' prefix for Hashcat (keep for John). Identify cipher from hash: $sshng$0$ = aes-128-cbc (Hashcat compatible), $sshng$1$ = aes-192-cbc (Hashcat compatible), $sshng$2$ = aes-256-ctr (John ONLY), $sshng$6$ = aes-256-cbc (Hashcat compatible). Tool selection: Hashcat = aes-256-cbc only (mode 22921), fast on GPU. John = ALL ciphers, CPU-based, broader compatibility. Benchmark both: hashcat -b -m 22921 (if compatible), john --test --format=SSH. Choose faster tool for your hardware + cipher combination.",
           "commands": [
-            "ssh2john-extract",
-            "hashid",
-            "hash-identifier",
-            "hash-rate-benchmark"
+            {
+              "id": "ssh2john-extract",
+              "example": "ssh2john id_rsa > ssh.hash",
+              "shows": "$sshng$"
+            },
+            {
+              "id": "hashid",
+              "example": "hashid '5f4dcc3b5aa765d61d8327deb882cf99' -m",
+              "shows": "[+] MD5"
+            },
+            {
+              "id": "hash-identifier",
+              "example": "hash-identifier",
+              "shows": "Possible Hashs:"
+            },
+            {
+              "id": "hash-rate-benchmark",
+              "example": "hashcat -b -m 1000 | grep -A3 'Hashmode:'",
+              "shows": "Hash rate displayed (H/s, kH/s, MH/s, GH/s)"
+            }
           ]
         },
         {
           "title": "Phase 4: Intelligence Gathering for Custom Wordlists",
           "notes": "Before blind dictionary attacks, search for context clues to create targeted wordlist. Look for: README files (password hints, naming conventions), User profiles (pet names, birth years, interests), File names (personal photos, documents with dates), Code comments (passphrase format hints), Documentation (password policies, company naming standards). Common SSH passphrase patterns: Season + Year (Summer2024), Username + digits (john1234), Pet name + year (Whiskers2019), Company + year (Contoso2024!). Create custom wordlist: List key variables (names, years, company), Generate combinations (capitalization, special chars), Test variations (append, prepend). Custom wordlist benefits: Smaller keyspace (faster), Higher success rate (intelligence-driven), Time-efficient (exam scenarios).",
           "commands": [
-            "create-policy-rules",
-            "rule-capitalize-append",
-            "rule-prepend-year",
-            "wordlist-effectiveness"
+            {
+              "id": "create-policy-rules",
+              "example": "echo -e 'c $2024 $!\\nc $2024 $@\\nc $2024 $#' > policy.rule",
+              "shows": "Rule file created"
+            },
+            {
+              "id": "rule-capitalize-append",
+              "example": "echo 'c $!' > cap-special.rule",
+              "shows": "Rule file created"
+            },
+            {
+              "id": "rule-prepend-year",
+              "example": "echo '^2 ^0 ^2 ^4' > prepend-year.rule",
+              "shows": "Rule file created"
+            },
+            {
+              "id": "wordlist-effectiveness",
+              "example": "wc -l /usr/share/wordlists/rockyou.txt && echo 'With rules: ' && python3 -c \"lines=14344391; rules=64; print(f'{lines * rules:,} total candidates')\"",
+              "shows": "Line count displayed"
+            }
           ]
         },
         {
           "title": "Phase 5: Cracking Execution",
           "notes": "Launch passphrase cracking with appropriate tool and strategy. For Hashcat-compatible ciphers (aes-256-cbc): hashcat -m 22921 hash.txt rockyou.txt, Add rules if needed: -r /usr/share/hashcat/rules/best64.rule. For John-only ciphers (aes-256-ctr): john --wordlist=rockyou.txt hash.txt, Use rules: --rules=Wordlist. Session management: Hashcat: --session=ssh-crack (pause/resume), John: Automatic restore (john --restore). Monitor progress: Hashcat: --status, John: --status, Check results: john --show hash.txt. Time estimates: SSH keys moderate speed (~5,000 c/s), Faster than KeePass, slower than NTLM. Adjust strategy based on time constraints.",
           "commands": [
-            "hashcat-ssh-key-crack",
-            "john-ssh-key-crack",
-            "hashcat-rule-attack",
-            "john-rules-attack",
-            "john-show-cracked",
-            "john-status",
-            "session-management"
+            {
+              "id": "hashcat-ssh-key-crack",
+              "example": "hashcat -m 22921 ssh.hash custom_wordlist.txt -r custom.rule --force",
+              "shows": "Cracked"
+            },
+            {
+              "id": "john-ssh-key-crack",
+              "example": "john --wordlist=custom_wordlist.txt --rules=sshRules ssh.hash",
+              "shows": "Loaded 1 password hash (SSH [RSA/DSA/EC/OPENSSH])"
+            },
+            {
+              "id": "hashcat-rule-attack",
+              "example": "hashcat -m 0 hashes.txt /usr/share/wordlists/rockyou.txt -r /usr/share/hashcat/rules/best64.rule --force",
+              "shows": "Guess.Mod........: Rules"
+            },
+            {
+              "id": "john-rules-attack",
+              "example": "john --wordlist=/usr/share/wordlists/rockyou.txt --rules=sshRules ssh.hash",
+              "shows": "guesses: X"
+            },
+            {
+              "id": "john-show-cracked",
+              "example": "john --show hashes.txt",
+              "shows": "username:password"
+            },
+            {
+              "id": "john-status",
+              "example": "john --status",
+              "shows": "Session..........: "
+            },
+            {
+              "id": "session-management",
+              "example": "hashcat -m 1000 ntlm.txt /usr/share/wordlists/rockyou.txt --session=exam-target1 -o cracked.txt --outfile-format=2",
+              "shows": "Session started"
+            }
           ]
         },
         {
           "title": "Phase 6: Key Usage and Verification",
           "notes": "After successful passphrase crack, use key for SSH authentication. Preparation: Set correct permissions: chmod 600 <KEYFILE> (SSH requires this). Verify passphrase: ssh -i <KEYFILE> user@target (enter cracked passphrase). Common issues: 'Permissions too open' = chmod 600 needed, 'Permission denied (publickey)' = Wrong username or key not authorized, 'Load key: invalid format' = Corrupted key or wrong format. Troubleshooting: Test with verbose: ssh -v -i <KEYFILE> user@target, Check authorized_keys on target: cat ~/.ssh/authorized_keys (must contain matching public key). Post-access: Enumerate privileges: sudo -l, Check other authorized_keys: find /home -name authorized_keys 2>/dev/null, Look for key comments (public key often has username@hostname).",
           "commands": [
-            "john-show-cracked"
+            {
+              "id": "john-show-cracked",
+              "example": "john --show hashes.txt",
+              "shows": "username:password"
+            }
           ]
         }
       ],
-      "tags": ["PASSWORD_ATTACKS", "SSH", "PRIVATE_KEY", "PASSPHRASE", "JOHN", "OSCP:HIGH"]
+      "tags": [
+        "PASSWORD_ATTACKS",
+        "SSH",
+        "PRIVATE_KEY",
+        "PASSPHRASE",
+        "JOHN",
+        "OSCP:HIGH"
+      ]
     }
   ]
 }

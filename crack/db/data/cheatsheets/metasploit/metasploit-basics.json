@@ -87,50 +87,130 @@
           "title": "Phase 1: Initial Setup (One-Time Configuration)",
           "notes": "Run once per Kali installation. Database persists across reboots. If Metasploit updates break database, run msfdb reinit (preserves data). Estimated time: 3-5 minutes.",
           "commands": [
-            "msf-db-init",
-            "msf-db-status",
-            "msf-console-start"
+            {
+              "id": "msf-db-init",
+              "example": "sudo msfdb init",
+              "shows": "Starting database"
+            },
+            {
+              "id": "msf-db-status",
+              "example": "db_status",
+              "shows": "Connected to msf"
+            },
+            {
+              "id": "msf-console-start",
+              "example": "msfconsole -q",
+              "shows": "msf6 > prompt appears"
+            }
           ]
         },
         {
           "title": "Phase 2: Workspace Management (Per Engagement)",
           "notes": "Create workspace before any scanning. Best practice: 1 workspace per target or network segment. Workspace names are case-sensitive. Delete completed workspaces to reduce database size: workspace -d old-target. Estimated time: 30 seconds per workspace.",
           "commands": [
-            "msf-workspace-add",
-            "msf-workspace-list",
-            "msf-workspace-switch",
-            "msf-workspace-delete"
+            {
+              "id": "msf-workspace-add",
+              "example": "[Command msf-workspace-add not found in database]",
+              "shows": "See command documentation"
+            },
+            {
+              "id": "msf-workspace-list",
+              "example": "workspace",
+              "shows": "Workspace list displayed"
+            },
+            {
+              "id": "msf-workspace-switch",
+              "example": "workspace client_pentest_2024",
+              "shows": "Workspace: <name> (confirmation message)"
+            },
+            {
+              "id": "msf-workspace-delete",
+              "example": "[Command msf-workspace-delete not found in database]",
+              "shows": "See command documentation"
+            }
           ]
         },
         {
           "title": "Phase 3: Reconnaissance Import (After Nmap)",
           "notes": "Import nmap XML immediately after scanning. Supports nmap XML (-oX), nmap grepable (-oG less reliable). Import updates existing hosts (doesn't duplicate). Estimated time: 10-30 seconds for import, instant query access.",
           "commands": [
-            "msf-db-import",
-            "msf-hosts-list",
-            "msf-services-list",
-            "msf-services-filter-port"
+            {
+              "id": "msf-db-import",
+              "example": "db_import /home/kali/scans/network.xml",
+              "shows": "Importing data..."
+            },
+            {
+              "id": "msf-hosts-list",
+              "example": "[Command msf-hosts-list not found in database]",
+              "shows": "See command documentation"
+            },
+            {
+              "id": "msf-services-list",
+              "example": "[Command msf-services-list not found in database]",
+              "shows": "See command documentation"
+            },
+            {
+              "id": "msf-services-filter-port",
+              "example": "[Command msf-services-filter-port not found in database]",
+              "shows": "See command documentation"
+            }
           ]
         },
         {
           "title": "Phase 4: Module Discovery (Target Selection)",
           "notes": "Search before manual Googling (Metasploit often has ready modules). Combine search filters: search type:exploit platform:linux cve:2021. Module path shows purpose: auxiliary/scanner = enumeration, exploit/windows/smb = exploitation. Estimated time: 1-3 minutes to find relevant module.",
           "commands": [
-            "msf-search-keyword",
-            "msf-search-type",
-            "msf-search-platform",
-            "msf-search-cve",
-            "msf-info-module"
+            {
+              "id": "msf-search-keyword",
+              "example": "[Command msf-search-keyword not found in database]",
+              "shows": "See command documentation"
+            },
+            {
+              "id": "msf-search-type",
+              "example": "[Command msf-search-type not found in database]",
+              "shows": "See command documentation"
+            },
+            {
+              "id": "msf-search-platform",
+              "example": "[Command msf-search-platform not found in database]",
+              "shows": "See command documentation"
+            },
+            {
+              "id": "msf-search-cve",
+              "example": "[Command msf-search-cve not found in database]",
+              "shows": "See command documentation"
+            },
+            {
+              "id": "msf-info-module",
+              "example": "info exploit/windows/smb/ms17_010_eternalblue",
+              "shows": "Module details displayed (Name, Module, License, Rank, etc)"
+            }
           ]
         },
         {
           "title": "Phase 5: Module Configuration (Pre-Execution)",
           "notes": "Always run show options before executing. Required options show 'yes' in Required column, no default value (must set). Optional options have defaults (can override). Use show advanced for rarely-used settings (timeouts, threads). Estimated time: 30-60 seconds to configure.",
           "commands": [
-            "msf-use-module",
-            "msf-show-options",
-            "msf-set-option",
-            "msf-show-advanced"
+            {
+              "id": "msf-use-module",
+              "example": "use exploit/multi/handler",
+              "shows": "Prompt changes to show module type and path"
+            },
+            {
+              "id": "msf-show-options",
+              "example": "show options",
+              "shows": "Options table displayed with columns: Name, Current Setti..."
+            },
+            {
+              "id": "msf-set-option",
+              "example": "set RHOSTS 192.168.45.100",
+              "shows": "OPTION => VALUE confirmation message"
+            },
+            {
+              "id": "msf-show-advanced",
+              "example": "[Command msf-show-advanced not found in database]",
+              "shows": "See command documentation"
+            }
           ]
         }
       ],

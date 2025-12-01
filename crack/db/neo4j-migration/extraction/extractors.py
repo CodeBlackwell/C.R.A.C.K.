@@ -504,7 +504,7 @@ class CheatsheetsExtractor(NodeRelationshipExtractor):
             if not sheet_id:
                 continue
 
-            # Extract command IDs from scenarios
+            # Extract command IDs from scenarios (remain as simple strings)
             for scenario in sheet.get('scenarios', []):
                 for cmd_id in scenario.get('commands', []):
                     if cmd_id:
@@ -513,19 +513,42 @@ class CheatsheetsExtractor(NodeRelationshipExtractor):
                             'command_id': cmd_id,
                             'context': 'scenario',
                             'scenario_title': safe_get(scenario, 'title'),
-                            'section_title': ''  # Empty for scenarios
+                            'section_title': '',  # Empty for scenarios
+                            'example': '',
+                            'shows': ''
                         })
 
-            # Extract command IDs from sections
+            # Extract command IDs from sections (support both string and object format)
             for section in sheet.get('sections', []):
-                for cmd_id in section.get('commands', []):
+                for cmd in section.get('commands', []):
+                    if not cmd:
+                        continue
+
+                    # Handle both formats:
+                    # Old: "command-id" (string)
+                    # New: {"id": "command-id", "example": "...", "shows": "..."} (object)
+                    if isinstance(cmd, str):
+                        # Old string format (backward compatible)
+                        cmd_id = cmd
+                        example = ''
+                        shows = ''
+                    elif isinstance(cmd, dict):
+                        # New object format with example
+                        cmd_id = cmd.get('id', '')
+                        example = cmd.get('example', '')
+                        shows = cmd.get('shows', '')
+                    else:
+                        continue
+
                     if cmd_id:
                         relationships.append({
                             'cheatsheet_id': sheet_id,
                             'command_id': cmd_id,
                             'context': 'section',
                             'scenario_title': '',  # Empty for sections
-                            'section_title': safe_get(section, 'title')
+                            'section_title': safe_get(section, 'title'),
+                            'example': example,
+                            'shows': shows
                         })
 
         return relationships

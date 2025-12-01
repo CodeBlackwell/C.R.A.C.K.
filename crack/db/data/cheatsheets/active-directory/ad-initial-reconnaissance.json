@@ -84,53 +84,145 @@
           "title": "Phase 1: Confirm Domain Membership & Identify DCs",
           "notes": "First verify you're in a domain environment (not standalone/workgroup). Identify domain controllers (primary targets for enumeration). These commands work from any Windows shell without special privileges.",
           "commands": [
-            "net-user-domain-list",
-            "net-domain-controllers"
+            {
+              "id": "net-user-domain-list",
+              "example": "net user /domain",
+              "shows": "User accounts for \\\\"
+            },
+            {
+              "id": "net-domain-controllers",
+              "example": "nltest /dclist:corp.com",
+              "shows": "PDC"
+            }
           ]
         },
         {
           "title": "Phase 2: Basic Object Enumeration (Legacy Tools)",
           "notes": "Enumerate users, groups, and computers using built-in net.exe commands. This works in highly restricted environments (AppLocker, constrained language mode). Start here if PowerShell is unavailable or blocked.",
           "commands": [
-            "net-user-domain-list",
-            "net-group-domain-admins",
-            "net-group-domain-computers",
-            "setspn-list-all"
+            {
+              "id": "net-user-domain-list",
+              "example": "net user /domain",
+              "shows": "User accounts for \\\\"
+            },
+            {
+              "id": "net-group-domain-admins",
+              "example": "net group \"Domain Admins\" /domain",
+              "shows": "Group name"
+            },
+            {
+              "id": "net-group-domain-computers",
+              "example": "net group \"Domain Computers\" /domain",
+              "shows": "Group name"
+            },
+            {
+              "id": "setspn-list-all",
+              "example": "setspn -T corp.com -Q */*",
+              "shows": "CN="
+            }
           ]
         },
         {
           "title": "Phase 3: Manual PowerShell LDAP Queries",
           "notes": "If PowerShell is available but you can't/won't import modules (opsec concern), use native .NET DirectorySearcher. Create the LDAPSearch function once, then run targeted queries. This approach avoids 'Invoke-' cmdlets that trigger alerts.",
           "commands": [
-            "ps-ldapsearch-function",
-            "ps-ldapsearch-users",
-            "ps-ldapsearch-computers",
-            "ps-ldapsearch-groups",
-            "ps-ldapsearch-spns"
+            {
+              "id": "ps-ldapsearch-function",
+              "example": "function LDAPSearch { param ([string]$LDAPQuery); $PDC = [System.DirectoryServices.ActiveDirectory.Domain]::GetCurrentDomain().PdcRoleOwner.Name; $DistinguishedName = ([adsi]'').distinguishedName; $DirectoryEntry = New-Object System.DirectoryServices.DirectoryEntry(\"LDAP://$PDC/$DistinguishedName\"); $DirectorySearcher = New-Object System.DirectoryServices.DirectorySearcher($DirectoryEntry, $LDAPQuery); return $DirectorySearcher.FindAll() }",
+              "shows": "Function created successfully"
+            },
+            {
+              "id": "ps-ldapsearch-users",
+              "example": "LDAPSearch -LDAPQuery \"(objectClass=user)\"",
+              "shows": "Properties"
+            },
+            {
+              "id": "ps-ldapsearch-computers",
+              "example": "LDAPSearch -LDAPQuery \"(objectClass=computer)\"",
+              "shows": "dnshostname"
+            },
+            {
+              "id": "ps-ldapsearch-groups",
+              "example": "LDAPSearch -LDAPQuery \"(objectClass=group)\"",
+              "shows": "cn"
+            },
+            {
+              "id": "ps-ldapsearch-spns",
+              "example": "LDAPSearch -LDAPQuery \"(&(objectClass=user)(servicePrincipalName=*))\"",
+              "shows": "serviceprincipalname"
+            }
           ]
         },
         {
           "title": "Phase 4: PowerView Comprehensive Enumeration",
           "notes": "If PowerView is loaded (or can be loaded), use automated cmdlets for rapid enumeration. This is the fastest approach but generates more PowerShell event log entries (4103, 4104). Use when speed > stealth.",
           "commands": [
-            "powerview-get-netdomain",
-            "powerview-get-netdomaincontroller",
-            "powerview-get-netuser-all",
-            "powerview-get-netuser-spn",
-            "powerview-get-netgroup-recursive",
-            "powerview-get-netcomputer-all",
-            "powerview-get-netou",
-            "powerview-get-netgpo"
+            {
+              "id": "powerview-get-netdomain",
+              "example": "Get-NetDomain",
+              "shows": "Forest"
+            },
+            {
+              "id": "powerview-get-netdomaincontroller",
+              "example": "Get-NetDomainController",
+              "shows": "Forest"
+            },
+            {
+              "id": "powerview-get-netuser-all",
+              "example": "Get-NetUser | select samaccountname,description,pwdlastset,lastlogon",
+              "shows": "samaccountname"
+            },
+            {
+              "id": "powerview-get-netuser-spn",
+              "example": "Get-NetUser -SPN | select samaccountname,serviceprincipalname",
+              "shows": "samaccountname"
+            },
+            {
+              "id": "powerview-get-netgroup-recursive",
+              "example": "Get-NetGroupMember -GroupName \"Domain Admins\" -Recurse",
+              "shows": "MemberName"
+            },
+            {
+              "id": "powerview-get-netcomputer-all",
+              "example": "Get-NetComputer | select dnshostname,operatingsystem,lastlogon",
+              "shows": "dnshostname"
+            },
+            {
+              "id": "powerview-get-netou",
+              "example": "Get-NetOU | select name,distinguishedname",
+              "shows": "name"
+            },
+            {
+              "id": "powerview-get-netgpo",
+              "example": "Get-NetGPO | select displayname,whenchanged",
+              "shows": "displayname"
+            }
           ]
         },
         {
           "title": "Phase 5: Advanced Queries (dsquery)",
           "notes": "Fallback option when PowerShell is blocked but dsquery.exe is available (often on older systems or DCs). Provides LDAP filter capabilities without PowerShell. Less friendly output (DNs not usernames) but same intelligence.",
           "commands": [
-            "dsquery-users",
-            "dsquery-computers",
-            "dsquery-admins",
-            "dsquery-domain-controllers"
+            {
+              "id": "dsquery-users",
+              "example": "dsquery user",
+              "shows": "CN="
+            },
+            {
+              "id": "dsquery-computers",
+              "example": "dsquery computer",
+              "shows": "CN="
+            },
+            {
+              "id": "dsquery-admins",
+              "example": "dsquery group -name \"Domain Admins\" | dsget group -members",
+              "shows": "CN="
+            },
+            {
+              "id": "dsquery-domain-controllers",
+              "example": "dsquery server",
+              "shows": "CN="
+            }
           ]
         }
       ],

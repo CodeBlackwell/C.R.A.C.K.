@@ -75,7 +75,7 @@
         {
           "title": "Scenario 5: Complete OSCP Lab Workflow - Group to Flag",
           "context": "Full OSCP lab scenario: 'Start VM Group 2, log in to CLIENT75 as stephanie. Use PowerShell to enumerate the Service Personnel group, starting with basic enumeration. Unravel nested groups, enumerate attributes for the last direct user member, and obtain the flag.' This is the complete step-by-step workflow from login to flag submission.",
-          "approach": "Step 1 - Verify domain access:\n  whoami /fqdn\n  Expected: corp\\stephanie\n  Confirms domain credentials and context.\n\nStep 2 - Open PowerShell:\n  Start menu → Windows PowerShell\n  Or from cmd: powershell.exe\n\nStep 3 - Create LDAP infrastructure:\n  Paste LDAPSearch function (ps-ldapsearch-function)\n  Verify: LDAPSearch -LDAPQuery \"(objectClass=user)\"\n  Should return user objects.\n\nStep 4 - Basic group enumeration:\n  LDAPSearch -LDAPQuery \"(&(objectCategory=group)(name=Service Personnel))\"\n  Check Properties.member to see if nested groups exist\n  Look for CN= paths containing other group names.\n\nStep 5 - Recursive enumeration (choose method):\n  Method A (PowerView): Get-DomainGroupMember -Identity \"Service Personnel\" -Recurse\n  Method B (Manual): Copy-paste ps-nested-group-one-liner\n\nStep 6 - Identify last user:\n  PowerView: ($members | Where-Object { $_.MemberObjectClass -eq \"user\" })[-1]\n  Manual: $script:AllUsers[-1]\n\nStep 7 - Extract all attributes:\n  PowerView: Get-DomainUser -Identity <USERNAME> | Format-List *\n  Manual: foreach ($prop in $lastUser.Properties.PropertyNames) { \"$prop : $($lastUser.Properties[$prop])\" }\n\nStep 8 - Locate flag:\n  Search output for 'description', 'info', 'comment' fields\n  Flag format: flag{...}, OS{...}, or plaintext\n  Sometimes Base64 encoded.\n\nStep 9 - Submit flag:\n  Copy exact flag value\n  Paste into lab submission box\n  Document process in enumeration.md",
+          "approach": "Step 1 - Verify domain access:\n  whoami /fqdn\n  Expected: corp\\stephanie\n  Confirms domain credentials and context.\n\nStep 2 - Open PowerShell:\n  Start menu \u2192 Windows PowerShell\n  Or from cmd: powershell.exe\n\nStep 3 - Create LDAP infrastructure:\n  Paste LDAPSearch function (ps-ldapsearch-function)\n  Verify: LDAPSearch -LDAPQuery \"(objectClass=user)\"\n  Should return user objects.\n\nStep 4 - Basic group enumeration:\n  LDAPSearch -LDAPQuery \"(&(objectCategory=group)(name=Service Personnel))\"\n  Check Properties.member to see if nested groups exist\n  Look for CN= paths containing other group names.\n\nStep 5 - Recursive enumeration (choose method):\n  Method A (PowerView): Get-DomainGroupMember -Identity \"Service Personnel\" -Recurse\n  Method B (Manual): Copy-paste ps-nested-group-one-liner\n\nStep 6 - Identify last user:\n  PowerView: ($members | Where-Object { $_.MemberObjectClass -eq \"user\" })[-1]\n  Manual: $script:AllUsers[-1]\n\nStep 7 - Extract all attributes:\n  PowerView: Get-DomainUser -Identity <USERNAME> | Format-List *\n  Manual: foreach ($prop in $lastUser.Properties.PropertyNames) { \"$prop : $($lastUser.Properties[$prop])\" }\n\nStep 8 - Locate flag:\n  Search output for 'description', 'info', 'comment' fields\n  Flag format: flag{...}, OS{...}, or plaintext\n  Sometimes Base64 encoded.\n\nStep 9 - Submit flag:\n  Copy exact flag value\n  Paste into lab submission box\n  Document process in enumeration.md",
           "commands": [
             "ps-ldapsearch-function",
             "ps-get-group-members-basic",
@@ -93,50 +93,106 @@
           "title": "Phase 1: Group Discovery & Basic Enumeration",
           "notes": "Start by identifying target groups and their direct members. Determine if nested groups exist by checking member Distinguished Names. If member DNs reference other groups (CN=GroupName in member list), nesting is present and requires recursion.",
           "commands": [
-            "ps-ldapsearch-function",
-            "ps-get-group-members-basic"
+            {
+              "id": "ps-ldapsearch-function",
+              "example": "function LDAPSearch { param ([string]$LDAPQuery); $PDC = [System.DirectoryServices.ActiveDirectory.Domain]::GetCurrentDomain().PdcRoleOwner.Name; $DistinguishedName = ([adsi]'').distinguishedName; $DirectoryEntry = New-Object System.DirectoryServices.DirectoryEntry(\"LDAP://$PDC/$DistinguishedName\"); $DirectorySearcher = New-Object System.DirectoryServices.DirectorySearcher($DirectoryEntry, $LDAPQuery); return $DirectorySearcher.FindAll() }",
+              "shows": "Function created successfully"
+            },
+            {
+              "id": "ps-get-group-members-basic",
+              "example": "$groupResult = LDAPSearch -LDAPQuery \"(&(objectCategory=group)(name=Domain Admins))\"; $group = $groupResult[0]; $group.Properties.member",
+              "shows": "CN="
+            }
           ]
         },
         {
           "title": "Phase 2: Member Type Identification",
           "notes": "For each group member (by Distinguished Name), query the object to determine if it's a user (leaf node - record) or nested group (branch node - recurse). Use objectClass attribute: 'group' = nested group, 'user' = leaf user.",
           "commands": [
-            "ps-nested-group-check-member-type"
+            {
+              "id": "ps-nested-group-check-member-type",
+              "example": "$memberDN = \"CN=Administrator,CN=Users,DC=corp,DC=com\"; $memberSearch = LDAPSearch -LDAPQuery \"(distinguishedName=$memberDN)\"; $member = $memberSearch[0]; $objectClass = $member.Properties.objectclass; if ($objectClass -contains \"group\") { Write-Host \"[GROUP] $($member.Properties.name[0])\" -ForegroundColor Magenta } elseif ($objectClass -contains \"user\") { Write-Host \"[USER] $($member.Properties.name[0])\" -ForegroundColor Green }",
+              "shows": "[GROUP]"
+            }
           ]
         },
         {
           "title": "Phase 3: Recursive Nested Group Traversal",
           "notes": "Implement or use recursive function to systematically traverse the group hierarchy. Maintain a collection ($script:AllUsers) of discovered users. Use depth-first traversal with indentation for visualization. Handle arbitrary nesting depth (OSCP labs typically 2-4 levels).",
           "commands": [
-            "ps-nested-group-recursive-function",
-            "ps-nested-group-one-liner"
+            {
+              "id": "ps-nested-group-recursive-function",
+              "example": "function Get-NestedGroupMember { param([string]$GroupName, [int]$Depth = 0); $indent = \"  \" * $Depth; Write-Host \"$indent[+] $GroupName\" -ForegroundColor Cyan; $groupResult = LDAPSearch -LDAPQuery \"(&(objectCategory=group)(name=$GroupName))\"; if ($groupResult.Count -eq 0) { return }; $group = $groupResult[0]; $members = $group.Properties.member; if ($members.Count -eq 0) { return }; foreach ($memberDN in $members) { $memberSearch = LDAPSearch -LDAPQuery \"(distinguishedName=$memberDN)\"; if ($memberSearch.Count -gt 0) { $member = $memberSearch[0]; $memberName = $member.Properties.name[0]; $objectClass = $member.Properties.objectclass; if ($objectClass -contains \"group\") { Write-Host \"$indent  [GROUP] $memberName\" -ForegroundColor Magenta; Get-NestedGroupMember -GroupName $memberName -Depth ($Depth + 1) } elseif ($objectClass -contains \"user\") { Write-Host \"$indent  [USER] $memberName\" -ForegroundColor Green; $script:AllUsers += $member } } } }; $script:AllUsers = @(); Get-NestedGroupMember -GroupName \"Service Personnel\"",
+              "shows": "[+]"
+            },
+            {
+              "id": "ps-nested-group-one-liner",
+              "example": "function LDAPSearch { param([string]$LDAPQuery); $PDC = [System.DirectoryServices.ActiveDirectory.Domain]::GetCurrentDomain().PdcRoleOwner.Name; $DN = ([adsi]'').distinguishedName; $DirectoryEntry = New-Object System.DirectoryServices.DirectoryEntry(\"LDAP://$PDC/$DN\"); $DirectorySearcher = New-Object System.DirectoryServices.DirectorySearcher($DirectoryEntry, $LDAPQuery); return $DirectorySearcher.FindAll() }; function Get-NestedGroupMember { param([string]$GroupName, [int]$Depth = 0); $indent = \"  \" * $Depth; Write-Host \"$indent[+] $GroupName\" -ForegroundColor Cyan; $groupResult = LDAPSearch -LDAPQuery \"(&(objectCategory=group)(name=$GroupName))\"; if ($groupResult.Count -eq 0) { return }; $group = $groupResult[0]; $members = $group.Properties.member; if ($members.Count -eq 0) { return }; foreach ($memberDN in $members) { $memberSearch = LDAPSearch -LDAPQuery \"(distinguishedName=$memberDN)\"; if ($memberSearch.Count -gt 0) { $member = $memberSearch[0]; $memberName = $member.Properties.name[0]; $objectClass = $member.Properties.objectclass; if ($objectClass -contains \"group\") { Write-Host \"$indent  [GROUP] $memberName\" -ForegroundColor Magenta; Get-NestedGroupMember -GroupName $memberName -Depth ($Depth + 1) } elseif ($objectClass -contains \"user\") { Write-Host \"$indent  [USER] $memberName\" -ForegroundColor Green; $script:AllUsers += $member } } } }; $script:AllUsers = @(); Get-NestedGroupMember -GroupName \"Service Personnel\"; if ($script:AllUsers.Count -gt 0) { $lastUser = $script:AllUsers[-1]; Write-Host \"`n[+] LAST USER: $($lastUser.Properties.samaccountname[0])\" -ForegroundColor Yellow; Write-Host \"[+] FLAG LOCATIONS:\" -ForegroundColor Yellow; @('description','info','comment') | ForEach-Object { $value = $lastUser.Properties[$_][0]; if ($value) { Write-Host \"$_ : $value\" -ForegroundColor Cyan } } }",
+              "shows": "Hierarchical tree output"
+            }
           ]
         },
         {
           "title": "Phase 4: PowerView Alternative Methods",
           "notes": "If PowerView is available, use automated cmdlets for faster enumeration. Check version compatibility (v2.0 uses -GroupName, v3.0+ uses -Identity). Use -Recurse parameter for automatic nested group traversal. PowerView flattens hierarchy into single list.",
           "commands": [
-            "powerview-get-domaingroup-recursive",
-            "ps-powerview-get-user-details",
-            "ps-compare-powerview-versions"
+            {
+              "id": "powerview-get-domaingroup-recursive",
+              "example": "Get-DomainGroupMember -Identity \"Domain Admins\" -Recurse",
+              "shows": "MemberName"
+            },
+            {
+              "id": "ps-powerview-get-user-details",
+              "example": "Get-DomainUser -Identity \"jeff_admin\" | Format-List *",
+              "shows": "samaccountname"
+            },
+            {
+              "id": "ps-compare-powerview-versions",
+              "example": "Get-Command Get-NetGroupMember -ErrorAction SilentlyContinue | Select-Object -ExpandProperty ParameterSets | Select-Object -First 1 | Select-Object -ExpandProperty Parameters | Select-Object Name | Where-Object { $_.Name -like \"*Group*\" -or $_.Name -like \"*Identity*\" }",
+              "shows": "GroupName"
+            }
           ]
         },
         {
           "title": "Phase 5: User Attribute Extraction & Flag Discovery",
           "notes": "After identifying target user (often 'last user' in enumeration), extract all AD attributes. Focus on text fields: description (most common flag location), info, comment, adminDescription. Check for Base64 encoding. Format: flag{...}, OS{...}, or plaintext hints.",
           "commands": [
-            "ps-get-last-nested-user",
-            "ps-extract-flag-from-user",
-            "ps-powerview-get-user-details"
+            {
+              "id": "ps-get-last-nested-user",
+              "example": "if ($script:AllUsers.Count -gt 0) { $lastUser = $script:AllUsers[-1]; Write-Host \"`n[+] LAST USER: $($lastUser.Properties.samaccountname[0])\" -ForegroundColor Yellow; foreach ($prop in $lastUser.Properties.PropertyNames) { Write-Host \"$prop : $($lastUser.Properties[$prop])\" -ForegroundColor White } } else { Write-Host \"[-] No users found\" -ForegroundColor Red }",
+              "shows": "LAST USER:"
+            },
+            {
+              "id": "ps-extract-flag-from-user",
+              "example": "$user = LDAPSearch -LDAPQuery \"(samAccountName=jeff_admin)\"; $user = $user[0]; Write-Host \"`n[+] Checking flag locations:\" -ForegroundColor Yellow; @('description','info','comment','adminDescription','userParameters') | ForEach-Object { $value = $user.Properties[$_][0]; if ($value) { Write-Host \"$_ : $value\" -ForegroundColor Cyan } }",
+              "shows": "description :"
+            },
+            {
+              "id": "ps-powerview-get-user-details",
+              "example": "Get-DomainUser -Identity \"jeff_admin\" | Format-List *",
+              "shows": "samaccountname"
+            }
           ]
         },
         {
           "title": "Phase 6: Specialized Queries - Service Accounts & New Admins",
           "notes": "Advanced group enumeration: Find service accounts by naming pattern (*svc*, *sql*) combined with SPN presence. Identify new Domain Admins by sorting on whencreated timestamp. Profile high-value targets for credential attacks (old passwords, over-privileged, Kerberoastable).",
           "commands": [
-            "ps-find-new-domain-admin",
-            "ps-powerview-find-service-accounts",
-            "ps-ldapsearch-spns"
+            {
+              "id": "ps-find-new-domain-admin",
+              "example": "LDAPSearch -LDAPQuery \"(&(objectCategory=group)(name=Domain Admins))\" | ForEach-Object { $_.Properties.member } | ForEach-Object { $memberDN = $_; $userSearch = LDAPSearch -LDAPQuery \"(distinguishedName=$memberDN)\"; $user = $userSearch[0]; [PSCustomObject]@{ Name = $user.Properties.samaccountname[0]; Created = $user.Properties.whencreated[0]; DN = $memberDN } } | Sort-Object Created | Format-Table -AutoSize",
+              "shows": "Name"
+            },
+            {
+              "id": "ps-powerview-find-service-accounts",
+              "example": "Get-DomainGroupMember -Identity \"Service Personnel\" -Recurse | Where-Object { $_.MemberObjectClass -eq \"user\" -and $_.MemberName -like \"*svc*\" }",
+              "shows": "MemberName"
+            },
+            {
+              "id": "ps-ldapsearch-spns",
+              "example": "LDAPSearch -LDAPQuery \"(&(objectClass=user)(servicePrincipalName=*))\"",
+              "shows": "serviceprincipalname"
+            }
           ]
         }
       ],

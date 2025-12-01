@@ -78,39 +78,75 @@
           "title": "Phase 1: Session Enumeration (Who's Logged In Where?)",
           "notes": "Identify active user sessions across domain computers. Focus on privileged accounts (Domain Admins, service accounts). NetSessionEnum API restricted on modern Windows - expect failures on Server 2019+/Windows 11+. Fallback to Get-NetLoggedon (uses Remote Registry, also often blocked).",
           "commands": [
-            "powerview-get-netsession",
-            "powerview-get-netloggedon",
-            "psloggedon"
+            {
+              "id": "powerview-get-netsession",
+              "example": "Get-NetSession -ComputerName DC1.corp.com",
+              "shows": "CName"
+            },
+            {
+              "id": "powerview-get-netloggedon",
+              "example": "Get-NetLoggedon -ComputerName WEB04.corp.com",
+              "shows": "UserName"
+            },
+            {
+              "id": "psloggedon",
+              "example": "PsLoggedOn.exe \\\\WS01",
+              "shows": "Users logged on locally"
+            }
           ]
         },
         {
           "title": "Phase 2: Local Admin Access Mapping",
           "notes": "Test local admin access on all domain computers by attempting C$ share access. This identifies lateral movement targets where no exploit is needed. Also reveals delegation patterns (which accounts are local admin where).",
           "commands": [
-            "powerview-find-localadminaccess"
+            {
+              "id": "powerview-find-localadminaccess",
+              "example": "Find-LocalAdminAccess",
+              "shows": "Computer names where you have admin access"
+            }
           ]
         },
         {
           "title": "Phase 3: Share Discovery & Enumeration",
           "notes": "Discover all SMB shares across domain computers. Prioritize: SYSVOL (GPP passwords), NETLOGON (scripts), user shares (credentials, keys), application shares (config files). Exclude default admin shares (C$, ADMIN$) unless testing local admin access.",
           "commands": [
-            "powerview-find-domainshare",
-            "powerview-find-domainshare-exclude"
+            {
+              "id": "powerview-find-domainshare",
+              "example": "Find-DomainShare",
+              "shows": "Name"
+            },
+            {
+              "id": "powerview-find-domainshare-exclude",
+              "example": "Find-DomainShare -CheckShareAccess -ExcludeStandard",
+              "shows": "ComputerName"
+            }
           ]
         },
         {
           "title": "Phase 4: GPP Password Hunting",
           "notes": "Search SYSVOL for Groups.xml, ScheduledTasks.xml, Services.xml containing 'cpassword' attribute. These files contain AES-encrypted passwords that can be decrypted with published Microsoft key. Credential hunting in SYSVOL is OSCP exam staple.",
           "commands": [
-            "gpp-password-files",
-            "gpp-password-decrypt"
+            {
+              "id": "gpp-password-files",
+              "example": "findstr /S /I cpassword \\\\corp.com\\sysvol\\corp.com\\policies\\*.xml",
+              "shows": "cpassword="
+            },
+            {
+              "id": "gpp-password-decrypt",
+              "example": "gpp-decrypt \"+bsY0V3d4/KgX3VJdO/vyepPfAN1zMFTiQDApgR92JE\"",
+              "shows": "Plaintext password displayed"
+            }
           ]
         },
         {
           "title": "Phase 5: Credential Extraction from Shares",
           "notes": "Manual credential hunting in accessible shares. Search for: .xml (app configs), .ps1 (scripts with hardcoded creds), .txt (password notes), .config (web.config, appsettings.json), .rdp (saved RDP sessions), .kdbx (KeePass databases), id_rsa (SSH keys). Use PowerShell or manual dir /s /b *.config to recursively search.",
           "commands": [
-            "powerview-find-domainshare"
+            {
+              "id": "powerview-find-domainshare",
+              "example": "Find-DomainShare",
+              "shows": "Name"
+            }
           ]
         }
       ],

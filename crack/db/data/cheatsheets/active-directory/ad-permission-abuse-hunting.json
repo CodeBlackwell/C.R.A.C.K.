@@ -82,35 +82,79 @@
           "title": "Phase 1: Broad ACL Enumeration",
           "notes": "Cast wide net - identify ALL interesting ACLs where your account (or groups you're in) has excessive permissions. PowerView's Find-InterestingDomainAcl automates this. Focus on: GenericAll, GenericWrite, WriteDACL, WriteOwner, ForceChangePassword.",
           "commands": [
-            "powerview-find-interestingdomainacl",
-            "powerview-get-objectacl-genericall"
+            {
+              "id": "powerview-find-interestingdomainacl",
+              "example": "Find-InterestingDomainAcl -ResolveGUIDs | ? {$_.IdentityReferenceName -match \"stephanie\"}",
+              "shows": "IdentityReferenceName"
+            },
+            {
+              "id": "powerview-get-objectacl-genericall",
+              "example": "Get-ObjectAcl -Identity \"Domain Admins\" | ? {$_.ActiveDirectoryRights -eq \"GenericAll\"} | select SecurityIdentifier,ActiveDirectoryRights",
+              "shows": "SecurityIdentifier"
+            }
           ]
         },
         {
           "title": "Phase 2: Targeted ACL Enumeration (High-Value Targets)",
           "notes": "Enumerate ACLs on specific high-value targets: Domain Admins group, Enterprise Admins, privileged users (adminCount=1), sensitive OUs. Even non-interesting permissions might be exploitable in context.",
           "commands": [
-            "powerview-get-objectacl-group",
-            "powerview-get-objectacl-user",
-            "ps-ldapsearch-admins"
+            {
+              "id": "powerview-get-objectacl-group",
+              "example": "Get-ObjectAcl -Identity \"Domain Admins\" | select SecurityIdentifier,ActiveDirectoryRights",
+              "shows": "SecurityIdentifier"
+            },
+            {
+              "id": "powerview-get-objectacl-user",
+              "example": "Get-ObjectAcl -Identity \"sqlservice\" | select SecurityIdentifier,ActiveDirectoryRights",
+              "shows": "SecurityIdentifier"
+            },
+            {
+              "id": "ps-ldapsearch-admins",
+              "example": "LDAPSearch -LDAPQuery \"(adminCount=1)\"",
+              "shows": "adminCount"
+            }
           ]
         },
         {
           "title": "Phase 3: SID Resolution & Path Validation",
           "notes": "ACLs reference objects by SID (Security Identifier) not name. Use Convert-SidToName to translate SIDs to usernames/group names. Verify you actually control the principal account. Check for indirect access via group membership (you might be in a group that has the permission).",
           "commands": [
-            "powerview-convert-sidtoname",
-            "powerview-get-netgroup-recursive"
+            {
+              "id": "powerview-convert-sidtoname",
+              "example": "Convert-SidToName S-1-5-21-1987370270-658905905-1781884369-1104",
+              "shows": "DOMAIN\\username"
+            },
+            {
+              "id": "powerview-get-netgroup-recursive",
+              "example": "Get-NetGroupMember -GroupName \"Domain Admins\" -Recurse",
+              "shows": "MemberName"
+            }
           ]
         },
         {
           "title": "Phase 4: Permission-Specific Enumeration",
           "notes": "Drill down on specific permission types if broad enumeration is too noisy. Each permission type has unique exploitation path: GenericAll (password reset/group addition), WriteDACL (grant yourself GenericAll), WriteOwner (take ownership first), ForceChangePassword (direct password reset).",
           "commands": [
-            "powerview-get-objectacl-genericall",
-            "powerview-get-objectacl-writedacl",
-            "powerview-get-objectacl-writeowner",
-            "powerview-get-objectacl-forcechangepassword"
+            {
+              "id": "powerview-get-objectacl-genericall",
+              "example": "Get-ObjectAcl -Identity \"Domain Admins\" | ? {$_.ActiveDirectoryRights -eq \"GenericAll\"} | select SecurityIdentifier,ActiveDirectoryRights",
+              "shows": "SecurityIdentifier"
+            },
+            {
+              "id": "powerview-get-objectacl-writedacl",
+              "example": "Get-ObjectAcl -Identity \"Domain Admins\" | ? {$_.ActiveDirectoryRights -match \"WriteDacl\"} | select SecurityIdentifier,ActiveDirectoryRights",
+              "shows": "SecurityIdentifier"
+            },
+            {
+              "id": "powerview-get-objectacl-writeowner",
+              "example": "Get-ObjectAcl -Identity \"Domain Admins\" | ? {$_.ActiveDirectoryRights -match \"WriteOwner\"} | select SecurityIdentifier,ActiveDirectoryRights",
+              "shows": "SecurityIdentifier"
+            },
+            {
+              "id": "powerview-get-objectacl-forcechangepassword",
+              "example": "Get-ObjectAcl -Identity \"administrator\" -ResolveGUIDs | ? {$_.ObjectAceType -eq \"User-Force-Change-Password\"} | select SecurityIdentifier,ObjectAceType",
+              "shows": "SecurityIdentifier"
+            }
           ]
         }
       ],
