@@ -460,7 +460,17 @@ class CheatsheetCLI(BaseCLIHandler):
             print(f"{self.theme.info(section.notes)}\n")
 
             # Commands in this section
-            for cmd_id in section.commands:
+            for cmd_entry in section.commands:
+                # Handle both old format (string ID) and new format (dict with id/example)
+                if isinstance(cmd_entry, dict):
+                    cmd_id = cmd_entry.get('id', '')
+                    example_cmd = cmd_entry.get('example')
+                    shows_output = cmd_entry.get('shows')
+                else:
+                    cmd_id = cmd_entry
+                    example_cmd = None
+                    shows_output = None
+
                 cmd = self.command_registry.get_command(cmd_id)
                 if not cmd:
                     print(f"  {self.theme.warning(f'{command_counter}. [Command not found: {cmd_id}]')}\n")
@@ -469,7 +479,9 @@ class CheatsheetCLI(BaseCLIHandler):
 
                 # Command header
                 print(f"  {self.theme.bold_white(f'{command_counter}.')} {self.theme.command_name(cmd.name)}")
-                print(f"     {self.theme.secondary(cmd.command)}")
+                # Show example command if available, otherwise show template
+                display_cmd = example_cmd if example_cmd else cmd.command
+                print(f"     {self.theme.secondary(display_cmd)}")
 
                 # Brief description
                 if cmd.description:
@@ -507,7 +519,12 @@ class CheatsheetCLI(BaseCLIHandler):
         """
         commands = []
         for section in sheet.sections:
-            commands.extend(section.commands)
+            for cmd_entry in section.commands:
+                # Handle both old format (string ID) and new format (dict with id/example)
+                if isinstance(cmd_entry, dict):
+                    commands.append(cmd_entry.get('id', ''))
+                else:
+                    commands.append(cmd_entry)
         return commands
 
     def _wrap_text(self, text: str, width: int) -> List[str]:
