@@ -102,7 +102,6 @@
             },
             {
               "id": "mimikatz-logonpasswords",
-              "example": "[Command mimikatz-logonpasswords not found in database]",
               "shows": "See command documentation"
             },
             {
@@ -123,7 +122,6 @@
             },
             {
               "id": "cme-smb-auth-test",
-              "example": "[Command cme-smb-auth-test not found in database]",
               "shows": "See command documentation"
             },
             {
@@ -191,7 +189,6 @@
             },
             {
               "id": "mimikatz-logonpasswords",
-              "example": "[Command mimikatz-logonpasswords not found in database]",
               "shows": "See command documentation"
             },
             {
@@ -212,7 +209,6 @@
             },
             {
               "id": "cme-smb-auth-test",
-              "example": "[Command cme-smb-auth-test not found in database]",
               "shows": "See command documentation"
             },
             {

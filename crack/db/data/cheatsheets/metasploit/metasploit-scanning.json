@@ -90,7 +90,6 @@
             },
             {
               "id": "msf-services-filter-port",
-              "example": "[Command msf-services-filter-port not found in database]",
               "shows": "See command documentation"
             },
             {
@@ -100,12 +99,10 @@
             },
             {
               "id": "msf-aux-ssh-version",
-              "example": "[Command msf-aux-ssh-version not found in database]",
               "shows": "See command documentation"
             },
             {
               "id": "msf-aux-http-version",
-              "example": "[Command msf-aux-http-version not found in database]",
               "shows": "See command documentation"
             }
           ]
@@ -121,22 +118,18 @@
             },
             {
               "id": "msf-aux-smb-shares",
-              "example": "[Command msf-aux-smb-shares not found in database]",
               "shows": "See command documentation"
             },
             {
               "id": "msf-aux-smb-users",
-              "example": "[Command msf-aux-smb-users not found in database]",
               "shows": "See command documentation"
             },
             {
               "id": "msf-aux-smb-ms17010",
-              "example": "[Command msf-aux-smb-ms17010 not found in database]",
               "shows": "See command documentation"
             },
             {
               "id": "msf-aux-smb-login",
-              "example": "[Command msf-aux-smb-login not found in database]",
               "shows": "See command documentation"
             }
           ]
@@ -152,7 +145,6 @@
             },
             {
               "id": "msf-aux-ftp-login",
-              "example": "[Command msf-aux-ftp-login not found in database]",
               "shows": "See command documentation"
             },
             {
@@ -162,7 +154,6 @@
             },
             {
               "id": "msf-creds-list",
-              "example": "[Command msf-creds-list not found in database]",
               "shows": "See command documentation"
             }
           ]
@@ -173,17 +164,14 @@
           "commands": [
             {
               "id": "msf-aux-http-dirscanner",
-              "example": "[Command msf-aux-http-dirscanner not found in database]",
               "shows": "See command documentation"
             },
             {
               "id": "msf-aux-http-version",
-              "example": "[Command msf-aux-http-version not found in database]",
               "shows": "See command documentation"
             },
             {
               "id": "msf-aux-http-robots",
-              "example": "[Command msf-aux-http-robots not found in database]",
               "shows": "See command documentation"
             }
           ]
@@ -194,22 +182,18 @@
           "commands": [
             {
               "id": "msf-hosts-list",
-              "example": "[Command msf-hosts-list not found in database]",
               "shows": "See command documentation"
             },
             {
               "id": "msf-services-list",
-              "example": "[Command msf-services-list not found in database]",
               "shows": "See command documentation"
             },
             {
               "id": "msf-creds-list",
-              "example": "[Command msf-creds-list not found in database]",
               "shows": "See command documentation"
             },
             {
               "id": "msf-db-export",
-              "example": "[Command msf-db-export not found in database]",
               "shows": "See command documentation"
             }
           ]

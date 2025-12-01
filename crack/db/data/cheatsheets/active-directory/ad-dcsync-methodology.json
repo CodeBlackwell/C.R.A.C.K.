@@ -290,7 +290,6 @@
             },
             {
               "id": "ad-golden-ticket-ticketer-create",
-              "example": "[Command ad-golden-ticket-ticketer-create not found in database]",
               "shows": "See command documentation"
             }
           ]

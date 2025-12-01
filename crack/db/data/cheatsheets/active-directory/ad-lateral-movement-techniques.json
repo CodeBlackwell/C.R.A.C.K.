@@ -104,7 +104,6 @@
             },
             {
               "id": "cme-smb-auth-test",
-              "example": "[Command cme-smb-auth-test not found in database]",
               "shows": "See command documentation"
             },
             {
@@ -146,12 +145,10 @@
           "commands": [
             {
               "id": "wmi-invoke-wmimethod",
-              "example": "[Command wmi-invoke-wmimethod not found in database]",
               "shows": "See command documentation"
             },
             {
               "id": "wmic-process-create",
-              "example": "[Command wmic-process-create not found in database]",
               "shows": "See command documentation"
             },
             {
@@ -203,7 +200,6 @@
             },
             {
               "id": "mimikatz-logonpasswords",
-              "example": "[Command mimikatz-logonpasswords not found in database]",
               "shows": "See command documentation"
             },
             {
@@ -229,12 +225,10 @@
             },
             {
               "id": "cme-smb-auth-test",
-              "example": "[Command cme-smb-auth-test not found in database]",
               "shows": "See command documentation"
             },
             {
               "id": "lateral-movement-decision-tree",
-              "example": "[Command lateral-movement-decision-tree not found in database]",
               "shows": "See command documentation"
             }
           ]

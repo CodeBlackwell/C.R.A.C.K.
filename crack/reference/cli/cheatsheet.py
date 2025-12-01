@@ -479,9 +479,8 @@ class CheatsheetCLI(BaseCLIHandler):
 
                 # Command header
                 print(f"  {self.theme.bold_white(f'{command_counter}.')} {self.theme.command_name(cmd.name)}")
-                # Show example command if available, otherwise show template
-                display_cmd = example_cmd if example_cmd else cmd.command
-                print(f"     {self.theme.secondary(display_cmd)}")
+                # Always show template command first
+                print(f"     {self.theme.secondary(cmd.command)}")
 
                 # Brief description
                 if cmd.description:
@@ -495,6 +494,10 @@ class CheatsheetCLI(BaseCLIHandler):
                 if cmd.failure_indicators:
                     failure_str = ', '.join(cmd.failure_indicators[:2])
                     print(f"     {self.theme.error('✗ Failure:')} {self.theme.info(failure_str)}")
+
+                # Show filled example if available (and not an error placeholder)
+                if example_cmd and not example_cmd.startswith('[Command'):
+                    print(f"     {self.theme.muted('- Filled Example:')} {self.theme.info(example_cmd)}")
 
                 print()
                 command_counter += 1

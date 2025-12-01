@@ -89,12 +89,10 @@
             },
             {
               "id": "msfvenom-php-shell",
-              "example": "[Command msfvenom-php-shell not found in database]",
               "shows": "See command documentation"
             },
             {
               "id": "msfvenom-aspx-shell",
-              "example": "[Command msfvenom-aspx-shell not found in database]",
               "shows": "See command documentation"
             }
           ]
@@ -105,17 +103,14 @@
           "commands": [
             {
               "id": "msfvenom-encode-shikata",
-              "example": "[Command msfvenom-encode-shikata not found in database]",
               "shows": "See command documentation"
             },
             {
               "id": "msfvenom-badchars",
-              "example": "[Command msfvenom-badchars not found in database]",
               "shows": "See command documentation"
             },
             {
               "id": "msfvenom-list-formats",
-              "example": "[Command msfvenom-list-formats not found in database]",
               "shows": "See command documentation"
             }
           ]
@@ -152,7 +147,6 @@
             },
             {
               "id": "msfvenom-php-shell",
-              "example": "[Command msfvenom-php-shell not found in database]",
               "shows": "See command documentation"
             }
           ]

@@ -180,7 +180,6 @@
             },
             {
               "id": "hashcat-sha512crypt-crack",
-              "example": "[Command hashcat-sha512crypt-crack not found in database]",
               "shows": "See command documentation"
             },
             {

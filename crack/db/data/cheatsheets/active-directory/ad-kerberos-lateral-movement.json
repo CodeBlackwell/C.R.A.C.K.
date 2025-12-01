@@ -107,7 +107,6 @@
             },
             {
               "id": "kerberos-time-sync",
-              "example": "[Command kerberos-time-sync not found in database]",
               "shows": "See command documentation"
             }
           ]
@@ -123,7 +122,6 @@
             },
             {
               "id": "kerberos-rubeus-asktgt",
-              "example": "[Command kerberos-rubeus-asktgt not found in database]",
               "shows": "See command documentation"
             },
             {
@@ -144,12 +142,10 @@
           "commands": [
             {
               "id": "mimikatz-export-tickets",
-              "example": "[Command mimikatz-export-tickets not found in database]",
               "shows": "See command documentation"
             },
             {
               "id": "kerberos-rubeus-ptt",
-              "example": "[Command kerberos-rubeus-ptt not found in database]",
               "shows": "See command documentation"
             },
             {
@@ -170,7 +166,6 @@
           "commands": [
             {
               "id": "kerberos-time-sync",
-              "example": "[Command kerberos-time-sync not found in database]",
               "shows": "See command documentation"
             },
             {
@@ -201,12 +196,10 @@
             },
             {
               "id": "kerberos-rubeus-asktgt",
-              "example": "[Command kerberos-rubeus-asktgt not found in database]",
               "shows": "See command documentation"
             },
             {
               "id": "lateral-movement-decision-tree",
-              "example": "[Command lateral-movement-decision-tree not found in database]",
               "shows": "See command documentation"
             }
           ]
@@ -217,12 +210,10 @@
           "commands": [
             {
               "id": "mimikatz-export-tickets",
-              "example": "[Command mimikatz-export-tickets not found in database]",
               "shows": "See command documentation"
             },
             {
               "id": "kerberos-rubeus-ptt",
-              "example": "[Command kerberos-rubeus-ptt not found in database]",
               "shows": "See command documentation"
             },
             {

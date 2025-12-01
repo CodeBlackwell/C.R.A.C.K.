@@ -124,12 +124,10 @@
             },
             {
               "id": "msf-services-filter-port",
-              "example": "[Command msf-services-filter-port not found in database]",
               "shows": "See command documentation"
             },
             {
               "id": "msf-hosts-list",
-              "example": "[Command msf-hosts-list not found in database]",
               "shows": "See command documentation"
             },
             {
@@ -171,7 +169,6 @@
             },
             {
               "id": "msf-db-export",
-              "example": "[Command msf-db-export not found in database]",
               "shows": "See command documentation"
             },
             {

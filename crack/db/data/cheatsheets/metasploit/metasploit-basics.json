@@ -110,7 +110,6 @@
           "commands": [
             {
               "id": "msf-workspace-add",
-              "example": "[Command msf-workspace-add not found in database]",
               "shows": "See command documentation"
             },
             {
@@ -125,7 +124,6 @@
             },
             {
               "id": "msf-workspace-delete",
-              "example": "[Command msf-workspace-delete not found in database]",
               "shows": "See command documentation"
             }
           ]
@@ -141,17 +139,14 @@
             },
             {
               "id": "msf-hosts-list",
-              "example": "[Command msf-hosts-list not found in database]",
               "shows": "See command documentation"
             },
             {
               "id": "msf-services-list",
-              "example": "[Command msf-services-list not found in database]",
               "shows": "See command documentation"
             },
             {
               "id": "msf-services-filter-port",
-              "example": "[Command msf-services-filter-port not found in database]",
               "shows": "See command documentation"
             }
           ]
@@ -162,22 +157,18 @@
           "commands": [
             {
               "id": "msf-search-keyword",
-              "example": "[Command msf-search-keyword not found in database]",
               "shows": "See command documentation"
             },
             {
               "id": "msf-search-type",
-              "example": "[Command msf-search-type not found in database]",
               "shows": "See command documentation"
             },
             {
               "id": "msf-search-platform",
-              "example": "[Command msf-search-platform not found in database]",
               "shows": "See command documentation"
             },
             {
               "id": "msf-search-cve",
-              "example": "[Command msf-search-cve not found in database]",
               "shows": "See command documentation"
             },
             {
@@ -208,7 +199,6 @@
             },
             {
               "id": "msf-show-advanced",
-              "example": "[Command msf-show-advanced not found in database]",
               "shows": "See command documentation"
             }
           ]
