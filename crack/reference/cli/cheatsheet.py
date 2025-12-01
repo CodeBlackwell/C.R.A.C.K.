@@ -499,6 +499,9 @@ class CheatsheetCLI(BaseCLIHandler):
                 if example_cmd and not example_cmd.startswith('[Command'):
                     print(f"     {self.theme.muted('- Filled Example:')} {self.theme.info(example_cmd)}")
 
+                # Show reference command for full details
+                print(f"     {self.theme.success('+')} {self.theme.primary(f'crack reference {cmd_id}')}")
+
                 print()
                 command_counter += 1
 
