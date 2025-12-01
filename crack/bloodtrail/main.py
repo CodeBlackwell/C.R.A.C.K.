@@ -723,7 +723,7 @@ def quick_enhance(
     Quick enhancement function for one-liner usage.
 
     Example:
-        from blood_trail import quick_enhance
+        from bloodtrail import quick_enhance
         stats = quick_enhance("/path/to/bh/json")
     """
     config = Neo4jConfig(uri=uri, user=user, password=password)

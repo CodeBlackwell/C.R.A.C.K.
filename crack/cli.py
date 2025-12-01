@@ -132,8 +132,9 @@ def cheatsheets_command(args):
     # Initialize registries
     theme = ReferenceTheme()
     config = ConfigManager()
-    command_registry = HybridCommandRegistry(config_manager=config, theme=theme)
-    cheatsheet_registry = CheatsheetRegistry(command_registry=command_registry, theme=theme)
+    db_path = Path(__file__).parent / 'db'
+    command_registry = HybridCommandRegistry(base_path=db_path, config_manager=config, theme=theme)
+    cheatsheet_registry = CheatsheetRegistry(base_path=db_path, command_registry=command_registry, theme=theme)
     cli = CheatsheetCLI(
         cheatsheet_registry=cheatsheet_registry,
         command_registry=command_registry,
@@ -401,7 +402,7 @@ def ports_command(args):
 
 def blood_trail_command(args):
     """Execute BloodHound Trail - Edge enhancement and Neo4j query analysis"""
-    from db.tools.blood_trail.cli import main as bt_main
+    from crack.bloodtrail.cli import main as bt_main
     sys.argv = ['crack-bloodtrail'] + args
     bt_main()
 
@@ -837,7 +838,7 @@ def main():
     reference_parser.set_defaults(func=reference_command)
 
     # Cheatsheets subcommand
-    cheatsheets_parser = subparsers.add_parser('cheatsheets',
+    cheatsheets_parser = subparsers.add_parser('cheatsheets', aliases=['cs'],
                                                help='Cheatsheets - Educational command collections',
                                                add_help=False)
     cheatsheets_parser.set_defaults(func=cheatsheets_command)
@@ -901,6 +902,12 @@ def main():
                                                help='BloodHound Trail - Edge enhancement and Neo4j query analysis',
                                                add_help=False)
     blood_trail_parser.set_defaults(func=blood_trail_command)
+
+    # BloodHound Trail alias (bt)
+    bt_parser = subparsers.add_parser('bt',
+                                       help='Alias for bloodtrail',
+                                       add_help=False)
+    bt_parser.set_defaults(func=blood_trail_command)
 
     # Parse known args to allow passing through tool-specific args
     args, remaining = parser.parse_known_args()
