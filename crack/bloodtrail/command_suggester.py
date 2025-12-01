@@ -26,7 +26,12 @@ from .command_mappings import (
     infer_dc_hostname,
     is_group_name,
     get_reason,
+    fill_command,
 )
+
+# Type hint for PwnedUser (avoid circular import)
+if False:  # TYPE_CHECKING
+    from .pwned_tracker import PwnedUser
 
 
 # =============================================================================
@@ -285,7 +290,8 @@ class CommandSuggester:
 
     def __init__(self, commands_db_path: Optional[Path] = None):
         if commands_db_path is None:
-            base = Path(__file__).parent.parent.parent.parent
+            # bloodtrail/command_suggester.py -> crack/db/data/commands
+            base = Path(__file__).parent.parent
             commands_db_path = base / "db" / "data" / "commands"
 
         self.commands_db_path = commands_db_path
@@ -314,7 +320,8 @@ class CommandSuggester:
     def build_command_tables(
         self,
         query_id: str,
-        records: List[Dict]
+        records: List[Dict],
+        pwned_users: Optional[Dict[str, Any]] = None
     ) -> List[CommandTable]:
         """
         Build DRY command tables from query results.
@@ -324,10 +331,12 @@ class CommandSuggester:
         - Group name filtering (skip DOMAIN CONTROLLERS@... etc.)
         - Access-type aware command selection
         - Domain/DC inference
+        - Auto-fill credentials for pwned users
 
         Args:
             query_id: Blood-trail query ID
             records: Query result records from Neo4j
+            pwned_users: Dict mapping username (uppercase) to PwnedUser objects
 
         Returns:
             List of CommandTable objects for tabular display
@@ -357,13 +366,19 @@ class CommandSuggester:
                     continue  # Skip groups like DOMAIN CONTROLLERS@...
 
             # For discovery commands, target_field holds what we discovered
-            # The command needs attacker creds (not from BloodHound)
             if is_discovery:
                 discovered = self._get_field(record, mapping, "target_field", None)
                 if not discovered:
                     continue
                 domain = extract_domain(discovered) if discovered else ""
-                user = "<USER>"  # Placeholder - attacker provides their own creds
+
+                # For auth-free commands (AS-REP roast), discovered user IS the target
+                # For auth-required commands (Kerberoast), attacker provides creds
+                if mapping.get("auth_free"):
+                    user = discovered  # Discovered user is the command target
+                else:
+                    user = "<USER>"  # Attacker provides creds
+
                 targets = [discovered]  # What we found
             else:
                 # Standard command: user has access to target
@@ -427,11 +442,21 @@ class CommandSuggester:
                     if is_group_name(target):
                         continue
 
-                    ready = self._fill_command(
-                        tables[cmd_id].template,
-                        user=user,
+                    # Look up pwned credentials for this user
+                    password = ""
+                    ntlm_hash = ""
+                    if pwned_users and user.upper() in pwned_users:
+                        pwned = pwned_users[user.upper()]
+                        password = pwned.get_credential("password") or ""
+                        ntlm_hash = pwned.get_credential("ntlm-hash") or ""
+
+                    ready = fill_command(
+                        template=tables[cmd_id].template,
+                        username=user,
                         target=target,
-                        domain=domain
+                        domain=domain,
+                        password=password,
+                        ntlm_hash=ntlm_hash,
                     )
 
                     # Generate reason for this command suggestion

