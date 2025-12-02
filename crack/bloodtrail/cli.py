@@ -61,20 +61,23 @@ def create_parser() -> argparse.ArgumentParser:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # Attack-path focused edges (recommended)
-  crack bloodtrail /path/to/bh/json/ --preset attack-paths
-
-  # All supported edges
+  # Import edges + auto-generate report with all queries (default)
   crack bloodtrail /path/to/bh/json/
+
+  # Show commands in console (report still saved to file)
+  crack bloodtrail /path/to/bh/json/ -c
+
+  # Attack-path focused edges only (recommended)
+  crack bloodtrail /path/to/bh/json/ --preset attack-paths
 
   # Dry run (validate without importing)
   crack bloodtrail /path/to/bh/json/ --dry-run --verbose
 
-  # Specific edge types only
-  crack bloodtrail /path/to/bh/json/ --edges AdminTo,GenericAll,GetChanges
+  # Skip report generation (edges only)
+  crack bloodtrail /path/to/bh/json/ --no-report
 
-  # Custom Neo4j credentials
-  crack bloodtrail /path/to/bh/json/ --uri bolt://host:7687 --user neo4j --password pass
+  # Run queries against existing Neo4j data (no import)
+  crack bloodtrail --run-all
 
 Supported Edge Types:
   Computer Access: AdminTo, CanPSRemote, CanRDP, ExecuteDCOM, HasSession
@@ -91,7 +94,7 @@ Supported Edge Types:
         type=Path,
         nargs="?",
         default=None,
-        help="Directory or ZIP file containing BloodHound JSON exports (required for edge enhancement)",
+        help="Directory or ZIP file containing BloodHound JSON exports. Auto-generates report with all queries.",
     )
 
     # Preset/Filter options
@@ -157,7 +160,7 @@ Supported Edge Types:
     parser.add_argument(
         "--no-report",
         action="store_true",
-        help="Skip automatic report generation after edge enhancement",
+        help="Skip automatic report generation (default: report auto-generated with all queries)",
     )
 
     # Query library options
@@ -234,7 +237,7 @@ Supported Edge Types:
     query_group.add_argument(
         "--run-all",
         action="store_true",
-        help="Run all queries and generate bloodtrail.md",
+        help="Run all queries against existing Neo4j data (without importing new data). Report auto-generated when data path provided.",
     )
     query_group.add_argument(
         "--report-path",

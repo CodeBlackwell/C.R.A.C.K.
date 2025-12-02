@@ -1050,12 +1050,23 @@ def _fetch_pwned_users(driver) -> list:
                 MATCH (u:User)
                 WHERE u.pwned = true
                 RETURN u.name AS name,
-                       u.pwned_cred_type AS cred_type,
-                       u.pwned_cred_value AS cred_value,
+                       u.pwned_cred_types AS cred_types,
+                       u.pwned_cred_values AS cred_values,
                        u.pwned_source_machine AS source_machine
                 ORDER BY u.pwned_at DESC
             """)
-            return [dict(r) for r in result]
+            # Convert array format to single value for display (use first credential)
+            users = []
+            for record in result:
+                cred_types = record["cred_types"] or []
+                cred_values = record["cred_values"] or []
+                users.append({
+                    "name": record["name"],
+                    "cred_type": cred_types[0] if cred_types else "password",
+                    "cred_value": cred_values[0] if cred_values else "",
+                    "source_machine": record["source_machine"]
+                })
+            return users
     except Exception:
         return []
 
