@@ -456,7 +456,8 @@ class BHEnhancer:
         edge_filter: Optional[Set[str]] = None,
         dry_run: bool = False,
         verbose: bool = False,
-        dc_ip: Optional[str] = None
+        dc_ip: Optional[str] = None,
+        clean_ips: bool = True
     ) -> ImportStats:
         """
         Run the edge enhancement pipeline.
@@ -467,6 +468,8 @@ class BHEnhancer:
             dry_run: Extract but don't import (validation mode)
             verbose: Print detailed progress
             dc_ip: Optional DC IP for DNS resolution and command placeholder population
+            clean_ips: If True, clear all IPs before regenerating (default, --clean mode).
+                       If False, incremental update (--update mode)
 
         Returns:
             ImportStats with results
@@ -558,6 +561,10 @@ class BHEnhancer:
                     if verbose:
                         print(f"    Found {C.BOLD}{len(computer_names)}{C.RESET} unique computers")
 
+                    # Clear existing IPs if --clean mode (default)
+                    if clean_ips and not dry_run:
+                        cleared_count, _ = self._clear_all_ips(verbose=verbose)
+
                     # Resolve IPs in parallel (use DC as DNS server if provided)
                     resolver = IPResolver(timeout=2.0, max_workers=20, dc_ip=dc_ip)
                     ip_mappings = resolver.resolve_batch(list(computer_names))
@@ -568,10 +575,19 @@ class BHEnhancer:
                     # Show stats
                     if enriched_count > 0:
                         res_stats = resolver.get_stats()
-                        print(f"{C.GREEN}[+]{C.RESET} IP Enrichment complete:")
+                        mode = "clean" if clean_ips else "update"
+                        print(f"{C.GREEN}[+]{C.RESET} IP Enrichment complete ({mode} mode):")
                         print(f"    {C.GREEN}Resolved:{C.RESET}  {res_stats['resolved']}")
                         print(f"    {C.DIM}Failed:{C.RESET}     {res_stats['failed']}")
                         print(f"    {C.DIM}Cached:{C.RESET}     {res_stats['cached']}")
+
+                        # Print detailed list of resolved IPs
+                        if verbose:
+                            resolved_ips = [(fqdn, ip) for fqdn, ip in ip_mappings.items() if ip is not None]
+                            if resolved_ips:
+                                print(f"\n{C.CYAN}Resolved Computer IPs:{C.RESET}")
+                                for computer, ip in sorted(resolved_ips):
+                                    print(f"    {C.DIM}{computer:40}{C.RESET} {C.GREEN}{ip}{C.RESET}")
                 else:
                     if verbose:
                         print(f"    {C.YELLOW}No computers found in edges{C.RESET}")
@@ -704,6 +720,61 @@ class BHEnhancer:
             return 0
 
         return enriched_count
+
+    def _clear_all_ips(self, verbose: bool = False) -> tuple[int, List[tuple[str, str]]]:
+        """
+        Clear all bloodtrail_ip properties from Computer nodes.
+
+        Used in --clean mode to ensure fresh slate before IP regeneration.
+
+        Args:
+            verbose: Print detailed output
+
+        Returns:
+            Tuple of (count of cleared nodes, list of (computer_name, ip) pairs that were cleared)
+        """
+        C = Colors
+
+        if not self.driver:
+            return (0, [])
+
+        try:
+            with self.driver.session() as session:
+                # Get list of computers with IPs before clearing
+                result = session.run("""
+                    MATCH (c:Computer)
+                    WHERE c.bloodtrail_ip IS NOT NULL
+                    RETURN c.name AS name, c.bloodtrail_ip AS ip
+                    ORDER BY c.name
+                """)
+
+                cleared_ips = [(record["name"], record["ip"]) for record in result]
+
+                if not cleared_ips:
+                    return (0, [])
+
+                # Clear all IPs
+                result = session.run("""
+                    MATCH (c:Computer)
+                    WHERE c.bloodtrail_ip IS NOT NULL
+                    REMOVE c.bloodtrail_ip, c.bloodtrail_ip_resolved_at
+                    RETURN count(c) AS cleared
+                """)
+
+                record = result.single()
+                cleared = record["cleared"] if record else 0
+
+                if verbose and cleared > 0:
+                    print(f"{C.YELLOW}[*]{C.RESET} Cleared {C.BOLD}{cleared}{C.RESET} existing IPs (--clean mode)")
+                    for computer, ip in cleared_ips:
+                        print(f"    {C.DIM}{computer:40}{C.RESET} {C.YELLOW}{ip}{C.RESET}")
+
+                return (cleared, cleared_ips)
+
+        except Exception as e:
+            if verbose:
+                print(f"{C.RED}[!]{C.RESET} Failed to clear IPs: {e}")
+            return (0, [])
 
     def _print_failure_diagnostics(self, edges: List[Edge]):
         """Print detailed diagnostics when all imports fail"""

@@ -152,6 +152,19 @@ Supported Edge Types:
         help="Domain Controller IP for DNS resolution and command auto-population (e.g., 192.168.50.70). Uses DC as DNS server to resolve internal AD computer names.",
     )
 
+    # IP refresh mode options
+    ip_refresh_group = parser.add_mutually_exclusive_group()
+    ip_refresh_group.add_argument(
+        "--clean",
+        action="store_true",
+        help="Clear all IPs before regenerating (default). Ensures fresh slate from DNS.",
+    )
+    ip_refresh_group.add_argument(
+        "--update",
+        action="store_true",
+        help="Incremental update - keep existing IPs, only overwrite resolved computers.",
+    )
+
     # Info options
     parser.add_argument(
         "--list-edges",
@@ -1339,6 +1352,7 @@ def main():
         dry_run=args.dry_run,
         verbose=args.verbose,
         dc_ip=getattr(args, 'dc_ip', None),
+        clean_ips=not getattr(args, 'update', False),  # True if --clean (default), False if --update
     )
 
     # Check if we should run the report
