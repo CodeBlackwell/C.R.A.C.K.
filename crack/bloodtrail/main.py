@@ -585,7 +585,7 @@ class BHEnhancer:
                         if verbose:
                             resolved_ips = [(fqdn, ip) for fqdn, ip in ip_mappings.items() if ip is not None]
                             if resolved_ips:
-                                print(f"\n{C.CYAN}Resolved Computer IPs:{C.RESET}")
+                                print(f"\n{C.CYAN}[*]{C.RESET} Resolved {C.BOLD}{len(resolved_ips)}{C.RESET} Computer IPs:")
                                 for computer, ip in sorted(resolved_ips):
                                     print(f"    {C.DIM}{computer:40}{C.RESET} {C.GREEN}{ip}{C.RESET}")
                 else:
