@@ -316,21 +316,24 @@ QUERY_COMMAND_MAPPINGS: Dict[str, Any] = {
         "commands": ["impacket-psexec", "impacket-wmiexec", "impacket-smbexec"],
         "access_type": "AdminTo",
         "array_field": "AdminOnComputers",
+        "array_ip_field": "AdminOnIPs",
         "user_field": "User",
         "permissions_required": "Local admin on target (AdminTo edge)",
     },
     "lateral-all-admins-per-computer": {
         "commands": ["impacket-psexec"],
         "access_type": "AdminTo",
-        "array_field": "LocalAdmins",  # Users who can admin
-        "target_field": "Computer",     # Single computer per row
-        "filter_groups": True,          # Filter out "DOMAIN ADMINS@..." etc.
+        "user_array_field": "LocalAdmins",  # Array of USERS (principals with admin)
+        "target_field": "Computer",          # Single computer target per record
+        "target_ip_field": "ComputerIP",
+        "filter_groups": True,               # Filter out "DOMAIN ADMINS@..." etc.
         "permissions_required": "Local admin on target (AdminTo edge)",
     },
     "lateral-rdp-targets": {
         "commands": ["xfreerdp-connect"],
         "access_type": "CanRDP",
         "array_field": "RDPTargets",
+        "array_ip_field": "RDPIPs",
         "user_field": "User",
         "permissions_required": "Remote Desktop Users or Administrators group",
     },
@@ -338,6 +341,7 @@ QUERY_COMMAND_MAPPINGS: Dict[str, Any] = {
         "commands": ["evil-winrm-shell"],
         "access_type": "CanPSRemote",
         "array_field": "PSRemoteTargets",
+        "array_ip_field": "PSRemoteIPs",
         "user_field": "User",
         "permissions_required": "Remote Management Users or Administrators group",
     },
@@ -345,6 +349,7 @@ QUERY_COMMAND_MAPPINGS: Dict[str, Any] = {
         "commands": ["impacket-wmiexec"],
         "access_type": "ExecuteDCOM",
         "array_field": "DCOMTargets",
+        "array_ip_field": "DCOMIPs",
         "user_field": "User",
         "permissions_required": "DCOM execution rights on target",
     },
@@ -352,6 +357,7 @@ QUERY_COMMAND_MAPPINGS: Dict[str, Any] = {
         "commands": ["impacket-psexec"],
         "access_type": "HasSession",
         "target_field": "Workstation",
+        "target_ip_field": "WorkstationIP",
         "array_field": "PrivilegedSessions",  # Who's logged in
         "context": "Credential harvest - privileged session on target",
         "permissions_required": "Local admin on workstation to dump creds",
@@ -360,6 +366,7 @@ QUERY_COMMAND_MAPPINGS: Dict[str, Any] = {
         "commands": ["impacket-psexec"],
         "access_type": "HasSession",
         "target_field": "Computer",
+        "target_ip_field": "ComputerIP",
         "user_field": "LoggedOnUser",
         "context": "Credential harvest opportunity",
         "permissions_required": "Local admin on target to dump creds",
@@ -367,6 +374,7 @@ QUERY_COMMAND_MAPPINGS: Dict[str, Any] = {
     "lateral-user-access-all": {
         "commands": ["impacket-psexec", "evil-winrm-shell", "xfreerdp-connect"],
         "target_field": "Target",
+        "target_ip_field": "TargetIP",
         "access_type_field": "AccessType",  # Dynamic: AdminTo|CanRDP|CanPSRemote
         "permissions_required": "Varies by access type (AdminTo/CanRDP/CanPSRemote)",
     },
@@ -374,6 +382,7 @@ QUERY_COMMAND_MAPPINGS: Dict[str, Any] = {
         "commands": ["impacket-psexec"],
         "access_type": "AdminTo",
         "target_field": "Computer",
+        "target_ip_field": "ComputerIP",
         "context": "Domain Users = local admin (any user can compromise)",
         "permissions_required": "Any domain user (misconfigured local admin)",
     },
@@ -381,6 +390,7 @@ QUERY_COMMAND_MAPPINGS: Dict[str, Any] = {
         "commands": ["impacket-psexec"],
         "access_type": "HasSession",
         "target_field": "Computer",
+        "target_ip_field": "ComputerIP",
         "context": "DA session - prime mimikatz target",
         "permissions_required": "Local admin on target to dump creds",
     },
@@ -430,6 +440,7 @@ QUERY_COMMAND_MAPPINGS: Dict[str, Any] = {
         "commands": ["rubeus-monitor"],
         "access_type": None,
         "target_field": "Computer",
+        "target_ip_field": "ComputerIP",
         "context": "Unconstrained delegation - monitor for TGT capture",
         "permissions_required": "Local admin on unconstrained delegation host",
     },
@@ -558,6 +569,7 @@ QUERY_COMMAND_MAPPINGS: Dict[str, Any] = {
         "commands": ["rbcd-getST", "rubeus-s4u-impersonate"],
         "access_type": "AllowedToAct",
         "target_field": "RBCDTarget",
+        "target_ip_field": "RBCDTargetIP",
         "array_field": "AllowedPrincipals",
         "context": "RBCD - impersonate users to target",
         "permissions_required": "Control of principal in msDS-AllowedToActOnBehalfOfOtherIdentity",
@@ -567,6 +579,7 @@ QUERY_COMMAND_MAPPINGS: Dict[str, Any] = {
         "access_type": "WriteAccountRestrictions",
         "user_field": "Attacker",
         "target_field": "TargetComputer",
+        "target_ip_field": "TargetComputerIP",
         "context": "Can configure RBCD on target computer",
         "permissions_required": "WriteProperty on msDS-AllowedToActOnBehalfOfOtherIdentity",
     },
@@ -583,6 +596,7 @@ QUERY_COMMAND_MAPPINGS: Dict[str, Any] = {
         "access_type": "AllowedToDelegate",
         "user_field": "DelegatingPrincipal",
         "target_field": "DomainController",
+        "target_ip_field": "DomainControllerIP",
         "context": "Constrained delegation to DC - high value",
         "permissions_required": "Control of delegating principal (password/hash/TGT)",
     },
@@ -590,6 +604,7 @@ QUERY_COMMAND_MAPPINGS: Dict[str, Any] = {
         "commands": ["rubeus-monitor", "rubeus-tgtdeleg"],
         "access_type": None,
         "target_field": "Computer",
+        "target_ip_field": "ComputerIP",
         "context": "Unconstrained delegation - TGT capture target",
         "permissions_required": "Local admin on unconstrained delegation host",
     },
@@ -1005,6 +1020,7 @@ def fill_command(
     template: str,
     username: str = "",
     target: str = "",
+    target_ip: str = "",
     domain: str = "",
     dc_ip: str = "",
     password: str = "",
@@ -1012,15 +1028,21 @@ def fill_command(
     cred_value: str = "",
 ) -> str:
     """
-    Universal command placeholder filler.
+    Universal command placeholder filler with IP preference.
 
     Fills all standard placeholders plus optional credentials.
     Credentials only fill if non-empty string provided.
 
+    IP Preference Logic:
+        - If target_ip is provided, use it for <TARGET> and <COMPUTER>
+        - Otherwise, fallback to target (FQDN)
+        - This allows commands to use IP addresses when available
+
     Args:
         template: Command template with <PLACEHOLDERS>
         username: Username (UPN format OK - will extract just username)
-        target: Target computer FQDN
+        target: Target computer FQDN (e.g., FILES04.CORP.COM)
+        target_ip: Resolved IP address (e.g., 10.0.0.15) - PREFERRED over target
         domain: Domain name
         dc_ip: Domain controller IP/hostname (auto-inferred if not provided)
         password: Password credential (fills <PASSWORD>)
@@ -1029,6 +1051,22 @@ def fill_command(
 
     Returns:
         Filled command string
+
+    Examples:
+        >>> # With IP (preferred)
+        >>> fill_command(
+        ...     "psexec <TARGET>",
+        ...     target="FILES04.CORP.COM",
+        ...     target_ip="10.0.0.15"
+        ... )
+        'psexec 10.0.0.15'
+
+        >>> # Without IP (fallback to FQDN)
+        >>> fill_command(
+        ...     "psexec <TARGET>",
+        ...     target="FILES04.CORP.COM"
+        ... )
+        'psexec FILES04.CORP.COM'
     """
     result = template
 
@@ -1039,10 +1077,12 @@ def fill_command(
         result = result.replace("<USERNAME>", clean_user)
         result = result.replace("<USER>", clean_user)
 
-    # === Target placeholders ===
-    if target:
-        result = result.replace("<TARGET>", target)
-        result = result.replace("<COMPUTER>", target)
+    # === Target placeholders - PREFER IP OVER FQDN ===
+    # Use IP if available, otherwise fallback to FQDN
+    effective_target = target_ip if target_ip else target
+    if effective_target:
+        result = result.replace("<TARGET>", effective_target)
+        result = result.replace("<COMPUTER>", effective_target)
 
     # === Domain placeholders ===
     if domain:
@@ -1074,19 +1114,30 @@ def fill_pwned_command(
     domain: str,
     target: str,
     cred_value: str,
-    dc_ip: Optional[str] = None
+    dc_ip: Optional[str] = None,
+    target_ip: str = ""
 ) -> str:
     """
     Fill a command template with pwned user credentials.
 
     DEPRECATED: Use fill_command() instead for new code.
     This function is kept for backward compatibility.
+
+    Args:
+        template: Command template with placeholders
+        username: Username
+        domain: Domain name
+        target: Target computer FQDN
+        cred_value: Credential value
+        dc_ip: Domain controller IP
+        target_ip: Resolved IP address (preferred over target FQDN)
     """
     return fill_command(
         template=template,
         username=username,
         domain=domain,
         target=target,
+        target_ip=target_ip,
         dc_ip=dc_ip or "",
         cred_value=cred_value,
     )

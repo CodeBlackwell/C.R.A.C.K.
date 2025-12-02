@@ -22,6 +22,7 @@ from .extractors import (
     deduplicate_edges,
 )
 from .data_source import DataSource, create_data_source
+from .ip_resolver import IPResolver
 
 
 class Colors:
@@ -541,6 +542,37 @@ class BHEnhancer:
                 for err in import_stats.errors[:5]:
                     print(f"    {C.RED}•{C.RESET} {err}")
 
+            # NEW: IP Address Enrichment
+            # Only if edges were successfully imported
+            if import_stats.edges_imported > 0 or import_stats.edges_already_existed > 0:
+                print()
+                print(f"{C.CYAN}[*]{C.RESET} Resolving IP addresses for Computer nodes...")
+
+                # Extract computer names from edges
+                computer_names = self._extract_computer_names(result.edges)
+
+                if computer_names:
+                    if verbose:
+                        print(f"    Found {C.BOLD}{len(computer_names)}{C.RESET} unique computers")
+
+                    # Resolve IPs in parallel
+                    resolver = IPResolver(timeout=2.0, max_workers=20)
+                    ip_mappings = resolver.resolve_batch(list(computer_names))
+
+                    # Store IPs in Neo4j
+                    enriched_count = self._enrich_ips(ip_mappings, verbose=verbose)
+
+                    # Show stats
+                    if enriched_count > 0:
+                        res_stats = resolver.get_stats()
+                        print(f"{C.GREEN}[+]{C.RESET} IP Enrichment complete:")
+                        print(f"    {C.GREEN}Resolved:{C.RESET}  {res_stats['resolved']}")
+                        print(f"    {C.DIM}Failed:{C.RESET}     {res_stats['failed']}")
+                        print(f"    {C.DIM}Cached:{C.RESET}     {res_stats['cached']}")
+                else:
+                    if verbose:
+                        print(f"    {C.YELLOW}No computers found in edges{C.RESET}")
+
             # If many failures, run diagnostics and show helpful output
             if import_stats.edges_failed > 0 and import_stats.edges_imported == 0:
                 self._print_failure_diagnostics(result.edges)
@@ -549,6 +581,112 @@ class BHEnhancer:
             self.close()
 
         return stats
+
+    def _extract_computer_names(self, edges: List[Edge]) -> Set[str]:
+        """
+        Extract unique computer FQDNs from edges.
+
+        Looks for Computer nodes in both source and target of edges.
+        Used to build list of computers for IP resolution.
+
+        Args:
+            edges: List of Edge objects from BloodHound data
+
+        Returns:
+            Set of unique computer FQDNs (e.g., {"FILES04.CORP.COM", "DC1.CORP.COM", ...})
+        """
+        computers = set()
+
+        for edge in edges:
+            # Extract computers from edge endpoints
+            # Computer nodes are typically targets of AdminTo, CanRDP, etc.
+            # or sources of HasSession
+            # We identify them by checking if name looks like FQDN (contains dot)
+
+            # Check source principal
+            if edge.source and '.' in edge.source:
+                # Likely a computer FQDN (e.g., DC1.CORP.COM)
+                # Filter out SIDs and ObjectGUIDs
+                if not edge.source.startswith('S-1-') and '@' not in edge.source:
+                    computers.add(edge.source)
+
+            # Check target principal
+            if edge.target and '.' in edge.target:
+                if not edge.target.startswith('S-1-') and '@' not in edge.target:
+                    computers.add(edge.target)
+
+        return computers
+
+    def _enrich_ips(self, ip_mappings: Dict[str, Optional[str]], verbose: bool = False):
+        """
+        Enrich Neo4j Computer nodes with resolved IP addresses.
+
+        Sets custom properties on Computer nodes:
+        - bloodtrail_ip: IPv4 address (e.g., "10.0.0.15")
+        - bloodtrail_ip_resolved_at: Timestamp of resolution
+
+        Args:
+            ip_mappings: Dict mapping computer FQDN -> IP address
+            verbose: Print detailed progress
+
+        Returns:
+            Number of computers enriched
+        """
+        C = Colors
+
+        if not ip_mappings:
+            if verbose:
+                print(f"{C.YELLOW}[*]{C.RESET} No computers to enrich")
+            return 0
+
+        # Count successful resolutions
+        successful = sum(1 for ip in ip_mappings.values() if ip is not None)
+        failed = len(ip_mappings) - successful
+
+        if verbose:
+            print(f"{C.CYAN}[*]{C.RESET} Enriching Neo4j with IP addresses...")
+            print(f"    Resolved: {C.GREEN}{successful}{C.RESET} computers")
+            print(f"    Failed:   {C.DIM}{failed}{C.RESET} computers (will use FQDN)")
+
+        # Batch update Neo4j (only for successfully resolved IPs)
+        enriched_count = 0
+        try:
+            with self.driver.session() as session:
+                # Prepare batch data (only include successful resolutions)
+                batch_data = [
+                    {"fqdn": fqdn, "ip": ip}
+                    for fqdn, ip in ip_mappings.items()
+                    if ip is not None
+                ]
+
+                if not batch_data:
+                    if verbose:
+                        print(f"{C.YELLOW}[*]{C.RESET} No IPs resolved successfully")
+                    return 0
+
+                # Batch Cypher query to set IP properties
+                query = """
+                UNWIND $computers AS comp
+                MATCH (c:Computer {name: comp.fqdn})
+                SET c.bloodtrail_ip = comp.ip,
+                    c.bloodtrail_ip_resolved_at = timestamp()
+                RETURN count(c) AS enriched
+                """
+
+                result = session.run(query, computers=batch_data)
+                record = result.single()
+                if record:
+                    enriched_count = record["enriched"]
+
+                if verbose and enriched_count > 0:
+                    print(f"{C.GREEN}[+]{C.RESET} Enriched {C.BOLD}{enriched_count}{C.RESET} Computer nodes with IPs")
+
+        except Exception as e:
+            if verbose:
+                print(f"{C.RED}[!]{C.RESET} IP enrichment error: {e}")
+            return 0
+
+        return enriched_count
 
     def _print_failure_diagnostics(self, edges: List[Edge]):
         """Print detailed diagnostics when all imports fail"""

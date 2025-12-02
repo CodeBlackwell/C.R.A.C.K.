@@ -382,6 +382,98 @@ class CommandSuggester:
                 targets = [discovered]  # What we found
             else:
                 # Standard command: user has access to target
+
+                # Check for user_array_field pattern (multiple users → single target)
+                if "user_array_field" in mapping:
+                    user_array = record.get(mapping["user_array_field"], [])
+                    if not isinstance(user_array, list):
+                        user_array = [user_array] if user_array else []
+
+                    # Get single target from target_field
+                    single_target = self._get_field(record, mapping, "target_field", None)
+                    if not single_target:
+                        continue
+
+                    # Get IP for single target (if available) - NEW
+                    single_target_ip = ""
+                    if "target_ip_field" in mapping:
+                        single_target_ip = record.get(mapping["target_ip_field"], "") or ""
+
+                    # Filter group names from user array if configured
+                    if mapping.get("filter_groups"):
+                        user_array = [u for u in user_array if u and not is_group_name(u)]
+
+                    # Process each user with the same target
+                    for user_principal in user_array:
+                        if not user_principal:
+                            continue
+                        user_domain = extract_domain(user_principal)
+
+                        # Build entries for each command
+                        for cmd_id in cmd_ids:
+                            if cmd_id not in tables:
+                                cmd = self.commands.get(cmd_id, {})
+                                if not cmd:
+                                    continue
+                                rewards = context if context else ACCESS_TYPE_REWARDS.get(
+                                    access_type, ACCESS_TYPE_REWARDS.get(None, "")
+                                )
+                                tables[cmd_id] = CommandTable(
+                                    command_id=cmd_id,
+                                    name=cmd.get("name", cmd_id),
+                                    template=cmd.get("command", ""),
+                                    access_type=access_type,
+                                    targets=[],
+                                    variables_needed=self._get_sensitive_placeholders(cmd),
+                                    context=context,
+                                    domain_level=domain_level,
+                                    example=self._build_example(cmd),
+                                    objective=cmd.get("description", ""),
+                                    rewards=rewards,
+                                    post_success=mapping.get("post_success", []),
+                                    permissions_required=mapping.get("permissions_required", ""),
+                                    is_discovery=is_discovery,
+                                )
+
+                            # Look up pwned credentials for this user
+                            password = ""
+                            ntlm_hash = ""
+                            if pwned_users and user_principal.upper() in pwned_users:
+                                pwned = pwned_users[user_principal.upper()]
+                                password = pwned.get_credential("password") or ""
+                                ntlm_hash = pwned.get_credential("ntlm-hash") or ""
+
+                            ready = fill_command(
+                                template=tables[cmd_id].template,
+                                username=user_principal,
+                                target=single_target,
+                                target_ip=single_target_ip,  # NEW: Pass IP
+                                domain=user_domain,
+                                password=password,
+                                ntlm_hash=ntlm_hash,
+                            )
+
+                            reason = get_reason(
+                                access_type=access_type,
+                                user=user_principal,
+                                target=single_target,
+                                context=context
+                            )
+
+                            warnings = validate_target_entry(record, access_type)
+
+                            tables[cmd_id].targets.append(TargetEntry(
+                                user=user_principal,
+                                target=single_target,
+                                ready_command=ready,
+                                domain=user_domain,
+                                access_type=access_type,
+                                reason=reason,
+                                warnings=warnings,
+                            ))
+                    continue  # Skip normal processing for this record
+
+                # Normal pattern: single user → multiple targets
                 # Get user principal - check principal_field first if no user_field
                 user = self._get_field(record, mapping, "user_field", None)
                 if not user and principal:
@@ -395,10 +487,14 @@ class CommandSuggester:
                 # Get targets - expand array fields or use single target
                 targets = self._get_targets(record, mapping, user)
 
+                # Get IPs (parallel to targets) - NEW
+                target_ips = self._get_target_ips(record, mapping)
+
             # For domain_level commands, target is the domain DC
             if mapping.get("domain_level") and not targets:
                 dc_host = infer_dc_hostname(domain)
                 targets = [dc_host]
+                target_ips = []  # DC uses hostname, not IP
 
             # Dynamic access type from result (for owned-* queries)
             record_access_type = access_type
@@ -434,13 +530,18 @@ class CommandSuggester:
                     )
 
                 # Add target entries
-                for target in targets:
+                for idx, target in enumerate(targets):
                     if not target:
                         continue
 
                     # Filter group names used as targets
                     if is_group_name(target):
                         continue
+
+                    # Get corresponding IP for this target (if available)
+                    target_ip = ""
+                    if idx < len(target_ips):
+                        target_ip = target_ips[idx] or ""
 
                     # Look up pwned credentials for this user
                     password = ""
@@ -454,6 +555,7 @@ class CommandSuggester:
                         template=tables[cmd_id].template,
                         username=user,
                         target=target,
+                        target_ip=target_ip,  # NEW: Pass IP (preferred over FQDN)
                         domain=domain,
                         password=password,
                         ntlm_hash=ntlm_hash,
@@ -542,6 +644,58 @@ class CommandSuggester:
             if field in record:
                 return [str(record[field])]
 
+        return []
+
+    def _get_target_ips(
+        self,
+        record: Dict,
+        mapping: Dict
+    ) -> List[Optional[str]]:
+        """
+        Extract IP addresses from record (parallel to targets).
+
+        Returns list of IPs matching 1:1 with targets from _get_targets().
+        Returns None for entries where IP unavailable.
+
+        Scenarios:
+        1. Array IP field (AdminOnIPs, RDPTargetIPs) -> expand to list
+        2. Single IP field (ComputerIP, TargetIP) -> single-item list
+        3. No IP field -> return empty list (will fallback to FQDN)
+
+        Args:
+            record: Query result record from Neo4j
+            mapping: QUERY_COMMAND_MAPPINGS entry
+
+        Returns:
+            List of IP addresses (or None for unresolved computers)
+
+        Examples:
+            >>> # With array IPs
+            >>> record = {"AdminOnComputers": ["DC1", "FILES04"], "AdminOnIPs": ["10.0.0.1", "10.0.0.15"]}
+            >>> _get_target_ips(record, {"array_ip_field": "AdminOnIPs"})
+            ['10.0.0.1', '10.0.0.15']
+
+            >>> # No IPs available
+            >>> record = {"Computer": "DC1"}
+            >>> _get_target_ips(record, {})
+            []
+        """
+        # Case 1: Array IP field (parallel to array_field)
+        if "array_ip_field" in mapping:
+            array_val = record.get(mapping["array_ip_field"], [])
+            if isinstance(array_val, list):
+                # Convert None values to empty strings for consistency
+                return [str(ip) if ip else "" for ip in array_val]
+            elif array_val:
+                return [str(array_val)]
+
+        # Case 2: Single IP field (parallel to target_field)
+        if "target_ip_field" in mapping:
+            ip = record.get(mapping["target_ip_field"], "")
+            return [str(ip)] if ip else [""]
+
+        # No IP fields defined - return empty list
+        # (Command generator will fallback to FQDN)
         return []
 
     def _fill_command(

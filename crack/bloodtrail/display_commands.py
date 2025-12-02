@@ -902,7 +902,7 @@ def generate_pwned_attack_paths(driver, use_colors: bool = True) -> tuple:
                 for tech in techniques:
                     template = tech.command_templates.get(cred_type)
                     if template and cred_value:
-                        cmd = fill_pwned_command(template, username, domain, ma['computer'], cred_value)
+                        cmd = fill_pwned_command(template, username, domain, ma['computer'], cred_value, target_ip=ma.get('computer_ip', ''))
                         tech_short = tech.name.split()[0].lower()
                         console_lines.append(f"    {c.DIM}{tech_short:>10}:{c.RESET}  {c.GREEN}{cmd}{c.RESET}")
                         markdown_lines.append(f"| {tech_short} | `{cmd}` |")
@@ -936,7 +936,7 @@ def generate_pwned_attack_paths(driver, use_colors: bool = True) -> tuple:
 
                     sd_template = CRED_TYPE_TEMPLATES.get(cred_type, {}).get("secretsdump")
                     if sd_template and cred_value:
-                        sd_cmd = fill_pwned_command(sd_template, username, domain, ma['computer'], cred_value)
+                        sd_cmd = fill_pwned_command(sd_template, username, domain, ma['computer'], cred_value, target_ip=ma.get('computer_ip', ''))
                         console_lines.append(f"    {c.DIM}secretsdump:{c.RESET}  {c.GREEN}{sd_cmd}{c.RESET}")
                         markdown_lines.append(f"```bash\n{sd_cmd}\n```")
                     console_lines.append("")
@@ -967,7 +967,7 @@ def generate_pwned_attack_paths(driver, use_colors: bool = True) -> tuple:
                         for tech in techniques:
                             template = tech.command_templates.get(cred_type)
                             if template and cred_value:
-                                cmd = fill_pwned_command(template, username, domain, ma['computer'], cred_value)
+                                cmd = fill_pwned_command(template, username, domain, ma['computer'], cred_value, target_ip=ma.get('computer_ip', ''))
                                 tech_short = tech.name.split()[0].lower()
                                 console_lines.append(f"    {c.DIM}{tech_short:>10}:{c.RESET}  {c.GREEN}{cmd}{c.RESET}")
                                 markdown_lines.append(f"| {tech_short} | `{cmd}` |")
@@ -998,7 +998,7 @@ def generate_pwned_attack_paths(driver, use_colors: bool = True) -> tuple:
                 for tech in techniques:
                     template = tech.command_templates.get(cred_type)
                     if template and cred_value:
-                        cmd = fill_pwned_command(template, username, domain, ma['computer'], cred_value)
+                        cmd = fill_pwned_command(template, username, domain, ma['computer'], cred_value, target_ip=ma.get('computer_ip', ''))
                         tech_short = tech.name.split()[0].lower()
                         console_lines.append(f"    {c.DIM}{tech_short:>10}:{c.RESET}  {c.GREEN}{cmd}{c.RESET}")
                         markdown_lines.append(f"| {tech_short} | `{cmd}` |")
@@ -1092,6 +1092,7 @@ def _fetch_user_access(driver, user_name: str) -> dict:
                 WHERE priv.admincount = true AND priv.name <> u.name
                 WITH c, type(r) AS access_type, null AS inherited_from, collect(DISTINCT priv.name) AS priv_sessions
                 RETURN c.name AS computer,
+                       c.bloodtrail_ip AS computer_ip,
                        collect(DISTINCT access_type) AS access_types,
                        inherited_from,
                        priv_sessions AS privileged_sessions
@@ -1104,6 +1105,7 @@ def _fetch_user_access(driver, user_name: str) -> dict:
                 WHERE priv.admincount = true AND priv.name <> u.name
                 WITH c, type(r) AS access_type, g.name AS inherited_from, collect(DISTINCT priv.name) AS priv_sessions
                 RETURN c.name AS computer,
+                       c.bloodtrail_ip AS computer_ip,
                        collect(DISTINCT access_type) AS access_types,
                        inherited_from,
                        priv_sessions AS privileged_sessions
@@ -1119,6 +1121,7 @@ def _fetch_user_access(driver, user_name: str) -> dict:
 
             for record in result:
                 computer = record["computer"]
+                computer_ip = record.get("computer_ip") or ""  # NEW: Get IP
                 access_types = record["access_types"]
                 inherited_from = record["inherited_from"]
 
@@ -1129,10 +1132,14 @@ def _fetch_user_access(driver, user_name: str) -> dict:
                     existing["access_types"] = list(set(existing["access_types"]) | set(access_types))
                     if inherited_from and not existing.get("inherited_from"):
                         existing["inherited_from"] = inherited_from
+                    # Update IP if not already set
+                    if computer_ip and not existing.get("computer_ip"):
+                        existing["computer_ip"] = computer_ip
                     continue
 
                 entry = {
                     "computer": computer,
+                    "computer_ip": computer_ip,  # NEW: Store IP
                     "access_types": access_types,
                     "privileged_sessions": [s for s in record["privileged_sessions"] if s],
                     "inherited_from": inherited_from,
