@@ -23,6 +23,7 @@ from .extractors import (
 )
 from .data_source import DataSource, create_data_source
 from .ip_resolver import IPResolver
+from .pwned_tracker import PwnedTracker
 
 
 class Colors:
@@ -454,7 +455,8 @@ class BHEnhancer:
         preset: Optional[str] = None,
         edge_filter: Optional[Set[str]] = None,
         dry_run: bool = False,
-        verbose: bool = False
+        verbose: bool = False,
+        dc_ip: Optional[str] = None
     ) -> ImportStats:
         """
         Run the edge enhancement pipeline.
@@ -464,6 +466,7 @@ class BHEnhancer:
             edge_filter: Specific edge types to extract (overrides preset)
             dry_run: Extract but don't import (validation mode)
             verbose: Print detailed progress
+            dc_ip: Optional DC IP for DNS resolution and command placeholder population
 
         Returns:
             ImportStats with results
@@ -555,8 +558,8 @@ class BHEnhancer:
                     if verbose:
                         print(f"    Found {C.BOLD}{len(computer_names)}{C.RESET} unique computers")
 
-                    # Resolve IPs in parallel
-                    resolver = IPResolver(timeout=2.0, max_workers=20)
+                    # Resolve IPs in parallel (use DC as DNS server if provided)
+                    resolver = IPResolver(timeout=2.0, max_workers=20, dc_ip=dc_ip)
                     ip_mappings = resolver.resolve_batch(list(computer_names))
 
                     # Store IPs in Neo4j
@@ -572,6 +575,20 @@ class BHEnhancer:
                 else:
                     if verbose:
                         print(f"    {C.YELLOW}No computers found in edges{C.RESET}")
+
+                # Store DC IP in Neo4j if provided (dual-purpose: DNS + command placeholder)
+                if dc_ip and not dry_run:
+                    try:
+                        tracker = PwnedTracker(self.config)
+                        if tracker.connect():
+                            result = tracker.set_dc_ip(dc_ip=dc_ip)
+                            if result.success:
+                                if verbose:
+                                    print(f"{C.GREEN}[+]{C.RESET} DC IP stored: {dc_ip}")
+                            tracker.close()
+                    except Exception as e:
+                        if verbose:
+                            print(f"{C.YELLOW}[!]{C.RESET} Could not store DC IP: {e}")
 
             # If many failures, run diagnostics and show helpful output
             if import_stats.edges_failed > 0 and import_stats.edges_imported == 0:

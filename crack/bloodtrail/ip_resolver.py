@@ -6,7 +6,11 @@ and parallel batch processing. Used during BloodHound import to enrich
 Neo4j with IP addresses for command generation.
 
 Usage:
+    # System DNS resolution (default)
     resolver = IPResolver(timeout=2.0, max_workers=20)
+
+    # DC-based DNS resolution (uses Domain Controller as DNS server)
+    resolver = IPResolver(timeout=2.0, max_workers=20, dc_ip="192.168.50.70")
 
     # Single resolution
     ip = resolver.resolve("FILES04.CORP.COM")  # -> "10.0.0.15" or None
@@ -22,6 +26,12 @@ import signal
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Dict, List, Optional, Set
 from contextlib import contextmanager
+
+try:
+    import dns.resolver
+    HAS_DNSPYTHON = True
+except ImportError:
+    HAS_DNSPYTHON = False
 
 
 class TimeoutError(Exception):
@@ -57,34 +67,48 @@ class IPResolver:
     - In-memory cache to avoid duplicate lookups
     - IPv4 focus (AF_INET) for pentesting tool compatibility
     - Graceful error handling (returns None on failure)
+    - Optional DC-based DNS resolution using dnspython
 
     Attributes:
         timeout: DNS lookup timeout in seconds (default: 2.0)
         max_workers: Number of parallel resolution threads (default: 20)
+        dc_ip: Optional Domain Controller IP for DNS queries (default: None)
     """
 
-    def __init__(self, timeout: float = 2.0, max_workers: int = 20):
+    def __init__(self, timeout: float = 2.0, max_workers: int = 20, dc_ip: Optional[str] = None):
         """
         Initialize IP resolver with timeout and concurrency settings.
 
         Args:
             timeout: DNS lookup timeout per hostname (seconds)
             max_workers: Number of parallel threads for batch resolution
+            dc_ip: Optional DC IP address to use as DNS server (requires dnspython)
         """
         self._cache: Dict[str, Optional[str]] = {}
         self.timeout = timeout
         self.max_workers = max_workers
+        self.dc_ip = dc_ip
         self._stats = {
             "resolved": 0,
             "failed": 0,
             "cached": 0,
         }
 
+        # Configure dnspython resolver if DC IP provided
+        if self.dc_ip and HAS_DNSPYTHON:
+            self._dns_resolver = dns.resolver.Resolver()
+            self._dns_resolver.nameservers = [self.dc_ip]
+            self._dns_resolver.timeout = timeout
+            self._dns_resolver.lifetime = timeout
+        else:
+            self._dns_resolver = None
+
     def resolve(self, fqdn: str) -> Optional[str]:
         """
         Resolve a single FQDN to IPv4 address.
 
-        Uses socket.getaddrinfo() with timeout. Results are cached.
+        Uses dnspython with custom DNS server if dc_ip provided, otherwise
+        falls back to socket.getaddrinfo() with system DNS. Results are cached.
 
         Args:
             fqdn: Fully qualified domain name (e.g., "FILES04.CORP.COM")
@@ -96,8 +120,9 @@ class IPResolver:
             >>> resolver = IPResolver()
             >>> resolver.resolve("localhost")
             '127.0.0.1'
-            >>> resolver.resolve("invalid.nonexistent")
-            None
+            >>> resolver = IPResolver(dc_ip="192.168.50.70")
+            >>> resolver.resolve("DC1.CORP.COM")
+            '192.168.50.70'
         """
         if not fqdn:
             return None
@@ -107,7 +132,54 @@ class IPResolver:
             self._stats["cached"] += 1
             return self._cache[fqdn]
 
-        # Resolve with timeout
+        # Try DC-based DNS resolution first
+        if self._dns_resolver:
+            ip = self._resolve_with_dnspython(fqdn)
+            if ip:
+                return ip
+            # If dnspython fails, fall through to socket resolution
+
+        # Fallback to system DNS resolution
+        return self._resolve_with_socket(fqdn)
+
+    def _resolve_with_dnspython(self, fqdn: str) -> Optional[str]:
+        """
+        Resolve FQDN using dnspython with custom DNS server (DC).
+
+        Args:
+            fqdn: Fully qualified domain name
+
+        Returns:
+            IPv4 address or None on failure
+        """
+        try:
+            # Query for A records
+            answers = self._dns_resolver.resolve(fqdn, 'A')
+            if answers:
+                # Get first IPv4 address
+                ip_address = str(answers[0])
+                self._cache[fqdn] = ip_address
+                self._stats["resolved"] += 1
+                return ip_address
+        except Exception:
+            # DNS query failed (NXDOMAIN, timeout, etc.)
+            pass
+
+        # Cache failure
+        self._cache[fqdn] = None
+        self._stats["failed"] += 1
+        return None
+
+    def _resolve_with_socket(self, fqdn: str) -> Optional[str]:
+        """
+        Resolve FQDN using socket.getaddrinfo() with system DNS.
+
+        Args:
+            fqdn: Fully qualified domain name
+
+        Returns:
+            IPv4 address or None on failure
+        """
         try:
             with timeout(self.timeout):
                 # getaddrinfo returns: [(family, type, proto, canonname, sockaddr), ...]
@@ -131,7 +203,7 @@ class IPResolver:
                     self._stats["failed"] += 1
                     return None
 
-        except (socket.gaierror, socket.herror, socket.timeout, TimeoutError, OSError) as e:
+        except (socket.gaierror, socket.herror, socket.timeout, TimeoutError, OSError):
             # DNS resolution failed (timeout, no such host, network error, etc.)
             self._cache[fqdn] = None
             self._stats["failed"] += 1

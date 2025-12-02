@@ -145,6 +145,12 @@ Supported Edge Types:
         default=500,
         help="Edges per batch (default: 500)",
     )
+    parser.add_argument(
+        "--dc-ip",
+        type=str,
+        metavar="IP",
+        help="Domain Controller IP for DNS resolution and command auto-population (e.g., 192.168.50.70). Uses DC as DNS server to resolve internal AD computer names.",
+    )
 
     # Info options
     parser.add_argument(
@@ -321,7 +327,7 @@ Supported Edge Types:
         "--set-dc-ip",
         type=str,
         metavar="IP",
-        help="Store DC IP address for command auto-population (e.g., 192.168.50.70)",
+        help="[DEPRECATED] Use --dc-ip during import instead. Store DC IP address for command auto-population (e.g., 192.168.50.70)",
     )
     config_group.add_argument(
         "--set-dc-hostname",
@@ -1033,7 +1039,7 @@ def handle_show_config(args):
         print()
 
         if not domain_config['dc_ip']:
-            print("  Set DC IP:   crack bloodtrail --set-dc-ip 192.168.50.70")
+            print("  Set DC IP:   crack bloodtrail /path/to/bh/json/ --dc-ip 192.168.50.70")
             print()
 
         return 0
@@ -1332,6 +1338,7 @@ def main():
         edge_filter=edge_filter,
         dry_run=args.dry_run,
         verbose=args.verbose,
+        dc_ip=getattr(args, 'dc_ip', None),
     )
 
     # Check if we should run the report
