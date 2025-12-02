@@ -18,6 +18,7 @@ class CommandVariable:
     description: str
     example: str = ""
     required: bool = True
+    common_values: List[str] = field(default_factory=list)
 
 
 @dataclass
@@ -155,28 +156,43 @@ class Command:
         return re.findall(r'<[A-Z_]+>', self.command)
 
     def matches_search(self, query: str) -> bool:
-        """Check if command matches search query
+        """Check if command matches search query (punctuation-insensitive)
 
         For multi-term queries (space-separated), ALL terms must match (AND logic).
-        Each term is matched against name, description, command text, and tags.
+        Each term is matched against ID, name, description, command text, and tags.
 
         Examples:
-            - "firewall" -> matches any command with "firewall" anywhere
-            - "firewall windows" -> matches only commands with BOTH "firewall" AND "windows"
+            - "tgsrep" -> matches "TGS-REP" (punctuation normalized)
+            - "firewall windows" -> matches only commands with BOTH terms
+            - "oscphigh" -> matches "OSCP:HIGH"
         """
         # Split query into terms (space-separated)
         terms = query.lower().split()
 
-        # Searchable content (all lowercase for case-insensitive matching)
+        # Build searchable content (all lowercase)
+        # BUG FIX: Added self.id to searchable fields
         searchable_content = ' '.join([
+            self.id.lower(),
             self.name.lower(),
             self.description.lower(),
             self.command.lower(),
             ' '.join(self.tags).lower()
         ])
 
-        # ALL terms must be present (AND logic)
-        return all(term in searchable_content for term in terms)
+        # Normalize punctuation for both content and query terms
+        searchable_normalized = _normalize_punctuation(searchable_content)
+
+        # ALL normalized terms must be present (AND logic)
+        return all(_normalize_punctuation(term) in searchable_normalized for term in terms)
+
+
+def _normalize_punctuation(text: str) -> str:
+    """Remove punctuation for fuzzy search matching
+
+    Removes: hyphens, underscores, colons, periods, slashes
+    Used by: Command.matches_search() for punctuation-insensitive substring matching
+    """
+    return text.replace('-', '').replace('_', '').replace(':', '').replace('.', '').replace('/', '')
 
 
 class HybridCommandRegistry:

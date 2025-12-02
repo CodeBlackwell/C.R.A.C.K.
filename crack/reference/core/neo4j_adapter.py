@@ -315,16 +315,20 @@ class Neo4jCommandRegistryAdapter:
         Returns:
             List of matching Command objects
         """
-        # Split query into terms for multi-term AND search
-        search_terms = [term.lower() for term in query.split()]
+        # Normalize search terms for punctuation-insensitive matching
+        search_terms = [
+            term.lower().replace('-', '').replace('_', '').replace(':', '').replace('.', '').replace('/', '')
+            for term in query.split()
+        ]
 
         cypher = """
         MATCH (cmd:Command)
         WHERE ALL(term IN $search_terms WHERE (
-            toLower(cmd.name) CONTAINS term
-            OR toLower(cmd.description) CONTAINS term
-            OR toLower(cmd.command) CONTAINS term
-            OR toLower(cmd.notes) CONTAINS term
+            replace(replace(replace(replace(replace(toLower(cmd.id), '-', ''), '_', ''), ':', ''), '.', ''), '/', '') CONTAINS term
+            OR replace(replace(replace(replace(replace(toLower(cmd.name), '-', ''), '_', ''), ':', ''), '.', ''), '/', '') CONTAINS term
+            OR replace(replace(replace(replace(replace(toLower(cmd.description), '-', ''), '_', ''), ':', ''), '.', ''), '/', '') CONTAINS term
+            OR replace(replace(replace(replace(replace(toLower(cmd.command), '-', ''), '_', ''), ':', ''), '.', ''), '/', '') CONTAINS term
+            OR replace(replace(replace(replace(replace(toLower(cmd.notes), '-', ''), '_', ''), ':', ''), '.', ''), '/', '') CONTAINS term
         ))
           AND ($category IS NULL OR cmd.category = $category)
           AND ($oscp_only = false OR cmd.oscp_relevance = 'high')
