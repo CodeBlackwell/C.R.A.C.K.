@@ -380,6 +380,7 @@ class CommandSuggester:
                     user = "<USER>"  # Attacker provides creds
 
                 targets = [discovered]  # What we found
+                target_ips = []  # Discovery commands don't have IPs
             else:
                 # Standard command: user has access to target
 
