@@ -77,10 +77,13 @@ def print_command_tables(
         if table.permissions_required:
             print(f"{c.CYAN}Requires: {table.permissions_required}{c.RESET}")
 
-        # Table header - adjust columns for discovery commands
+        # Table header - adjust columns based on command type
         if table.is_discovery:
             # Discovery commands find targets, attacker provides their own creds
             print(f"\n  {'Discovered':<25} {'Domain':<20} {'Info':<40} {'Ready Command'}")
+        elif table.is_coercion:
+            # Coercion commands: listener is unconstrained host, target is what we coerce
+            print(f"\n  {'Listener (Unconstrained)':<25} {'Coerce Target':<20} {'Reason':<40} {'Ready Command'}")
         else:
             print(f"\n  {'User':<25} {'Target':<20} {'Reason':<40} {'Ready Command'}")
         print(f"  {'-'*25} {'-'*20} {'-'*40} {'-'*50}")
@@ -504,7 +507,8 @@ def print_pwned_followup_commands(
                             username=username,
                             domain=domain,
                             target=ma.computer,
-                            cred_value=cv
+                            cred_value=cv,
+                            target_ip=ma.computer_ip or ""
                         )
                         # Short name for technique
                         tech_short = tech.name.split()[0].lower()
@@ -539,7 +543,8 @@ def print_pwned_followup_commands(
                             username=username,
                             domain=domain,
                             target=ma.computer,
-                            cred_value=cv
+                            cred_value=cv,
+                            target_ip=ma.computer_ip or ""
                         )
                         label_short = "PtH" if ct == "ntlm-hash" else ct[:4]
                         print(f"    {c.DIM}secretsdump ({label_short}):{c.RESET}  {c.GREEN}{sd_cmd}{c.RESET}")
@@ -571,7 +576,8 @@ def print_pwned_followup_commands(
                                     username=username,
                                     domain=domain,
                                     target=ma.computer,
-                                    cred_value=cv
+                                    cred_value=cv,
+                                    target_ip=ma.computer_ip or ""
                                 )
                                 tech_short = tech.name.split()[0].lower()
                                 print(f"    {c.DIM}{tech_short:>10}:{c.RESET}  {c.GREEN}{cmd}{c.RESET}")
@@ -605,7 +611,8 @@ def print_pwned_followup_commands(
                             username=username,
                             domain=domain,
                             target=ma.computer,
-                            cred_value=cv
+                            cred_value=cv,
+                            target_ip=ma.computer_ip or ""
                         )
                         tech_short = tech.name.split()[0].lower()
                         print(f"    {c.DIM}{tech_short:>10}:{c.RESET}  {c.GREEN}{cmd}{c.RESET}")

@@ -78,6 +78,7 @@ class CommandTable:
     post_success: List[Dict] = field(default_factory=list)  # Next steps after success
     permissions_required: str = ""     # What permissions needed to run command
     is_discovery: bool = False         # True for Kerberoast, AS-REP, etc.
+    is_coercion: bool = False          # True for PetitPotam, Coercer, etc.
 
     @property
     def phase(self) -> str:
@@ -105,6 +106,7 @@ class CommandTable:
             "post_success": self.post_success,
             "permissions_required": self.permissions_required,
             "is_discovery": self.is_discovery,
+            "is_coercion": self.is_coercion,
         }
 
 
@@ -385,6 +387,84 @@ class CommandSuggester:
                 target_ips = []  # Discovery commands don't have IPs
             else:
                 # Standard command: user has access to target
+
+                # Check for coercion commands (special handling)
+                # Coercion: attacker uses own creds, CoercionHost is LISTENER, target is what we coerce
+                if mapping.get("is_coercion"):
+                    listener = self._get_field(record, mapping, "listener_field", None)
+                    listener_ip = self._get_field(record, mapping, "listener_ip_field", None)
+                    coerce_target = self._get_field(record, mapping, "target_field", None)
+
+                    if not listener or not coerce_target:
+                        continue
+
+                    # Extract domain from listener (unconstrained delegation host)
+                    domain = extract_domain(listener) if listener and "@" in listener else ""
+                    if not domain and "." in listener:
+                        # Extract from FQDN: DC1.CORP.COM -> CORP.COM
+                        parts = listener.split(".")
+                        if len(parts) >= 2:
+                            domain = ".".join(parts[1:])
+
+                    # Build entries for each coercion command
+                    for cmd_id in cmd_ids:
+                        if cmd_id not in tables:
+                            cmd = self.commands.get(cmd_id, {})
+                            if not cmd:
+                                continue
+                            rewards = context if context else ACCESS_TYPE_REWARDS.get(
+                                access_type, ACCESS_TYPE_REWARDS.get(None, "")
+                            )
+                            tables[cmd_id] = CommandTable(
+                                command_id=cmd_id,
+                                name=cmd.get("name", cmd_id),
+                                template=cmd.get("command", ""),
+                                access_type=access_type,
+                                targets=[],
+                                variables_needed=self._get_sensitive_placeholders(cmd),
+                                context=context,
+                                domain_level=domain_level,
+                                example=self._build_example(cmd),
+                                objective=cmd.get("description", ""),
+                                rewards=rewards,
+                                post_success=mapping.get("post_success", []),
+                                permissions_required=mapping.get("permissions_required", ""),
+                                is_discovery=is_discovery,
+                                is_coercion=True,  # Mark as coercion command
+                            )
+
+                        # For coercion: don't fill username (attacker provides own creds)
+                        # Fill listener_ip and target_ip instead
+                        ready = fill_command(
+                            template=tables[cmd_id].template,
+                            username="",  # Attacker provides creds - leave placeholder
+                            target=coerce_target,
+                            target_ip="",  # Target is what we coerce (domain/DC)
+                            domain=domain,
+                            dc_ip=dc_ip or "",
+                            listener_ip=listener_ip or "",
+                        )
+
+                        reason = get_reason(
+                            access_type=access_type,
+                            user=listener,
+                            target=coerce_target,
+                            context=context
+                        )
+
+                        warnings = validate_target_entry(record, access_type)
+
+                        tables[cmd_id].targets.append(TargetEntry(
+                            user=listener,        # Display: unconstrained delegation host
+                            target=coerce_target, # Display: what we're coercing
+                            ready_command=ready,
+                            domain=domain,
+                            access_type=access_type,
+                            reason=reason,
+                            warnings=warnings,
+                        ))
+
+                    continue  # Skip normal processing for coercion records
 
                 # Check for user_array_field pattern (multiple users → single target)
                 if "user_array_field" in mapping:

