@@ -46,6 +46,7 @@ class MachineAccess:
     access_types: List[str]  # AdminTo, CanRDP, CanPSRemote, etc.
     privilege_level: str     # local-admin, user-level, dcom-exec
     sessions: List[str] = field(default_factory=list)  # Privileged users with sessions
+    computer_ip: Optional[str] = None  # Resolved IP address from Neo4j
 
 
 @dataclass
@@ -589,6 +590,7 @@ class PwnedTracker:
             WHERE priv.admincount = true
             WITH c, type(r) AS AccessType, null AS InheritedFrom, collect(DISTINCT priv.name) AS PrivSessions
             RETURN c.name AS Computer,
+                   c.bloodtrail_ip AS ComputerIP,
                    collect(DISTINCT AccessType) AS AccessTypes,
                    InheritedFrom,
                    PrivSessions
@@ -601,6 +603,7 @@ class PwnedTracker:
             WHERE priv.admincount = true
             WITH c, type(r) AS AccessType, g.name AS InheritedFrom, collect(DISTINCT priv.name) AS PrivSessions
             RETURN c.name AS Computer,
+                   c.bloodtrail_ip AS ComputerIP,
                    collect(DISTINCT AccessType) AS AccessTypes,
                    InheritedFrom,
                    PrivSessions
@@ -610,6 +613,7 @@ class PwnedTracker:
         seen_computers = {}
         for record in result:
             computer = record["Computer"]
+            computer_ip = record.get("ComputerIP") or ""
             access_types = record["AccessTypes"]
 
             if computer in seen_computers:
@@ -618,12 +622,16 @@ class PwnedTracker:
                 existing["access_types"] = list(set(existing["access_types"]) | set(access_types))
                 # Merge sessions
                 existing["sessions"] = list(set(existing["sessions"]) | set(record["PrivSessions"] or []))
+                # Update IP if not already set
+                if computer_ip and not existing.get("computer_ip"):
+                    existing["computer_ip"] = computer_ip
                 continue
 
             seen_computers[computer] = {
                 "access_types": access_types,
                 "sessions": record["PrivSessions"] or [],
                 "inherited_from": record["InheritedFrom"],
+                "computer_ip": computer_ip,
             }
 
         access_list = []
@@ -643,7 +651,8 @@ class PwnedTracker:
                 computer=computer,
                 access_types=access_types,
                 privilege_level=priv_level,
-                sessions=data["sessions"]
+                sessions=data["sessions"],
+                computer_ip=data.get("computer_ip", "")
             ))
 
         return access_list
@@ -836,10 +845,12 @@ class PwnedTracker:
             - domain: Domain name (e.g., CORP.COM)
             - dc_hostname: DC hostname (e.g., DC1.CORP.COM)
             - dc_ip: DC IP address (e.g., 192.168.50.70)
+            - domain_sid: Domain SID (e.g., S-1-5-21-1987370270-658905905-1781884369)
 
         Config is stored as properties on the Domain node:
             - bloodtrail_dc_ip
             - bloodtrail_dc_hostname
+            - bloodtrail_domain_sid
 
         Returns None if no domain found in BloodHound data.
         """
@@ -853,7 +864,8 @@ class PwnedTracker:
                     MATCH (d:Domain)
                     RETURN d.name AS domain,
                            d.bloodtrail_dc_ip AS dc_ip,
-                           d.bloodtrail_dc_hostname AS dc_hostname
+                           d.bloodtrail_dc_hostname AS dc_hostname,
+                           d.bloodtrail_domain_sid AS domain_sid
                     LIMIT 1
                 """)
 
@@ -880,6 +892,7 @@ class PwnedTracker:
                     "domain": domain,
                     "dc_hostname": dc_hostname,
                     "dc_ip": record["dc_ip"],
+                    "domain_sid": record["domain_sid"],
                 }
 
         except Exception:
@@ -942,6 +955,71 @@ class PwnedTracker:
         except Exception as e:
             return PwnedResult(success=False, error=str(e))
 
+    def set_domain_sid(self, domain_sid: str) -> PwnedResult:
+        """
+        Store Domain SID in Neo4j for Golden/Silver ticket auto-population.
+
+        The Domain SID is the same for all objects in the domain.
+        Format: S-1-5-21-XXXXXXXXXX-XXXXXXXXXX-XXXXXXXXXX (without user RID)
+
+        Args:
+            domain_sid: Domain SID (e.g., S-1-5-21-1987370270-658905905-1781884369)
+
+        Returns:
+            PwnedResult with success status
+        """
+        if not self._ensure_connected():
+            return PwnedResult(success=False, error="Could not connect to Neo4j")
+
+        # Validate SID format
+        if not domain_sid.startswith("S-1-5-21-"):
+            return PwnedResult(
+                success=False,
+                error="Invalid SID format. Expected: S-1-5-21-XXXXXXXXXX-XXXXXXXXXX-XXXXXXXXXX"
+            )
+
+        # Strip any trailing RID if user accidentally included it
+        parts = domain_sid.split("-")
+        if len(parts) > 7:
+            # User included the RID, strip it
+            domain_sid = "-".join(parts[:7])
+            print(f"[*] Stripped RID, using domain SID: {domain_sid}")
+
+        try:
+            with self.driver.session() as session:
+                # Check if domain exists
+                check_result = session.run("""
+                    MATCH (d:Domain)
+                    RETURN d.name AS domain
+                    LIMIT 1
+                """)
+
+                check_record = check_result.single()
+                if not check_record:
+                    return PwnedResult(
+                        success=False,
+                        error="No domain found in BloodHound data. Import data first."
+                    )
+
+                # Update domain with SID
+                result = session.run("""
+                    MATCH (d:Domain)
+                    SET d.bloodtrail_domain_sid = $domain_sid
+                    RETURN d.name AS domain
+                """, {"domain_sid": domain_sid})
+
+                record = result.single()
+                if not record:
+                    return PwnedResult(
+                        success=False,
+                        error="Failed to update domain SID"
+                    )
+
+                return PwnedResult(success=True, user=record["domain"])
+
+        except Exception as e:
+            return PwnedResult(success=False, error=str(e))
+
     def clear_domain_config(self) -> PwnedResult:
         """
         Clear stored domain configuration.
@@ -956,7 +1034,7 @@ class PwnedTracker:
             with self.driver.session() as session:
                 result = session.run("""
                     MATCH (d:Domain)
-                    REMOVE d.bloodtrail_dc_ip, d.bloodtrail_dc_hostname
+                    REMOVE d.bloodtrail_dc_ip, d.bloodtrail_dc_hostname, d.bloodtrail_domain_sid
                     RETURN d.name AS domain
                 """)
 

