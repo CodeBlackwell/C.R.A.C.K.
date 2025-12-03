@@ -561,33 +561,34 @@ class BHEnhancer:
                     if verbose:
                         print(f"    Found {C.BOLD}{len(computer_names)}{C.RESET} unique computers")
 
-                    # Clear existing IPs if --clean mode (default)
-                    if clean_ips and not dry_run:
+                    # Clear existing IPs if --clean mode AND we have dc_ip to resolve new ones
+                    if dc_ip and clean_ips and not dry_run:
                         cleared_count, _ = self._clear_all_ips(verbose=verbose)
 
-                    # Resolve IPs in parallel (use DC as DNS server if provided)
-                    resolver = IPResolver(timeout=2.0, max_workers=20, dc_ip=dc_ip)
-                    ip_mappings = resolver.resolve_batch(list(computer_names))
+                    # Resolve IPs in parallel (only if DC provided as DNS server)
+                    if dc_ip:
+                        resolver = IPResolver(timeout=2.0, max_workers=20, dc_ip=dc_ip)
+                        ip_mappings = resolver.resolve_batch(list(computer_names))
 
-                    # Store IPs in Neo4j
-                    enriched_count = self._enrich_ips(ip_mappings, verbose=verbose)
+                        # Store IPs in Neo4j
+                        enriched_count = self._enrich_ips(ip_mappings, verbose=verbose)
 
-                    # Show stats
-                    if enriched_count > 0:
-                        res_stats = resolver.get_stats()
-                        mode = "clean" if clean_ips else "update"
-                        print(f"{C.GREEN}[+]{C.RESET} IP Enrichment complete ({mode} mode):")
-                        print(f"    {C.GREEN}Resolved:{C.RESET}  {res_stats['resolved']}")
-                        print(f"    {C.DIM}Failed:{C.RESET}     {res_stats['failed']}")
-                        print(f"    {C.DIM}Cached:{C.RESET}     {res_stats['cached']}")
+                        # Show stats
+                        if enriched_count > 0:
+                            res_stats = resolver.get_stats()
+                            mode = "clean" if clean_ips else "update"
+                            print(f"{C.GREEN}[+]{C.RESET} IP Enrichment complete ({mode} mode):")
+                            print(f"    {C.GREEN}Resolved:{C.RESET}  {res_stats['resolved']}")
+                            print(f"    {C.DIM}Failed:{C.RESET}     {res_stats['failed']}")
+                            print(f"    {C.DIM}Cached:{C.RESET}     {res_stats['cached']}")
 
-                        # Print detailed list of resolved IPs
-                        if verbose:
-                            resolved_ips = [(fqdn, ip) for fqdn, ip in ip_mappings.items() if ip is not None]
-                            if resolved_ips:
-                                print(f"\n{C.CYAN}[*]{C.RESET} Resolved {C.BOLD}{len(resolved_ips)}{C.RESET} Computer IPs:")
-                                for computer, ip in sorted(resolved_ips):
-                                    print(f"    {C.DIM}{computer:40}{C.RESET} {C.GREEN}{ip}{C.RESET}")
+                            # Print detailed list of resolved IPs
+                            if verbose:
+                                resolved_ips = [(fqdn, ip) for fqdn, ip in ip_mappings.items() if ip is not None]
+                                if resolved_ips:
+                                    print(f"\n{C.CYAN}[*]{C.RESET} Resolved {C.BOLD}{len(resolved_ips)}{C.RESET} Computer IPs:")
+                                    for computer, ip in sorted(resolved_ips):
+                                        print(f"    {C.DIM}{computer:40}{C.RESET} {C.GREEN}{ip}{C.RESET}")
                 else:
                     if verbose:
                         print(f"    {C.YELLOW}No computers found in edges{C.RESET}")

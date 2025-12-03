@@ -767,6 +767,17 @@ def handle_run_all(args):
 
     high_only = getattr(args, 'oscp_high_only', False)
 
+    # Get stored DC IP from domain config (for <DC_IP> placeholder)
+    dc_ip = None
+    try:
+        tracker = PwnedTracker(config)
+        if tracker.connect():
+            domain_config = tracker.get_domain_config()
+            dc_ip = domain_config.get("dc_ip") if domain_config else None
+            tracker.close()
+    except Exception:
+        pass  # Silently continue if DC IP not available
+
     try:
         stats = run_all_queries(
             runner,
@@ -775,6 +786,7 @@ def handle_run_all(args):
             oscp_high_only=high_only,
             show_commands=getattr(args, 'commands', False),
             show_data=getattr(args, 'data', False),
+            dc_ip=dc_ip,
         )
     finally:
         runner.close()
@@ -1383,6 +1395,19 @@ def main():
                     report_path = args.bh_data_dir.parent / "bloodtrail.md"
                 else:
                     report_path = args.bh_data_dir / "bloodtrail.md"
+
+                # Get DC IP from args (if provided) or from stored domain config
+                dc_ip_for_report = getattr(args, 'dc_ip', None)
+                if not dc_ip_for_report:
+                    try:
+                        tracker = PwnedTracker(config)
+                        if tracker.connect():
+                            domain_config = tracker.get_domain_config()
+                            dc_ip_for_report = domain_config.get("dc_ip") if domain_config else None
+                            tracker.close()
+                    except Exception:
+                        pass
+
                 report_stats = run_all_queries(
                     runner,
                     output_path=report_path,
@@ -1391,6 +1416,7 @@ def main():
                     verbose=args.verbose,
                     show_commands=getattr(args, 'commands', False),
                     show_data=getattr(args, 'data', False),
+                    dc_ip=dc_ip_for_report,
                 )
 
                 # Final summary

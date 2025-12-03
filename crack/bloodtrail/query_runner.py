@@ -418,6 +418,7 @@ class QueryRunner:
         self.driver = None
         self._queries: Dict[str, Query] = {}
         self._categories: Dict[str, List[str]] = {}
+        self._pwned_users_cache: Optional[set] = None
         self._load_all_queries()
 
     def _get_queries_dir(self) -> Path:
@@ -488,6 +489,30 @@ class QueryRunner:
         """Close Neo4j connection"""
         if self.driver:
             self.driver.close()
+
+    def get_pwned_users(self, force_refresh: bool = False) -> set:
+        """
+        Get set of pwned user names for highlighting.
+
+        Returns:
+            Set of user principal names that are marked as pwned
+        """
+        if self._pwned_users_cache is not None and not force_refresh:
+            return self._pwned_users_cache
+
+        if not self.driver:
+            return set()
+
+        try:
+            with self.driver.session() as session:
+                result = session.run(
+                    "MATCH (u:User) WHERE u.pwned = true RETURN u.name AS name"
+                )
+                self._pwned_users_cache = {r["name"] for r in result if r["name"]}
+        except Exception:
+            self._pwned_users_cache = set()
+
+        return self._pwned_users_cache
 
     def get_inventory(self) -> Dict[str, Any]:
         """
@@ -790,13 +815,19 @@ class QueryRunner:
 
         return cypher
 
-    def format_results_table(self, result: QueryResult, max_width: int = 50) -> str:
+    def format_results_table(
+        self,
+        result: QueryResult,
+        max_width: int = 50,
+        highlight_pwned: bool = True
+    ) -> str:
         """
-        Format query results as an ASCII table.
+        Format query results as an ASCII table with optional pwned user highlighting.
 
         Args:
             result: QueryResult to format
             max_width: Maximum column width
+            highlight_pwned: If True, highlight pwned users in green
 
         Returns:
             Formatted table string
@@ -807,18 +838,40 @@ class QueryRunner:
         if not result.records:
             return "No results found"
 
+        # Get pwned users for highlighting
+        pwned_users = self.get_pwned_users() if highlight_pwned else set()
+
+        # ANSI codes for highlighting
+        GREEN = '\033[92m'
+        BOLD = '\033[1m'
+        RESET = '\033[0m'
+        PWNED_MARKER = f"{GREEN}{BOLD}[P]{RESET} "
+
+        # User-related column names (case-insensitive match)
+        USER_COLUMNS = {
+            'user', 'users', 'attacker', 'victim', 'target', 'principal',
+            'pwneduser', 'pwnedwithaccess', 'newtargetusers', 'victimsession',
+            'highvaluetarget', 'serviceaccount', 'member', 'gmsaaccount'
+        }
+
         # Get column headers from first record
         headers = list(result.records[0].keys())
+
+        # Identify user columns
+        user_header_indices = {
+            h for h in headers if h.lower() in USER_COLUMNS
+        }
 
         # Pre-format all values (applies timestamp formatting)
         formatted_records = []
         for record in result.records:
             formatted = {}
             for h in headers:
-                formatted[h] = format_field_value(h, record.get(h, ""))
+                val = format_field_value(h, record.get(h, ""))
+                formatted[h] = val
             formatted_records.append(formatted)
 
-        # Calculate column widths using formatted values
+        # Calculate column widths using formatted values (without ANSI codes)
         widths = {}
         for h in headers:
             max_val_len = max(
@@ -837,15 +890,27 @@ class QueryRunner:
         lines.append(header_line)
         lines.append("-" * len(header_line))
 
-        # Rows
+        # Rows with pwned highlighting
+        pwned_count = 0
         for formatted in formatted_records:
             row = []
             for h in headers:
                 val = formatted[h][:max_width]
-                row.append(val.ljust(widths[h])[:widths[h]])
+                display_val = val.ljust(widths[h])[:widths[h]]
+
+                # Highlight if this is a user column and user is pwned
+                if h in user_header_indices and val in pwned_users:
+                    display_val = f"{GREEN}{display_val}{RESET}"
+                    pwned_count += 1
+
+                row.append(display_val)
             lines.append(" | ".join(row))
 
-        lines.append(f"\n({result.record_count} records)")
+        # Footer with pwned indicator if any found
+        footer = f"\n({result.record_count} records)"
+        if pwned_count > 0:
+            footer += f" | {GREEN}{BOLD}{pwned_count} pwned user(s) highlighted{RESET}"
+        lines.append(footer)
 
         return "\n".join(lines)
 
@@ -871,6 +936,7 @@ def run_all_queries(
     verbose: bool = False,
     show_commands: bool = False,
     show_data: bool = False,
+    dc_ip: Optional[str] = None,
 ) -> dict:
     """
     Run all queries and generate colorized console output + markdown report.
@@ -883,6 +949,7 @@ def run_all_queries(
         verbose: Show full query results in console (no truncation)
         show_commands: Only show command suggestions in console (-c flag)
         show_data: Only show raw query data in console (-d flag)
+        dc_ip: Domain Controller IP (for <DC_IP> placeholder - retrieved from Neo4j)
 
     Returns:
         Dict with summary statistics
@@ -907,6 +974,18 @@ def run_all_queries(
     except ImportError:
         suggester = None
         suggestions_enabled = False
+
+    # Fetch pwned users for credential auto-fill
+    pwned_lookup = {}
+    try:
+        from .pwned_tracker import PwnedTracker
+        tracker = PwnedTracker(runner.config)
+        if tracker.connect():
+            for u in tracker.list_pwned_users():
+                pwned_lookup[u.name.upper()] = u
+            tracker.close()
+    except Exception:
+        pass  # Continue without pwned user credentials
 
     queries = runner.list_queries()
     if oscp_high_only:
@@ -1068,7 +1147,7 @@ def run_all_queries(
 
                     # Generate attack command tables (DRY approach)
                     if suggestions_enabled and suggester:
-                        tables = suggester.build_command_tables(query.id, result.records)
+                        tables = suggester.build_command_tables(query.id, result.records, pwned_users=pwned_lookup, dc_ip=dc_ip)
                         if tables:
                             all_tables.extend(tables)
                             stats["tables_generated"] += len(tables)
@@ -1319,6 +1398,19 @@ def run_all_queries(
         for f in sorted(high_findings, key=lambda x: -x["count"]):
             report_lines.append(f"- **{f['query']}**: {f['count']} results ({f['category']})")
         report_lines.append("")
+
+    # Generate Pwned User Attack Paths section
+    try:
+        from .display_commands import generate_pwned_attack_paths
+        if runner.driver:
+            pwned_console, pwned_markdown = generate_pwned_attack_paths(runner.driver)
+            if pwned_console:
+                print(pwned_console)
+                report_lines.append("")
+                report_lines.append(pwned_markdown)
+    except Exception as e:
+        # Silently skip if generation fails
+        pass
 
     # Write report
     if output_path is None:

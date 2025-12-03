@@ -321,7 +321,8 @@ class CommandSuggester:
         self,
         query_id: str,
         records: List[Dict],
-        pwned_users: Optional[Dict[str, Any]] = None
+        pwned_users: Optional[Dict[str, Any]] = None,
+        dc_ip: Optional[str] = None,
     ) -> List[CommandTable]:
         """
         Build DRY command tables from query results.
@@ -337,6 +338,7 @@ class CommandSuggester:
             query_id: Blood-trail query ID
             records: Query result records from Neo4j
             pwned_users: Dict mapping username (uppercase) to PwnedUser objects
+            dc_ip: Domain Controller IP from stored config (for <DC_IP> placeholder)
 
         Returns:
             List of CommandTable objects for tabular display
@@ -450,6 +452,7 @@ class CommandSuggester:
                                 target=single_target,
                                 target_ip=single_target_ip,  # NEW: Pass IP
                                 domain=user_domain,
+                                dc_ip=dc_ip or "",  # DC IP from stored config
                                 password=password,
                                 ntlm_hash=ntlm_hash,
                             )
@@ -495,7 +498,8 @@ class CommandSuggester:
             if mapping.get("domain_level") and not targets:
                 dc_host = infer_dc_hostname(domain)
                 targets = [dc_host]
-                target_ips = []  # DC uses hostname, not IP
+                # Use stored DC IP if available, otherwise fallback to FQDN
+                target_ips = [dc_ip] if dc_ip else []
 
             # Dynamic access type from result (for owned-* queries)
             record_access_type = access_type
@@ -558,6 +562,7 @@ class CommandSuggester:
                         target=target,
                         target_ip=target_ip,  # NEW: Pass IP (preferred over FQDN)
                         domain=domain,
+                        dc_ip=dc_ip or "",  # DC IP from stored config
                         password=password,
                         ntlm_hash=ntlm_hash,
                     )
