@@ -411,7 +411,7 @@
       "id": "evil-winrm-shell",
       "name": "Evil-WinRM - PowerShell Remoting",
       "description": "Connect to Windows via WinRM for PowerShell access",
-      "command": "evil-winrm -i <TARGET> -u <USER> -p <PASS>",
+      "command": "evil-winrm -i <TARGET> -u <USER> -p <PASSWORD>",
       "category": "active-directory",
       "subcategory": "lateral-movement",
       "variables": [
@@ -428,7 +428,7 @@
           "required": true
         },
         {
-          "name": "<PASS>",
+          "name": "<PASSWORD>",
           "description": "Password",
           "example": "Password123",
           "required": true

