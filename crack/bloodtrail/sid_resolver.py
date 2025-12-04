@@ -3,15 +3,18 @@ SID Resolver - Maps Security Identifiers to Names
 
 Builds a cache from BloodHound JSON exports and resolves SIDs to
 human-readable names with object types.
+
+Supports both directory and ZIP file data sources.
 """
 
 import json
 import re
 from pathlib import Path
-from typing import Dict, Optional, Tuple, List
+from typing import Dict, Optional, Tuple, List, Union
 from dataclasses import dataclass, field
 
 from .config import WELL_KNOWN_SIDS, DOMAIN_RIDS
+from .data_source import DataSource, create_data_source
 
 
 @dataclass
@@ -40,7 +43,13 @@ class SIDResolver:
         # Returns ("DOMAIN ADMINS@DOMAIN.COM", "Group")
     """
 
-    def __init__(self, bh_data_dir: Optional[Path] = None):
+    def __init__(self, bh_data_source: Optional[Union[Path, DataSource]] = None):
+        """
+        Initialize the SID resolver.
+
+        Args:
+            bh_data_source: Path to directory/ZIP or DataSource object
+        """
         self._cache: Dict[str, Tuple[str, str]] = {}
         self._domain_sids: Dict[str, str] = {}  # domain_sid -> domain_name
         self.stats = ResolverStats()
@@ -49,8 +58,8 @@ class SIDResolver:
         self._cache.update(WELL_KNOWN_SIDS)
 
         # Load from BloodHound data if provided
-        if bh_data_dir:
-            self._load_all_sids(bh_data_dir)
+        if bh_data_source:
+            self._load_all_sids(bh_data_source)
 
     def resolve(self, sid: str) -> Tuple[str, str]:
         """
@@ -126,45 +135,35 @@ class SIDResolver:
 
         return None
 
-    def _load_all_sids(self, data_dir: Path):
-        """Load SIDs from all BloodHound JSON files in directory"""
-        data_dir = Path(data_dir)
+    def _load_all_sids(self, data_source: Union[Path, DataSource]):
+        """Load SIDs from all BloodHound JSON files in directory or ZIP"""
+        # Convert Path to DataSource if needed
+        if isinstance(data_source, (str, Path)):
+            data_source = create_data_source(Path(data_source))
 
-        if not data_dir.exists():
-            raise FileNotFoundError(f"BloodHound data directory not found: {data_dir}")
-
-        # Find JSON files
-        json_files = list(data_dir.glob("*.json"))
+        json_files = data_source.list_json_files()
         if not json_files:
-            raise FileNotFoundError(f"No JSON files found in: {data_dir}")
+            raise FileNotFoundError(f"No JSON files found in: {data_source.source_path}")
 
-        # Load each file type
-        for json_file in json_files:
-            fname = json_file.name.lower()
-            try:
-                with open(json_file) as f:
-                    data = json.load(f)
+        # Load each file type using the data source iterator
+        for filename, data in data_source.iter_json_files():
+            fname = filename.lower()
 
-                # Extract based on file type
-                if "users" in fname:
-                    self._extract_from_objects(data, "User")
-                elif "computers" in fname:
-                    self._extract_from_objects(data, "Computer")
-                elif "groups" in fname:
-                    self._extract_from_objects(data, "Group")
-                elif "domains" in fname:
-                    self._extract_domains(data)
-                elif "gpos" in fname:
-                    self._extract_from_objects(data, "GPO")
-                elif "ous" in fname:
-                    self._extract_from_objects(data, "OU")
-                elif "containers" in fname:
-                    self._extract_from_objects(data, "Container")
-
-            except json.JSONDecodeError as e:
-                print(f"[!] JSON parse error in {json_file}: {e}")
-            except Exception as e:
-                print(f"[!] Error loading {json_file}: {e}")
+            # Extract based on file type
+            if "users" in fname:
+                self._extract_from_objects(data, "User")
+            elif "computers" in fname:
+                self._extract_from_objects(data, "Computer")
+            elif "groups" in fname:
+                self._extract_from_objects(data, "Group")
+            elif "domains" in fname:
+                self._extract_domains(data)
+            elif "gpos" in fname:
+                self._extract_from_objects(data, "GPO")
+            elif "ous" in fname:
+                self._extract_from_objects(data, "OU")
+            elif "containers" in fname:
+                self._extract_from_objects(data, "Container")
 
     def _extract_from_objects(self, data: dict, obj_type: str):
         """Extract SID→Name mappings from BloodHound objects"""

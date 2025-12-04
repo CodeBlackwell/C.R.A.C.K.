@@ -1405,9 +1405,47 @@ def run_all_queries(
         if runner.driver:
             pwned_console, pwned_markdown = generate_pwned_attack_paths(runner.driver)
             if pwned_console:
-                print(pwned_console)
+                if show_all or show_commands:
+                    print(pwned_console)
                 report_lines.append("")
                 report_lines.append(pwned_markdown)
+    except Exception as e:
+        # Silently skip if generation fails
+        pass
+
+    # Generate Password Spray Recommendations section
+    try:
+        from .display_commands import generate_spray_section
+        from .pwned_tracker import PwnedTracker
+        tracker = PwnedTracker(runner.config)
+        if tracker.connect():
+            pwned_users_list = tracker.list_pwned_users()
+            policy = tracker.get_password_policy()
+            tracker.close()
+
+            if pwned_users_list:
+                # Extract domain from first pwned user
+                domain = ""
+                for user in pwned_users_list:
+                    if "@" in user.name:
+                        domain = user.name.split("@")[1]
+                        break
+
+                # Get DC IP from config if available
+                dc_ip = getattr(runner.config, 'dc_ip', None) or "<DC_IP>"
+
+                spray_console, spray_markdown = generate_spray_section(
+                    pwned_users=pwned_users_list,
+                    policy=policy,
+                    domain=domain,
+                    dc_ip=dc_ip,
+                    use_colors=True,
+                )
+                if spray_console:
+                    if show_all or show_commands:
+                        print(spray_console)
+                    report_lines.append("")
+                    report_lines.append(spray_markdown)
     except Exception as e:
         # Silently skip if generation fails
         pass

@@ -86,6 +86,16 @@ class CommandTable:
         return ACCESS_TYPE_PHASES.get(self.access_type, "Other")
 
     @property
+    def priority_score(self) -> int:
+        """Get priority score for impact-based sorting within phases.
+
+        Higher score = higher impact = shown first.
+        Used by display functions to sort commands within phase groups.
+        """
+        from .command_mappings import ACCESS_TYPE_PRIORITY
+        return ACCESS_TYPE_PRIORITY.get(self.access_type, 0)
+
+    @property
     def target_count(self) -> int:
         return len(self.targets)
 

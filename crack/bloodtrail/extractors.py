@@ -3,16 +3,19 @@ Edge Extractors for BloodHound Data
 
 Extracts relationship data from BloodHound JSON exports and converts
 to Neo4j edge format for import.
+
+Supports both directory and ZIP file data sources.
 """
 
 import json
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Iterator
+from typing import Dict, List, Optional, Set, Iterator, Union
 from dataclasses import dataclass, field
 
 from .config import ACE_EDGE_MAPPINGS, ATTACK_PATH_EDGES
 from .sid_resolver import SIDResolver
+from .data_source import DataSource, create_data_source
 
 
 @dataclass
@@ -540,7 +543,7 @@ class EdgeExtractorRegistry:
         ]
 
     def extract_from_file(self, json_path: Path) -> ExtractionResult:
-        """Extract edges from a single JSON file"""
+        """Extract edges from a single JSON file (filesystem path)"""
         result = ExtractionResult()
 
         try:
@@ -551,6 +554,11 @@ class EdgeExtractorRegistry:
             return result
 
         filename = json_path.name
+        return self.extract_from_data(data, filename)
+
+    def extract_from_data(self, data: dict, filename: str) -> ExtractionResult:
+        """Extract edges from parsed JSON data"""
+        result = ExtractionResult()
 
         for extractor in self.extractors:
             if extractor.should_process(filename):
@@ -559,26 +567,30 @@ class EdgeExtractorRegistry:
 
         return result
 
-    def extract_from_directory(
+    def extract_from_source(
         self,
-        data_dir: Path,
+        data_source: Union[Path, DataSource],
         edge_filter: Optional[Set[str]] = None
     ) -> ExtractionResult:
         """
-        Extract edges from all JSON files in directory.
+        Extract edges from a DataSource (directory or ZIP file).
 
         Args:
-            data_dir: Directory containing BloodHound JSON exports
+            data_source: DataSource object or Path to directory/ZIP
             edge_filter: Optional set of edge types to extract (None = all)
 
         Returns:
             ExtractionResult with all extracted edges
         """
         result = ExtractionResult()
-        data_dir = Path(data_dir)
 
-        for json_path in data_dir.glob("*.json"):
-            file_result = self.extract_from_file(json_path)
+        # Convert Path to DataSource if needed
+        if isinstance(data_source, (str, Path)):
+            data_source = create_data_source(Path(data_source))
+
+        # Iterate over all JSON files in the source
+        for filename, data in data_source.iter_json_files():
+            file_result = self.extract_from_data(data, filename)
             result.merge(file_result)
 
         # Apply edge type filter
@@ -590,9 +602,29 @@ class EdgeExtractorRegistry:
 
         return result
 
-    def get_attack_path_edges(self, data_dir: Path) -> ExtractionResult:
+    def extract_from_directory(
+        self,
+        data_dir: Union[Path, DataSource],
+        edge_filter: Optional[Set[str]] = None
+    ) -> ExtractionResult:
+        """
+        Extract edges from all JSON files in directory or ZIP.
+
+        This method is maintained for backwards compatibility.
+        Use extract_from_source() for new code.
+
+        Args:
+            data_dir: Directory/ZIP Path or DataSource containing BloodHound exports
+            edge_filter: Optional set of edge types to extract (None = all)
+
+        Returns:
+            ExtractionResult with all extracted edges
+        """
+        return self.extract_from_source(data_dir, edge_filter)
+
+    def get_attack_path_edges(self, data_source: Union[Path, DataSource]) -> ExtractionResult:
         """Extract only attack-path relevant edges"""
-        return self.extract_from_directory(data_dir, edge_filter=ATTACK_PATH_EDGES)
+        return self.extract_from_source(data_source, edge_filter=ATTACK_PATH_EDGES)
 
     def get_all_edge_types(self) -> Set[str]:
         """Return all supported edge types"""
