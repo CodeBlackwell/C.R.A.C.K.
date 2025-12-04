@@ -34,12 +34,12 @@ def generate_authenticated_attacks(
     Returns:
         Tuple of (console_lines: List[str], markdown_lines: List[str])
     """
-    from ..command_mappings import (
+    from ..mappings.authenticated import (
         AUTHENTICATED_USER_TEMPLATES,
         AUTHENTICATED_ATTACKS,
-        fill_pwned_command,
-        infer_dc_hostname,
     )
+    from ..mappings.command_fill import fill_pwned_command
+    from ..mappings.text_utils import infer_dc_hostname
 
     c = Colors if use_colors else NoColors
 
@@ -109,7 +109,7 @@ def print_authenticated_attacks_template(use_colors: bool = True, dc_ip: str = N
         use_colors: Enable ANSI colors
         dc_ip: Domain Controller IP (replaces <DC_IP> placeholder if provided)
     """
-    from ..command_mappings import AUTHENTICATED_USER_TEMPLATES, AUTHENTICATED_ATTACKS
+    from ..mappings.authenticated import AUTHENTICATED_USER_TEMPLATES, AUTHENTICATED_ATTACKS
 
     c = Colors if use_colors else NoColors
 
@@ -138,7 +138,7 @@ def print_authenticated_attacks_template(use_colors: bool = True, dc_ip: str = N
 
 def generate_authenticated_attacks_template_markdown() -> str:
     """Generate markdown version of authenticated attacks template."""
-    from ..command_mappings import AUTHENTICATED_USER_TEMPLATES, AUTHENTICATED_ATTACKS
+    from ..mappings.authenticated import AUTHENTICATED_USER_TEMPLATES, AUTHENTICATED_ATTACKS
 
     lines = []
     lines.append("#### Authenticated User Attacks (Any Domain User)")

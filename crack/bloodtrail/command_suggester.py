@@ -15,19 +15,21 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List, Optional, Any, Union
 
-from .command_mappings import (
-    QUERY_COMMAND_MAPPINGS,
-    EDGE_COMMAND_MAPPINGS,
+from .mappings.query_loader import QUERY_COMMAND_MAPPINGS
+from .mappings.edge_mappings import EDGE_COMMAND_MAPPINGS
+from .mappings.text_utils import (
     SENSITIVE_PLACEHOLDERS,
-    ACCESS_TYPE_PHASES,
-    ACCESS_TYPE_REWARDS,
     extract_domain,
     extract_username,
     infer_dc_hostname,
     is_group_name,
-    get_reason,
-    fill_command,
 )
+from .mappings.access_types import (
+    ACCESS_TYPE_PHASES,
+    ACCESS_TYPE_REWARDS,
+    get_reason,
+)
+from .mappings.command_fill import fill_command
 
 # Type hint for PwnedUser (avoid circular import)
 if False:  # TYPE_CHECKING
@@ -92,7 +94,7 @@ class CommandTable:
         Higher score = higher impact = shown first.
         Used by display functions to sort commands within phase groups.
         """
-        from .command_mappings import ACCESS_TYPE_PRIORITY
+        from .mappings.access_types import ACCESS_TYPE_PRIORITY
         return ACCESS_TYPE_PRIORITY.get(self.access_type, 0)
 
     @property

@@ -164,7 +164,8 @@ def print_cred_harvest_targets(
         targets: List of dicts with pwned_user, target, privileged_sessions
         use_colors: Enable ANSI colors
     """
-    from ..command_mappings import CRED_TYPE_TEMPLATES, fill_pwned_command
+    from ..mappings.edge_mappings import CRED_TYPE_TEMPLATES
+    from ..mappings.command_fill import fill_pwned_command
 
     c = Colors if use_colors else NoColors
 

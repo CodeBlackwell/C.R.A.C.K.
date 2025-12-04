@@ -28,15 +28,11 @@ def generate_pwned_attack_paths(driver, use_colors: bool = True) -> tuple:
         Tuple of (console_output: str, markdown_output: str)
         Returns ("", "") if no pwned users
     """
-    from ..command_mappings import (
-        CRED_TYPE_TEMPLATES,
-        LATERAL_TECHNIQUES,
-        fill_pwned_command,
-        infer_dc_hostname,
-        get_techniques_for_access,
-        AUTHENTICATED_USER_TEMPLATES,
-        AUTHENTICATED_ATTACKS,
-    )
+    from ..mappings.edge_mappings import CRED_TYPE_TEMPLATES
+    from ..mappings.lateral import LATERAL_TECHNIQUES, get_techniques_for_access
+    from ..mappings.command_fill import fill_pwned_command
+    from ..mappings.text_utils import infer_dc_hostname
+    from ..mappings.authenticated import AUTHENTICATED_USER_TEMPLATES, AUTHENTICATED_ATTACKS
 
     c = Colors if use_colors else NoColors
 
@@ -298,7 +294,7 @@ def generate_post_exploit_section(driver, use_colors: bool = True, lhost: str = 
     Returns:
         Tuple of (console_output: str, markdown_output: str)
     """
-    from ..command_mappings import get_post_exploit_commands, get_harvest_tips
+    from ..mappings.post_exploit import get_post_exploit_commands, get_harvest_tips
 
     c = Colors if use_colors else NoColors
 

@@ -1154,7 +1154,7 @@ def run_all_queries(
                             stats["total_targets"] += sum(len(t.targets) for t in tables)
 
                         # Also check for attack sequences (chain queries)
-                        from .command_mappings import QUERY_COMMAND_MAPPINGS
+                        from .mappings.query_loader import QUERY_COMMAND_MAPPINGS
                         mapping = QUERY_COMMAND_MAPPINGS.get(query.id)
                         if mapping == "BUILD_SEQUENCE":
                             sequences = suggester.suggest_for_query(query.id, result.records)

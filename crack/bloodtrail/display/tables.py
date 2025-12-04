@@ -8,7 +8,7 @@ from typing import List, Dict
 
 from .base import Colors, NoColors, truncate
 from ..command_suggester import CommandTable, TargetEntry, AttackSequence
-from ..command_mappings import ACCESS_TYPE_PHASES
+from ..mappings.access_types import ACCESS_TYPE_PHASES
 
 
 def deduplicate_command_tables(tables: List[CommandTable]) -> List[CommandTable]:

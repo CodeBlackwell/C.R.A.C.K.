@@ -70,7 +70,7 @@ def print_spray_recommendations(
         return
 
     # For filtered output (smb/kerberos/ldap only)
-    from ..command_mappings import SPRAY_TECHNIQUES, SPRAY_ONELINERS
+    from ..mappings.spray import SPRAY_TECHNIQUES, SPRAY_ONELINERS
 
     def fill_template(cmd: str, pwd: str = "<PASSWORD>") -> str:
         return fill_spray_template(cmd, dc_ip, domain, pwd, usernames)
@@ -133,7 +133,7 @@ def _print_all_targets_section(
 
     Shows bash loops for SMB, WinRM, RDP, and MSSQL protocols.
     """
-    from ..command_mappings import ALL_TARGETS_PROTOCOLS, ALL_TARGETS_IP_THRESHOLD
+    from ..mappings.spray import ALL_TARGETS_PROTOCOLS, ALL_TARGETS_IP_THRESHOLD
 
     if not all_ips:
         print()
@@ -228,7 +228,7 @@ def generate_spray_section(
     Returns:
         Tuple of (console_output: str, markdown_output: str)
     """
-    from ..command_mappings import (
+    from ..mappings.spray import (
         SPRAY_TECHNIQUES,
         SPRAY_SCENARIOS,
         USER_ENUM_COMMANDS,
