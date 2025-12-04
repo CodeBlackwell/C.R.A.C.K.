@@ -1,63 +1,96 @@
 """
-Blood-trail DRY Command Display - Backward Compatibility Wrapper
+bloodtrail.display - Display and output formatting for bloodtrail.
 
-This module re-exports all functions from the modularized display package.
-All display functionality has been moved to bloodtrail/display/ subpackage.
-
-For new code, import directly from bloodtrail.display:
-    from bloodtrail.display import print_command_tables, Colors
-
-This wrapper ensures existing imports continue to work.
+This package provides all display functions for bloodtrail output including:
+- Table rendering and formatting
+- Attack path visualization
+- Credential display
+- Password spray recommendations
+- Post-exploitation commands
 """
 
-# Re-export everything from the display package
-from .display import (
-    # Base utilities
+# Base utilities (shared across modules)
+from .base import (
     Colors,
     NoColors,
     truncate,
     extract_creds_from_pwned_users,
     fill_spray_template,
-    # Tables
+)
+
+# Table rendering
+from .tables import (
     deduplicate_command_tables,
     print_command_tables,
     print_command_tables_by_phase,
     print_domain_level_table,
     format_table_markdown,
     format_tables_markdown,
-    # Statistics
+)
+
+# Statistics
+from .statistics import (
     get_table_stats,
     print_stats,
-    # Post-success
+)
+
+# Post-success suggestions
+from .post_success import (
     print_post_success,
-    # Techniques
+)
+
+# Technique legend and comparison
+from .techniques import (
     print_technique_legend,
     generate_technique_legend_console,
     generate_technique_legend_markdown,
-    # Pwned display
+)
+
+# Pwned user display
+from .pwned_display import (
     print_pwned_users_table,
     print_machines_ip_table,
     print_cred_harvest_targets,
-    # Authenticated
+)
+
+# Authenticated attacks
+from .authenticated import (
     generate_authenticated_attacks,
     print_authenticated_attacks_template,
     generate_authenticated_attacks_template_markdown,
-    # Post-exploit
+)
+
+# Post-exploitation commands
+from .post_exploit import (
     print_post_exploit_commands,
     print_pwned_followup_commands,
-    # Attack paths
+)
+
+# Attack paths (Neo4j integration)
+from .attack_paths import (
     generate_pwned_attack_paths,
     generate_post_exploit_section,
-    # Spray
+)
+
+# Password spray recommendations
+from .spray import (
     print_spray_recommendations,
     generate_spray_section,
-    # Spray tailored
-    print_spray_tailored,
-    # Backward compatibility aliases
-    _NoColors,
-    _truncate,
-    _generate_authenticated_attacks,
 )
+
+# BloodHound-based tailored spray
+from .spray_tailored import (
+    print_spray_tailored,
+)
+
+
+# Backward compatibility aliases
+_NoColors = NoColors
+_truncate = truncate
+
+# Private function aliases for backward compatibility
+_generate_authenticated_attacks = generate_authenticated_attacks
+
 
 __all__ = [
     # Base
