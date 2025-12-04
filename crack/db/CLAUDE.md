@@ -29,9 +29,8 @@ CHAIN (ordered sequence)
   - Conditional logic, alternate paths
 
 CHEATSHEET (contextual collection)
-  - Scenarios: context-driven workflows
-  - Sections: phase-based groupings
-  - References commands by ID only
+  - Scenarios: context-driven workflows (command IDs as strings)
+  - Sections: phase-based groupings (command objects with examples)
   - Educational header (when/how to recognize)
 
 COMMAND (atomic unit)
@@ -120,6 +119,37 @@ D: Minimal educational content
 F: Required fields only
 ```
 
+### Cheatsheet Section Commands (Required Format)
+Section commands must be objects with filled examples (not plain strings):
+```json
+"sections": [{
+  "title": "Phase 1: Setup",
+  "notes": "Start servers before transfers",
+  "commands": [
+    {
+      "id": "ft-python-http-server",
+      "example": "python3 -m http.server 8000",
+      "shows": "Serving HTTP on 0.0.0.0 port 8000"
+    },
+    {
+      "id": "ft-smb-server",
+      "example": "impacket-smbserver share /var/www/html -smb2support",
+      "shows": "Impacket SMB server started"
+    }
+  ]
+}]
+```
+
+**Required fields:**
+- `id` (string): Command ID from commands database
+- `example` (string): Command with placeholders filled using dummy data
+
+**Optional fields:**
+- `shows` (string): Brief expected output hint
+- Additional fields allowed (loose schema)
+
+**Note:** Scenario commands remain as simple string IDs.
+
 ## VALIDATION
 
 ### Rules
@@ -140,6 +170,12 @@ python3 db/scripts/validate_commands.py reference/data/commands/{category}/{file
 # Advanced validation + metrics
 python3 db/neo4j-migration/scripts/utils/validate_all_commands.py
 python3 db/neo4j-migration/scripts/utils/json_stats.py --verbose
+
+# Cheatsheet validation (section commands must have example field)
+python3 db/neo4j-migration/scripts/utils/validate_schema_compliance.py --cheatsheets
+
+# Migrate cheatsheet sections to new format
+python3 db/scripts/migrate_cheatsheet_sections.py
 
 # Comprehensive diagnostic
 cd db/neo4j-migration/scripts/utils && ./quick_report.sh --verbose --save
@@ -219,6 +255,7 @@ Fixes:
 ❌ Cheatsheet in commands/ dir → ✓ Place in cheatsheets/ dir
 ❌ Missing OSCP tag → ✓ Add OSCP:HIGH|MEDIUM|LOW
 ❌ Placeholder without variable → ✓ Add to variables[] array
+❌ Section command as string → ✓ Use object: {"id": "...", "example": "...", "shows": "..."}
 ```
 
 ### Migration Pipeline
