@@ -388,6 +388,16 @@ Supported Edge Types:
         help="Clear stored domain configuration",
     )
     config_group.add_argument(
+        "--purge",
+        action="store_true",
+        help="Purge ALL data from Neo4j database (nodes, edges, credentials). Use with caution!",
+    )
+    config_group.add_argument(
+        "-y", "--yes",
+        action="store_true",
+        help="Skip confirmation prompts (use with --purge)",
+    )
+    config_group.add_argument(
         "--discover-dc",
         nargs='*',
         metavar=('USER', 'PASSWORD'),
@@ -1362,6 +1372,119 @@ def handle_clear_config(args):
         tracker.close()
 
 
+def handle_purge(args):
+    """Handle --purge command - completely clear Neo4j database"""
+    config = Neo4jConfig(uri=args.uri, user=args.user, password=args.password)
+
+    # Connect to Neo4j
+    try:
+        driver = GraphDatabase.driver(config.uri, auth=(config.user, config.password))
+        with driver.session() as session:
+            session.run("RETURN 1")
+    except Exception as e:
+        print(f"[!] Could not connect to Neo4j: {e}")
+        return 1
+
+    # Get current database stats
+    try:
+        with driver.session() as session:
+            # Count nodes and relationships
+            result = session.run("""
+                MATCH (n)
+                WITH count(n) AS total_nodes
+                MATCH ()-[r]->()
+                WITH total_nodes, count(r) AS total_rels
+                RETURN total_nodes, total_rels
+            """)
+            record = result.single()
+            total_nodes = record["total_nodes"] if record else 0
+            total_rels = record["total_rels"] if record else 0
+
+            # Get node counts by label
+            result = session.run("""
+                MATCH (u:User) WITH count(u) AS users
+                MATCH (c:Computer) WITH users, count(c) AS computers
+                MATCH (g:Group) WITH users, computers, count(g) AS groups
+                MATCH (d:Domain) WITH users, computers, groups, count(d) AS domains
+                RETURN users, computers, groups, domains
+            """)
+            record = result.single()
+            if record:
+                users = record["users"]
+                computers = record["computers"]
+                groups = record["groups"]
+                domains = record["domains"]
+            else:
+                users = computers = groups = domains = 0
+
+    except Exception as e:
+        print(f"[!] Error checking database: {e}")
+        driver.close()
+        return 1
+
+    # Display what will be deleted
+    print()
+    print("\033[91m\033[1m╔══════════════════════════════════════════════════════════════════════╗\033[0m")
+    print("\033[91m\033[1m║\033[0m   \033[91m⚠\033[0m  \033[1mWARNING: Database Purge\033[0m                                        \033[91m\033[1m║\033[0m")
+    print("\033[91m\033[1m╚══════════════════════════════════════════════════════════════════════╝\033[0m")
+    print()
+    print("  This will permanently delete ALL data from Neo4j:")
+    print()
+    print(f"    \033[91m•\033[0m Users:         \033[1m{users}\033[0m")
+    print(f"    \033[91m•\033[0m Computers:     \033[1m{computers}\033[0m")
+    print(f"    \033[91m•\033[0m Groups:        \033[1m{groups}\033[0m")
+    print(f"    \033[91m•\033[0m Domains:       \033[1m{domains}\033[0m")
+    print(f"    \033[91m•\033[0m Total Nodes:   \033[1m{total_nodes}\033[0m")
+    print(f"    \033[91m•\033[0m Relationships: \033[1m{total_rels}\033[0m")
+    print()
+    print("  \033[2mThis includes:\033[0m")
+    print("    - All BloodHound Active Directory data")
+    print("    - All pwned user credentials and tracking")
+    print("    - Domain configuration (DC IP, SID, etc.)")
+    print("    - Password policies")
+    print()
+
+    if total_nodes == 0:
+        print("[*] Database is already empty.")
+        driver.close()
+        return 0
+
+    # Confirm unless -y/--yes provided
+    if not getattr(args, 'yes', False):
+        confirm = input("  \033[1mType 'PURGE' to confirm:\033[0m ").strip()
+        if confirm != "PURGE":
+            print()
+            print("[*] Aborted. No changes made.")
+            driver.close()
+            return 0
+
+    # Execute purge
+    print()
+    print("[*] Purging database...")
+
+    try:
+        with driver.session() as session:
+            # Delete all nodes and relationships
+            result = session.run("MATCH (n) DETACH DELETE n RETURN count(n) AS deleted")
+            record = result.single()
+            deleted = record["deleted"] if record else 0
+
+        print(f"\033[92m[+]\033[0m Purge complete: \033[1m{deleted}\033[0m nodes deleted")
+        print()
+        print("  To reimport BloodHound data:")
+        print("    1. Import via BloodHound GUI (File > Upload Data)")
+        print("    2. Run: crack bloodtrail /path/to/sharphound.zip")
+        print()
+
+    except Exception as e:
+        print(f"[!] Purge failed: {e}")
+        driver.close()
+        return 1
+
+    driver.close()
+    return 0
+
+
 def handle_domain_sid(args):
     """Handle --domain-sid command"""
     config = Neo4jConfig(uri=args.uri, user=args.user, password=args.password)
@@ -1834,6 +1957,9 @@ def main():
 
     if args.clear_config:
         return handle_clear_config(args)
+
+    if args.purge:
+        return handle_purge(args)
 
     if args.discover_dc is not None:
         return handle_discover_dc(args)
