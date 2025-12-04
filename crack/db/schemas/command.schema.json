@@ -60,6 +60,13 @@
                   "type": "boolean",
                   "default": true,
                   "description": "Whether this variable is required"
+                },
+                "common_values": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Suggested values for UI dropdowns or autocomplete"
                 }
               }
             }
