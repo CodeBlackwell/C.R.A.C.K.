@@ -1,0 +1,210 @@
+{
+  "metadata": {
+    "file_purpose": "Mimikatz Kerberos Module Commands - Ticket manipulation, Pass-the-Ticket attacks, and Kerberos ticket management for Active Directory lateral movement",
+    "oscp_relevance": "HIGH - Pass-the-Ticket is a core OSCP technique for lateral movement without passwords. Ticket manipulation provides stealth and flexibility for domain compromise.",
+    "educational_context": "The mimikatz kerberos module enables manipulation of Kerberos tickets in memory. Unlike NTLM-based attacks (Pass-the-Hash), Kerberos tickets can be exported, modified, and injected into different sessions. TGT (Ticket Granting Ticket) provides access to any service, while TGS (Service Ticket) targets specific services. Tickets have lifetimes (default 10 hours for TGT) and can be used for lateral movement, privilege escalation, and persistence.",
+    "prerequisites": [
+      "Local Administrator privileges on Windows system",
+      "SeDebugPrivilege enabled (privilege::debug)",
+      "Access to exported .kirbi ticket files (from sekurlsa::tickets /export or Golden/Silver ticket creation)",
+      "Understanding of Kerberos authentication workflow"
+    ],
+    "related_techniques": [
+      "Pass-the-Ticket (using stolen or forged tickets for authentication)",
+      "Golden Ticket (ad-golden-ticket.json)",
+      "Silver Ticket (ad-silver-ticket.json)",
+      "Kerberoasting (ad-kerberoasting.json)",
+      "Overpass-the-Hash (convert NTLM hash to Kerberos ticket)"
+    ],
+    "attack_chain": [
+      "1. Export tickets from compromised system (sekurlsa::tickets /export)",
+      "2. Identify high-value tickets (TGT, DA sessions, service accounts)",
+      "3. Transfer tickets to attack machine or target system",
+      "4. Purge existing tickets (kerberos::purge) to avoid conflicts",
+      "5. Inject ticket into memory (kerberos::ptt)",
+      "6. Verify ticket injection (kerberos::list or klist)",
+      "7. Use ticket for lateral movement (access SMB shares, PsExec, WMI)"
+    ],
+    "detection_evasion": [
+      "Tickets don't leave artifacts on disk (unlike password files)",
+      "Kerberos authentication is normal traffic (Event ID 4768/4769)",
+      "Use hostnames instead of IPs to force Kerberos (vs NTLM)",
+      "Purge tickets after use to remove evidence",
+      "Realistic ticket lifetimes reduce detection risk"
+    ]
+  },
+  "commands": [
+    {
+      "id": "mimikatz-kerberos-ptt",
+      "name": "Mimikatz Pass-the-Ticket (Inject Ticket)",
+      "category": "post-exploit",
+      "subcategory": "kerberos-attacks",
+      "command": ".\\mimikatz.exe \"kerberos::ptt <TICKET_FILE>\" \"exit\"",
+      "description": "Inject Kerberos ticket (.kirbi file) into current Windows session for Pass-the-Ticket attack. Enables authentication using stolen or forged tickets without knowing passwords or hashes. Works with TGT (domain-wide access) and TGS (service-specific access).",
+      "variables": [
+        {
+          "name": "<TICKET_FILE>",
+          "description": "Path to .kirbi ticket file to inject (supports wildcards for multiple tickets)",
+          "example": "admin.kirbi",
+          "required": true,
+          "common_values": [
+            "ticket.kirbi",
+            "*.kirbi",
+            "C:\\Temp\\admin@krbtgt-CORP.COM.kirbi"
+          ]
+        }
+      ],
+      "flag_explanations": {
+        "kerberos::ptt": "Pass-the-Ticket module that injects Kerberos tickets into the current Windows logon session (LUID - Logon ID). WHY THIS WORKS: Windows stores Kerberos tickets in memory associated with each user session. By injecting a ticket, you add it to the ticket cache, allowing the current process to authenticate as the ticket's user. This bypasses the need for passwords or NTLM hashes. CRITICAL: Ticket must match the target service or be a TGT for domain-wide access. Unlike sekurlsa module, kerberos::ptt does NOT require SeDebugPrivilege - it uses standard Kerberos APIs accessible to any user.",
+        "<TICKET_FILE>": "Path to Base64-encoded .kirbi file containing the Kerberos ticket. Format: [LogonID]-[TicketType]-[Flags]-[KeyType]-user@service-DOMAIN.kirbi. Supports wildcards: 'kerberos::ptt *.kirbi' injects all tickets in current directory. WHY .KIRBI: Mimikatz proprietary format for Kerberos tickets (binary structure). Convert from ccache: impacket-ticketConverter ticket.ccache ticket.kirbi. File contains: service principal name, session key, ticket lifetime, authorization data, and encrypted TGS/TGT.",
+        "Ticket Types": "TGT (Type 2) = Ticket Granting Ticket - encrypted with krbtgt hash, used to request TGS for ANY service. Most valuable for Pass-the-Ticket attacks. TGS (Type 0) = Service Ticket - encrypted with service account hash, grants access to ONE specific service only (e.g., cifs/DC1 for SMB, http/WEB01 for HTTP). Injecting TGT provides domain-wide access, TGS provides single-service access.",
+        "LUID Context": "Pass-the-Ticket injects into CURRENT logon session only. Each Windows session (console, RDP, service) has unique LUID. Ticket injected in RDP session won't work in console session. Use 'kerberos::ptt /luid:0x<LUID_HEX> <ticket>' to inject into specific session (requires SeDebugPrivilege). For exam: inject ticket, then use same session for lateral movement commands."
+      },
+      "success_indicators": [
+        "Output: '* File: '<TICKET_FILE>': OK' (ticket successfully loaded)",
+        "Output: 'Injecting ticket : OK' (ticket added to session cache)",
+        "klist shows imported ticket: 'Client: user @ DOMAIN.COM'",
+        "klist shows correct service: 'Server: krbtgt/DOMAIN.COM @ DOMAIN.COM' (TGT) or 'Server: cifs/target @ DOMAIN.COM' (TGS)",
+        "Ticket lifetime displayed: 'Start Time: <time>, End Time: <time>'",
+        "Can access target service: dir \\\\DC1\\C$ (if TGT or cifs TGS injected)"
+      ],
+      "failure_indicators": [
+        "ERROR: 'The system cannot find the file specified' (.kirbi file path incorrect)",
+        "ERROR: 'kuhl_m_kerberos_ptt ; LsaCallKerberosPackage: 0x00000520' (incompatible ticket format)",
+        "ERROR: 'kuhl_m_kerberos_ptt_file ; Unable to read file' (corrupted .kirbi file)",
+        "Ticket not shown in klist output (injection failed silently)",
+        "Access still denied to target service (wrong service principal or expired ticket)"
+      ],
+      "troubleshooting": {
+        "Ticket injection OK but access denied": "Possible causes: (1) Ticket is for wrong service (e.g., injected http/SERVER but trying to access cifs/SERVER). Solution: Verify service principal matches - use TGT for universal access or correct TGS. (2) Ticket expired. Solution: Check 'klist' end time. (3) Target validates tickets at KDC (PAC validation). Solution: Use freshly forged Golden/Silver ticket. (4) Using IP instead of hostname. Solution: Use fully qualified hostname to force Kerberos (IPs use NTLM fallback).",
+        "ERROR 0x00000520 (Unknown format)": "Ticket file is corrupted or wrong format. Solution: Verify .kirbi file integrity - should start with binary data, ~1-5KB size. If converting from ccache: impacket-ticketConverter ticket.ccache ticket.kirbi. If from Rubeus: Rubeus.exe dump /service:krbtgt /nowrap /outfile:ticket.kirbi. Test file with: kerberos::list /export (should parse without errors).",
+        "Ticket not appearing in klist": "Injection succeeded but ticket not visible. Causes: (1) Injected into different LUID. Solution: Verify current session LUID with 'klist' - look for 'Current LogonId is 0:0x<HEX>'. (2) Ticket immediately purged by system policy. Solution: Check GPO for ticket lifetime restrictions. (3) Using 'klist purge' cleared cache. Solution: Re-inject ticket.",
+        "Multiple tickets conflicting": "Injecting second TGT overwrites first. Solution: Use kerberos::purge BEFORE injection to clear existing tickets, ensuring clean state. Or use specific LUID: kerberos::ptt /luid:0x123456 ticket.kirbi to inject into specific session without affecting current."
+      },
+      "prerequisites": [],
+      "alternatives": [
+        "kerberos-rubeus-ptt"
+      ],
+      "next_steps": [
+        "mimikatz-kerberos-list",
+        "windows-smb-access-test",
+        "windows-psexec-lateral-movement"
+      ],
+      "tags": [
+        "OSCP:HIGH",
+        "MIMIKATZ",
+        "KERBEROS",
+        "PASS_THE_TICKET",
+        "LATERAL_MOVEMENT",
+        "TICKET_INJECTION",
+        "TGT",
+        "TGS",
+        "ACTIVE_DIRECTORY",
+        "POST_EXPLOITATION"
+      ],
+      "oscp_relevance": "high",
+      "notes": "OSCP METHODOLOGY: Pass-the-Ticket is essential for lateral movement when you have tickets but not passwords. COMMON SCENARIO: You dump credentials from workstation, find TGT for Domain Admin who logged in earlier. Inject that TGT and gain DA access without cracking passwords.\n\nTIME ESTIMATE: 10-30 seconds (5 sec inject ticket, 5 sec verify with klist, 10-20 sec test access)\n\nMANUAL ALTERNATIVES:\n1. Rubeus: Rubeus.exe ptt /ticket:admin.kirbi (C# alternative, same functionality)\n2. Impacket (Linux): Export KRB5CCNAME=admin.ccache environment variable, then use impacket tools\n3. PowerShell: Not directly supported - use Rubeus or Mimikatz\n\nKERBEROS VS NTLM:\n- Kerberos: Mutual authentication, ticket-based, supports delegation\n- NTLM: Challenge-response, hash-based, works with IPs\n- Force Kerberos: Use FQDN hostnames (DC1.corp.com) NOT IPs (192.168.1.10)\n- Fallback: If Kerberos fails, Windows tries NTLM (unless disabled)\n\nTICKET TYPES:\n- TGT (krbtgt service): 10-hour default lifetime, grants access to ANY service\n- TGS (specific service): Varies by service, grants access to ONE service\n- Forged tickets: Golden (TGT) and Silver (TGS) can have arbitrary lifetimes\n\nOSCP EXAM TIPS:\n1. ALWAYS verify ticket injection with klist immediately after ptt\n2. Test access with simple command: dir \\\\DC1\\C$ or net use \\\\DC1\\IPC$\n3. Use TGT when available (more flexible than service-specific TGS)\n4. Purge tickets (kerberos::purge) before injecting to avoid conflicts\n5. Document ticket source: exported from USER on SYSTEM at TIME\n6. Tickets work from ANY Windows system in domain (not tied to specific machine)\n\nDETECTION NOTES:\n- Event ID 4768: TGT request (normal Kerberos traffic)\n- Event ID 4769: TGS request (also normal)\n- Event ID 4624: Successful logon (Type 3 = Network logon from ticket use)\n- Low detection risk: Ticket reuse looks identical to legitimate authentication\n- Stealth advantage: No password spray, no failed logins, no unusual protocols\n\nCOMMON MISTAKES:\n1. Using IP addresses (forces NTLM, not Kerberos) - use hostnames\n2. Not verifying ticket expiration before injection\n3. Forgetting to purge existing tickets causing conflicts\n4. Mixing tickets from different domains\n5. Not testing access immediately after injection\n\nADVANCED USAGE:\n- Inject into specific session: kerberos::ptt /luid:0x3e7 admin.kirbi (requires SeDebugPrivilege)\n- Inject multiple tickets: kerberos::ptt *.kirbi (wildcards supported)\n- Cross-forest tickets: Requires trust relationship between forests"
+    },
+    {
+      "id": "mimikatz-kerberos-list",
+      "name": "Mimikatz List Kerberos Tickets",
+      "category": "enumeration",
+      "subcategory": "kerberos-attacks",
+      "command": ".\\mimikatz.exe \"kerberos::list\" \"exit\"",
+      "description": "List all Kerberos tickets cached in current Windows session with detailed metadata. Alternative to Windows klist command with enhanced information (encryption types, flags, session keys). Essential for verifying Pass-the-Ticket injection and identifying high-value tickets for lateral movement.",
+      "variables": [],
+      "flag_explanations": {
+        "kerberos::list": "Enumerate all Kerberos tickets in the current logon session's ticket cache. WHY MORE DETAILED THAN KLIST: Mimikatz displays additional metadata including encryption type (RC4, AES128, AES256), ticket flags (forwardable, renewable, proxiable), authorization data (PAC - Privilege Attribute Certificate), and session keys. This information is critical for understanding ticket capabilities and identifying Golden/Silver tickets. DOES NOT REQUIRE SEDEBUGPRIVILEGE: Uses standard Kerberos SSP (Security Support Provider) APIs accessible to any user for their own session.",
+        "Ticket Cache": "Windows stores Kerberos tickets in-memory associated with each logon session (LUID). Cache includes: TGT (for requesting service tickets), TGS tickets (for accessing specific services), and renewal tickets. Tickets persist until expiration, logoff, or manual purge. CRITICAL: Tickets in cache are automatically used for authentication when accessing Kerberos-enabled services (SMB, HTTP, LDAP).",
+        "Output Fields": "Key fields displayed: (1) Start Time / End Time: Ticket validity period (default TGT lifetime = 10 hours). (2) Service Name: krbtgt/<DOMAIN> for TGT, cifs/<SERVER> for SMB TGS, http/<SERVER> for HTTP TGS, etc. (3) Client: User@DOMAIN who owns the ticket. (4) Flags: 40e10000 = forwardable + renewable + initial. (5) Encryption: 0x12 = AES256, 0x11 = AES128, 0x17 = RC4 (older, weaker). (6) Ticket: Base64-encoded ticket data (can be extracted and saved).",
+        "Encryption Types": "0x17 (23) = RC4_HMAC_MD5 - Legacy encryption, faster cracking, common in pre-2012 domains. 0x11 (17) = AES128_CTS_HMAC_SHA1_96 - Modern encryption, stronger than RC4. 0x12 (18) = AES256_CTS_HMAC_SHA1_96 - Strongest encryption, default for Windows 2008 R2+. WHY IT MATTERS: Forged Golden/Silver tickets with RC4 may be suspicious in AES-only environments. Match encryption to domain security level."
+      },
+      "success_indicators": [
+        "Output: 'Group 0 - Ticket Granting Service' (TGS tickets section)",
+        "Output: 'Group 1 - Client Ticket ?' (TGT tickets section)",
+        "Output: 'Group 2 - Ticket Granting Ticket' (another TGT view)",
+        "Displays ticket details: 'Start/End/MaxRenew: <timestamps>'",
+        "Shows service names: 'Server Name: krbtgt / <DOMAIN>' or 'cifs / <SERVER>'",
+        "Encryption type displayed: '* KeyType: AES-256 ( 18 )'",
+        "At least one ticket shown (even minimal session has tickets)"
+      ],
+      "failure_indicators": [
+        "ERROR: 'kuhl_m_kerberos_list ; LsaCallKerberosPackage' (Kerberos SSP unavailable)",
+        "Output: 'No ticket!' (ticket cache is empty - rare)",
+        "ERROR: 'Access is denied' (insufficient permissions for LUID enumeration)"
+      ],
+      "troubleshooting": {
+        "No tickets displayed": "Ticket cache is empty. Causes: (1) Recently ran 'klist purge' or 'mimikatz kerberos::purge'. Solution: Normal - obtain new tickets by accessing resources: dir \\\\DC1\\SYSVOL (requests TGT automatically). (2) User logged on with NTLM only (not Kerberos). Solution: Access service by FQDN to force Kerberos. (3) Kerberos disabled via GPO. Solution: Unusual - verify with: gpresult /h gp.html, check 'Network security: Configure encryption types allowed for Kerberos'.",
+        "ERROR LsaCallKerberosPackage": "Kerberos Security Support Provider (SSP) not loaded or malfunctioning. Solution: Extremely rare - indicates system corruption or heavily restricted environment. Alternative: Use Windows native 'klist' command instead. Verify Kerberos service status: sc query kdc (on DC) or check network authentication: netsh advfirewall show allprofiles.",
+        "Tickets shown but can't access resources": "Tickets exist but incorrect service principal or expired. Diagnosis steps: (1) Check End Time - if in past, tickets expired. (2) Verify Service Name matches target - 'cifs/DC1' works for \\\\DC1\\C$, but NOT for HTTP access. (3) Check Client name - ensure it's a privileged account. Solution: Inject correct ticket (kerberos::ptt) or request new ticket by accessing service."
+      },
+      "prerequisites": [],
+      "alternatives": [],
+      "next_steps": [
+        "mimikatz-kerberos-ptt",
+        "mimikatz-kerberos-purge"
+      ],
+      "tags": [
+        "OSCP:MEDIUM",
+        "MIMIKATZ",
+        "KERBEROS",
+        "ENUMERATION",
+        "TICKET_ANALYSIS",
+        "TGT",
+        "TGS",
+        "ACTIVE_DIRECTORY",
+        "POST_EXPLOITATION"
+      ],
+      "oscp_relevance": "medium",
+      "notes": "OSCP METHODOLOGY: Use kerberos::list to verify Pass-the-Ticket injection success and identify available tickets for lateral movement. IMMEDIATE USE CASE: After injecting Golden Ticket, run kerberos::list to confirm TGT appears in cache with correct user and domain.\n\nTIME ESTIMATE: 5-10 seconds (instant execution, 5-10 sec to analyze output)\n\nMANUAL ALTERNATIVES:\n1. Windows klist: Built-in command, shows basic ticket info (client, server, times). Less detail than Mimikatz.\n2. Rubeus.exe triage: Lists tickets with additional metadata, similar to Mimikatz kerberos::list.\n3. PowerShell: Get-WinEvent -LogName Security -FilterXPath \"*[System[EventID=4768 or EventID=4769]]\" (shows ticket requests from event logs, not cache)\n\nKLIST VS KERBEROS::LIST:\nWindows klist:\n  - Pros: Built-in, no tools needed, fast\n  - Cons: Limited metadata, no encryption details, no session keys\n  - Output: Basic (client, server, start/end times)\nMimikatz kerberos::list:\n  - Pros: Full ticket metadata, encryption types, flags, session keys\n  - Cons: Requires Mimikatz upload\n  - Output: Comprehensive (everything klist shows + encryption, keys, PAC data)\n\nOSCP EXAM TIPS:\n1. Run IMMEDIATELY after Pass-the-Ticket injection to verify success\n2. Look for 'Server Name: krbtgt' = TGT (domain-wide access)\n3. Check 'End Time' to ensure ticket hasn't expired before lateral movement\n4. Identify which tickets are TGT vs TGS by service name (krbtgt = TGT, others = TGS)\n5. Document all tickets found: Client, Server, Encryption, Expiration\n6. Compare before/after ticket purge to verify cleanup\n\nTICKET ANALYSIS:\n- Forwardable flag (0x40000000): Ticket can be used for delegation (pass to other systems)\n- Renewable flag (0x00800000): Can be renewed beyond End Time up to MaxRenew time\n- Initial flag (0x00400000): Ticket obtained via AS-REQ (initial authentication), not TGS-REQ\n- Pre-authent flag (0x00200000): Kerberos pre-authentication was required (prevents AS-REP roasting)\n\nENCRYPTION INTERPRETATION:\n- Environment with AES256: Modern, secure domain (2008 R2+)\n- Mix of RC4 and AES: Transitional environment, legacy systems present\n- RC4 only: Older domain (<2008) or security settings weakened for compatibility\n- Forged tickets should match domain's encryption standard to blend in\n\nDETECTION NOTES:\n- Querying own ticket cache is normal user activity (Event ID 4768/4769)\n- No special privileges required, no suspicious events generated\n- Mimikatz process execution may trigger AV (focus is on the binary, not the action)\n- Very low detection risk for this specific command\n\nCOMMON USE CASES:\n1. Verify Pass-the-Ticket injection: kerberos::ptt ticket.kirbi && kerberos::list\n2. Identify ticket expiration before lateral movement\n3. Confirm ticket encryption type matches domain policy\n4. Compare tickets before/after purge for cleanup verification\n5. Debug Kerberos authentication failures (missing or wrong tickets)\n\nTROUBLESHOOTING AUTHENTICATION:\nIf kerberos::list shows ticket but access denied:\n- Wrong service principal: Need cifs/SERVER for SMB, http/SERVER for HTTP\n- IP vs hostname: Using IP forces NTLM (Kerberos requires hostname)\n- Expired ticket: Check End Time has not passed\n- PAC validation: Some services validate ticket at KDC (Golden/Silver tickets may fail)"
+    },
+    {
+      "id": "mimikatz-kerberos-purge",
+      "name": "Mimikatz Purge Kerberos Tickets",
+      "category": "utilities",
+      "subcategory": "kerberos-attacks",
+      "command": ".\\mimikatz.exe \"kerberos::purge\" \"exit\"",
+      "description": "Remove all Kerberos tickets from current Windows session cache. Essential for cleanup after Pass-the-Ticket attacks, avoiding ticket conflicts, and resetting Kerberos authentication state. Equivalent to Windows 'klist purge' but integrated into Mimikatz workflows.",
+      "variables": [],
+      "flag_explanations": {
+        "kerberos::purge": "Purge (delete) all Kerberos tickets from the current logon session's ticket cache. WHY NEEDED: (1) CLEANUP: Remove evidence of Pass-the-Ticket attacks after lateral movement. (2) RESET: Clear conflicting tickets before injecting new ones (e.g., injecting TGT when TGS already exists for same service). (3) FORCE RE-AUTHENTICATION: Clear cached tickets to force fresh Kerberos authentication (useful for testing). DOES NOT REQUIRE SEDEBUGPRIVILEGE: Uses standard Kerberos SSP APIs to modify current user's ticket cache only.",
+        "Ticket Cache Clearing": "Removes both TGT (Ticket Granting Ticket) and TGS (Service Ticket) entries from memory. After purge: (1) Next access to Kerberos service triggers automatic TGT request to KDC. (2) User must re-authenticate if accessing new services. (3) Cached tickets from Pass-the-Ticket are gone (cannot be recovered). DOES NOT LOG OUT USER: Session remains active, only Kerberos tickets cleared. Network authentication continues using NTLM if Kerberos unavailable.",
+        "OPSEC Considerations": "Purging tickets removes forensic evidence of Pass-the-Ticket attacks from memory. However: (1) Tickets are re-requested automatically on next access (generates Event ID 4768/4769). (2) Cannot purge tickets in OTHER sessions without SeDebugPrivilege. (3) Event logs still show historical ticket requests. Best practice: Purge AFTER completing lateral movement objectives, before disconnecting session."
+      },
+      "success_indicators": [
+        "Output: 'Ticket(s) purge for current session is OK' (all tickets removed)",
+        "klist shows no tickets: 'Cached Tickets: (0)' or 'No ticket!'",
+        "kerberos::list shows empty cache or minimal system tickets",
+        "Next network access triggers TGT request (visible in Event ID 4768 on DC)"
+      ],
+      "failure_indicators": [
+        "ERROR: 'kuhl_m_kerberos_purge ; LsaCallKerberosPackage' (Kerberos SSP unavailable)",
+        "Tickets still visible in klist after purge (purge failed)",
+        "ERROR: 'Access is denied' (insufficient permissions - shouldn't occur for own session)"
+      ],
+      "troubleshooting": {
+        "Tickets still present after purge": "Purge command failed to execute properly. Causes: (1) Tickets belong to different LUID (logon session). Solution: Verify current LUID with 'klist' - 'Current LogonId is 0:0x<HEX>'. Each RDP/console session has separate LUID. (2) System automatically re-requested tickets. Solution: Normal behavior - accessing network resource immediately after purge triggers new TGT request. (3) Running purge in wrong session. Solution: Ensure Mimikatz runs in same session where tickets were injected.",
+        "ERROR LsaCallKerberosPackage": "Cannot communicate with Kerberos SSP. Solution: Extremely rare - indicates Kerberos subsystem failure. Alternative: Use Windows 'klist purge' command instead. Verify Kerberos service: sc query kdc (on DC) or check authentication: gpresult /r | findstr Kerberos.",
+        "Want to purge specific ticket (not all)": "Mimikatz kerberos::purge removes ALL tickets - no selective deletion. Solution: (1) Use Windows: klist purge /luid:0x<LUID> (purges specific LUID but still all tickets). (2) Alternative: Export specific tickets with kerberos::list /export, purge all, then re-inject only desired tickets with kerberos::ptt. (3) Best approach: Accept that purge clears everything - tickets automatically regenerate on access."
+      },
+      "prerequisites": [],
+      "alternatives": [],
+      "next_steps": [
+        "mimikatz-kerberos-list",
+        "mimikatz-kerberos-ptt"
+      ],
+      "tags": [
+        "OSCP:MEDIUM",
+        "MIMIKATZ",
+        "KERBEROS",
+        "CLEANUP",
+        "TICKET_PURGE",
+        "OPSEC",
+        "ACTIVE_DIRECTORY",
+        "POST_EXPLOITATION"
+      ],
+      "oscp_relevance": "medium",
+      "notes": "OSCP METHODOLOGY: Use kerberos::purge for cleanup and ticket conflict resolution. CRITICAL FOR OPSEC: After completing lateral movement with Pass-the-Ticket, purge tickets to remove evidence from memory. Note: Event logs still record ticket usage, but in-memory tickets are cleared.\n\nTIME ESTIMATE: 5 seconds (instant execution, verify with klist)\n\nMANUAL ALTERNATIVES:\n1. Windows klist purge: Built-in command, same functionality. Syntax: klist purge (purges current session) or klist purge /luid:0x<LUID> (specific session).\n2. Logoff and logon: Nuclear option - clears all tickets by terminating session. Not recommended during active attack.\n3. Reboot: Clears ALL tickets for ALL sessions. Not practical during exam.\n\nOSCP EXAM TIPS:\n1. Purge BEFORE injecting new ticket to avoid conflicts (old TGT vs new injected TGT)\n2. Purge AFTER completing lateral movement for cleanup\n3. Verify purge success with: kerberos::list (should show empty or minimal tickets)\n4. Document in report: Purged tickets on SYSTEM at TIME for cleanup\n5. Not always necessary - tickets expire naturally (10 hours default)\n6. Useful when switching between different user tickets (DA → local admin → service account)\n\nWHEN TO PURGE:\nPURGE BEFORE INJECTION:\n- Scenario: Workstation has existing TGT for current user. Want to inject DA TGT from different user.\n- Problem: Multiple TGTs can conflict, causing authentication failures.\n- Solution: kerberos::purge && kerberos::ptt da.kirbi\n\nPURGE AFTER ATTACK:\n- Scenario: Used Pass-the-Ticket for lateral movement, now disconnecting.\n- Problem: Injected tickets remain in memory as forensic evidence.\n- Solution: kerberos::purge before ending session (removes in-memory evidence)\n\nDON'T PURGE:\n- Scenario: Normal domain user, accessing resources legitimately.\n- Reason: Tickets regenerate automatically, no operational benefit.\n- Exception: Testing Kerberos authentication flow (force re-auth)\n\nTICKET REGENERATION:\nAfter purge, tickets automatically regenerate when accessing Kerberos services:\n1. User accesses \\\\DC1\\SYSVOL\n2. Windows requests TGT from KDC (AS-REQ) → Event ID 4768\n3. KDC validates credentials, issues TGT (AS-REP)\n4. Windows requests TGS for cifs/DC1 (TGS-REQ) → Event ID 4769\n5. KDC issues service ticket (TGS-REP)\n6. Authentication succeeds, tickets cached\n\nDETECTION NOTES:\n- Purging tickets is normal administrative activity (no specific Event ID)\n- Sudden ticket re-requests after purge visible in Event ID 4768/4769\n- Pattern: Purge + immediate re-auth may indicate testing or attack\n- Low suspicion: Users rarely manually purge tickets, but it's not inherently malicious\n\nCOMMON MISTAKES:\n1. Purging tickets in wrong session (console vs RDP) - verify LUID first\n2. Purging before verifying injected ticket works - test access BEFORE cleanup\n3. Assuming purge removes event log evidence - logs persist, only memory cleared\n4. Not verifying purge success with kerberos::list or klist\n5. Purging tickets needed for ongoing operations - ensure attack complete first\n\nADVANCED USAGE:\n- Purge specific LUID: kerberos::purge /luid:0x<LUID_HEX> (requires SeDebugPrivilege)\n- Purge all LUIDs: Loop through sessions with sekurlsa module (admin required)\n- Selective purge: Not supported - all tickets purged together\n\nFORENSIC NOTES:\nWhat purge DOES remove:\n- In-memory ticket cache entries\n- Session keys associated with tickets\n- Authorization data (PAC)\n\nWhat purge DOES NOT remove:\n- Event log entries (Event ID 4768/4769/4624)\n- LSA cached credentials (different from Kerberos tickets)\n- NTLM hashes in LSASS memory\n- SAM/LSA Secrets on disk"
+    }
+  ]
+}

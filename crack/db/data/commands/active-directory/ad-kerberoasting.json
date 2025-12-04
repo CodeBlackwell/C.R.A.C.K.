@@ -4,7 +4,7 @@
       "id": "impacket-getuserspns-kerberoast",
       "name": "impacket-GetUserSPNs - Kerberoasting Attack",
       "description": "Request and extract TGS-REP hashes for service accounts (Kerberoasting)",
-      "command": "sudo impacket-GetUserSPNs -request -dc-ip <DC_IP> <DOMAIN>/<USERNAME>",
+      "command": "impacket-GetUserSPNs -request -dc-ip <DC_IP> <DOMAIN>/<USERNAME>:\"<PASSWORD>\"",
       "category": "password-attacks",
       "subcategory": "active-directory",
       "variables": [
@@ -23,7 +23,13 @@
         {
           "name": "<USERNAME>",
           "description": "Valid domain username for authentication",
-          "example": "pete",
+          "example": "meg",
+          "required": true
+        },
+        {
+          "name": "<PASSWORD>",
+          "description": "Domain user password (escape special chars with backslash)",
+          "example": "VimForPowerShell123!",
           "required": true
         }
       ],
@@ -74,7 +80,7 @@
       "id": "impacket-getuserspns-list",
       "name": "impacket-GetUserSPNs - List SPNs Only",
       "description": "Enumerate service principal names without requesting TGS tickets",
-      "command": "sudo impacket-GetUserSPNs -dc-ip <DC_IP> <DOMAIN>/<USERNAME>",
+      "command": "impacket-GetUserSPNs -dc-ip <DC_IP> <DOMAIN>/<USERNAME>:\"<PASSWORD>\"",
       "category": "enumeration",
       "subcategory": "active-directory",
       "variables": [
@@ -93,7 +99,13 @@
         {
           "name": "<USERNAME>",
           "description": "Valid domain username",
-          "example": "pete",
+          "example": "meg",
+          "required": true
+        },
+        {
+          "name": "<PASSWORD>",
+          "description": "Domain user password",
+          "example": "VimForPowerShell123!",
           "required": true
         }
       ],
