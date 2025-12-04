@@ -953,11 +953,15 @@ class PwnedTracker:
             - dc_hostname: DC hostname (e.g., DC1.CORP.COM)
             - dc_ip: DC IP address (e.g., 192.168.50.70)
             - domain_sid: Domain SID (e.g., S-1-5-21-1987370270-658905905-1781884369)
+            - lhost: Attacker IP for callbacks (e.g., 192.168.45.200)
+            - lport: Attacker port for callbacks (e.g., 443)
 
         Config is stored as properties on the Domain node:
             - bloodtrail_dc_ip
             - bloodtrail_dc_hostname
             - bloodtrail_domain_sid
+            - bloodtrail_lhost
+            - bloodtrail_lport
 
         Returns None if no domain found in BloodHound data.
         """
@@ -972,7 +976,9 @@ class PwnedTracker:
                     RETURN d.name AS domain,
                            d.bloodtrail_dc_ip AS dc_ip,
                            d.bloodtrail_dc_hostname AS dc_hostname,
-                           d.bloodtrail_domain_sid AS domain_sid
+                           d.bloodtrail_domain_sid AS domain_sid,
+                           d.bloodtrail_lhost AS lhost,
+                           d.bloodtrail_lport AS lport
                     LIMIT 1
                 """)
 
@@ -1000,10 +1006,47 @@ class PwnedTracker:
                     "dc_hostname": dc_hostname,
                     "dc_ip": record["dc_ip"],
                     "domain_sid": record["domain_sid"],
+                    "lhost": record["lhost"],
+                    "lport": record["lport"],
                 }
 
         except Exception:
             return None
+
+    def set_callback_config(self, lhost: str, lport: int) -> PwnedResult:
+        """
+        Store attacker LHOST and LPORT for reverse shell templates.
+
+        Args:
+            lhost: Attacker IP address for callbacks
+            lport: Attacker port for callbacks
+
+        Returns:
+            PwnedResult with success status
+        """
+        if not self._ensure_connected():
+            return PwnedResult(success=False, error="Could not connect to Neo4j")
+
+        try:
+            with self.driver.session() as session:
+                result = session.run("""
+                    MATCH (d:Domain)
+                    SET d.bloodtrail_lhost = $lhost,
+                        d.bloodtrail_lport = $lport
+                    RETURN d.name AS domain
+                """, {"lhost": lhost, "lport": lport})
+
+                record = result.single()
+                if not record:
+                    return PwnedResult(
+                        success=False,
+                        error="No domain found. Import BloodHound data first."
+                    )
+
+                return PwnedResult(success=True, user=record["domain"])
+
+        except Exception as e:
+            return PwnedResult(success=False, error=str(e))
 
     def set_dc_ip(self, dc_ip: str, dc_hostname: str = None) -> PwnedResult:
         """
@@ -1141,7 +1184,8 @@ class PwnedTracker:
             with self.driver.session() as session:
                 result = session.run("""
                     MATCH (d:Domain)
-                    REMOVE d.bloodtrail_dc_ip, d.bloodtrail_dc_hostname, d.bloodtrail_domain_sid
+                    REMOVE d.bloodtrail_dc_ip, d.bloodtrail_dc_hostname, d.bloodtrail_domain_sid,
+                           d.bloodtrail_lhost, d.bloodtrail_lport
                     RETURN d.name AS domain
                 """)
 

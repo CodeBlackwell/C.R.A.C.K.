@@ -1413,6 +1413,41 @@ def run_all_queries(
         # Silently skip if generation fails
         pass
 
+    # Generate Post-Exploitation Commands section
+    try:
+        from .display_commands import generate_post_exploit_section
+        if runner.driver:
+            pe_console, pe_markdown = generate_post_exploit_section(runner.driver)
+            if pe_console:
+                if show_all or show_commands:
+                    print(pe_console)
+                report_lines.append("")
+                report_lines.append(pe_markdown)
+    except Exception as e:
+        # Silently skip if generation fails
+        pass
+
+    # Generate Tailored Spray Commands section
+    try:
+        from .display_commands import print_spray_tailored
+        from .pwned_tracker import PwnedTracker
+        tracker = PwnedTracker(runner.config)
+        if tracker.connect():
+            access_data = tracker.get_all_users_with_access()
+            if access_data:
+                domain_config = tracker.get_domain_config()
+                domain = domain_config.get("domain", "") if domain_config else ""
+                ts_console, ts_markdown = print_spray_tailored(access_data, domain)
+                if ts_console:
+                    if show_all or show_commands:
+                        print(ts_console)
+                    report_lines.append("")
+                    report_lines.append(ts_markdown)
+            tracker.close()
+    except Exception as e:
+        # Silently skip if generation fails
+        pass
+
     # Generate Password Spray Recommendations section
     try:
         from .display_commands import generate_spray_section

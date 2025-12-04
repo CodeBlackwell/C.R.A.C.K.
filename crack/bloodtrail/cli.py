@@ -348,11 +348,8 @@ Supported Edge Types:
     )
     pwned_group.add_argument(
         "--post-exploit", "-pe",
-        nargs="?",
-        const="all",  # Default if flag given without value
-        metavar="USER",
-        help="Show post-exploitation (mimikatz) commands for pwned user(s) with local-admin access. "
-             "Specify USER or omit for all pwned users.",
+        action="store_true",
+        help="Show post-exploitation (mimikatz) commands for all pwned users with local-admin access.",
     )
     pwned_group.add_argument(
         "--list-ip-addresses", "-lip",
@@ -395,6 +392,18 @@ Supported Edge Types:
         nargs='*',
         metavar=('USER', 'PASSWORD'),
         help="Discover DC IP using BloodHound + crackmapexec. Usage: --discover-dc [USER PASSWORD]",
+    )
+    config_group.add_argument(
+        "--lhost",
+        type=str,
+        metavar="IP",
+        help="Attacker IP for reverse shell callbacks (stored in domain config)",
+    )
+    config_group.add_argument(
+        "--lport",
+        type=int,
+        metavar="PORT",
+        help="Attacker port for reverse shell callbacks (default: 443, stored in domain config)",
     )
 
     # Password Policy options
@@ -1169,24 +1178,25 @@ def handle_post_exploit(args):
         return 1
 
     try:
-        # Get domain config for DC IP and SID auto-population
+        # Get domain config for DC IP, SID, and LHOST/LPORT auto-population
         domain_config = tracker.get_domain_config()
         dc_ip = domain_config.get("dc_ip") if domain_config else None
         domain_sid = domain_config.get("domain_sid") if domain_config else None
+        lhost = domain_config.get("lhost") if domain_config else None
+        lport = domain_config.get("lport") if domain_config else None
 
-        # Get target user(s)
-        if args.post_exploit == "all":
-            pwned_users = tracker.list_pwned_users()
-            if not pwned_users:
-                print("[*] No pwned users found")
-                print("    Mark users as pwned first: --pwn USER@DOMAIN.COM")
-                return 0
-        else:
-            pwned_user = tracker.get_pwned_user(args.post_exploit)
-            if not pwned_user:
-                print(f"[!] User not found or not pwned: {args.post_exploit}")
-                return 1
-            pwned_users = [pwned_user]
+        # Override from CLI args if provided
+        if getattr(args, 'lhost', None):
+            lhost = args.lhost
+        if getattr(args, 'lport', None):
+            lport = args.lport
+
+        # Get all pwned users
+        pwned_users = tracker.list_pwned_users()
+        if not pwned_users:
+            print("[*] No pwned users found")
+            print("    Mark users as pwned first: --pwn USER@DOMAIN.COM")
+            return 0
 
         shown_count = 0
         for user in pwned_users:
@@ -1205,6 +1215,8 @@ def handle_post_exploit(args):
                     cred_values=user.cred_values,
                     dc_ip=dc_ip,
                     domain_sid=domain_sid,
+                    lhost=lhost,
+                    lport=lport,
                 )
                 shown_count += 1
 
@@ -1300,12 +1312,25 @@ def handle_show_config(args):
         print(f"  DC Hostname: {domain_config['dc_hostname'] or '(not set)'}")
         print(f"  DC IP:       {domain_config['dc_ip'] or '(not set)'}")
         print(f"  Domain SID:  {domain_config['domain_sid'] or '(not set)'}")
+
+        # Callback config
+        lhost = domain_config.get('lhost')
+        lport = domain_config.get('lport')
+        if lhost or lport:
+            print()
+            print("📡 Callback Configuration")
+            print("-" * 40)
+            print(f"  LHOST:       {lhost or '(not set)'}")
+            print(f"  LPORT:       {lport or '(not set)'}")
+
         print()
 
         if not domain_config['dc_ip']:
             print("  Set DC IP:   crack bloodtrail /path/to/bh/json/ --dc-ip 192.168.50.70")
         if not domain_config['domain_sid']:
             print("  Set SID:     crack bloodtrail -ds S-1-5-21-XXXXXXXXXX-XXXXXXXXXX-XXXXXXXXXX")
+        if not lhost:
+            print("  Set LHOST:   crack bloodtrail --lhost 192.168.45.200 --lport 443")
         print()
 
         return 0
@@ -1365,6 +1390,32 @@ def handle_domain_sid(args):
             print(f"  Domain:     {domain_config['domain']}")
             print(f"  Domain SID: {domain_config['domain_sid']}")
 
+        return 0
+
+    finally:
+        tracker.close()
+
+
+def handle_callback_config(args):
+    """Handle --lhost/--lport flags - store callback configuration."""
+    config = Neo4jConfig(uri=args.uri, user=args.user, password=args.password)
+    tracker = PwnedTracker(config)
+
+    if not tracker.connect():
+        print("[!] Could not connect to Neo4j")
+        return 1
+
+    try:
+        lhost = args.lhost
+        lport = args.lport or 443  # Default to 443
+
+        result = tracker.set_callback_config(lhost, lport)
+
+        if not result.success:
+            print(f"[!] Failed to set callback config: {result.error}")
+            return 1
+
+        print(f"[+] Callback config set: LHOST={lhost} LPORT={lport}")
         return 0
 
     finally:
@@ -1773,6 +1824,10 @@ def main():
 
     if args.domain_sid:
         return handle_domain_sid(args)
+
+    # Store LHOST/LPORT when provided with --lhost flag only (not during report)
+    if args.lhost and not (args.run_all or args.post_exploit):
+        return handle_callback_config(args)
 
     if args.show_config:
         return handle_show_config(args)
