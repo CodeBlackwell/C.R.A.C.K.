@@ -137,3 +137,12 @@ DOCUMENT: investigation_checklist.md
 - What differently next time?
 
 **Remember:** Failed attempts documented well teach more than lucky successes explained poorly.
+
+## User Preferences
+
+### File Transfers
+Preferred methods for transferring files to targets:
+1. **Apache2** - `sudo systemctl start apache2` → serve from `/var/www/html/`
+2. **Netcat** - `nc -lvnp PORT < file` (sender) / `nc IP PORT > file` (receiver)
+
+Avoid: Python http.server when Apache is available.
