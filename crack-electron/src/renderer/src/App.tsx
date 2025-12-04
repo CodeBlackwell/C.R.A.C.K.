@@ -86,6 +86,8 @@ function App() {
   const [explorerHistory, setExplorerHistory] = useState<ExpansionRecord[]>([]);
   const [highlightedNodeId, setHighlightedNodeId] = useState<string | null>(null);
   const [cleanMode, setCleanMode] = useState(true);
+  const [focusMode, setFocusMode] = useState(false);
+  const [focusedNodeId, setFocusedNodeId] = useState<string | null>(null);
   const [graphLayout, setGraphLayout] = useState<LayoutType>('dagre');
   const [layoutOrientation, setLayoutOrientation] = useState<Orientation>('horizontal');
 
@@ -170,6 +172,7 @@ function App() {
 
   const handleCommandSelect = async (commandId: string) => {
     console.log('[App] Command selected:', commandId);
+    setFocusedNodeId(commandId); // Track for focus mode
     try {
       const command = await window.electronAPI.getCommand(commandId);
       console.log('[App] Command data received:', command ? command.name : 'null');
@@ -179,6 +182,14 @@ function App() {
       console.error('[App] Error fetching command:', error);
     }
   };
+
+  // Wrapper for cleanMode change - auto-disables focus when clean is off
+  const handleCleanModeChange = useCallback((newCleanMode: boolean) => {
+    setCleanMode(newCleanMode);
+    if (!newCleanMode) {
+      setFocusMode(false); // Auto-disable focus when clean is off
+    }
+  }, []);
 
   const handleCheatsheetSelect = async (cheatsheetId: string) => {
     console.log('[App] Cheatsheet selected:', cheatsheetId);
@@ -602,7 +613,10 @@ function App() {
                           externalExpanded={explorerExpanded}
                           externalHistory={explorerHistory}
                           cleanMode={cleanMode}
-                          onCleanModeChange={setCleanMode}
+                          onCleanModeChange={handleCleanModeChange}
+                          focusMode={focusMode}
+                          focusedNodeId={focusedNodeId}
+                          onFocusModeChange={setFocusMode}
                           layout={graphLayout}
                           orientation={layoutOrientation}
                           onLayoutChange={setGraphLayout}

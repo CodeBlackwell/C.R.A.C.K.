@@ -62,6 +62,10 @@ interface ChainExplorerGraphProps {
   // Clean mode: only show chain path + last node's connections
   cleanMode?: boolean;
   onCleanModeChange?: (cleanMode: boolean) => void;
+  // Focus mode: only show edges connecting to selected node (requires clean mode)
+  focusMode?: boolean;
+  focusedNodeId?: string | null;
+  onFocusModeChange?: (focusMode: boolean) => void;
   // Layout controls
   layout?: LayoutType;
   orientation?: Orientation;
@@ -124,6 +128,9 @@ export default function ChainExplorerGraph({
   externalHistory,
   cleanMode = false,
   onCleanModeChange,
+  focusMode = false,
+  focusedNodeId,
+  onFocusModeChange,
   layout = 'dagre',
   orientation = 'horizontal',
   onLayoutChange,
@@ -152,6 +159,8 @@ export default function ChainExplorerGraph({
   // Refs to always have latest functions (fixes stale closure in Cytoscape events)
   const expandNodeRef = useRef<(commandId: string) => void>(() => {});
   const onCommandSelectRef = useRef<((commandId: string) => void) | undefined>(onCommandSelect);
+  // Track when selection originated from graph click (to skip initialCommandId effect)
+  const clickedFromGraphRef = useRef(false);
 
   // Find descendant nodes for collapse
   const findDescendantNodes = useCallback((nodeId: string, history: ExpansionRecord[]): Set<string> => {
@@ -233,22 +242,24 @@ export default function ChainExplorerGraph({
     layoutInstance.run();
   }, [layout, orientation]);
 
-  // Rebuild visible graph from full state based on cleanMode
+  // Rebuild visible graph from full state based on cleanMode and focusMode
   const rebuildVisibleGraph = useCallback((
     fullNodes: Map<string, GraphNode>,
     fullEdges: Map<string, GraphEdge>,
     expanded: Set<string>,
     history: ExpansionRecord[],
-    isCleanMode: boolean
+    isCleanMode: boolean,
+    isFocusMode: boolean = false,
+    focusNodeId: string | null = null
   ) => {
-    console.log('[ChainExplorer] rebuildVisibleGraph:', { isCleanMode, historyLength: history.length });
+    console.log('[ChainExplorer] rebuildVisibleGraph:', { isCleanMode, isFocusMode, focusNodeId, historyLength: history.length });
 
     let visibleNodes: Map<string, GraphNode>;
     let visibleEdges: Map<string, GraphEdge>;
+    let chainPath = new Set<string>();
 
     if (isCleanMode && history.length > 1) {
       // CLEAN MODE: Only show chain path + last node's connections
-      const chainPath = new Set<string>();
       history.forEach(record => chainPath.add(record.nodeId));
 
       // Get the last expanded node (tip of the chain)
@@ -295,6 +306,51 @@ export default function ChainExplorerGraph({
       visibleEdges = new Map(fullEdges);
     }
 
+    // FOCUS MODE: Further filter to only show edges connecting to focused node
+    if (isFocusMode && focusNodeId && isCleanMode) {
+      console.log('[ChainExplorer] Focus mode filtering for node:', focusNodeId);
+
+      // Filter edges to only those connecting to focused node
+      const focusedEdges = new Map<string, GraphEdge>();
+      visibleEdges.forEach((edge, key) => {
+        if (edge.data.source === focusNodeId || edge.data.target === focusNodeId) {
+          focusedEdges.set(key, edge);
+        }
+      });
+
+      // Keep chain path nodes + focused node + nodes connected to focused node
+      const focusedNodes = new Map<string, GraphNode>();
+
+      // Add chain path nodes
+      chainPath.forEach(id => {
+        if (visibleNodes.has(id)) {
+          focusedNodes.set(id, visibleNodes.get(id)!);
+        }
+      });
+
+      // Add focused node
+      if (visibleNodes.has(focusNodeId)) {
+        focusedNodes.set(focusNodeId, visibleNodes.get(focusNodeId)!);
+      }
+
+      // Add nodes connected to focused node via remaining edges
+      focusedEdges.forEach(edge => {
+        const otherId = edge.data.source === focusNodeId ? edge.data.target : edge.data.source;
+        if (visibleNodes.has(otherId)) {
+          focusedNodes.set(otherId, visibleNodes.get(otherId)!);
+        }
+      });
+
+      visibleNodes = focusedNodes;
+      visibleEdges = focusedEdges;
+
+      console.log('[ChainExplorer] Focus mode result:', {
+        focusNodeId,
+        visibleNodes: visibleNodes.size,
+        visibleEdges: visibleEdges.size,
+      });
+    }
+
     // Calculate unexplored nodes for visible set
     const visibleUnexplored = new Set<string>();
     visibleNodes.forEach((node, id) => {
@@ -312,16 +368,34 @@ export default function ChainExplorerGraph({
     updateCytoscapeGraph(visibleNodes, visibleEdges, expanded, visibleUnexplored);
   }, [updateCytoscapeGraph]);
 
-  // Re-render when cleanMode toggles (use refs to avoid other deps triggering this)
+  // Re-render when cleanMode/focusMode changes, or focusedNodeId changes while focusMode is ON
   const prevCleanModeRef = useRef(cleanMode);
+  const prevFocusModeRef = useRef(focusMode);
+  const prevFocusedNodeIdRef = useRef(focusedNodeId);
   useEffect(() => {
     if (fullGraphNodes.size === 0) return;
-    if (prevCleanModeRef.current !== cleanMode) {
-      console.log('[ChainExplorer] cleanMode toggled:', prevCleanModeRef.current, '->', cleanMode);
+    const cleanModeChanged = prevCleanModeRef.current !== cleanMode;
+    const focusModeChanged = prevFocusModeRef.current !== focusMode;
+    const focusedNodeChanged = prevFocusedNodeIdRef.current !== focusedNodeId;
+
+    // Only rebuild if: cleanMode changed, focusMode changed, OR (focusedNode changed AND focusMode is ON)
+    const shouldRebuild = cleanModeChanged || focusModeChanged || (focusedNodeChanged && focusMode);
+
+    if (shouldRebuild) {
+      console.log('[ChainExplorer] Filter mode changed:', {
+        cleanMode: cleanModeChanged ? `${prevCleanModeRef.current} -> ${cleanMode}` : 'unchanged',
+        focusMode: focusModeChanged ? `${prevFocusModeRef.current} -> ${focusMode}` : 'unchanged',
+        focusedNodeId: focusedNodeChanged ? `${prevFocusedNodeIdRef.current} -> ${focusedNodeId}` : 'unchanged',
+      });
       prevCleanModeRef.current = cleanMode;
-      rebuildVisibleGraph(fullGraphNodes, fullGraphEdges, expandedNodes, expansionHistory, cleanMode);
+      prevFocusModeRef.current = focusMode;
+      prevFocusedNodeIdRef.current = focusedNodeId;
+      rebuildVisibleGraph(fullGraphNodes, fullGraphEdges, expandedNodes, expansionHistory, cleanMode, focusMode, focusedNodeId);
+    } else if (focusedNodeChanged) {
+      // Still update ref even if we don't rebuild (so we don't trigger on next render)
+      prevFocusedNodeIdRef.current = focusedNodeId;
     }
-  }, [cleanMode, fullGraphNodes, fullGraphEdges, expandedNodes, expansionHistory, rebuildVisibleGraph]);
+  }, [cleanMode, focusMode, focusedNodeId, fullGraphNodes, fullGraphEdges, expandedNodes, expansionHistory, rebuildVisibleGraph]);
 
   // Expand a node to show its relationships
   const expandNode = useCallback(async (commandId: string) => {
@@ -386,14 +460,14 @@ export default function ChainExplorerGraph({
       setExpandedNodes(newExpanded);
       setExpansionHistory(newHistory);
 
-      // Rebuild visible graph based on cleanMode
-      rebuildVisibleGraph(newFullNodes, newFullEdges, newExpanded, newHistory, cleanMode);
+      // Rebuild visible graph based on cleanMode and focusMode
+      rebuildVisibleGraph(newFullNodes, newFullEdges, newExpanded, newHistory, cleanMode, focusMode, focusedNodeId);
     } catch (error) {
       console.error('[ChainExplorer] Error expanding node:', error);
     } finally {
       setLoading(false);
     }
-  }, [expandedNodes, graphEdges, fullGraphNodes, fullGraphEdges, expansionHistory, rebuildVisibleGraph, cleanMode]);
+  }, [expandedNodes, graphEdges, fullGraphNodes, fullGraphEdges, expansionHistory, rebuildVisibleGraph, cleanMode, focusMode, focusedNodeId]);
 
   // Keep refs updated with latest functions (fixes stale closure)
   useEffect(() => {
@@ -551,9 +625,9 @@ export default function ChainExplorerGraph({
     setExpandedNodes(newExpanded);
     setExpansionHistory(newHistory);
 
-    // Rebuild visible graph based on cleanMode
-    rebuildVisibleGraph(newNodes, newEdges, newExpanded, newHistory, cleanMode);
-  }, [expandedNodes, fullGraphNodes, fullGraphEdges, expansionHistory, findDescendantNodes, rebuildVisibleGraph, cleanMode]);
+    // Rebuild visible graph based on cleanMode and focusMode
+    rebuildVisibleGraph(newNodes, newEdges, newExpanded, newHistory, cleanMode, focusMode, focusedNodeId);
+  }, [expandedNodes, fullGraphNodes, fullGraphEdges, expansionHistory, findDescendantNodes, rebuildVisibleGraph, cleanMode, focusMode, focusedNodeId]);
 
   // Emit state changes to parent
   useEffect(() => {
@@ -745,25 +819,21 @@ export default function ChainExplorerGraph({
       maxZoom: 3,
     });
 
-    // Node click handler - expand/collapse AND update details
-    // Uses refs to always call latest functions (avoids stale closure)
+    // Single click - update details view only (for focus mode filtering)
     cyRef.current.on('tap', 'node', (event) => {
       const nodeId = event.target.data('id');
-      console.log('[ChainExplorer] Node clicked:', nodeId);
-      expandNodeRef.current(nodeId);
-      // Also update details view with clicked node
+      console.log('[ChainExplorer] Node clicked (details):', nodeId);
+      clickedFromGraphRef.current = true; // Mark as graph-originated (skip initialCommandId effect)
       if (onCommandSelectRef.current) {
         onCommandSelectRef.current(nodeId);
       }
     });
 
-    // Double-click to select command for details panel
+    // Double-click - expand node to add to tree
     cyRef.current.on('dbltap', 'node', (event) => {
       const nodeId = event.target.data('id');
-      console.log('[ChainExplorer] Node double-clicked:', nodeId);
-      if (onCommandSelect) {
-        onCommandSelect(nodeId);
-      }
+      console.log('[ChainExplorer] Node double-clicked (expand):', nodeId);
+      expandNodeRef.current(nodeId);
     });
 
     // Tooltip handlers
@@ -800,6 +870,13 @@ export default function ChainExplorerGraph({
   // If the command is new (from search), RESET and start fresh
   useEffect(() => {
     if (!initialCommandId || !cyRef.current) return;
+
+    // Skip if selection originated from graph click (single click for details only)
+    if (clickedFromGraphRef.current) {
+      console.log('[ChainExplorer] Selection from graph click, skipping expand:', initialCommandId);
+      clickedFromGraphRef.current = false; // Reset for next time
+      return;
+    }
 
     // Skip if already expanded (don't reload same command)
     if (expandedNodes.has(initialCommandId)) {
@@ -858,8 +935,8 @@ export default function ChainExplorerGraph({
           setExpandedNodes(newExpanded);
           setExpansionHistory(newHistory);
 
-          // Rebuild visible graph (respects cleanMode)
-          rebuildVisibleGraph(newFullNodes, newFullEdges, newExpanded, newHistory, cleanMode);
+          // Rebuild visible graph (respects cleanMode and focusMode)
+          rebuildVisibleGraph(newFullNodes, newFullEdges, newExpanded, newHistory, cleanMode, focusMode, focusedNodeId);
         } finally {
           setLoading(false);
         }
@@ -891,6 +968,16 @@ export default function ChainExplorerGraph({
             onClick={() => onCleanModeChange?.(!cleanMode)}
           >
             Clean
+          </Button>
+          <Button
+            size="xs"
+            variant={focusMode ? 'filled' : 'subtle'}
+            color={focusMode ? 'cyan' : 'gray'}
+            onClick={() => onFocusModeChange?.(!focusMode)}
+            disabled={!cleanMode}
+            style={{ opacity: cleanMode ? 1 : 0.5 }}
+          >
+            Focus
           </Button>
           <SegmentedControl
             size="xs"
