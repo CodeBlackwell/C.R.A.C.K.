@@ -431,6 +431,17 @@ Supported Edge Types:
         default="all",
         help="Filter spray methods to show (default: all)",
     )
+    spray_group.add_argument(
+        "--spray-tailored",
+        action="store_true",
+        help="Generate tailored spray commands based on BloodHound access data (user→machine mappings)",
+    )
+    spray_group.add_argument(
+        "--spray-tailored-output",
+        type=str,
+        metavar="FILE",
+        help="Output file for tailored spray report (default: spray_tailored.md in current dir)",
+    )
 
     return parser
 
@@ -1591,6 +1602,10 @@ def handle_spray(args):
         domain = domain_config.get("domain", "") if domain_config else ""
         dc_ip = (domain_config.get("dc_ip") if domain_config else None) or "<DC_IP>"
 
+        # Get all machine IPs for multi-target loops
+        machines = tracker.get_all_machines_with_ips()
+        all_ips = [m["ip"] for m in machines if m.get("ip")]
+
         # Show recommendations
         print_spray_recommendations(
             pwned_users=pwned_users,
@@ -1598,7 +1613,57 @@ def handle_spray(args):
             domain=domain,
             dc_ip=dc_ip,
             method_filter=getattr(args, 'spray_method', 'all'),
+            all_ips=all_ips,
         )
+
+        return 0
+
+    finally:
+        tracker.close()
+
+
+def handle_spray_tailored(args):
+    """Handle --spray-tailored command - generate tailored spray commands based on BloodHound access data."""
+    from .display_commands import print_spray_tailored
+
+    config = Neo4jConfig(uri=args.uri, user=args.user, password=args.password)
+    tracker = PwnedTracker(config)
+
+    if not tracker.connect():
+        print("[!] Could not connect to Neo4j")
+        return 1
+
+    try:
+        # Get all user-to-machine access relationships
+        access_data = tracker.get_all_users_with_access()
+
+        if not access_data:
+            print("[!] No user-to-machine access relationships found in Neo4j")
+            print("    Make sure BloodHound data has been imported with edge collection")
+            return 1
+
+        # Get domain config
+        domain_config = tracker.get_domain_config()
+        domain = domain_config.get("domain", "") if domain_config else ""
+
+        # Generate output
+        console_output, markdown_output = print_spray_tailored(
+            access_data=access_data,
+            domain=domain,
+            use_colors=True,
+        )
+
+        # Print to console (no truncation)
+        print(console_output)
+
+        # Write report file
+        output_file = getattr(args, 'spray_tailored_output', None) or "spray_tailored.md"
+        try:
+            with open(output_file, "w") as f:
+                f.write(markdown_output)
+            print(f"[+] Report written to: {output_file}")
+        except Exception as e:
+            print(f"[!] Failed to write report: {e}")
 
         return 0
 
@@ -1731,6 +1796,10 @@ def main():
     # Handle password spray command
     if args.spray:
         return handle_spray(args)
+
+    # Handle tailored spray command
+    if args.spray_tailored:
+        return handle_spray_tailored(args)
 
     # Edge enhancement requires bh_data_dir
     if not hasattr(args, 'bh_data_dir') or args.bh_data_dir is None:

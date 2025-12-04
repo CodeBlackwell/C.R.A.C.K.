@@ -850,6 +850,53 @@ class PwnedTracker:
         except Exception:
             return []
 
+    def get_all_users_with_access(self) -> List[Dict[str, Any]]:
+        """
+        Get ALL users with machine access (AdminTo, CanRDP, CanPSRemote, ExecuteDCOM, ReadLAPSPassword).
+
+        Returns both direct access and inherited access through group membership.
+        Used by --spray-tailored to generate targeted commands.
+
+        Returns:
+            List of dicts with: user, computer, access_type, ip, inherited_from
+        """
+        if not self._ensure_connected():
+            return []
+
+        try:
+            with self.driver.session() as session:
+                result = session.run("""
+                    // Direct access
+                    MATCH (u:User)-[r:AdminTo|CanRDP|CanPSRemote|ExecuteDCOM|ReadLAPSPassword]->(c:Computer)
+                    WHERE u.enabled = true OR u.enabled IS NULL
+                    RETURN u.name AS User, c.name AS Computer, type(r) AS AccessType,
+                           c.bloodtrail_ip AS IP, null AS InheritedFrom
+
+                    UNION
+
+                    // Inherited through groups
+                    MATCH (u:User)-[:MemberOf*1..]->(g:Group)-[r:AdminTo|CanRDP|CanPSRemote|ExecuteDCOM|ReadLAPSPassword]->(c:Computer)
+                    WHERE u.enabled = true OR u.enabled IS NULL
+                    RETURN u.name AS User, c.name AS Computer, type(r) AS AccessType,
+                           c.bloodtrail_ip AS IP, g.name AS InheritedFrom
+                """)
+
+                access_list = []
+                for record in result:
+                    access_list.append({
+                        "user": record["User"],
+                        "computer": record["Computer"],
+                        "access_type": record["AccessType"],
+                        "ip": record["IP"],
+                        "inherited_from": record["InheritedFrom"],
+                    })
+
+                return access_list
+
+        except Exception as e:
+            print(f"[!] Error querying user access: {e}")
+            return []
+
     def get_escalation_paths(self, max_hops: int = 6) -> List[Dict[str, Any]]:
         """
         Find shortest paths from any pwned user to Domain Admins.
