@@ -52,6 +52,7 @@ from .display_commands import (
     print_pwned_users_table,
     print_cred_harvest_targets,
     print_post_exploit_commands,
+    print_machines_ip_table,
 )
 
 
@@ -341,6 +342,11 @@ Supported Edge Types:
         metavar="USER",
         help="Show post-exploitation (mimikatz) commands for pwned user(s) with local-admin access. "
              "Specify USER or omit for all pwned users.",
+    )
+    pwned_group.add_argument(
+        "--list-ip-addresses", "-lip",
+        action="store_true",
+        help="List all machines with their resolved IP addresses",
     )
 
     # Domain configuration options
@@ -1114,6 +1120,27 @@ def handle_post_exploit(args):
         tracker.close()
 
 
+def handle_list_ip_addresses(args):
+    """Handle --list-ip-addresses command - list all machines with IPs."""
+    config = Neo4jConfig(uri=args.uri, user=args.user, password=args.password)
+    tracker = PwnedTracker(config)
+
+    if not tracker.connect():
+        print("[!] Could not connect to Neo4j")
+        return 1
+
+    try:
+        machines = tracker.get_all_machines_with_ips()
+        # Get DC IP from stored config for highlighting
+        domain_config = tracker.get_domain_config()
+        dc_ip = domain_config.get("dc_ip") if domain_config else None
+        print_machines_ip_table(machines, dc_ip=dc_ip)
+        return 0
+
+    finally:
+        tracker.close()
+
+
 def handle_set_dc_ip(args):
     """Handle --set-dc-ip command"""
     config = Neo4jConfig(uri=args.uri, user=args.user, password=args.password)
@@ -1475,7 +1502,7 @@ def handle_spray(args):
         # Get domain config
         domain_config = tracker.get_domain_config()
         domain = domain_config.get("domain", "") if domain_config else ""
-        dc_ip = domain_config.get("dc_ip", "<DC_IP>") if domain_config else "<DC_IP>"
+        dc_ip = (domain_config.get("dc_ip") if domain_config else None) or "<DC_IP>"
 
         # Show recommendations
         print_spray_recommendations(
@@ -1574,6 +1601,9 @@ def main():
 
     if args.post_exploit:
         return handle_post_exploit(args)
+
+    if args.list_ip_addresses:
+        return handle_list_ip_addresses(args)
 
     # Handle domain configuration commands
     if args.set_dc_ip:

@@ -827,6 +827,29 @@ class PwnedTracker:
         except Exception:
             return []
 
+    def get_all_machines_with_ips(self) -> List[Dict[str, Optional[str]]]:
+        """
+        Get all Computer nodes with their resolved IP addresses (if any).
+
+        Returns:
+            List of dicts with 'name' (hostname) and 'ip' (IP or None)
+        """
+        if not self._ensure_connected():
+            return []
+
+        try:
+            with self.driver.session() as session:
+                result = session.run("""
+                    MATCH (c:Computer)
+                    RETURN c.name AS name, c.bloodtrail_ip AS ip
+                    ORDER BY c.name
+                """)
+
+                return [{"name": record["name"], "ip": record["ip"]} for record in result]
+
+        except Exception:
+            return []
+
     def get_escalation_paths(self, max_hops: int = 6) -> List[Dict[str, Any]]:
         """
         Find shortest paths from any pwned user to Domain Admins.

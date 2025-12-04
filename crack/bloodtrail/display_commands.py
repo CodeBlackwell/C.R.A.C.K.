@@ -929,6 +929,49 @@ def print_pwned_users_table(
     print()
 
 
+def print_machines_ip_table(machines: List[Dict], use_colors: bool = True, dc_ip: str = None) -> None:
+    """
+    Print table of machines with their resolved IP addresses.
+
+    Args:
+        machines: List of dicts with 'name' and 'ip' keys
+        use_colors: Enable ANSI colors
+        dc_ip: Domain Controller IP to highlight with blood drip emoji
+    """
+    c = Colors if use_colors else _NoColors
+
+    if not machines:
+        print(f"{c.DIM}No machines found in BloodHound database.{c.RESET}")
+        return
+
+    resolved = sum(1 for m in machines if m["ip"])
+    print(f"\n{c.BOLD}{'='*60}{c.RESET}")
+    print(f"  {c.CYAN}MACHINES{c.RESET} ({resolved}/{len(machines)} resolved)")
+    print(f"{'='*60}\n")
+
+    # Calculate column widths
+    max_name = max(len(m["name"]) for m in machines)
+    max_ip = max(len(m["ip"] or "---") for m in machines)
+
+    # Header
+    print(f"  {c.BOLD}{'Machine':<{max_name}}  {'IP Address':<{max_ip}}{c.RESET}")
+    print(f"  {'-' * max_name}  {'-' * max_ip}")
+
+    # Rows
+    for m in machines:
+        ip_display = m["ip"] if m["ip"] else "---"
+        is_dc = dc_ip and m["ip"] == dc_ip
+        ip_color = c.RED if is_dc else (c.CYAN if m["ip"] else c.DIM)
+        dc_marker = " 🩸" if is_dc else ""
+        print(f"  {m['name']:<{max_name}}  {ip_color}{ip_display:<{max_ip}}{c.RESET}{dc_marker}")
+
+    # Legend
+    if dc_ip:
+        print()
+        print(f"  {c.DIM}🩸 = Domain Controller (stored DC IP){c.RESET}")
+    print()
+
+
 def print_cred_harvest_targets(
     targets: List[Dict],
     use_colors: bool = True
@@ -2090,10 +2133,11 @@ def print_spray_recommendations(
 
         print()
         print(f"  {c.BOLD}From Linux (Kali):{c.RESET}")
+        first_pwd = passwords[0] if passwords else "<PASSWORD>"
         for key in ["kerbrute_enum", "crackmapexec_users", "bloodhound_export"]:
             if key in linux_cmds:
                 cmd = linux_cmds[key]
-                filled = fill_template(cmd["cmd"])
+                filled = fill_template(cmd["cmd"], first_pwd)
                 print(f"    {c.DIM}# {cmd['description']}{c.RESET}")
                 print(f"    {c.GREEN}{filled}{c.RESET}")
                 print()
@@ -2189,3 +2233,351 @@ def _print_spray_comparison_table(c) -> None:
         print(f"  {c.DIM}|{c.RESET}{method:^{w_method}}{c.DIM}|{c.RESET}{noise_colored}{c.DIM}|{c.RESET}{speed_colored}{c.DIM}|{c.RESET}{admin_colored}{c.DIM}|{c.RESET}")
 
     print(f"  {c.DIM}+{'-'*w_method}+{'-'*w_noise}+{'-'*w_speed}+{'-'*w_admin}+{c.RESET}")
+
+
+# =============================================================================
+# PASSWORD SPRAY SECTION (for run_all_queries report integration)
+# =============================================================================
+
+def generate_spray_section(
+    pwned_users: List = None,
+    policy = None,
+    domain: str = "",
+    dc_ip: str = "<DC_IP>",
+    use_colors: bool = True,
+) -> tuple:
+    """
+    Generate Password Spray Recommendations section for the report.
+
+    Returns both console-formatted and markdown-formatted output.
+    Designed for integration with run_all_queries() report generation.
+
+    Args:
+        pwned_users: List of PwnedUser objects with credentials
+        policy: Optional PasswordPolicy for safe spray planning
+        domain: Domain name for command templates
+        dc_ip: Domain Controller IP
+        use_colors: Enable ANSI colors for console output
+
+    Returns:
+        Tuple of (console_output: str, markdown_output: str)
+        Returns ("", "") if no pwned users with passwords
+    """
+    from .command_mappings import (
+        SPRAY_TECHNIQUES,
+        SPRAY_SCENARIOS,
+        USER_ENUM_COMMANDS,
+    )
+
+    c = Colors if use_colors else _NoColors
+    pwned_users = pwned_users or []
+
+    # Extract credentials from pwned users
+    passwords = []
+    usernames = []
+    for user in pwned_users:
+        usernames.append(user.username)
+        for ctype, cval in zip(user.cred_types, user.cred_values):
+            if ctype == "password" and cval:
+                passwords.append(cval)
+
+    # Only show section if we have passwords to spray with
+    if not passwords:
+        return "", ""
+
+    console_lines = []
+    markdown_lines = []
+
+    # Helper to fill command template
+    def fill_template(cmd: str, pwd: str = "<PASSWORD>") -> str:
+        result = cmd
+        result = result.replace("<DC_IP>", dc_ip)
+        result = result.replace("<DOMAIN>", domain.lower() if domain else "<DOMAIN>")
+        result = result.replace("<PASSWORD>", pwd)
+        result = result.replace("<USER_FILE>", "users.txt")
+        result = result.replace("<PASSWORD_FILE>", "passwords.txt")
+        if usernames:
+            result = result.replace("<USERNAME>", usernames[0])
+        return result
+
+    # =========================================================================
+    # HEADER
+    # =========================================================================
+    console_lines.append("")
+    console_lines.append(f"{c.CYAN}{c.BOLD}{'='*78}{c.RESET}")
+    console_lines.append(f"  {c.BOLD}PASSWORD SPRAYING METHODS{c.RESET}")
+    if pwned_users:
+        user_list = ", ".join(u.username for u in pwned_users[:5])
+        if len(pwned_users) > 5:
+            user_list += f" (+{len(pwned_users)-5} more)"
+        console_lines.append(f"  {c.DIM}Based on captured credentials: {user_list}{c.RESET}")
+    console_lines.append(f"{c.CYAN}{'='*78}{c.RESET}")
+
+    markdown_lines.append("## Password Spraying Methods")
+    markdown_lines.append("")
+    if pwned_users:
+        user_list = ", ".join(u.username for u in pwned_users[:5])
+        if len(pwned_users) > 5:
+            user_list += f" (+{len(pwned_users)-5} more)"
+        markdown_lines.append(f"*Based on captured credentials: {user_list}*")
+        markdown_lines.append("")
+
+    # =========================================================================
+    # PASSWORD POLICY SECTION
+    # =========================================================================
+    console_lines.append("")
+    if policy:
+        console_lines.append(f"  {c.YELLOW}{c.BOLD}PASSWORD POLICY{c.RESET} {c.DIM}(from stored config){c.RESET}")
+        console_lines.append(f"  {c.DIM}{'-'*70}{c.RESET}")
+        console_lines.append(f"    Lockout threshold:   {policy.lockout_threshold} attempts" +
+              (" (no lockout)" if policy.lockout_threshold == 0 else ""))
+        console_lines.append(f"    Lockout duration:    {policy.lockout_duration} minutes")
+        console_lines.append(f"    Observation window:  {policy.observation_window} minutes")
+        console_lines.append("")
+        console_lines.append(f"  {c.GREEN}{c.BOLD}SAFE SPRAY PARAMETERS{c.RESET}")
+        console_lines.append(f"    Attempts per round:  {c.BOLD}{policy.safe_spray_attempts}{c.RESET}")
+        console_lines.append(f"    Delay between:       {c.BOLD}{policy.spray_delay_minutes} minutes{c.RESET}")
+
+        if policy.lockout_threshold == 0:
+            console_lines.append(f"    {c.RED}WARNING: No lockout policy detected - exercise caution anyway{c.RESET}")
+
+        markdown_lines.append("### Password Policy")
+        markdown_lines.append("")
+        markdown_lines.append("| Setting | Value |")
+        markdown_lines.append("|---------|-------|")
+        markdown_lines.append(f"| Lockout threshold | {policy.lockout_threshold} attempts |")
+        markdown_lines.append(f"| Lockout duration | {policy.lockout_duration} minutes |")
+        markdown_lines.append(f"| Observation window | {policy.observation_window} minutes |")
+        markdown_lines.append("")
+        markdown_lines.append("**Safe Spray Parameters:**")
+        markdown_lines.append(f"- Attempts per round: **{policy.safe_spray_attempts}**")
+        markdown_lines.append(f"- Delay between: **{policy.spray_delay_minutes} minutes**")
+        markdown_lines.append("")
+    else:
+        console_lines.append(f"  {c.YELLOW}No password policy stored.{c.RESET}")
+        console_lines.append(f"  Import with: {c.GREEN}crack bloodtrail --set-policy{c.RESET}")
+        # Find first pwned user with a password credential
+        hint_user, hint_pass = "<USER>", "<PASSWORD>"
+        for user in pwned_users:
+            for ctype, cval in zip(user.cred_types, user.cred_values):
+                if ctype == "password" and cval:
+                    hint_user = user.username
+                    hint_pass = cval
+                    break
+            if hint_pass != "<PASSWORD>":
+                break
+        console_lines.append(f"  Set policy: {c.GREEN}crackmapexec smb {dc_ip} -u '{hint_user}' -p '{hint_pass}' --pass-pol | crack bt --set-policy{c.RESET}")
+        console_lines.append("")
+        console_lines.append(f"  {c.DIM}Default safe parameters (conservative):{c.RESET}")
+        console_lines.append(f"    Attempts per round:  {c.BOLD}2{c.RESET}")
+        console_lines.append(f"    Delay between:       {c.BOLD}30 minutes{c.RESET}")
+
+        markdown_lines.append("### Password Policy")
+        markdown_lines.append("")
+        markdown_lines.append("*No password policy stored. Import with: `crack bloodtrail --set-policy`*")
+        markdown_lines.append("")
+        markdown_lines.append(f"Set policy: `crackmapexec smb {dc_ip} -u '{hint_user}' -p '{hint_pass}' --pass-pol | crack bt --set-policy`")
+        markdown_lines.append("")
+        markdown_lines.append("**Default safe parameters (conservative):**")
+        markdown_lines.append("- Attempts per round: **2**")
+        markdown_lines.append("- Delay between: **30 minutes**")
+        markdown_lines.append("")
+
+    # =========================================================================
+    # SPRAY METHODS
+    # =========================================================================
+    methods = [
+        ("smb", "METHOD 1"),
+        ("kerberos", "METHOD 2"),
+        ("ldap", "METHOD 3"),
+    ]
+
+    markdown_lines.append("### Spray Methods")
+    markdown_lines.append("")
+
+    for method_key, method_label in methods:
+        tech = SPRAY_TECHNIQUES.get(method_key)
+        if not tech:
+            continue
+
+        console_lines.append("")
+        console_lines.append(f"  {c.CYAN}{c.BOLD}{method_label}: {tech.name}{c.RESET}")
+        console_lines.append(f"  {c.DIM}Ports: {', '.join(str(p) for p in tech.ports)} | Noise: {tech.noise_level.upper()}{c.RESET}")
+        console_lines.append("")
+
+        markdown_lines.append(f"#### {method_label}: {tech.name}")
+        markdown_lines.append(f"*Ports: {', '.join(str(p) for p in tech.ports)} | Noise: {tech.noise_level.upper()}*")
+        markdown_lines.append("")
+
+        # Commands with captured passwords
+        template_key = "single_password" if method_key != "ldap" else "spray_ps1"
+        template = tech.command_templates.get(template_key, "")
+
+        if template:
+            markdown_lines.append("```bash")
+            if passwords and method_key != "ldap":
+                for pwd in passwords[:3]:
+                    cmd = fill_template(template, pwd)
+                    console_lines.append(f"    {c.GREEN}{cmd}{c.RESET}")
+                    markdown_lines.append(cmd)
+            else:
+                pwd = passwords[0] if passwords else "<PASSWORD>"
+                cmd = fill_template(template, pwd)
+                console_lines.append(f"    {c.GREEN}{cmd}{c.RESET}")
+                markdown_lines.append(cmd)
+            markdown_lines.append("```")
+            markdown_lines.append("")
+
+        console_lines.append("")
+        console_lines.append(f"    {c.GREEN}+ {tech.advantages}{c.RESET}")
+        console_lines.append(f"    {c.RED}- {tech.disadvantages}{c.RESET}")
+
+        markdown_lines.append(f"- **+** {tech.advantages}")
+        markdown_lines.append(f"- **-** {tech.disadvantages}")
+        markdown_lines.append("")
+
+    # =========================================================================
+    # USER ENUMERATION COMMANDS
+    # =========================================================================
+    console_lines.append("")
+    console_lines.append(f"  {c.YELLOW}{c.BOLD}USER LIST GENERATION{c.RESET}")
+    console_lines.append(f"  {c.DIM}{'-'*70}{c.RESET}")
+
+    markdown_lines.append("### User List Generation")
+    markdown_lines.append("")
+
+    linux_cmds = USER_ENUM_COMMANDS.get("linux", {})
+    windows_cmds = USER_ENUM_COMMANDS.get("windows", {})
+
+    console_lines.append("")
+    console_lines.append(f"  {c.BOLD}From Linux (Kali):{c.RESET}")
+
+    markdown_lines.append("**From Linux (Kali):**")
+    markdown_lines.append("")
+
+    for key in ["kerbrute_enum", "crackmapexec_users", "bloodhound_export"]:
+        if key in linux_cmds:
+            cmd = linux_cmds[key]
+            filled = fill_template(cmd["cmd"])
+            console_lines.append(f"    {c.DIM}# {cmd['description']}{c.RESET}")
+            console_lines.append(f"    {c.GREEN}{filled}{c.RESET}")
+            console_lines.append("")
+
+            markdown_lines.append(f"```bash")
+            markdown_lines.append(f"# {cmd['description']}")
+            markdown_lines.append(filled)
+            markdown_lines.append("```")
+            markdown_lines.append("")
+
+    console_lines.append(f"  {c.BOLD}From Windows (on target):{c.RESET}")
+    markdown_lines.append("**From Windows (on target):**")
+    markdown_lines.append("")
+
+    for key in ["domain_users_to_file", "powershell_ad"]:
+        if key in windows_cmds:
+            cmd = windows_cmds[key]
+            console_lines.append(f"    {c.DIM}# {cmd['description']}{c.RESET}")
+            console_lines.append(f"    {c.GREEN}{cmd['cmd']}{c.RESET}")
+            console_lines.append("")
+
+            markdown_lines.append(f"```powershell")
+            markdown_lines.append(f"# {cmd['description']}")
+            markdown_lines.append(cmd['cmd'])
+            markdown_lines.append("```")
+            markdown_lines.append("")
+
+    # =========================================================================
+    # SCENARIO RECOMMENDATIONS
+    # =========================================================================
+    console_lines.append("")
+    console_lines.append(f"  {c.YELLOW}{c.BOLD}SCENARIO RECOMMENDATIONS{c.RESET}")
+    console_lines.append(f"  {c.DIM}{'-'*70}{c.RESET}")
+    console_lines.append("")
+
+    # Table header
+    console_lines.append(f"  {'Scenario':<42} {'Method':<12} {'Reason'}")
+    console_lines.append(f"  {'-'*42} {'-'*12} {'-'*40}")
+
+    markdown_lines.append("### Scenario Recommendations")
+    markdown_lines.append("")
+    markdown_lines.append("| Scenario | Method | Reason |")
+    markdown_lines.append("|----------|--------|--------|")
+
+    for scenario in SPRAY_SCENARIOS:
+        s = scenario["scenario"][:40]
+        m = scenario["recommendation"]
+        r = scenario["reason"][:38]
+        console_lines.append(f"  {s:<42} {c.BOLD}{m:<12}{c.RESET} {c.DIM}{r}{c.RESET}")
+        markdown_lines.append(f"| {scenario['scenario']} | **{m}** | {scenario['reason']} |")
+
+    markdown_lines.append("")
+
+    # =========================================================================
+    # QUICK REFERENCE TABLE
+    # =========================================================================
+    console_lines.append("")
+    console_lines.append(f"  {c.CYAN}{c.BOLD}QUICK REFERENCE: When to Use Each{c.RESET}")
+    console_lines.append("")
+
+    w_method, w_noise, w_speed, w_admin = 16, 8, 10, 12
+
+    console_lines.append(f"  {c.DIM}+{'-'*w_method}+{'-'*w_noise}+{'-'*w_speed}+{'-'*w_admin}+{c.RESET}")
+    console_lines.append(f"  {c.DIM}|{c.RESET}{'Method':^{w_method}}{c.DIM}|{c.RESET}{'Noise':^{w_noise}}{c.DIM}|{c.RESET}{'Speed':^{w_speed}}{c.DIM}|{c.RESET}{'Admin Check':^{w_admin}}{c.DIM}|{c.RESET}")
+    console_lines.append(f"  {c.DIM}+{'-'*w_method}+{'-'*w_noise}+{'-'*w_speed}+{'-'*w_admin}+{c.RESET}")
+
+    rows = [
+        ("SMB (CME)", "HIGH", "Medium", "YES"),
+        ("Kerberos", "LOW", "Fast", "No"),
+        ("LDAP/ADSI", "MEDIUM", "Slow", "No"),
+    ]
+
+    for method, noise, speed, admin in rows:
+        if noise == "HIGH":
+            noise_colored = f"{c.RED}{noise:^{w_noise}}{c.RESET}"
+        elif noise == "MEDIUM":
+            noise_colored = f"{c.YELLOW}{noise:^{w_noise}}{c.RESET}"
+        else:
+            noise_colored = f"{c.GREEN}{noise:^{w_noise}}{c.RESET}"
+
+        if admin == "YES":
+            admin_colored = f"{c.GREEN}{admin:^{w_admin}}{c.RESET}"
+        else:
+            admin_colored = f"{admin:^{w_admin}}"
+
+        if speed == "Fast":
+            speed_colored = f"{c.GREEN}{speed:^{w_speed}}{c.RESET}"
+        else:
+            speed_colored = f"{speed:^{w_speed}}"
+
+        console_lines.append(f"  {c.DIM}|{c.RESET}{method:^{w_method}}{c.DIM}|{c.RESET}{noise_colored}{c.DIM}|{c.RESET}{speed_colored}{c.DIM}|{c.RESET}{admin_colored}{c.DIM}|{c.RESET}")
+
+    console_lines.append(f"  {c.DIM}+{'-'*w_method}+{'-'*w_noise}+{'-'*w_speed}+{'-'*w_admin}+{c.RESET}")
+
+    markdown_lines.append("### Quick Reference")
+    markdown_lines.append("")
+    markdown_lines.append("| Method | Noise | Speed | Admin Check |")
+    markdown_lines.append("|--------|-------|-------|-------------|")
+    markdown_lines.append("| SMB (CME) | HIGH | Medium | YES |")
+    markdown_lines.append("| Kerberos | LOW | Fast | No |")
+    markdown_lines.append("| LDAP/ADSI | MEDIUM | Slow | No |")
+    markdown_lines.append("")
+
+    # =========================================================================
+    # EXAM TIP
+    # =========================================================================
+    console_lines.append("")
+    threshold = policy.lockout_threshold if policy else 5
+    safe = policy.safe_spray_attempts if policy else 4
+    window = policy.spray_delay_minutes if policy else 30
+    console_lines.append(f"  {c.YELLOW}{c.BOLD}EXAM TIP:{c.RESET} Before spraying, always check {c.GREEN}net accounts{c.RESET} to verify lockout.")
+    console_lines.append(f"  {c.DIM}With {threshold}-attempt lockout, safely attempt {safe} passwords per {window} min window.{c.RESET}")
+
+    console_lines.append("")
+    console_lines.append(f"{c.CYAN}{'='*78}{c.RESET}")
+    console_lines.append("")
+
+    markdown_lines.append(f"> **EXAM TIP:** Before spraying, always check `net accounts` to verify lockout.")
+    markdown_lines.append(f"> With {threshold}-attempt lockout, safely attempt {safe} passwords per {window} min window.")
+    markdown_lines.append("")
+
+    return "\n".join(console_lines), "\n".join(markdown_lines)
