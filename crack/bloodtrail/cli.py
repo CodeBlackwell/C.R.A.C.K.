@@ -30,7 +30,7 @@ from pathlib import Path
 
 from neo4j import GraphDatabase
 
-from .config import Neo4jConfig, ATTACK_PATH_EDGES
+from .config import Neo4jConfig, ATTACK_PATH_EDGES, LHOST as CONFIG_LHOST, LPORT as CONFIG_LPORT
 from .main import BHEnhancer
 from .query_runner import (
     QueryRunner,
@@ -40,6 +40,7 @@ from .query_runner import (
     run_all_queries,
 )
 from .data_source import is_valid_bloodhound_source, create_data_source
+from .ip_resolver import IPResolver
 from .pwned_tracker import (
     PwnedTracker,
     DiscoveryError,
@@ -162,7 +163,7 @@ Supported Edge Types:
         "--dc-ip",
         type=str,
         metavar="IP",
-        help="Domain Controller IP for DNS resolution and command auto-population (e.g., 192.168.50.70). Uses DC as DNS server to resolve internal AD computer names.",
+        help="Set DC IP for DNS resolution and command auto-population. Can be used standalone (bt --dc-ip 192.168.50.70) or during import.",
     )
 
     # IP refresh mode options
@@ -1132,11 +1133,25 @@ def handle_pwned_user_detail(args):
 
         machine_access = tracker.get_pwned_user_access(args.pwned_user)
 
-        # Get domain config for DC IP and SID auto-population
+        # Get domain config for DC IP, SID, and LHOST/LPORT auto-population
         domain_config = tracker.get_domain_config()
         dc_ip = domain_config.get("dc_ip") if domain_config else None
         dc_hostname = domain_config.get("dc_hostname") if domain_config else None
         domain_sid = domain_config.get("domain_sid") if domain_config else None
+        lhost = domain_config.get("lhost") if domain_config else None
+        lport = domain_config.get("lport") if domain_config else None
+
+        # Override from CLI args if provided
+        if getattr(args, 'lhost', None):
+            lhost = args.lhost
+        if getattr(args, 'lport', None):
+            lport = args.lport
+
+        # Fall back to config.py defaults if still not set
+        if not lhost and CONFIG_LHOST:
+            lhost = CONFIG_LHOST
+        if not lport and CONFIG_LPORT:
+            lport = CONFIG_LPORT
 
         print_pwned_followup_commands(
             user_name=pwned_user.name,
@@ -1147,6 +1162,8 @@ def handle_pwned_user_detail(args):
             dc_ip=dc_ip,
             dc_hostname=dc_hostname,
             domain_sid=domain_sid,
+            lhost=lhost,
+            lport=lport,
         )
         return 0
 
@@ -1200,6 +1217,12 @@ def handle_post_exploit(args):
             lhost = args.lhost
         if getattr(args, 'lport', None):
             lport = args.lport
+
+        # Fall back to config.py defaults if still not set
+        if not lhost and CONFIG_LHOST:
+            lhost = CONFIG_LHOST
+        if not lport and CONFIG_LPORT:
+            lport = CONFIG_LPORT
 
         # Get all pwned users
         pwned_users = tracker.list_pwned_users()
@@ -1291,6 +1314,92 @@ def handle_set_dc_ip(args):
             print(f"  Domain:      {domain_config['domain']}")
             print(f"  DC Hostname: {domain_config['dc_hostname'] or '(auto-detected)'}")
             print(f"  DC IP:       {domain_config['dc_ip']}")
+
+        return 0
+
+    finally:
+        tracker.close()
+
+
+def handle_dc_ip_standalone(args):
+    """Handle --dc-ip as standalone config setter with IP resolution"""
+    config = Neo4jConfig(uri=args.uri, user=args.user, password=args.password)
+    tracker = PwnedTracker(config)
+
+    if not tracker.connect():
+        print("[!] Could not connect to Neo4j")
+        return 1
+
+    try:
+        # Set DC IP in config
+        result = tracker.set_dc_ip(
+            dc_ip=args.dc_ip,
+            dc_hostname=getattr(args, 'set_dc_hostname', None)
+        )
+
+        if not result.success:
+            print(f"[!] Failed to set DC IP: {result.error}")
+            return 1
+
+        print(f"[+] DC IP set: {args.dc_ip}")
+
+        # Show domain config
+        domain_config = tracker.get_domain_config()
+        if domain_config:
+            print(f"  Domain:      {domain_config['domain']}")
+
+        # Fetch all computers from Neo4j
+        driver = GraphDatabase.driver(args.uri, auth=(args.user, args.password))
+        try:
+            with driver.session() as session:
+                result = session.run("""
+                    MATCH (c:Computer)
+                    RETURN c.name AS name
+                    ORDER BY c.name
+                """)
+                computers = [record["name"] for record in result if record["name"]]
+
+            # Filter out SIDs and invalid hostnames
+            computers = [c for c in computers if c and 'S-1-5-' not in c and '.' in c]
+
+            if not computers:
+                print("\n[*] No computers found in Neo4j. Import BloodHound data first.")
+                return 0
+
+            print(f"\n[*] Resolving IPs for {len(computers)} computers using DC as DNS...")
+
+            # Resolve IPs using DC as DNS server
+            resolver = IPResolver(timeout=2.0, max_workers=20, dc_ip=args.dc_ip)
+            ip_mappings = resolver.resolve_batch(computers)
+
+            # Store resolved IPs in Neo4j
+            resolved_count = 0
+            with driver.session() as session:
+                for fqdn, ip in ip_mappings.items():
+                    if ip:
+                        session.run("""
+                            MATCH (c:Computer {name: $name})
+                            SET c.bloodtrail_ip = $ip,
+                                c.bloodtrail_ip_resolved_at = datetime()
+                        """, name=fqdn, ip=ip)
+                        resolved_count += 1
+
+            # Print results table
+            stats = resolver.get_stats()
+            print(f"\n[+] Resolved: {stats['resolved']} | Failed: {stats['failed']}")
+            print()
+            print(f"{'COMPUTER':<45} {'IP ADDRESS':<15}")
+            print("-" * 60)
+
+            for fqdn in sorted(ip_mappings.keys()):
+                ip = ip_mappings[fqdn]
+                if ip:
+                    print(f"{fqdn:<45} \033[92m{ip:<15}\033[0m")
+                else:
+                    print(f"{fqdn:<45} \033[91m(unresolved)\033[0m")
+
+        finally:
+            driver.close()
 
         return 0
 
@@ -1981,6 +2090,10 @@ def main():
     # Handle tailored spray command
     if args.spray_tailored:
         return handle_spray_tailored(args)
+
+    # Handle --dc-ip as standalone config setter (when no data directory provided)
+    if args.dc_ip and (not hasattr(args, 'bh_data_dir') or args.bh_data_dir is None):
+        return handle_dc_ip_standalone(args)
 
     # Edge enhancement requires bh_data_dir
     if not hasattr(args, 'bh_data_dir') or args.bh_data_dir is None:

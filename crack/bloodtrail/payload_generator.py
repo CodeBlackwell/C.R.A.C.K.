@@ -49,11 +49,8 @@ class PayloadGenerator:
             target: Target hostname or IP
 
         Returns:
-            List of PayloadOption objects, empty if not configured
+            List of PayloadOption objects (uses placeholders if LHOST/LPORT not configured)
         """
-        if self._use_placeholders:
-            return []
-
         payloads = []
 
         # Option A: PowerShell TCP Reverse Shell (interactive PS prompt)

@@ -14,6 +14,11 @@ NEO4J_URI = "bolt://localhost:7687"
 NEO4J_USER = "neo4j"
 NEO4J_PASSWORD = "Neo4j123"
 
+# Listener defaults (for reverse shell payloads)
+# Set these to avoid passing --lhost/--lport every time
+LHOST = None  # e.g., "192.168.45.200"
+LPORT = None  # e.g., 443
+
 # Batch processing
 DEFAULT_BATCH_SIZE = 500
 

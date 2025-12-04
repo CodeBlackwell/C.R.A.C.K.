@@ -430,7 +430,7 @@ def generate_post_exploit_section(driver, use_colors: bool = True, lhost: str = 
         console_lines.extend(ptt_console)
         markdown_lines.extend(ptt_markdown)
 
-        target_ips = [m.get("ip", m.get("computer", "TARGET")) for m in admin_machines[:3]]
+        target_ips = [m.get("ip") or "<TARGET_HOST_IP>" for m in admin_machines[:3]]
         dcom_console, dcom_markdown = _generate_dcom_workflow(target_ips, c, lhost=lhost, lport=lport)
         console_lines.extend(dcom_console)
         markdown_lines.extend(dcom_markdown)
