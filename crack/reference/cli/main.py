@@ -89,7 +89,10 @@ class ReferenceCLI:
 
         # Fallback: JSON
         print(self.theme.hint("✓ Using JSON backend"))
-        return HybridCommandRegistry(config_manager=self.config, theme=self.theme)
+        # Use db/ as base path since commands live in db/data/commands/
+        from pathlib import Path
+        db_path = Path(__file__).parent.parent.parent / 'db'
+        return HybridCommandRegistry(base_path=db_path, config_manager=self.config, theme=self.theme)
 
     def _print_banner(self):
         """Print CRACK Reference banner"""
