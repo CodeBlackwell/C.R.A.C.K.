@@ -10,6 +10,65 @@ from .command_suggester import CommandTable, TargetEntry, AttackSequence
 from .command_mappings import ACCESS_TYPE_PHASES
 
 
+def deduplicate_command_tables(tables: List[CommandTable]) -> List[CommandTable]:
+    """
+    Merge command tables with the same command_id, deduplicating targets.
+
+    Multiple queries can produce the same command (e.g., "impacket-psexec")
+    with overlapping targets. This function merges them into a single table.
+
+    Args:
+        tables: List of CommandTable objects (may have duplicates)
+
+    Returns:
+        List of deduplicated CommandTable objects with merged targets
+    """
+    if not tables:
+        return []
+
+    # Group tables by command_id (the true unique identifier)
+    merged: Dict[str, CommandTable] = {}
+
+    for table in tables:
+        key = table.command_id
+
+        if key not in merged:
+            # First occurrence - make a copy to avoid mutating original
+            merged[key] = CommandTable(
+                command_id=table.command_id,
+                name=table.name,
+                template=table.template,
+                access_type=table.access_type,
+                targets=list(table.targets),  # Copy targets list
+                variables_needed=list(table.variables_needed),
+                context=table.context,
+                domain_level=table.domain_level,
+                example=table.example,
+                objective=table.objective,
+                rewards=table.rewards,
+                post_success=list(table.post_success),
+                permissions_required=table.permissions_required,
+                is_discovery=table.is_discovery,
+                is_coercion=table.is_coercion,
+            )
+        else:
+            # Merge targets into existing table
+            existing = merged[key]
+            seen_targets = {(t.user, t.target) for t in existing.targets}
+
+            for target in table.targets:
+                target_key = (target.user, target.target)
+                if target_key not in seen_targets:
+                    existing.targets.append(target)
+                    seen_targets.add(target_key)
+
+            # Keep the access_type that's most specific (non-empty wins)
+            if table.access_type and not existing.access_type:
+                existing.access_type = table.access_type
+
+    return list(merged.values())
+
+
 class Colors:
     """ANSI color codes for terminal output"""
     HEADER = '\033[95m'
@@ -132,8 +191,12 @@ def print_command_tables_by_phase(
     - Privilege Escalation (DCSync > GenericAll > WriteDacl > ...)
 
     Within each phase, commands are sorted by ACCESS_TYPE_PRIORITY (highest first).
+    Duplicate tables (same name+access_type) are merged before display.
     """
     c = Colors if use_colors else _NoColors
+
+    # Deduplicate tables: merge tables with same name+access_type
+    tables = deduplicate_command_tables(tables)
 
     # Define phase order (most actionable first)
     PHASE_ORDER = ["Quick Wins", "Lateral Movement", "Privilege Escalation", "Other"]
@@ -1043,15 +1106,15 @@ def print_post_exploit_commands(
         _print_arg_acquisition(missing_args, c)
 
     # =========================================================================
-    # LATERAL MOVEMENT PHASE
+    # ON-TARGET ACTIONS (Post-Landing)
     # =========================================================================
     if local_admin_targets:
         print()
         print(f"  {c.BOLD}{c.CYAN}{'─'*70}")
-        print(f"  LATERAL MOVEMENT")
+        print(f"  ON-TARGET ACTIONS")
         print(f"  {'─'*70}{c.RESET}")
         print()
-        print(f"  {c.RED}{c.BOLD}LOCAL ADMIN ACCESS{c.RESET} ({len(local_admin_targets)} machines) [AdminTo] (Priority: 99)")
+        print(f"  {c.RED}{c.BOLD}CREDENTIAL HARVESTING{c.RESET} ({len(local_admin_targets)} machines with local admin)")
         print(f"  {c.DIM}{'─'*70}{c.RESET}")
 
         # Priority targets with sessions
