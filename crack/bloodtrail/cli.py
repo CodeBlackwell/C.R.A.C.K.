@@ -81,6 +81,10 @@ Examples:
   # Run queries against existing Neo4j data (no import)
   crack bloodtrail --run-all
 
+  # Resume with existing Neo4j data (quick shortcut)
+  crack bloodtrail -r
+  crack bloodtrail --resume
+
 Supported Edge Types:
   Computer Access: AdminTo, CanPSRemote, CanRDP, ExecuteDCOM, HasSession
   ACL Abuse:       GenericAll, GenericWrite, WriteDacl, WriteOwner, Owns
@@ -111,6 +115,13 @@ Supported Edge Types:
         "--edges",
         type=str,
         help="Comma-separated list of specific edge types to import",
+    )
+
+    # Resume mode - use existing Neo4j data
+    parser.add_argument(
+        "-r", "--resume",
+        action="store_true",
+        help="Resume from existing Neo4j data (skip edge import, auto-generate report)",
     )
 
     # Neo4j connection
@@ -850,6 +861,82 @@ def handle_run_all(args):
     return 0 if stats["failed"] == 0 else 1
 
 
+def handle_resume(args):
+    """Handle --resume command - work with existing Neo4j data"""
+    config = Neo4jConfig(uri=args.uri, user=args.user, password=args.password)
+
+    # Connect and verify data exists
+    runner = QueryRunner(config)
+    if not runner.connect():
+        print("[!] Could not connect to Neo4j")
+        print("    Ensure Neo4j is running: sudo neo4j start")
+        return 1
+
+    # Check if Neo4j has data
+    try:
+        with runner.driver.session() as session:
+            result = session.run("MATCH (n) RETURN count(n) as total")
+            total_nodes = result.single()["total"]
+
+            if total_nodes == 0:
+                print("[!] No data found in Neo4j database")
+                print()
+                print("    To import BloodHound data, run:")
+                print("      crack bt /path/to/bloodhound/json/")
+                print()
+                runner.close()
+                return 1
+    except Exception as e:
+        print(f"[!] Error checking Neo4j data: {e}")
+        runner.close()
+        return 1
+
+    # Display nice banner
+    C = "\033[96m"  # Cyan
+    Y = "\033[93m"  # Yellow
+    B = "\033[1m"   # Bold
+    D = "\033[2m"   # Dim
+    R = "\033[0m"   # Reset
+
+    print()
+    print(f"{C}{B}╔══════════════════════════════════════════════════════════════════════╗{R}")
+    print(f"{C}{B}║{R}   {Y}🩸{R} {B}BloodHound Trail{R} - Resume Mode (Existing Data)              {C}{B}║{R}")
+    print(f"{C}{B}╚══════════════════════════════════════════════════════════════════════╝{R}")
+    print()
+    print(f"  {D}Neo4j endpoint:{R}  {B}{args.uri}{R}")
+    print(f"  {D}Nodes in DB:{R}     {B}{total_nodes}{R}")
+    print()
+
+    # Get stored DC IP from domain config
+    dc_ip = None
+    try:
+        tracker = PwnedTracker(config)
+        if tracker.connect():
+            domain_config = tracker.get_domain_config()
+            dc_ip = domain_config.get("dc_ip") if domain_config else None
+            tracker.close()
+    except Exception:
+        pass
+
+    # Run all queries (auto-generate report)
+    high_only = getattr(args, 'oscp_high_only', False)
+
+    try:
+        stats = run_all_queries(
+            runner,
+            output_path=getattr(args, 'report_path', None),
+            skip_variable_queries=True,
+            oscp_high_only=high_only,
+            show_commands=getattr(args, 'commands', False),
+            show_data=getattr(args, 'data', False),
+            dc_ip=dc_ip,
+        )
+    finally:
+        runner.close()
+
+    return 0 if stats["failed"] == 0 else 1
+
+
 def handle_export_ce(args):
     """Handle --export-ce and --export-ce-json commands"""
     config = Neo4jConfig(uri=args.uri, user=args.user, password=args.password)
@@ -1546,6 +1633,16 @@ def main():
 
     if args.export_ce or args.export_ce_json:
         return handle_export_ce(args)
+
+    # Handle --resume
+    if args.resume:
+        # Error if filepath also provided
+        if args.bh_data_dir is not None:
+            print("[!] Cannot use --resume with a data path")
+            print("    Use --resume alone to work with existing Neo4j data")
+            print("    Or provide a path without --resume to import new data")
+            return 1
+        return handle_resume(args)
 
     if args.run_all:
         return handle_run_all(args)
