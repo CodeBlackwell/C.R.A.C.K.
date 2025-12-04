@@ -738,256 +738,308 @@ SENSITIVE_PLACEHOLDERS = {
 
 
 # =============================================================================
-# ACCESS TYPE -> REWARDS MAPPING (practical value of exploiting this access)
+# ACCESS_TYPE_CATALOG - Single source of truth for access type metadata
+# =============================================================================
+# Consolidates reward, phase, priority, and reason_template into one structure.
+#
+# Priority range:
+#   100-199: Privilege Escalation (domain compromise potential)
+#   50-99: Lateral Movement (code execution, access)
+#   0-49: Quick Wins (discovery, enumeration)
+
+
+@dataclass
+class AccessTypeInfo:
+    """Consolidated metadata for a BloodHound access type (edge)."""
+    reward: str
+    phase: str
+    priority: int
+    reason_template: str
+
+
+ACCESS_TYPE_CATALOG: Dict[Optional[str], AccessTypeInfo] = {
+    # === PRIVILEGE ESCALATION (100-199) ===
+    "DCSync": AccessTypeInfo(
+        reward="Dump all domain password hashes including krbtgt",
+        phase="Privilege Escalation",
+        priority=199,
+        reason_template="{user} has DCSync rights (GetChanges+GetChangesAll)",
+    ),
+    "GoldenCert": AccessTypeInfo(
+        reward="Forge any certificate with compromised CA key",
+        phase="Privilege Escalation",
+        priority=198,
+        reason_template="CA {target} key compromised - forge any certificate",
+    ),
+    "GenericAll": AccessTypeInfo(
+        reward="Full control - reset passwords, modify group membership",
+        phase="Privilege Escalation",
+        priority=195,
+        reason_template="{user} has GenericAll over {target}",
+    ),
+    "WriteOwner": AccessTypeInfo(
+        reward="Take ownership then modify DACL for full control",
+        phase="Privilege Escalation",
+        priority=190,
+        reason_template="{user} can take ownership of {target}",
+    ),
+    "WriteDacl": AccessTypeInfo(
+        reward="Grant yourself additional permissions on object",
+        phase="Privilege Escalation",
+        priority=185,
+        reason_template="{user} can modify DACL on {target}",
+    ),
+    "Owns": AccessTypeInfo(
+        reward="Full object control - reset password or modify permissions",
+        phase="Privilege Escalation",
+        priority=180,
+        reason_template="{user} owns {target} - full control",
+    ),
+    "ForceChangePassword": AccessTypeInfo(
+        reward="Reset user password without knowing current",
+        phase="Privilege Escalation",
+        priority=175,
+        reason_template="{user} can reset password for {target}",
+    ),
+    "AddKeyCredentialLink": AccessTypeInfo(
+        reward="Add shadow credentials for certificate-based auth",
+        phase="Privilege Escalation",
+        priority=170,
+        reason_template="{user} can add shadow credentials to {target}",
+    ),
+    "ReadGMSAPassword": AccessTypeInfo(
+        reward="Retrieve cleartext gMSA password for authentication",
+        phase="Privilege Escalation",
+        priority=165,
+        reason_template="{user} can read gMSA password for {target}",
+    ),
+    "ReadLAPSPassword": AccessTypeInfo(
+        reward="Retrieve local admin password from LAPS",
+        phase="Privilege Escalation",
+        priority=160,
+        reason_template="{user} can read LAPS password on {target}",
+    ),
+    "SyncLAPSPassword": AccessTypeInfo(
+        reward="Domain-wide LAPS password retrieval",
+        phase="Privilege Escalation",
+        priority=158,
+        reason_template="{user} has domain-wide LAPS sync rights",
+    ),
+    "AddMember": AccessTypeInfo(
+        reward="Add yourself to privileged groups",
+        phase="Privilege Escalation",
+        priority=155,
+        reason_template="{user} can add members to {target}",
+    ),
+    "GenericWrite": AccessTypeInfo(
+        reward="Add SPN for Kerberoasting or modify attributes",
+        phase="Privilege Escalation",
+        priority=150,
+        reason_template="{user} has GenericWrite on {target}",
+    ),
+    "WriteSPN": AccessTypeInfo(
+        reward="Add SPN for targeted Kerberoasting attack",
+        phase="Privilege Escalation",
+        priority=145,
+        reason_template="{user} can add SPN to {target} for targeted Kerberoasting",
+    ),
+    "ADCSESC1": AccessTypeInfo(
+        reward="Request certificate as any user for domain admin access",
+        phase="Privilege Escalation",
+        priority=140,
+        reason_template="{user} can request cert as any user via {target}",
+    ),
+    "ADCSESC3": AccessTypeInfo(
+        reward="Enrollment agent abuse for user impersonation",
+        phase="Privilege Escalation",
+        priority=138,
+        reason_template="{user} can enroll on behalf of others via {target}",
+    ),
+    "ADCSESC4": AccessTypeInfo(
+        reward="Modify template to enable ESC1 vulnerability",
+        phase="Privilege Escalation",
+        priority=135,
+        reason_template="{user} can modify template {target} for ESC1",
+    ),
+    "ADCSESC6a": AccessTypeInfo(
+        reward="Request cert with arbitrary SAN for impersonation",
+        phase="Privilege Escalation",
+        priority=132,
+        reason_template="{user} can exploit EDITF_ATTRIBUTESUBJECTALTNAME2 on {target}",
+    ),
+    "ADCSESC6b": AccessTypeInfo(
+        reward="Bypass issuance requirements for unauthorized certs",
+        phase="Privilege Escalation",
+        priority=130,
+        reason_template="{user} can bypass issuance requirements on {target}",
+    ),
+    "ADCSESC7": AccessTypeInfo(
+        reward="Approve pending certificate requests as CA manager",
+        phase="Privilege Escalation",
+        priority=128,
+        reason_template="{user} can manage CA {target} - approve pending requests",
+    ),
+    "ADCSESC5": AccessTypeInfo(
+        reward="PKI object modification for certificate abuse",
+        phase="Privilege Escalation",
+        priority=125,
+        reason_template="{user} can modify PKI object {target}",
+    ),
+    "ADCSESC9a": AccessTypeInfo(
+        reward="Bypass security extension for certificate abuse",
+        phase="Privilege Escalation",
+        priority=122,
+        reason_template="{user} can exploit no security extension on {target}",
+    ),
+    "ADCSESC9b": AccessTypeInfo(
+        reward="Exploit weak certificate mapping for impersonation",
+        phase="Privilege Escalation",
+        priority=120,
+        reason_template="{user} can exploit weak certificate mapping on {target}",
+    ),
+    "ADCSESC10a": AccessTypeInfo(
+        reward="Exploit weak cert binding for authentication",
+        phase="Privilege Escalation",
+        priority=118,
+        reason_template="{user} can exploit weak cert binding on {target}",
+    ),
+    "ADCSESC10b": AccessTypeInfo(
+        reward="Shadow credentials via ADCS for persistent access",
+        phase="Privilege Escalation",
+        priority=115,
+        reason_template="{user} can add shadow credentials via {target}",
+    ),
+    "ADCSESC13": AccessTypeInfo(
+        reward="OID group link for privilege escalation",
+        phase="Privilege Escalation",
+        priority=112,
+        reason_template="{user} can exploit OID group link on {target}",
+    ),
+    "Enroll": AccessTypeInfo(
+        reward="Request certificates for authentication",
+        phase="Privilege Escalation",
+        priority=105,
+        reason_template="{user} can enroll in template {target}",
+    ),
+    "EnrollOnBehalfOf": AccessTypeInfo(
+        reward="Request certificates impersonating other users",
+        phase="Privilege Escalation",
+        priority=103,
+        reason_template="{user} can enroll certificates on behalf of others",
+    ),
+    "ManageCA": AccessTypeInfo(
+        reward="CA management for certificate manipulation",
+        phase="Privilege Escalation",
+        priority=101,
+        reason_template="{user} can manage CA {target}",
+    ),
+    "ManageCertificates": AccessTypeInfo(
+        reward="Approve/deny certificate requests",
+        phase="Privilege Escalation",
+        priority=100,
+        reason_template="{user} can approve certificate requests on {target}",
+    ),
+    # === LATERAL MOVEMENT (50-99) ===
+    "AdminTo": AccessTypeInfo(
+        reward="SYSTEM shell for credential dumping, persistence, and pivoting",
+        phase="Lateral Movement",
+        priority=99,
+        reason_template="{user} has local admin rights on {target}",
+    ),
+    "ExecuteDCOM": AccessTypeInfo(
+        reward="Remote code execution via DCOM for lateral movement",
+        phase="Lateral Movement",
+        priority=90,
+        reason_template="{user} can execute DCOM on {target}",
+    ),
+    "CanPSRemote": AccessTypeInfo(
+        reward="PowerShell remoting for stealthy command execution",
+        phase="Lateral Movement",
+        priority=85,
+        reason_template="{user} has PSRemote/WinRM access to {target}",
+    ),
+    "HasSession": AccessTypeInfo(
+        reward="Harvest cached credentials from logged-in privileged user",
+        phase="Lateral Movement",
+        priority=80,
+        reason_template="Privileged session active on {target} - credential harvest",
+    ),
+    "AllowedToDelegate": AccessTypeInfo(
+        reward="Impersonate any user to target service via S4U",
+        phase="Lateral Movement",
+        priority=75,
+        reason_template="{user} has constrained delegation to {target}",
+    ),
+    "AllowedToAct": AccessTypeInfo(
+        reward="Impersonate users via RBCD for privileged access",
+        phase="Lateral Movement",
+        priority=73,
+        reason_template="{user} can impersonate users to {target} via RBCD",
+    ),
+    "AddAllowedToAct": AccessTypeInfo(
+        reward="Configure RBCD to enable user impersonation",
+        phase="Lateral Movement",
+        priority=71,
+        reason_template="{user} can add RBCD principals to {target}",
+    ),
+    "WriteAccountRestrictions": AccessTypeInfo(
+        reward="Modify RBCD settings for delegation abuse",
+        phase="Lateral Movement",
+        priority=70,
+        reason_template="{user} can configure RBCD on {target}",
+    ),
+    "CanRDP": AccessTypeInfo(
+        reward="Interactive desktop access for GUI tools and credential theft",
+        phase="Lateral Movement",
+        priority=65,
+        reason_template="{user} has RDP access to {target}",
+    ),
+    "CoerceToTGT": AccessTypeInfo(
+        reward="Capture TGT for pass-the-ticket attacks",
+        phase="Lateral Movement",
+        priority=60,
+        reason_template="{user} can coerce {target} auth to capture TGT",
+    ),
+    "HasSIDHistory": AccessTypeInfo(
+        reward="Inherited permissions from historical SID membership",
+        phase="Lateral Movement",
+        priority=55,
+        reason_template="{user} has SID history granting access to {target}",
+    ),
+    "TrustedBy": AccessTypeInfo(
+        reward="Cross-domain access via trust relationship",
+        phase="Lateral Movement",
+        priority=50,
+        reason_template="{target} trusts {user}'s domain",
+    ),
+    # === QUICK WINS (0-49) ===
+    None: AccessTypeInfo(
+        reward="Potential attack vector identified",
+        phase="Quick Wins",
+        priority=10,
+        reason_template="",
+    ),
+}
+
+
+# =============================================================================
+# Backward-compatible dictionary views (generated from ACCESS_TYPE_CATALOG)
 # =============================================================================
 
 ACCESS_TYPE_REWARDS: Dict[Optional[str], str] = {
-    # Lateral Movement rewards
-    "AdminTo": "SYSTEM shell for credential dumping, persistence, and pivoting",
-    "CanRDP": "Interactive desktop access for GUI tools and credential theft",
-    "CanPSRemote": "PowerShell remoting for stealthy command execution",
-    "ExecuteDCOM": "Remote code execution via DCOM for lateral movement",
-    "HasSession": "Harvest cached credentials from logged-in privileged user",
-    "CoerceToTGT": "Capture TGT for pass-the-ticket attacks",
-    "HasSIDHistory": "Inherited permissions from historical SID membership",
-    "TrustedBy": "Cross-domain access via trust relationship",
-
-    # Delegation rewards
-    "AllowedToDelegate": "Impersonate any user to target service via S4U",
-    "AllowedToAct": "Impersonate users via RBCD for privileged access",
-    "AddAllowedToAct": "Configure RBCD to enable user impersonation",
-    "WriteAccountRestrictions": "Modify RBCD settings for delegation abuse",
-
-    # Privilege Escalation rewards
-    "DCSync": "Dump all domain password hashes including krbtgt",
-    "GenericAll": "Full control - reset passwords, modify group membership",
-    "GenericWrite": "Add SPN for Kerberoasting or modify attributes",
-    "WriteDacl": "Grant yourself additional permissions on object",
-    "WriteOwner": "Take ownership then modify DACL for full control",
-    "ForceChangePassword": "Reset user password without knowing current",
-    "AddMember": "Add yourself to privileged groups",
-    "ReadGMSAPassword": "Retrieve cleartext gMSA password for authentication",
-    "ReadLAPSPassword": "Retrieve local admin password from LAPS",
-    "SyncLAPSPassword": "Domain-wide LAPS password retrieval",
-    "AddKeyCredentialLink": "Add shadow credentials for certificate-based auth",
-    "WriteSPN": "Add SPN for targeted Kerberoasting attack",
-    "Owns": "Full object control - reset password or modify permissions",
-
-    # ADCS rewards
-    "ADCSESC1": "Request certificate as any user for domain admin access",
-    "ADCSESC3": "Enrollment agent abuse for user impersonation",
-    "ADCSESC4": "Modify template to enable ESC1 vulnerability",
-    "ADCSESC5": "PKI object modification for certificate abuse",
-    "ADCSESC6a": "Request cert with arbitrary SAN for impersonation",
-    "ADCSESC6b": "Bypass issuance requirements for unauthorized certs",
-    "ADCSESC7": "Approve pending certificate requests as CA manager",
-    "ADCSESC9a": "Bypass security extension for certificate abuse",
-    "ADCSESC9b": "Exploit weak certificate mapping for impersonation",
-    "ADCSESC10a": "Exploit weak cert binding for authentication",
-    "ADCSESC10b": "Shadow credentials via ADCS for persistent access",
-    "ADCSESC13": "OID group link for privilege escalation",
-    "GoldenCert": "Forge any certificate with compromised CA key",
-    "Enroll": "Request certificates for authentication",
-    "EnrollOnBehalfOf": "Request certificates impersonating other users",
-    "ManageCA": "CA management for certificate manipulation",
-    "ManageCertificates": "Approve/deny certificate requests",
-
-    # Default
-    None: "Potential attack vector identified",
+    k: v.reward for k, v in ACCESS_TYPE_CATALOG.items()
 }
 
-
-# =============================================================================
-# ACCESS TYPE -> PHASE MAPPING (for output grouping)
-# =============================================================================
-
-ACCESS_TYPE_PHASES = {
-    # Quick Wins
-    None: "Quick Wins",
-
-    # Lateral Movement
-    "AdminTo": "Lateral Movement",
-    "CanRDP": "Lateral Movement",
-    "CanPSRemote": "Lateral Movement",
-    "ExecuteDCOM": "Lateral Movement",
-    "HasSession": "Lateral Movement",
-    "CoerceToTGT": "Lateral Movement",
-    "HasSIDHistory": "Lateral Movement",
-    "TrustedBy": "Lateral Movement",
-
-    # Delegation (Lateral Movement)
-    "AllowedToDelegate": "Lateral Movement",
-    "AllowedToAct": "Lateral Movement",
-    "AddAllowedToAct": "Lateral Movement",
-    "WriteAccountRestrictions": "Lateral Movement",
-
-    # Privilege Escalation
-    "DCSync": "Privilege Escalation",
-    "GenericAll": "Privilege Escalation",
-    "GenericWrite": "Privilege Escalation",
-    "WriteDacl": "Privilege Escalation",
-    "WriteOwner": "Privilege Escalation",
-    "ForceChangePassword": "Privilege Escalation",
-    "AddMember": "Privilege Escalation",
-    "ReadGMSAPassword": "Privilege Escalation",
-    "ReadLAPSPassword": "Privilege Escalation",
-    "SyncLAPSPassword": "Privilege Escalation",
-    "AddKeyCredentialLink": "Privilege Escalation",
-    "WriteSPN": "Privilege Escalation",
-    "Owns": "Privilege Escalation",
-
-    # ADCS (Privilege Escalation)
-    "ADCSESC1": "Privilege Escalation",
-    "ADCSESC3": "Privilege Escalation",
-    "ADCSESC4": "Privilege Escalation",
-    "ADCSESC5": "Privilege Escalation",
-    "ADCSESC6a": "Privilege Escalation",
-    "ADCSESC6b": "Privilege Escalation",
-    "ADCSESC7": "Privilege Escalation",
-    "ADCSESC9a": "Privilege Escalation",
-    "ADCSESC9b": "Privilege Escalation",
-    "ADCSESC10a": "Privilege Escalation",
-    "ADCSESC10b": "Privilege Escalation",
-    "ADCSESC13": "Privilege Escalation",
-    "GoldenCert": "Privilege Escalation",
-    "Enroll": "Privilege Escalation",
-    "EnrollOnBehalfOf": "Privilege Escalation",
-    "ManageCA": "Privilege Escalation",
-    "ManageCertificates": "Privilege Escalation",
+ACCESS_TYPE_PHASES: Dict[Optional[str], str] = {
+    k: v.phase for k, v in ACCESS_TYPE_CATALOG.items()
 }
-
-
-# =============================================================================
-# ACCESS TYPE -> PRIORITY SCORE (impact-first ordering within phases)
-# =============================================================================
-# Higher number = higher impact = shown first in output
-# Range: 0-199 where:
-#   - 100-199: Privilege Escalation (domain compromise potential)
-#   - 50-99: Lateral Movement (code execution, access)
-#   - 0-49: Quick Wins (discovery, enumeration)
 
 ACCESS_TYPE_PRIORITY: Dict[Optional[str], int] = {
-    # === PRIVILEGE ESCALATION (100-199) ===
-    # Domain-level (highest impact)
-    "DCSync": 199,                    # Full domain compromise - krbtgt hash
-    "GoldenCert": 198,                # Forge any certificate
-    "GenericAll": 195,                # Full control - depends on target
-    "WriteOwner": 190,                # Take ownership then full control
-    "WriteDacl": 185,                 # Grant self GenericAll
-    "Owns": 180,                      # Full control on object
-
-    # Account takeover
-    "ForceChangePassword": 175,       # Instant account takeover
-    "AddKeyCredentialLink": 170,      # Shadow credentials - stealthy takeover
-    "ReadGMSAPassword": 165,          # Often service account = privileged
-    "ReadLAPSPassword": 160,          # Local admin on target
-    "SyncLAPSPassword": 158,          # Domain-wide LAPS sync
-
-    # Membership modification
-    "AddMember": 155,                 # Add self to privileged group
-    "GenericWrite": 150,              # Modify attrs, add SPN for Kerberoast
-    "WriteSPN": 145,                  # Targeted Kerberoasting
-
-    # ADCS (ordered by reliability/simplicity)
-    "ADCSESC1": 140,                  # Simple, reliable
-    "ADCSESC3": 138,                  # Enrollment agent
-    "ADCSESC4": 135,                  # Template modification
-    "ADCSESC6a": 132,                 # EDITF flag abuse
-    "ADCSESC6b": 130,                 # Issuance bypass
-    "ADCSESC7": 128,                  # CA manager
-    "ADCSESC5": 125,                  # PKI object modification
-    "ADCSESC9a": 122,                 # No security extension
-    "ADCSESC9b": 120,                 # Weak cert mapping
-    "ADCSESC10a": 118,                # Weak cert binding
-    "ADCSESC10b": 115,                # Shadow creds via ADCS
-    "ADCSESC13": 112,                 # OID group link
-    "Enroll": 105,                    # Basic enrollment
-    "EnrollOnBehalfOf": 103,          # Enrollment agent basic
-    "ManageCA": 101,                  # CA management
-    "ManageCertificates": 100,        # Cert management
-
-    # === LATERAL MOVEMENT (50-99) ===
-    # Code execution (highest in lateral)
-    "AdminTo": 99,                    # SYSTEM shell + cred dump
-    "ExecuteDCOM": 90,                # Remote code execution
-    "CanPSRemote": 85,                # PowerShell remoting
-    "HasSession": 80,                 # Credential harvest opportunity
-
-    # Delegation abuse
-    "AllowedToDelegate": 75,          # Constrained delegation
-    "AllowedToAct": 73,               # RBCD
-    "AddAllowedToAct": 71,            # Configure RBCD
-    "WriteAccountRestrictions": 70,   # Modify RBCD
-
-    # Remote access (lower - no direct code exec)
-    "CanRDP": 65,                     # GUI access only
-    "CoerceToTGT": 60,                # Requires listener setup
-    "HasSIDHistory": 55,              # Inherited access
-    "TrustedBy": 50,                  # Cross-domain (complex)
-
-    # === QUICK WINS (0-49) ===
-    None: 10,                         # Default for untyped (discovery)
+    k: v.priority for k, v in ACCESS_TYPE_CATALOG.items()
 }
 
-
-# =============================================================================
-# ACCESS TYPE -> REASON TEMPLATES (for command suggestion justification)
-# =============================================================================
-
-# Templates use {user} and {target} placeholders for dynamic reason generation
 ACCESS_TYPE_REASONS: Dict[Optional[str], str] = {
-    # Lateral Movement reasons
-    "AdminTo": "{user} has local admin rights on {target}",
-    "CanRDP": "{user} has RDP access to {target}",
-    "CanPSRemote": "{user} has PSRemote/WinRM access to {target}",
-    "ExecuteDCOM": "{user} can execute DCOM on {target}",
-    "HasSession": "Privileged session active on {target} - credential harvest",
-    "CoerceToTGT": "{user} can coerce {target} auth to capture TGT",
-    "HasSIDHistory": "{user} has SID history granting access to {target}",
-    "TrustedBy": "{target} trusts {user}'s domain",
-
-    # Delegation reasons
-    "AllowedToDelegate": "{user} has constrained delegation to {target}",
-    "AllowedToAct": "{user} can impersonate users to {target} via RBCD",
-    "AddAllowedToAct": "{user} can add RBCD principals to {target}",
-    "WriteAccountRestrictions": "{user} can configure RBCD on {target}",
-
-    # Privilege Escalation reasons
-    "DCSync": "{user} has DCSync rights (GetChanges+GetChangesAll)",
-    "GenericAll": "{user} has GenericAll over {target}",
-    "GenericWrite": "{user} has GenericWrite on {target}",
-    "WriteDacl": "{user} can modify DACL on {target}",
-    "WriteOwner": "{user} can take ownership of {target}",
-    "ForceChangePassword": "{user} can reset password for {target}",
-    "AddMember": "{user} can add members to {target}",
-    "ReadGMSAPassword": "{user} can read gMSA password for {target}",
-    "ReadLAPSPassword": "{user} can read LAPS password on {target}",
-    "SyncLAPSPassword": "{user} has domain-wide LAPS sync rights",
-    "AddKeyCredentialLink": "{user} can add shadow credentials to {target}",
-    "WriteSPN": "{user} can add SPN to {target} for targeted Kerberoasting",
-    "Owns": "{user} owns {target} - full control",
-
-    # ADCS reasons
-    "ADCSESC1": "{user} can request cert as any user via {target}",
-    "ADCSESC3": "{user} can enroll on behalf of others via {target}",
-    "ADCSESC4": "{user} can modify template {target} for ESC1",
-    "ADCSESC5": "{user} can modify PKI object {target}",
-    "ADCSESC6a": "{user} can exploit EDITF_ATTRIBUTESUBJECTALTNAME2 on {target}",
-    "ADCSESC6b": "{user} can bypass issuance requirements on {target}",
-    "ADCSESC7": "{user} can manage CA {target} - approve pending requests",
-    "ADCSESC9a": "{user} can exploit no security extension on {target}",
-    "ADCSESC9b": "{user} can exploit weak certificate mapping on {target}",
-    "ADCSESC10a": "{user} can exploit weak cert binding on {target}",
-    "ADCSESC10b": "{user} can add shadow credentials via {target}",
-    "ADCSESC13": "{user} can exploit OID group link on {target}",
-    "GoldenCert": "CA {target} key compromised - forge any certificate",
-    "Enroll": "{user} can enroll in template {target}",
-    "EnrollOnBehalfOf": "{user} can enroll certificates on behalf of others",
-    "ManageCA": "{user} can manage CA {target}",
-    "ManageCertificates": "{user} can approve certificate requests on {target}",
-
-    # Quick Wins - no access_type (None)
-    None: "",  # Will use context-based reason instead
+    k: v.reason_template for k, v in ACCESS_TYPE_CATALOG.items()
 }
 
 

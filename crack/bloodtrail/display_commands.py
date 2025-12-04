@@ -2029,13 +2029,8 @@ def print_spray_recommendations(
     """
     Print password spray recommendations based on captured credentials and policy.
 
-    Shows all three spray methods with:
-    - Commands auto-filled with captured credentials
-    - Policy-aware spray parameters (attempts, delays)
-    - Scenario-based recommendations
-    - User enumeration commands
-    - Technique comparison table
-    - ALL TARGETS section with multi-protocol loops (SMB, WinRM, RDP, MSSQL)
+    Delegates to generate_spray_section() for core output, then handles
+    method_filter and all_ips-specific features.
 
     Args:
         pwned_users: List of PwnedUser objects with credentials
@@ -2046,272 +2041,97 @@ def print_spray_recommendations(
         method_filter: Filter to specific method (smb, kerberos, ldap, all)
         all_ips: List of resolved IPs from Neo4j for multi-target loops
     """
-    from .command_mappings import (
-        SPRAY_TECHNIQUES,
-        SPRAY_SCENARIOS,
-        USER_ENUM_COMMANDS,
-        SPRAY_ONELINERS,
-    )
-
     c = Colors if use_colors else _NoColors
     pwned_users = pwned_users or []
-
-    # Extract credentials from pwned users
     passwords, usernames = extract_creds_from_pwned_users(pwned_users)
 
-    # =========================================================================
-    # HEADER
-    # =========================================================================
-    print()
-    print(f"{c.CYAN}{c.BOLD}{'='*78}{c.RESET}")
-    print(f"  {c.BOLD}PASSWORD SPRAYING METHODS{c.RESET}")
-    if pwned_users:
-        user_list = ", ".join(u.username for u in pwned_users[:5])
-        if len(pwned_users) > 5:
-            user_list += f" (+{len(pwned_users)-5} more)"
-        print(f"  {c.DIM}Based on captured credentials: {user_list}{c.RESET}")
-    print(f"{c.CYAN}{'='*78}{c.RESET}")
+    # For "all" filter, use full generate_spray_section output
+    if method_filter == "all":
+        console_out, _ = generate_spray_section(
+            pwned_users=pwned_users,
+            policy=policy,
+            domain=domain,
+            dc_ip=dc_ip,
+            use_colors=use_colors,
+        )
+        if console_out:
+            # Print all except final separator (we'll add ALL TARGETS section)
+            lines = console_out.rstrip().split('\n')
+            # Find and remove the last "===" separator line if present
+            if lines and '=' * 78 in lines[-1]:
+                lines = lines[:-1]
+            print('\n'.join(lines))
 
-    # =========================================================================
-    # PASSWORD POLICY SECTION
-    # =========================================================================
-    print()
-    if policy:
-        print(f"  {c.YELLOW}{c.BOLD}PASSWORD POLICY{c.RESET} {c.DIM}(from stored config){c.RESET}")
-        print(f"  {c.DIM}{'-'*70}{c.RESET}")
-        print(f"    Lockout threshold:   {policy.lockout_threshold} attempts" +
-              (" (no lockout)" if policy.lockout_threshold == 0 else ""))
-        print(f"    Lockout duration:    {policy.lockout_duration} minutes")
-        print(f"    Observation window:  {policy.observation_window} minutes")
+        # Add ALL TARGETS section (unique to print_spray_recommendations)
+        if all_ips is not None:
+            first_pwd = passwords[0] if passwords else "<PASSWORD>"
+            first_user = usernames[0] if usernames else "<USERNAME>"
+            _print_all_targets_section(
+                all_ips=all_ips,
+                password=first_pwd,
+                username=first_user,
+                domain=domain,
+                c=c,
+            )
+
+        # Close with separator
         print()
-        print(f"  {c.GREEN}{c.BOLD}SAFE SPRAY PARAMETERS{c.RESET}")
-        print(f"    Attempts per round:  {c.BOLD}{policy.safe_spray_attempts}{c.RESET}")
-        print(f"    Delay between:       {c.BOLD}{policy.spray_delay_minutes} minutes{c.RESET}")
-
-        if policy.lockout_threshold == 0:
-            print(f"    {c.RED}WARNING: No lockout policy detected - exercise caution anyway{c.RESET}")
-    else:
-        print(f"  {c.YELLOW}No password policy stored.{c.RESET}")
-        print(f"  Import with: {c.GREEN}crack bloodtrail --set-policy{c.RESET}")
+        print(f"{c.CYAN}{'='*78}{c.RESET}")
         print()
-        print(f"  {c.DIM}Default safe parameters (conservative):{c.RESET}")
-        print(f"    Attempts per round:  {c.BOLD}2{c.RESET}")
-        print(f"    Delay between:       {c.BOLD}30 minutes{c.RESET}")
+        return
 
-    # Local wrapper for fill_spray_template with captured context
+    # For filtered output (smb/kerberos/ldap only), show just that method
+    from .command_mappings import SPRAY_TECHNIQUES, SPRAY_ONELINERS
+
     def fill_template(cmd: str, pwd: str = "<PASSWORD>") -> str:
         return fill_spray_template(cmd, dc_ip, domain, pwd, usernames)
 
-    # =========================================================================
-    # METHOD 1: SMB-BASED
-    # =========================================================================
-    if method_filter in ("all", "smb"):
-        smb = SPRAY_TECHNIQUES["smb"]
-        print()
-        print(f"  {c.CYAN}{c.BOLD}METHOD 1: {smb.name}{c.RESET}")
-        print(f"  {c.DIM}Ports: {', '.join(str(p) for p in smb.ports)} | Noise: {smb.noise_level.upper()}{c.RESET}")
-        print()
+    # Header
+    print()
+    print(f"{c.CYAN}{c.BOLD}{'='*78}{c.RESET}")
+    print(f"  {c.BOLD}PASSWORD SPRAYING - {method_filter.upper()} METHOD{c.RESET}")
+    print(f"{c.CYAN}{'='*78}{c.RESET}")
 
-        # Show commands with captured passwords
-        if passwords:
-            for pwd in passwords[:3]:  # Show up to 3 passwords
-                cmd = fill_template(smb.command_templates["single_password"], pwd)
-                print(f"    {c.GREEN}{cmd}{c.RESET}")
-        else:
-            cmd = fill_template(smb.command_templates["single_password"])
-            print(f"    {c.GREEN}{cmd}{c.RESET}")
+    # Show selected method
+    method_map = {"smb": ("smb", "1"), "kerberos": ("kerberos", "2"), "ldap": ("ldap", "3")}
+    if method_filter in method_map:
+        tech_key, num = method_map[method_filter]
+        tech = SPRAY_TECHNIQUES.get(tech_key)
+        if tech:
+            print()
+            print(f"  {c.CYAN}{c.BOLD}METHOD {num}: {tech.name}{c.RESET}")
+            print(f"  {c.DIM}Ports: {', '.join(str(p) for p in tech.ports)} | Noise: {tech.noise_level.upper()}{c.RESET}")
+            print()
 
-        print()
-        print(f"    {c.GREEN}+ {smb.advantages}{c.RESET}")
-        print(f"    {c.RED}- {smb.disadvantages}{c.RESET}")
+            template_key = "single_password" if tech_key != "ldap" else "spray_ps1"
+            template = tech.command_templates.get(template_key, "")
+            if template:
+                if passwords and tech_key != "ldap":
+                    for pwd in passwords[:3]:
+                        cmd = fill_template(template, pwd)
+                        print(f"    {c.GREEN}{cmd}{c.RESET}")
+                else:
+                    pwd = passwords[0] if passwords else "<PASSWORD>"
+                    cmd = fill_template(template, pwd)
+                    print(f"    {c.GREEN}{cmd}{c.RESET}")
 
-    # =========================================================================
-    # METHOD 2: KERBEROS-BASED
-    # =========================================================================
-    if method_filter in ("all", "kerberos"):
-        kerb = SPRAY_TECHNIQUES["kerberos"]
-        print()
-        print(f"  {c.CYAN}{c.BOLD}METHOD 2: {kerb.name}{c.RESET}")
-        print(f"  {c.DIM}Ports: {', '.join(str(p) for p in kerb.ports)} | Noise: {kerb.noise_level.upper()}{c.RESET}")
-        print()
+            print()
+            print(f"    {c.GREEN}+ {tech.advantages}{c.RESET}")
+            print(f"    {c.RED}- {tech.disadvantages}{c.RESET}")
 
-        if passwords:
-            for pwd in passwords[:3]:
-                cmd = fill_template(kerb.command_templates["single_password"], pwd)
-                print(f"    {c.GREEN}{cmd}{c.RESET}")
-        else:
-            cmd = fill_template(kerb.command_templates["single_password"])
-            print(f"    {c.GREEN}{cmd}{c.RESET}")
-
-        print()
-        print(f"    {c.GREEN}+ {kerb.advantages}{c.RESET}")
-        print(f"    {c.RED}- {kerb.disadvantages}{c.RESET}")
-
-    # =========================================================================
-    # METHOD 3: LDAP-BASED
-    # =========================================================================
-    if method_filter in ("all", "ldap"):
-        ldap = SPRAY_TECHNIQUES["ldap"]
-        print()
-        print(f"  {c.CYAN}{c.BOLD}METHOD 3: {ldap.name}{c.RESET}")
-        print(f"  {c.DIM}Ports: {', '.join(str(p) for p in ldap.ports)} | Noise: {ldap.noise_level.upper()}{c.RESET}")
-        print()
-
-        pwd = passwords[0] if passwords else "<PASSWORD>"
-        cmd = fill_template(ldap.command_templates["spray_ps1"], pwd)
-        print(f"    {c.GREEN}{cmd}{c.RESET}")
-
-        print()
-        print(f"    {c.GREEN}+ {ldap.advantages}{c.RESET}")
-        print(f"    {c.RED}- {ldap.disadvantages}{c.RESET}")
-
-    # =========================================================================
-    # ALL TARGETS - Multi-Protocol Credential Validation Loops
-    # =========================================================================
-    if method_filter == "all" and all_ips is not None:
-        first_pwd = passwords[0] if passwords else "<PASSWORD>"
-        first_user = usernames[0] if usernames else "<USERNAME>"
-        _print_all_targets_section(
-            all_ips=all_ips,
-            password=first_pwd,
-            username=first_user,
-            domain=domain,
-            c=c,
-        )
-
-    # =========================================================================
-    # USER ENUMERATION COMMANDS
-    # =========================================================================
-    if method_filter == "all":
-        print()
-        print(f"  {c.YELLOW}{c.BOLD}USER LIST GENERATION{c.RESET}")
-        print(f"  {c.DIM}{'-'*70}{c.RESET}")
-
-        linux_cmds = USER_ENUM_COMMANDS.get("linux", {})
-        windows_cmds = USER_ENUM_COMMANDS.get("windows", {})
-
-        print()
-        print(f"  {c.BOLD}From Linux (Kali):{c.RESET}")
-        first_pwd = passwords[0] if passwords else "<PASSWORD>"
-        for key in ["kerbrute_enum", "crackmapexec_users", "bloodhound_export"]:
-            if key in linux_cmds:
-                cmd = linux_cmds[key]
-                filled = fill_template(cmd["cmd"], first_pwd)
-                print(f"    {c.DIM}# {cmd['description']}{c.RESET}")
-                print(f"    {c.GREEN}{filled}{c.RESET}")
-                print()
-
-        print(f"  {c.BOLD}From Windows (on target):{c.RESET}")
-        for key in ["domain_users_to_file", "powershell_ad"]:
-            if key in windows_cmds:
-                cmd = windows_cmds[key]
-                print(f"    {c.DIM}# {cmd['description']}{c.RESET}")
-                print(f"    {c.GREEN}{cmd['cmd']}{c.RESET}")
-                print()
-
-    # =========================================================================
-    # SCENARIO RECOMMENDATIONS
-    # =========================================================================
-    if method_filter == "all":
-        print()
-        print(f"  {c.YELLOW}{c.BOLD}SCENARIO RECOMMENDATIONS{c.RESET}")
-        print(f"  {c.DIM}{'-'*70}{c.RESET}")
-        print()
-
-        # Table header
-        print(f"  {'Scenario':<42} {'Method':<12} {'Reason'}")
-        print(f"  {'-'*42} {'-'*12} {'-'*40}")
-
-        for scenario in SPRAY_SCENARIOS:
-            s = scenario["scenario"][:40]
-            m = scenario["recommendation"]
-            r = scenario["reason"][:38]
-            print(f"  {s:<42} {c.BOLD}{m:<12}{c.RESET} {c.DIM}{r}{c.RESET}")
-
-    # =========================================================================
-    # QUICK REFERENCE TABLE
-    # =========================================================================
-    if method_filter == "all":
-        print()
-        print(f"  {c.CYAN}{c.BOLD}QUICK REFERENCE: When to Use Each{c.RESET}")
-        print()
-        _print_spray_comparison_table(c)
-
-    # =========================================================================
-    # SPRAY ONE-LINERS
-    # =========================================================================
+    # Show relevant one-liners
     print()
     print(f"  {c.YELLOW}{c.BOLD}SPRAY ONE-LINERS{c.RESET}")
     print(f"  {c.DIM}{'-'*70}{c.RESET}")
-    print(f"  {c.DIM}Complete attack workflows - copy/paste ready{c.RESET}")
-    print()
-
     first_pwd = passwords[0] if passwords else "<PASSWORD>"
     for i, oneliner in enumerate(SPRAY_ONELINERS, 1):
-        name = oneliner["name"]
-        desc = oneliner["description"]
         cmd = fill_template(oneliner["cmd"], first_pwd)
-
-        print(f"  {c.BOLD}{i}. {name}{c.RESET}")
-        print(f"     {c.DIM}{desc}{c.RESET}")
+        print(f"  {c.BOLD}{i}. {oneliner['name']}{c.RESET}")
         print(f"     {c.GREEN}{cmd}{c.RESET}")
         print()
 
-    # =========================================================================
-    # EXAM TIP
-    # =========================================================================
-    print()
-    threshold = policy.lockout_threshold if policy else 5
-    safe = policy.safe_spray_attempts if policy else 4
-    window = policy.spray_delay_minutes if policy else 30
-    print(f"  {c.YELLOW}{c.BOLD}EXAM TIP:{c.RESET} Before spraying, always check {c.GREEN}net accounts{c.RESET} to verify lockout.")
-    print(f"  {c.DIM}With {threshold}-attempt lockout, safely attempt {safe} passwords per {window} min window.{c.RESET}")
-
-    print()
     print(f"{c.CYAN}{'='*78}{c.RESET}")
     print()
-
-
-def _print_spray_comparison_table(c) -> None:
-    """Print comparison table for spray methods."""
-    w_method, w_noise, w_speed, w_admin = 16, 8, 10, 12
-
-    # Header
-    print(f"  {c.DIM}+{'-'*w_method}+{'-'*w_noise}+{'-'*w_speed}+{'-'*w_admin}+{c.RESET}")
-    print(f"  {c.DIM}|{c.RESET}{'Method':^{w_method}}{c.DIM}|{c.RESET}{'Noise':^{w_noise}}{c.DIM}|{c.RESET}{'Speed':^{w_speed}}{c.DIM}|{c.RESET}{'Admin Check':^{w_admin}}{c.DIM}|{c.RESET}")
-    print(f"  {c.DIM}+{'-'*w_method}+{'-'*w_noise}+{'-'*w_speed}+{'-'*w_admin}+{c.RESET}")
-
-    # Rows
-    rows = [
-        ("SMB (CME)", "HIGH", "Medium", "YES"),
-        ("Kerberos", "LOW", "Fast", "No"),
-        ("LDAP/ADSI", "MEDIUM", "Slow", "No"),
-    ]
-
-    for method, noise, speed, admin in rows:
-        # Color the noise level
-        if noise == "HIGH":
-            noise_colored = f"{c.RED}{noise:^{w_noise}}{c.RESET}"
-        elif noise == "MEDIUM":
-            noise_colored = f"{c.YELLOW}{noise:^{w_noise}}{c.RESET}"
-        else:
-            noise_colored = f"{c.GREEN}{noise:^{w_noise}}{c.RESET}"
-
-        # Color admin check
-        if admin == "YES":
-            admin_colored = f"{c.GREEN}{admin:^{w_admin}}{c.RESET}"
-        else:
-            admin_colored = f"{admin:^{w_admin}}"
-
-        # Color speed
-        if speed == "Fast":
-            speed_colored = f"{c.GREEN}{speed:^{w_speed}}{c.RESET}"
-        else:
-            speed_colored = f"{speed:^{w_speed}}"
-
-        print(f"  {c.DIM}|{c.RESET}{method:^{w_method}}{c.DIM}|{c.RESET}{noise_colored}{c.DIM}|{c.RESET}{speed_colored}{c.DIM}|{c.RESET}{admin_colored}{c.DIM}|{c.RESET}")
-
-    print(f"  {c.DIM}+{'-'*w_method}+{'-'*w_noise}+{'-'*w_speed}+{'-'*w_admin}+{c.RESET}")
 
 
 def _print_all_targets_section(
@@ -3449,6 +3269,13 @@ def print_spray_tailored(
                     markdown_lines.append(single_cmd)
                     markdown_lines.append("```")
                     markdown_lines.append("")
+
+    # =========================================================================
+    # MONOLITHIC SPRAY SECTION
+    # =========================================================================
+    mono_console, mono_markdown = _generate_monolithic_spray(access_data, domain, use_colors)
+    console_lines.extend(mono_console)
+    markdown_lines.extend(mono_markdown)
 
     # =========================================================================
     # FOOTER
