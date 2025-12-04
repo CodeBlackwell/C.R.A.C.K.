@@ -18,6 +18,7 @@ class Colors:
     GREEN = '\033[92m'
     YELLOW = '\033[93m'
     RED = '\033[91m'
+    MAGENTA = '\033[95m'
     BOLD = '\033[1m'
     DIM = '\033[2m'
     RESET = '\033[0m'
@@ -123,22 +124,22 @@ def print_command_tables_by_phase(
     use_colors: bool = True
 ) -> None:
     """
-    Print command tables grouped by attack phase.
+    Print command tables grouped by attack phase, sorted by impact priority.
 
-    Phases:
-    - Quick Wins
-    - Lateral Movement
-    - Privilege Escalation
+    Phases (in order):
+    - Quick Wins (Kerberoast, AS-REP, etc.)
+    - Lateral Movement (AdminTo > DCOM > PSRemote > RDP)
+    - Privilege Escalation (DCSync > GenericAll > WriteDacl > ...)
+
+    Within each phase, commands are sorted by ACCESS_TYPE_PRIORITY (highest first).
     """
     c = Colors if use_colors else _NoColors
 
+    # Define phase order (most actionable first)
+    PHASE_ORDER = ["Quick Wins", "Lateral Movement", "Privilege Escalation", "Other"]
+
     # Group by phase
-    phases = {
-        "Quick Wins": [],
-        "Lateral Movement": [],
-        "Privilege Escalation": [],
-        "Other": [],
-    }
+    phases: Dict[str, List[CommandTable]] = {phase: [] for phase in PHASE_ORDER}
 
     for table in tables:
         if not table.targets:
@@ -148,14 +149,19 @@ def print_command_tables_by_phase(
             phase = "Other"
         phases[phase].append(table)
 
-    # Print each phase
-    for phase_name, phase_tables in phases.items():
+    # Print each phase in defined order
+    for phase_name in PHASE_ORDER:
+        phase_tables = phases[phase_name]
         if not phase_tables:
             continue
 
-        # Phase header
+        # Sort by priority within phase (highest impact first)
+        phase_tables.sort(key=lambda t: t.priority_score, reverse=True)
+
+        # Phase header with counts
+        total_targets = sum(len(t.targets) for t in phase_tables)
         print(f"\n{c.BOLD}{c.CYAN}{'='*70}")
-        print(f"  {phase_name.upper()}")
+        print(f"  {phase_name.upper()} ({len(phase_tables)} techniques, {total_targets} targets)")
         print(f"{'='*70}{c.RESET}")
 
         print_command_tables(phase_tables, use_colors)
@@ -541,9 +547,15 @@ def print_pwned_followup_commands(
         print(f"  Credential: {c.YELLOW}{primary_cred_type}{c.RESET} (stored - auto-filled)")
     print()
 
-    # Domain-level access (DCSync)
+    # ==========================================================================
+    # PRIVILEGE ESCALATION PHASE
+    # ==========================================================================
     if domain_level_access == "domain-admin":
-        print(f"👑 {c.RED}{c.BOLD}DOMAIN ADMIN ACCESS{c.RESET} [DCSync]")
+        print(f"{c.BOLD}{c.CYAN}{'='*70}")
+        print(f"  PRIVILEGE ESCALATION")
+        print(f"{'='*70}{c.RESET}")
+        print()
+        print(f"👑 {c.RED}{c.BOLD}DOMAIN ADMIN ACCESS{c.RESET} [DCSync] (Priority: 199)")
         print()
         print(f"  {'Attack':<22} {'Reason':<40} {'Ready Command'}")
         print(f"  {'-'*22} {'-'*40} {'-'*60}")
@@ -577,9 +589,20 @@ def print_pwned_followup_commands(
         "certificate": "certificate",
     }
 
-    # Local Admin access - per-target technique list, grouped by credential type
+    # ==========================================================================
+    # LATERAL MOVEMENT PHASE (sorted by priority: AdminTo=99 > DCOM=90 > PSRemote=85 > RDP=65)
+    # ==========================================================================
+    has_lateral_access = admin_access or dcom_access or user_access
+    if has_lateral_access:
+        total_lateral = len(admin_access) + len(dcom_access) + len(user_access)
+        print(f"\n{c.BOLD}{c.CYAN}{'='*70}")
+        print(f"  LATERAL MOVEMENT ({total_lateral} targets)")
+        print(f"{'='*70}{c.RESET}")
+
+    # Local Admin access - per-target technique list (Priority: 99)
     if admin_access:
-        print(f"🩸 {c.RED}{c.BOLD}LOCAL ADMIN ACCESS{c.RESET} ({len(admin_access)} machines)")
+        print()
+        print(f"🩸 {c.RED}{c.BOLD}LOCAL ADMIN ACCESS{c.RESET} ({len(admin_access)} machines) [AdminTo] (Priority: 99)")
 
         priority_targets = []
         techniques = get_techniques_for_access("AdminTo")
@@ -649,9 +672,41 @@ def print_pwned_followup_commands(
         # Show technique comparison legend
         print_technique_legend(techniques, c)
 
-    # User-level access (RDP, PSRemote) - per-target technique list
+    # DCOM access - per-target technique list (Priority: 90)
+    if dcom_access:
+        print(f"\n⚙️  {c.BLUE}{c.BOLD}DCOM ACCESS{c.RESET} ({len(dcom_access)} machines) [ExecuteDCOM] (Priority: 90)")
+
+        techniques = get_techniques_for_access("ExecuteDCOM")
+
+        # Generate commands for each credential type
+        for ct, cv in zip(cred_types, cred_values):
+            print()
+            label = CRED_TYPE_LABELS.get(ct, ct)
+            print(f"  {c.CYAN}Using: {label}{c.RESET}")
+            print()
+
+            for ma in dcom_access[:5]:
+                print(f"  {c.BOLD}{ma.computer}{c.RESET}")
+
+                for tech in techniques:
+                    template = tech.command_templates.get(ct)
+                    if template:
+                        cmd = fill_pwned_command(
+                            template,
+                            username=username,
+                            domain=domain,
+                            target=ma.computer,
+                            cred_value=cv,
+                            target_ip=ma.computer_ip or ""
+                        )
+                        tech_short = tech.name.split()[0].lower()
+                        print(f"    {c.DIM}{tech_short:>10}:{c.RESET}  {c.GREEN}{cmd}{c.RESET}")
+
+                print()
+
+    # User-level access (RDP, PSRemote) - per-target technique list (Priority: 65-85)
     if user_access:
-        print(f"🔵 {c.BLUE}{c.BOLD}USER-LEVEL ACCESS{c.RESET} ({len(user_access)} machines)")
+        print(f"\n🔵 {c.BLUE}{c.BOLD}USER-LEVEL ACCESS{c.RESET} ({len(user_access)} machines) [CanPSRemote/CanRDP] (Priority: 65-85)")
 
         # Generate commands for each credential type
         for ct, cv in zip(cred_types, cred_values):
@@ -685,38 +740,6 @@ def print_pwned_followup_commands(
 
             if len(user_access) > 10:
                 print(f"  {c.DIM}... and {len(user_access) - 10} more machines{c.RESET}")
-
-    # DCOM access - per-target technique list
-    if dcom_access:
-        print(f"\n⚙️  {c.BLUE}{c.BOLD}DCOM ACCESS{c.RESET} ({len(dcom_access)} machines)")
-
-        techniques = get_techniques_for_access("ExecuteDCOM")
-
-        # Generate commands for each credential type
-        for ct, cv in zip(cred_types, cred_values):
-            print()
-            label = CRED_TYPE_LABELS.get(ct, ct)
-            print(f"  {c.CYAN}Using: {label}{c.RESET}")
-            print()
-
-            for ma in dcom_access[:5]:
-                print(f"  {c.BOLD}{ma.computer}{c.RESET}")
-
-                for tech in techniques:
-                    template = tech.command_templates.get(ct)
-                    if template:
-                        cmd = fill_pwned_command(
-                            template,
-                            username=username,
-                            domain=domain,
-                            target=ma.computer,
-                            cred_value=cv,
-                            target_ip=ma.computer_ip or ""
-                        )
-                        tech_short = tech.name.split()[0].lower()
-                        print(f"    {c.DIM}{tech_short:>10}:{c.RESET}  {c.GREEN}{cmd}{c.RESET}")
-
-                print()
 
     # No edge-based access found
     if not admin_access and not user_access and not dcom_access and not domain_level_access:
@@ -774,9 +797,9 @@ def print_pwned_users_table(
     print(f"  {'-'*30} {'-'*15} {'-'*10} {'-'*10} {'-'*8} {'-'*20}")
 
     for user in users:
-        # Count access by type
-        admin_count = sum(1 for a in user.access if a.privilege_level == "local-admin")
-        user_count = sum(1 for a in user.access if a.privilege_level == "user-level")
+        # Count access by type (cred-access and rbcd-capable count as admin-equivalent)
+        admin_count = sum(1 for a in user.access if a.privilege_level in ("local-admin", "cred-access", "rbcd-capable"))
+        user_count = sum(1 for a in user.access if a.privilege_level in ("user-level", "dcom-exec"))
         domain_marker = "YES" if user.domain_level_access == "domain-admin" else "-"
 
         # Format timestamp
@@ -797,8 +820,49 @@ def print_pwned_users_table(
 
         print(f"  {name_color}{user.name:<30}{c.RESET} {cred_display:<15} {admin_count:<10} {user_count:<10} {domain_marker:<8} {pwned_at_str}")
 
+    # Credentials section - show actual pwned credentials
     print()
-    print(f"{c.DIM}Run: bloodtrail --pwn USER -v  to see detailed access for a user{c.RESET}")
+    print(f"{c.BOLD}{'='*90}{c.RESET}")
+    print(f"  {c.GREEN}CAPTURED CREDENTIALS{c.RESET}")
+    print(f"{'='*90}")
+    print()
+
+    for user in users:
+        if not user.cred_types or not user.cred_values:
+            continue
+
+        # Color based on privilege level (include cred-access and rbcd-capable as admin-equiv)
+        if user.domain_level_access == "domain-admin":
+            name_color = c.RED
+        elif any(a.privilege_level in ("local-admin", "cred-access", "rbcd-capable") for a in user.access):
+            name_color = c.YELLOW
+        else:
+            name_color = c.RESET
+
+        print(f"  {name_color}{c.BOLD}{user.name}{c.RESET}")
+
+        # Print each credential type and value
+        for cred_type, cred_value in zip(user.cred_types, user.cred_values):
+            # Format credential type for display
+            cred_label = cred_type.replace("-", " ").title()
+            print(f"    {c.DIM}{cred_label}:{c.RESET} {c.GREEN}{cred_value}{c.RESET}")
+
+        print()
+
+    # gMSA Access section - show service accounts user can read passwords for
+    users_with_gmsa = [u for u in users if u.gmsa_access]
+    if users_with_gmsa:
+        print(f"{c.BOLD}{'='*90}{c.RESET}")
+        print(f"  {c.MAGENTA}SERVICE ACCOUNT ACCESS (gMSA){c.RESET}")
+        print(f"{'='*90}")
+        print()
+
+        for user in users_with_gmsa:
+            print(f"  {c.BOLD}{user.name}{c.RESET}")
+            print(f"    {c.DIM}Can read:{c.RESET} {c.MAGENTA}{', '.join(user.gmsa_access)}{c.RESET}")
+            print()
+
+    print(f"{c.DIM}Run: bloodtrail --pwned-user USER  to see detailed access for a user{c.RESET}")
     print()
 
 
@@ -938,11 +1002,15 @@ def print_post_exploit_commands(
                 print(f"    {c.DIM}{ctype_display}:{c.RESET}  {c.GREEN}{cval}{c.RESET}")
 
     # =========================================================================
-    # DOMAIN ADMIN SECTION
+    # PRIVILEGE ESCALATION PHASE
     # =========================================================================
     if domain_level_access:
         print()
-        print(f"  {c.RED}{c.BOLD}DOMAIN ADMIN ACCESS{c.RESET}")
+        print(f"  {c.BOLD}{c.CYAN}{'─'*70}")
+        print(f"  PRIVILEGE ESCALATION")
+        print(f"  {'─'*70}{c.RESET}")
+        print()
+        print(f"  {c.RED}{c.BOLD}DOMAIN ADMIN ACCESS{c.RESET} [DCSync] (Priority: 199)")
         print(f"  {c.DIM}{'─'*70}{c.RESET}")
 
         # DCSync - remote preferred
@@ -975,11 +1043,15 @@ def print_post_exploit_commands(
         _print_arg_acquisition(missing_args, c)
 
     # =========================================================================
-    # LOCAL ADMIN SECTION
+    # LATERAL MOVEMENT PHASE
     # =========================================================================
     if local_admin_targets:
         print()
-        print(f"  {c.RED}{c.BOLD}LOCAL ADMIN ACCESS{c.RESET} ({len(local_admin_targets)} machines)")
+        print(f"  {c.BOLD}{c.CYAN}{'─'*70}")
+        print(f"  LATERAL MOVEMENT")
+        print(f"  {'─'*70}{c.RESET}")
+        print()
+        print(f"  {c.RED}{c.BOLD}LOCAL ADMIN ACCESS{c.RESET} ({len(local_admin_targets)} machines) [AdminTo] (Priority: 99)")
         print(f"  {c.DIM}{'─'*70}{c.RESET}")
 
         # Priority targets with sessions
@@ -1778,3 +1850,279 @@ def generate_authenticated_attacks_template_markdown() -> str:
 
     lines.append("")
     return "\n".join(lines)
+
+
+# =============================================================================
+# PASSWORD SPRAY RECOMMENDATIONS
+# =============================================================================
+
+def print_spray_recommendations(
+    pwned_users: List = None,
+    policy = None,
+    domain: str = "",
+    dc_ip: str = "<DC_IP>",
+    use_colors: bool = True,
+    method_filter: str = "all",
+) -> None:
+    """
+    Print password spray recommendations based on captured credentials and policy.
+
+    Shows all three spray methods with:
+    - Commands auto-filled with captured credentials
+    - Policy-aware spray parameters (attempts, delays)
+    - Scenario-based recommendations
+    - User enumeration commands
+    - Technique comparison table
+
+    Args:
+        pwned_users: List of PwnedUser objects with credentials
+        policy: Optional PasswordPolicy for safe spray planning
+        domain: Domain name for command templates
+        dc_ip: Domain Controller IP
+        use_colors: Enable ANSI colors
+        method_filter: Filter to specific method (smb, kerberos, ldap, all)
+    """
+    from .command_mappings import (
+        SPRAY_TECHNIQUES,
+        SPRAY_SCENARIOS,
+        USER_ENUM_COMMANDS,
+    )
+
+    c = Colors if use_colors else _NoColors
+    pwned_users = pwned_users or []
+
+    # Extract credentials from pwned users
+    passwords = []
+    usernames = []
+    for user in pwned_users:
+        usernames.append(user.username)
+        for ctype, cval in zip(user.cred_types, user.cred_values):
+            if ctype == "password" and cval:
+                passwords.append(cval)
+
+    # =========================================================================
+    # HEADER
+    # =========================================================================
+    print()
+    print(f"{c.CYAN}{c.BOLD}{'='*78}{c.RESET}")
+    print(f"  {c.BOLD}PASSWORD SPRAYING METHODS{c.RESET}")
+    if pwned_users:
+        user_list = ", ".join(u.username for u in pwned_users[:5])
+        if len(pwned_users) > 5:
+            user_list += f" (+{len(pwned_users)-5} more)"
+        print(f"  {c.DIM}Based on captured credentials: {user_list}{c.RESET}")
+    print(f"{c.CYAN}{'='*78}{c.RESET}")
+
+    # =========================================================================
+    # PASSWORD POLICY SECTION
+    # =========================================================================
+    print()
+    if policy:
+        print(f"  {c.YELLOW}{c.BOLD}PASSWORD POLICY{c.RESET} {c.DIM}(from stored config){c.RESET}")
+        print(f"  {c.DIM}{'-'*70}{c.RESET}")
+        print(f"    Lockout threshold:   {policy.lockout_threshold} attempts" +
+              (" (no lockout)" if policy.lockout_threshold == 0 else ""))
+        print(f"    Lockout duration:    {policy.lockout_duration} minutes")
+        print(f"    Observation window:  {policy.observation_window} minutes")
+        print()
+        print(f"  {c.GREEN}{c.BOLD}SAFE SPRAY PARAMETERS{c.RESET}")
+        print(f"    Attempts per round:  {c.BOLD}{policy.safe_spray_attempts}{c.RESET}")
+        print(f"    Delay between:       {c.BOLD}{policy.spray_delay_minutes} minutes{c.RESET}")
+
+        if policy.lockout_threshold == 0:
+            print(f"    {c.RED}WARNING: No lockout policy detected - exercise caution anyway{c.RESET}")
+    else:
+        print(f"  {c.YELLOW}No password policy stored.{c.RESET}")
+        print(f"  Import with: {c.GREEN}crack bloodtrail --set-policy{c.RESET}")
+        print()
+        print(f"  {c.DIM}Default safe parameters (conservative):{c.RESET}")
+        print(f"    Attempts per round:  {c.BOLD}2{c.RESET}")
+        print(f"    Delay between:       {c.BOLD}30 minutes{c.RESET}")
+
+    # Helper to fill command template
+    def fill_template(cmd: str, pwd: str = "<PASSWORD>") -> str:
+        result = cmd
+        result = result.replace("<DC_IP>", dc_ip)
+        result = result.replace("<DOMAIN>", domain.lower() if domain else "<DOMAIN>")
+        result = result.replace("<PASSWORD>", pwd)
+        result = result.replace("<USER_FILE>", "users.txt")
+        result = result.replace("<PASSWORD_FILE>", "passwords.txt")
+        if usernames:
+            result = result.replace("<USERNAME>", usernames[0])
+        return result
+
+    # =========================================================================
+    # METHOD 1: SMB-BASED
+    # =========================================================================
+    if method_filter in ("all", "smb"):
+        smb = SPRAY_TECHNIQUES["smb"]
+        print()
+        print(f"  {c.CYAN}{c.BOLD}METHOD 1: {smb.name}{c.RESET}")
+        print(f"  {c.DIM}Ports: {', '.join(str(p) for p in smb.ports)} | Noise: {smb.noise_level.upper()}{c.RESET}")
+        print()
+
+        # Show commands with captured passwords
+        if passwords:
+            for pwd in passwords[:3]:  # Show up to 3 passwords
+                cmd = fill_template(smb.command_templates["single_password"], pwd)
+                print(f"    {c.GREEN}{cmd}{c.RESET}")
+        else:
+            cmd = fill_template(smb.command_templates["single_password"])
+            print(f"    {c.GREEN}{cmd}{c.RESET}")
+
+        print()
+        print(f"    {c.GREEN}+ {smb.advantages}{c.RESET}")
+        print(f"    {c.RED}- {smb.disadvantages}{c.RESET}")
+
+    # =========================================================================
+    # METHOD 2: KERBEROS-BASED
+    # =========================================================================
+    if method_filter in ("all", "kerberos"):
+        kerb = SPRAY_TECHNIQUES["kerberos"]
+        print()
+        print(f"  {c.CYAN}{c.BOLD}METHOD 2: {kerb.name}{c.RESET}")
+        print(f"  {c.DIM}Ports: {', '.join(str(p) for p in kerb.ports)} | Noise: {kerb.noise_level.upper()}{c.RESET}")
+        print()
+
+        if passwords:
+            for pwd in passwords[:3]:
+                cmd = fill_template(kerb.command_templates["single_password"], pwd)
+                print(f"    {c.GREEN}{cmd}{c.RESET}")
+        else:
+            cmd = fill_template(kerb.command_templates["single_password"])
+            print(f"    {c.GREEN}{cmd}{c.RESET}")
+
+        print()
+        print(f"    {c.GREEN}+ {kerb.advantages}{c.RESET}")
+        print(f"    {c.RED}- {kerb.disadvantages}{c.RESET}")
+
+    # =========================================================================
+    # METHOD 3: LDAP-BASED
+    # =========================================================================
+    if method_filter in ("all", "ldap"):
+        ldap = SPRAY_TECHNIQUES["ldap"]
+        print()
+        print(f"  {c.CYAN}{c.BOLD}METHOD 3: {ldap.name}{c.RESET}")
+        print(f"  {c.DIM}Ports: {', '.join(str(p) for p in ldap.ports)} | Noise: {ldap.noise_level.upper()}{c.RESET}")
+        print()
+
+        pwd = passwords[0] if passwords else "<PASSWORD>"
+        cmd = fill_template(ldap.command_templates["spray_ps1"], pwd)
+        print(f"    {c.GREEN}{cmd}{c.RESET}")
+
+        print()
+        print(f"    {c.GREEN}+ {ldap.advantages}{c.RESET}")
+        print(f"    {c.RED}- {ldap.disadvantages}{c.RESET}")
+
+    # =========================================================================
+    # USER ENUMERATION COMMANDS
+    # =========================================================================
+    if method_filter == "all":
+        print()
+        print(f"  {c.YELLOW}{c.BOLD}USER LIST GENERATION{c.RESET}")
+        print(f"  {c.DIM}{'-'*70}{c.RESET}")
+
+        linux_cmds = USER_ENUM_COMMANDS.get("linux", {})
+        windows_cmds = USER_ENUM_COMMANDS.get("windows", {})
+
+        print()
+        print(f"  {c.BOLD}From Linux (Kali):{c.RESET}")
+        for key in ["kerbrute_enum", "crackmapexec_users", "bloodhound_export"]:
+            if key in linux_cmds:
+                cmd = linux_cmds[key]
+                filled = fill_template(cmd["cmd"])
+                print(f"    {c.DIM}# {cmd['description']}{c.RESET}")
+                print(f"    {c.GREEN}{filled}{c.RESET}")
+                print()
+
+        print(f"  {c.BOLD}From Windows (on target):{c.RESET}")
+        for key in ["domain_users_to_file", "powershell_ad"]:
+            if key in windows_cmds:
+                cmd = windows_cmds[key]
+                print(f"    {c.DIM}# {cmd['description']}{c.RESET}")
+                print(f"    {c.GREEN}{cmd['cmd']}{c.RESET}")
+                print()
+
+    # =========================================================================
+    # SCENARIO RECOMMENDATIONS
+    # =========================================================================
+    if method_filter == "all":
+        print()
+        print(f"  {c.YELLOW}{c.BOLD}SCENARIO RECOMMENDATIONS{c.RESET}")
+        print(f"  {c.DIM}{'-'*70}{c.RESET}")
+        print()
+
+        # Table header
+        print(f"  {'Scenario':<42} {'Method':<12} {'Reason'}")
+        print(f"  {'-'*42} {'-'*12} {'-'*40}")
+
+        for scenario in SPRAY_SCENARIOS:
+            s = scenario["scenario"][:40]
+            m = scenario["recommendation"]
+            r = scenario["reason"][:38]
+            print(f"  {s:<42} {c.BOLD}{m:<12}{c.RESET} {c.DIM}{r}{c.RESET}")
+
+    # =========================================================================
+    # QUICK REFERENCE TABLE
+    # =========================================================================
+    if method_filter == "all":
+        print()
+        print(f"  {c.CYAN}{c.BOLD}QUICK REFERENCE: When to Use Each{c.RESET}")
+        print()
+        _print_spray_comparison_table(c)
+
+    # =========================================================================
+    # EXAM TIP
+    # =========================================================================
+    print()
+    threshold = policy.lockout_threshold if policy else 5
+    safe = policy.safe_spray_attempts if policy else 4
+    window = policy.spray_delay_minutes if policy else 30
+    print(f"  {c.YELLOW}{c.BOLD}EXAM TIP:{c.RESET} Before spraying, always check {c.GREEN}net accounts{c.RESET} to verify lockout.")
+    print(f"  {c.DIM}With {threshold}-attempt lockout, safely attempt {safe} passwords per {window} min window.{c.RESET}")
+
+    print()
+    print(f"{c.CYAN}{'='*78}{c.RESET}")
+    print()
+
+
+def _print_spray_comparison_table(c) -> None:
+    """Print comparison table for spray methods."""
+    w_method, w_noise, w_speed, w_admin = 16, 8, 10, 12
+
+    # Header
+    print(f"  {c.DIM}+{'-'*w_method}+{'-'*w_noise}+{'-'*w_speed}+{'-'*w_admin}+{c.RESET}")
+    print(f"  {c.DIM}|{c.RESET}{'Method':^{w_method}}{c.DIM}|{c.RESET}{'Noise':^{w_noise}}{c.DIM}|{c.RESET}{'Speed':^{w_speed}}{c.DIM}|{c.RESET}{'Admin Check':^{w_admin}}{c.DIM}|{c.RESET}")
+    print(f"  {c.DIM}+{'-'*w_method}+{'-'*w_noise}+{'-'*w_speed}+{'-'*w_admin}+{c.RESET}")
+
+    # Rows
+    rows = [
+        ("SMB (CME)", "HIGH", "Medium", "YES"),
+        ("Kerberos", "LOW", "Fast", "No"),
+        ("LDAP/ADSI", "MEDIUM", "Slow", "No"),
+    ]
+
+    for method, noise, speed, admin in rows:
+        # Color the noise level
+        if noise == "HIGH":
+            noise_colored = f"{c.RED}{noise:^{w_noise}}{c.RESET}"
+        elif noise == "MEDIUM":
+            noise_colored = f"{c.YELLOW}{noise:^{w_noise}}{c.RESET}"
+        else:
+            noise_colored = f"{c.GREEN}{noise:^{w_noise}}{c.RESET}"
+
+        # Color admin check
+        if admin == "YES":
+            admin_colored = f"{c.GREEN}{admin:^{w_admin}}{c.RESET}"
+        else:
+            admin_colored = f"{admin:^{w_admin}}"
+
+        # Color speed
+        if speed == "Fast":
+            speed_colored = f"{c.GREEN}{speed:^{w_speed}}{c.RESET}"
+        else:
+            speed_colored = f"{speed:^{w_speed}}"
+
+        print(f"  {c.DIM}|{c.RESET}{method:^{w_method}}{c.DIM}|{c.RESET}{noise_colored}{c.DIM}|{c.RESET}{speed_colored}{c.DIM}|{c.RESET}{admin_colored}{c.DIM}|{c.RESET}")
+
+    print(f"  {c.DIM}+{'-'*w_method}+{'-'*w_noise}+{'-'*w_speed}+{'-'*w_admin}+{c.RESET}")

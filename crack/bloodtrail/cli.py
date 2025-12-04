@@ -295,9 +295,9 @@ Supported Edge Types:
         help="Unmark user as pwned",
     )
     pwned_group.add_argument(
-        "--list-pwned",
+        "--list-pwned", "-lp",
         action="store_true",
-        help="List all pwned users with access paths",
+        help="List all pwned users with access paths and credentials",
     )
     pwned_group.add_argument(
         "--cred-type",
@@ -378,6 +378,41 @@ Supported Edge Types:
         nargs='*',
         metavar=('USER', 'PASSWORD'),
         help="Discover DC IP using BloodHound + crackmapexec. Usage: --discover-dc [USER PASSWORD]",
+    )
+
+    # Password Policy options
+    policy_group = parser.add_argument_group("Password Policy")
+    policy_group.add_argument(
+        "--set-policy",
+        nargs="?",
+        const="-",  # stdin if no value
+        metavar="FILE",
+        help="Import password policy from 'net accounts' output. Use '-' for stdin, file path, or omit to paste interactively.",
+    )
+    policy_group.add_argument(
+        "--show-policy",
+        action="store_true",
+        help="Show stored password policy and safe spray parameters",
+    )
+    policy_group.add_argument(
+        "--clear-policy",
+        action="store_true",
+        help="Clear stored password policy",
+    )
+
+    # Password Spray options
+    spray_group = parser.add_argument_group("Password Spraying")
+    spray_group.add_argument(
+        "--spray",
+        action="store_true",
+        help="Show password spray recommendations based on captured credentials",
+    )
+    spray_group.add_argument(
+        "--spray-method",
+        type=str,
+        choices=["smb", "kerberos", "ldap", "all"],
+        default="all",
+        help="Filter spray methods to show (default: all)",
     )
 
     return parser
@@ -1292,6 +1327,171 @@ def handle_discover_dc(args):
         tracker.close()
 
 
+# =============================================================================
+# PASSWORD POLICY HANDLERS
+# =============================================================================
+
+def handle_set_policy(args):
+    """Handle --set-policy command - import password policy from net accounts output."""
+    from .policy_parser import parse_net_accounts, format_policy_display
+
+    config = Neo4jConfig(uri=args.uri, user=args.user, password=args.password)
+    tracker = PwnedTracker(config)
+
+    if not tracker.connect():
+        print("[!] Could not connect to Neo4j")
+        return 1
+
+    try:
+        # Get policy text from stdin, file, or interactive
+        policy_text = ""
+
+        if args.set_policy == "-":
+            # Read from stdin
+            print("[*] Reading 'net accounts' output from stdin (Ctrl+D when done):")
+            import sys
+            policy_text = sys.stdin.read()
+        elif args.set_policy and args.set_policy != "-":
+            # Read from file if it exists
+            import os
+            if os.path.isfile(args.set_policy):
+                with open(args.set_policy, 'r') as f:
+                    policy_text = f.read()
+                print(f"[*] Read policy from: {args.set_policy}")
+            else:
+                # Treat as the text itself (if someone passes the value directly)
+                policy_text = args.set_policy
+        else:
+            # Interactive input
+            print("[*] Paste 'net accounts' output (empty line to finish):")
+            print()
+            lines = []
+            while True:
+                try:
+                    line = input()
+                    if not line and lines:
+                        break
+                    lines.append(line)
+                except EOFError:
+                    break
+            policy_text = "\n".join(lines)
+
+        if not policy_text.strip():
+            print("[!] No policy text provided")
+            return 1
+
+        # Parse the policy
+        policy = parse_net_accounts(policy_text)
+
+        # Store in Neo4j
+        result = tracker.set_password_policy(policy)
+
+        if not result.success:
+            print(f"[!] Failed to store policy: {result.error}")
+            return 1
+
+        # Show what was stored
+        print()
+        print("[+] Password policy stored successfully!")
+        print()
+        print(format_policy_display(policy))
+
+        return 0
+
+    finally:
+        tracker.close()
+
+
+def handle_show_policy(args):
+    """Handle --show-policy command - display stored password policy."""
+    from .policy_parser import format_policy_display
+
+    config = Neo4jConfig(uri=args.uri, user=args.user, password=args.password)
+    tracker = PwnedTracker(config)
+
+    if not tracker.connect():
+        print("[!] Could not connect to Neo4j")
+        return 1
+
+    try:
+        policy = tracker.get_password_policy()
+
+        if not policy:
+            print("[*] No password policy stored")
+            print("    Import with: crack bloodtrail --set-policy")
+            return 0
+
+        print()
+        print(format_policy_display(policy))
+        print()
+
+        return 0
+
+    finally:
+        tracker.close()
+
+
+def handle_clear_policy(args):
+    """Handle --clear-policy command - clear stored password policy."""
+    config = Neo4jConfig(uri=args.uri, user=args.user, password=args.password)
+    tracker = PwnedTracker(config)
+
+    if not tracker.connect():
+        print("[!] Could not connect to Neo4j")
+        return 1
+
+    try:
+        result = tracker.clear_password_policy()
+
+        if not result.success:
+            print(f"[!] Failed to clear policy: {result.error}")
+            return 1
+
+        print("[+] Password policy cleared")
+        return 0
+
+    finally:
+        tracker.close()
+
+
+def handle_spray(args):
+    """Handle --spray command - show password spray recommendations."""
+    from .display_commands import print_spray_recommendations
+
+    config = Neo4jConfig(uri=args.uri, user=args.user, password=args.password)
+    tracker = PwnedTracker(config)
+
+    if not tracker.connect():
+        print("[!] Could not connect to Neo4j")
+        return 1
+
+    try:
+        # Get pwned users with credentials
+        pwned_users = tracker.list_pwned_users()
+
+        # Get password policy if stored
+        policy = tracker.get_password_policy()
+
+        # Get domain config
+        domain_config = tracker.get_domain_config()
+        domain = domain_config.get("domain", "") if domain_config else ""
+        dc_ip = domain_config.get("dc_ip", "<DC_IP>") if domain_config else "<DC_IP>"
+
+        # Show recommendations
+        print_spray_recommendations(
+            pwned_users=pwned_users,
+            policy=policy,
+            domain=domain,
+            dc_ip=dc_ip,
+            method_filter=getattr(args, 'spray_method', 'all'),
+        )
+
+        return 0
+
+    finally:
+        tracker.close()
+
+
 def main():
     parser = create_parser()
     args = parser.parse_args()
@@ -1390,6 +1590,20 @@ def main():
 
     if args.discover_dc is not None:
         return handle_discover_dc(args)
+
+    # Handle password policy commands
+    if args.set_policy is not None:
+        return handle_set_policy(args)
+
+    if args.show_policy:
+        return handle_show_policy(args)
+
+    if args.clear_policy:
+        return handle_clear_policy(args)
+
+    # Handle password spray command
+    if args.spray:
+        return handle_spray(args)
 
     # Edge enhancement requires bh_data_dir
     if not hasattr(args, 'bh_data_dir') or args.bh_data_dir is None:

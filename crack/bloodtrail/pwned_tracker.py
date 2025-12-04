@@ -33,6 +33,7 @@ from neo4j import GraphDatabase
 from neo4j.exceptions import ServiceUnavailable, AuthError
 
 from .config import Neo4jConfig
+from .policy_parser import PasswordPolicy
 
 
 # =============================================================================
@@ -60,6 +61,7 @@ class PwnedUser:
     notes: Optional[str] = None
     access: List[MachineAccess] = field(default_factory=list)
     domain_level_access: Optional[str] = None  # domain-admin if DCSync/GenericAll on Domain
+    gmsa_access: List[str] = field(default_factory=list)  # gMSA accounts user can read passwords for
 
     @property
     def cred_type(self) -> str:
@@ -119,6 +121,9 @@ EDGE_TO_PRIVILEGE = {
     "CanPSRemote": "user-level",
     "ExecuteDCOM": "dcom-exec",
     "HasSession": "session-harvest",  # Not direct access, but cred harvest opportunity
+    # Credential access edges (effective local-admin)
+    "ReadLAPSPassword": "cred-access",
+    "AllowedToAct": "rbcd-capable",
 }
 
 # Domain-level access edges (checked separately)
@@ -452,6 +457,7 @@ class PwnedTracker:
                     # Get access for this user
                     access = self._get_user_access(session, user_name)
                     domain_level = self._get_domain_level_access(session, user_name)
+                    gmsa = self._get_gmsa_access(session, user_name)
 
                     # Convert timestamp
                     pwned_at = record["PwnedAt"]
@@ -472,7 +478,8 @@ class PwnedTracker:
                         source_machine=record["SourceMachine"],
                         notes=record["Notes"],
                         access=access,
-                        domain_level_access=domain_level
+                        domain_level_access=domain_level,
+                        gmsa_access=gmsa,
                     ))
 
                 return users
@@ -514,6 +521,7 @@ class PwnedTracker:
 
                 access = self._get_user_access(session, user)
                 domain_level = self._get_domain_level_access(session, user)
+                gmsa = self._get_gmsa_access(session, user)
 
                 pwned_at = record["PwnedAt"]
                 if pwned_at:
@@ -533,7 +541,8 @@ class PwnedTracker:
                     source_machine=record["SourceMachine"],
                     notes=record["Notes"],
                     access=access,
-                    domain_level_access=domain_level
+                    domain_level_access=domain_level,
+                    gmsa_access=gmsa,
                 )
 
         except Exception:
@@ -583,9 +592,10 @@ class PwnedTracker:
         Returns list of MachineAccess with privilege levels derived from edge types.
         """
         # Query for BOTH direct access AND inherited access through groups
+        # Includes: AdminTo, CanRDP, CanPSRemote, ExecuteDCOM, ReadLAPSPassword, AllowedToAct
         result = session.run("""
             // Direct access
-            MATCH (u:User {name: $user_name})-[r:AdminTo|CanRDP|CanPSRemote|ExecuteDCOM]->(c:Computer)
+            MATCH (u:User {name: $user_name})-[r:AdminTo|CanRDP|CanPSRemote|ExecuteDCOM|ReadLAPSPassword|AllowedToAct]->(c:Computer)
             OPTIONAL MATCH (c)<-[:HasSession]-(priv:User)
             WHERE priv.admincount = true
             WITH c, type(r) AS AccessType, null AS InheritedFrom, collect(DISTINCT priv.name) AS PrivSessions
@@ -598,7 +608,7 @@ class PwnedTracker:
             UNION
 
             // Inherited access through group membership
-            MATCH (u:User {name: $user_name})-[:MemberOf*1..]->(g:Group)-[r:AdminTo|CanRDP|CanPSRemote|ExecuteDCOM]->(c:Computer)
+            MATCH (u:User {name: $user_name})-[:MemberOf*1..]->(g:Group)-[r:AdminTo|CanRDP|CanPSRemote|ExecuteDCOM|ReadLAPSPassword|AllowedToAct]->(c:Computer)
             OPTIONAL MATCH (c)<-[:HasSession]-(priv:User)
             WHERE priv.admincount = true
             WITH c, type(r) AS AccessType, g.name AS InheritedFrom, collect(DISTINCT priv.name) AS PrivSessions
@@ -638,10 +648,14 @@ class PwnedTracker:
         for computer, data in seen_computers.items():
             access_types = data["access_types"]
 
-            # Determine highest privilege level
+            # Determine highest privilege level (ordered by impact)
             priv_level = "unknown"
             if "AdminTo" in access_types:
                 priv_level = "local-admin"
+            elif "ReadLAPSPassword" in access_types:
+                priv_level = "cred-access"  # Can get local admin creds
+            elif "AllowedToAct" in access_types:
+                priv_level = "rbcd-capable"  # RBCD impersonation = effective admin
             elif "ExecuteDCOM" in access_types:
                 priv_level = "dcom-exec"
             elif access_types:  # CanRDP or CanPSRemote
@@ -656,6 +670,29 @@ class PwnedTracker:
             ))
 
         return access_list
+
+    def _get_gmsa_access(self, session, user: str) -> List[str]:
+        """
+        Get gMSA (Group Managed Service Account) access for a user.
+
+        gMSA accounts are User nodes, not Computer nodes, so they need separate tracking.
+        ReadGMSAPassword edge grants ability to retrieve the service account password.
+
+        Returns list of gMSA account names the user can read passwords for.
+        """
+        result = session.run("""
+            // Direct gMSA access
+            MATCH (u:User {name: $user_name})-[:ReadGMSAPassword]->(gmsa:User)
+            RETURN gmsa.name AS ServiceAccount
+
+            UNION
+
+            // Inherited gMSA access through group membership
+            MATCH (u:User {name: $user_name})-[:MemberOf*1..]->(g:Group)-[:ReadGMSAPassword]->(gmsa:User)
+            RETURN gmsa.name AS ServiceAccount
+        """, {"user_name": user})
+
+        return list(set(record["ServiceAccount"] for record in result))
 
     def _get_domain_level_access(self, session, user: str) -> Optional[str]:
         """
@@ -1035,6 +1072,148 @@ class PwnedTracker:
                 result = session.run("""
                     MATCH (d:Domain)
                     REMOVE d.bloodtrail_dc_ip, d.bloodtrail_dc_hostname, d.bloodtrail_domain_sid
+                    RETURN d.name AS domain
+                """)
+
+                record = result.single()
+                if not record:
+                    return PwnedResult(
+                        success=False,
+                        error="No domain found"
+                    )
+
+                return PwnedResult(success=True, user=record["domain"])
+
+        except Exception as e:
+            return PwnedResult(success=False, error=str(e))
+
+    # =========================================================================
+    # PASSWORD POLICY STORAGE
+    # =========================================================================
+
+    def set_password_policy(self, policy: PasswordPolicy) -> PwnedResult:
+        """
+        Store password policy on Domain node for safe spray planning.
+
+        Policy is stored as Neo4j properties on the Domain node:
+            - bloodtrail_policy_lockout_threshold
+            - bloodtrail_policy_lockout_duration
+            - bloodtrail_policy_observation_window
+            - bloodtrail_policy_min_length
+            - bloodtrail_policy_max_age
+            - bloodtrail_policy_min_age
+            - bloodtrail_policy_history
+            - bloodtrail_policy_updated_at
+
+        Args:
+            policy: PasswordPolicy dataclass from policy_parser
+
+        Returns:
+            PwnedResult with success status
+        """
+        if not self._ensure_connected():
+            return PwnedResult(success=False, error="Could not connect to Neo4j")
+
+        try:
+            with self.driver.session() as session:
+                result = session.run("""
+                    MATCH (d:Domain)
+                    SET d.bloodtrail_policy_lockout_threshold = $threshold,
+                        d.bloodtrail_policy_lockout_duration = $duration,
+                        d.bloodtrail_policy_observation_window = $window,
+                        d.bloodtrail_policy_min_length = $min_length,
+                        d.bloodtrail_policy_max_age = $max_age,
+                        d.bloodtrail_policy_min_age = $min_age,
+                        d.bloodtrail_policy_history = $history,
+                        d.bloodtrail_policy_updated_at = $timestamp
+                    RETURN d.name AS domain
+                """, {
+                    "threshold": policy.lockout_threshold,
+                    "duration": policy.lockout_duration,
+                    "window": policy.observation_window,
+                    "min_length": policy.min_length,
+                    "max_age": policy.max_age,
+                    "min_age": policy.min_age,
+                    "history": policy.history,
+                    "timestamp": int(time.time()),
+                })
+
+                record = result.single()
+                if not record:
+                    return PwnedResult(
+                        success=False,
+                        error="No domain found in BloodHound data. Import data first."
+                    )
+
+                return PwnedResult(success=True, user=record["domain"])
+
+        except Exception as e:
+            return PwnedResult(success=False, error=str(e))
+
+    def get_password_policy(self) -> Optional[PasswordPolicy]:
+        """
+        Retrieve stored password policy from Domain node.
+
+        Returns:
+            PasswordPolicy dataclass or None if not set
+        """
+        if not self._ensure_connected():
+            return None
+
+        try:
+            with self.driver.session() as session:
+                result = session.run("""
+                    MATCH (d:Domain)
+                    RETURN d.bloodtrail_policy_lockout_threshold AS threshold,
+                           d.bloodtrail_policy_lockout_duration AS duration,
+                           d.bloodtrail_policy_observation_window AS window,
+                           d.bloodtrail_policy_min_length AS min_length,
+                           d.bloodtrail_policy_max_age AS max_age,
+                           d.bloodtrail_policy_min_age AS min_age,
+                           d.bloodtrail_policy_history AS history,
+                           d.bloodtrail_policy_updated_at AS updated_at
+                    LIMIT 1
+                """)
+
+                record = result.single()
+                if not record or record["threshold"] is None:
+                    return None
+
+                return PasswordPolicy(
+                    lockout_threshold=record["threshold"] or 0,
+                    lockout_duration=record["duration"] or 30,
+                    observation_window=record["window"] or 30,
+                    min_length=record["min_length"] or 0,
+                    max_age=record["max_age"] or 0,
+                    min_age=record["min_age"] or 0,
+                    history=record["history"] or 0,
+                )
+
+        except Exception:
+            return None
+
+    def clear_password_policy(self) -> PwnedResult:
+        """
+        Clear stored password policy from Domain node.
+
+        Returns:
+            PwnedResult with success status
+        """
+        if not self._ensure_connected():
+            return PwnedResult(success=False, error="Could not connect to Neo4j")
+
+        try:
+            with self.driver.session() as session:
+                result = session.run("""
+                    MATCH (d:Domain)
+                    REMOVE d.bloodtrail_policy_lockout_threshold,
+                           d.bloodtrail_policy_lockout_duration,
+                           d.bloodtrail_policy_observation_window,
+                           d.bloodtrail_policy_min_length,
+                           d.bloodtrail_policy_max_age,
+                           d.bloodtrail_policy_min_age,
+                           d.bloodtrail_policy_history,
+                           d.bloodtrail_policy_updated_at
                     RETURN d.name AS domain
                 """)
 
