@@ -2455,10 +2455,11 @@ def generate_spray_section(
     markdown_lines.append("**From Linux (Kali):**")
     markdown_lines.append("")
 
+    first_pwd = passwords[0] if passwords else "<PASSWORD>"
     for key in ["kerbrute_enum", "crackmapexec_users", "bloodhound_export"]:
         if key in linux_cmds:
             cmd = linux_cmds[key]
-            filled = fill_template(cmd["cmd"])
+            filled = fill_template(cmd["cmd"], first_pwd)
             console_lines.append(f"    {c.DIM}# {cmd['description']}{c.RESET}")
             console_lines.append(f"    {c.GREEN}{filled}{c.RESET}")
             console_lines.append("")

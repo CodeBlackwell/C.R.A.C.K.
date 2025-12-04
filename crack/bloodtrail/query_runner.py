@@ -1421,18 +1421,22 @@ def run_all_queries(
         if tracker.connect():
             pwned_users_list = tracker.list_pwned_users()
             policy = tracker.get_password_policy()
+            domain_config = tracker.get_domain_config()
             tracker.close()
 
             if pwned_users_list:
-                # Extract domain from first pwned user
+                # Extract domain from domain config or first pwned user
                 domain = ""
-                for user in pwned_users_list:
-                    if "@" in user.name:
-                        domain = user.name.split("@")[1]
-                        break
+                if domain_config and domain_config.get("domain"):
+                    domain = domain_config["domain"]
+                else:
+                    for user in pwned_users_list:
+                        if "@" in user.name:
+                            domain = user.name.split("@")[1]
+                            break
 
-                # Get DC IP from config if available
-                dc_ip = getattr(runner.config, 'dc_ip', None) or "<DC_IP>"
+                # Get DC IP from domain config
+                dc_ip = (domain_config.get("dc_ip") if domain_config else None) or "<DC_IP>"
 
                 spray_console, spray_markdown = generate_spray_section(
                     pwned_users=pwned_users_list,
