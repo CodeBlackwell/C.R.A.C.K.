@@ -6,7 +6,7 @@
       "id": "owned-what-can-access",
       "name": "What Can Owned User Access?",
       "description": "Find all computers the owned user can access via any lateral movement method. First query to run after compromise.",
-      "cypher": "MATCH (u:User {name:'<USER>'})-[r:AdminTo|CanRDP|CanPSRemote|ExecuteDCOM]->(c:Computer)\nRETURN c.name AS Target,\n       type(r) AS AccessType,\n       c.operatingsystem AS OS\nORDER BY AccessType",
+      "cypher": "MATCH (u:User {name:'<USER>'})-[r:AdminTo|CanRDP|CanPSRemote|ExecuteDCOM]->(c:Computer)\nRETURN c.name AS Target,\n       c.bloodtrail_ip AS TargetIP,\n       type(r) AS AccessType,\n       c.operatingsystem AS OS\nORDER BY AccessType",
       "variables": {
         "USER": {
           "description": "Owned username in UPN format",
@@ -101,7 +101,7 @@
       "id": "owned-first-hop",
       "name": "First Hop Lateral Movement",
       "description": "Find immediate lateral movement opportunities (single hop) from owned user to computers with interesting sessions.",
-      "cypher": "MATCH (u:User {name:'<USER>'})-[:AdminTo]->(c:Computer)<-[:HasSession]-(session:User)\nRETURN c.name AS Computer,\n       collect(session.name) AS ActiveSessions,\n       collect(session.admincount) AS SessionPrivileged",
+      "cypher": "MATCH (u:User {name:'<USER>'})-[:AdminTo]->(c:Computer)<-[:HasSession]-(session:User)\nRETURN c.name AS Computer,\n       c.bloodtrail_ip AS ComputerIP,\n       collect(session.name) AS ActiveSessions,\n       collect(session.admincount) AS SessionPrivileged",
       "variables": {
         "USER": {
           "description": "Owned username in UPN format",
@@ -155,7 +155,7 @@
       "id": "owned-session-opportunities",
       "name": "Session Harvest Opportunities",
       "description": "Find computers where owned user has admin AND privileged users have sessions. Prime mimikatz targets.",
-      "cypher": "MATCH (u:User {name:'<USER>'})-[:AdminTo]->(c:Computer)<-[:HasSession]-(priv:User {admincount:true})\nRETURN c.name AS Computer,\n       collect(priv.name) AS PrivilegedSessions,\n       count(priv) AS SessionCount\nORDER BY SessionCount DESC",
+      "cypher": "MATCH (u:User {name:'<USER>'})-[:AdminTo]->(c:Computer)<-[:HasSession]-(priv:User {admincount:true})\nRETURN c.name AS Computer,\n       c.bloodtrail_ip AS ComputerIP,\n       collect(priv.name) AS PrivilegedSessions,\n       count(priv) AS SessionCount\nORDER BY SessionCount DESC",
       "variables": {
         "USER": {
           "description": "Owned username in UPN format",
