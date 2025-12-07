@@ -1052,6 +1052,9 @@ def handle_pwn_user(args):
         dc_hostname = domain_config.get("dc_hostname") if domain_config else None
         domain_sid = domain_config.get("domain_sid") if domain_config else None
 
+        # Get user SPNs for manual enumeration suggestions
+        user_spns = tracker.get_user_spns(result.user)
+
         # Show success with follow-up commands
         print_pwned_followup_commands(
             user_name=result.user,
@@ -1062,6 +1065,7 @@ def handle_pwn_user(args):
             dc_ip=dc_ip,
             dc_hostname=dc_hostname,
             domain_sid=domain_sid,
+            spns=user_spns,
         )
         return 0
 
@@ -1153,6 +1157,9 @@ def handle_pwned_user_detail(args):
         if not lport and CONFIG_LPORT:
             lport = CONFIG_LPORT
 
+        # Get user SPNs for manual enumeration suggestions
+        user_spns = tracker.get_user_spns(pwned_user.name)
+
         print_pwned_followup_commands(
             user_name=pwned_user.name,
             access=machine_access,
@@ -1164,6 +1171,7 @@ def handle_pwned_user_detail(args):
             domain_sid=domain_sid,
             lhost=lhost,
             lport=lport,
+            spns=user_spns,
         )
         return 0
 

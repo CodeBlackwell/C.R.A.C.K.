@@ -578,6 +578,40 @@ class PwnedTracker:
         except Exception:
             return False
 
+    def get_user_spns(self, user: str) -> List[str]:
+        """
+        Get a user's Service Principal Names (SPNs).
+
+        SPNs indicate which services a user account runs. Service accounts
+        often have local admin access on machines where their services run,
+        even if BloodHound doesn't detect this via AdminTo edges.
+
+        Args:
+            user: User principal name (UPN format)
+
+        Returns:
+            List of SPN strings (e.g., ["HTTP/web04.corp.com", "HTTP/web04"])
+        """
+        user = user.upper()
+
+        if not self._ensure_connected():
+            return []
+
+        try:
+            with self.driver.session() as session:
+                result = session.run("""
+                    MATCH (u:User {name: $user_name})
+                    RETURN u.serviceprincipalnames AS SPNs
+                """, {"user_name": user})
+
+                record = result.single()
+                if record and record["SPNs"]:
+                    return list(record["SPNs"])
+                return []
+
+        except Exception:
+            return []
+
     # =========================================================================
     # ACCESS PATH QUERIES
     # =========================================================================

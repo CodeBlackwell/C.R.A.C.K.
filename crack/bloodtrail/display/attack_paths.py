@@ -10,6 +10,7 @@ from .base import Colors, NoColors, truncate
 from .techniques import generate_technique_legend_console, generate_technique_legend_markdown
 from .authenticated import generate_authenticated_attacks_template_markdown
 from .post_exploit import _generate_ptt_workflow, _generate_dcom_workflow
+from .manual_enum import generate_manual_enumeration_suggestions
 
 
 def generate_pwned_attack_paths(driver, use_colors: bool = True) -> tuple:
@@ -245,11 +246,29 @@ def generate_pwned_attack_paths(driver, use_colors: bool = True) -> tuple:
                 console_lines.append("")
                 markdown_lines.append("")
 
-        # No edge-based access
+        # No edge-based access - show manual enumeration suggestions
         if not admin_machines and not user_machines and not dcom_machines and not domain_access:
-            console_lines.append(f"{c.DIM}No direct machine access via AdminTo/CanRDP/CanPSRemote edges.{c.RESET}")
-            markdown_lines.append("_No direct machine access via BloodHound edges_")
-            markdown_lines.append("")
+            # Only show manual enum if we have credentials
+            if cred_value:
+                # Fetch SPNs and DC IP for this user
+                user_spns = _fetch_user_spns(driver, user_name)
+                dc_ip = _fetch_dc_ip(driver)
+
+                manual_console, manual_markdown = generate_manual_enumeration_suggestions(
+                    username=username,
+                    domain=domain,
+                    cred_type=cred_type,
+                    cred_value=cred_value,
+                    spns=user_spns,
+                    dc_ip=dc_ip,
+                    use_colors=use_colors,
+                )
+                console_lines.extend(manual_console)
+                markdown_lines.extend(manual_markdown)
+            else:
+                console_lines.append(f"{c.DIM}No direct machine access via AdminTo/CanRDP/CanPSRemote edges.{c.RESET}")
+                markdown_lines.append("_No direct machine access via BloodHound edges_")
+                markdown_lines.append("")
 
         console_lines.append("")
 
@@ -436,6 +455,39 @@ def generate_post_exploit_section(driver, use_colors: bool = True, lhost: str = 
         markdown_lines.extend(dcom_markdown)
 
     return "\n".join(console_lines), "\n".join(markdown_lines)
+
+
+def _fetch_user_spns(driver, user_name: str) -> list:
+    """Fetch a user's Service Principal Names from Neo4j."""
+    try:
+        with driver.session() as session:
+            result = session.run("""
+                MATCH (u:User {name: $user_name})
+                RETURN u.serviceprincipalnames AS SPNs
+            """, {"user_name": user_name})
+            record = result.single()
+            if record and record["SPNs"]:
+                return list(record["SPNs"])
+            return []
+    except Exception:
+        return []
+
+
+def _fetch_dc_ip(driver) -> str:
+    """Fetch DC IP from domain configuration in Neo4j."""
+    try:
+        with driver.session() as session:
+            result = session.run("""
+                MATCH (d:Domain)
+                RETURN d.bloodtrail_dc_ip AS dc_ip
+                LIMIT 1
+            """)
+            record = result.single()
+            if record and record["dc_ip"]:
+                return record["dc_ip"]
+            return None
+    except Exception:
+        return None
 
 
 def _fetch_pwned_users(driver) -> list:

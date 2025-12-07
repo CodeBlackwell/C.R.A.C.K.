@@ -83,6 +83,15 @@ from .post_exploit import (
     get_arg_acquisition,
 )
 
+# Manual enumeration (for users without BloodHound edges)
+from .manual_enum import (
+    MANUAL_ENUM_COMMANDS,
+    ManualEnumCommand,
+    fill_manual_enum_command,
+    extract_machine_from_spn,
+    derive_subnet_from_ip,
+)
+
 # Spray techniques
 from .spray import (
     SPRAY_TECHNIQUES,
@@ -154,6 +163,12 @@ __all__ = [
     "get_post_exploit_commands",
     "get_harvest_tips",
     "get_arg_acquisition",
+    # Manual enumeration
+    "MANUAL_ENUM_COMMANDS",
+    "ManualEnumCommand",
+    "fill_manual_enum_command",
+    "extract_machine_from_spn",
+    "derive_subnet_from_ip",
     # Spray
     "SPRAY_TECHNIQUES",
     "ALL_TARGETS_PROTOCOLS",

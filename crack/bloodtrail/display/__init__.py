@@ -66,6 +66,12 @@ from .post_exploit import (
     print_pwned_followup_commands,
 )
 
+# Manual enumeration (for users without BloodHound edges)
+from .manual_enum import (
+    generate_manual_enumeration_suggestions,
+    print_manual_enumeration_suggestions,
+)
+
 # Attack paths (Neo4j integration)
 from .attack_paths import (
     generate_pwned_attack_paths,
@@ -126,6 +132,9 @@ __all__ = [
     # Post-exploit
     "print_post_exploit_commands",
     "print_pwned_followup_commands",
+    # Manual enumeration
+    "generate_manual_enumeration_suggestions",
+    "print_manual_enumeration_suggestions",
     # Attack paths
     "generate_pwned_attack_paths",
     "generate_post_exploit_section",
