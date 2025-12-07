@@ -95,7 +95,8 @@
       "oscp_relevance": "high",
       "methodology_guidance": {
         "after_success": "Verify listening port: ss -ntplu | grep <LOCAL_PORT> Test connectivity: telnet <BIND_ADDRESS> <LOCAL_PORT> Connect to service through tunnel (e.g., psql -h <BIND_ADDRESS> -p <LOCAL_PORT>) For multiple ports, add more -L flags: ssh -N -L port1:dest1:dport1 -L port2:dest2:dport2 user@host"
-      }
+      },
+      "filled_example": "ssh -N -L 0.0.0.0:4455:172.16.50.217:445 database_admin@10.4.50.215"
     },
     {
       "id": "ssh-dynamic-port-forward",
@@ -178,7 +179,8 @@
       "oscp_relevance": "high",
       "methodology_guidance": {
         "after_success": "Configure Proxychains: Edit /etc/proxychains4.conf, set 'socks5 <BIND_ADDRESS> <SOCKS_PORT>' Optimize timeouts: In proxychains4.conf, set tcp_read_time_out=1000, tcp_connect_time_out=1000 Test with curl: proxychains curl http://<INTERNAL_IP> Port scan internal network: sudo proxychains nmap -sT --top-ports=20 -Pn <SUBNET> Access SMB shares: proxychains smbclient -L //<INTERNAL_IP>/ -U <USER>"
-      }
+      },
+      "filled_example": "ssh -N -D 0.0.0.0:9999 database_admin@10.4.50.215"
     },
     {
       "id": "ssh-remote-port-forward",
@@ -273,7 +275,8 @@
       "methodology_guidance": {
         "after_success": "On SSH server (Kali): Verify listening: ss -ntplu | grep <REMOTE_PORT> Test connectivity: telnet 127.0.0.1 <REMOTE_PORT> (if bound to loopback) For all-interfaces binding: Edit /etc/ssh/sshd_config on SSH server, add 'GatewayPorts yes', restart sshd",
         "oscp_tips": "Connect to service: psql -h 127.0.0.1 -p <REMOTE_PORT> (example for PostgreSQL)"
-      }
+      },
+      "filled_example": "ssh -N -R 127.0.0.1:2345:10.4.50.215:5432 kali@192.168.118.4"
     },
     {
       "id": "ssh-remote-dynamic-port-forward",
@@ -348,7 +351,8 @@
       "oscp_relevance": "high",
       "methodology_guidance": {
         "after_success": "On SSH server (Kali): Verify SOCKS proxy: ss -ntplu | grep <SOCKS_PORT> Configure Proxychains: Edit /etc/proxychains4.conf, set 'socks5 127.0.0.1 <SOCKS_PORT>' Optimize performance: Set tcp_read_time_out=1000, tcp_connect_time_out=1000 in proxychains4.conf Test with nmap: sudo proxychains nmap -sT --top-ports=20 -Pn <INTERNAL_IP> Access services: proxychains psql -h <INTERNAL_IP>, proxychains smbclient -L //<INTERNAL_IP>/"
-      }
+      },
+      "filled_example": "ssh -N -R 9998 kali@192.168.118.4"
     },
     {
       "id": "socat-port-forward",
@@ -416,7 +420,8 @@
       "methodology_guidance": {
         "after_success": "Verify listening: ss -ntplu | grep <LOCAL_PORT> Test connectivity: telnet localhost <LOCAL_PORT> For multiple ports: Run separate Socat process for each port forward",
         "oscp_tips": "Connect from client: psql -h <PIVOT_IP> -p <LOCAL_PORT> (example for PostgreSQL)"
-      }
+      },
+      "filled_example": "socat -ddd TCP-LISTEN:2345,fork TCP:10.4.50.215:5432"
     }
   ]
 }

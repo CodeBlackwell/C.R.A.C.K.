@@ -5,7 +5,7 @@
       "name": "PowerShell WMI CIM Session Creation",
       "description": "Create CIM session for WMI-based lateral movement using DCOM protocol",
       "command": "$options = New-CimSessionOption -Protocol DCOM; $session = New-Cimsession -ComputerName <TARGET> -Credential $credential -SessionOption $options",
-      "category": "LATERAL_MOVEMENT",
+      "category": "exploitation",
       "subcategory": "WMI",
       "os": "WINDOWS",
       "variables": [
@@ -75,14 +75,21 @@
         "LATERAL_MOVEMENT",
         "OSCP:MEDIUM"
       ],
-      "prerequisites": ["ps-winrm-credential-setup"],
-      "alternatives": ["wmi-new-cimsession"],
-      "next_steps": ["ps-wmi-invoke-method"],
+      "prerequisites": [
+        "ps-winrm-credential-setup"
+      ],
+      "alternatives": [
+        "wmi-new-cimsession"
+      ],
+      "next_steps": [
+        "ps-wmi-invoke-method"
+      ],
       "related_commands": [
         "ps-winrm-credential-setup",
         "ps-wmi-invoke-method",
         "wmic-process-create"
-      ]
+      ],
+      "filled_example": "$options = New-CimSessionOption -Protocol DCOM; $session = New-Cimsession -ComputerName 192.168.50.73 -Credential $credential -SessionOption $options"
     }
   ]
 }

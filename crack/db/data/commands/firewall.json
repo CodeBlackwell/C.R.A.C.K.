@@ -92,7 +92,8 @@
       "notes": "Rule is not persistent by default.\n\nUse iptables-save to persist across reboots.",
       "methodology_guidance": {
         "after_success": "Verify rule: sudo iptables -L INPUT -v -n Test connectivity: nc -lvnp <PORT> Make persistent: sudo iptables-save > /etc/iptables/rules.v4"
-      }
+      },
+      "filled_example": "sudo iptables -A INPUT -p tcp --dport 4444 -j ACCEPT"
     },
     {
       "id": "iptables-port-forward",
@@ -149,7 +150,8 @@
       "notes": "Useful for bypassing firewall restrictions or redirecting traffic through allowed ports",
       "methodology_guidance": {
         "after_success": "Verify rule: sudo iptables -t nat -L PREROUTING -v -n Test port forward: nc -lvnp <DST_PORT> Connect from remote: nc <TARGET> <SRC_PORT>"
-      }
+      },
+      "filled_example": "sudo iptables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 8080"
     },
     {
       "id": "iptables-delete-rule",
@@ -189,7 +191,8 @@
       "notes": "Use --line-numbers to see rule numbers before deleting",
       "methodology_guidance": {
         "after_success": "Verify deletion: sudo iptables -L -v -n"
-      }
+      },
+      "filled_example": "sudo iptables -D INPUT 3"
     },
     {
       "id": "iptables-flush-all",
@@ -307,7 +310,8 @@
       "oscp_relevance": "high",
       "methodology_guidance": {
         "after_success": "Reload UFW: sudo ufw reload Verify rule: sudo ufw status verbose Test connectivity: nc -lvnp <PORT>"
-      }
+      },
+      "filled_example": "sudo ufw allow 4444/tcp"
     },
     {
       "id": "ufw-disable",
@@ -424,7 +428,8 @@
       "oscp_relevance": "medium",
       "methodology_guidance": {
         "after_success": "Reload firewall: sudo firewall-cmd --reload Verify rule: sudo firewall-cmd --list-ports Test connectivity: nc -lvnp <PORT>"
-      }
+      },
+      "filled_example": "sudo firewall-cmd --zone=public --add-port=4444/tcp --permanent"
     },
     {
       "id": "firewalld-port-forward",
@@ -475,7 +480,8 @@
       "oscp_relevance": "medium",
       "methodology_guidance": {
         "after_success": "Reload: sudo firewall-cmd --reload Test: nc -lvnp <DST_PORT> Connect: nc <TARGET> <SRC_PORT>"
-      }
+      },
+      "filled_example": "sudo firewall-cmd --zone=public --add-forward-port=port=80:proto=tcp:toport=8080 --permanent"
     },
     {
       "id": "netsh-firewall-show",
@@ -604,7 +610,8 @@
       "notes": "Requires Administrator privileges.\n\nRule persists across reboots.",
       "methodology_guidance": {
         "after_success": "Verify rule: netsh advfirewall firewall show rule name=\"<RULE_NAME>\" Test connectivity: nc.exe -lvnp <PORT>"
-      }
+      },
+      "filled_example": "netsh advfirewall firewall add rule name=\"Allow_ReverseShell\" protocol=TCP dir=in localport=4444 action=allow"
     },
     {
       "id": "netsh-firewall-port-forward",
@@ -666,7 +673,8 @@
       "notes": "This allows firewall rule.\n\nUse 'netsh interface portproxy' for actual port forwarding.",
       "methodology_guidance": {
         "after_success": "Add actual port forward: netsh interface portproxy add v4tov4 listenport=<SRC_PORT> listenaddress=<LOCAL_IP> connectport=<DST_PORT> connectaddress=<DST_IP> Verify: netsh interface portproxy show all"
-      }
+      },
+      "filled_example": "netsh advfirewall firewall add rule name=\"port_forward_ssh_2222\" protocol=TCP dir=in localip=192.168.50.64 localport=2222 action=allow"
     },
     {
       "id": "netsh-portproxy-add",
@@ -731,7 +739,8 @@
       "notes": "Useful for pivoting through compromised Windows hosts.\n\nFirewall rule must be added separately.",
       "methodology_guidance": {
         "after_success": "Verify: netsh interface portproxy show all Test connectivity: nc <LISTEN_IP> <SRC_PORT> Delete if needed: netsh interface portproxy delete v4tov4 listenport=<SRC_PORT> listenaddress=<LISTEN_IP>"
-      }
+      },
+      "filled_example": "netsh interface portproxy add v4tov4 listenport=2222 listenaddress=0.0.0.0 connectport=22 connectaddress=127.0.0.1"
     },
     {
       "id": "netsh-portproxy-show",
@@ -834,7 +843,8 @@
       "notes": "Use to clean up custom rules after exploitation",
       "methodology_guidance": {
         "after_success": "Verify deletion: netsh advfirewall firewall show rule name=\"<RULE_NAME>\""
-      }
+      },
+      "filled_example": "netsh advfirewall firewall delete rule name=\"Allow_ReverseShell\""
     }
   ]
 }

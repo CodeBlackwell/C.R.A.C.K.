@@ -47,7 +47,8 @@
         "Access denied": "Run as Administrator"
       },
       "notes": "Critical for cleanup in OSCP exam - remove port forwards to avoid leaving persistent backdoors.\n\nAlso delete associated firewall rules with netsh-firewall-delete-rule.\n\nFor complete cleanup:\nnetsh interface portproxy reset (removes all rules).",
-      "oscp_relevance": "medium"
+      "oscp_relevance": "medium",
+      "filled_example": "netsh interface portproxy delete v4tov4 listenport=2222 listenaddress=0.0.0.0"
     },
     {
       "id": "where-windows",
@@ -81,7 +82,8 @@
       "prerequisites": [],
       "troubleshooting": {},
       "notes": "Quick check for tool availability.\n\nCommon OSCP checks:\nwhere ssh (OpenSSH client), where python, where powershell, where curl.\n\nEquivalent to Linux 'which' command.",
-      "oscp_relevance": "medium"
+      "oscp_relevance": "medium",
+      "filled_example": "where ssh"
     },
     {
       "id": "systeminfo-windows",

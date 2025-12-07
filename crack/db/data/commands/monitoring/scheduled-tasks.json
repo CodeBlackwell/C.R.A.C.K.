@@ -36,8 +36,17 @@
         "no crontab for <user>",
         "crontab: command not found"
       ],
-      "next_steps": ["crontab-user-specific", "crontab-system-wide", "cron-directories-list", "pspy-monitor", "suid-find"],
-      "alternatives": ["cron-directories-list", "linux-systemd-timers"],
+      "next_steps": [
+        "crontab-user-specific",
+        "crontab-system-wide",
+        "cron-directories-list",
+        "pspy-monitor",
+        "suid-find"
+      ],
+      "alternatives": [
+        "cron-directories-list",
+        "linux-systemd-timers"
+      ],
       "prerequisites": [],
       "notes": "Cron format:\nminute hour day month weekday command.\n\nOSCP tip:\nCheck if cron scripts are writable - modify to run reverse shell as cron user.\n\nTime estimate:\n<1 second.\n\nSpecial strings:\n@reboot (run at startup), @daily, @hourly, @weekly, @monthly.",
       "methodology_guidance": {
@@ -85,13 +94,24 @@
         "no crontab for <user>",
         "Permission denied"
       ],
-      "next_steps": ["cron-directories-list", "crontab-system-wide", "pspy-monitor", "cron-enum"],
-      "alternatives": ["crontab-user-list", "cron-directories-list"],
-      "prerequisites": ["crontab-user-list"],
+      "next_steps": [
+        "cron-directories-list",
+        "crontab-system-wide",
+        "pspy-monitor",
+        "cron-enum"
+      ],
+      "alternatives": [
+        "crontab-user-list",
+        "cron-directories-list"
+      ],
+      "prerequisites": [
+        "crontab-user-list"
+      ],
       "notes": "Root's crontab is high-value target.\n\nIf root cron runs writable script, instant privesc.\n\nCrontab location varies:\n/var/spool/cron/crontabs/ (Debian/Ubuntu), /var/spool/cron/ (RHEL/CentOS).\n\nTime estimate:\n<1 second.",
       "methodology_guidance": {
         "after_success": "Check root's crontab: sudo crontab -l -u root Check if cron scripts are writable by current user Replace script with malicious version if writable Wait for cron to execute for privilege escalation"
-      }
+      },
+      "filled_example": "sudo crontab -l -u root"
     },
     {
       "id": "crontab-system-wide",
@@ -168,9 +188,20 @@
       "failure_indicators": [
         "No such file or directory"
       ],
-      "next_steps": ["pspy-monitor", "suid-find", "linpeas-run", "cron-enum"],
-      "alternatives": ["crontab-user-list", "crontab-system-wide", "linux-systemd-timers"],
-      "prerequisites": ["crontab-user-list"],
+      "next_steps": [
+        "pspy-monitor",
+        "suid-find",
+        "linpeas-run",
+        "cron-enum"
+      ],
+      "alternatives": [
+        "crontab-user-list",
+        "crontab-system-wide",
+        "linux-systemd-timers"
+      ],
+      "prerequisites": [
+        "crontab-user-list"
+      ],
       "notes": "Scripts in these directories run automatically:\ncron.hourly (every hour), cron.daily (daily), cron.weekly (weekly), cron.monthly (monthly).\n\nAll run as root by default.\n\nCRITICAL privesc vector if writable.\n\nTime estimate:\n2 seconds.\n\nCommand to find writable:\nfind /etc/cron* -type f -writable 2>/dev/null",
       "methodology_guidance": {
         "after_success": "Check file permissions: find /etc/cron* -type f -perm -o+w Check for writable scripts: find /etc/cron* -writable 2>/dev/null Modify writable script to add reverse shell",
@@ -358,7 +389,8 @@
       "notes": "Useful for verifying task execution status.\n\nLastTaskResult 0x0 = success, other values indicate errors.\n\nTime estimate:\n1 second.",
       "methodology_guidance": {
         "after_success": "Get task action: (Get-ScheduledTask -TaskName <TASK_NAME>).Actions Check executable path permissions: icacls <PATH> Export task XML: Export-ScheduledTask -TaskName <TASK_NAME> Modify task if writable: Set-ScheduledTask"
-      }
+      },
+      "filled_example": "Get-ScheduledTask -TaskName MyBackup | Get-ScheduledTaskInfo"
     },
     {
       "id": "win-schtasks-task-xml",
@@ -407,7 +439,8 @@
       "notes": "XML may contain Base64-encoded credentials or sensitive command arguments.\n\nTime estimate:\n1 second.\n\nSave to file:\nschtasks /query /tn <TASK> /xml > task.xml",
       "methodology_guidance": {
         "after_success": "Search XML for credentials or sensitive data Check <Command> element for executable path Verify <UserId> to see which account runs task Check <Arguments> for command-line parameters"
-      }
+      },
+      "filled_example": "schtasks /query /tn \\Microsoft\\Windows\\MyTask /xml"
     },
     {
       "id": "win-wmic-scheduled-job",

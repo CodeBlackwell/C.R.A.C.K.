@@ -55,7 +55,8 @@
       "oscp_relevance": "high",
       "methodology_guidance": {
         "after_success": "Filter for dangerous permissions: Get-ObjectAcl -Identity <OBJECT> | ? {$_.ActiveDirectoryRights -match 'GenericAll'} Check who has rights: Convert-SidToName <SID>"
-      }
+      },
+      "filled_example": "Get-ObjectAcl -Identity administrator"
     },
     {
       "id": "powerview-get-objectacl-genericall",
@@ -105,11 +106,12 @@
       "troubleshooting": {
         "No results": "No GenericAll permissions found. Try other dangerous rights: WriteDACL, WriteOwner, ForceChangePassword"
       },
-      "notes": "GENERICALL = FULL CONTROL\n\nON USER OBJECTS:\n- Reset their password\n- Modify attributes\n- Read all properties\n\nON GROUP OBJECTS:\n- Add/remove members (add yourself to Domain Admins!)\n- Modify group attributes\n\nON COMPUTER OBJECTS:\n- Modify servicePrincipalName (Kerberoasting)\n- Access LAPS password\n\nOSCP:\nMost powerful ACL for privilege escalation.\nIf you have GenericAll on privileged group → add yourself to group.",
+      "notes": "GENERICALL = FULL CONTROL\n\nON USER OBJECTS:\n- Reset their password\n- Modify attributes\n- Read all properties\n\nON GROUP OBJECTS:\n- Add/remove members (add yourself to Domain Admins!)\n- Modify group attributes\n\nON COMPUTER OBJECTS:\n- Modify servicePrincipalName (Kerberoasting)\n- Access LAPS password\n\nOSCP:\nMost powerful ACL for privilege escalation.\nIf you have GenericAll on privileged group \u2192 add yourself to group.",
       "oscp_relevance": "high",
       "methodology_guidance": {
         "after_success": "Convert all SIDs: Get-ObjectAcl -Identity \"<OBJECT>\" | ? {$_.ActiveDirectoryRights -eq \"GenericAll\"} | select -ExpandProperty SecurityIdentifier | Convert-SidToName Abuse GenericAll: Add-DomainGroupMember, Set-DomainUserPassword"
-      }
+      },
+      "filled_example": "Get-ObjectAcl -Identity \"Domain Admins\" | ? {$_.ActiveDirectoryRights -eq \"GenericAll\"} | select SecurityIdentifier,ActiveDirectoryRights"
     },
     {
       "id": "powerview-convert-sidtoname",
@@ -154,7 +156,8 @@
       "oscp_relevance": "high",
       "methodology_guidance": {
         "after_success": "Use with ACL enumeration: Get-ObjectAcl | select -ExpandProperty SecurityIdentifier | Convert-SidToName Identify object type: Get-NetUser -Identity <NAME> or Get-NetGroup -Identity <NAME>"
-      }
+      },
+      "filled_example": "Convert-SidToName S-1-5-21-1987370270-658905905-1781884369-1104"
     },
     {
       "id": "powerview-get-objectacl-writedacl",
@@ -201,11 +204,12 @@
       "troubleshooting": {
         "No results": "Try WriteOwner instead - allows changing object owner to yourself, then modifying permissions"
       },
-      "notes": "WRITEDACL = MODIFY ACL PERMISSIONS\n\nATTACK PATH:\n1.\n\nYou have WriteDACL on target object\n2.\n\nGrant yourself GenericAll on that object\n3.\n\nNow you have full control\n\nEXAMPLE:\nWriteDACL on 'Domain Admins' → Grant GenericAll → Add yourself to Domain Admins\n\nSIMILAR POWERFUL RIGHTS:\n- WriteOwner:\nChange owner, then modify ACL\n- WriteProperty:\nModify attributes\n\nOSCP:\nWriteDACL is as powerful as GenericAll - just requires one extra step.",
+      "notes": "WRITEDACL = MODIFY ACL PERMISSIONS\n\nATTACK PATH:\n1.\n\nYou have WriteDACL on target object\n2.\n\nGrant yourself GenericAll on that object\n3.\n\nNow you have full control\n\nEXAMPLE:\nWriteDACL on 'Domain Admins' \u2192 Grant GenericAll \u2192 Add yourself to Domain Admins\n\nSIMILAR POWERFUL RIGHTS:\n- WriteOwner:\nChange owner, then modify ACL\n- WriteProperty:\nModify attributes\n\nOSCP:\nWriteDACL is as powerful as GenericAll - just requires one extra step.",
       "oscp_relevance": "high",
       "methodology_guidance": {
         "after_success": "Convert SIDs to names Abuse WriteDACL: Add-DomainObjectAcl -TargetIdentity <OBJECT> -Rights All -PrincipalIdentity <YOUR_USER> Grant yourself GenericAll, then add to group or reset password"
-      }
+      },
+      "filled_example": "Get-ObjectAcl -Identity \"Domain Admins\" | ? {$_.ActiveDirectoryRights -match \"WriteDacl\"} | select SecurityIdentifier,ActiveDirectoryRights"
     },
     {
       "id": "powerview-get-objectacl-forcechangepassword",
@@ -253,11 +257,12 @@
       "troubleshooting": {
         "No results": "User may be protected by AdminSDHolder. Check admincount attribute: Get-NetUser -Identity <USERNAME> | select admincount"
       },
-      "notes": "USER-FORCE-CHANGE-PASSWORD:\nCan reset user's password without knowing current password.\n\nATTACK PATH:\n1.\n\nYou have ForceChangePassword on target user\n2.\n\nReset their password\n3.\n\nAuthenticate as them\n\nNO CURRENT PASSWORD NEEDED.\nNO ACCOUNT LOCKOUT.\n\nSIMILAR RIGHTS:\nAllExtendedRights (includes password reset + other extended rights)\n\nPROTECTED ACCOUNTS:\nadmincount=1 may have this right restricted by AdminSDHolder.\n\nOSCP:\nIf you can reset Domain Admin password → domain compromised.",
+      "notes": "USER-FORCE-CHANGE-PASSWORD:\nCan reset user's password without knowing current password.\n\nATTACK PATH:\n1.\n\nYou have ForceChangePassword on target user\n2.\n\nReset their password\n3.\n\nAuthenticate as them\n\nNO CURRENT PASSWORD NEEDED.\nNO ACCOUNT LOCKOUT.\n\nSIMILAR RIGHTS:\nAllExtendedRights (includes password reset + other extended rights)\n\nPROTECTED ACCOUNTS:\nadmincount=1 may have this right restricted by AdminSDHolder.\n\nOSCP:\nIf you can reset Domain Admin password \u2192 domain compromised.",
       "oscp_relevance": "high",
       "methodology_guidance": {
         "after_success": "Convert SIDs to names Abuse: Set-DomainUserPassword -Identity <USERNAME> -Password (ConvertTo-SecureString 'NewPass123!' -AsPlainText -Force) Authenticate as target user with new password"
-      }
+      },
+      "filled_example": "Get-ObjectAcl -Identity \"administrator\" -ResolveGUIDs | ? {$_.ObjectAceType -eq \"User-Force-Change-Password\"} | select SecurityIdentifier,ObjectAceType"
     },
     {
       "id": "powerview-get-objectacl-writeowner",
@@ -308,7 +313,8 @@
       "oscp_relevance": "high",
       "methodology_guidance": {
         "after_success": "Convert SIDs to names Abuse WriteOwner: (1) Set-DomainObjectOwner -Identity <OBJECT> -OwnerIdentity <YOUR_USER>, (2) Grant yourself GenericAll, (3) Abuse full control"
-      }
+      },
+      "filled_example": "Get-ObjectAcl -Identity \"Domain Admins\" | ? {$_.ActiveDirectoryRights -match \"WriteOwner\"} | select SecurityIdentifier,ActiveDirectoryRights"
     },
     {
       "id": "powerview-find-interestingdomainacl",
@@ -361,7 +367,8 @@
       "oscp_relevance": "high",
       "methodology_guidance": {
         "after_success": "Review ActiveDirectoryRights for exploitation opportunities Check ObjectDN to identify high-value targets Abuse identified permissions with Add-DomainGroupMember or Set-DomainUserPassword"
-      }
+      },
+      "filled_example": "Find-InterestingDomainAcl -ResolveGUIDs | ? {$_.IdentityReferenceName -match \"stephanie\"}"
     },
     {
       "id": "powerview-get-pathacl",
@@ -416,7 +423,8 @@
       "oscp_relevance": "medium",
       "methodology_guidance": {
         "after_success": "Check for writable shares: FullControl, Modify, Write Look for sensitive data in accessible shares Check SYSVOL for GPP passwords"
-      }
+      },
+      "filled_example": "Get-PathAcl -Path \"\\\\DC1.corp.com\\SYSVOL\""
     },
     {
       "id": "powerview-get-objectacl-user",
@@ -463,7 +471,8 @@
       "oscp_relevance": "high",
       "methodology_guidance": {
         "after_success": "Convert SID to name: Convert-SidToName <SID>"
-      }
+      },
+      "filled_example": "Get-ObjectAcl -Identity \"sqlservice\" | select SecurityIdentifier,ActiveDirectoryRights"
     },
     {
       "id": "powerview-get-objectacl-group",
@@ -508,7 +517,8 @@
       "oscp_relevance": "high",
       "methodology_guidance": {
         "after_success": "Check if you can add members: if GenericAll or WriteProperty on 'member' attribute"
-      }
+      },
+      "filled_example": "Get-ObjectAcl -Identity \"Domain Admins\" | select SecurityIdentifier,ActiveDirectoryRights"
     }
   ]
 }

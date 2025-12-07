@@ -98,7 +98,8 @@
         "CURL",
         "HTTP",
         "CONNECTIVITY_TEST"
-      ]
+      ],
+      "filled_example": "curl http://127.0.0.1:8080"
     },
     {
       "id": "ssh-local-port-forward-inline",
@@ -149,7 +150,8 @@
         "SSH",
         "PORT_FORWARD",
         "TUNNELING"
-      ]
+      ],
+      "filled_example": "ssh -L 8080:192.168.10.50:80 user@10.10.10.50"
     },
     {
       "id": "crackmapexec-smb-framework",
@@ -262,7 +264,8 @@
         "SOCKS",
         "WINDOWS",
         "TUNNELING"
-      ]
+      ],
+      "filled_example": "plink -R 9050:127.0.0.1:1080 kali@10.10.14.5"
     },
     {
       "id": "ip-route-ping-verification",
@@ -286,7 +289,8 @@
         "ROUTING",
         "PING",
         "NETWORK_VERIFICATION"
-      ]
+      ],
+      "filled_example": "ip route && ping 172.16.10.50"
     },
     {
       "id": "chisel-http-tunneling",
@@ -335,7 +339,8 @@
         "POWERSHELL",
         "CONNECTIVITY_TEST",
         "FIREWALL"
-      ]
+      ],
+      "filled_example": "Test-NetConnection 10.10.14.5 -Port 22"
     },
     {
       "id": "plink-remote-forward-windows",
@@ -381,7 +386,8 @@
         "WINDOWS",
         "PORT_FORWARD",
         "REVERSE_TUNNEL"
-      ]
+      ],
+      "filled_example": "plink -R 9999:127.0.0.1:3389 kali@10.10.14.5"
     },
     {
       "id": "proxychains-config-verify",

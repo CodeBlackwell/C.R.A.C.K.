@@ -75,7 +75,8 @@
           "title": "PowerView GitHub",
           "url": "https://github.com/PowerShellMafia/PowerSploit/tree/master/Recon"
         }
-      ]
+      ],
+      "filled_example": "Import-Module C:\\Tools\\PowerView.ps1"
     },
     {
       "id": "get-netdomain",
@@ -213,7 +214,8 @@
           "title": "PowerView Get-NetUser",
           "url": "https://powersploit.readthedocs.io/en/latest/Recon/Get-NetUser/"
         }
-      ]
+      ],
+      "filled_example": "Get-NetUser -SamAccountName Administrator"
     },
     {
       "id": "get-netgroup",
@@ -287,7 +289,8 @@
           "title": "PowerView Get-NetGroup",
           "url": "https://powersploit.readthedocs.io/en/latest/Recon/Get-NetGroup/"
         }
-      ]
+      ],
+      "filled_example": "Get-NetGroup -GroupName \"Domain Admins\""
     },
     {
       "id": "get-netcomputer",

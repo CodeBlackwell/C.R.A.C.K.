@@ -40,7 +40,8 @@
       },
       "methodology_guidance": {
         "after_success": "Inspect discovered directories Check for upload functionality"
-      }
+      },
+      "filled_example": "ffuf -u http://192.168.1.1/FUZZ -w /usr/share/wordlists/dirb/common.txt"
     },
     {
       "id": "ffuf-vhost-fuzz",
@@ -82,7 +83,8 @@
       },
       "methodology_guidance": {
         "after_success": "Add discovered vhosts to /etc/hosts Enumerate each vhost"
-      }
+      },
+      "filled_example": "ffuf -u http://192.168.1.1 -H 'Host: FUZZ.example.com' -w /usr/share/seclists/Discovery/DNS/subdomains-top1million-5000.txt"
     },
     {
       "id": "ffuf-param-fuzz",
@@ -124,7 +126,8 @@
       },
       "methodology_guidance": {
         "after_success": "Test discovered parameters for injection"
-      }
+      },
+      "filled_example": "ffuf -u 'http://target.com/index.php?FUZZ=test' -w /usr/share/seclists/Discovery/Web-Content/burp-parameter-names.txt"
     },
     {
       "id": "curl-get",
@@ -154,7 +157,8 @@
       },
       "methodology_guidance": {
         "after_success": "Inspect response Check headers"
-      }
+      },
+      "filled_example": "curl http://target.com"
     },
     {
       "id": "curl-headers",
@@ -183,7 +187,8 @@
       },
       "methodology_guidance": {
         "after_success": "Check server version Look for security headers"
-      }
+      },
+      "filled_example": "curl -I http://target.com"
     },
     {
       "id": "gobuster-dir-basic",
@@ -226,7 +231,8 @@
       },
       "methodology_guidance": {
         "after_success": "Inspect discovered directories Check for sensitive files"
-      }
+      },
+      "filled_example": "gobuster dir -u http://192.168.1.1 -w /usr/share/wordlists/dirb/common.txt"
     },
     {
       "id": "wfuzz-dir",
@@ -268,7 +274,8 @@
       },
       "methodology_guidance": {
         "after_success": "Enumerate discovered paths"
-      }
+      },
+      "filled_example": "wfuzz -w /usr/share/wordlists/dirb/common.txt --hc 404 http://192.168.1.1/FUZZ"
     },
     {
       "id": "wfuzz-param",
@@ -300,7 +307,8 @@
       "next_steps": [],
       "methodology_guidance": {
         "after_success": "Test parameters for injection"
-      }
+      },
+      "filled_example": "wfuzz -w /usr/share/seclists/Discovery/Web-Content/burp-parameter-names.txt --hh 0 http://target.com/index.php/?FUZZ=test"
     },
     {
       "id": "nikto-web-scan",
@@ -332,7 +340,8 @@
       },
       "methodology_guidance": {
         "after_success": "Review findings Test identified vulnerabilities"
-      }
+      },
+      "filled_example": "nikto -h http://192.168.1.1"
     },
     {
       "id": "wpscan-enumerate",
@@ -363,7 +372,8 @@
       },
       "methodology_guidance": {
         "after_success": "Brute force found users Check for vulnerable plugins"
-      }
+      },
+      "filled_example": "wpscan --url http://target.com --enumerate u,p,t"
     },
     {
       "id": "joomscan-enumerate",
@@ -393,7 +403,8 @@
       },
       "methodology_guidance": {
         "after_success": "Check for vulnerable components Test admin panel"
-      }
+      },
+      "filled_example": "joomscan -u http://target.com"
     },
     {
       "id": "droopescan-enumerate",
@@ -430,7 +441,8 @@
       },
       "methodology_guidance": {
         "after_success": "Check version for exploits Enumerate plugins/modules"
-      }
+      },
+      "filled_example": "droopescan scan drupal -u http://target.com"
     },
     {
       "id": "wget-recursive",
@@ -462,7 +474,8 @@
       },
       "methodology_guidance": {
         "after_success": "Analyze downloaded files Search for credentials/comments"
-      }
+      },
+      "filled_example": "wget -r -np -nH --cut-dirs=1 http://target.com/"
     },
     {
       "id": "sqlmap-advanced",
@@ -501,7 +514,8 @@
       },
       "methodology_guidance": {
         "after_success": "Enumerate databases Dump credentials OS command execution"
-      }
+      },
+      "filled_example": "sqlmap -u 'http://target.com/index.php?id=1' -p id --batch"
     }
   ]
 }

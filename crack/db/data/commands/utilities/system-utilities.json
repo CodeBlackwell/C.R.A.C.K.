@@ -23,7 +23,8 @@
         "-p": "Create parent directories as needed, no error if directory exists"
       },
       "oscp_relevance": "medium",
-      "notes": "Essential for organizing enumeration output and creating staging directories"
+      "notes": "Essential for organizing enumeration output and creating staging directories",
+      "filled_example": "mkdir -p /tmp/output"
     },
     {
       "id": "chmod-executable",
@@ -52,7 +53,8 @@
         "chmod-numeric-permissions"
       ],
       "oscp_relevance": "high",
-      "notes": "Required for running scripts, exploits, and compiled binaries"
+      "notes": "Required for running scripts, exploits, and compiled binaries",
+      "filled_example": "chmod +x exploit.sh"
     },
     {
       "id": "chmod-numeric-permissions",
@@ -89,7 +91,8 @@
         "chmod-executable"
       ],
       "oscp_relevance": "medium",
-      "notes": "Common permissions:\n755 for executables, 644 for files, 700 for sensitive scripts"
+      "notes": "Common permissions:\n755 for executables, 644 for files, 700 for sensitive scripts",
+      "filled_example": "chmod 755 script.sh"
     },
     {
       "id": "chmod-writable",
@@ -117,7 +120,8 @@
       "alternatives": [
         "chmod-numeric-permissions"
       ],
-      "oscp_relevance": "medium"
+      "oscp_relevance": "medium",
+      "filled_example": "chmod +w config.txt"
     },
     {
       "id": "chown-file",
@@ -155,7 +159,8 @@
         "-R": "Recursively change ownership of directories and contents"
       },
       "oscp_relevance": "medium",
-      "notes": "Useful after uploading web shells or modifying system files"
+      "notes": "Useful after uploading web shells or modifying system files",
+      "filled_example": "chown www-data:www-data /var/www/shell.php"
     },
     {
       "id": "cp-file",
@@ -190,7 +195,8 @@
       "alternatives": [
         "rsync-files"
       ],
-      "oscp_relevance": "medium"
+      "oscp_relevance": "medium",
+      "filled_example": "cp /usr/share/exploits/shell.php /tmp/shell.php"
     },
     {
       "id": "mv-file",
@@ -221,7 +227,8 @@
         "-i": "Interactive - prompt before overwrite",
         "-v": "Verbose output"
       },
-      "oscp_relevance": "medium"
+      "oscp_relevance": "medium",
+      "filled_example": "mv exploit.py exploit_backup.py"
     },
     {
       "id": "rm-file",
@@ -248,7 +255,8 @@
         "-i": "Interactive - prompt before each removal"
       },
       "oscp_relevance": "medium",
-      "notes": "Be careful with rm -rf, especially as root - can destroy systems"
+      "notes": "Be careful with rm -rf, especially as root - can destroy systems",
+      "filled_example": "rm /tmp/exploit.py"
     },
     {
       "id": "touch-file",
@@ -270,7 +278,8 @@
         }
       ],
       "oscp_relevance": "low",
-      "notes": "Useful for testing write permissions or creating placeholder files"
+      "notes": "Useful for testing write permissions or creating placeholder files",
+      "filled_example": "touch /tmp/test.txt"
     },
     {
       "id": "ln-symbolic",
@@ -302,7 +311,8 @@
         "-f": "Force - remove existing destination files"
       },
       "oscp_relevance": "medium",
-      "notes": "Useful for path traversal exploits or creating convenient shortcuts"
+      "notes": "Useful for path traversal exploits or creating convenient shortcuts",
+      "filled_example": "ln -s /usr/share/wordlists/rockyou.txt rockyou.txt"
     },
     {
       "id": "find-files",
@@ -345,7 +355,8 @@
       "prerequisites": [],
       "next_steps": [
         "strings-file"
-      ]
+      ],
+      "filled_example": "find /var/www -name \"*.php\""
     },
     {
       "id": "cat-file",
@@ -372,7 +383,8 @@
         "less-file"
       ],
       "oscp_relevance": "high",
-      "notes": "Most common way to read files - essential for reading flags, configs, source code"
+      "notes": "Most common way to read files - essential for reading flags, configs, source code",
+      "filled_example": "cat /etc/passwd"
     },
     {
       "id": "grep-file",
@@ -418,7 +430,8 @@
       "next_steps": [
         "cat-file",
         "grep-r-etc"
-      ]
+      ],
+      "filled_example": "grep password /etc/config.conf"
     },
     {
       "id": "head-file",
@@ -452,7 +465,8 @@
         "cat-file",
         "less-file"
       ],
-      "oscp_relevance": "medium"
+      "oscp_relevance": "medium",
+      "filled_example": "head -n 10 log.txt"
     },
     {
       "id": "tail-file",
@@ -488,7 +502,8 @@
         "less-file"
       ],
       "oscp_relevance": "medium",
-      "notes": "tail -f is essential for monitoring logs during exploitation"
+      "notes": "tail -f is essential for monitoring logs during exploitation",
+      "filled_example": "tail -n 10 log.txt"
     },
     {
       "id": "less-file",
@@ -513,7 +528,8 @@
         "cat-file"
       ],
       "oscp_relevance": "medium",
-      "notes": "Better than cat for large files - supports search with /, quit with q"
+      "notes": "Better than cat for large files - supports search with /, quit with q",
+      "filled_example": "less large_file.txt"
     },
     {
       "id": "wc-file",
@@ -540,7 +556,8 @@
         "-c": "Count only bytes/characters"
       },
       "oscp_relevance": "low",
-      "notes": "Useful for checking wordlist sizes or output lengths"
+      "notes": "Useful for checking wordlist sizes or output lengths",
+      "filled_example": "wc wordlist.txt"
     },
     {
       "id": "tar-extract",
@@ -574,7 +591,8 @@
         "gunzip-decompress"
       ],
       "oscp_relevance": "medium",
-      "notes": "Common for extracting exploit code or downloaded tools"
+      "notes": "Common for extracting exploit code or downloaded tools",
+      "filled_example": "tar -xvf exploit.tar.gz"
     },
     {
       "id": "tar-create",
@@ -608,7 +626,8 @@
         "-f": "Specify filename"
       },
       "oscp_relevance": "medium",
-      "notes": "Useful for exfiltrating multiple files or creating backups"
+      "notes": "Useful for exfiltrating multiple files or creating backups",
+      "filled_example": "tar -czvf backup.tar.gz /tmp/loot/*"
     },
     {
       "id": "unzip-file",
@@ -638,7 +657,8 @@
       "alternatives": [
         "tar-extract"
       ],
-      "oscp_relevance": "medium"
+      "oscp_relevance": "medium",
+      "filled_example": "unzip exploit.zip"
     },
     {
       "id": "gzip-compress",
@@ -667,7 +687,8 @@
       "alternatives": [
         "tar-create"
       ],
-      "oscp_relevance": "low"
+      "oscp_relevance": "low",
+      "filled_example": "gzip large_file.txt"
     },
     {
       "id": "gunzip-decompress",
@@ -695,7 +716,8 @@
       "alternatives": [
         "tar-extract"
       ],
-      "oscp_relevance": "low"
+      "oscp_relevance": "low",
+      "filled_example": "gunzip file.gz"
     }
   ]
 }

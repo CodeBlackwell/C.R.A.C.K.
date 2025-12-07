@@ -48,7 +48,8 @@
       "notes": "CRITICAL for OSCP defense monitoring and troubleshooting.\n\nPress Ctrl+C to exit.\n\nCommon logs:\n/var/log/auth.log (authentication), /var/log/syslog (system), /var/log/apache2/access.log (web).\n\nTime estimate:\nruns continuously until stopped.\n\nManual alternative:\nwhile true; do tail -n 1 <FILE>; sleep 1; done",
       "methodology_guidance": {
         "after_success": "Watch for authentication attempts: tail -f /var/log/auth.log Monitor system messages: tail -f /var/log/syslog Watch web server logs: tail -f /var/log/apache2/access.log Filter with grep: tail-follow-filter"
-      }
+      },
+      "filled_example": "tail -f /var/log/syslog"
     },
     {
       "id": "tail-follow-filter",
@@ -112,7 +113,8 @@
       "notes": "--line-buffered is REQUIRED or grep will buffer output and display will be delayed.\n\nOSCP defense patterns:\n'Failed password' (brute force), 'Invalid user' (enumeration), 'Accepted publickey' (successful login), 'sudo.*COMMAND' (privilege usage).\n\nTime estimate:\nruns continuously.",
       "methodology_guidance": {
         "after_success": "Monitor failed SSH attempts: tail -f /var/log/auth.log | grep 'Failed password' Watch for root logins: tail -f /var/log/auth.log | grep 'session opened.*root' Monitor sudo usage: tail -f /var/log/auth.log | grep 'sudo.*COMMAND' Track user activity: tail -f /var/log/auth.log | grep <USERNAME>"
-      }
+      },
+      "filled_example": "tail -f /var/log/auth.log | grep --line-buffered Failed password"
     },
     {
       "id": "tail-follow-multiple",
@@ -162,7 +164,8 @@
       "notes": "File headers show which file each line comes from:\n==> /var/log/syslog <==.\n\nUseful for correlating events across logs.\n\nTime estimate:\nruns continuously.",
       "methodology_guidance": {
         "after_success": "Monitor system and auth logs: tail -f /var/log/syslog /var/log/auth.log Watch application logs together Use multitail for better multi-log display (if installed)"
-      }
+      },
+      "filled_example": "tail -f /var/log/syslog /var/log/auth.log"
     },
     {
       "id": "journalctl-follow",
@@ -261,7 +264,8 @@
       "notes": "Service-specific monitoring helps troubleshoot issues.\n\nCommon services:\nssh, apache2, nginx, mysql, postgresql, cron.\n\nCan monitor multiple:\njournalctl -u ssh -u apache2 -f.\n\nTime estimate:\nruns continuously.",
       "methodology_guidance": {
         "after_success": "Monitor SSH: journalctl -u ssh -f Monitor web server: journalctl -u apache2 -f or nginx Monitor database: journalctl -u postgresql -f Add priority filter: journalctl -u <SERVICE> -f -p err"
-      }
+      },
+      "filled_example": "journalctl -u ssh -f"
     },
     {
       "id": "journalctl-priority-filter",
@@ -305,7 +309,8 @@
       "notes": "Priority levels (lowest to highest):\n0=emerg, 1=alert, 2=crit, 3=err, 4=warning, 5=notice, 6=info, 7=debug.\n\n-p err shows errors, critical, alert, and emergency.\n\nFor errors only (not above):\njournalctl PRIORITY=3.\n\nTime estimate:\n1-5 seconds.",
       "methodology_guidance": {
         "after_success": "View errors only: journalctl -p err View critical and above: journalctl -p crit Combine with follow: journalctl -f -p err Combine with service: journalctl -u ssh -p warning"
-      }
+      },
+      "filled_example": "journalctl -p err"
     },
     {
       "id": "journalctl-time-range",
@@ -351,7 +356,8 @@
       "methodology_guidance": {
         "time_estimate": "Last 10 minutes: journalctl --since \"10 minutes ago\" Last hour: journalctl --since \"1 hour ago\"",
         "after_success": "Today: journalctl --since today Yesterday: journalctl --since yesterday --until today"
-      }
+      },
+      "filled_example": "journalctl --since \"2024-01-01 10:00:00\" --until \"2024-01-01 10:00:00\""
     },
     {
       "id": "dmesg-kernel-messages",

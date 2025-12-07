@@ -37,7 +37,8 @@
         "CMS_ENUM",
         "VERSION_DETECTION",
         "CURL"
-      ]
+      ],
+      "filled_example": "curl -s http://example.com/feed/ | grep generator"
     }
   ]
 }

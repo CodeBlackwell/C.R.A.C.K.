@@ -51,7 +51,8 @@
         "MONITORING",
         "PROCESS_ENUM",
         "GREP"
-      ]
+      ],
+      "filled_example": "ps aux | grep apache|nginx"
     },
     {
       "id": "ps-grep-extract-pid",
@@ -81,7 +82,8 @@
         "PROCESS_ENUM",
         "AWK",
         "PID_EXTRACTION"
-      ]
+      ],
+      "filled_example": "ps aux | grep sshd | awk '{print $2}'"
     },
     {
       "id": "proc-cmdline-specific-pid",
@@ -109,7 +111,8 @@
         "PROCESS_ENUM",
         "LINUX",
         "PROC_FS"
-      ]
+      ],
+      "filled_example": "cat /proc/1234/cmdline | tr '\\0' ' '"
     },
     {
       "id": "crontab-user-direct-read",
@@ -136,7 +139,8 @@
         "SCHEDULED_TASKS",
         "CRON",
         "PRIVESC"
-      ]
+      ],
+      "filled_example": "cat /var/spool/cron/crontabs/www-data"
     },
     {
       "id": "less-etc-crontab",
@@ -535,7 +539,8 @@
         "RESOURCE_MONITORING",
         "LSOF",
         "FILE_DESCRIPTORS"
-      ]
+      ],
+      "filled_example": "lsof +d /var/www/html"
     },
     {
       "id": "cat-wtmp-utmpdump",

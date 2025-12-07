@@ -36,7 +36,8 @@
         "evil-winrm-hash"
       ],
       "oscp_relevance": "high",
-      "notes": "NTLM hash format:\nlowercase hexadecimal, 32 characters.\n\nCommon sources:\nsecretsdump.py, mimikatz, crackmapexec --sam/--lsa"
+      "notes": "NTLM hash format:\nlowercase hexadecimal, 32 characters.\n\nCommon sources:\nsecretsdump.py, mimikatz, crackmapexec --sam/--lsa",
+      "filled_example": "test -f hashes.txt && grep -qE '^[a-f0-9]{32}$' hashes.txt"
     },
     {
       "id": "verify-crackmapexec-installed",
@@ -149,7 +150,8 @@
         "-I": "Fetch headers only (HEAD request)",
         "--connect-timeout 5": "Maximum time to establish connection",
         "--max-time 10": "Maximum total time for operation"
-      }
+      },
+      "filled_example": "curl -I http://192.168.1.100:80 --connect-timeout 5 --max-time 10"
     },
     {
       "id": "verify-powerview-imported",
@@ -313,7 +315,8 @@
       },
       "next_steps": [],
       "oscp_relevance": "high",
-      "notes": "Mimikatz extracts plaintext passwords, hashes, tickets from memory.\n\nRequires SYSTEM/Admin privileges."
+      "notes": "Mimikatz extracts plaintext passwords, hashes, tickets from memory.\n\nRequires SYSTEM/Admin privileges.",
+      "filled_example": "test -f C:\\Tools\\Mimikatz/mimikatz.exe"
     },
     {
       "id": "verify-rubeus-available",
@@ -353,7 +356,8 @@
         "rubeus-kerberoast"
       ],
       "oscp_relevance": "high",
-      "notes": "Rubeus is C# toolkit for Kerberos attacks:\nASREPRoasting, Kerberoasting, overpass-the-hash, ticket manipulation"
+      "notes": "Rubeus is C# toolkit for Kerberos attacks:\nASREPRoasting, Kerberoasting, overpass-the-hash, ticket manipulation",
+      "filled_example": "test -f C:\\Tools\\Rubeus/Rubeus.exe"
     },
     {
       "id": "verify-getcap-installed",
@@ -513,7 +517,8 @@
         "xfreerdp-connect"
       ],
       "oscp_relevance": "high",
-      "notes": "RDP default port 3389.\n\nService name:\nTermService (Windows).\n\nRequired for graphical remote access and lateral movement."
+      "notes": "RDP default port 3389.\n\nService name:\nTermService (Windows).\n\nRequired for graphical remote access and lateral movement.",
+      "filled_example": "nmap -p 3389 -Pn 192.168.1.100 | grep -q 'open'"
     },
     {
       "id": "verify-python-available",
@@ -587,7 +592,8 @@
         "proxychains-nmap"
       ],
       "oscp_relevance": "high",
-      "notes": "SOCKS proxy created via SSH dynamic port forwarding (ssh -D).\n\nConfigure proxychains:\n/etc/proxychains4.conf"
+      "notes": "SOCKS proxy created via SSH dynamic port forwarding (ssh -D).\n\nConfigure proxychains:\n/etc/proxychains4.conf",
+      "filled_example": "netstat -tulnp | grep -E ':1080.*LISTEN'"
     },
     {
       "id": "verify-credentials",
@@ -640,7 +646,8 @@
       ],
       "next_steps": [],
       "oscp_relevance": "high",
-      "notes": "Use to validate credentials before exploitation.\n\nSMB (port 445) most reliable for Windows credential validation."
+      "notes": "Use to validate credentials before exploitation.\n\nSMB (port 445) most reliable for Windows credential validation.",
+      "filled_example": "crackmapexec smb 192.168.1.100 -u admin -p P@ssw0rd123!"
     },
     {
       "id": "verify-powershell-access",
@@ -724,7 +731,8 @@
         "-c 4": "Send 4 ICMP echo requests",
         "-z": "Zero-I/O mode (scanning)",
         "-v": "Verbose output"
-      }
+      },
+      "filled_example": "ping -c 4 192.168.1.100 || nc -zv 192.168.1.100 80"
     },
     {
       "id": "verify-root-access",
@@ -790,7 +798,8 @@
       },
       "alternatives": [],
       "oscp_relevance": "medium",
-      "notes": "test -f checks for regular files.\n\nUse -d for directories, -e for any file type (file/dir/symlink)."
+      "notes": "test -f checks for regular files.\n\nUse -d for directories, -e for any file type (file/dir/symlink).",
+      "filled_example": "test -f /tmp/file.txt"
     },
     {
       "id": "verify-port-open",
@@ -839,7 +848,8 @@
       "flag_explanations": {
         "-z": "Zero-I/O mode (scan only, no data transfer)",
         "-v": "Verbose output showing connection status"
-      }
+      },
+      "filled_example": "nc -zv 192.168.1.100 445"
     },
     {
       "id": "verify-sql-injection-vulnerable",
@@ -903,7 +913,8 @@
         "--dbs": "Enumerate databases if vulnerable",
         "--level=1": "Test thoroughness (1-5, default 1)",
         "--risk=1": "Risk of interference (1-3, default 1)"
-      }
+      },
+      "filled_example": "sqlmap -u \"http://192.168.1.100/login.php?id=1\" --batch --dbs --level=1 --risk=1"
     },
     {
       "id": "verify-smb-null-session",
@@ -950,7 +961,8 @@
         "-N": "Suppress password prompt (null authentication)",
         "-L": "List available shares on target"
       },
-      "notes": "Null sessions deprecated post-Windows 2000 but sometimes enabled on legacy systems.\n\nIPC$ share indicates anonymous access."
+      "notes": "Null sessions deprecated post-Windows 2000 but sometimes enabled on legacy systems.\n\nIPC$ share indicates anonymous access.",
+      "filled_example": "smbclient -N -L //192.168.1.100"
     },
     {
       "id": "verify-ldap-anonymous-bind",
@@ -997,7 +1009,8 @@
         "-b \"\"": "Base DN (empty for rootDSE query)",
         "-s base": "Search scope: base object only"
       },
-      "notes": "Anonymous LDAP bind often disabled in hardened environments.\n\nIf allowed, provides base DN for further enumeration."
+      "notes": "Anonymous LDAP bind often disabled in hardened environments.\n\nIf allowed, provides base DN for further enumeration.",
+      "filled_example": "ldapsearch -x -H ldap://192.168.1.100 -b \"\" -s base \"(objectClass=*)\""
     }
   ]
 }

@@ -41,14 +41,20 @@
         "Host seems down",
         "Note: Host seems down"
       ],
-      "next_steps": ["nmap-quick-scan", "nmap-service-scan"],
-      "alternatives": ["ping-host"],
+      "next_steps": [
+        "nmap-quick-scan",
+        "nmap-service-scan"
+      ],
+      "alternatives": [
+        "ping-host"
+      ],
       "prerequisites": [],
       "notes": "Use -sn for host discovery only, no port scan",
       "oscp_relevance": "high",
       "methodology_guidance": {
         "after_success": "Run full port scan on discovered hosts: nmap -p- <IP> Perform service enumeration: nmap -sV -sC <IP> Check for specific services (SMB, HTTP, SSH)"
-      }
+      },
+      "filled_example": "nmap -sn 192.168.1.0/24"
     },
     {
       "id": "nmap-quick-scan",
@@ -114,7 +120,8 @@
       "oscp_relevance": "high",
       "methodology_guidance": {
         "after_success": "Service scan on open ports: nmap -sV -sC -p <PORTS> <TARGET> UDP scan if needed: nmap -sU --top-ports 20 <TARGET> Vulnerability scripts: nmap --script vuln -p <PORTS> <TARGET>"
-      }
+      },
+      "filled_example": "nmap -Pn -p- --min-rate=1000 192.168.1.100 -oA quick_scan"
     },
     {
       "id": "nmap-service-scan",
@@ -185,7 +192,8 @@
       "oscp_relevance": "high",
       "methodology_guidance": {
         "after_success": "Research service versions for vulnerabilities: searchsploit <service> Web enumeration if HTTP found: gobuster dir -u http://<IP> SMB enumeration if 445 open: enum4linux -a <IP> SSH brute if 22 open: hydra -L users -P pass ssh://<IP>"
-      }
+      },
+      "filled_example": "nmap -sV -sC -p 80,443,22,21 192.168.1.100 -oA service_scan"
     },
     {
       "id": "nmap-vuln-scan",
@@ -240,7 +248,8 @@
       "methodology_guidance": {
         "after_success": "Research found CVEs: searchsploit <CVE> Check Metasploit: msfconsole; search <vulnerability> Try specific vuln scripts: --script smb-vuln-ms17-010",
         "manual_alternative": "Manual verification of vulnerabilities"
-      }
+      },
+      "filled_example": "nmap --script vuln -p 80,443,445 192.168.1.100"
     },
     {
       "id": "dns-enum",
@@ -287,7 +296,8 @@
       "oscp_relevance": "medium",
       "methodology_guidance": {
         "after_success": "Try zone transfer: dnsrecon -d <DOMAIN> -t axfr Subdomain brute: gobuster dns -d <DOMAIN> -w wordlist Check for virtual hosts on discovered IPs Reverse DNS on IP ranges: dnsrecon -r <RANGE>"
-      }
+      },
+      "filled_example": "dnsrecon -d example.com -t std"
     },
     {
       "id": "smb-enum",
@@ -332,14 +342,27 @@
         "Connection refused",
         "Could not connect"
       ],
-      "next_steps": ["smb-smbclient-connect", "smb-smbmap-recursive", "smb-mount-share", "hydra-smb-attack"],
-      "alternatives": ["smb-enum4linux-full", "smb-crackmapexec-shares", "smb-null-session-shares", "enum4linux-smb"],
-      "prerequisites": ["nmap-service-scan"],
+      "next_steps": [
+        "smb-smbclient-connect",
+        "smb-smbmap-recursive",
+        "smb-mount-share",
+        "hydra-smb-attack"
+      ],
+      "alternatives": [
+        "smb-enum4linux-full",
+        "smb-crackmapexec-shares",
+        "smb-null-session-shares",
+        "enum4linux-smb"
+      ],
+      "prerequisites": [
+        "nmap-service-scan"
+      ],
       "notes": "Check for null sessions and guest access",
       "oscp_relevance": "high",
       "methodology_guidance": {
         "after_success": "Try null session: smbclient -L //<IP> -N Mount shares: mount -t cifs //<IP>/<share> /mnt Check write access: smbmap -H <IP> -u guest Brute force: hydra -L users -P pass smb://<IP>"
-      }
+      },
+      "filled_example": "enum4linux -a 192.168.1.100"
     },
     {
       "id": "snmp-enum",
@@ -390,7 +413,8 @@
       "oscp_relevance": "medium",
       "methodology_guidance": {
         "after_success": "Extract user accounts: snmpwalk -c <SNMP_COMMUNITY> -v2c <IP> 1.3.6.1.4.1.77.1.2.25 Get running processes: snmpwalk -c <SNMP_COMMUNITY> -v2c <IP> 1.3.6.1.2.1.25.4.2.1.2 Try snmp-check for formatted output: snmp-check <IP> Brute community strings: onesixtyone -c wordlist <IP>"
-      }
+      },
+      "filled_example": "snmpwalk -c public -v2c 192.168.1.100"
     },
     {
       "id": "smb-null-session-shares",
@@ -453,7 +477,8 @@
         "No shares visible": "Shares may be hidden from listing. Try connecting to common shares directly: C$, ADMIN$, IPC$, Users, Public"
       },
       "notes": "Null sessions often allowed on older Windows (pre-2000) and misconfigured Samba servers.\n\nThis is the first step in SMB enumeration - always try before authenticated methods.\n\nDocument all discovered shares in enumeration.md.\n\nTime estimate:\n1-2 minutes.\n\nOSCP tip:\nIf null session works, try accessing IPC$ for further enumeration with rpcclient.",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "filled_example": "smbclient -N -L //192.168.45.100"
     },
     {
       "id": "smb-enum4linux-full",
@@ -517,7 +542,8 @@
         "Connection timeout": "Port 445/139 may be rate-limited. Reduce scan speed or wait before retrying"
       },
       "notes": "enum4linux wraps multiple Samba tools (smbclient, rpcclient, net).\n\nBest used after confirming SMB is accessible.\n\nTime estimate:\n3-5 minutes for full scan.\n\nCan be noisy - IDS may detect.\n\nDocument findings in enumeration.md:\nworkgroup name, users, shares, password policy (useful for credential attacks).\n\nOSCP tip:\nLook for shares with READ/WRITE access, weak password policies (no complexity, no lockout), and user lists for credential spraying.",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "filled_example": "enum4linux -a 192.168.45.100"
     },
     {
       "id": "smb-crackmapexec-shares",
@@ -594,7 +620,8 @@
         "Kerberos error": "Domain authentication failed. Use local auth: crackmapexec smb <TARGET> -u <USER> -p <PASS> --shares --local-auth"
       },
       "notes": "CrackMapExec is faster than enum4linux for share enumeration with known credentials.\n\nShows explicit READ/WRITE permissions which is critical for exploitation planning.\n\nTime estimate:\n30 seconds.\n\nOSCP tip:\nLook for non-standard shares (anything besides C$, ADMIN$, IPC$) and shares with WRITE access - potential for uploading payloads.\n\nFor null session:\ncrackmapexec smb <TARGET> -u '' -p '' --shares.\n\nFor multiple targets:\ncrackmapexec smb <SUBNET> -u <USER> -p <PASS> --shares",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "filled_example": "crackmapexec smb 192.168.45.100 -u administrator -p password123 --shares"
     },
     {
       "id": "smb-smbclient-connect",
@@ -667,7 +694,8 @@
       "oscp_relevance": "high",
       "methodology_guidance": {
         "after_success": "Use 'ls' to list files Use 'get <FILE>' to download files Use 'put <FILE>' to upload files Search for sensitive files: passwords.txt, config files, SSH keys"
-      }
+      },
+      "filled_example": "smbclient //192.168.45.100/Users -U administrator"
     },
     {
       "id": "smb-smbmap-recursive",
@@ -753,7 +781,8 @@
       "oscp_relevance": "high",
       "methodology_guidance": {
         "after_success": "Download interesting files: smbmap -H <TARGET> -u <USER> -p <PASS> --download '<SHARE>\\path\\file.txt' Search for specific files: smbmap -H <TARGET> -u <USER> -p <PASS> -r <SHARE> -A password Look for writable directories for potential payload upload"
-      }
+      },
+      "filled_example": "smbmap -H 192.168.45.100 -u administrator -p password123 -R Users"
     },
     {
       "id": "smb-mount-share",
@@ -841,7 +870,8 @@
       "oscp_relevance": "high",
       "methodology_guidance": {
         "after_success": "Browse share: ls -la <MOUNT_POINT> Search for files: find <MOUNT_POINT> -type f -name '*password*' Copy files: cp <MOUNT_POINT>/path/file.txt ~/loot/ Unmount when done: sudo umount <MOUNT_POINT>"
-      }
+      },
+      "filled_example": "sudo mount -t cifs -o username=administrator,password=password123 //192.168.45.100/Users /mnt/smb"
     },
     {
       "id": "curl-header-enum",
@@ -922,7 +952,8 @@
       "oscp_relevance": "high",
       "methodology_guidance": {
         "after_success": "Research server version for vulnerabilities: searchsploit <SERVER_VERSION> Test for HTTP method vulnerabilities: curl -I -X OPTIONS http://<TARGET> Check for information disclosure in headers: X-Powered-By, Server"
-      }
+      },
+      "filled_example": "curl -I -X GET http://192.168.45.100:80//"
     },
     {
       "id": "whatweb-technology-detection",
@@ -991,7 +1022,8 @@
       "oscp_relevance": "high",
       "methodology_guidance": {
         "after_success": "If WordPress: wpscan --url http://<TARGET> --enumerate u,vp,tt If Joomla: joomscan -u http://<TARGET> If Drupal: droopescan scan drupal -u http://<TARGET> Research detected versions: searchsploit <CMS> <VERSION>"
-      }
+      },
+      "filled_example": "whatweb -v -a 3 http://192.168.45.100:80"
     },
     {
       "id": "vhost-fuzzing-gobuster",
@@ -1050,9 +1082,17 @@
         "[-] Unable to connect",
         "context deadline exceeded"
       ],
-      "next_steps": ["gobuster-dir", "whatweb-technology-detection", "nikto-scan"],
-      "alternatives": ["ffuf-vhost-fuzz"],
-      "prerequisites": ["nmap-service-scan"],
+      "next_steps": [
+        "gobuster-dir",
+        "whatweb-technology-detection",
+        "nikto-scan"
+      ],
+      "alternatives": [
+        "ffuf-vhost-fuzz"
+      ],
+      "prerequisites": [
+        "nmap-service-scan"
+      ],
       "troubleshooting": {
         "All entries return same size": "Server returns same response for all hosts. Filter by size: --exclude-length <SIZE> or try different status codes",
         "No results found": "Try common subdomains manually: dev, staging, test, admin, api, mobile, internal",
@@ -1064,7 +1104,8 @@
       "methodology_guidance": {
         "oscp_tips": "Add discovered vhosts to /etc/hosts: echo '<IP> vhost.example.com' | sudo tee -a /etc/hosts Browse discovered vhosts: http://vhost.example.com Directory enumeration on new vhosts: gobuster dir -u http://vhost.example.com -w <WORDLIST>",
         "after_success": "Run technology detection: whatweb http://vhost.example.com"
-      }
+      },
+      "filled_example": "gobuster vhost -u http://example.com -w /usr/share/seclists/Discovery/DNS/subdomains-top1million-5000.txt -t 50 --append-domain"
     },
     {
       "id": "dns-zone-transfer-dig",
@@ -1128,7 +1169,8 @@
       "methodology_guidance": {
         "after_success": "If successful: Extract all subdomains and IPs from output Enumerate discovered hosts: sudo nmap -Pn -p- <DISCOVERED_IP> Add subdomains to /etc/hosts for further testing",
         "on_failure": "If failed: Try subdomain brute force: gobuster dns -d <DOMAIN> -w <WORDLIST>"
-      }
+      },
+      "filled_example": "dig axfr @192.168.45.100 example.com"
     }
   ]
 }

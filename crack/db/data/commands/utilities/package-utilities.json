@@ -6,7 +6,12 @@
       "category": "custom",
       "command": "sudo apt install -y <PACKAGE>",
       "description": "Install Debian/Ubuntu package using apt package manager",
-      "tags": ["utility", "package-manager", "linux", "OSCP:HIGH"],
+      "tags": [
+        "utility",
+        "package-manager",
+        "linux",
+        "OSCP:HIGH"
+      ],
       "variables": [
         {
           "name": "<PACKAGE>",
@@ -19,9 +24,12 @@
         "-y": "Automatic yes to prompts",
         "--no-install-recommends": "Don't install recommended packages (minimal install)"
       },
-      "prerequisites": ["apt-update"],
+      "prerequisites": [
+        "apt-update"
+      ],
       "oscp_relevance": "high",
-      "notes": "Essential for installing tools on Debian-based systems (Kali, Ubuntu, Parrot)"
+      "notes": "Essential for installing tools on Debian-based systems (Kali, Ubuntu, Parrot)",
+      "filled_example": "sudo apt install -y nmap"
     },
     {
       "id": "apt-update",
@@ -29,9 +37,17 @@
       "category": "custom",
       "command": "sudo apt update",
       "description": "Update available package list from repositories",
-      "tags": ["utility", "package-manager", "linux", "OSCP:MEDIUM"],
+      "tags": [
+        "utility",
+        "package-manager",
+        "linux",
+        "OSCP:MEDIUM"
+      ],
       "flag_explanations": {},
-      "next_steps": ["apt-upgrade", "apt-install"],
+      "next_steps": [
+        "apt-upgrade",
+        "apt-install"
+      ],
       "oscp_relevance": "medium",
       "notes": "Run before apt install to ensure latest package versions"
     },
@@ -41,11 +57,18 @@
       "category": "custom",
       "command": "sudo apt upgrade -y",
       "description": "Upgrade all installed packages to latest versions",
-      "tags": ["utility", "package-manager", "linux", "OSCP:LOW"],
+      "tags": [
+        "utility",
+        "package-manager",
+        "linux",
+        "OSCP:LOW"
+      ],
       "flag_explanations": {
         "-y": "Automatic yes to prompts"
       },
-      "prerequisites": ["apt-update"],
+      "prerequisites": [
+        "apt-update"
+      ],
       "oscp_relevance": "low",
       "notes": "Use before OSCP exam to ensure all tools are up-to-date"
     },
@@ -55,7 +78,12 @@
       "category": "custom",
       "command": "pip install <PACKAGE>",
       "description": "Install Python package using pip (Python 2.x)",
-      "tags": ["utility", "package-manager", "python", "OSCP:HIGH"],
+      "tags": [
+        "utility",
+        "package-manager",
+        "python",
+        "OSCP:HIGH"
+      ],
       "variables": [
         {
           "name": "<PACKAGE>",
@@ -69,9 +97,12 @@
         "--upgrade": "Upgrade if already installed",
         "-r": "Install from requirements file"
       },
-      "alternatives": ["pip3-install"],
+      "alternatives": [
+        "pip3-install"
+      ],
       "oscp_relevance": "high",
-      "notes": "Many exploits require Python packages - impacket, requests, etc."
+      "notes": "Many exploits require Python packages - impacket, requests, etc.",
+      "filled_example": "pip install impacket"
     },
     {
       "id": "pip3-install",
@@ -79,7 +110,12 @@
       "category": "custom",
       "command": "pip3 install <PACKAGE>",
       "description": "Install Python package using pip3 (Python 3.x)",
-      "tags": ["utility", "package-manager", "python", "OSCP:HIGH"],
+      "tags": [
+        "utility",
+        "package-manager",
+        "python",
+        "OSCP:HIGH"
+      ],
       "variables": [
         {
           "name": "<PACKAGE>",
@@ -93,9 +129,12 @@
         "--upgrade": "Upgrade if already installed",
         "-r": "Install from requirements file"
       },
-      "alternatives": ["pip-install"],
+      "alternatives": [
+        "pip-install"
+      ],
       "oscp_relevance": "high",
-      "notes": "Prefer pip3 over pip for modern Python tools"
+      "notes": "Prefer pip3 over pip for modern Python tools",
+      "filled_example": "pip3 install pwntools"
     },
     {
       "id": "npm-install",
@@ -103,7 +142,12 @@
       "category": "custom",
       "command": "npm install <PACKAGE>",
       "description": "Install Node.js package using npm",
-      "tags": ["utility", "package-manager", "nodejs", "OSCP:LOW"],
+      "tags": [
+        "utility",
+        "package-manager",
+        "nodejs",
+        "OSCP:LOW"
+      ],
       "variables": [
         {
           "name": "<PACKAGE>",
@@ -118,7 +162,8 @@
         "--save-dev": "Add to devDependencies"
       },
       "oscp_relevance": "low",
-      "notes": "Occasionally needed for Node.js exploits or tools"
+      "notes": "Occasionally needed for Node.js exploits or tools",
+      "filled_example": "npm install express"
     },
     {
       "id": "gem-install",
@@ -126,7 +171,12 @@
       "category": "custom",
       "command": "gem install <GEM>",
       "description": "Install Ruby gem package",
-      "tags": ["utility", "package-manager", "ruby", "OSCP:MEDIUM"],
+      "tags": [
+        "utility",
+        "package-manager",
+        "ruby",
+        "OSCP:MEDIUM"
+      ],
       "variables": [
         {
           "name": "<GEM>",
@@ -140,7 +190,8 @@
         "--no-document": "Skip documentation generation (faster)"
       },
       "oscp_relevance": "medium",
-      "notes": "Useful for evil-winrm and other Ruby-based tools"
+      "notes": "Useful for evil-winrm and other Ruby-based tools",
+      "filled_example": "gem install winrm"
     },
     {
       "id": "yum-install",
@@ -148,7 +199,12 @@
       "category": "custom",
       "command": "sudo yum install -y <PACKAGE>",
       "description": "Install RHEL/CentOS package using yum",
-      "tags": ["utility", "package-manager", "linux", "OSCP:LOW"],
+      "tags": [
+        "utility",
+        "package-manager",
+        "linux",
+        "OSCP:LOW"
+      ],
       "variables": [
         {
           "name": "<PACKAGE>",
@@ -160,9 +216,13 @@
       "flag_explanations": {
         "-y": "Automatic yes to prompts"
       },
-      "alternatives": ["dnf-install", "apt-install"],
+      "alternatives": [
+        "dnf-install",
+        "apt-install"
+      ],
       "oscp_relevance": "low",
-      "notes": "For Red Hat-based systems (less common in OSCP)"
+      "notes": "For Red Hat-based systems (less common in OSCP)",
+      "filled_example": "sudo yum install -y nmap"
     },
     {
       "id": "dnf-install",
@@ -170,7 +230,12 @@
       "category": "custom",
       "command": "sudo dnf install -y <PACKAGE>",
       "description": "Install Fedora/RHEL 8+ package using dnf",
-      "tags": ["utility", "package-manager", "linux", "OSCP:LOW"],
+      "tags": [
+        "utility",
+        "package-manager",
+        "linux",
+        "OSCP:LOW"
+      ],
       "variables": [
         {
           "name": "<PACKAGE>",
@@ -182,8 +247,12 @@
       "flag_explanations": {
         "-y": "Automatic yes to prompts"
       },
-      "alternatives": ["yum-install", "apt-install"],
-      "oscp_relevance": "low"
+      "alternatives": [
+        "yum-install",
+        "apt-install"
+      ],
+      "oscp_relevance": "low",
+      "filled_example": "sudo dnf install -y nmap"
     },
     {
       "id": "brew-install",
@@ -191,7 +260,12 @@
       "category": "custom",
       "command": "brew install <PACKAGE>",
       "description": "Install macOS package using Homebrew",
-      "tags": ["utility", "package-manager", "macos", "OSCP:LOW"],
+      "tags": [
+        "utility",
+        "package-manager",
+        "macos",
+        "OSCP:LOW"
+      ],
       "variables": [
         {
           "name": "<PACKAGE>",
@@ -201,7 +275,8 @@
         }
       ],
       "oscp_relevance": "low",
-      "notes": "For macOS users preparing for OSCP"
+      "notes": "For macOS users preparing for OSCP",
+      "filled_example": "brew install nmap"
     },
     {
       "id": "cargo-install",
@@ -209,7 +284,12 @@
       "category": "custom",
       "command": "cargo install <PACKAGE>",
       "description": "Install Rust package using cargo",
-      "tags": ["utility", "package-manager", "rust", "OSCP:LOW"],
+      "tags": [
+        "utility",
+        "package-manager",
+        "rust",
+        "OSCP:LOW"
+      ],
       "variables": [
         {
           "name": "<PACKAGE>",
@@ -219,7 +299,8 @@
         }
       ],
       "oscp_relevance": "low",
-      "notes": "Useful for modern tools like feroxbuster, rustscan"
+      "notes": "Useful for modern tools like feroxbuster, rustscan",
+      "filled_example": "cargo install feroxbuster"
     },
     {
       "id": "go-get",
@@ -227,7 +308,12 @@
       "category": "custom",
       "command": "go get <PACKAGE>",
       "description": "Install Go package (deprecated - use go install)",
-      "tags": ["utility", "package-manager", "golang", "OSCP:LOW"],
+      "tags": [
+        "utility",
+        "package-manager",
+        "golang",
+        "OSCP:LOW"
+      ],
       "variables": [
         {
           "name": "<PACKAGE>",
@@ -236,9 +322,12 @@
           "required": true
         }
       ],
-      "alternatives": ["go-install"],
+      "alternatives": [
+        "go-install"
+      ],
       "oscp_relevance": "low",
-      "notes": "Deprecated - use go install instead"
+      "notes": "Deprecated - use go install instead",
+      "filled_example": "go get github.com/OJ/gobuster/v3@latest"
     },
     {
       "id": "go-install",
@@ -246,7 +335,12 @@
       "category": "custom",
       "command": "go install <PACKAGE>@latest",
       "description": "Install Go package binary (modern way)",
-      "tags": ["utility", "package-manager", "golang", "OSCP:LOW"],
+      "tags": [
+        "utility",
+        "package-manager",
+        "golang",
+        "OSCP:LOW"
+      ],
       "variables": [
         {
           "name": "<PACKAGE>",
@@ -255,9 +349,12 @@
           "required": true
         }
       ],
-      "alternatives": ["go-get"],
+      "alternatives": [
+        "go-get"
+      ],
       "oscp_relevance": "low",
-      "notes": "Preferred over go get for tools like gobuster, ffuf"
+      "notes": "Preferred over go get for tools like gobuster, ffuf",
+      "filled_example": "go install github.com/OJ/gobuster/v3@latest"
     },
     {
       "id": "choco-install",
@@ -265,7 +362,12 @@
       "category": "custom",
       "command": "choco install <PACKAGE> -y",
       "description": "Install Windows package using Chocolatey",
-      "tags": ["utility", "package-manager", "windows", "OSCP:LOW"],
+      "tags": [
+        "utility",
+        "package-manager",
+        "windows",
+        "OSCP:LOW"
+      ],
       "variables": [
         {
           "name": "<PACKAGE>",
@@ -277,9 +379,12 @@
       "flag_explanations": {
         "-y": "Automatic yes to prompts"
       },
-      "alternatives": ["winget-install"],
+      "alternatives": [
+        "winget-install"
+      ],
       "oscp_relevance": "low",
-      "notes": "For setting up Windows attack box"
+      "notes": "For setting up Windows attack box",
+      "filled_example": "choco install nmap -y"
     },
     {
       "id": "winget-install",
@@ -287,7 +392,12 @@
       "category": "custom",
       "command": "winget install <PACKAGE>",
       "description": "Install Windows package using winget",
-      "tags": ["utility", "package-manager", "windows", "OSCP:LOW"],
+      "tags": [
+        "utility",
+        "package-manager",
+        "windows",
+        "OSCP:LOW"
+      ],
       "variables": [
         {
           "name": "<PACKAGE>",
@@ -301,9 +411,12 @@
         "-i": "Interactive mode",
         "-h": "Silent install"
       },
-      "alternatives": ["choco-install"],
+      "alternatives": [
+        "choco-install"
+      ],
       "oscp_relevance": "low",
-      "notes": "Built into Windows 10/11 - no additional setup required"
+      "notes": "Built into Windows 10/11 - no additional setup required",
+      "filled_example": "winget install Nmap.Nmap"
     },
     {
       "id": "scoop-install",
@@ -311,7 +424,12 @@
       "category": "custom",
       "command": "scoop install <PACKAGE>",
       "description": "Install Windows package using Scoop",
-      "tags": ["utility", "package-manager", "windows", "OSCP:LOW"],
+      "tags": [
+        "utility",
+        "package-manager",
+        "windows",
+        "OSCP:LOW"
+      ],
       "variables": [
         {
           "name": "<PACKAGE>",
@@ -320,9 +438,13 @@
           "required": true
         }
       ],
-      "alternatives": ["choco-install", "winget-install"],
+      "alternatives": [
+        "choco-install",
+        "winget-install"
+      ],
       "oscp_relevance": "low",
-      "notes": "User-focused package manager - no admin rights required"
+      "notes": "User-focused package manager - no admin rights required",
+      "filled_example": "scoop install nmap"
     }
   ]
 }

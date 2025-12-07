@@ -34,7 +34,8 @@
         "Process crashes on attach - Normal for some processes, try non-invasive attach",
         "Wrong architecture - Use WinDbg x64 for 64-bit processes, x86 for 32-bit",
         "Anti-debug detected - Process may have IsDebuggerPresent checks"
-      ]
+      ],
+      "filled_example": "# Launch WinDbg (x64) and attach:\n# File -> Attach to Process -> Select process -> OK\n\n# Or via command line:\nwindbg.exe -p 1234\n\n# Common processes to debug:\n# - powershell.exe (AMSI analysis)\n# - cscript.exe / wscript.exe (JScript AMSI)\n# - WINWORD.EXE (VBA analysis)"
     },
     {
       "id": "windbg-breakpoint-commands",
@@ -79,7 +80,8 @@
         "Module not loaded - Use 'lm' to list modules, 'sxe ld:amsi' to break on module load",
         "Function not found - Check spelling, use 'x amsi!*' to list exports",
         "Breakpoint never hits - Function not called, check code path"
-      ]
+      ],
+      "filled_example": "# Set breakpoint on function\nbp amsi!AmsiScanBuffer\n\n# Common AMSI breakpoints:\nbp amsi!AmsiInitialize\nbp amsi!AmsiOpenSession\nbp amsi!AmsiScanBuffer\nbp amsi!AmsiCloseSession\n\n# Continue execution\ng\n\n# Step execution\np  # Step over\nt  # Step into\n\n# List breakpoints\nbl\n\n# Clear breakpoint\nbc 0"
     },
     {
       "id": "windbg-memory-inspection",
@@ -118,7 +120,8 @@
         "Access violation - Address not valid or not readable",
         "Wrong format - Use du for Unicode strings, da for ASCII",
         "Address not found - Use registers (rsp, rcx) instead of hard-coded addresses"
-      ]
+      ],
+      "filled_example": "# Display memory as DWORD (32-bit values)\ndd rsp\n\n# Display memory as QWORD (64-bit values)\ndq rsp\n\n# Display memory as ASCII string\ndc rsp\n\n# Display memory as Unicode string\ndu rsp\n\n# Display memory as bytes\ndb rsp\n\n# Display specific number of values\ndd rsp L10"
     },
     {
       "id": "windbg-disassemble",
@@ -169,7 +172,8 @@
         "Address not executable - Pointing to data section",
         "Symbols not loaded - Use '.reload /f' to force symbol load",
         "Too complex to follow - Use flow graph in IDA/Ghidra"
-      ]
+      ],
+      "filled_example": "# Unassemble at current instruction pointer\nu\n\n# Unassemble specific address or function\nu rip\nu amsi!AmsiScanBuffer\n\n# Unassemble with length\nu rip L20\n\n# Unassemble current function\nuf .\n\n# Unassemble specific function (full)\nuf amsi!AmsiScanBuffer"
     },
     {
       "id": "frida-trace-amsi",
@@ -204,7 +208,8 @@
         "No output - Functions not called, execute AMSI-flagged command",
         "Permission denied - Run with appropriate privileges",
         "Frida not found - Install with pip"
-      ]
+      ],
+      "filled_example": "# List running processes\nfrida-ps\n\n# Trace AMSI functions in PowerShell process\nfrida-trace -p 5432 -x amsi.dll -i Amsi*\n\n# Trace with detailed logging\nfrida-trace -p 5432 -x amsi.dll -i AmsiScanBuffer -i AmsiInitialize"
     },
     {
       "id": "windbg-edit-memory",
@@ -261,7 +266,8 @@
         "Access violation - Memory not writable, use !vprot to check/change permissions",
         "Patch doesn't work - Wrong address or wrong bytes",
         "Process crashes - Patched critical code path incorrectly"
-      ]
+      ],
+      "filled_example": "# Edit memory (DWORD)\ned 7ffa12345678 90909090\n\n# Edit memory (byte)\neb 7ffa12345678 48 0x12 0x34 ...\n\n# Example: Patch AmsiScanBuffer to return clean\n# Find function address:\nx amsi!AmsiScanBuffer\n\n# Patch with: xor rax,rax (48 31 C0); ret (C3)\neb 7ffa12345678 48 31 C0 C3"
     }
   ],
   "oscp_relevance": "Debugging skills critical for understanding bypass techniques at low level. Essential for researching new bypasses. WinDbg and Frida both valuable but time-consuming - prioritize for lab research, not exam day.",

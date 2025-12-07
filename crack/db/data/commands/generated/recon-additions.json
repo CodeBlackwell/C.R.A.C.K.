@@ -34,7 +34,8 @@
       },
       "methodology_guidance": {
         "after_success": "Enumerate discovered services Check for known vulnerabilities"
-      }
+      },
+      "filled_example": "rustscan -a 192.168.1.1 -- -sV -sC"
     },
     {
       "id": "masscan-fast-scan",
@@ -64,7 +65,8 @@
       "flag_explanations": {
         "-p": "Port range to scan",
         "--rate": "Packets per second"
-      }
+      },
+      "filled_example": "masscan -p1-65535 192.168.1.0/24 --rate=1000"
     },
     {
       "id": "autorecon-full",
@@ -100,7 +102,8 @@
       },
       "methodology_guidance": {
         "after_success": "Review scan results Prioritize attack vectors"
-      }
+      },
+      "filled_example": "autorecon 192.168.1.1 -o ./autorecon-results"
     },
     {
       "id": "enum4linux-smb",
@@ -135,7 +138,8 @@
       },
       "methodology_guidance": {
         "after_success": "Test null sessions Enumerate shares Check for vulnerabilities"
-      }
+      },
+      "filled_example": "enum4linux -a 192.168.1.1"
     },
     {
       "id": "enum4linux-ng",
@@ -171,7 +175,8 @@
       },
       "methodology_guidance": {
         "after_success": "Mount accessible shares Test credentials"
-      }
+      },
+      "filled_example": "enum4linux-ng -A 192.168.1.1"
     },
     {
       "id": "whatweb-scan",
@@ -200,7 +205,8 @@
       },
       "methodology_guidance": {
         "after_success": "Research CMS vulnerabilities Check plugin versions"
-      }
+      },
+      "filled_example": "whatweb -v http://target.com"
     },
     {
       "id": "ldapsearch-basic",
@@ -237,7 +243,8 @@
       },
       "methodology_guidance": {
         "after_success": "Enumerate users Check for password policy"
-      }
+      },
+      "filled_example": "ldapsearch -x -H ldap://192.168.1.1 -b 'DC=domain,DC=local'"
     },
     {
       "id": "ldapsearch-dump",
@@ -287,7 +294,8 @@
       },
       "methodology_guidance": {
         "after_success": "Parse user data Extract service accounts"
-      }
+      },
+      "filled_example": "ldapsearch -x -H ldap://192.168.1.1 -b 'DC=domain,DC=local' -D 'admin' -w 'P@ssw0rd123!' '*'"
     },
     {
       "id": "dig-domain-enum",
@@ -312,7 +320,8 @@
       "next_steps": [],
       "methodology_guidance": {
         "after_success": "Try zone transfer Enumerate subdomains"
-      }
+      },
+      "filled_example": "dig example.com ANY"
     },
     {
       "id": "dig-zone-transfer",
@@ -348,7 +357,8 @@
       },
       "methodology_guidance": {
         "after_success": "Document all records Identify internal hostnames"
-      }
+      },
+      "filled_example": "dig axfr @192.168.1.1 example.com"
     },
     {
       "id": "dnsenum-domain",
@@ -373,7 +383,8 @@
       "next_steps": [],
       "methodology_guidance": {
         "after_success": "Check for subdomains Try zone transfer"
-      }
+      },
+      "filled_example": "dnsenum example.com"
     },
     {
       "id": "dnsrecon-domain",
@@ -402,7 +413,8 @@
       "flag_explanations": {
         "-d": "Domain to target",
         "-t": "Type of enumeration (std, axfr, bing, etc.)"
-      }
+      },
+      "filled_example": "dnsrecon -d example.com -t std"
     }
   ]
 }

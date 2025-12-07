@@ -32,7 +32,8 @@
       "oscp_relevance": "high",
       "alternatives": [
         "get-service"
-      ]
+      ],
+      "filled_example": "sc qc wuauserv"
     },
     {
       "id": "nmap-version-check",
@@ -81,7 +82,8 @@
       "notes": "Extracted from instruction text:\n'Manual binary analysis:\nstrings /path/to/binary'.\n\nCommon technique for analyzing SUID binaries, identifying library dependencies, or finding embedded credentials.",
       "oscp_relevance": "high",
       "alternatives": [],
-      "next_steps": []
+      "next_steps": [],
+      "filled_example": "strings /usr/local/bin/vulnerable_app"
     },
     {
       "id": "getcap-specific-binary",
@@ -114,7 +116,8 @@
       "notes": "Extracted from instruction text:\n'Check specific binary:\ngetcap /usr/bin/python3 (test known binary)'.\n\nVerifies if a known binary has capabilities that could be exploited for privilege escalation.",
       "oscp_relevance": "high",
       "prerequisites": [],
-      "alternatives": []
+      "alternatives": [],
+      "filled_example": "getcap /usr/bin/python3"
     },
     {
       "id": "ldap-dn-path-check",
@@ -144,7 +147,8 @@
       "oscp_relevance": "medium",
       "alternatives": [
         "ldapsearch-ad"
-      ]
+      ],
+      "filled_example": "grep -E 'CN=(Users|Groups)' ldap_results.txt"
     },
     {
       "id": "ad-user-attribute-inspection",
@@ -263,7 +267,8 @@
       "prerequisites": [
         "import-powerview"
       ],
-      "alternatives": []
+      "alternatives": [],
+      "filled_example": "Get-ObjectAcl -Identity CN=Administrator,CN=Users,DC=corp,DC=com | ? {$_.SecurityIdentifier -eq S-1-5-21-1234567890-1234567890-1234567890-1001}"
     },
     {
       "id": "check-robots-txt",
@@ -298,7 +303,8 @@
       "alternatives": [
         "nikto-scan"
       ],
-      "next_steps": []
+      "next_steps": [],
+      "filled_example": "curl http://192.168.1.100/robots.txt"
     },
     {
       "id": "check-rate-limiting",
@@ -357,7 +363,8 @@
         "429 status codes": "Rate limiting detected - use slower attack with --req-delay or manual attempts",
         "Account lockout messages": "Reduce request rate, increase delay between attempts",
         "IP blocking": "Use proxy rotation or VPN to change source IP"
-      }
+      },
+      "filled_example": "wfuzz -c -w /usr/share/seclists/Passwords/Common-Credentials/10-million-password-list-top-20.txt -u http://192.168.1.100/login.php -d \"username=admin&password=FUZZ\" --hc 429"
     }
   ]
 }

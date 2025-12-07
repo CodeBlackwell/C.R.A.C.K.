@@ -60,7 +60,8 @@
       "oscp_relevance": "high",
       "methodology_guidance": {
         "after_success": "Verify SOCKS proxy running: ss -ntplu | grep <SOCKS_PORT> Edit full config: sudo nano /etc/proxychains4.conf Set timeout values: tcp_read_time_out = 1000, tcp_connect_time_out = 1000 Enable proxy_dns: Uncomment 'proxy_dns' line to prevent DNS leaks Test configuration: proxychains curl -I http://internal-ip"
-      }
+      },
+      "filled_example": "echo 'socks5 127.0.0.1 9999' >> /etc/proxychains4.conf"
     },
     {
       "id": "proxychains-nmap",
@@ -134,7 +135,8 @@
       "oscp_relevance": "high",
       "methodology_guidance": {
         "after_success": "Enumerate services: proxychains nmap -sT -sV -p <OPEN_PORTS> -Pn -v <TARGET> Scan discovered subnet: proxychains nmap -sT -Pn --top-ports=20 172.16.50.0/24 Run vulnerability scan: proxychains nmap -sT -Pn --script=vuln -p <PORT> <TARGET> Access discovered services: proxychains psql -h <TARGET>, proxychains smbclient -L //<TARGET>"
-      }
+      },
+      "filled_example": "proxychains -q nmap -sT -Pn --top-ports=20 -v 172.16.50.217"
     },
     {
       "id": "proxychains-psql",
@@ -209,7 +211,8 @@
       "oscp_relevance": "medium",
       "methodology_guidance": {
         "after_success": "List databases: \\l List tables in database: \\dt Query user table: SELECT * FROM cwd_user; (for Confluence) Extract credentials: SELECT username, password_hash FROM users; Check database version: SELECT version();"
-      }
+      },
+      "filled_example": "proxychains -q psql -h 172.16.50.217 -p 5432 -U postgres -d confluence"
     }
   ]
 }

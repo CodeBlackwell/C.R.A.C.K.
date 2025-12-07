@@ -5,7 +5,7 @@
       "name": "PowerShell WinRM Invoke-Command Remote Execution",
       "description": "Execute commands remotely via WinRM using Invoke-Command with credential object",
       "command": "Invoke-Command -ComputerName <TARGET> -Credential $credential -ScriptBlock {<COMMAND>}",
-      "category": "LATERAL_MOVEMENT",
+      "category": "exploitation",
       "subcategory": "WINRM",
       "os": "WINDOWS",
       "variables": [
@@ -86,14 +86,24 @@
         "REMOTE_EXECUTION",
         "OSCP:HIGH"
       ],
-      "prerequisites": ["ps-winrm-credential-setup"],
-      "alternatives": ["winrm-invoke-command", "evil-winrm-creds", "wmi-invoke-method"],
-      "next_steps": ["mimikatz-sekurlsa-logonpasswords", "ps-reverse-shell-base64"],
+      "prerequisites": [
+        "ps-winrm-credential-setup"
+      ],
+      "alternatives": [
+        "winrm-invoke-command",
+        "evil-winrm-creds",
+        "wmi-invoke-method"
+      ],
+      "next_steps": [
+        "mimikatz-sekurlsa-logonpasswords",
+        "ps-reverse-shell-base64"
+      ],
       "related_commands": [
         "ps-winrm-credential-setup",
         "ps-winrm-new-pssession",
         "winrs-remote-execution"
-      ]
+      ],
+      "filled_example": "Invoke-Command -ComputerName 192.168.50.73 -Credential $credential -ScriptBlock {whoami; hostname}"
     }
   ]
 }

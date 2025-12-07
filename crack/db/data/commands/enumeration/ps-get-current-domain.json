@@ -5,7 +5,7 @@
       "name": "PowerShell Get Current Domain Information",
       "description": "Retrieve current Active Directory domain information using .NET System.DirectoryServices.ActiveDirectory",
       "command": "[System.DirectoryServices.ActiveDirectory.Domain]::GetCurrentDomain()",
-      "category": "ENUMERATION",
+      "category": "enumeration",
       "subcategory": "ACTIVE_DIRECTORY",
       "os": "WINDOWS",
       "variables": [],

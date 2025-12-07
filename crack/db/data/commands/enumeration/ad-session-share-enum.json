@@ -55,7 +55,8 @@
       "methodology_guidance": {
         "after_success": "Identify high-value logged-on users (Domain Admins) Target computers where admins are logged in for credential theft",
         "on_failure": "Use Get-NetLoggedon for alternative enumeration method"
-      }
+      },
+      "filled_example": "Get-NetSession -ComputerName DC1.corp.com"
     },
     {
       "id": "powerview-get-netloggedon",
@@ -109,7 +110,8 @@
       "methodology_guidance": {
         "after_success": "Identify domain admin sessions Target systems where privileged users are logged in",
         "oscp_tips": "Attempt credential theft if admin access available"
-      }
+      },
+      "filled_example": "Get-NetLoggedon -ComputerName WEB04.corp.com"
     },
     {
       "id": "powerview-find-localadminaccess",
@@ -289,7 +291,8 @@
       "oscp_relevance": "high",
       "methodology_guidance": {
         "after_success": "Target systems where admin users are logged in Attempt credential theft if you have admin access Check other systems: loop through computer list"
-      }
+      },
+      "filled_example": ".\\PsLoggedon.exe \\\\FILES04.corp.com"
     },
     {
       "id": "net-view-shares",
@@ -338,7 +341,8 @@
       "oscp_relevance": "high",
       "methodology_guidance": {
         "after_success": "Test access: dir \\\\<TARGET>\\<SHARE> Search for sensitive files Mount share: net use Z: \\\\<TARGET>\\<SHARE>"
-      }
+      },
+      "filled_example": "net view \\\\FILES04.corp.com"
     },
     {
       "id": "test-share-access",
@@ -398,7 +402,8 @@
       "oscp_relevance": "high",
       "methodology_guidance": {
         "after_success": "Recursively search for files: dir \\\\<TARGET>\\<SHARE> /s /b Search for sensitive patterns: findstr /S /I password *.txt *.config *.xml Download interesting files: copy \\\\<TARGET>\\<SHARE>\\<FILE> ."
-      }
+      },
+      "filled_example": "dir \\\\FILES04.corp.com\\backup"
     },
     {
       "id": "search-share-files",
@@ -470,7 +475,8 @@
       "oscp_relevance": "high",
       "methodology_guidance": {
         "after_success": "Review found files: type \\\\<TARGET>\\<SHARE>\\<FOUND_FILE> Download for offline analysis: copy \\\\<TARGET>\\<SHARE>\\<FOUND_FILE> . Search for multiple patterns: findstr /S /I /M \"password config backup credential\" *.*"
-      }
+      },
+      "filled_example": "findstr /S /I /M /P \"password\" \\\\FILES04\\backup\\*.*"
     },
     {
       "id": "gpp-password-decrypt",
@@ -520,7 +526,8 @@
       "oscp_relevance": "high",
       "methodology_guidance": {
         "after_success": "Test credentials: crackmapexec smb <TARGET> -u <USER> -p <DECRYPTED_PASSWORD> Try password against local admin accounts Check password age and reuse across systems"
-      }
+      },
+      "filled_example": "gpp-decrypt \"+bsY0V3d4/KgX3VJdO/vyepPfAN1zMFTiQDApgR92JE\""
     },
     {
       "id": "powerview-find-domainshare-exclude",
@@ -609,7 +616,8 @@
       "oscp_relevance": "medium",
       "methodology_guidance": {
         "after_success": "If Domain Admin logged on, target that machine for credential dumping"
-      }
+      },
+      "filled_example": "PsLoggedOn.exe \\\\WS01"
     },
     {
       "id": "gpp-password-files",
@@ -661,7 +669,8 @@
       "oscp_relevance": "high",
       "methodology_guidance": {
         "after_success": "Decrypt found passwords: gpp-decrypt <CPASSWORD>"
-      }
+      },
+      "filled_example": "findstr /S /I cpassword \\\\corp.com\\sysvol\\corp.com\\policies\\*.xml"
     }
   ]
 }

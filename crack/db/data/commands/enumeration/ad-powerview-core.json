@@ -181,7 +181,8 @@
       "oscp_relevance": "high",
       "methodology_guidance": {
         "after_success": "Check memberof for Domain Admins membership Check admincount=1 for protected accounts Check serviceprincipalname for Kerberoastable accounts"
-      }
+      },
+      "filled_example": "Get-NetUser -Identity administrator"
     },
     {
       "id": "powerview-get-netuser-spn",
@@ -327,7 +328,8 @@
       "oscp_relevance": "high",
       "methodology_guidance": {
         "after_success": "Check for nested groups (member DNs starting with CN=group) Enumerate each member: Get-NetUser -Identity <USERNAME>"
-      }
+      },
+      "filled_example": "Get-NetGroup -Identity \"Domain Admins\" | select member"
     },
     {
       "id": "powerview-get-netgroupmember",
@@ -380,7 +382,8 @@
       "oscp_relevance": "high",
       "methodology_guidance": {
         "after_success": "Use -Recurse to unravel nested groups Enumerate each user member: Get-NetUser -Identity <USERNAME> Check for service accounts in privileged groups"
-      }
+      },
+      "filled_example": "Get-NetGroupMember -Identity \"Domain Admins\""
     },
     {
       "id": "powerview-get-netcomputer",

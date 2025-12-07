@@ -98,7 +98,8 @@
       "oscp_relevance": "high",
       "methodology_guidance": {
         "after_success": "If user in Domain Admins: prioritize as high-value target Check Password last set - old passwords may be weaker Check Last logon - dormant accounts = less detection"
-      }
+      },
+      "filled_example": "net user administrator /domain"
     },
     {
       "id": "net-group-domain-list",
@@ -197,7 +198,8 @@
       "oscp_relevance": "high",
       "methodology_guidance": {
         "after_success": "Enumerate each member to find attack paths Check for nested groups (groups within groups)"
-      }
+      },
+      "filled_example": "net group \"Domain Admins\" /domain"
     },
     {
       "id": "net-accounts-domain",
@@ -297,7 +299,8 @@
       "oscp_relevance": "high",
       "methodology_guidance": {
         "after_success": "If SPNs found: request Kerberos service ticket Kerberoast the account: Rubeus.exe kerberoast /user:<USERNAME> Crack ticket offline: hashcat -m 13100 ticket.txt wordlist.txt Identify service type from SPN (HTTP=web, MSSQLSvc=database)"
-      }
+      },
+      "filled_example": "setspn -L svc_sql"
     },
     {
       "id": "setspn-query-all",
@@ -591,7 +594,8 @@
         "Cannot find domain": "Verify domain name with: systeminfo | findstr Domain"
       },
       "notes": "IDENTIFY DOMAIN CONTROLLERS:\nList all DCs in the domain.\n\nWHY TARGET DCs:\n- Hold master copy of AD database (NTDS.dit)\n- Contain all domain credentials\n- DCSync attacks possible if compromised\n\nCOMMAND:\n  nltest /dclist:corp.com\n\nOUTPUT:\n  PDC = Primary Domain Controller\n  Lists all DC hostnames and IPs\n\nTime:\n<5 seconds",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "filled_example": "nltest /dclist:corp.com"
     },
     {
       "id": "setspn-list-all",
@@ -640,7 +644,8 @@
       "oscp_relevance": "high",
       "methodology_guidance": {
         "after_success": "Request TGS tickets for discovered SPNs"
-      }
+      },
+      "filled_example": "setspn -T corp.com -Q */*"
     },
     {
       "id": "dsquery-users",

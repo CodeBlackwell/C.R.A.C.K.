@@ -209,7 +209,7 @@ class SchemaValidator:
 
     def __init__(self, base_path: Path):
         self.base_path = base_path
-        self.commands_dir = base_path / 'reference' / 'data' / 'commands'
+        self.commands_dir = base_path / 'db' / 'data' / 'commands'
         self.all_command_ids: Set[str] = set()
         self.violations: Dict[str, List[Dict]] = defaultdict(list)
         self.stats = defaultdict(int)
@@ -322,6 +322,29 @@ class SchemaValidator:
                 })
                 self.stats['unused_variable_definitions'] += len(unused_vars)
 
+            # Validate filled_example field presence/absence based on placeholders
+            has_placeholders = len(placeholders) > 0
+            filled_example = cmd.get('filled_example')
+
+            if has_placeholders:
+                # Commands WITH placeholders MUST have filled_example
+                if not filled_example:
+                    file_violations['missing_filled_example'].append({
+                        'id': cmd_id,
+                        'placeholders': list(placeholders),
+                        'command': command_text[:80]
+                    })
+                    self.stats['missing_filled_example'] += 1
+            else:
+                # Commands WITHOUT placeholders should NOT have filled_example (redundant)
+                if filled_example:
+                    file_violations['redundant_filled_example'].append({
+                        'id': cmd_id,
+                        'filled_example': filled_example,
+                        'command': command_text[:80]
+                    })
+                    self.stats['redundant_filled_example'] += 1
+
             # Check for hardcoded values (common patterns)
             hardcoded_patterns = [
                 (r'\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b', 'IP address'),
@@ -331,14 +354,22 @@ class SchemaValidator:
                 (r'user(name)?:\s*\w+', 'username')
             ]
 
+            # Built-in accounts that are legitimate to hardcode
+            ALLOWED_HARDCODED = {'krbtgt', 'administrator', 'guest', 'system', 'nt authority'}
+
             for pattern, desc in hardcoded_patterns:
-                if re.search(pattern, command_text, re.IGNORECASE):
+                match = re.search(pattern, command_text, re.IGNORECASE)
+                if match:
+                    matched_text = match.group().lower()
+                    # Skip if it's a known built-in account
+                    if any(allowed in matched_text for allowed in ALLOWED_HARDCODED):
+                        continue
                     # Exclude if it's clearly a placeholder or example
-                    if '<' not in command_text[max(0, command_text.find(re.search(pattern, command_text, re.IGNORECASE).group())-10):]:
+                    if '<' not in command_text[max(0, command_text.find(match.group())-10):]:
                         file_violations['hardcoded_values'].append({
                             'id': cmd_id,
                             'type': desc,
-                            'match': re.search(pattern, command_text, re.IGNORECASE).group(),
+                            'match': match.group(),
                             'command': command_text[:100]
                         })
                         self.stats['hardcoded_values'] += 1
@@ -428,10 +459,12 @@ class SchemaValidator:
             ('invalid_category', 'HIGH', 'Invalid Category'),
             ('duplicate_ids', 'CRITICAL', 'Duplicate Command IDs'),
             ('missing_variable_definitions', 'HIGH', 'Missing Variable Definitions'),
+            ('missing_filled_example', 'HIGH', 'Missing filled_example (command has placeholders)'),
             ('alternatives_using_text', 'HIGH', 'Alternatives Using Text (should be IDs)'),
             ('prerequisites_using_text', 'HIGH', 'Prerequisites Using Text (should be IDs)'),
             ('orphaned_references', 'MEDIUM', 'Orphaned References (missing commands)'),
             ('hardcoded_values', 'MEDIUM', 'Hardcoded Values (should use placeholders)'),
+            ('redundant_filled_example', 'MEDIUM', 'Redundant filled_example (no placeholders)'),
             ('unused_variable_definitions', 'LOW', 'Unused Variable Definitions'),
         ]
 

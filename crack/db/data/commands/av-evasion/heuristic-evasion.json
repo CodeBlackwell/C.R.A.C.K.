@@ -39,7 +39,8 @@
         "Advanced sandboxes honor Sleep() - Use additional checks",
         "Threshold too strict - System overhead may cause false positives",
         "Too short sleep - Obvious to user that program is delaying"
-      ]
+      ],
+      "filled_example": "using System;\nusing System.Threading;\n\nDateTime t1 = DateTime.Now;\nThread.Sleep(10000);\ndouble deltaT = DateTime.Now.Subtract(t1).TotalSeconds;\nif(deltaT < 9.5) {\n    return; // Sandbox detected\n}\n// Continue execution"
     },
     {
       "id": "non-emulated-api-numa",
@@ -97,7 +98,8 @@
       "failure_indicators": [
         "Real systems with low memory may fail - Use moderate size (100-500MB)",
         "Modern sandboxes may provide generous memory - Less reliable than API checks"
-      ]
+      ],
+      "filled_example": "using System;\n\nIntPtr mem = IntPtr.Zero;\ntry {\n    mem = Marshal.AllocHGlobal(100000000); // e.g., 100MB\n    if(mem == IntPtr.Zero) {\n        return; // Allocation failed - sandbox\n    }\n    Marshal.FreeHGlobal(mem);\n} catch {\n    return; // Exception - sandbox\n}"
     },
     {
       "id": "check-processor-count",
@@ -130,7 +132,8 @@
         "Old real systems may have 1-2 cores - Use threshold of 2, not 4",
         "Modern sandboxes may provision more cores - Combine with other checks",
         "VMs in enterprise may have limited cores - Consider target environment"
-      ]
+      ],
+      "filled_example": "using System;\n\nint cores = Environment.ProcessorCount;\nif(cores < 2) {\n    return; // Sandbox detected\n}"
     },
     {
       "id": "check-username-environment",
@@ -189,7 +192,8 @@
         "Clean real systems may have few files - Use low threshold (3-5)",
         "Exception if path doesn't exist - Wrap in try/catch",
         "Sandboxes may pre-populate artifacts - Combine with other checks"
-      ]
+      ],
+      "filled_example": "using System;\nusing System.IO;\n\nstring recentPath = Environment.GetFolderPath(Environment.SpecialFolder.Recent);\nint fileCount = Directory.GetFiles(recentPath).Length;\n\nif(fileCount < 5) {\n    return; // Fresh sandbox detected\n}"
     },
     {
       "id": "check-uptime",
@@ -222,7 +226,8 @@
         "User just rebooted - False positive if threshold too high",
         "Environment.TickCount rolls over at 49.7 days - Use GetTickCount64 for accuracy",
         "Persistent sandboxes may have long uptime - Less reliable for cloud sandboxes"
-      ]
+      ],
+      "filled_example": "using System;\n\nint uptimeMS = Environment.TickCount;\nint uptimeMinutes = uptimeMS / 60000;\n\nif(uptimeMinutes < 10) {\n    return; // Fresh sandbox detected\n}"
     }
   ],
   "oscp_relevance": "Essential for bypassing behavioral analysis and sandboxing. Modern AV relies heavily on heuristics - signature evasion alone is insufficient.",

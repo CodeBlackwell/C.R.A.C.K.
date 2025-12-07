@@ -5,7 +5,7 @@
       "name": "PowerShell .NET DirectorySearcher LDAP Query",
       "description": "Perform LDAP queries against Active Directory using built-in .NET DirectorySearcher class without importing tools",
       "command": "([adsisearcher]'<LDAP_FILTER>').FindAll()",
-      "category": "ENUMERATION",
+      "category": "enumeration",
       "subcategory": "ACTIVE_DIRECTORY",
       "os": "WINDOWS",
       "variables": [
@@ -93,9 +93,18 @@
         "servers": "(&(objectClass=computer)(operatingSystem=*Server*))",
         "service_accounts": "(&(objectClass=user)(servicePrincipalName=*))"
       },
-      "prerequisites": ["ps-get-current-domain"],
-      "alternatives": ["ldapsearch-users-ad", "get-netuser"],
-      "next_steps": ["kerbrute-userenum-ad", "impacket-getnpusers-asreproast"]
+      "prerequisites": [
+        "ps-get-current-domain"
+      ],
+      "alternatives": [
+        "ldapsearch-users-ad",
+        "get-netuser"
+      ],
+      "next_steps": [
+        "kerbrute-userenum-ad",
+        "impacket-getnpusers-asreproast"
+      ],
+      "filled_example": "([adsisearcher]'(objectClass=user)').FindAll()"
     }
   ]
 }

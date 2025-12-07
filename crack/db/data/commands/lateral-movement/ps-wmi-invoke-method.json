@@ -5,7 +5,7 @@
       "name": "PowerShell WMI Remote Process Creation",
       "description": "Create remote process via WMI using Invoke-CimMethod and Win32_Process class",
       "command": "Invoke-CimMethod -CimSession $session -ClassName Win32_Process -MethodName Create -Arguments @{CommandLine='<COMMAND>'}",
-      "category": "LATERAL_MOVEMENT",
+      "category": "exploitation",
       "subcategory": "WMI",
       "os": "WINDOWS",
       "variables": [
@@ -86,14 +86,24 @@
         "REMOTE_EXECUTION",
         "OSCP:MEDIUM"
       ],
-      "prerequisites": ["ps-wmi-cimsession-setup", "ps-winrm-credential-setup"],
-      "alternatives": ["wmi-invoke-method", "ps-winrm-invoke-command"],
-      "next_steps": ["mimikatz-sekurlsa-logonpasswords", "ps-reverse-shell-base64"],
+      "prerequisites": [
+        "ps-wmi-cimsession-setup",
+        "ps-winrm-credential-setup"
+      ],
+      "alternatives": [
+        "wmi-invoke-method",
+        "ps-winrm-invoke-command"
+      ],
+      "next_steps": [
+        "mimikatz-sekurlsa-logonpasswords",
+        "ps-reverse-shell-base64"
+      ],
       "related_commands": [
         "ps-wmi-cimsession-setup",
         "ps-reverse-shell-base64",
         "wmic-process-create"
-      ]
+      ],
+      "filled_example": "Invoke-CimMethod -CimSession $session -ClassName Win32_Process -MethodName Create -Arguments @{CommandLine='calc'}"
     }
   ]
 }

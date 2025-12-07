@@ -47,7 +47,8 @@
       "oscp_relevance": "high",
       "methodology_guidance": {
         "after_success": "less <FILE> more <FILE> head <FILE> tail <FILE>"
-      }
+      },
+      "filled_example": "cat /etc/passwd"
     },
     {
       "id": "cd-change-directory",
@@ -89,7 +90,8 @@
       "oscp_relevance": "medium",
       "methodology_guidance": {
         "after_success": "pushd <DIRECTORY> cd - (previous directory)"
-      }
+      },
+      "filled_example": "cd /var/www/html"
     },
     {
       "id": "file-rename-extension",
@@ -137,7 +139,8 @@
       "oscp_relevance": "medium",
       "methodology_guidance": {
         "after_success": "cp <OLD> <NEW> && rm <OLD>"
-      }
+      },
+      "filled_example": "mv shell.txt shell.php"
     },
     {
       "id": "hosts-file-add-entry",
@@ -190,11 +193,12 @@
         "still_not_resolving": "DNS cache issue. Flush with: sudo systemd-resolve --flush-caches. Or restart DNS: sudo systemctl restart systemd-resolved",
         "duplicate_entry": "Entry already exists. Edit /etc/hosts manually to update. Or remove old entry first"
       },
-      "notes": "CRITICAL OSCP STEP: Map target hostname for web applications.\n\nWorkflow:\n1. Add host entry (THIS COMMAND)\n   echo '10.10.11.18 usage.htb' | sudo tee -a /etc/hosts\n2. Verify resolution\n   ping usage.htb\n   → Should ping 10.10.11.18\n3. Access web application\n   http://usage.htb\n\nCommon OSCP usage:\necho '10.10.11.18 usage.htb' | sudo tee -a /etc/hosts\necho '10.10.11.50 office.htb' | sudo tee -a /etc/hosts\n\nVerification:\ncat /etc/hosts | grep htb\nping -c 1 usage.htb\n\nTime estimate: 5-10 seconds",
+      "notes": "CRITICAL OSCP STEP: Map target hostname for web applications.\n\nWorkflow:\n1. Add host entry (THIS COMMAND)\n   echo '10.10.11.18 usage.htb' | sudo tee -a /etc/hosts\n2. Verify resolution\n   ping usage.htb\n   \u2192 Should ping 10.10.11.18\n3. Access web application\n   http://usage.htb\n\nCommon OSCP usage:\necho '10.10.11.18 usage.htb' | sudo tee -a /etc/hosts\necho '10.10.11.50 office.htb' | sudo tee -a /etc/hosts\n\nVerification:\ncat /etc/hosts | grep htb\nping -c 1 usage.htb\n\nTime estimate: 5-10 seconds",
       "oscp_relevance": "high",
       "methodology_guidance": {
         "after_success": "sudo nano /etc/hosts sudo vi /etc/hosts"
-      }
+      },
+      "filled_example": "echo '10.10.11.18 usage.htb' | sudo tee -a /etc/hosts"
     },
     {
       "id": "capture-user-flag",
@@ -239,7 +243,8 @@
       "oscp_relevance": "high",
       "methodology_guidance": {
         "after_success": "find /home -name user.txt -exec cat {} \\; locate user.txt"
-      }
+      },
+      "filled_example": "cat /home/dash/user.txt"
     },
     {
       "id": "capture-root-flag",
@@ -362,7 +367,8 @@
       "oscp_relevance": "low",
       "methodology_guidance": {
         "after_success": "ltrace <BINARY> strace <BINARY> gdb <BINARY>"
-      }
+      },
+      "filled_example": "strings /usr/bin/usage_management | grep -i password"
     },
     {
       "id": "sudo-execute-usage-management",

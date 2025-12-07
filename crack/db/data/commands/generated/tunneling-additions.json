@@ -24,8 +24,14 @@
         "OSCP:HIGH"
       ],
       "prerequisites": [],
-      "alternatives": ["ssh-dynamic-port-forward", "ligolo-server"],
-      "next_steps": ["chisel-client", "chisel-socks"],
+      "alternatives": [
+        "ssh-dynamic-port-forward",
+        "ligolo-server"
+      ],
+      "next_steps": [
+        "chisel-client",
+        "chisel-socks"
+      ],
       "flag_explanations": {
         "-p": "Server listening port",
         "--reverse": "Enable reverse tunneling",
@@ -33,7 +39,8 @@
       },
       "methodology_guidance": {
         "after_success": "Run chisel client on compromised host Configure proxychains"
-      }
+      },
+      "filled_example": "chisel server -p 8000 --reverse"
     },
     {
       "id": "chisel-client",
@@ -82,12 +89,22 @@
         "client",
         "OSCP:HIGH"
       ],
-      "prerequisites": ["chisel-server"],
-      "alternatives": ["ssh-local-forward", "plink-remote-forward", "ligolo-agent"],
-      "next_steps": ["proxychains-nmap", "nmap-service-scan"],
+      "prerequisites": [
+        "chisel-server"
+      ],
+      "alternatives": [
+        "ssh-local-forward",
+        "plink-remote-forward",
+        "ligolo-agent"
+      ],
+      "next_steps": [
+        "proxychains-nmap",
+        "nmap-service-scan"
+      ],
       "methodology_guidance": {
         "after_success": "Access service at localhost:<LPORT>"
-      }
+      },
+      "filled_example": "chisel client 10.10.14.1:8000 R:9090:172.16.1.10:80"
     },
     {
       "id": "chisel-socks",
@@ -117,12 +134,21 @@
         "proxy",
         "OSCP:HIGH"
       ],
-      "prerequisites": ["chisel-server"],
-      "alternatives": ["ssh-dynamic-forward", "sshuttle-vpn"],
-      "next_steps": ["proxychains-config", "proxychains-nmap"],
+      "prerequisites": [
+        "chisel-server"
+      ],
+      "alternatives": [
+        "ssh-dynamic-forward",
+        "sshuttle-vpn"
+      ],
+      "next_steps": [
+        "proxychains-config",
+        "proxychains-nmap"
+      ],
       "methodology_guidance": {
         "after_success": "Configure proxychains Scan internal network"
-      }
+      },
+      "filled_example": "chisel client 10.10.14.1:8000 R:socks"
     },
     {
       "id": "ssh-local-forward",
@@ -171,9 +197,18 @@
         "local",
         "OSCP:HIGH"
       ],
-      "prerequisites": ["ssh-connect"],
-      "alternatives": ["chisel-client", "ssh-local-port-forward", "plink-remote-forward"],
-      "next_steps": ["proxychains-nmap", "nmap-service-scan"],
+      "prerequisites": [
+        "ssh-connect"
+      ],
+      "alternatives": [
+        "chisel-client",
+        "ssh-local-port-forward",
+        "plink-remote-forward"
+      ],
+      "next_steps": [
+        "proxychains-nmap",
+        "nmap-service-scan"
+      ],
       "flag_explanations": {
         "-L": "Local port forwarding",
         "-N": "No command execution (tunnel only)",
@@ -181,7 +216,8 @@
       },
       "methodology_guidance": {
         "after_success": "Access service at localhost:<LPORT>"
-      }
+      },
+      "filled_example": "ssh -L 8080:172.16.1.10:80 user@192.168.1.1"
     },
     {
       "id": "ssh-remote-forward",
@@ -224,16 +260,26 @@
         "remote",
         "OSCP:HIGH"
       ],
-      "prerequisites": ["ssh-connect"],
-      "alternatives": ["chisel-client", "plink-remote-forward", "ssh-remote-port-forward"],
-      "next_steps": ["nmap-service-scan", "nc-listener-setup"],
+      "prerequisites": [
+        "ssh-connect"
+      ],
+      "alternatives": [
+        "chisel-client",
+        "plink-remote-forward",
+        "ssh-remote-port-forward"
+      ],
+      "next_steps": [
+        "nmap-service-scan",
+        "nc-listener-setup"
+      ],
       "flag_explanations": {
         "-R": "Remote port forwarding",
         "-N": "No command execution"
       },
       "methodology_guidance": {
         "after_success": "Service accessible on SSH host at <RPORT>"
-      }
+      },
+      "filled_example": "ssh -R 8080:localhost:80 user@192.168.1.1"
     },
     {
       "id": "ssh-dynamic-forward",
@@ -270,9 +316,18 @@
         "dynamic",
         "OSCP:HIGH"
       ],
-      "prerequisites": ["ssh-connect"],
-      "alternatives": ["chisel-socks", "sshuttle-vpn", "ssh-dynamic-port-forward"],
-      "next_steps": ["proxychains-config", "proxychains-nmap"],
+      "prerequisites": [
+        "ssh-connect"
+      ],
+      "alternatives": [
+        "chisel-socks",
+        "sshuttle-vpn",
+        "ssh-dynamic-port-forward"
+      ],
+      "next_steps": [
+        "proxychains-config",
+        "proxychains-nmap"
+      ],
       "flag_explanations": {
         "-D": "Dynamic port forwarding (SOCKS)",
         "-N": "No command execution",
@@ -280,7 +335,8 @@
       },
       "methodology_guidance": {
         "after_success": "Configure proxychains.conf Route traffic through SOCKS"
-      }
+      },
+      "filled_example": "ssh -D 1080 user@192.168.1.1"
     },
     {
       "id": "ligolo-server",
@@ -297,8 +353,13 @@
         "OSCP:HIGH"
       ],
       "prerequisites": [],
-      "alternatives": ["chisel-server", "ssh-dynamic-port-forward"],
-      "next_steps": ["ligolo-agent"],
+      "alternatives": [
+        "chisel-server",
+        "ssh-dynamic-port-forward"
+      ],
+      "next_steps": [
+        "ligolo-agent"
+      ],
       "methodology_guidance": {
         "after_success": "Run ligolo agent on target Add routes"
       }
@@ -325,12 +386,21 @@
         "agent",
         "OSCP:HIGH"
       ],
-      "prerequisites": ["ligolo-server"],
-      "alternatives": ["chisel-client", "ssh-dynamic-forward"],
-      "next_steps": ["nmap-service-scan", "bloodhound-ingest"],
+      "prerequisites": [
+        "ligolo-server"
+      ],
+      "alternatives": [
+        "chisel-client",
+        "ssh-dynamic-forward"
+      ],
+      "next_steps": [
+        "nmap-service-scan",
+        "bloodhound-ingest"
+      ],
       "methodology_guidance": {
         "after_success": "Start session Add route to internal network"
-      }
+      },
+      "filled_example": "ligolo-agent -connect 10.10.14.1:11601 -ignore-cert"
     }
   ]
 }

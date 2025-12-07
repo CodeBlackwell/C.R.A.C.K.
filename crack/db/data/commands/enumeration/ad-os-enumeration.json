@@ -200,7 +200,8 @@
         "after_success": "If Running: Use PsLoggedOn or Get-NetLoggedon immediately",
         "manual_alternative": "If Stopped + Manual: Start service (if admin): Start-Service -ComputerName <TARGET> -Name RemoteRegistry",
         "on_failure": "If Disabled: Skip Remote Registry method, use alternatives (NetSessionEnum on legacy OS, or gain local admin)"
-      }
+      },
+      "filled_example": "Get-Service -ComputerName WS01.corp.com -Name RemoteRegistry"
     },
     {
       "id": "enable-remote-registry",
@@ -259,7 +260,8 @@
       "oscp_relevance": "high",
       "methodology_guidance": {
         "after_success": "Verify service running: Get-Service -ComputerName <TARGET> -Name RemoteRegistry Enumerate logged-on users: PsLoggedOn.exe \\\\<TARGET> Alternative: Get-NetLoggedon -ComputerName <TARGET>"
-      }
+      },
+      "filled_example": "sc.exe \\\\WORKSTATION05.corp.com config RemoteRegistry start= auto && sc.exe \\\\WORKSTATION05.corp.com start RemoteRegistry"
     },
     {
       "id": "query-hkey-users-remote",
@@ -312,7 +314,8 @@
       "oscp_relevance": "medium",
       "methodology_guidance": {
         "after_success": "Convert SIDs to usernames: wmic useraccount where sid='<SID>' get name Alternative: PowerShell: (New-Object System.Security.Principal.SecurityIdentifier('<SID>')).Translate([System.Security.Principal.NTAccount]).Value Filter out system accounts (S-1-5-18, S-1-5-19, S-1-5-20) - focus on domain user SIDs (S-1-5-21-...)"
-      }
+      },
+      "filled_example": "reg query \\\\FILESERVER01\\HKU"
     }
   ]
 }

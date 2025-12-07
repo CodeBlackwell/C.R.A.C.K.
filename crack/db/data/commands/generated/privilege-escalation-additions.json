@@ -51,7 +51,8 @@
       "next_steps": [],
       "methodology_guidance": {
         "after_success": "Execute exploitation steps Verify root access"
-      }
+      },
+      "filled_example": "/usr/bin/find"
     },
     {
       "id": "cap-find",
@@ -101,7 +102,8 @@
       "next_steps": [],
       "methodology_guidance": {
         "after_success": "Use capability to escalate Get root shell"
-      }
+      },
+      "filled_example": "/usr/bin/python3.8"
     },
     {
       "id": "cron-enum",
