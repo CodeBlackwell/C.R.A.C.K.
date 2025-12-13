@@ -177,11 +177,16 @@ class DisplayCLI(BaseCLIHandler):
         print(f"\n{self.theme.primary('Command Template:')}")
         print(f"  {self.theme.command_name(cmd.command)}")
 
-        # Autofilled example
+        # Filled example (pre-defined in JSON)
+        if cmd.filled_example:
+            print(f"\n{self.theme.primary('Filled Example:')}")
+            print(f"  {self.theme.success(cmd.filled_example)}")
+
+        # Autofilled example (dynamic from session context)
         if self.placeholder_engine:
             filled = self.placeholder_engine.substitute(cmd.command)
             if filled != cmd.command:
-                print(f"\n{self.theme.primary('Autofilled Example:')}")
+                print(f"\n{self.theme.primary('Autofilled (Session):')}")
                 print(f"  {self.theme.success(filled)}")
 
         # Prerequisites

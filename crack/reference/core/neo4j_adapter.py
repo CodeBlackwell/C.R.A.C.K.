@@ -167,7 +167,8 @@ class Neo4jCommandRegistryAdapter:
             Command dataclass instance or None
         """
         try:
-            return CommandMapper.to_command(record, CommandMapper.NEO4J_FIELD_MAPPING)
+            # Convert Neo4j Record to dict for proper field access
+            return CommandMapper.to_command(dict(record), CommandMapper.NEO4J_FIELD_MAPPING)
         except Exception as e:
             return self.error_handler.handle_mapping_error(e, {'record_keys': list(record.keys())}, None)
 
@@ -274,6 +275,7 @@ class Neo4jCommandRegistryAdapter:
             description=cmd_node['description'],
             category=cmd_node['category'],
             subcategory=cmd_node.get('subcategory', ''),
+            filled_example=cmd_node.get('filled_example', ''),
             tags=tags,
             variables=[],  # Variables not linked in current schema
             flag_explanations=flag_explanations,

@@ -57,6 +57,7 @@ class Command:
     command: str
     description: str
     subcategory: str = ""
+    filled_example: str = ""  # Pre-defined example with placeholders filled
     tags: List[str] = field(default_factory=list)
     variables: List[CommandVariable] = field(default_factory=list)
     flag_explanations: Dict[str, str] = field(default_factory=dict)

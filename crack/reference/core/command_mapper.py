@@ -288,6 +288,7 @@ class CommandMapper:
                 command=cmd_node.get(command_field, ''),
                 description=cmd_node.get('description', ''),
                 subcategory=cmd_node.get('subcategory', ''),
+                filled_example=cmd_node.get('filled_example', ''),
                 tags=tags,
                 variables=variables,
                 flag_explanations=flag_explanations,

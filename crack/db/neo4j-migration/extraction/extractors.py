@@ -415,6 +415,7 @@ class CommandsExtractor(NodeRelationshipExtractor):
                 'command': safe_get(cmd, 'command'),
                 'description': safe_get(cmd, 'description'),
                 'subcategory': safe_get(cmd, 'subcategory'),
+                'filled_example': safe_get(cmd, 'filled_example'),  # Pre-filled example
                 'notes': safe_get(cmd, 'notes'),
                 'oscp_relevance': safe_get(cmd, 'oscp_relevance'),
                 # Enriched fields (JSON-serialized)

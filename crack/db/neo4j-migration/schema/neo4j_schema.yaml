@@ -28,6 +28,7 @@ nodes:
       - command
       - description
       - subcategory
+      - filled_example  # Pre-filled command example
       - notes
       - oscp_relevance
       # Enriched fields (stored as JSON strings)
@@ -418,6 +419,8 @@ relationships:
       - context
       - scenario_title
       - section_title
+      - example
+      - shows
     extractor: _extract_cheatsheet_command_rels
 
   cheatsheet_tagged_with:
