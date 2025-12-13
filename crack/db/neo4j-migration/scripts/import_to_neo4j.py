@@ -358,8 +358,8 @@ def main():
     )
     parser.add_argument(
         '--csv-dir',
-        default='db/neo4j-migration/data/neo4j',
-        help='CSV directory (default: db/neo4j-migration/data/neo4j/)'
+        default='../data/neo4j',
+        help='CSV directory (default: ../data/neo4j/)'
     )
     parser.add_argument(
         '--batch-size',
