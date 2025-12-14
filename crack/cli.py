@@ -406,6 +406,12 @@ def blood_trail_command(args):
     sys.argv = ['crack-bloodtrail'] + args
     bt_main()
 
+def prism_command(args):
+    """Execute PRISM - Parse and distill security tool output"""
+    from crack.prism.cli import main as prism_main
+    sys.argv = ['crack-prism'] + args
+    prism_main()
+
 def config_command(args):
     """Execute configuration management"""
     from crack.config import ConfigManager
@@ -909,13 +915,19 @@ def main():
                                        add_help=False)
     bt_parser.set_defaults(func=blood_trail_command)
 
+    # PRISM - Security tool output parser
+    prism_parser = subparsers.add_parser('prism',
+                                         help='PRISM - Parse and distill security tool output (mimikatz, etc.)',
+                                         add_help=False)
+    prism_parser.set_defaults(func=prism_command)
+
     # Parse known args to allow passing through tool-specific args
     args, remaining = parser.parse_known_args()
 
     # Show banner unless suppressed
-    # Note: reference, db, and ports commands have no banner by default
+    # Note: reference, db, ports, and prism commands have no banner by default
     if not args.no_banner and args.tool:
-        if args.tool not in ['reference', 'db', 'ports'] or '--banner' in remaining:
+        if args.tool not in ['reference', 'db', 'ports', 'prism'] or '--banner' in remaining:
             print_banner()
 
     # Execute the selected tool

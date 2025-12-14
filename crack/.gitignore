@@ -81,6 +81,35 @@ CRACK_targets/*.json
 !qa_profiles/**/profile.json
 
 # Debug logs
-.debug_logs/crack/crack/
+.debug_logs/
 *.egg-info/
-__pycache__/
+
+# PDF Archive (local reference materials)
+.pdf_archive/
+*.pdf
+
+# Private Archive (sensitive operational data)
+.private_archive/
+
+# Sensitive operational files
+*.ovpn
+spray_output/
+*BloodHound*.zip
+
+# Session and operational data
+sessions/
+*.state
+
+# Backup files
+*.bak
+*.backup
+
+# Coverage and test artifacts
+coverage.json
+.coveragerc
+pytest.ini
+
+# Operational reports (generated from real engagements)
+blood-trail.md
+bloodtrail.md
+spray_tailored.md

@@ -1,0 +1,105 @@
+# Nmap 7.95 scan initiated Thu Dec  4 18:27:28 2025 as: /usr/lib/nmap/nmap -T3 -sV -oA nmap -vvv 192.168.249.95-97
+Nmap scan report for 192.168.249.95
+Host is up, received echo-reply ttl 125 (0.13s latency).
+Scanned at 2025-12-04 18:27:34 HST for 249s
+Not shown: 992 closed tcp ports (reset)
+PORT      STATE SERVICE        REASON          VERSION
+135/tcp   open  msrpc          syn-ack ttl 125 Microsoft Windows RPC
+139/tcp   open  netbios-ssn    syn-ack ttl 125 Microsoft Windows netbios-ssn
+445/tcp   open  microsoft-ds?  syn-ack ttl 125
+3389/tcp  open  ms-wbt-server  syn-ack ttl 125 Microsoft Terminal Services
+5001/tcp  open  commplex-link? syn-ack ttl 125
+5985/tcp  open  http           syn-ack ttl 125 Microsoft HTTPAPI httpd 2.0 (SSDP/UPnP)
+8443/tcp  open  ssl/https-alt  syn-ack ttl 125 AppManager
+12000/tcp open  cce4x?         syn-ack ttl 125
+2 services unrecognized despite returning data. If you know the service/version, please submit the following fingerprints at https://nmap.org/cgi-bin/submit.cgi?new-service :
+==============NEXT SERVICE FINGERPRINT (SUBMIT INDIVIDUALLY)==============
+SF-Port5001-TCP:V=7.95%I=7%D=12/4%Time=69325FDF%P=x86_64-pc-linux-gnu%r(SI
+SF:POptions,DB,"HTTP/1\.1\x20200\x20OK\r\nContent-Type:\x20text/html;\x20c
+SF:harset=ISO-8859-1\r\nContent-Length:\x20132\r\n\r\nMAINSERVER_RESPONSE:
+SF:<serverinfo\x20method=\"setserverinfo\"\x20mainserver=\"5001\"\x20webse
+SF:rver=\"44444\"\x20pxyname=\"192\.168\.45\.204\"\x20startpage=\"\"/>\n\0
+SF:\r\n");
+==============NEXT SERVICE FINGERPRINT (SUBMIT INDIVIDUALLY)==============
+SF-Port8443-TCP:V=7.95%T=SSL%I=7%D=12/4%Time=69325F78%P=x86_64-pc-linux-gn
+SF:u%r(GetRequest,24E,"HTTP/1\.1\x20200\x20\r\nSet-Cookie:\x20JSESSIONID_A
+SF:PM_44444=5BF2F848AD3D0BE7EB47D19D887298C1;\x20Path=/;\x20Secure;\x20Htt
+SF:pOnly\r\nAccept-Ranges:\x20bytes\r\nETag:\x20W/\"261-1591621693000\"\r\
+SF:nLast-Modified:\x20Mon,\x2008\x20Jun\x202020\x2013:08:13\x20GMT\r\nCont
+SF:ent-Type:\x20text/html\r\nContent-Length:\x20261\r\nDate:\x20Fri,\x2005
+SF:\x20Dec\x202025\x2004:28:52\x20GMT\r\nConnection:\x20close\r\nServer:\x
+SF:20AppManager\r\n\r\n<!--\x20\$Id\$\x20-->\n<!DOCTYPE\x20HTML\x20PUBLIC\
+SF:x20\"-//W3C//DTD\x20HTML\x204\.01\x20Transitional//EN\">\n<html>\n<head
+SF:>\n<!--\x20This\x20comment\x20is\x20for\x20Instant\x20Gratification\x20
+SF:to\x20work\x20applications\.do\x20-->\n<script>\n\n\twindow\.open\(\"/w
+SF:ebclient/common/jsp/home\.jsp\",\x20\"_top\"\);\n\n</script>\n\n</head>
+SF:\n</html>\n")%r(HTTPOptions,849,"HTTP/1\.1\x20403\x20\r\nSet-Cookie:\x2
+SF:0JSESSIONID_APM_44444=7AE77A03E2C6741F507D65857279C1DB;\x20Path=/;\x20S
+SF:ecure;\x20HttpOnly\r\nCache-Control:\x20private\r\nExpires:\x20Thu,\x20
+SF:01\x20Jan\x201970\x2000:00:00\x20GMT\r\nContent-Type:\x20text/html;char
+SF:set=UTF-8\r\nContent-Length:\x201810\r\nDate:\x20Fri,\x2005\x20Dec\x202
+SF:025\x2004:28:54\x20GMT\r\nConnection:\x20close\r\nServer:\x20AppManager
+SF:\r\n\r\n<meta\x20http-equiv=\"X-UA-Compatible\"\x20content=\"IE=edge\">
+SF:\n<meta\x20http-equiv=\"Content-Type\"\x20content=\"UTF-8\">\n<!--\$Id\
+SF:$-->\n\n\n\n\n\n\n\n\n\n<html>\n<head>\n<title>Applications\x20Manager<
+SF:/title>\n\n<link\x20REL=\"SHORTCUT\x20ICON\"\x20HREF=\"/favicon\.ico\">
+SF:\n\n</head>\n\n<body\x20style=\"background-color:#fff;\">\n\n<style\x20
+SF:type=\"text/css\">\n\t#container-error\n\t{\n\t\tborder:1px\x20solid\x2
+SF:0#c1c1c1;\n\t\tbackground:\x20#fff;\x20font:11px\x20Arial,\x20Helvetica
+SF:,\x20sans-serif;\x20width:90%;\x20margin:80px;\n\t\x20\t\n\t}\n\n\t#hea
+SF:der-error\n\t{\n\t\tbackground:\x20#ededed;\x20line-height:18px;\n\t\tp
+SF:adding:\x2015px;\x20color:#000;\x20font-size:8px;\n\t}\n\n\t#header-err
+SF:or\x20h1\n\t{\n\t\tmargin:\x200;\x20\x20color:#000;")%r(FourOhFourReque
+SF:st,4C3,"HTTP/1\.1\x20404\x20\r\nSet-Cookie:\x20JSESSIONID_APM_44444=026
+SF:8FBEA203A81B3BFDCB6CE32BDD15E;\x20Path=/;\x20Secure;\x20HttpOnly\r\nCon
+SF:tent-Type:\x20text/html;charset=UTF-8\r\nContent-Length:\x20973\r\nDate
+SF::\x20Fri,\x2005\x20Dec\x202025\x2004:28:55\x20GMT\r\nConnection:\x20clo
+SF:se\r\nServer:\x20AppManager\r\n\r\n<!DOCTYPE\x20html>\n\n<meta\x20http-
+SF:equiv=\"X-UA-Compatible\"\x20content=\"IE=edge\">\n\n\n\n\n\n\n\n\n\n\n
+SF:<html>\n<head>\n<title>Applications\x20Manager</title>\n\n<link\x20REL=
+SF:\"SHORTCUT\x20ICON\"\x20HREF=\"/favicon\.ico\">\n\n<!--\x20Includes\x20
+SF:commonstyle\x20CSS\x20and\x20dynamic\x20style\x20sheet\x20bases\x20on\x
+SF:20user\x20selection\x20-->\n\n<link\x20href=\"/images/commonstyle\.css\
+SF:?rev=14440\"\x20rel=\"stylesheet\"\x20type=\"text/css\">\n\n\x20\x20\x2
+SF:0\x20\n\x20\x20\x20\x20\n\x20\x20\x20\x20\x20\x20\x20\x20<link\x20href=
+SF:\"/images/newUI/newCommonstyle\.css\?rev=14260\"\x20rel=\"stylesheet\"\
+SF:x20type=\"text/css\">\n\x20\x20\x20\x20\n\n<link\x20href=\"/images/Grey
+SF:/style\.css\?rev=14030\"\x20rel=\"stylesheet\"\x20type=\"text/css\">\n\
+SF:n<meta\x20http-equiv=\"Content-Type\"\x20content=\"text/html;\x20charse
+SF:t=iso-8859-1\">\n</head>\n\n<body\x20bgcolor=\"#FFFFFF\"\x20leftmarg");
+Service Info: OS: Windows; CPE: cpe:/o:microsoft:windows
+
+Nmap scan report for 192.168.249.96
+Host is up, received echo-reply ttl 125 (0.13s latency).
+Scanned at 2025-12-04 18:27:34 HST for 249s
+Not shown: 995 closed tcp ports (reset)
+PORT     STATE SERVICE       REASON          VERSION
+135/tcp  open  msrpc         syn-ack ttl 125 Microsoft Windows RPC
+139/tcp  open  netbios-ssn   syn-ack ttl 125 Microsoft Windows netbios-ssn
+445/tcp  open  microsoft-ds? syn-ack ttl 125
+3306/tcp open  mysql         syn-ack ttl 125 MariaDB 10.3.24 or later (unauthorized)
+5985/tcp open  http          syn-ack ttl 125 Microsoft HTTPAPI httpd 2.0 (SSDP/UPnP)
+Service Info: OS: Windows; CPE: cpe:/o:microsoft:windows
+
+Nmap scan report for 192.168.249.97
+Host is up, received echo-reply ttl 125 (0.14s latency).
+Scanned at 2025-12-04 18:27:34 HST for 249s
+Not shown: 988 filtered tcp ports (no-response)
+PORT     STATE SERVICE      REASON          VERSION
+53/tcp   open  domain       syn-ack ttl 125 Simple DNS Plus
+88/tcp   open  kerberos-sec syn-ack ttl 125 Microsoft Windows Kerberos (server time: 2025-12-05 04:28:46Z)
+135/tcp  open  msrpc        syn-ack ttl 125 Microsoft Windows RPC
+139/tcp  open  netbios-ssn  syn-ack ttl 125 Microsoft Windows netbios-ssn
+389/tcp  open  ldap         syn-ack ttl 125 Microsoft Windows Active Directory LDAP (Domain: secura.yzx, Site: Default-First-Site-Name)
+445/tcp  open  microsoft-ds syn-ack ttl 125 Microsoft Windows Server 2008 R2 - 2012 microsoft-ds (workgroup: SECURA)
+464/tcp  open  kpasswd5?    syn-ack ttl 125
+593/tcp  open  ncacn_http   syn-ack ttl 125 Microsoft Windows RPC over HTTP 1.0
+636/tcp  open  tcpwrapped   syn-ack ttl 125
+3268/tcp open  ldap         syn-ack ttl 125 Microsoft Windows Active Directory LDAP (Domain: secura.yzx, Site: Default-First-Site-Name)
+3269/tcp open  tcpwrapped   syn-ack ttl 125
+5985/tcp open  http         syn-ack ttl 125 Microsoft HTTPAPI httpd 2.0 (SSDP/UPnP)
+Service Info: Host: DC01; OS: Windows; CPE: cpe:/o:microsoft:windows
+
+Read data files from: /usr/share/nmap
+Service detection performed. Please report any incorrect results at https://nmap.org/submit/ .
+# Nmap done at Thu Dec  4 18:31:43 2025 -- 3 IP addresses (3 hosts up) scanned in 254.56 seconds

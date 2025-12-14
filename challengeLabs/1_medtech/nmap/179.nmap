@@ -1,0 +1,10 @@
+# Nmap 7.95 scan initiated Sun Dec 14 01:19:07 2025 as: /usr/lib/nmap/nmap -T3 -A -oA nmap/179 -vv 192.168.179.10-14 192.168.179.82-83
+Nmap scan report for 192.168.179.10 [host down, received no-response]
+Nmap scan report for 192.168.179.11 [host down, received no-response]
+Nmap scan report for 192.168.179.12 [host down, received no-response]
+Nmap scan report for 192.168.179.13 [host down, received no-response]
+Nmap scan report for 192.168.179.14 [host down, received no-response]
+Nmap scan report for 192.168.179.82 [host down, received no-response]
+Nmap scan report for 192.168.179.83 [host down, received no-response]
+Read data files from: /usr/share/nmap
+# Nmap done at Sun Dec 14 01:19:14 2025 -- 7 IP addresses (0 hosts up) scanned in 7.24 seconds

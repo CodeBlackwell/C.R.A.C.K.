@@ -128,19 +128,17 @@
           "commands": [
             {
               "id": "ps-get-current-domain",
-              "example": "[System.DirectoryServices.ActiveDirectory.Domain]::GetCurrentDomain()",
-              "shows": "Command executes successfully"
+              "shows": "Domain name, forest, DCs, PDC emulator"
             },
             {
               "id": "ps-ldap-directorysearcher",
-              "example": "([adsisearcher]'(objectClass=user)').FindAll()",
-              "shows": "Command executes successfully"
+              "shows": "LDAP user objects with properties"
             }
           ]
         },
         {
-          "title": "Phase 6: Flag Retrieval and Post-Exploitation",
-          "notes": "Final OSCP exam phase - locate and retrieve proof.txt flags from Administrator desktops. Also includes credential harvesting from registry AutoLogon keys and filesystem searches for passwords in config files. Time-critical commands to maximize exam points.",
+          "title": "Phase 6: Flag Retrieval (Quick OSCP Wins)",
+          "notes": "Time-critical flag retrieval for OSCP exam. Start with simplest approach (known path), escalate to comprehensive searches only if needed. Save complex searches for last - they take 2-5 minutes to complete.",
           "commands": [
             {
               "id": "ps-search-desktop-flags",
@@ -148,49 +146,84 @@
               "shows": "proof.txt contents or flag hash"
             },
             {
-              "id": "windows-flag-finder-ps",
-              "example": "Write-Host \"`n[*] Searching filesystem...\" -ForegroundColor Cyan; $fc=0; Get-ChildItem -Path C:\\ -Recurse -ErrorAction SilentlyContinue -Include *flag*.txt,*proof*.txt,*local*.txt | ForEach-Object { $fc++; Write-Host \"[FILE] $($_.FullName)\" -ForegroundColor Green; Get-Content $_.FullName }; Write-Host \"    Filesystem complete ($fc files found)\" -ForegroundColor DarkGray; Write-Host \"`n[*] Searching registry...\" -ForegroundColor Cyan; $rc=0; $hives=@('HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall','HKLM:\\SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall','HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run','HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run','HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment'); foreach($hive in $hives){ Write-Host \"    Checking: $hive\" -ForegroundColor DarkGray; Get-ChildItem -Path $hive -ErrorAction SilentlyContinue | ForEach-Object { $props = Get-ItemProperty $_.PSPath -ErrorAction SilentlyContinue; $props.PSObject.Properties | Where-Object { $_.Value -match 'OS\\{[a-fA-F0-9]{32}\\}|flag|proof' } | ForEach-Object { $rc++; Write-Host \"[REG] $($_.Name): $($_.Value)\" -ForegroundColor Green } } }; Write-Host \"    Registry complete ($rc matches found)\" -ForegroundColor DarkGray; Write-Host \"`n[*] Checking environment variables...\" -ForegroundColor Cyan; $ec=0; Get-ChildItem Env: | Where-Object { $_.Value -match 'OS\\{|flag|proof' } | ForEach-Object { $ec++; Write-Host \"[ENV] $($_.Name)=$($_.Value)\" -ForegroundColor Green }; Write-Host \"    Environment complete ($ec matches found)\" -ForegroundColor DarkGray; Write-Host \"`n[+] Search complete: $fc files, $rc registry, $ec env vars\" -ForegroundColor Yellow",
-              "shows": "[FILE] C:\\...\\proof.txt or [REG] OS{hash} or [ENV] FLAG=value"
-            },
-            {
-              "id": "windows-flag-finder-ps-simple",
-              "example": "$f=Get-ChildItem -Path C:\\ -Recurse -ErrorAction SilentlyContinue -Include *flag*.txt,*proof*.txt; if($f){$f.FullName}else{Get-ChildItem C:\\ -Recurse -Include *.txt -ErrorAction SilentlyContinue | Select-String -Pattern 'OS\\{[a-fA-F0-9]{32}\\}' -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Path -Unique}",
-              "shows": "C:\\Users\\Administrator\\Desktop\\proof.txt (filesystem only)"
-            },
-            {
               "id": "windows-flag-finder-cmd",
-              "example": "cmd /c \"dir /s /b C:\\*flag*.txt C:\\*proof*.txt 2>nul & if errorlevel 1 findstr /s /i /m OS{ C:\\*.txt 2>nul\"",
               "shows": "C:\\Users\\Administrator\\Desktop\\proof.txt"
             },
             {
+              "id": "windows-flag-finder-ps-simple",
+              "shows": "Flag file paths (filesystem only)"
+            },
+            {
+              "id": "windows-flag-finder-ps",
+              "shows": "[FILE] path [REG] value [ENV] var (comprehensive)"
+            }
+          ]
+        },
+        {
+          "title": "Phase 7: Credential Harvesting",
+          "notes": "Extract stored credentials from Windows. Check registry AutoLogon first (30% hit rate in OSCP labs), then search for passwords in config files. Found credentials enable lateral movement through password reuse.",
+          "commands": [
+            {
               "id": "ps-registry-autologon",
-              "example": "Get-ItemProperty -Path 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon' | Select-Object DefaultUserName,DefaultPassword,DefaultDomainName",
-              "shows": "Command executes successfully"
+              "shows": "DefaultUserName, DefaultPassword, DefaultDomainName"
             },
             {
               "id": "ps-search-credentials",
               "example": "Get-ChildItem -Path C:\\Users -Include *.txt,*.xml,*.ini,*.config -Recurse -ErrorAction SilentlyContinue | Select-String -Pattern password",
-              "shows": "Command executes successfully"
-            },
-            {
-              "id": "ps-enum-installed-apps",
-              "example": "Get-ItemProperty \"HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*\",\"HKLM:\\SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*\" -ErrorAction SilentlyContinue | Select-Object DisplayName,DisplayVersion,Publisher | Sort-Object DisplayName | Format-Table -AutoSize",
-              "shows": "List of installed applications with versions"
-            },
+              "shows": "Lines containing 'password' in config files"
+            }
+          ]
+        },
+        {
+          "title": "Phase 8: Process & Application Enumeration",
+          "notes": "Identify running processes and installed applications for privilege escalation vectors. Non-standard processes indicate third-party software that may be vulnerable. Command line arguments may contain credentials.",
+          "commands": [
             {
               "id": "ps-enum-processes",
-              "example": "Get-Process | Where-Object {$_.Path} | Select-Object ProcessName,Id,Path | Sort-Object Path | Format-Table -AutoSize",
-              "shows": "Running processes with executable paths"
-            },
-            {
-              "id": "ps-enum-processes-wmi",
-              "example": "Get-WmiObject Win32_Process | Select-Object Name,ProcessId,ExecutablePath,CommandLine | Format-Table -AutoSize -Wrap",
-              "shows": "Processes with command line args (may contain creds)"
+              "shows": "ProcessName, Id, Path table"
             },
             {
               "id": "ps-enum-processes-nonstandard",
-              "example": "Get-Process | Where-Object {$_.Path -and $_.Path -notlike 'C:\\Windows\\*'} | Select-Object ProcessName,Id,Path | Sort-Object Path | Format-Table -AutoSize",
-              "shows": "Non-system processes (third-party software)"
+              "shows": "Non-Windows processes (third-party software)"
+            },
+            {
+              "id": "ps-enum-installed-apps",
+              "shows": "DisplayName, DisplayVersion, Publisher table"
+            },
+            {
+              "id": "ps-enum-processes-wmi",
+              "shows": "Processes with CommandLine args (may contain creds)"
+            }
+          ]
+        },
+        {
+          "title": "Phase 9: Sensitive File Discovery",
+          "notes": "Search filesystem for credential stores and configuration files. Start with targeted searches (KeePass DBs), then broaden to password-related filenames. Directory-scoped searches are faster when you know the target application.",
+          "commands": [
+            {
+              "id": "ps-search-keepass-db",
+              "example": "Get-ChildItem -Path C:\\ -Include *.kdbx -File -Recurse -ErrorAction SilentlyContinue",
+              "shows": "*.kdbx files (crack with keepass2john)"
+            },
+            {
+              "id": "ps-search-password-files",
+              "example": "Get-ChildItem -Path C:\\ -Include *password*,*cred*,*secret*,*.kdbx,*login*,*backup* -File -Recurse -ErrorAction SilentlyContinue",
+              "shows": "Files named *password*, *cred*, *secret*, etc."
+            },
+            {
+              "id": "ps-search-config-files",
+              "example": "Get-ChildItem -Path C:\\ -Include *.ini,*.config,*.xml,*.conf,web.config,*.json -File -Recurse -ErrorAction SilentlyContinue",
+              "shows": "*.ini, *.config, *.xml, web.config, etc."
+            },
+            {
+              "id": "ps-search-app-config",
+              "example": "Get-ChildItem -Path C:\\xampp -Include *.txt,*.ini,*.conf,*.config,*.xml,*.json -File -Recurse -ErrorAction SilentlyContinue",
+              "shows": "App config files (replace path with target app directory)"
+            },
+            {
+              "id": "ps-search-user-documents",
+              "example": "Get-ChildItem -Path C:\\Users\\dave\\ -Include *.txt,*.pdf,*.xls,*.xlsx,*.doc,*.docx -File -Recurse -ErrorAction SilentlyContinue",
+              "shows": "User documents (digital Post-it notes)"
             }
           ]
         }
