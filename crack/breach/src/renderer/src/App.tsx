@@ -75,12 +75,25 @@ function App() {
     // Future: reload targets, credentials, loot for new engagement
   }, []);
 
-  // Listen for session events
+  // Listen for session events - use window to survive HMR
   useEffect(() => {
+    const HANDLERS_KEY = '__BREACH_SESSION_HANDLERS__';
+    const existing = (window as any)[HANDLERS_KEY] as {
+      created?: (event: unknown, session: TerminalSession) => void;
+      status?: (event: unknown, data: { sessionId: string; status: string }) => void;
+    } | undefined;
+
+    // Remove existing listeners first (handles HMR and StrictMode)
+    if (existing?.created) {
+      window.electronAPI.removeSessionCreatedListener(existing.created as any);
+    }
+    if (existing?.status) {
+      window.electronAPI.removeSessionStatusListener(existing.status as any);
+    }
+
     const handleSessionCreated = (_: unknown, session: TerminalSession) => {
       log.lifecycle('Session created', { sessionId: session.id, type: session.type });
       setSessions((prev) => {
-        // Prevent duplicates from StrictMode double-invocation
         if (prev.some((s) => s.id === session.id)) {
           return prev;
         }
@@ -101,12 +114,23 @@ function App() {
       );
     };
 
+    // Store handlers globally to survive HMR
+    (window as any)[HANDLERS_KEY] = {
+      created: handleSessionCreated,
+      status: handleSessionStatus,
+    };
+
     window.electronAPI.onSessionCreated(handleSessionCreated as any);
     window.electronAPI.onSessionStatus(handleSessionStatus as any);
 
     return () => {
-      window.electronAPI.removeSessionCreatedListener(handleSessionCreated as any);
-      window.electronAPI.removeSessionStatusListener(handleSessionStatus as any);
+      const handlers = (window as any)[HANDLERS_KEY];
+      if (handlers?.created) {
+        window.electronAPI.removeSessionCreatedListener(handlers.created as any);
+      }
+      if (handlers?.status) {
+        window.electronAPI.removeSessionStatusListener(handlers.status as any);
+      }
     };
   }, []);
 

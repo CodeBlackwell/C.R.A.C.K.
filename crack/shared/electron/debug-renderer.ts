@@ -56,6 +56,7 @@ const CATEGORY_STYLES: Record<string, string> = {
   RENDER: 'background: #495057; color: white; padding: 1px 4px; border-radius: 2px;',
   FOCUS: 'background: #20c997; color: white; padding: 1px 4px; border-radius: 2px;',
   CLIPBOARD: 'background: #15aabf; color: white; padding: 1px 4px; border-radius: 2px;',
+  TERMINAL_IO: 'background: #f06595; color: white; padding: 1px 4px; border-radius: 2px; font-weight: bold;',
   // Shared categories
   IPC: 'background: #be4bdb; color: white; padding: 1px 4px; border-radius: 2px;',
   ERROR: 'background: #ff6b6b; color: white; padding: 1px 4px; border-radius: 2px;',
@@ -275,6 +276,11 @@ export class RendererLogger {
   /** Log clipboard operations */
   clipboard(message: string, data?: unknown): void {
     this.info(LogCategory.CLIPBOARD, message, data);
+  }
+
+  /** Log terminal I/O - input and output tracking */
+  terminalIO(message: string, data?: unknown): void {
+    this.info(LogCategory.TERMINAL_IO, message, data);
   }
 
   /** Log IPC calls */

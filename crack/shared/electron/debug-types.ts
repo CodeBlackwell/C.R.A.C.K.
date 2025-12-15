@@ -41,6 +41,7 @@ export enum LogCategory {
   RENDER = 'RENDER',           // Re-render triggers (verbose)
   FOCUS = 'FOCUS',             // Focus/blur events
   CLIPBOARD = 'CLIPBOARD',     // Copy/paste operations
+  TERMINAL_IO = 'TERMINAL_IO', // Terminal input/output tracking
 
   // === Shared Categories (Both Processes) ===
   ERROR = 'ERROR',             // All error logging
@@ -148,6 +149,7 @@ export const RENDERER_CATEGORIES: LogCategory[] = [
   LogCategory.RENDER,
   LogCategory.FOCUS,
   LogCategory.CLIPBOARD,
+  LogCategory.TERMINAL_IO,
   LogCategory.IPC,
   LogCategory.PERFORMANCE,
   LogCategory.ERROR,

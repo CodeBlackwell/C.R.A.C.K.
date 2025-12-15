@@ -2,12 +2,14 @@
  * TerminalPane - xterm.js Terminal Wrapper
  *
  * Renders a terminal instance connected to a PTY session via IPC.
+ * Uses fetch-then-listen pattern: fetch buffered output first, then register for live updates.
  */
 
 import { useEffect, useRef, useCallback } from 'react';
-import { Terminal } from 'xterm';
+import { Terminal, IDisposable } from 'xterm';
 import { FitAddon } from 'xterm-addon-fit';
 import { WebLinksAddon } from 'xterm-addon-web-links';
+import { log, LogCategory } from '@shared/electron/debug-renderer';
 import 'xterm/css/xterm.css';
 
 interface TerminalPaneProps {
@@ -40,20 +42,72 @@ const TERMINAL_THEME = {
   brightWhite: '#f0f6fc',
 };
 
+// Track terminal instances globally to prevent StrictMode double-creation
+// Use window to survive HMR (Hot Module Replacement) reloads
+interface TerminalInstance {
+  terminal: Terminal;
+  fitAddon: FitAddon;
+  disposed: boolean;
+  onDataDisposable: IDisposable | null;
+  outputCleanup: (() => void) | null;
+  container: HTMLDivElement | null; // Track which container the terminal is attached to
+}
+
+const TERMINAL_INSTANCES_KEY = '__BREACH_TERMINAL_INSTANCES__';
+const terminalInstances: Map<string, TerminalInstance> =
+  (window as any)[TERMINAL_INSTANCES_KEY] ||
+  ((window as any)[TERMINAL_INSTANCES_KEY] = new Map());
+
 export function TerminalPane({ sessionId, active }: TerminalPaneProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const terminalRef = useRef<Terminal | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
-  // Track the session ID we initialized for to handle StrictMode properly
-  const initializedForSessionRef = useRef<string | null>(null);
-  // Store output handler ref for proper cleanup
-  const outputHandlerRef = useRef<((event: unknown, data: { sessionId: string; data: string }) => void) | null>(null);
 
-  // Initialize terminal
+  // Initialize terminal - fetch-then-listen pattern
   useEffect(() => {
-    // Only initialize if not already initialized for this session
-    if (!containerRef.current || initializedForSessionRef.current === sessionId) return;
+    if (!containerRef.current) return;
 
+    log.lifecycle('TerminalPane mount', { sessionId });
+
+    // Check if we already have an instance for this session (StrictMode reclaim)
+    const existing = terminalInstances.get(sessionId);
+    log.data('Terminal instance check', {
+      sessionId,
+      hasExisting: !!existing,
+      disposed: existing?.disposed,
+      hasOutputCleanup: !!existing?.outputCleanup
+    });
+
+    if (existing && !existing.disposed) {
+      log.lifecycle('Reclaiming existing terminal', { sessionId });
+      existing.disposed = false;
+      terminalRef.current = existing.terminal;
+      fitAddonRef.current = existing.fitAddon;
+
+      // Check if terminal needs to be moved to new container
+      // This happens in StrictMode where React creates a new DOM element on remount
+      if (existing.container !== containerRef.current) {
+        log.lifecycle('Moving terminal to new container', { sessionId });
+        // Clear old container if it still has terminal elements
+        if (existing.container && existing.container.children.length > 0) {
+          existing.container.innerHTML = '';
+        }
+        // Open in new container
+        existing.terminal.open(containerRef.current);
+        existing.container = containerRef.current;
+        // Refit after move
+        setTimeout(() => {
+          try {
+            existing.fitAddon.fit();
+          } catch {
+            // Ignore fit errors
+          }
+        }, 10);
+      }
+      return; // Reclaimed - output listener already registered
+    }
+
+    // Create new terminal
     const terminal = new Terminal({
       theme: TERMINAL_THEME,
       fontFamily: 'JetBrains Mono, Monaco, Courier, monospace',
@@ -70,19 +124,80 @@ export function TerminalPane({ sessionId, active }: TerminalPaneProps) {
 
     terminal.loadAddon(fitAddon);
     terminal.loadAddon(webLinksAddon);
-
     terminal.open(containerRef.current);
 
     terminalRef.current = terminal;
     fitAddonRef.current = fitAddon;
-    initializedForSessionRef.current = sessionId;
 
-    // Defer fit() with setTimeout to ensure terminal is fully initialized
-    // Use multiple frames to give xterm time to set up internal renderer
+    // Track onData for cleanup (prevents duplicate input)
+    const onDataDisposable = terminal.onData((data) => {
+      log.terminalIO('INPUT', {
+        sessionId,
+        data: data.length <= 10 ? data : `${data.substring(0, 10)}...`,
+        charCodes: data.split('').map(c => c.charCodeAt(0)).slice(0, 5)
+      });
+      window.electronAPI.sessionWrite(sessionId, data);
+    });
+
+    // Handle resize
+    terminal.onResize(({ cols, rows }) => {
+      window.electronAPI.sessionResize(sessionId, cols, rows);
+    });
+
+    // Output handler for live updates
+    const handleOutput = (_: unknown, data: { sessionId: string; data: string }) => {
+      if (data.sessionId === sessionId) {
+        log.terminalIO('OUTPUT', {
+          sessionId,
+          dataLength: data.data.length,
+          preview: data.data.length <= 20 ? data.data : `${data.data.substring(0, 20)}...`
+        });
+        terminal.write(data.data);
+      }
+    };
+
+    // Store instance
+    const instance: TerminalInstance = {
+      terminal,
+      fitAddon,
+      disposed: false,
+      onDataDisposable,
+      outputCleanup: null,
+      container: containerRef.current,
+    };
+    terminalInstances.set(sessionId, instance);
+
+    // FETCH existing output FIRST, THEN register for live updates
+    log.ipc('Fetching session output buffer', { sessionId });
+    window.electronAPI.sessionGetOutput(sessionId).then((existingOutput) => {
+      if (instance.disposed) {
+        log.lifecycle('Terminal disposed during fetch, skipping', { sessionId });
+        return;
+      }
+
+      log.data('Session output buffer received', {
+        sessionId,
+        bufferLength: existingOutput?.length || 0,
+        hasContent: existingOutput && existingOutput.length > 0
+      });
+
+      // Write buffered output
+      if (existingOutput && existingOutput.length > 0) {
+        terminal.write(existingOutput.join(''));
+      }
+
+      // NOW register for live output (after buffer is written)
+      log.lifecycle('Registering output listener', { sessionId });
+      window.electronAPI.onSessionOutput(handleOutput);
+      instance.outputCleanup = () => {
+        window.electronAPI.removeSessionOutputListener(handleOutput);
+      };
+    });
+
+    // Defer fit() to ensure terminal is fully initialized
     setTimeout(() => {
       if (fitAddonRef.current && containerRef.current) {
         const rect = containerRef.current.getBoundingClientRect();
-        // Only fit if container has actual dimensions
         if (rect.width > 0 && rect.height > 0) {
           try {
             fitAddonRef.current.fit();
@@ -93,56 +208,29 @@ export function TerminalPane({ sessionId, active }: TerminalPaneProps) {
       }
     }, 50);
 
-    // Forward terminal input to PTY
-    terminal.onData((data) => {
-      window.electronAPI.sessionWrite(sessionId, data);
-    });
-
-    // Handle resize
-    terminal.onResize(({ cols, rows }) => {
-      window.electronAPI.sessionResize(sessionId, cols, rows);
-    });
-
-    // Load existing output
-    window.electronAPI.sessionGetOutput(sessionId).then((output) => {
-      if (output) {
-        terminal.write(output);
-      }
-    });
-
     return () => {
-      terminal.dispose();
+      const inst = terminalInstances.get(sessionId);
+      if (inst) {
+        inst.disposed = true;
+      }
+
+      // Defer disposal for StrictMode reclaim
+      setTimeout(() => {
+        const inst = terminalInstances.get(sessionId);
+        if (inst?.disposed) {
+          inst.onDataDisposable?.dispose();
+          inst.outputCleanup?.();
+          inst.terminal.dispose();
+          terminalInstances.delete(sessionId);
+        }
+      }, 0);
+
       terminalRef.current = null;
       fitAddonRef.current = null;
-      // Don't reset initializedForSessionRef - let it persist to prevent re-init in StrictMode
     };
   }, [sessionId]);
 
-  // Listen for session output - use stable ref for proper cleanup
-  useEffect(() => {
-    // Remove any existing listener first (handles StrictMode double-mount)
-    if (outputHandlerRef.current) {
-      window.electronAPI.removeSessionOutputListener(outputHandlerRef.current as any);
-    }
-
-    const handleOutput = (_: unknown, data: { sessionId: string; data: string }) => {
-      if (data.sessionId === sessionId && terminalRef.current) {
-        terminalRef.current.write(data.data);
-      }
-    };
-
-    outputHandlerRef.current = handleOutput;
-    window.electronAPI.onSessionOutput(handleOutput as any);
-
-    return () => {
-      if (outputHandlerRef.current) {
-        window.electronAPI.removeSessionOutputListener(outputHandlerRef.current as any);
-        outputHandlerRef.current = null;
-      }
-    };
-  }, [sessionId]);
-
-  // Safe fit function that checks terminal readiness
+  // Safe fit function
   const safeFit = useCallback(() => {
     if (!fitAddonRef.current || !terminalRef.current || !containerRef.current) {
       return;
@@ -152,27 +240,22 @@ export function TerminalPane({ sessionId, active }: TerminalPaneProps) {
       try {
         fitAddonRef.current.fit();
       } catch {
-        // Ignore fit errors - terminal may not be ready
+        // Ignore fit errors
       }
     }
   }, []);
 
-  // Handle window resize events
+  // Handle window resize
   useEffect(() => {
     if (!active) return;
-
-    const handleWindowResize = () => {
-      safeFit();
-    };
-
+    const handleWindowResize = () => safeFit();
     window.addEventListener('resize', handleWindowResize);
     return () => window.removeEventListener('resize', handleWindowResize);
   }, [active, safeFit]);
 
-  // Handle pane becoming active - delay fit to ensure DOM is updated
+  // Handle pane becoming active
   useEffect(() => {
-    if (active && initializedForSessionRef.current) {
-      // Small delay to ensure display:block has taken effect
+    if (active && terminalRef.current) {
       const timer = setTimeout(safeFit, 10);
       return () => clearTimeout(timer);
     }
