@@ -5,11 +5,9 @@
  */
 
 import { ipcMain } from 'electron';
-import { createDebugLogger } from '@shared/electron/debug';
+import { debug } from '../debug';
 import { runQuery, runWrite } from '@shared/neo4j/query';
 import type { Credential, SecretType } from '@shared/types/credential';
-
-const debug = createDebugLogger({ appName: 'breach' });
 
 /**
  * Generate credential ID

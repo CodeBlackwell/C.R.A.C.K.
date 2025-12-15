@@ -6,10 +6,8 @@
 
 import { ipcMain } from 'electron';
 import { runQuery, runWrite } from '@shared/neo4j/query';
-import { createDebugLogger } from '@shared/electron/debug';
+import { debug } from '../debug';
 import type { CreateTargetData } from '@shared/types/target';
-
-const debug = createDebugLogger({ appName: 'breach' });
 
 /** Generate a unique ID with prefix */
 function generateId(prefix: string): string {

@@ -7,14 +7,12 @@
 
 import * as pty from 'node-pty';
 import { BrowserWindow } from 'electron';
-import { createDebugLogger } from '@shared/electron/debug';
+import { debug } from '../debug';
 import type {
   TerminalSession,
   SessionType,
   CreateSessionOptions,
 } from '@shared/types/session';
-
-const debug = createDebugLogger({ appName: 'breach' });
 
 /** Internal PTY process wrapper */
 interface PtyProcess {

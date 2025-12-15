@@ -6,9 +6,7 @@
 
 import { ipcMain } from 'electron';
 import { neo4jDriver, runQuery } from '@shared/neo4j/query';
-import { createDebugLogger } from '@shared/electron/debug';
-
-const debug = createDebugLogger({ appName: 'breach' });
+import { debug } from '../debug';
 
 /** Register Neo4j-related IPC handlers */
 export function registerNeo4jHandlers(): void {

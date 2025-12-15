@@ -5,14 +5,12 @@
  */
 
 import { ipcMain } from 'electron';
-import { createDebugLogger } from '@shared/electron/debug';
+import { debug } from '../debug';
 import { runQuery, runWrite } from '@shared/neo4j/query';
 import { detectPatterns, isFlagFile, generateLootId } from '@shared/types/loot';
 import type { Loot, LootType, PatternType } from '@shared/types/loot';
 import * as fs from 'fs';
 import * as path from 'path';
-
-const debug = createDebugLogger({ appName: 'breach' });
 
 /**
  * Register loot IPC handlers

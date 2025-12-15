@@ -42,10 +42,11 @@ import {
 } from '@tabler/icons-react';
 import type { Credential, SecretType } from '@shared/types/credential';
 import {
-  CREDENTIAL_ACTIONS,
-  getApplicableActions,
+  getApplicableActionsByCategory,
   substituteCredential,
+  CREDENTIAL_CATEGORY_ORDER,
 } from '@shared/types/credential';
+import type { CommandAction } from '@shared/types/actions';
 
 interface CredentialVaultProps {
   engagementId?: string;
@@ -170,10 +171,7 @@ export function CredentialVault({
   };
 
   // Handle credential action
-  const handleAction = (cred: Credential, actionId: string, target?: string) => {
-    const action = CREDENTIAL_ACTIONS.find((a) => a.id === actionId);
-    if (!action) return;
-
+  const handleAction = (cred: Credential, action: CommandAction, target?: string) => {
     const command = substituteCredential(action.command, cred, target || '<RHOST>');
     onUseCredential?.(command, cred.id);
   };
@@ -306,8 +304,8 @@ export function CredentialVault({
                         <CredentialCard
                           key={cred.id}
                           credential={cred}
-                          onAction={(actionId, target) =>
-                            handleAction(cred, actionId, target)
+                          onAction={(action, target) =>
+                            handleAction(cred, action, target)
                           }
                         />
                       ))}
@@ -351,7 +349,7 @@ export function CredentialVault({
 /** Individual credential card */
 interface CredentialCardProps {
   credential: Credential;
-  onAction: (actionId: string, target?: string) => void;
+  onAction: (action: CommandAction, target?: string) => void;
 }
 
 function CredentialCard({ credential, onAction }: CredentialCardProps) {
@@ -359,8 +357,9 @@ function CredentialCard({ credential, onAction }: CredentialCardProps) {
   const color = CRED_TYPE_COLORS[credential.secretType] || 'gray';
   const label = CRED_TYPE_LABELS[credential.secretType] || credential.secretType;
 
-  // Get applicable actions for this credential type
-  const actions = getApplicableActions(credential.secretType);
+  // Get applicable actions for this credential type, grouped by category
+  const actionsByCategory = getApplicableActionsByCategory(credential.secretType);
+  const hasActions = actionsByCategory.size > 0;
 
   // Format display
   const displayAccount = credential.domain
@@ -441,25 +440,46 @@ function CredentialCard({ credential, onAction }: CredentialCardProps) {
           </CopyButton>
 
           {/* Action menu */}
-          {actions.length > 0 && (
-            <Menu shadow="md" width={200} position="bottom-end">
+          {hasActions && (
+            <Menu shadow="md" width={220} position="bottom-end">
               <Menu.Target>
-                <ActionIcon variant="subtle" color="gray" size="sm">
-                  <IconDotsVertical size={14} />
-                </ActionIcon>
+                <Tooltip label="Use Credential">
+                  <ActionIcon variant="subtle" color="cyan" size="sm">
+                    <IconTerminal2 size={14} />
+                  </ActionIcon>
+                </Tooltip>
               </Menu.Target>
 
               <Menu.Dropdown>
-                <Menu.Label>Use Credential</Menu.Label>
-                {actions.map((action) => (
-                  <Menu.Item
-                    key={action.id}
-                    leftSection={<IconTerminal2 size={14} />}
-                    onClick={() => onAction(action.id)}
-                  >
-                    {action.label}
-                  </Menu.Item>
-                ))}
+                {CREDENTIAL_CATEGORY_ORDER.map((category, categoryIndex) => {
+                  const categoryActions = actionsByCategory.get(category);
+                  if (!categoryActions?.length) return null;
+
+                  return (
+                    <div key={category}>
+                      {categoryIndex > 0 && actionsByCategory.has(CREDENTIAL_CATEGORY_ORDER[categoryIndex - 1]) && (
+                        <Divider />
+                      )}
+                      <Menu.Label>{category}</Menu.Label>
+                      {categoryActions.map((action) => (
+                        <Menu.Item
+                          key={action.id}
+                          leftSection={<IconTerminal2 size={14} />}
+                          onClick={() => onAction(action)}
+                        >
+                          <Stack gap={0}>
+                            <Text size="xs">{action.label}</Text>
+                            {action.description && (
+                              <Text size="xs" c="dimmed" truncate style={{ maxWidth: 170 }}>
+                                {action.description}
+                              </Text>
+                            )}
+                          </Stack>
+                        </Menu.Item>
+                      ))}
+                    </div>
+                  );
+                })}
                 <Divider />
                 <Menu.Label>Secret</Menu.Label>
                 <Menu.Item disabled>

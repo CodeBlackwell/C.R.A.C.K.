@@ -181,6 +181,49 @@ const electronAPI = {
   /** Get engagement statistics */
   engagementStats: (id: string): Promise<EngagementStats | null> =>
     ipcRenderer.invoke('engagement-stats', id),
+
+  // =========================================================================
+  // ACTIONS (Command database queries)
+  // =========================================================================
+
+  /** Get enriched category data from Neo4j command database */
+  actionsGetCategory: (categoryId: string): Promise<{
+    id: string;
+    tools: Array<{
+      id: string;
+      name: string;
+      variants: Array<{
+        id: string;
+        label: string;
+        command: string;
+        description?: string;
+        oscpRelevance?: string;
+      }>;
+    }>;
+  } | null> =>
+    ipcRenderer.invoke('actions-get-category', categoryId),
+
+  /** Search commands by query string */
+  actionsSearch: (query: string): Promise<Array<{
+    id: string;
+    name: string;
+    command: string;
+    description?: string;
+    category?: string;
+    oscpRelevance?: string;
+  }>> =>
+    ipcRenderer.invoke('actions-search', query),
+
+  /** Get detailed command information */
+  actionsGetCommand: (commandId: string): Promise<{
+    id: string;
+    name: string;
+    command: string;
+    description?: string;
+    flags?: Array<{ flag: string; explanation: string }>;
+    variables?: Array<{ name: string; description: string; example?: string }>;
+  } | null> =>
+    ipcRenderer.invoke('actions-get-command', commandId),
 };
 
 // Expose to renderer

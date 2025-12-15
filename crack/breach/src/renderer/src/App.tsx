@@ -20,6 +20,7 @@ import { TargetSidebar } from './components/layout/TargetSidebar';
 import { ContextPanel } from './components/context';
 import { EngagementSelector } from './components/header';
 import { EngagementManager } from './components/modals';
+import { log, LogCategory } from '@shared/electron/debug-renderer';
 import type { TerminalSession } from '@shared/types/session';
 import type { Loot, PatternType } from '@shared/types/loot';
 import type { Engagement } from '@shared/types/engagement';
@@ -37,18 +38,23 @@ function App() {
   const [activeEngagement, setActiveEngagement] = useState<Engagement | null>(null);
   const [contextPanelCollapsed, setContextPanelCollapsed] = useState(false);
   const [engagementManagerOpen, setEngagementManagerOpen] = useState(false);
+  const [selectedTarget, setSelectedTarget] = useState<{
+    id: string;
+    ip: string;
+    hostname?: string;
+  } | null>(null);
 
   // Check Neo4j connection on mount
   useEffect(() => {
-    console.log('[App] Checking Neo4j connection...');
+    log.ipc('Checking Neo4j connection...');
     window.electronAPI
       .healthCheck()
       .then((status) => {
-        console.log('[App] Health check result:', status);
+        log.data('Health check result', status);
         setConnectionStatus(status);
       })
       .catch((error) => {
-        console.error('[App] Health check error:', error);
+        log.error(LogCategory.IPC, 'Health check failed', error);
         setConnectionStatus({ connected: false, uri: 'Error' });
       });
 
@@ -56,15 +62,15 @@ function App() {
     window.electronAPI
       .getActiveEngagement()
       .then((engagement) => {
-        console.log('[App] Active engagement:', engagement);
+        log.data('Active engagement loaded', { name: (engagement as Engagement | null)?.name });
         setActiveEngagement(engagement as Engagement | null);
       })
-      .catch(console.error);
+      .catch((err) => log.error(LogCategory.DATA, 'Failed to load engagement', err));
   }, []);
 
   // Handle engagement change (reload related data)
   const handleEngagementChange = useCallback((engagement: Engagement | null) => {
-    console.log('[App] Engagement changed:', engagement?.name || 'none');
+    log.action('Engagement changed', { name: engagement?.name || 'none', id: engagement?.id });
     setActiveEngagement(engagement);
     // Future: reload targets, credentials, loot for new engagement
   }, []);
@@ -72,8 +78,14 @@ function App() {
   // Listen for session events
   useEffect(() => {
     const handleSessionCreated = (_: unknown, session: TerminalSession) => {
-      console.log('[App] Session created:', session.id);
-      setSessions((prev) => [...prev, session]);
+      log.lifecycle('Session created', { sessionId: session.id, type: session.type });
+      setSessions((prev) => {
+        // Prevent duplicates from StrictMode double-invocation
+        if (prev.some((s) => s.id === session.id)) {
+          return prev;
+        }
+        return [...prev, session];
+      });
       setActiveSessionId(session.id);
     };
 
@@ -81,7 +93,7 @@ function App() {
       _: unknown,
       data: { sessionId: string; status: string }
     ) => {
-      console.log('[App] Session status update:', data);
+      log.lifecycle('Session status update', data);
       setSessions((prev) =>
         prev.map((s) =>
           s.id === data.sessionId ? { ...s, status: data.status as TerminalSession['status'] } : s
@@ -103,13 +115,13 @@ function App() {
     window.electronAPI
       .sessionList()
       .then((sessionList) => {
-        console.log('[App] Loaded sessions:', sessionList.length);
+        log.data('Loaded sessions', { count: sessionList.length });
         setSessions(sessionList);
         if (sessionList.length > 0 && !activeSessionId) {
           setActiveSessionId(sessionList[0].id);
         }
       })
-      .catch(console.error);
+      .catch((err) => log.error(LogCategory.DATA, 'Failed to load sessions', err));
   }, []);
 
   const handleSessionSelect = useCallback((sessionId: string) => {
@@ -137,26 +149,56 @@ function App() {
       label: 'bash',
       interactive: true,
     });
-    console.log('[App] New session created:', session.id);
+    log.action('New session created', { sessionId: session.id });
   }, []);
 
   // Handle using a credential (spawn command in new session)
   const handleUseCredential = useCallback(async (command: string, credentialId: string) => {
-    console.log('[App] Using credential:', credentialId, 'Command:', command);
+    log.action('Using credential', { credentialId, command: command.substring(0, 50) });
     // Create a new session with the command
     const session = await window.electronAPI.sessionCreate('bash', ['-c', command], {
       type: 'shell',
       label: `cred-${credentialId.slice(0, 6)}`,
       interactive: true,
     });
-    console.log('[App] Credential session created:', session.id);
+    log.lifecycle('Credential session created', { sessionId: session.id, credentialId });
   }, []);
 
   // Handle extracting credentials from loot
   const handleExtractCredential = useCallback(async (loot: Loot, pattern: PatternType) => {
-    console.log('[App] Extracting credential from loot:', loot.name, 'Pattern:', pattern);
+    log.action('Extracting credential from loot', { lootName: loot.name, pattern });
     // TODO: Implement PRISM integration to extract and add credential
-    // For now, just log it
+  }, []);
+
+  // Handle target selection from sidebar
+  const handleTargetSelect = useCallback((targetId: string, targetIp: string, targetHostname?: string) => {
+    log.action('Target selected', { targetId, ip: targetIp, hostname: targetHostname });
+    setSelectedTarget({ id: targetId, ip: targetIp, hostname: targetHostname });
+  }, []);
+
+  // Handle executing action from ActionsPanel
+  const handleExecuteAction = useCallback(async (command: string, label: string) => {
+    log.action('Executing action', { label, command: command.substring(0, 80), targetId: selectedTarget?.id });
+    // Create a new terminal session with the command
+    const session = await window.electronAPI.sessionCreate('bash', ['-c', command], {
+      type: 'shell',
+      label: label,
+      interactive: true,
+      targetId: selectedTarget?.id,
+    });
+    log.lifecycle('Action session created', { sessionId: session.id, label });
+  }, [selectedTarget]);
+
+  // Handle target action (Nmap scan, etc.)
+  const handleTargetAction = useCallback(async (command: string, targetId: string, actionLabel: string) => {
+    log.action('Target action', { label: actionLabel, targetId, command: command.substring(0, 80) });
+    // Create a new session with the command
+    const session = await window.electronAPI.sessionCreate('bash', ['-c', command], {
+      type: 'shell',
+      label: actionLabel,
+      interactive: true,
+    });
+    log.lifecycle('Target action session created', { sessionId: session.id, targetId, label: actionLabel });
   }, []);
 
   return (
@@ -255,7 +297,9 @@ function App() {
             {/* Left Sidebar: Targets */}
             <TargetSidebar
               engagementId={activeEngagement?.id as string}
-              onTargetSelect={(targetId) => console.log('Target selected:', targetId)}
+              selectedTargetId={selectedTarget?.id}
+              onTargetSelect={handleTargetSelect}
+              onTargetAction={handleTargetAction}
             />
 
             {/* Center: Workspace */}
@@ -298,6 +342,10 @@ function App() {
               onToggleCollapse={() => setContextPanelCollapsed(!contextPanelCollapsed)}
               onUseCredential={handleUseCredential}
               onExtractCredential={handleExtractCredential}
+              selectedTargetId={selectedTarget?.id}
+              selectedTargetIp={selectedTarget?.ip}
+              selectedTargetHostname={selectedTarget?.hostname}
+              onExecuteAction={handleExecuteAction}
             />
           </div>
         </AppShell.Main>

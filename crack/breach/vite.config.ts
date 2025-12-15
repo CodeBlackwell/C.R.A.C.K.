@@ -33,9 +33,6 @@ export default defineConfig({
       {
         // Preload script
         entry: 'src/preload/index.ts',
-        onstart(options) {
-          options.reload();
-        },
         vite: {
           resolve: {
             alias: {
@@ -62,5 +59,11 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
+  },
+  // Inject debug flags at build time for renderer
+  define: {
+    __DEBUG__: JSON.stringify(process.env.DEBUG === 'true'),
+    __DEBUG_CATEGORIES__: JSON.stringify(process.env.DEBUG_CATEGORIES || '*'),
+    __DEBUG_LEVEL__: JSON.stringify(process.env.DEBUG_LEVEL || 'INFO'),
   },
 });

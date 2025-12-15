@@ -6,16 +6,14 @@
 
 import { app, BrowserWindow } from 'electron';
 import path from 'path';
-import { createDebugLogger } from '@shared/electron/debug';
+import { debug } from './debug';
 import { registerSessionHandlers, setPtyMainWindow } from './ipc/sessions';
 import { registerTargetHandlers } from './ipc/targets';
 import { registerNeo4jHandlers } from './ipc/neo4j';
 import { registerCredentialHandlers } from './ipc/credentials';
 import { registerLootHandlers } from './ipc/loot';
 import { registerEngagementHandlers } from './ipc/engagements';
-
-// Initialize debug logger
-const debug = createDebugLogger({ appName: 'breach' });
+import { registerActionsHandlers } from './ipc/actions';
 
 debug.section('B.R.E.A.C.H. STARTUP');
 
@@ -49,7 +47,8 @@ async function createWindow(): Promise<void> {
   if (VITE_DEV_SERVER_URL) {
     debug.startup('Loading dev server', { url: VITE_DEV_SERVER_URL });
     await mainWindow.loadURL(VITE_DEV_SERVER_URL);
-    mainWindow.webContents.openDevTools();
+    // Open DevTools docked to avoid separate window
+    mainWindow.webContents.openDevTools({ mode: 'bottom' });
   } else {
     debug.startup('Loading production build');
     await mainWindow.loadFile(path.join(__dirname, '../../dist/index.html'));
@@ -74,6 +73,7 @@ app.whenReady().then(async () => {
   registerCredentialHandlers();
   registerLootHandlers();
   registerEngagementHandlers();
+  registerActionsHandlers();
 
   // Create main window
   await createWindow();

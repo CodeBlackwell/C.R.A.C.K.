@@ -6,10 +6,8 @@
 
 import { ipcMain } from 'electron';
 import { ptyManager, setPtyMainWindow as setPtyWindow } from '../pty/manager';
-import { createDebugLogger } from '@shared/electron/debug';
+import { debug } from '../debug';
 import type { CreateSessionOptions } from '@shared/types/session';
-
-const debug = createDebugLogger({ appName: 'breach' });
 
 /** Export setPtyMainWindow for main process */
 export { setPtyWindow as setPtyMainWindow };

@@ -1,67 +1,89 @@
 #!/bin/bash
-# B.R.E.A.C.H. Launcher Script
+
+# B.R.E.A.C.H. Launcher
+# Box Reconnaissance, Exploitation & Attack Command Hub
 #
 # Usage:
-#   ./start.sh           # Normal mode
-#   ./start.sh debug     # Debug mode
-#   ./start.sh verbose   # Maximum verbosity
-#   ./start.sh build     # Build only
+#   ./start.sh              # Normal mode
+#   ./start.sh --debug      # Debug mode (all logs)
+#   ./start.sh debug        # Same as --debug
+#   ./start.sh --verbose    # Maximum verbosity
+#   ./start.sh verbose      # Same as --verbose
 
-set -e
-
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$SCRIPT_DIR"
 
-# Colors
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-CYAN='\033[0;36m'
-NC='\033[0m'
+echo "🔓 Starting B.R.E.A.C.H. (Box Reconnaissance, Exploitation & Attack Command Hub)"
 
-echo -e "${CYAN}╔═══════════════════════════════════════════════════════╗${NC}"
-echo -e "${CYAN}║${NC}  ${RED}B${NC}.${YELLOW}R${NC}.${GREEN}E${NC}.${CYAN}A${NC}.${RED}C${NC}.${YELLOW}H${NC}.                                      ${CYAN}║${NC}"
-echo -e "${CYAN}║${NC}  Box Reconnaissance, Exploitation & Attack Command Hub ${CYAN}║${NC}"
-echo -e "${CYAN}╚═══════════════════════════════════════════════════════╝${NC}"
-echo ""
+# Check if Neo4j is running
+if ! pgrep -f "org.neo4j.server" > /dev/null; then
+    echo "📊 Starting Neo4j..."
 
-# Check for node_modules
-if [ ! -d "node_modules" ]; then
-    echo -e "${YELLOW}[!] Installing dependencies...${NC}"
+    # Try systemd first
+    if systemctl list-unit-files neo4j.service &> /dev/null; then
+        sudo systemctl start neo4j
+    # Fall back to direct neo4j command
+    elif command -v neo4j &> /dev/null; then
+        sudo neo4j start
+    else
+        echo "❌ Neo4j not found. Please install Neo4j."
+        echo "   B.R.E.A.C.H. requires Neo4j for engagement tracking."
+        exit 1
+    fi
+
+    # Wait for Neo4j to be ready
+    echo "⏳ Waiting for Neo4j to start..."
+    for i in {1..10}; do
+        if pgrep -f "org.neo4j.server" > /dev/null; then
+            echo "✅ Neo4j is running"
+            break
+        fi
+        sleep 1
+    done
+
+    if ! pgrep -f "org.neo4j.server" > /dev/null; then
+        echo "⚠️  Neo4j may not have started properly"
+    fi
+else
+    echo "✅ Neo4j is already running"
+fi
+
+# Check node_modules
+if [ ! -d "$SCRIPT_DIR/node_modules" ]; then
+    echo "📦 Installing dependencies..."
     npm install
-
-    # Rebuild native modules for Electron
-    echo -e "${YELLOW}[!] Rebuilding native modules for Electron...${NC}"
-    npm run rebuild
 fi
 
-# Check for neo4j
-if ! command -v cypher-shell &> /dev/null; then
-    echo -e "${YELLOW}[!] Warning: Neo4j cypher-shell not found. Database features may not work.${NC}"
-fi
+# Determine which mode to run
+MODE=${1:-normal}
 
-# Parse arguments
-MODE="${1:-dev}"
+# Handle --flag style arguments
+case "$MODE" in
+    --debug)
+        MODE="debug"
+        ;;
+    --verbose)
+        MODE="verbose"
+        ;;
+    -d)
+        MODE="debug"
+        ;;
+    -v)
+        MODE="verbose"
+        ;;
+esac
 
 case "$MODE" in
     debug)
-        echo -e "${GREEN}[+] Starting B.R.E.A.C.H. in debug mode...${NC}"
-        export DEBUG=true
+        echo "🔧 Launching B.R.E.A.C.H. in DEBUG mode..."
         npm run dev:debug
         ;;
     verbose)
-        echo -e "${GREEN}[+] Starting B.R.E.A.C.H. in verbose mode...${NC}"
-        export DEBUG=true
-        export DEBUG_CATEGORIES="*"
+        echo "🔧 Launching B.R.E.A.C.H. in VERBOSE mode..."
         npm run dev:verbose
         ;;
-    build)
-        echo -e "${GREEN}[+] Building B.R.E.A.C.H....${NC}"
-        npm run build
-        echo -e "${GREEN}[+] Build complete! Run with: npm run preview${NC}"
-        ;;
     *)
-        echo -e "${GREEN}[+] Starting B.R.E.A.C.H....${NC}"
+        echo "🔧 Launching B.R.E.A.C.H. (normal mode)..."
         npm run dev
         ;;
 esac

@@ -18,6 +18,21 @@ class CredentialType(Enum):
     AES256 = "aes256"                 # Kerberos AES256 key
     DES_CBC_MD5 = "des_cbc_md5"       # Kerberos DES key
     RC4_HMAC = "rc4_hmac"             # Kerberos RC4 key (same as NTLM)
+    # GPP (Group Policy Preferences) credentials
+    GPP_PASSWORD = "gpp_password"     # Decrypted GPP password (cleartext)
+    GPP_CPASSWORD = "gpp_cpassword"   # Raw encrypted cPassword (for manual decrypt)
+    # Kerberoast hashes
+    KRB5TGS = "krb5tgs"               # Kerberos TGS hash ($krb5tgs$23$...)
+    KRB5ASREP = "krb5asrep"           # AS-REP roast hash ($krb5asrep$23$...)
+    # Secretsdump/SAM/NTDS
+    SAM_HASH = "sam_hash"             # SAM database hash (user:rid:lm:ntlm:::)
+    NTDS_HASH = "ntds_hash"           # NTDS.dit hash (user:rid:lm:ntlm:::)
+    DCC2 = "dcc2"                     # Domain Cached Credentials v2
+    # Network captures
+    NET_NTLMV1 = "net_ntlmv1"         # NetNTLMv1 (responder/relay)
+    NET_NTLMV2 = "net_ntlmv2"         # NetNTLMv2 (responder/relay)
+    # SSH/Keys
+    SSH_KEY = "ssh_key"               # SSH private key
 
 
 # Well-known service accounts to identify

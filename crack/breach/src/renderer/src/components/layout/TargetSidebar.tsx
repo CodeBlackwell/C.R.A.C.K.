@@ -20,6 +20,8 @@ import {
   Button,
   Collapse,
   Alert,
+  Menu,
+  Divider,
 } from '@mantine/core';
 import {
   IconServer,
@@ -30,7 +32,16 @@ import {
   IconPlus,
   IconX,
   IconAlertCircle,
+  IconRadar,
+  IconTerminal2,
 } from '@tabler/icons-react';
+import {
+  NMAP_ACTIONS,
+  getNmapActionsByCategory,
+  NMAP_CATEGORY_ORDER,
+} from '@shared/actions/nmap';
+import { substituteCommand } from '@shared/types/actions';
+import type { CommandAction } from '@shared/types/actions';
 
 interface Target {
   id: string;
@@ -52,7 +63,9 @@ interface Service {
 
 interface TargetSidebarProps {
   engagementId?: string;
-  onTargetSelect?: (targetId: string) => void;
+  selectedTargetId?: string;
+  onTargetSelect?: (targetId: string, targetIp: string, targetHostname?: string) => void;
+  onTargetAction?: (command: string, targetId: string, actionLabel: string) => void;
 }
 
 /** Status color mapping */
@@ -67,12 +80,15 @@ const STATUS_COLORS: Record<string, string> = {
 /** Basic IP validation regex */
 const IP_REGEX = /^(\d{1,3}\.){3}\d{1,3}$/;
 
-export function TargetSidebar({ engagementId, onTargetSelect }: TargetSidebarProps) {
+export function TargetSidebar({ engagementId, selectedTargetId, onTargetSelect, onTargetAction }: TargetSidebarProps) {
   const [targets, setTargets] = useState<Target[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
   const [expandedTargets, setExpandedTargets] = useState<string[]>([]);
   const [targetServices, setTargetServices] = useState<Record<string, Service[]>>({});
+
+  // Get Nmap actions grouped by category
+  const nmapActionsByCategory = useMemo(() => getNmapActionsByCategory(), []);
 
   // Add target form state
   const [showAddForm, setShowAddForm] = useState(false);
@@ -187,6 +203,15 @@ export function TargetSidebar({ engagementId, onTargetSelect }: TargetSidebarPro
     } finally {
       setAddLoading(false);
     }
+  };
+
+  // Handle Nmap action on target
+  const handleNmapAction = (target: Target, action: CommandAction) => {
+    const command = substituteCommand(action.command, {
+      ip: target.ip_address,
+      hostname: target.hostname,
+    });
+    onTargetAction?.(command, target.id, action.label);
   };
 
   return (
@@ -350,6 +375,7 @@ export function TargetSidebar({ engagementId, onTargetSelect }: TargetSidebarPro
             multiple
             value={expandedTargets}
             onChange={handleAccordionChange}
+            chevronPosition="left"
             styles={{
               item: { borderBottom: '1px solid #373A40' },
               control: { padding: '8px 12px' },
@@ -358,41 +384,91 @@ export function TargetSidebar({ engagementId, onTargetSelect }: TargetSidebarPro
           >
             {filteredTargets.map((target) => (
               <Accordion.Item key={target.id} value={target.id}>
-                <Accordion.Control
-                  onClick={() => onTargetSelect?.(target.id)}
-                >
-                  <Group gap="xs" wrap="nowrap">
-                    <IconCircleFilled
-                      size={8}
-                      color={
-                        STATUS_COLORS[target.status || 'unknown'] || '#868e96'
-                      }
-                    />
-                    <Stack gap={2} style={{ flex: 1, overflow: 'hidden' }}>
-                      <Text
-                        size="sm"
-                        fw={500}
-                        style={{
-                          fontFamily: 'JetBrains Mono, monospace',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                        }}
-                      >
-                        {target.ip_address}
-                      </Text>
-                      {target.hostname && (
-                        <Text size="xs" c="dimmed" truncate>
-                          {target.hostname}
+                <Group gap={0} wrap="nowrap" pr="xs">
+                  <Accordion.Control
+                    onClick={() => onTargetSelect?.(target.id, target.ip_address, target.hostname)}
+                    style={selectedTargetId === target.id ? { background: 'rgba(34, 139, 230, 0.1)' } : undefined}
+                  >
+                    <Group gap="xs" wrap="nowrap">
+                      <IconCircleFilled
+                        size={8}
+                        color={
+                          STATUS_COLORS[target.status || 'unknown'] || '#868e96'
+                        }
+                      />
+                      <Stack gap={2} style={{ flex: 1, overflow: 'hidden' }}>
+                        <Text
+                          size="sm"
+                          fw={500}
+                          style={{
+                            fontFamily: 'JetBrains Mono, monospace',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                          }}
+                        >
+                          {target.ip_address}
                         </Text>
+                        {target.hostname && (
+                          <Text size="xs" c="dimmed" truncate>
+                            {target.hostname}
+                          </Text>
+                        )}
+                      </Stack>
+                      {target.serviceCount !== undefined && target.serviceCount > 0 && (
+                        <Badge size="xs" variant="light" color="cyan">
+                          {target.serviceCount}
+                        </Badge>
                       )}
-                    </Stack>
-                    {target.serviceCount !== undefined && target.serviceCount > 0 && (
-                      <Badge size="xs" variant="light" color="cyan">
-                        {target.serviceCount}
-                      </Badge>
-                    )}
-                  </Group>
-                </Accordion.Control>
+                    </Group>
+                  </Accordion.Control>
+                  {/* Nmap Scan Menu - Outside Accordion.Control to avoid nested buttons */}
+                  <Menu shadow="md" width={240} position="bottom-end">
+                    <Menu.Target>
+                      <Tooltip label="Scan Target">
+                        <ActionIcon
+                          variant="subtle"
+                          color="cyan"
+                          size="sm"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <IconRadar size={14} />
+                        </ActionIcon>
+                      </Tooltip>
+                    </Menu.Target>
+
+                    <Menu.Dropdown onClick={(e) => e.stopPropagation()}>
+                      {NMAP_CATEGORY_ORDER.map((category, categoryIndex) => {
+                        const categoryActions = nmapActionsByCategory.get(category);
+                        if (!categoryActions?.length) return null;
+
+                        return (
+                          <div key={category}>
+                            {categoryIndex > 0 && nmapActionsByCategory.has(NMAP_CATEGORY_ORDER[categoryIndex - 1]) && (
+                              <Divider />
+                            )}
+                            <Menu.Label>{category}</Menu.Label>
+                            {categoryActions.map((action) => (
+                              <Menu.Item
+                                key={action.id}
+                                leftSection={<IconTerminal2 size={14} />}
+                                onClick={() => handleNmapAction(target, action)}
+                              >
+                                <Stack gap={0}>
+                                  <Text size="xs">{action.label}</Text>
+                                  {action.description && (
+                                    <Text size="xs" c="dimmed" truncate style={{ maxWidth: 180 }}>
+                                      {action.description}
+                                    </Text>
+                                  )}
+                                </Stack>
+                              </Menu.Item>
+                            ))}
+                          </div>
+                        );
+                      })}
+                    </Menu.Dropdown>
+                  </Menu>
+                </Group>
                 <Accordion.Panel>
                   <Stack gap={4}>
                     {target.os_guess && (

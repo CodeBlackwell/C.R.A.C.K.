@@ -108,6 +108,9 @@ class PrismParserRegistry:
         try:
             from . import mimikatz  # noqa: F401
             from . import nmap  # noqa: F401
+            from . import gpp  # noqa: F401
+            from . import kerberoast  # noqa: F401
+            from . import secretsdump  # noqa: F401
         except ImportError as e:
             logger.warning(f"Some PRISM parsers failed to import: {e}")
 

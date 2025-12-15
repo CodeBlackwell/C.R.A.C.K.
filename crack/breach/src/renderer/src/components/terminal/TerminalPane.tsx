@@ -68,7 +68,15 @@ export function TerminalPane({ sessionId, active }: TerminalPaneProps) {
     terminal.loadAddon(webLinksAddon);
 
     terminal.open(containerRef.current);
-    fitAddon.fit();
+
+    // Defer fit() to allow terminal to fully render in DOM
+    requestAnimationFrame(() => {
+      try {
+        fitAddon.fit();
+      } catch {
+        // Ignore fit errors during initialization
+      }
+    });
 
     terminalRef.current = terminal;
     fitAddonRef.current = fitAddon;
@@ -116,8 +124,12 @@ export function TerminalPane({ sessionId, active }: TerminalPaneProps) {
 
   // Handle resize when pane becomes active or window resizes
   const handleResize = useCallback(() => {
-    if (fitAddonRef.current && active) {
-      fitAddonRef.current.fit();
+    if (fitAddonRef.current && terminalRef.current && active) {
+      try {
+        fitAddonRef.current.fit();
+      } catch {
+        // Ignore fit errors during resize
+      }
     }
   }, [active]);
 

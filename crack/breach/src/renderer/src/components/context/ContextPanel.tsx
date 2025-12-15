@@ -16,6 +16,7 @@ import {
 } from '@tabler/icons-react';
 import { CredentialVault } from './CredentialVault';
 import { LootPanel } from './LootPanel';
+import { ActionsPanel } from './ActionsPanel';
 import type { Loot, PatternType } from '@shared/types/loot';
 
 interface ContextPanelProps {
@@ -24,6 +25,11 @@ interface ContextPanelProps {
   onToggleCollapse?: () => void;
   onUseCredential?: (command: string, credentialId: string) => void;
   onExtractCredential?: (loot: Loot, pattern: PatternType) => void;
+  /** Selected target for actions panel */
+  selectedTargetId?: string;
+  selectedTargetIp?: string;
+  selectedTargetHostname?: string;
+  onExecuteAction?: (command: string, label: string) => void;
 }
 
 export function ContextPanel({
@@ -32,6 +38,10 @@ export function ContextPanel({
   onToggleCollapse,
   onUseCredential,
   onExtractCredential,
+  selectedTargetId,
+  selectedTargetIp,
+  selectedTargetHostname,
+  onExecuteAction,
 }: ContextPanelProps) {
   const [activeTab, setActiveTab] = useState<string | null>('credentials');
 
@@ -184,50 +194,19 @@ export function ContextPanel({
         )}
 
         {activeTab === 'actions' && (
-          <QuickActionsPlaceholder engagementId={engagementId} />
+          <ActionsPanel
+            targetId={selectedTargetId}
+            targetIp={selectedTargetIp}
+            targetHostname={selectedTargetHostname}
+            engagementId={engagementId}
+            onExecuteAction={onExecuteAction}
+          />
         )}
       </div>
     </Stack>
   );
 }
 
-/** Placeholder for Quick Actions panel */
-function QuickActionsPlaceholder({ engagementId }: { engagementId?: string }) {
-  return (
-    <Stack
-      gap={0}
-      style={{
-        height: '100%',
-        background: '#25262b',
-      }}
-    >
-      {/* Header */}
-      <Group
-        justify="space-between"
-        p="xs"
-        style={{ borderBottom: '1px solid #373A40' }}
-      >
-        <Group gap="xs">
-          <IconBolt size={16} color="#868e96" />
-          <Text size="sm" fw={600} c="dimmed">
-            QUICK ACTIONS
-          </Text>
-        </Group>
-      </Group>
-
-      {/* Content */}
-      <Stack align="center" justify="center" style={{ flex: 1 }} gap="xs">
-        <IconBolt size={32} color="#6e7681" />
-        <Text size="xs" c="dimmed" ta="center">
-          Context-sensitive actions
-        </Text>
-        <Text size="xs" c="dimmed" ta="center" maw={200}>
-          Actions will appear here based on discovered credentials and services
-        </Text>
-      </Stack>
-    </Stack>
-  );
-}
-
 export { CredentialVault } from './CredentialVault';
 export { LootPanel } from './LootPanel';
+export { ActionsPanel } from './ActionsPanel';
