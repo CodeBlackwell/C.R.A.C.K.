@@ -28,6 +28,7 @@ crack/
 │   ├── post/           # BloodTrail, PRISM, Sessions
 │   └── engagement/     # Client/engagement/target tracking
 ├── reference/          # Command reference system
+├── crackpedia/         # GUI command encyclopedia (Electron)
 └── db/                 # Data storage, Neo4j migration
     └── data/           # JSON knowledge base
 ```
@@ -38,6 +39,7 @@ crack/
 |--------|-----------|---------|
 | db | `db/CLAUDE.md` | Command schema, validation, enrichment |
 | reference | `reference/CLAUDE.md` | Registry, backends, CLI usage |
+| crackpedia | `crackpedia/CLAUDE.md` | GUI development, Electron/React |
 
 ## Data Persistence Summary
 
@@ -126,7 +128,29 @@ crack finding list            # List findings
 crack reference <query>       # Command lookup
 crack cheatsheets             # Educational collections
 crack config set <var> <val>  # Variable management
+
+# GUI
+crackpedia                    # Launch visual command encyclopedia
 ```
+
+## Crackpedia (GUI)
+
+Electron-based visual command encyclopedia. Launch with:
+
+```bash
+crackpedia              # Normal mode
+crackpedia debug        # Debug mode
+crackpedia verbose      # Maximum verbosity
+```
+
+Features:
+- **Command Search** - Full-text search across 734+ commands
+- **Graph Visualization** - Interactive relationship explorer
+- **Attack Chains** - Multi-step workflow visualization
+- **Cheatsheets** - Educational reference sheets
+- **Writeups** - Machine walkthrough viewer
+
+See `crackpedia/CLAUDE.md` for development guide.
 
 ## Development Guidelines
 

@@ -1,7 +1,7 @@
 {
-  "name": "crack-electron",
+  "name": "crackpedia",
   "version": "0.1.0",
-  "description": "CRACK Neo4j Graph Visualizer",
+  "description": "Crackpedia - CRACK Command Encyclopedia",
   "main": "dist-electron/main/index.js",
   "scripts": {
     "dev": "vite --host",

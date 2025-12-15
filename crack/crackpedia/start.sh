@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# CRACK Electron Launcher
+# Crackpedia Launcher
 # Ensures Neo4j is running and launches the app
 #
 # Usage:
@@ -10,7 +10,7 @@
 #   ./start.sh ipc      # Debug IPC only
 #   ./start.sh verbose  # Maximum verbosity
 
-echo "🚀 Starting CRACK Electron..."
+echo "🚀 Starting Crackpedia..."
 
 # Check if Neo4j is running
 if ! pgrep -f "org.neo4j.server" > /dev/null; then
@@ -65,7 +65,7 @@ case "$MODE" in
         npm run dev:ipc
         ;;
     *)
-        echo "🔧 Launching Electron app (normal mode)..."
+        echo "🔧 Launching Crackpedia (normal mode)..."
         npm run dev
         ;;
 esac

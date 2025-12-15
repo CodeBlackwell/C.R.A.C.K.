@@ -1,4 +1,4 @@
-# CLAUDE.md - CRACK Electron Development Guide
+# CLAUDE.md - Crackpedia Development Guide
 
 ## Project Overview
 Desktop application for visualizing CRACK command database using Electron + React + Neo4j.
@@ -25,7 +25,7 @@ User Action → Renderer → IPC → Main → Neo4j → Main → IPC → Rendere
 
 ## File Structure
 ```
-crack-electron/
+crackpedia/
 ├── src/
 │   ├── main/
 │   │   ├── index.ts          # Electron main process, window management
@@ -52,8 +52,11 @@ crack-electron/
 
 ### Start Dev Server
 ```bash
-cd /home/kali/Desktop/OSCP/crack-electron
+cd /home/kali/Desktop/KaliBackup/OSCP/crack/crackpedia
 npm run dev
+
+# Or use the launcher
+crackpedia
 ```
 
 ### Debug Process

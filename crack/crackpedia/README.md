@@ -1,4 +1,4 @@
-# CRACK Electron - Command Graph Visualizer
+# Crackpedia - CRACK Command Encyclopedia
 
 Electron-based GUI for visualizing and exploring the CRACK penetration testing toolkit's Neo4j command database.
 
@@ -35,6 +35,17 @@ Electron-based GUI for visualizing and exploring the CRACK penetration testing t
    ```
 
 2. **CRACK database** must be populated with commands
+
+## Quick Start
+
+```bash
+# Launch Crackpedia (ensures Neo4j is running)
+crackpedia
+
+# Or run directly
+cd /path/to/crack/crackpedia
+./start.sh
+```
 
 ## Development
 
@@ -78,7 +89,7 @@ npm run build
 ## Project Structure
 
 ```
-crack-electron/
+crackpedia/
 ├── src/
 │   ├── main/              # Electron main process
 │   │   ├── index.ts       # App entry

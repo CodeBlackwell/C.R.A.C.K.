@@ -69,7 +69,7 @@ function App() {
   }>({ connected: false });
   const [activeView, setActiveView] = useState<'commands' | 'cheatsheets' | 'chains' | 'writeups'>(() => {
     // Load persisted view from localStorage, default to 'chains'
-    const saved = localStorage.getItem('crack-activeView');
+    const saved = localStorage.getItem('crackpedia-activeView');
     if (saved && ['commands', 'cheatsheets', 'chains', 'writeups'].includes(saved)) {
       return saved as 'commands' | 'cheatsheets' | 'chains' | 'writeups';
     }
@@ -150,7 +150,7 @@ function App() {
   // Debug: Log active view changes and persist to localStorage
   useEffect(() => {
     console.log('[App] Active view changed:', activeView);
-    localStorage.setItem('crack-activeView', activeView);
+    localStorage.setItem('crackpedia-activeView', activeView);
   }, [activeView]);
 
   useEffect(() => {
@@ -487,7 +487,7 @@ function App() {
                 WebkitTextFillColor: 'transparent',
               }}
             >
-              CRACK // Command Graph Visualizer
+              Crackpedia
             </Text>
             <Badge
               color={connectionStatus.connected ? 'teal' : 'red'}

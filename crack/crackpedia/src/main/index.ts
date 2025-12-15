@@ -38,7 +38,7 @@ function createWindow() {
       webSecurity: false, // Allow file:// URLs for local image loading
     },
     backgroundColor: '#1a1b1e', // Mantine dark theme background
-    title: 'CRACK - Command Graph Visualizer',
+    title: 'Crackpedia',
   });
 
   logElectron('Browser window created successfully');
