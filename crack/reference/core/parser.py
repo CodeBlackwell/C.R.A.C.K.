@@ -178,7 +178,7 @@ class MarkdownGenerator:
     """Generate markdown documentation from commands"""
 
     def __init__(self):
-        self.template_path = Path(__file__).parent.parent / 'data' / 'templates'
+        self.template_path = Path(__file__).parent.parent.parent / 'db' / 'data' / 'templates'
 
     def generate_command_md(self, command: Command) -> str:
         """Generate markdown for a single command"""

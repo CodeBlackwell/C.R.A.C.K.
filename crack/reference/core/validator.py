@@ -19,7 +19,7 @@ class CommandValidator:
 
     def _load_schema(self) -> dict:
         """Load the command JSON schema"""
-        schema_path = Path(__file__).parent.parent / 'data' / 'schemas' / 'command.schema.json'
+        schema_path = Path(__file__).parent.parent.parent / 'db' / 'schemas' / 'command.schema.json'
         if schema_path.exists():
             with open(schema_path, 'r') as f:
                 return json.load(f)

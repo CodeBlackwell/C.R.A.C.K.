@@ -12,13 +12,19 @@ reference/
 │   ├── colors.py           # ReferenceTheme, ANSI escape codes
 │   ├── validator.py        # CommandValidator, schema validation
 │   └── parser.py           # MarkdownCommandParser (TODO)
-├── data/commands/          # JSON command definitions (fallback)
-│   ├── *.json              # Flat structure (legacy)
-│   └── category/           # Subdirectory structure
-│       └── subcategory.json
 ├── cli/
 │   └── main.py             # ReferenceCLI with auto-detect fallback ✨ UPDATED
 └── ~/.crack/crack.db       # SQL database (preferred backend) ✨ NEW
+
+db/data/                    # JSON command definitions (fallback)
+├── commands/               # Command JSON files
+│   ├── *.json              # Flat structure (legacy)
+│   └── category/           # Subdirectory structure
+│       └── subcategory.json
+├── cheatsheets/            # Cheatsheet collections
+├── chains/                 # Attack chains
+├── writeups/               # Machine writeups
+└── templates/              # Jinja2 templates
 ```
 
 ## Backend Architecture ✨ UPDATED (Phase 5: Neo4j Graph Database)
@@ -281,7 +287,7 @@ No config value → Uses example: 3389
 
 ### Adding Commands
 
-**1. Create JSON** (`data/commands/category/subcategory.json`)
+**1. Create JSON** (`db/data/commands/category/subcategory.json`)
 ```json
 {
   "category": "exploitation",
@@ -358,11 +364,11 @@ config_path = "~/.crack/config.json"
 ## Quick Reference
 
 **File locations:**
-- Commands: `reference/data/commands/`
+- Commands: `db/data/commands/`
 - Config: `~/.crack/config.json`
 - Registry: `reference/core/registry.py:83-411`
 - Theme: `reference/core/colors.py:1-113`
-- CLI: `reference/cli.py:23-778`
+- CLI: `reference/cli/main.py`
 
 **Key concepts:**
 - Commands = JSON definitions with placeholders
@@ -381,7 +387,7 @@ crack reference --fill test-command  # Test interactive fill
 ```
 
 **No reinstall needed for:**
-- JSON changes (`data/commands/`)
+- JSON changes (`db/data/commands/`)
 - New commands
 - Placeholder defaults
 - Theme color changes

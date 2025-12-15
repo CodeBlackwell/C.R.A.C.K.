@@ -10,7 +10,7 @@ Usage:
     python3 extract_htb_pdf.py [options]
 
 Options:
-    --input-dir PATH    Source directory containing PDFs (default: ../data/writeups/hackthebox/)
+    --input-dir PATH    Source directory containing PDFs (default: db/data/writeups/hackthebox/)
     --output-dir PATH   Output directory for organized extractions (default: same as input)
     --verbose           Show detailed extraction logs
     --skip-images       Skip image extraction (text only)
