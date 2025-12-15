@@ -44,11 +44,15 @@ export function TerminalPane({ sessionId, active }: TerminalPaneProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const terminalRef = useRef<Terminal | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
-  const initializedRef = useRef(false);
+  // Track the session ID we initialized for to handle StrictMode properly
+  const initializedForSessionRef = useRef<string | null>(null);
+  // Store output handler ref for proper cleanup
+  const outputHandlerRef = useRef<((event: unknown, data: { sessionId: string; data: string }) => void) | null>(null);
 
   // Initialize terminal
   useEffect(() => {
-    if (!containerRef.current || initializedRef.current) return;
+    // Only initialize if not already initialized for this session
+    if (!containerRef.current || initializedForSessionRef.current === sessionId) return;
 
     const terminal = new Terminal({
       theme: TERMINAL_THEME,
@@ -71,7 +75,7 @@ export function TerminalPane({ sessionId, active }: TerminalPaneProps) {
 
     terminalRef.current = terminal;
     fitAddonRef.current = fitAddon;
-    initializedRef.current = true;
+    initializedForSessionRef.current = sessionId;
 
     // Defer fit() with setTimeout to ensure terminal is fully initialized
     // Use multiple frames to give xterm time to set up internal renderer
@@ -110,22 +114,31 @@ export function TerminalPane({ sessionId, active }: TerminalPaneProps) {
       terminal.dispose();
       terminalRef.current = null;
       fitAddonRef.current = null;
-      initializedRef.current = false;
+      // Don't reset initializedForSessionRef - let it persist to prevent re-init in StrictMode
     };
   }, [sessionId]);
 
-  // Listen for session output
+  // Listen for session output - use stable ref for proper cleanup
   useEffect(() => {
+    // Remove any existing listener first (handles StrictMode double-mount)
+    if (outputHandlerRef.current) {
+      window.electronAPI.removeSessionOutputListener(outputHandlerRef.current as any);
+    }
+
     const handleOutput = (_: unknown, data: { sessionId: string; data: string }) => {
       if (data.sessionId === sessionId && terminalRef.current) {
         terminalRef.current.write(data.data);
       }
     };
 
+    outputHandlerRef.current = handleOutput;
     window.electronAPI.onSessionOutput(handleOutput as any);
 
     return () => {
-      window.electronAPI.removeSessionOutputListener(handleOutput as any);
+      if (outputHandlerRef.current) {
+        window.electronAPI.removeSessionOutputListener(outputHandlerRef.current as any);
+        outputHandlerRef.current = null;
+      }
     };
   }, [sessionId]);
 
@@ -158,7 +171,7 @@ export function TerminalPane({ sessionId, active }: TerminalPaneProps) {
 
   // Handle pane becoming active - delay fit to ensure DOM is updated
   useEffect(() => {
-    if (active && initializedRef.current) {
+    if (active && initializedForSessionRef.current) {
       // Small delay to ensure display:block has taken effect
       const timer = setTimeout(safeFit, 10);
       return () => clearTimeout(timer);
