@@ -16,14 +16,14 @@ from urllib.parse import urlparse, quote
 
 # Import from the modular SQLi scanner
 try:
-    from sqli.databases import DatabaseEnumeration
-    from crack.themes import Colors
+    from .databases import DatabaseEnumeration
+    from crack.core.themes import Colors
 except ImportError:
     # Fallback for standalone execution
     sys.path.insert(0, '/home/kali/OSCP')
     try:
-        from crack.enumeration.sqli.databases import DatabaseEnumeration
-        from crack.themes import Colors
+        from crack.tools.recon.sqli.databases import DatabaseEnumeration
+        from crack.core.themes import Colors
     except ImportError:
         # Ultimate fallback - define Colors locally
         class Colors:

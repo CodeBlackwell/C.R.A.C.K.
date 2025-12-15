@@ -31,7 +31,7 @@ import time
 
 # Try to import CRACK themes, fallback to ANSI codes
 try:
-    from crack.themes import Colors
+    from crack.core.themes import Colors
 except ImportError:
     class Colors:
         CYAN = '\033[96m'

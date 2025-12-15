@@ -35,8 +35,8 @@ class ChainsCLI(BaseCLIHandler):
         if self._loaded:
             return
 
-        # Load chains from data directory
-        data_dir = Path(__file__).parent.parent / 'data' / 'attack_chains'
+        # Load chains from data directory (crack/data/chains/)
+        data_dir = Path(__file__).parent.parent.parent / 'data' / 'chains'
         if data_dir.exists():
             try:
                 chains = self.loader.load_all_chains([data_dir])
@@ -329,7 +329,7 @@ class ChainsCLI(BaseCLIHandler):
         if chain_path:
             paths = [Path(chain_path)]
         else:
-            data_dir = Path(__file__).parent.parent / 'data' / 'attack_chains'
+            data_dir = Path(__file__).parent.parent.parent / 'data' / 'chains'
             paths = [data_dir]
 
         # Load and validate

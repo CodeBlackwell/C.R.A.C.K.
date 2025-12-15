@@ -119,7 +119,7 @@ class CheatsheetRegistry:
         self.command_registry = command_registry
         self.theme = theme
         if self.theme is None:
-            from crack.themes.colors import ReferenceTheme
+            from crack.core.themes.colors import ReferenceTheme
             self.theme = ReferenceTheme()
 
         self.cheatsheets: Dict[str, Cheatsheet] = {}

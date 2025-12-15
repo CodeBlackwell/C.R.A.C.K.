@@ -49,20 +49,36 @@ crack = "crack.cli:main"
 [tool.setuptools]
 packages = [
     "crack",
-    "crack.bloodtrail",
-    "crack.bloodtrail.autospray",
-    "crack.bloodtrail.display",
-    "crack.bloodtrail.mappings",
-    "crack.config",
-    "crack.db",
-    "crack.network",
-    "crack.prism",
-    "crack.prism.display",
-    "crack.prism.models",
-    "crack.prism.neo4j",
-    "crack.prism.parsers",
-    "crack.prism.parsers.mimikatz",
-    "crack.prism.parsers.nmap",
+    # Core foundation
+    "crack.core",
+    "crack.core.config",
+    "crack.core.themes",
+    "crack.core.utils",
+    # Tools - Recon
+    "crack.tools",
+    "crack.tools.recon",
+    "crack.tools.recon.network",
+    "crack.tools.recon.web",
+    "crack.tools.recon.sqli",
+    # Tools - Post-Exploitation
+    "crack.tools.post",
+    "crack.tools.post.bloodtrail",
+    "crack.tools.post.bloodtrail.autospray",
+    "crack.tools.post.bloodtrail.display",
+    "crack.tools.post.bloodtrail.mappings",
+    "crack.tools.post.prism",
+    "crack.tools.post.prism.display",
+    "crack.tools.post.prism.models",
+    "crack.tools.post.prism.neo4j",
+    "crack.tools.post.prism.parsers",
+    "crack.tools.post.prism.parsers.mimikatz",
+    "crack.tools.post.prism.parsers.nmap",
+    "crack.tools.post.sessions",
+    "crack.tools.post.sessions.listeners",
+    "crack.tools.post.sessions.shell",
+    "crack.tools.post.sessions.storage",
+    "crack.tools.post.sessions.tunnel",
+    # Reference system
     "crack.reference",
     "crack.reference.builders",
     "crack.reference.chains",
@@ -75,30 +91,32 @@ packages = [
     "crack.reference.generators",
     "crack.reference.models",
     "crack.reference.patterns",
-    "crack.sessions",
-    "crack.sessions.listeners",
-    "crack.sessions.shell",
-    "crack.sessions.storage",
-    "crack.sessions.tunnel",
-    "crack.sqli",
-    "crack.themes",
-    "crack.utils",
-    "crack.web",
+    # Database
+    "crack.db",
 ]
 
 [tool.setuptools.package-dir]
 crack = "."
-"crack.bloodtrail" = "bloodtrail"
-"crack.config" = "config"
-"crack.db" = "db"
-"crack.network" = "network"
-"crack.prism" = "prism"
+# Core
+"crack.core" = "core"
+"crack.core.config" = "core/config"
+"crack.core.themes" = "core/themes"
+"crack.core.utils" = "core/utils"
+# Tools - Recon
+"crack.tools" = "tools"
+"crack.tools.recon" = "tools/recon"
+"crack.tools.recon.network" = "tools/recon/network"
+"crack.tools.recon.web" = "tools/recon/web"
+"crack.tools.recon.sqli" = "tools/recon/sqli"
+# Tools - Post
+"crack.tools.post" = "tools/post"
+"crack.tools.post.bloodtrail" = "tools/post/bloodtrail"
+"crack.tools.post.prism" = "tools/post/prism"
+"crack.tools.post.sessions" = "tools/post/sessions"
+# Reference
 "crack.reference" = "reference"
-"crack.sessions" = "sessions"
-"crack.sqli" = "sqli"
-"crack.themes" = "themes"
-"crack.utils" = "utils"
-"crack.web" = "web"
+# Database
+"crack.db" = "db"
 
 [tool.setuptools.package-data]
 "*" = ["*.json", "*.md", "*.txt", "*.yaml", "*.cypher"]

@@ -395,7 +395,7 @@ crack reference --fill test-command  # Test interactive fill
 
 ## 🔄 Neo4j Graph Database (Phase 5) - Quick Reference
 
-**For full documentation, see**: `reference/NEO4J_ARCHITECTURE.md`
+**For full documentation, see**: `docs/architecture/NEO4J_ARCHITECTURE.md`
 
 ### Minimalist Architecture
 - **3 flexible primitives** replace 10 hardcoded methods (76% code reduction)

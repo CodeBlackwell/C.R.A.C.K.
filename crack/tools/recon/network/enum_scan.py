@@ -19,18 +19,15 @@ from pathlib import Path
 from datetime import datetime
 
 try:
-    from crack.network.port_scanner import PortScanner
-    from crack.network.parallel_enumerator import ParallelEnumerator
-    from crack.exploit.cve_lookup import CVELookup
-    from crack.themes import Colors
+    from .port_scanner import PortScanner
+    from .parallel_enumerator import ParallelEnumerator
+    from crack.core.themes import Colors
+    CVELookup = None  # Optional module
 except ImportError:
     # Fallback for direct execution
     from port_scanner import PortScanner
     from parallel_enumerator import ParallelEnumerator
-    import sys
-    import os
-    sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    from exploit.cve_lookup import CVELookup
+    CVELookup = None
 
     class Colors:
         HEADER = '\033[95m'

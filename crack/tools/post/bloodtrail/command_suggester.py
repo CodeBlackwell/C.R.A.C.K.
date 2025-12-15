@@ -304,9 +304,9 @@ class CommandSuggester:
 
     def __init__(self, commands_db_path: Optional[Path] = None):
         if commands_db_path is None:
-            # bloodtrail/command_suggester.py -> crack/db/data/commands
+            # bloodtrail/command_suggester.py -> crack/data/commands
             base = Path(__file__).parent.parent
-            commands_db_path = base / "db" / "data" / "commands"
+            commands_db_path = base / "data" / "commands"
 
         self.commands_db_path = commands_db_path
         self.commands: Dict[str, Dict] = {}

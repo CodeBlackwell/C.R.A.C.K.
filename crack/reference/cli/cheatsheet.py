@@ -693,7 +693,7 @@ class CheatsheetCLI(BaseCLIHandler):
             List of wrapped lines
         """
         # Strip ANSI codes for length calculation
-        from crack.themes import Colors
+        from crack.core.themes import Colors
         plain_text = Colors.strip(text)
 
         # If line fits, return as-is

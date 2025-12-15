@@ -19,7 +19,7 @@ try:
 except ImportError:
     PYFIGLET_AVAILABLE = False
 
-from crack.themes import ReferenceTheme, Colors
+from crack.core.themes import ReferenceTheme, Colors
 
 def print_banner():
     """Display the C.R.A.C.K. banner with themed colors and random font"""
@@ -58,56 +58,56 @@ def print_banner():
 
 def html_enum_command(args):
     """Execute the HTML enumeration tool"""
-    from crack.web import html_enum
+    from crack.tools.recon.web import html_enum
     # Pass arguments to the original main function
     sys.argv = ['html_enum'] + args
     html_enum.main()
 
 def param_discover_command(args):
     """Execute the parameter discovery tool"""
-    from crack.web import param_discover
+    from crack.tools.recon.web import param_discover
     # Pass arguments to the original main function
     sys.argv = ['param_discover'] + args
     param_discover.main()
 
 def sqli_scan_command(args):
     """Execute the SQLi scanner tool"""
-    from crack.sqli import sqli_scanner
+    from crack.tools.recon.sqli import sqli_scanner
     # Pass arguments to the original main function
     sys.argv = ['sqli_scanner'] + args
     sqli_scanner.main()
 
 def sqli_fu_command(args):
     """Execute the SQLi follow-up enumeration reference tool"""
-    from crack.sqli import reference
+    from crack.tools.recon.sqli import reference
     # Pass arguments to the original main function
     sys.argv = ['sqli_fu'] + args
     reference.main()
 
 def param_extract_command(args):
     """Execute the parameter extraction tool"""
-    from crack.web import param_extract
+    from crack.tools.recon.web import param_extract
     # Pass arguments to the original main function
     sys.argv = ['param_extract'] + args
     param_extract.main()
 
 def enum_scan_command(args):
     """Execute the enumeration scanner tool"""
-    from crack.network import enum_scan
+    from crack.tools.recon.network import enum_scan
     # Pass arguments to the original main function
     sys.argv = ['enum_scan'] + args
     enum_scan.main()
 
 def scan_analyze_command(args):
     """Execute the scan analyzer tool"""
-    from crack.network import scan_analyzer
+    from crack.tools.recon.network import scan_analyzer
     # Pass arguments to the original main function
     sys.argv = ['scan_analyzer'] + args
     scan_analyzer.main()
 
 def dns_enum_command(args):
     """Execute the recursive DNS enumeration tool"""
-    from crack.network import dns_enum
+    from crack.tools.recon.network import dns_enum
     # Pass arguments to the original main function
     sys.argv = ['dns_enum'] + args
     dns_enum.main()
@@ -127,14 +127,14 @@ def cheatsheets_command(args):
     from crack.reference.core import HybridCommandRegistry, ConfigManager, ReferenceTheme
     from crack.reference.core.cheatsheet_registry import CheatsheetRegistry
     from crack.reference.cli.cheatsheet import CheatsheetCLI
-    from crack.themes import Colors
+    from crack.core.themes import Colors
 
     # Initialize registries
     theme = ReferenceTheme()
     config = ConfigManager()
-    db_path = Path(__file__).parent / 'db'
-    command_registry = HybridCommandRegistry(base_path=db_path, config_manager=config, theme=theme)
-    cheatsheet_registry = CheatsheetRegistry(base_path=db_path, command_registry=command_registry, theme=theme)
+    crack_root = Path(__file__).parent
+    command_registry = HybridCommandRegistry(base_path=crack_root, config_manager=config, theme=theme)
+    cheatsheet_registry = CheatsheetRegistry(base_path=crack_root, command_registry=command_registry, theme=theme)
     cli = CheatsheetCLI(
         cheatsheet_registry=cheatsheet_registry,
         command_registry=command_registry,
@@ -204,7 +204,7 @@ def cheatsheets_command(args):
 
 def _list_subjects(cheatsheet_registry):
     """List all available cheatsheet subjects/categories"""
-    from crack.themes import Colors
+    from crack.core.themes import Colors
     from pathlib import Path
 
     # Get cheatsheet base directory
@@ -346,45 +346,19 @@ def chain_builder_command(args):
         chain_id = args[1]
         sys.exit(cli.clone(chain_id))
 
-def track_command(args):
-    """Execute CRACK Track - enumeration tracking and task management"""
-    from crack.track import cli as track_cli
-    # Pass arguments to the track CLI
-    sys.argv = ['crack-track'] + args
-    track_cli.main()
-
-def checklist_command(args):
-    """Execute the enumeration checklist system (backward compatibility alias)"""
-    # Redirect to track command for backward compatibility
-    track_command(args)
-
 def port_scan_command(args):
     """Execute the two-stage port scanner"""
-    from crack.network import port_scanner
+    from crack.tools.recon.network import port_scanner
     # Pass arguments to the original main function
     sys.argv = ['port_scanner'] + args
     port_scanner.main()
 
 def session_command(args):
     """Execute session management commands via unified CLI"""
-    from crack.sessions.unified_cli import UnifiedSessionCLI
+    from crack.tools.post.sessions.unified_cli import UnifiedSessionCLI
 
     cli = UnifiedSessionCLI()
     cli.run(args)
-
-def linpeas_command(args):
-    """Execute LinPEAS helper tool"""
-    from crack.exploit import linpeas_helper
-    # Pass arguments to the original main function
-    sys.argv = ['linpeas_helper'] + args
-    linpeas_helper.main()
-
-def airgeddon_command(args):
-    """Execute airgeddon helper tool"""
-    from crack.exploit import airgeddon_helper
-    # Pass arguments to the original main function
-    sys.argv = ['airgeddon_helper'] + args
-    airgeddon_helper.main()
 
 def db_command(args):
     """Execute database management commands"""
@@ -395,27 +369,27 @@ def db_command(args):
 
 def ports_command(args):
     """Execute the port reference tool"""
-    from crack.utils import ports
+    from crack.core.utils import ports
     # Pass arguments to the original main function
     sys.argv = ['ports'] + args
     ports.main()
 
 def blood_trail_command(args):
     """Execute BloodHound Trail - Edge enhancement and Neo4j query analysis"""
-    from crack.bloodtrail.cli import main as bt_main
+    from crack.tools.post.bloodtrail.cli import main as bt_main
     sys.argv = ['crack-bloodtrail'] + args
     bt_main()
 
 def prism_command(args):
     """Execute PRISM - Parse and distill security tool output"""
-    from crack.prism.cli import main as prism_main
+    from crack.tools.post.prism.cli import main as prism_main
     sys.argv = ['crack-prism'] + args
     prism_main()
 
 def config_command(args):
     """Execute configuration management"""
-    from crack.config import ConfigManager
-    from crack.config.variables import get_all_categories, get_by_category
+    from crack.core.config import ConfigManager
+    from crack.core.config.variables import get_all_categories, get_by_category
 
     config = ConfigManager()
 
@@ -656,8 +630,7 @@ def main():
 {Colors.YELLOW}▶ Network & Enumeration{Colors.END}
   ├─ port-scan       Two-stage port scanner with service detection
   ├─ enum-scan       Fast port scan + automatic CVE lookup
-  ├─ scan-analyze    Parse nmap output to identify attack vectors
-  └─ track           CRACK Track - Enumeration tracking & task management
+  └─ scan-analyze    Parse nmap output to identify attack vectors
 
 {Colors.YELLOW}▶ Web Application{Colors.END}
   ├─ html-enum       Find forms, comments, endpoints in HTML
@@ -665,10 +638,6 @@ def main():
   ├─ param-extract   Extract form values as variables
   ├─ sqli-scan       Detect SQL injection vulnerabilities
   └─ sqli-fu         SQLi post-exploitation reference
-
-{Colors.YELLOW}▶ Post-Exploitation{Colors.END}
-  ├─ linpeas         LinPEAS helper with 8 execution methods + AV bypass
-  └─ airgeddon       Airgeddon helper - WiFi security auditing (OSWP)
 
 {Colors.YELLOW}▶ Active Directory{Colors.END}
   └─ bloodtrail     BloodHound Trail - Edge enhancement and Neo4j query analysis
@@ -855,18 +824,6 @@ def main():
                                                  add_help=False)
     chain_builder_parser.set_defaults(func=chain_builder_command)
 
-    # CRACK Track subcommand (primary)
-    track_parser = subparsers.add_parser('track',
-                                        help='CRACK Track - Enumeration tracking & task management',
-                                        add_help=False)
-    track_parser.set_defaults(func=track_command)
-
-    # Enumeration Checklist subcommand (backward compatibility alias)
-    checklist_parser = subparsers.add_parser('checklist',
-                                             help='Alias for "track" (backward compatibility)',
-                                             add_help=False)
-    checklist_parser.set_defaults(func=checklist_command)
-
     # Session Management subcommand
     session_parser = subparsers.add_parser('session',
                                            help='Session Management - Reverse shell handler',
@@ -878,18 +835,6 @@ def main():
                                          help='Configuration Management - Variable management',
                                          add_help=False)
     config_parser.set_defaults(func=config_command)
-
-    # LinPEAS Helper subcommand
-    linpeas_parser = subparsers.add_parser('linpeas',
-                                          help='LinPEAS Helper - Privilege Escalation Enumeration',
-                                          add_help=False)
-    linpeas_parser.set_defaults(func=linpeas_command)
-
-    # Airgeddon Helper subcommand
-    airgeddon_parser = subparsers.add_parser('airgeddon',
-                                            help='Airgeddon Helper - WiFi Security Auditing (OSWP)',
-                                            add_help=False)
-    airgeddon_parser.set_defaults(func=airgeddon_command)
 
     # Database Management subcommand
     db_parser = subparsers.add_parser('db',

@@ -26,8 +26,8 @@ from .core.step_processor import StepProcessor
 from .variables.context import VariableContext
 from .filtering.selector import FindingSelector
 from crack.reference.core.registry import HybridCommandRegistry
-from crack.config import ConfigManager
-from crack.themes import ReferenceTheme
+from crack.core.config import ConfigManager
+from crack.core.themes import ReferenceTheme
 
 
 class ChainInteractive:
@@ -131,7 +131,7 @@ class ChainInteractive:
         if self.chain_registry.get_chain('linux-privesc-suid-basic'):
             return  # Already loaded
 
-        data_dir = Path(__file__).parent.parent.parent / 'db' / 'data' / 'chains'
+        data_dir = Path(__file__).parent.parent.parent / 'data' / 'chains'
         if not data_dir.exists():
             print(self.theme.warning(f"Chain data directory not found: {data_dir}"))
             return

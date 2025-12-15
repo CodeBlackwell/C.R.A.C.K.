@@ -14,11 +14,8 @@ from urllib.parse import urlparse, urljoin
 from pathlib import Path
 
 try:
-    from crack.themes import Colors
+    from crack.core.themes import Colors
 except ImportError:
-    try:
-        from crack.themes import Colors
-    except ImportError:
         # Fallback colors
         class Colors:
             BLUE = '\033[94m'

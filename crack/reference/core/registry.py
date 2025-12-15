@@ -208,7 +208,7 @@ class HybridCommandRegistry:
         self.theme = theme
         if self.theme is None:
             # Import here to avoid circular dependency
-            from crack.themes.colors import ReferenceTheme
+            from crack.core.themes.colors import ReferenceTheme
             self.theme = ReferenceTheme()
 
         # Initialize shared components (lazy import to avoid circular dependency)

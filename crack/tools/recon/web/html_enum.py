@@ -15,7 +15,7 @@ from collections import defaultdict
 from queue import Queue
 
 try:
-    from crack.themes import Colors
+    from crack.core.themes import Colors
 except ImportError:
     # Fallback for standalone execution
     class Colors:

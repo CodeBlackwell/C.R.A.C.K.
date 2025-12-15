@@ -7,8 +7,8 @@ from .neo4j_adapter import Neo4jCommandRegistryAdapter
 from .parser import MarkdownCommandParser
 from .placeholder import PlaceholderEngine
 from .validator import CommandValidator
-from crack.themes import ReferenceTheme, Colors, disable_colors
-from crack.themes.colors import get_theme as get_reference_theme
+from crack.core.themes import ReferenceTheme, Colors, disable_colors
+from crack.core.themes.colors import get_theme as get_reference_theme
 from .cheatsheet_registry import CheatsheetRegistry, Cheatsheet, CheatsheetScenario, CheatsheetSection, EducationalHeader
 
 # Alias for backward compatibility
@@ -27,8 +27,8 @@ from .exceptions import (
 )
 from .adapter_interface import CommandRegistryAdapter, ReadOnlyAdapter, MutableAdapter
 
-# Import shared config from crack.config
-from crack.config import ConfigManager
+# Import shared config from crack.core.config
+from crack.core.config import ConfigManager
 
 __all__ = [
     'HybridCommandRegistry',

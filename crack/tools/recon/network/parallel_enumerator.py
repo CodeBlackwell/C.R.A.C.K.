@@ -11,7 +11,7 @@ from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 try:
-    from crack.themes import Colors
+    from crack.core.themes import Colors
 except ImportError:
     class Colors:
         HEADER = '\033[95m'

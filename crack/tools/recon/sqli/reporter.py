@@ -9,7 +9,7 @@ import sys
 from .databases import DatabaseEnumeration
 
 try:
-    from crack.themes import Colors
+    from crack.core.themes import Colors
 except ImportError:
     # Fallback for standalone execution
     class Colors:
