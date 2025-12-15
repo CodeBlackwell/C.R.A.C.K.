@@ -386,6 +386,24 @@ def prism_command(args):
     sys.argv = ['crack-prism'] + args
     prism_main()
 
+
+def engagement_cmd_command(args):
+    """Execute engagement tracking commands"""
+    from crack.tools.engagement.cli import engagement_command
+    sys.exit(engagement_command(args))
+
+
+def target_cmd_command(args):
+    """Execute target management commands"""
+    from crack.tools.engagement.cli import target_command
+    sys.exit(target_command(args))
+
+
+def finding_cmd_command(args):
+    """Execute finding management commands"""
+    from crack.tools.engagement.cli import finding_command
+    sys.exit(finding_command(args))
+
 def config_command(args):
     """Execute configuration management"""
     from crack.core.config import ConfigManager
@@ -642,6 +660,11 @@ def main():
 {Colors.YELLOW}▶ Active Directory{Colors.END}
   └─ bloodtrail     BloodHound Trail - Edge enhancement and Neo4j query analysis
 
+{Colors.YELLOW}▶ Engagement Tracking{Colors.END}
+  ├─ engagement      Client/engagement management (Neo4j)
+  ├─ target          Target IP/hostname tracking
+  └─ finding         Vulnerability and finding management
+
 {Colors.YELLOW}▶ Session Management{Colors.END}
   └─ session         Reverse shell session management (TCP/HTTP/DNS)
 
@@ -704,6 +727,16 @@ def main():
   crack reference --tag QUICK_WIN              # Find quick wins
   crack reference --config auto                # Auto-detect settings
   crack reference --set TARGET 192.168.45.100  # Set config variable
+
+{Colors.GREEN}Engagement Tracking:{Colors.END}
+  crack engagement client create 'ACME Corp'   # Create client
+  crack engagement create 'Q4 Pentest' --client <id>  # Create engagement
+  crack engagement activate <eng_id>           # Set active engagement
+  crack engagement status                      # Show current engagement
+  crack target add 192.168.1.100              # Add target to engagement
+  crack target service-add <id> 80 --name http # Add service
+  crack finding add 'SQL Injection' --severity critical  # Add finding
+  crack finding link <id> --target <target_id> # Link finding to target
 
 {Colors.GREEN}Session Management:{Colors.END}
   crack session start tcp --port 4444          # Start TCP listener
@@ -865,6 +898,24 @@ def main():
                                          help='PRISM - Parse and distill security tool output (mimikatz, etc.)',
                                          add_help=False)
     prism_parser.set_defaults(func=prism_command)
+
+    # Engagement Tracking subcommand
+    engagement_parser = subparsers.add_parser('engagement',
+                                              help='Engagement Tracking - Client/engagement management',
+                                              add_help=False)
+    engagement_parser.set_defaults(func=engagement_cmd_command)
+
+    # Target Management subcommand
+    target_parser = subparsers.add_parser('target',
+                                          help='Target Management - Add/list targets in engagement',
+                                          add_help=False)
+    target_parser.set_defaults(func=target_cmd_command)
+
+    # Finding Management subcommand
+    finding_parser = subparsers.add_parser('finding',
+                                           help='Finding Management - Track vulnerabilities and issues',
+                                           add_help=False)
+    finding_parser.set_defaults(func=finding_cmd_command)
 
     # Parse known args to allow passing through tool-specific args
     args, remaining = parser.parse_known_args()

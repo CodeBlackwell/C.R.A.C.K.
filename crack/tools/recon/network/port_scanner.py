@@ -3,6 +3,8 @@
 Two-stage port scanning for time-efficient enumeration
 STAGE 1: Fast port discovery (30 seconds)
 STAGE 2: Targeted service detection (1-2 minutes)
+
+Integrates with engagement tracking when active.
 """
 
 import subprocess
@@ -10,6 +12,7 @@ import re
 import os
 import sys
 from pathlib import Path
+from typing import List, Dict, Optional
 
 try:
     from crack.core.themes import Colors
@@ -165,11 +168,100 @@ class PortScanner:
         # Stage 2: Service detection
         scan_file = self.stage2_service_detection()
 
-        return {
+        results = {
             'ports': self.open_ports,
             'scan_file': scan_file,
             'output_dir': str(self.output_dir)
         }
+
+        # Log to engagement if active
+        self._log_to_engagement(scan_file)
+
+        return results
+
+    def _log_to_engagement(self, scan_file: Optional[str]) -> None:
+        """Log discovered services to active engagement"""
+        try:
+            from crack.tools.engagement.integration import EngagementIntegration
+
+            if not EngagementIntegration.is_active():
+                return
+
+            print(f"\n{Colors.CYAN}[ENGAGEMENT] Logging to active engagement...{Colors.END}")
+
+            # Ensure target exists
+            target_id = EngagementIntegration.ensure_target(self.target)
+            if not target_id:
+                print(f"{Colors.YELLOW}  Warning: Could not add target to engagement{Colors.END}")
+                return
+
+            # Parse services from scan file
+            if scan_file and Path(scan_file).exists():
+                services = self._parse_nmap_services(scan_file)
+                count = EngagementIntegration.add_services_batch(target_id, services)
+                print(f"{Colors.GREEN}  Logged {count} services to engagement{Colors.END}")
+            else:
+                # Just log ports without service details
+                for port in self.open_ports:
+                    EngagementIntegration.add_service(target_id, port)
+                print(f"{Colors.GREEN}  Logged {len(self.open_ports)} ports to engagement{Colors.END}")
+
+        except ImportError:
+            # Engagement module not available
+            pass
+        except Exception as e:
+            print(f"{Colors.YELLOW}  Warning: Failed to log to engagement: {e}{Colors.END}")
+
+    def _parse_nmap_services(self, scan_file: str) -> List[Dict]:
+        """
+        Parse nmap output file for service details.
+
+        Args:
+            scan_file: Path to .nmap file
+
+        Returns:
+            List of service dicts with port, protocol, service_name, version
+        """
+        services = []
+
+        try:
+            with open(scan_file, 'r') as f:
+                content = f.read()
+
+            # Match lines like: 80/tcp open http Apache httpd 2.4.41
+            # Format: PORT/PROTO STATE SERVICE VERSION
+            pattern = r'^(\d+)/(tcp|udp)\s+(\w+)\s+(\S+)(?:\s+(.*))?$'
+
+            for line in content.split('\n'):
+                match = re.match(pattern, line.strip())
+                if match:
+                    port = int(match.group(1))
+                    protocol = match.group(2)
+                    state = match.group(3)
+                    service_name = match.group(4)
+                    version = match.group(5) or ""
+
+                    if state == 'open':
+                        services.append({
+                            'port': port,
+                            'protocol': protocol,
+                            'service_name': service_name,
+                            'version': version.strip(),
+                            'banner': ''
+                        })
+
+        except Exception:
+            # Fallback to just ports
+            for port in self.open_ports:
+                services.append({
+                    'port': port,
+                    'protocol': 'tcp',
+                    'service_name': '',
+                    'version': '',
+                    'banner': ''
+                })
+
+        return services
 
 
 def main():

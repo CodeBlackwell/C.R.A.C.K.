@@ -7,6 +7,7 @@ Orchestrates session lifecycle:
 - Validates PIDs and cleans up dead sessions
 - Emits lifecycle events (SESSION_STARTED, SESSION_DIED)
 - Thread-safe operations for concurrent access
+- Integrates with engagement tracking when active
 
 Usage:
     >>> from sessions.manager import SessionManager
@@ -216,7 +217,32 @@ class SessionManager(ISessionManager):
             'shell_type': session.shell_type
         })
 
+        # Log to engagement if active
+        self._log_to_engagement(session)
+
         return session
+
+    def _log_to_engagement(self, session: Session) -> None:
+        """Log session to active engagement"""
+        try:
+            from crack.tools.engagement.integration import EngagementIntegration
+
+            if not EngagementIntegration.is_active():
+                return
+
+            EngagementIntegration.log_session(
+                target_ip=session.target,
+                port=session.port or 0,
+                session_type=session.type,
+                session_id=session.id
+            )
+
+        except ImportError:
+            # Engagement module not available
+            pass
+        except Exception:
+            # Silently ignore engagement logging failures
+            pass
 
     def list_sessions(self, filters: Dict[str, Any] = None) -> List[Session]:
         """List sessions with optional filtering.

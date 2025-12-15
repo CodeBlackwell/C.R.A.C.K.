@@ -3,6 +3,8 @@ PRISM Neo4j Adapter - Credential storage and relationship mapping
 
 Stores extracted credentials in Neo4j with relationships to
 hosts, domains, and users.
+
+Integrates with engagement tracking when active.
 """
 
 from typing import Optional, Dict, Any, List
@@ -20,6 +22,36 @@ from ..models import ParsedSummary, Credential, KerberosTicket
 from ..models import NmapScanSummary, NmapHost, NmapPort
 
 logger = logging.getLogger(__name__)
+
+
+def _log_to_engagement(source_hostname: str, source_ip: str, cred_count: int) -> None:
+    """Log credential extraction to engagement if active"""
+    try:
+        from crack.tools.engagement.integration import EngagementIntegration
+
+        if not EngagementIntegration.is_active():
+            return
+
+        # Try to find target by hostname or IP
+        target_id = None
+        if source_ip:
+            target_id = EngagementIntegration.find_target_by_ip(source_ip)
+
+        if target_id:
+            # Log finding
+            EngagementIntegration.add_finding(
+                title=f"Credentials Extracted ({cred_count} total)",
+                severity="high",
+                description=f"Extracted {cred_count} credentials from {source_hostname or source_ip}",
+                evidence=f"Source: {source_hostname or source_ip}",
+                target_id=target_id
+            )
+            logger.info(f"Logged credential extraction to engagement target {target_id}")
+
+    except ImportError:
+        pass
+    except Exception as e:
+        logger.debug(f"Failed to log to engagement: {e}")
 
 
 class PrismNeo4jAdapter:
@@ -143,6 +175,14 @@ class PrismNeo4jAdapter:
                     summary.source_hostname
                 )
                 results['tickets'] += 1
+
+        # Log to engagement if active
+        if results['credentials'] > 0:
+            _log_to_engagement(
+                summary.source_hostname or "",
+                getattr(summary, 'source_ip', ''),
+                results['credentials']
+            )
 
         return results
 
@@ -381,7 +421,48 @@ class PrismNeo4jAdapter:
                         host_domain
                     )
 
+        # Log to engagement if active
+        self._log_nmap_to_engagement(summary)
+
         return results
+
+    def _log_nmap_to_engagement(self, summary: NmapScanSummary) -> None:
+        """Log nmap scan results to engagement if active"""
+        try:
+            from crack.tools.engagement.integration import EngagementIntegration
+
+            if not EngagementIntegration.is_active():
+                return
+
+            for host in summary.hosts_up:
+                # Ensure target exists in engagement
+                target_id = EngagementIntegration.ensure_target(
+                    host.ip,
+                    hostname=host.hostname or "",
+                    os_guess=host.os_display or ""
+                )
+
+                if target_id:
+                    # Add services
+                    services = []
+                    for port in host.open_ports:
+                        services.append({
+                            'port': port.port,
+                            'protocol': port.protocol,
+                            'service_name': port.service or "",
+                            'version': port.version or "",
+                            'banner': ""
+                        })
+
+                    if services:
+                        EngagementIntegration.add_services_batch(target_id, services)
+
+            logger.info(f"Logged {len(summary.hosts_up)} hosts to engagement")
+
+        except ImportError:
+            pass
+        except Exception as e:
+            logger.debug(f"Failed to log nmap to engagement: {e}")
 
     @staticmethod
     def _create_nmap_host(tx, host: NmapHost) -> None:
