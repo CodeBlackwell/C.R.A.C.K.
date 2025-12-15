@@ -8,13 +8,15 @@ __author__ = "OSCP Student"
 __description__ = "Comprehensive Recon & Attack Creation Kit - Professional pentesting tools"
 
 # Import main modules for easier access
-from . import network
-from . import web
-from . import sqli
-from . import exploit
-from . import utils
-from . import reference
-from . import track
-from . import config
-
-__all__ = ["network", "web", "sqli", "exploit", "utils", "reference", "track", "config"]
+# Note: imports are lazy to avoid circular dependencies
+__all__ = [
+    "network",
+    "web",
+    "sqli",
+    "utils",
+    "reference",
+    "config",
+    "bloodtrail",
+    "sessions",
+    "prism",
+]

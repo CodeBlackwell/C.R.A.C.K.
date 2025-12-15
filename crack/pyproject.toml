@@ -8,7 +8,7 @@ version = "1.0.0"
 description = "C.R.A.C.K. - (C)omprehensive (R)econ & (A)ttack (C)reation (K)it - Professional pentesting tools for OSCP"
 readme = "README.md"
 requires-python = ">=3.8"
-license = {text = "MIT"}
+license = "MIT"
 authors = [
     {name = "OSCP Student", email = "student@oscp.local"},
 ]
@@ -17,7 +17,6 @@ classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Information Technology",
     "Topic :: Security",
-    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
@@ -50,23 +49,56 @@ crack = "crack.cli:main"
 [tool.setuptools]
 packages = [
     "crack",
-    "themes",
+    "crack.bloodtrail",
+    "crack.bloodtrail.autospray",
+    "crack.bloodtrail.display",
+    "crack.bloodtrail.mappings",
+    "crack.config",
+    "crack.db",
     "crack.network",
-    "crack.web",
-    "crack.sqli",
-    "crack.exploit",
-    "crack.utils",
+    "crack.prism",
+    "crack.prism.display",
+    "crack.prism.models",
+    "crack.prism.neo4j",
+    "crack.prism.parsers",
+    "crack.prism.parsers.mimikatz",
+    "crack.prism.parsers.nmap",
     "crack.reference",
+    "crack.reference.builders",
+    "crack.reference.chains",
+    "crack.reference.chains.core",
+    "crack.reference.chains.filtering",
+    "crack.reference.chains.parsing",
+    "crack.reference.chains.variables",
+    "crack.reference.cli",
     "crack.reference.core",
-    "crack.reference.docs",
-    "db",
-    "db.scripts",
-    "db.neo4j-migration",
-    "db.neo4j-migration.scripts"
+    "crack.reference.generators",
+    "crack.reference.models",
+    "crack.reference.patterns",
+    "crack.sessions",
+    "crack.sessions.listeners",
+    "crack.sessions.shell",
+    "crack.sessions.storage",
+    "crack.sessions.tunnel",
+    "crack.sqli",
+    "crack.themes",
+    "crack.utils",
+    "crack.web",
 ]
 
 [tool.setuptools.package-dir]
 crack = "."
+"crack.bloodtrail" = "bloodtrail"
+"crack.config" = "config"
+"crack.db" = "db"
+"crack.network" = "network"
+"crack.prism" = "prism"
+"crack.reference" = "reference"
+"crack.sessions" = "sessions"
+"crack.sqli" = "sqli"
+"crack.themes" = "themes"
+"crack.utils" = "utils"
+"crack.web" = "web"
 
 [tool.setuptools.package-data]
-crack = ["*.md", "*.txt"]
+"*" = ["*.json", "*.md", "*.txt", "*.yaml", "*.cypher"]

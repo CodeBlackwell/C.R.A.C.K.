@@ -19,7 +19,7 @@ try:
 except ImportError:
     PYFIGLET_AVAILABLE = False
 
-from themes import ReferenceTheme, Colors
+from crack.themes import ReferenceTheme, Colors
 
 def print_banner():
     """Display the C.R.A.C.K. banner with themed colors and random font"""
