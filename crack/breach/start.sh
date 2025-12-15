@@ -13,6 +13,31 @@
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$SCRIPT_DIR"
 
+# Handle --help
+if [[ "$1" == "--help" || "$1" == "-h" ]]; then
+    echo ""
+    echo "B.R.E.A.C.H. - Box Reconnaissance, Exploitation & Attack Command Hub"
+    echo ""
+    echo "Usage:"
+    echo "  crack-breach              Launch B.R.E.A.C.H. GUI"
+    echo "  crack-breach --debug      Launch with debug logging"
+    echo "  crack-breach --verbose    Launch with verbose logging"
+    echo "  crack-breach --help       Show this help"
+    echo ""
+    echo "Features:"
+    echo "  • Terminal multiplexer (xterm.js + node-pty)"
+    echo "  • Engagement tracking (Neo4j)"
+    echo "  • Credential vault"
+    echo "  • Loot tracking"
+    echo "  • Target sidebar"
+    echo ""
+    echo "Requirements:"
+    echo "  • Neo4j 5.x running on bolt://localhost:7687"
+    echo "  • Node.js 18+"
+    echo ""
+    exit 0
+fi
+
 echo "🔓 Starting B.R.E.A.C.H. (Box Reconnaissance, Exploitation & Attack Command Hub)"
 
 # Check if Neo4j is running
