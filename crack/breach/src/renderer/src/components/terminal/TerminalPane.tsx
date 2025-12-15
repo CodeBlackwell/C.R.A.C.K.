@@ -84,16 +84,13 @@ export function TerminalPane({ sessionId, active }: TerminalPaneProps) {
       terminalRef.current = existing.terminal;
       fitAddonRef.current = existing.fitAddon;
 
-      // Check if terminal needs to be moved to new container
+      // Move terminal's DOM element to new container if needed
       // This happens in StrictMode where React creates a new DOM element on remount
-      if (existing.container !== containerRef.current) {
-        log.lifecycle('Moving terminal to new container', { sessionId });
-        // Clear old container if it still has terminal elements
-        if (existing.container && existing.container.children.length > 0) {
-          existing.container.innerHTML = '';
-        }
-        // Open in new container
-        existing.terminal.open(containerRef.current);
+      // IMPORTANT: Use appendChild to MOVE the element, NOT terminal.open() which creates duplicates
+      if (existing.terminal.element && existing.terminal.element.parentElement !== containerRef.current) {
+        log.lifecycle('Moving terminal DOM to new container', { sessionId });
+        // appendChild moves (not copies) the element to the new container
+        containerRef.current.appendChild(existing.terminal.element);
         existing.container = containerRef.current;
         // Refit after move
         setTimeout(() => {
