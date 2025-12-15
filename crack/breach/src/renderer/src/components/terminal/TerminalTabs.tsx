@@ -13,6 +13,7 @@ import {
   Text,
   Menu,
   Paper,
+  Box,
 } from '@mantine/core';
 import {
   IconPlus,
@@ -136,14 +137,28 @@ export function TerminalTabs({
                   />
                   <Menu position="bottom-end" withinPortal>
                     <Menu.Target>
-                      <ActionIcon
-                        size="xs"
-                        variant="subtle"
-                        color="gray"
-                        onClick={(e) => e.stopPropagation()}
+                      <Box
+                        component="span"
+                        onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          width: 18,
+                          height: 18,
+                          borderRadius: 4,
+                          cursor: 'pointer',
+                          color: '#868e96',
+                        }}
+                        onMouseEnter={(e: React.MouseEvent<HTMLSpanElement>) => {
+                          e.currentTarget.style.background = 'rgba(134, 142, 150, 0.1)';
+                        }}
+                        onMouseLeave={(e: React.MouseEvent<HTMLSpanElement>) => {
+                          e.currentTarget.style.background = 'transparent';
+                        }}
                       >
                         <IconDotsVertical size={12} />
-                      </ActionIcon>
+                      </Box>
                     </Menu.Target>
                     <Menu.Dropdown>
                       <Menu.Item

@@ -69,18 +69,25 @@ export function TerminalPane({ sessionId, active }: TerminalPaneProps) {
 
     terminal.open(containerRef.current);
 
-    // Defer fit() to allow terminal to fully render in DOM
-    requestAnimationFrame(() => {
-      try {
-        fitAddon.fit();
-      } catch {
-        // Ignore fit errors during initialization
-      }
-    });
-
     terminalRef.current = terminal;
     fitAddonRef.current = fitAddon;
     initializedRef.current = true;
+
+    // Defer fit() with setTimeout to ensure terminal is fully initialized
+    // Use multiple frames to give xterm time to set up internal renderer
+    setTimeout(() => {
+      if (fitAddonRef.current && containerRef.current) {
+        const rect = containerRef.current.getBoundingClientRect();
+        // Only fit if container has actual dimensions
+        if (rect.width > 0 && rect.height > 0) {
+          try {
+            fitAddonRef.current.fit();
+          } catch {
+            // Ignore fit errors during initialization
+          }
+        }
+      }
+    }, 50);
 
     // Forward terminal input to PTY
     terminal.onData((data) => {
@@ -122,22 +129,41 @@ export function TerminalPane({ sessionId, active }: TerminalPaneProps) {
     };
   }, [sessionId]);
 
-  // Handle resize when pane becomes active or window resizes
-  const handleResize = useCallback(() => {
-    if (fitAddonRef.current && terminalRef.current && active) {
+  // Safe fit function that checks terminal readiness
+  const safeFit = useCallback(() => {
+    if (!fitAddonRef.current || !terminalRef.current || !containerRef.current) {
+      return;
+    }
+    const rect = containerRef.current.getBoundingClientRect();
+    if (rect.width > 0 && rect.height > 0) {
       try {
         fitAddonRef.current.fit();
       } catch {
-        // Ignore fit errors during resize
+        // Ignore fit errors - terminal may not be ready
       }
     }
-  }, [active]);
+  }, []);
 
+  // Handle window resize events
   useEffect(() => {
-    handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, [handleResize]);
+    if (!active) return;
+
+    const handleWindowResize = () => {
+      safeFit();
+    };
+
+    window.addEventListener('resize', handleWindowResize);
+    return () => window.removeEventListener('resize', handleWindowResize);
+  }, [active, safeFit]);
+
+  // Handle pane becoming active - delay fit to ensure DOM is updated
+  useEffect(() => {
+    if (active && initializedRef.current) {
+      // Small delay to ensure display:block has taken effect
+      const timer = setTimeout(safeFit, 10);
+      return () => clearTimeout(timer);
+    }
+  }, [active, safeFit]);
 
   // Focus terminal when active
   useEffect(() => {
