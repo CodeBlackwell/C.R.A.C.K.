@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="Content-Security-Policy" content="
+      default-src 'self';
+      script-src 'self' 'unsafe-inline';
+      style-src 'self' 'unsafe-inline';
+      font-src 'self' data:;
+      img-src 'self' data:;
+      connect-src 'self';
+    " />
+    <title>B.R.E.A.C.H.</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        background: #1a1b1e;
+        font-family: Inter, system-ui, -apple-system, sans-serif;
+      }
+      #root {
+        width: 100vw;
+        height: 100vh;
+      }
+      /* Loading screen */
+      .loading {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        gap: 16px;
+        background: #1a1b1e;
+        color: #868e96;
+      }
+      .loading-title {
+        font-size: 24px;
+        font-weight: 700;
+        background: linear-gradient(45deg, #ff6b6b, #ffd93d);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+      .loading-spinner {
+        width: 32px;
+        height: 32px;
+        border: 3px solid #373A40;
+        border-top-color: #22b8cf;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root">
+      <div class="loading">
+        <div class="loading-title">B.R.E.A.C.H.</div>
+        <div class="loading-spinner"></div>
+        <div>Loading...</div>
+      </div>
+    </div>
+    <script type="module" src="/src/renderer/src/main.tsx"></script>
+  </body>
+</html>

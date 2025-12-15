@@ -836,6 +836,450 @@ class EngagementAdapter:
         return summary
 
 
+    # =========================================================================
+    # Terminal Session Operations (B.R.E.A.C.H. Integration)
+    # =========================================================================
+
+    def add_terminal_session(
+        self,
+        engagement_id: str,
+        session_id: str,
+        session_type: str,
+        command: str,
+        args: List[str],
+        target_id: Optional[str] = None,
+        label: str = "",
+        persistent: bool = True,
+        interactive: bool = True,
+        working_dir: str = "",
+        pid: Optional[int] = None
+    ) -> str:
+        """
+        Add terminal session to engagement.
+
+        Args:
+            engagement_id: Engagement ID
+            session_id: Unique session ID (from PtyManager)
+            session_type: Session type (shell, listener, tunnel, etc.)
+            command: Command being run
+            args: Command arguments
+            target_id: Optional target this session relates to
+            label: Display label
+            persistent: Whether session should persist across restarts
+            interactive: Whether session is interactive
+            working_dir: Working directory
+            pid: Process ID
+
+        Returns:
+            Session ID
+        """
+        query = """
+        MATCH (e:Engagement {id: $engagement_id})
+        MERGE (s:TerminalSession {id: $session_id})
+        SET s.type = $session_type,
+            s.command = $command,
+            s.args = $args,
+            s.status = 'running',
+            s.label = $label,
+            s.persistent = $persistent,
+            s.interactive = $interactive,
+            s.working_dir = $working_dir,
+            s.pid = $pid,
+            s.started_at = datetime(),
+            s.engagement_id = $engagement_id,
+            s.target_id = $target_id
+        MERGE (e)-[:HAS_TERMINAL_SESSION]->(s)
+        RETURN s.id AS id
+        """
+
+        params = {
+            'engagement_id': engagement_id,
+            'session_id': session_id,
+            'session_type': session_type,
+            'command': command,
+            'args': args,
+            'target_id': target_id or '',
+            'label': label,
+            'persistent': persistent,
+            'interactive': interactive,
+            'working_dir': working_dir,
+            'pid': pid,
+        }
+
+        result = self._execute_write(query, **params)
+
+        # Link to target if provided
+        if target_id:
+            self._link_session_to_target(session_id, target_id)
+
+        return result['id'] if result else session_id
+
+    def _link_session_to_target(self, session_id: str, target_id: str) -> None:
+        """Link terminal session to target"""
+        query = """
+        MATCH (s:TerminalSession {id: $session_id})
+        MATCH (t:Target {id: $target_id})
+        MERGE (s)-[:ON_TARGET]->(t)
+        """
+        self._execute_write(query, session_id=session_id, target_id=target_id)
+
+    def update_terminal_session(
+        self,
+        session_id: str,
+        status: str,
+        exit_code: Optional[int] = None,
+        stopped_at: Optional[str] = None
+    ) -> bool:
+        """
+        Update terminal session status.
+
+        Args:
+            session_id: Session ID
+            status: New status
+            exit_code: Exit code (if stopped)
+            stopped_at: Stop timestamp (if stopped)
+
+        Returns:
+            True if successful
+        """
+        set_parts = ["s.status = $status", "s.last_activity_at = datetime()"]
+        params = {'session_id': session_id, 'status': status}
+
+        if exit_code is not None:
+            set_parts.append("s.exit_code = $exit_code")
+            params['exit_code'] = exit_code
+
+        if stopped_at:
+            set_parts.append("s.stopped_at = $stopped_at")
+            params['stopped_at'] = stopped_at
+
+        query = f"""
+        MATCH (s:TerminalSession {{id: $session_id}})
+        SET {', '.join(set_parts)}
+        RETURN s.id AS id
+        """
+
+        result = self._execute_write(query, **params)
+        return result is not None
+
+    def get_terminal_sessions(
+        self,
+        engagement_id: str,
+        target_id: Optional[str] = None,
+        status: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
+        """
+        Get terminal sessions for engagement.
+
+        Args:
+            engagement_id: Engagement ID
+            target_id: Optional target filter
+            status: Optional status filter
+
+        Returns:
+            List of session dicts
+        """
+        where_parts = []
+        params = {'engagement_id': engagement_id}
+
+        if target_id:
+            where_parts.append("s.target_id = $target_id")
+            params['target_id'] = target_id
+
+        if status:
+            where_parts.append("s.status = $status")
+            params['status'] = status
+
+        where_clause = f"WHERE {' AND '.join(where_parts)}" if where_parts else ""
+
+        query = f"""
+        MATCH (e:Engagement {{id: $engagement_id}})-[:HAS_TERMINAL_SESSION]->(s:TerminalSession)
+        {where_clause}
+        RETURN s
+        ORDER BY s.started_at DESC
+        """
+
+        results = self._execute_read(query, **params)
+        return [dict(r['s']) for r in results]
+
+    def get_reconnectable_sessions(self) -> List[Dict[str, Any]]:
+        """
+        Get sessions that should be reconnected on restart.
+
+        Returns sessions with:
+        - status not in ['stopped', 'completed', 'error']
+        - persistent = true
+
+        Returns:
+            List of session dicts with PID for reconnection check
+        """
+        query = """
+        MATCH (s:TerminalSession)
+        WHERE s.persistent = true
+          AND NOT s.status IN ['stopped', 'completed', 'error']
+        RETURN s
+        ORDER BY s.started_at
+        """
+        results = self._execute_read(query)
+        return [dict(r['s']) for r in results]
+
+    def link_sessions(
+        self,
+        source_session_id: str,
+        target_session_id: str,
+        link_type: str = 'tunnels_through'
+    ) -> bool:
+        """
+        Link two sessions (e.g., tunnel client to server).
+
+        Args:
+            source_session_id: Source session ID
+            target_session_id: Target session ID
+            link_type: Relationship type (tunnels_through, spawned_from, proxies_via)
+
+        Returns:
+            True if successful
+        """
+        # Map link types to relationship names
+        rel_map = {
+            'tunnels_through': 'TUNNELS_THROUGH',
+            'spawned_from': 'SPAWNED_FROM',
+            'proxies_via': 'PROXIES_VIA',
+            'provides_access': 'PROVIDES_ACCESS',
+        }
+        rel_type = rel_map.get(link_type, 'LINKED_TO')
+
+        query = f"""
+        MATCH (source:TerminalSession {{id: $source_id}})
+        MATCH (target:TerminalSession {{id: $target_id}})
+        MERGE (source)-[:{rel_type}]->(target)
+        RETURN source.id AS id
+        """
+
+        result = self._execute_write(
+            query,
+            source_id=source_session_id,
+            target_id=target_session_id
+        )
+        return result is not None
+
+    # =========================================================================
+    # Command Execution Logging (B.R.E.A.C.H. Integration)
+    # =========================================================================
+
+    def log_command_execution(
+        self,
+        target_id: str,
+        command: str,
+        session_id: Optional[str] = None,
+        exit_code: Optional[int] = None,
+        duration_ms: Optional[int] = None,
+        output_preview: str = ""
+    ) -> str:
+        """
+        Log a command execution against a target.
+
+        Args:
+            target_id: Target ID
+            command: Full command string
+            session_id: Terminal session ID (if run in session)
+            exit_code: Command exit code
+            duration_ms: Execution duration in milliseconds
+            output_preview: First ~500 chars of output
+
+        Returns:
+            Execution ID
+        """
+        import uuid
+        exec_id = str(uuid.uuid4())
+
+        query = """
+        MATCH (t:Target {id: $target_id})
+        CREATE (e:CommandExecution {
+            id: $exec_id,
+            command: $command,
+            target_id: $target_id,
+            session_id: $session_id,
+            executed_at: datetime(),
+            exit_code: $exit_code,
+            duration_ms: $duration_ms,
+            output_preview: $output_preview
+        })
+        MERGE (t)-[:EXECUTED_COMMAND]->(e)
+        RETURN e.id AS id
+        """
+
+        params = {
+            'exec_id': exec_id,
+            'target_id': target_id,
+            'command': command,
+            'session_id': session_id or '',
+            'exit_code': exit_code,
+            'duration_ms': duration_ms,
+            'output_preview': output_preview[:500] if output_preview else '',
+        }
+
+        result = self._execute_write(query, **params)
+
+        # Link to session if provided
+        if session_id:
+            self._link_execution_to_session(exec_id, session_id)
+
+        return result['id'] if result else exec_id
+
+    def _link_execution_to_session(self, exec_id: str, session_id: str) -> None:
+        """Link command execution to terminal session"""
+        query = """
+        MATCH (e:CommandExecution {id: $exec_id})
+        MATCH (s:TerminalSession {id: $session_id})
+        MERGE (s)-[:RAN]->(e)
+        """
+        self._execute_write(query, exec_id=exec_id, session_id=session_id)
+
+    def get_command_history(
+        self,
+        target_id: str,
+        limit: int = 50
+    ) -> List[Dict[str, Any]]:
+        """
+        Get command execution history for target.
+
+        Args:
+            target_id: Target ID
+            limit: Max results to return
+
+        Returns:
+            List of execution dicts
+        """
+        query = """
+        MATCH (t:Target {id: $target_id})-[:EXECUTED_COMMAND]->(e:CommandExecution)
+        RETURN e
+        ORDER BY e.executed_at DESC
+        LIMIT $limit
+        """
+        results = self._execute_read(query, target_id=target_id, limit=limit)
+        return [dict(r['e']) for r in results]
+
+    # =========================================================================
+    # Checklist Operations (B.R.E.A.C.H. Integration)
+    # =========================================================================
+
+    def add_checklist_item(
+        self,
+        target_id: str,
+        command_id: str,
+        notes: str = ""
+    ) -> str:
+        """
+        Add a checklist item for a target.
+
+        Args:
+            target_id: Target ID
+            command_id: Command ID from reference system
+            notes: Additional notes
+
+        Returns:
+            Checklist item ID
+        """
+        import uuid
+        item_id = str(uuid.uuid4())
+
+        query = """
+        MATCH (t:Target {id: $target_id})
+        CREATE (c:ChecklistItem {
+            id: $item_id,
+            command_id: $command_id,
+            target_id: $target_id,
+            status: 'pending',
+            notes: $notes,
+            created_at: datetime()
+        })
+        MERGE (t)-[:HAS_CHECKLIST_ITEM]->(c)
+        RETURN c.id AS id
+        """
+
+        params = {
+            'item_id': item_id,
+            'target_id': target_id,
+            'command_id': command_id,
+            'notes': notes,
+        }
+
+        result = self._execute_write(query, **params)
+
+        # Link to command if it exists
+        self._link_checklist_to_command(item_id, command_id)
+
+        return result['id'] if result else item_id
+
+    def _link_checklist_to_command(self, item_id: str, command_id: str) -> None:
+        """Link checklist item to command reference"""
+        query = """
+        MATCH (c:ChecklistItem {id: $item_id})
+        MATCH (cmd:Command {id: $command_id})
+        MERGE (c)-[:REFERENCES]->(cmd)
+        """
+        # Ignore failures (command might not exist in graph)
+        try:
+            self._execute_write(query, item_id=item_id, command_id=command_id)
+        except Exception:
+            pass
+
+    def update_checklist_item(
+        self,
+        item_id: str,
+        status: str,
+        notes: Optional[str] = None
+    ) -> bool:
+        """
+        Update checklist item status.
+
+        Args:
+            item_id: Checklist item ID
+            status: New status (pending, in_progress, completed, skipped)
+            notes: Optional updated notes
+
+        Returns:
+            True if successful
+        """
+        set_parts = ["c.status = $status"]
+        params = {'item_id': item_id, 'status': status}
+
+        if status == 'completed':
+            set_parts.append("c.completed_at = datetime()")
+
+        if notes is not None:
+            set_parts.append("c.notes = $notes")
+            params['notes'] = notes
+
+        query = f"""
+        MATCH (c:ChecklistItem {{id: $item_id}})
+        SET {', '.join(set_parts)}
+        RETURN c.id AS id
+        """
+
+        result = self._execute_write(query, **params)
+        return result is not None
+
+    def get_checklist(self, target_id: str) -> List[Dict[str, Any]]:
+        """
+        Get checklist items for target.
+
+        Args:
+            target_id: Target ID
+
+        Returns:
+            List of checklist item dicts
+        """
+        query = """
+        MATCH (t:Target {id: $target_id})-[:HAS_CHECKLIST_ITEM]->(c:ChecklistItem)
+        RETURN c
+        ORDER BY c.created_at
+        """
+        results = self._execute_read(query, target_id=target_id)
+        return [dict(r['c']) for r in results]
+
+
 if __name__ == '__main__':
     print("EngagementAdapter requires Neo4j connection.")
     print("Run integration tests with: pytest tests/engagement/")
