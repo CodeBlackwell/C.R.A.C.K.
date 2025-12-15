@@ -259,11 +259,25 @@ ipcMain.handle('get-command', async (_event, commandId: string) => {
         return field;
       };
 
+      // Parse success/failure indicators from command properties (string arrays)
+      const successIndicators = parseJsonField(record.command.success_indicators) || [];
+      const failureIndicators = parseJsonField(record.command.failure_indicators) || [];
+
+      // Transform string indicators to structured format for UI
+      const transformedIndicators = [
+        ...successIndicators.map((s: string) => ({ pattern: s, type: 'success', description: '' })),
+        ...failureIndicators.map((s: string) => ({ pattern: s, type: 'failure', description: '' })),
+      ];
+
       const command = {
         ...record.command,
-        flags: record.flags.filter((f: any) => f.name),
+        flags: record.flags.filter((f: any) => f.flag),  // Fixed: was f.name
         variables: record.variables.filter((v: any) => v.name),
-        indicators: record.indicators.filter((i: any) => i.pattern),
+        indicators: transformedIndicators.length > 0
+          ? transformedIndicators
+          : record.indicators.filter((i: any) => i.pattern),  // Fallback to relationship-based indicators
+        success_indicators: successIndicators,
+        failure_indicators: failureIndicators,
         tags: record.tags.filter((t: string) => t),
         troubleshooting: parseJsonField(record.command.troubleshooting),
         flag_explanations: parseJsonField(record.command.flag_explanations),
@@ -273,6 +287,7 @@ ipcMain.handle('get-command', async (_event, commandId: string) => {
         examples: parseJsonField(record.command.examples),
         educational: parseJsonField(record.command.educational),
         related_commands: parseJsonField(record.command.related_commands),
+        filled_example: record.command.filled_example || null,
       };
       logIPC('IPC: get-command completed', {
         id: command.id,

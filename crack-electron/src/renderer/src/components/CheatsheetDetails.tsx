@@ -1,6 +1,20 @@
-import { Paper, Text, Stack, Accordion, Badge, Group, Divider, Code, ScrollArea } from '@mantine/core';
+import { Paper, Text, Stack, Accordion, Badge, Group, Divider, ScrollArea } from '@mantine/core';
 import { useState } from 'react';
-import { Cheatsheet } from '../types/cheatsheet';
+import { Cheatsheet, SectionCommand } from '../types/cheatsheet';
+
+// Helper to extract command ID from string or SectionCommand
+const getCommandId = (cmd: string | SectionCommand): string => {
+  return typeof cmd === 'string' ? cmd : cmd.id;
+};
+
+// Helper to get display label for command
+const getCommandLabel = (cmd: string | SectionCommand): string => {
+  if (typeof cmd === 'string') {
+    return cmd;
+  }
+  // For SectionCommand, show the example if available
+  return cmd.example || cmd.id;
+};
 
 interface CheatsheetDetailsProps {
   cheatsheet: Cheatsheet;
@@ -194,18 +208,18 @@ export default function CheatsheetDetails({ cheatsheet, onCommandClick }: Cheats
                               COMMANDS
                             </Text>
                             <Group gap="xs">
-                              {scenario.commands.map((cmdId) => (
+                              {scenario.commands.map((cmd, idx) => (
                                 <Badge
-                                  key={cmdId}
+                                  key={`${getCommandId(cmd)}-${idx}`}
                                   size="sm"
                                   variant="light"
                                   color="blue"
                                   style={{
                                     cursor: onCommandClick ? 'pointer' : 'default',
                                   }}
-                                  onClick={() => onCommandClick?.(cmdId)}
+                                  onClick={() => onCommandClick?.(getCommandId(cmd))}
                                 >
-                                  {cmdId}
+                                  {getCommandLabel(cmd)}
                                 </Badge>
                               ))}
                             </Group>
@@ -294,18 +308,18 @@ export default function CheatsheetDetails({ cheatsheet, onCommandClick }: Cheats
                               COMMANDS
                             </Text>
                             <Group gap="xs">
-                              {section.commands.map((cmdId) => (
+                              {section.commands.map((cmd, idx) => (
                                 <Badge
-                                  key={cmdId}
+                                  key={`${getCommandId(cmd)}-${idx}`}
                                   size="sm"
                                   variant="light"
                                   color="green"
                                   style={{
                                     cursor: onCommandClick ? 'pointer' : 'default',
                                   }}
-                                  onClick={() => onCommandClick?.(cmdId)}
+                                  onClick={() => onCommandClick?.(getCommandId(cmd))}
                                 >
-                                  {cmdId}
+                                  {getCommandLabel(cmd)}
                                 </Badge>
                               ))}
                             </Group>

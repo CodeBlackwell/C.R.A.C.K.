@@ -6,7 +6,7 @@ export interface Command {
   description: string;
   command: string;
   tags: string[];
-  oscp_relevance: boolean;
+  oscp_relevance: 'high' | 'medium' | 'low' | boolean; // String enum from data, or legacy boolean
   notes?: string;
   troubleshooting?: Record<string, string>; // Error message -> solution
   prerequisites?: string | string[];
@@ -16,17 +16,21 @@ export interface Command {
   flags?: Flag[];
   variables?: Variable[];
   indicators?: Indicator[];
+  success_indicators?: string[];   // Simple string arrays from data
+  failure_indicators?: string[];   // Simple string arrays from data
   examples?: Example[];
   educational?: Educational;
   related_commands?: string[];
+  filled_example?: string;         // Pre-filled command example
 }
 
 export interface Flag {
-  name: string;
+  flag: string;           // Property name from data schema
   description: string;
   required?: boolean;
   example?: string;
-  explanation?: string; // Detailed explanation of what the flag does
+  default_value?: string; // Default value if not specified
+  explanation?: string;   // Detailed explanation of what the flag does
 }
 
 export interface Variable {

@@ -17,15 +17,22 @@ export interface CheatsheetScenario {
   title: string;
   context?: string;
   approach?: string;
-  commands?: string[];  // Command IDs
+  commands?: (string | SectionCommand)[];  // Support both string IDs and enriched objects
   expected_outcome?: string;
   why_this_works?: string;
+}
+
+// Command reference in section - can be string ID or enriched object
+export interface SectionCommand {
+  id: string;
+  example: string;
+  shows: string;
 }
 
 export interface CheatsheetSection {
   title: string;
   notes?: string;
-  commands?: string[];  // Command IDs
+  commands?: (string | SectionCommand)[];  // Support both string IDs and enriched objects
 }
 
 // List view item (minimal data for search results)

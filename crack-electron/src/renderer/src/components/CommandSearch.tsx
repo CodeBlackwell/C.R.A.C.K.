@@ -25,7 +25,7 @@ interface SearchResult {
   category: string;
   description: string;
   tags: string[];
-  oscp_relevance: boolean;
+  oscp_relevance: 'high' | 'medium' | 'low' | boolean;  // String enum from data, or legacy boolean
 }
 
 export default function CommandSearch({ onSelectCommand }: CommandSearchProps) {

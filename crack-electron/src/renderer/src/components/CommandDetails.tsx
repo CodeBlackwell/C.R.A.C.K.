@@ -151,6 +151,30 @@ export default function CommandDetails({ command, viewMode, onViewModeChange, on
               >
                 {command.command}
               </Code>
+
+              {/* Filled Example - pre-filled command with real values */}
+              {command.filled_example && (
+                <div style={{ marginTop: '12px' }}>
+                  <Text size="xs" c="dimmed" mb={4}>
+                    Pre-filled example: <Text component="span" size="xs" c="dimmed">(click to copy)</Text>
+                  </Text>
+                  <Code
+                    block
+                    onClick={() => copyToClipboard(command.filled_example!, 'cmd')}
+                    style={{
+                      background: '#1a1b1e',
+                      fontSize: '11px',
+                      padding: '10px',
+                      border: '1px solid #373A40',
+                      borderLeft: '3px solid #51cf66',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                    }}
+                  >
+                    {command.filled_example}
+                  </Code>
+                </div>
+              )}
             </div>
 
             {/* Examples */}
@@ -415,7 +439,7 @@ export default function CommandDetails({ command, viewMode, onViewModeChange, on
                                 padding: '4px 8px',
                               }}
                             >
-                              {flag.name}
+                              {flag.flag}
                             </Code>
                             {flag.required && (
                               <Badge size="xs" color="red" variant="light">

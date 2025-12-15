@@ -289,7 +289,7 @@ export default function ChainCommandView({ commandId, chainName, stepNumber, onB
                                 padding: '4px 8px',
                               }}
                             >
-                              {flag.name}
+                              {flag.flag}
                             </Code>
                             {flag.required && (
                               <Badge size="xs" color="red" variant="light">

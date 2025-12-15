@@ -1,7 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
-import { Paper, Text, ScrollArea, Accordion, Loader, Center, Stack, Badge, Group, Code, Divider } from '@mantine/core';
-import { Cheatsheet } from '../types/cheatsheet';
+import { Paper, Text, ScrollArea, Accordion, Loader, Center, Stack, Badge, Group, Code } from '@mantine/core';
+import { Cheatsheet, SectionCommand } from '../types/cheatsheet';
 import { Command } from '../types/command';
+
+// Helper to extract command ID from string or SectionCommand
+const getCommandId = (cmd: string | SectionCommand): string => {
+  return typeof cmd === 'string' ? cmd : cmd.id;
+};
 
 interface CheatsheetCommandListProps {
   cheatsheet: Cheatsheet;
@@ -25,12 +30,12 @@ export default function CheatsheetCommandList({ cheatsheet, expandedCommandId }:
 
       // From scenarios
       cheatsheet.scenarios?.forEach((scenario) => {
-        scenario.commands?.forEach((cmdId) => commandIds.add(cmdId));
+        scenario.commands?.forEach((cmd) => commandIds.add(getCommandId(cmd)));
       });
 
       // From sections
       cheatsheet.sections?.forEach((section) => {
-        section.commands?.forEach((cmdId) => commandIds.add(cmdId));
+        section.commands?.forEach((cmd) => commandIds.add(getCommandId(cmd)));
       });
 
       console.log('[CheatsheetCommandList] Found command IDs:', Array.from(commandIds));
