@@ -10,6 +10,9 @@ import { createDebugLogger } from '@shared/electron/debug';
 import { registerSessionHandlers, setPtyMainWindow } from './ipc/sessions';
 import { registerTargetHandlers } from './ipc/targets';
 import { registerNeo4jHandlers } from './ipc/neo4j';
+import { registerCredentialHandlers } from './ipc/credentials';
+import { registerLootHandlers } from './ipc/loot';
+import { registerEngagementHandlers } from './ipc/engagements';
 
 // Initialize debug logger
 const debug = createDebugLogger({ appName: 'breach' });
@@ -68,6 +71,9 @@ app.whenReady().then(async () => {
   registerNeo4jHandlers();
   registerSessionHandlers();
   registerTargetHandlers();
+  registerCredentialHandlers();
+  registerLootHandlers();
+  registerEngagementHandlers();
 
   // Create main window
   await createWindow();

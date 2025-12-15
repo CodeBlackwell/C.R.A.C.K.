@@ -6,6 +6,14 @@
 
 import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron';
 import type { TerminalSession, CreateSessionOptions } from '@shared/types/session';
+import type { Credential } from '@shared/types/credential';
+import type { Loot, PatternType } from '@shared/types/loot';
+import type {
+  Engagement,
+  CreateEngagementData,
+  EngagementStats,
+  EngagementStatus,
+} from '@shared/types/engagement';
 
 /** Callback type for session events */
 type SessionOutputCallback = (event: IpcRendererEvent, data: { sessionId: string; data: string }) => void;
@@ -86,9 +94,90 @@ const electronAPI = {
   targetUpdateStatus: (targetId: string, status: string) =>
     ipcRenderer.invoke('target-update-status', targetId, status),
 
+  // Credentials
+  credentialList: (engagementId: string): Promise<Credential[]> =>
+    ipcRenderer.invoke('credential-list', engagementId),
+  credentialAdd: (credential: Omit<Credential, 'id' | 'createdAt'>): Promise<Credential> =>
+    ipcRenderer.invoke('credential-add', credential),
+  credentialUpdate: (id: string, updates: Partial<Credential>): Promise<boolean> =>
+    ipcRenderer.invoke('credential-update', id, updates),
+  credentialDelete: (id: string): Promise<boolean> =>
+    ipcRenderer.invoke('credential-delete', id),
+  credentialValidateAccess: (credentialId: string, serviceId: string, accessType: string): Promise<boolean> =>
+    ipcRenderer.invoke('credential-validate-access', credentialId, serviceId, accessType),
+  credentialByTarget: (targetId: string): Promise<Credential[]> =>
+    ipcRenderer.invoke('credential-by-target', targetId),
+  credentialGetAdmin: (engagementId: string): Promise<Credential[]> =>
+    ipcRenderer.invoke('credential-get-admin', engagementId),
+
+  // Loot
+  lootList: (engagementId: string): Promise<Loot[]> =>
+    ipcRenderer.invoke('loot-list', engagementId),
+  lootAdd: (lootData: {
+    name: string;
+    path: string;
+    sourcePath?: string;
+    sourceSessionId: string;
+    targetId: string;
+    engagementId: string;
+    content?: string;
+    notes?: string;
+  }): Promise<Loot> =>
+    ipcRenderer.invoke('loot-add', lootData),
+  lootGetContent: (id: string): Promise<{ content?: string; error?: string; truncated?: boolean; size?: number }> =>
+    ipcRenderer.invoke('loot-get-content', id),
+  lootDelete: (id: string, deleteFile?: boolean): Promise<boolean> =>
+    ipcRenderer.invoke('loot-delete', id, deleteFile),
+  lootByPattern: (engagementId: string, pattern: PatternType): Promise<Loot[]> =>
+    ipcRenderer.invoke('loot-by-pattern', engagementId, pattern),
+  lootGetFlags: (engagementId: string): Promise<Loot[]> =>
+    ipcRenderer.invoke('loot-get-flags', engagementId),
+  lootUpdateNotes: (id: string, notes: string): Promise<boolean> =>
+    ipcRenderer.invoke('loot-update-notes', id, notes),
+
   // Console bridge (renderer → terminal)
   logToTerminal: (level: string, message: string) =>
     ipcRenderer.send('log-to-terminal', level, message),
+
+  // =========================================================================
+  // ENGAGEMENTS
+  // =========================================================================
+
+  /** List all engagements */
+  engagementList: (): Promise<Engagement[]> =>
+    ipcRenderer.invoke('engagement-list'),
+
+  /** Get engagement by ID */
+  engagementGet: (id: string): Promise<Engagement | null> =>
+    ipcRenderer.invoke('engagement-get', id),
+
+  /** Create a new engagement */
+  engagementCreate: (data: CreateEngagementData): Promise<Engagement | null> =>
+    ipcRenderer.invoke('engagement-create', data),
+
+  /** Activate an engagement (deactivates others) */
+  engagementActivate: (id: string): Promise<Engagement | null> =>
+    ipcRenderer.invoke('engagement-activate', id),
+
+  /** Deactivate all engagements */
+  engagementDeactivate: (): Promise<boolean> =>
+    ipcRenderer.invoke('engagement-deactivate'),
+
+  /** Update engagement status */
+  engagementUpdateStatus: (id: string, status: EngagementStatus): Promise<boolean> =>
+    ipcRenderer.invoke('engagement-update-status', id, status),
+
+  /** Update engagement details */
+  engagementUpdate: (id: string, updates: Partial<Engagement>): Promise<boolean> =>
+    ipcRenderer.invoke('engagement-update', id, updates),
+
+  /** Delete an engagement */
+  engagementDelete: (id: string): Promise<{ success: boolean; error?: string }> =>
+    ipcRenderer.invoke('engagement-delete', id),
+
+  /** Get engagement statistics */
+  engagementStats: (id: string): Promise<EngagementStats | null> =>
+    ipcRenderer.invoke('engagement-stats', id),
 };
 
 // Expose to renderer

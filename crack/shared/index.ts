@@ -64,3 +64,33 @@ export type {
   CreateSessionOptions,
   SessionFilter,
 } from './types/session';
+
+// Credential types
+export type {
+  SecretType,
+  Credential,
+  CredentialAction,
+} from './types/credential';
+
+export {
+  CREDENTIAL_ACTIONS,
+  substituteCredential,
+  getApplicableActions,
+} from './types/credential';
+
+// Loot types
+export type {
+  LootType,
+  PatternType,
+  Loot,
+  LootPattern,
+} from './types/loot';
+
+export {
+  LOOT_PATTERNS,
+  FLAG_FILENAMES,
+  detectPatterns,
+  isFlagFile,
+  getPatternAction,
+  generateLootId,
+} from './types/loot';

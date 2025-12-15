@@ -17,8 +17,12 @@ import {
 import '@mantine/core/styles.css';
 import { TerminalTabs } from './components/terminal/TerminalTabs';
 import { TargetSidebar } from './components/layout/TargetSidebar';
-import { SessionDock } from './components/layout/SessionDock';
+import { ContextPanel } from './components/context';
+import { EngagementSelector } from './components/header';
+import { EngagementManager } from './components/modals';
 import type { TerminalSession } from '@shared/types/session';
+import type { Loot, PatternType } from '@shared/types/loot';
+import type { Engagement } from '@shared/types/engagement';
 
 type WorkspaceView = 'terminals' | 'topology';
 
@@ -30,7 +34,9 @@ function App() {
   const [sessions, setSessions] = useState<TerminalSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [workspaceView, setWorkspaceView] = useState<WorkspaceView>('terminals');
-  const [activeEngagement, setActiveEngagement] = useState<Record<string, unknown> | null>(null);
+  const [activeEngagement, setActiveEngagement] = useState<Engagement | null>(null);
+  const [contextPanelCollapsed, setContextPanelCollapsed] = useState(false);
+  const [engagementManagerOpen, setEngagementManagerOpen] = useState(false);
 
   // Check Neo4j connection on mount
   useEffect(() => {
@@ -51,9 +57,16 @@ function App() {
       .getActiveEngagement()
       .then((engagement) => {
         console.log('[App] Active engagement:', engagement);
-        setActiveEngagement(engagement);
+        setActiveEngagement(engagement as Engagement | null);
       })
       .catch(console.error);
+  }, []);
+
+  // Handle engagement change (reload related data)
+  const handleEngagementChange = useCallback((engagement: Engagement | null) => {
+    console.log('[App] Engagement changed:', engagement?.name || 'none');
+    setActiveEngagement(engagement);
+    // Future: reload targets, credentials, loot for new engagement
   }, []);
 
   // Listen for session events
@@ -127,6 +140,25 @@ function App() {
     console.log('[App] New session created:', session.id);
   }, []);
 
+  // Handle using a credential (spawn command in new session)
+  const handleUseCredential = useCallback(async (command: string, credentialId: string) => {
+    console.log('[App] Using credential:', credentialId, 'Command:', command);
+    // Create a new session with the command
+    const session = await window.electronAPI.sessionCreate('bash', ['-c', command], {
+      type: 'shell',
+      label: `cred-${credentialId.slice(0, 6)}`,
+      interactive: true,
+    });
+    console.log('[App] Credential session created:', session.id);
+  }, []);
+
+  // Handle extracting credentials from loot
+  const handleExtractCredential = useCallback(async (loot: Loot, pattern: PatternType) => {
+    console.log('[App] Extracting credential from loot:', loot.name, 'Pattern:', pattern);
+    // TODO: Implement PRISM integration to extract and add credential
+    // For now, just log it
+  }, []);
+
   return (
     <MantineProvider
       defaultColorScheme="dark"
@@ -171,11 +203,12 @@ function App() {
               >
                 B.R.E.A.C.H.
               </Text>
-              {activeEngagement && (
-                <Badge variant="light" color="blue">
-                  {(activeEngagement as any).name || 'Engagement'}
-                </Badge>
-              )}
+              <EngagementSelector
+                activeEngagement={activeEngagement}
+                onEngagementChange={handleEngagementChange}
+                onOpenManager={() => setEngagementManagerOpen(true)}
+                onQuickCreate={() => setEngagementManagerOpen(true)}
+              />
             </Group>
 
             <Group gap="md">
@@ -258,16 +291,25 @@ function App() {
               )}
             </div>
 
-            {/* Right: Session Dock */}
-            <SessionDock
-              sessions={sessions}
-              activeSessionId={activeSessionId}
-              onSessionSelect={handleSessionSelect}
-              onNewSession={handleNewSession}
+            {/* Right: Context Panel (Credentials, Loot, Actions) */}
+            <ContextPanel
+              engagementId={activeEngagement?.id as string}
+              collapsed={contextPanelCollapsed}
+              onToggleCollapse={() => setContextPanelCollapsed(!contextPanelCollapsed)}
+              onUseCredential={handleUseCredential}
+              onExtractCredential={handleExtractCredential}
             />
           </div>
         </AppShell.Main>
       </AppShell>
+
+      {/* Engagement Manager Modal */}
+      <EngagementManager
+        opened={engagementManagerOpen}
+        onClose={() => setEngagementManagerOpen(false)}
+        activeEngagement={activeEngagement}
+        onEngagementChange={handleEngagementChange}
+      />
     </MantineProvider>
   );
 }
