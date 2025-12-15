@@ -7,8 +7,15 @@
 import { ipcMain } from 'electron';
 import { runQuery, runWrite } from '@shared/neo4j/query';
 import { createDebugLogger } from '@shared/electron/debug';
+import type { CreateTargetData } from '@shared/types/target';
 
 const debug = createDebugLogger({ appName: 'breach' });
+
+/** Generate a unique ID with prefix */
+function generateId(prefix: string): string {
+  const uuid = Math.random().toString(36).substring(2, 10);
+  return `${prefix}-${uuid}`;
+}
 
 /** Register target-related IPC handlers */
 export function registerTargetHandlers(): void {
@@ -35,6 +42,58 @@ export function registerTargetHandlers(): void {
       return [];
     }
   });
+
+  // Add target to engagement
+  ipcMain.handle(
+    'target-add',
+    async (_, engagementId: string, data: CreateTargetData) => {
+      debug.ipc('target-add called', { engagementId, ip: data.ip_address });
+      try {
+        const id = generateId('tgt');
+        const now = new Date().toISOString();
+
+        // Check for duplicate IP in engagement
+        const existing = await runQuery(
+          `MATCH (e:Engagement {id: $engagementId})-[:TARGETS]->(t:Target {ip_address: $ip})
+           RETURN t.id as id`,
+          { engagementId, ip: data.ip_address }
+        );
+
+        if (existing.length > 0) {
+          debug.ipc('target-add duplicate IP', { ip: data.ip_address });
+          return { error: 'Target with this IP already exists' };
+        }
+
+        const results = await runQuery(
+          `MATCH (e:Engagement {id: $engagementId})
+           CREATE (e)-[:TARGETS]->(t:Target {
+             id: $id,
+             ip_address: $ip_address,
+             hostname: $hostname,
+             status: 'unknown',
+             notes: $notes,
+             created_at: $created_at
+           })
+           RETURN t.id as id, t.ip_address as ip_address, t.hostname as hostname,
+                  t.status as status, t.notes as notes, t.created_at as created_at`,
+          {
+            engagementId,
+            id,
+            ip_address: data.ip_address,
+            hostname: data.hostname || null,
+            notes: data.notes || null,
+            created_at: now,
+          }
+        );
+
+        debug.ipc('target-add completed', { id });
+        return results.length > 0 ? results[0] : null;
+      } catch (error) {
+        debug.error('target-add failed', error);
+        return { error: String(error) };
+      }
+    }
+  );
 
   // Get target details
   ipcMain.handle('target-get', async (_, targetId: string) => {

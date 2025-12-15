@@ -14,6 +14,7 @@ import type {
   EngagementStats,
   EngagementStatus,
 } from '@shared/types/engagement';
+import type { Target, CreateTargetData } from '@shared/types/target';
 
 /** Callback type for session events */
 type SessionOutputCallback = (event: IpcRendererEvent, data: { sessionId: string; data: string }) => void;
@@ -85,6 +86,8 @@ const electronAPI = {
   // Targets
   targetList: (engagementId: string) =>
     ipcRenderer.invoke('target-list', engagementId),
+  targetAdd: (engagementId: string, data: CreateTargetData): Promise<Target | { error: string } | null> =>
+    ipcRenderer.invoke('target-add', engagementId, data),
   targetGet: (targetId: string) =>
     ipcRenderer.invoke('target-get', targetId),
   targetServices: (targetId: string) =>

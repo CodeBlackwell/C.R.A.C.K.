@@ -26,9 +26,11 @@ crack/
 ├── tools/
 │   ├── recon/          # Network, web, SQLi scanning
 │   ├── post/           # BloodTrail, PRISM, Sessions
-│   └── engagement/     # Client/engagement/target tracking
+│   └── engagement/     # Engagement/target tracking (Python CLI)
 ├── reference/          # Command reference system
 ├── crackpedia/         # GUI command encyclopedia (Electron)
+├── breach/             # GUI pentesting workspace (Electron)
+├── shared/             # Shared TypeScript types for Electron apps
 └── db/                 # Data storage, Neo4j migration
     └── data/           # JSON knowledge base
 ```
@@ -39,7 +41,8 @@ crack/
 |--------|-----------|---------|
 | db | `db/CLAUDE.md` | Command schema, validation, enrichment |
 | reference | `reference/CLAUDE.md` | Registry, backends, CLI usage |
-| crackpedia | `crackpedia/CLAUDE.md` | GUI development, Electron/React |
+| crackpedia | `crackpedia/CLAUDE.md` | GUI command encyclopedia |
+| breach | `breach/CLAUDE.md` | GUI pentesting workspace |
 
 ## Data Persistence Summary
 
@@ -51,28 +54,28 @@ crack/
 | Listeners | JSON | `~/.crack/sessions/` |
 | Active engagement | JSON | `~/.crack/engagement.json` |
 | Graph queries | Neo4j | `bolt://localhost:7687` |
-| Engagement data | Neo4j | Client, Engagement, Target, Finding, Service nodes |
+| Engagement data | Neo4j | Engagement, Target, Service, Credential, Loot nodes |
 | BloodHound data | Neo4j | Separate database |
 
-## Engagement Tracking (NEW)
+## Engagement Tracking
 
-Unified client/engagement/target tracking with Neo4j persistence.
+Simplified engagement/target tracking with Neo4j persistence. No client/organization layer - each engagement is a standalone workspace.
 
 ### Graph Model
 ```
-(:Client)─[:HAS_ENGAGEMENT]→(:Engagement)─[:TARGETS]→(:Target)─[:HAS_SERVICE]→(:Service)
-                                    └─[:HAS_FINDING]→(:Finding)─[:AFFECTS]→(:Target)
-                                                           └─[:EXPLOITS]→(:CVE)
+(:Engagement)─[:TARGETS]→(:Target)─[:HAS_SERVICE]→(:Service)
+      │
+      ├─[:HAS_CREDENTIAL]→(:Credential)─[:GRANTS_ACCESS]→(:Service)
+      │
+      ├─[:HAS_FINDING]→(:Finding)─[:AFFECTS]→(:Target)
+      │
+      └─[:HAS_LOOT]→(:Loot)
 ```
 
-### CLI Commands
+### CLI Commands (Python)
 ```bash
-# Client Management
-crack engagement client create "ACME Corp"
-crack engagement client list
-
 # Engagement Management
-crack engagement create "Q4 Pentest" --client <id>
+crack engagement create "OSCP Lab"
 crack engagement list
 crack engagement activate <id>
 crack engagement status
@@ -88,6 +91,15 @@ crack finding add "SQL Injection" --severity critical
 crack finding list
 crack finding link <finding_id> --target <target_id>
 ```
+
+### GUI (B.R.E.A.C.H.)
+```bash
+cd breach && ./start.sh   # Launch workspace GUI
+```
+- Terminal multiplexer with PTY sessions
+- Engagement selector dropdown
+- Credential vault and loot tracking
+- Target sidebar with status indicators
 
 ### Tool Integration
 When an engagement is active, tools auto-log data:
@@ -133,24 +145,31 @@ crack config set <var> <val>  # Variable management
 crackpedia                    # Launch visual command encyclopedia
 ```
 
-## Crackpedia (GUI)
+## GUI Applications
 
-Electron-based visual command encyclopedia. Launch with:
-
+### Crackpedia (Command Encyclopedia)
 ```bash
 crackpedia              # Normal mode
 crackpedia debug        # Debug mode
-crackpedia verbose      # Maximum verbosity
 ```
-
-Features:
-- **Command Search** - Full-text search across 734+ commands
-- **Graph Visualization** - Interactive relationship explorer
-- **Attack Chains** - Multi-step workflow visualization
-- **Cheatsheets** - Educational reference sheets
-- **Writeups** - Machine walkthrough viewer
+- Command search across 734+ commands
+- Graph visualization of command relationships
+- Attack chain workflows
+- Cheatsheets and writeups
 
 See `crackpedia/CLAUDE.md` for development guide.
+
+### B.R.E.A.C.H. (Pentesting Workspace)
+```bash
+cd breach && ./start.sh   # Launch workspace
+```
+- Terminal multiplexer with xterm.js + node-pty
+- Engagement navigation (switch between workspaces)
+- Credential vault (discovered creds with "Use" action)
+- Loot tracking (flags, SSH keys, configs)
+- Target sidebar (machines by status)
+
+See `breach/CLAUDE.md` for development guide.
 
 ## Development Guidelines
 
@@ -219,10 +238,11 @@ crack config auto  # Detects LHOST, INTERFACE
 
 Priority items remaining:
 
-1. **Session Migration** - Move chain sessions to Neo4j
-2. **Progress Dashboard** - Engagement progress visualization
-3. **Report Generation** - Export engagement findings to markdown/PDF
-4. **Attack Timeline** - Reconstruct attack sequence from engagement data
+1. **B.R.E.A.C.H. Topology View** - Cytoscape graph showing session relationships
+2. **Finding Tracker** - Vulnerability management with severity levels
+3. **PRISM Integration** - Auto-parse credentials from terminal output
+4. **Report Generation** - Export engagement findings to markdown/PDF
+5. **Attack Timeline** - Reconstruct attack sequence from session history
 
 ## Philosophy
 

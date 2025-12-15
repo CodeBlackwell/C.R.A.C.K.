@@ -2,6 +2,7 @@
  * TargetSidebar - Left Panel for Target Navigation
  *
  * Displays engagement targets with services and status indicators.
+ * Includes inline form for adding new targets.
  */
 
 import { useState, useEffect, useMemo } from 'react';
@@ -16,6 +17,9 @@ import {
   Tooltip,
   TextInput,
   Loader,
+  Button,
+  Collapse,
+  Alert,
 } from '@mantine/core';
 import {
   IconServer,
@@ -23,6 +27,9 @@ import {
   IconRefresh,
   IconSearch,
   IconCircleFilled,
+  IconPlus,
+  IconX,
+  IconAlertCircle,
 } from '@tabler/icons-react';
 
 interface Target {
@@ -57,12 +64,22 @@ const STATUS_COLORS: Record<string, string> = {
   compromised: 'orange',
 };
 
+/** Basic IP validation regex */
+const IP_REGEX = /^(\d{1,3}\.){3}\d{1,3}$/;
+
 export function TargetSidebar({ engagementId, onTargetSelect }: TargetSidebarProps) {
   const [targets, setTargets] = useState<Target[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
   const [expandedTargets, setExpandedTargets] = useState<string[]>([]);
   const [targetServices, setTargetServices] = useState<Record<string, Service[]>>({});
+
+  // Add target form state
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [addLoading, setAddLoading] = useState(false);
+  const [addError, setAddError] = useState<string | null>(null);
+  const [newIp, setNewIp] = useState('');
+  const [newHostname, setNewHostname] = useState('');
 
   // Load targets for engagement
   useEffect(() => {
@@ -117,6 +134,61 @@ export function TargetSidebar({ engagementId, onTargetSelect }: TargetSidebarPro
       .finally(() => setLoading(false));
   };
 
+  // Reset add form
+  const resetAddForm = () => {
+    setNewIp('');
+    setNewHostname('');
+    setAddError(null);
+    setShowAddForm(false);
+  };
+
+  // Validate IP
+  const isValidIp = (ip: string): boolean => {
+    if (!IP_REGEX.test(ip)) return false;
+    const parts = ip.split('.').map(Number);
+    return parts.every((p) => p >= 0 && p <= 255);
+  };
+
+  // Handle add target
+  const handleAddTarget = async () => {
+    if (!engagementId) return;
+
+    // Validate IP
+    if (!newIp.trim()) {
+      setAddError('IP address is required');
+      return;
+    }
+    if (!isValidIp(newIp.trim())) {
+      setAddError('Invalid IP address format');
+      return;
+    }
+
+    setAddLoading(true);
+    setAddError(null);
+
+    try {
+      const result = await window.electronAPI.targetAdd(engagementId, {
+        ip_address: newIp.trim(),
+        hostname: newHostname.trim() || undefined,
+      });
+
+      if (result && 'error' in result) {
+        setAddError(result.error);
+      } else if (result) {
+        // Success - refresh list and reset form
+        handleRefresh();
+        resetAddForm();
+      } else {
+        setAddError('Failed to add target');
+      }
+    } catch (err) {
+      setAddError('Failed to add target');
+      console.error(err);
+    } finally {
+      setAddLoading(false);
+    }
+  };
+
   return (
     <Stack
       gap={0}
@@ -138,19 +210,97 @@ export function TargetSidebar({ engagementId, onTargetSelect }: TargetSidebarPro
           <Text size="sm" fw={600} c="dimmed">
             TARGETS
           </Text>
+          <Badge size="xs" variant="light" color="gray">
+            {targets.length}
+          </Badge>
         </Group>
-        <Tooltip label="Refresh">
-          <ActionIcon
-            variant="subtle"
-            color="gray"
-            size="sm"
-            onClick={handleRefresh}
-            loading={loading}
-          >
-            <IconRefresh size={14} />
-          </ActionIcon>
-        </Tooltip>
+        <Group gap={4}>
+          <Tooltip label="Add Target">
+            <ActionIcon
+              variant={showAddForm ? 'filled' : 'subtle'}
+              color={showAddForm ? 'cyan' : 'gray'}
+              size="sm"
+              onClick={() => setShowAddForm(!showAddForm)}
+              disabled={!engagementId}
+            >
+              {showAddForm ? <IconX size={14} /> : <IconPlus size={14} />}
+            </ActionIcon>
+          </Tooltip>
+          <Tooltip label="Refresh">
+            <ActionIcon
+              variant="subtle"
+              color="gray"
+              size="sm"
+              onClick={handleRefresh}
+              loading={loading}
+              disabled={!engagementId}
+            >
+              <IconRefresh size={14} />
+            </ActionIcon>
+          </Tooltip>
+        </Group>
       </Group>
+
+      {/* Add Target Form (collapsible) */}
+      <Collapse in={showAddForm}>
+        <Stack
+          gap="xs"
+          p="xs"
+          style={{
+            background: '#1a1b1e',
+            borderBottom: '1px solid #373A40',
+          }}
+        >
+          {addError && (
+            <Alert
+              icon={<IconAlertCircle size={14} />}
+              color="red"
+              variant="light"
+              p="xs"
+              styles={{ message: { fontSize: 12 } }}
+            >
+              {addError}
+            </Alert>
+          )}
+          <TextInput
+            size="xs"
+            placeholder="192.168.1.100"
+            label="IP Address"
+            value={newIp}
+            onChange={(e) => setNewIp(e.target.value)}
+            styles={{
+              input: { background: '#25262b', border: '1px solid #373A40' },
+              label: { fontSize: 11, marginBottom: 4 },
+            }}
+            onKeyDown={(e) => e.key === 'Enter' && handleAddTarget()}
+          />
+          <TextInput
+            size="xs"
+            placeholder="dc01.corp.local (optional)"
+            label="Hostname"
+            value={newHostname}
+            onChange={(e) => setNewHostname(e.target.value)}
+            styles={{
+              input: { background: '#25262b', border: '1px solid #373A40' },
+              label: { fontSize: 11, marginBottom: 4 },
+            }}
+            onKeyDown={(e) => e.key === 'Enter' && handleAddTarget()}
+          />
+          <Group justify="flex-end" gap="xs">
+            <Button size="xs" variant="subtle" color="gray" onClick={resetAddForm}>
+              Cancel
+            </Button>
+            <Button
+              size="xs"
+              color="cyan"
+              onClick={handleAddTarget}
+              loading={addLoading}
+            >
+              Add Target
+            </Button>
+          </Group>
+        </Stack>
+      </Collapse>
 
       {/* Search */}
       <div style={{ padding: '8px 12px', borderBottom: '1px solid #373A40' }}>
@@ -180,9 +330,21 @@ export function TargetSidebar({ engagementId, onTargetSelect }: TargetSidebarPro
             <Loader size="sm" color="cyan" />
           </Group>
         ) : filteredTargets.length === 0 ? (
-          <Text c="dimmed" size="sm" ta="center" p="xl">
-            No targets found
-          </Text>
+          <Stack align="center" p="xl" gap="sm">
+            <Text c="dimmed" size="sm">
+              No targets found
+            </Text>
+            {!showAddForm && (
+              <Button
+                size="xs"
+                variant="light"
+                leftSection={<IconPlus size={14} />}
+                onClick={() => setShowAddForm(true)}
+              >
+                Add First Target
+              </Button>
+            )}
+          </Stack>
         ) : (
           <Accordion
             multiple
