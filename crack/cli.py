@@ -387,6 +387,54 @@ def prism_command(args):
     prism_main()
 
 
+def breach_command(args):
+    """Launch B.R.E.A.C.H. GUI workspace"""
+    breach_dir = Path(__file__).parent / 'breach'
+    start_script = breach_dir / 'start.sh'
+
+    if not start_script.exists():
+        print(f"{Colors.RED}Error:{Colors.END} B.R.E.A.C.H. not found at {breach_dir}")
+        print(f"Expected start script: {start_script}")
+        sys.exit(1)
+
+    # Parse args
+    debug = '--debug' in args or '-d' in args
+
+    if '--help' in args or '-h' in args:
+        print(f"{Colors.CYAN}B.R.E.A.C.H. - Box Reconnaissance, Exploitation & Attack Command Hub{Colors.END}\n")
+        print(f"{Colors.YELLOW}Usage:{Colors.END}")
+        print("  crack breach              Launch B.R.E.A.C.H. GUI")
+        print("  crack breach --debug      Launch with debug logging")
+        print("  crack breach --help       Show this help\n")
+        print(f"{Colors.YELLOW}Features:{Colors.END}")
+        print("  • Terminal multiplexer (xterm.js + node-pty)")
+        print("  • Engagement tracking (Neo4j)")
+        print("  • Credential vault")
+        print("  • Loot tracking")
+        print("  • Target sidebar\n")
+        print(f"{Colors.YELLOW}Requirements:{Colors.END}")
+        print("  • Neo4j 5.x running on bolt://localhost:7687")
+        print("  • Node.js 18+")
+        return
+
+    # Build command
+    cmd = ['bash', str(start_script)]
+    if debug:
+        cmd.append('debug')
+
+    print(f"{Colors.CYAN}Launching B.R.E.A.C.H...{Colors.END}")
+    if debug:
+        print(f"{Colors.YELLOW}Debug mode enabled{Colors.END}")
+
+    # Run in breach directory
+    try:
+        result = subprocess.run(cmd, cwd=breach_dir)
+        sys.exit(result.returncode)
+    except KeyboardInterrupt:
+        print(f"\n{Colors.YELLOW}B.R.E.A.C.H. terminated{Colors.END}")
+        sys.exit(0)
+
+
 def engagement_cmd_command(args):
     """Execute engagement tracking commands"""
     from crack.tools.engagement.cli import engagement_command
@@ -663,7 +711,8 @@ def main():
 {Colors.YELLOW}▶ Engagement Tracking{Colors.END}
   ├─ engagement      Client/engagement management (Neo4j)
   ├─ target          Target IP/hostname tracking
-  └─ finding         Vulnerability and finding management
+  ├─ finding         Vulnerability and finding management
+  └─ breach          B.R.E.A.C.H. GUI workspace (Electron)
 
 {Colors.YELLOW}▶ Session Management{Colors.END}
   └─ session         Reverse shell session management (TCP/HTTP/DNS)
@@ -737,6 +786,10 @@ def main():
   crack target service-add <id> 80 --name http # Add service
   crack finding add 'SQL Injection' --severity critical  # Add finding
   crack finding link <id> --target <target_id> # Link finding to target
+
+{Colors.GREEN}B.R.E.A.C.H. GUI:{Colors.END}
+  crack breach                                 # Launch GUI workspace
+  crack breach --debug                         # Launch with debug logging
 
 {Colors.GREEN}Session Management:{Colors.END}
   crack session start tcp --port 4444          # Start TCP listener
@@ -899,6 +952,12 @@ def main():
                                          add_help=False)
     prism_parser.set_defaults(func=prism_command)
 
+    # B.R.E.A.C.H. GUI workspace
+    breach_parser = subparsers.add_parser('breach',
+                                          help='B.R.E.A.C.H. - GUI pentesting workspace (Electron)',
+                                          add_help=False)
+    breach_parser.set_defaults(func=breach_command)
+
     # Engagement Tracking subcommand
     engagement_parser = subparsers.add_parser('engagement',
                                               help='Engagement Tracking - Client/engagement management',
@@ -921,9 +980,9 @@ def main():
     args, remaining = parser.parse_known_args()
 
     # Show banner unless suppressed
-    # Note: reference, db, ports, and prism commands have no banner by default
+    # Note: reference, db, ports, prism, and breach commands have no banner by default
     if not args.no_banner and args.tool:
-        if args.tool not in ['reference', 'db', 'ports', 'prism'] or '--banner' in remaining:
+        if args.tool not in ['reference', 'db', 'ports', 'prism', 'breach'] or '--banner' in remaining:
             print_banner()
 
     # Execute the selected tool
