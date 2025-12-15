@@ -78,9 +78,10 @@ export function TerminalPane({ sessionId, active }: TerminalPaneProps) {
       hasOutputCleanup: !!existing?.outputCleanup
     });
 
-    if (existing && !existing.disposed) {
+    if (existing) {
+      // Reclaim existing terminal - cancel any pending disposal from StrictMode unmount
       log.lifecycle('Reclaiming existing terminal', { sessionId });
-      existing.disposed = false;
+      existing.disposed = false; // Cancel deferred disposal
       terminalRef.current = existing.terminal;
       fitAddonRef.current = existing.fitAddon;
 
