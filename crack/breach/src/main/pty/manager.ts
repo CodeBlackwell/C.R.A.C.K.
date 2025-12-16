@@ -17,6 +17,14 @@ import type {
 } from '@shared/types/session';
 import type { CommandProvenance } from '@shared/types/signal';
 
+/**
+ * Capture the launch directory at module load time.
+ * This is the directory from which BREACH was launched.
+ * All new terminal sessions will default to this directory.
+ */
+const LAUNCH_DIRECTORY = process.cwd();
+debug.pty('Launch directory captured', { launchDir: LAUNCH_DIRECTORY });
+
 /** Internal PTY process wrapper */
 interface PtyProcess {
   pty: pty.IPty;
@@ -67,7 +75,7 @@ class PtyManager {
       status: 'starting',
       command,
       args,
-      workingDir: options.workingDir || process.env.HOME || '/tmp',
+      workingDir: options.workingDir || LAUNCH_DIRECTORY,
       env: options.env,
       targetId: options.targetId,
       engagementId: options.engagementId,
