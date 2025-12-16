@@ -341,9 +341,21 @@ export function ActionsPanel({
             ACTIONS
           </Text>
           {targetIp && (
-            <Badge size="xs" variant="light" color="cyan">
-              {targetIp}
-            </Badge>
+            <>
+              <Badge size="xs" variant="light" color="cyan">
+                {targetIp}
+              </Badge>
+              <Tooltip label={`ping -c 3 ${targetIp}`}>
+                <ActionIcon
+                  variant="subtle"
+                  color="blue"
+                  size="xs"
+                  onClick={() => onExecuteAction?.(`ping -c 3 ${targetIp}`, 'Ping', true)}
+                >
+                  <IconRadar size={12} />
+                </ActionIcon>
+              </Tooltip>
+            </>
           )}
         </Group>
         <Group gap={4}>
