@@ -13,11 +13,16 @@ import {
   IconBolt,
   IconChevronLeft,
   IconChevronRight,
+  IconBug,
+  IconRadar,
 } from '@tabler/icons-react';
 import { CredentialVault } from './CredentialVault';
 import { LootPanel } from './LootPanel';
 import { ActionsPanel } from './ActionsPanel';
+import { FindingsPanel } from './FindingsPanel';
+import { SignalsPanel } from './SignalsPanel';
 import type { Loot, PatternType } from '@shared/types/loot';
+import type { Finding } from '@shared/types/finding';
 
 interface ContextPanelProps {
   engagementId?: string;
@@ -25,11 +30,16 @@ interface ContextPanelProps {
   onToggleCollapse?: () => void;
   onUseCredential?: (command: string, credentialId: string) => void;
   onExtractCredential?: (loot: Loot, pattern: PatternType) => void;
+  onFindingClick?: (finding: Finding) => void;
   /** Selected target for actions panel */
   selectedTargetId?: string;
   selectedTargetIp?: string;
   selectedTargetHostname?: string;
-  onExecuteAction?: (command: string, label: string) => void;
+  onExecuteAction?: (command: string, label: string, autorun: boolean) => void;
+  /** External tab control - allows parent to set active tab */
+  activeTab?: string;
+  /** Callback when tab changes - notifies parent of tab selection */
+  onTabChange?: (tab: string) => void;
 }
 
 export function ContextPanel({
@@ -38,12 +48,25 @@ export function ContextPanel({
   onToggleCollapse,
   onUseCredential,
   onExtractCredential,
+  onFindingClick,
   selectedTargetId,
   selectedTargetIp,
   selectedTargetHostname,
   onExecuteAction,
+  activeTab: externalActiveTab,
+  onTabChange,
 }: ContextPanelProps) {
-  const [activeTab, setActiveTab] = useState<string | null>('actions');
+  // Use external state if provided, internal otherwise
+  const [internalActiveTab, setInternalActiveTab] = useState<string | null>('actions');
+  const activeTab = externalActiveTab ?? internalActiveTab;
+
+  // Handle tab changes - notify parent if callback provided
+  const handleTabChange = (tab: string | null) => {
+    if (tab) {
+      onTabChange?.(tab);
+    }
+    setInternalActiveTab(tab);
+  };
 
   // Collapsed view - just icons
   if (collapsed) {
@@ -77,7 +100,7 @@ export function ContextPanel({
               color={activeTab === 'actions' ? 'orange' : 'gray'}
               size="lg"
               onClick={() => {
-                setActiveTab('actions');
+                handleTabChange('actions');
                 onToggleCollapse?.();
               }}
             >
@@ -91,7 +114,7 @@ export function ContextPanel({
               color={activeTab === 'credentials' ? 'cyan' : 'gray'}
               size="lg"
               onClick={() => {
-                setActiveTab('credentials');
+                handleTabChange('credentials');
                 onToggleCollapse?.();
               }}
             >
@@ -105,11 +128,39 @@ export function ContextPanel({
               color={activeTab === 'loot' ? 'green' : 'gray'}
               size="lg"
               onClick={() => {
-                setActiveTab('loot');
+                handleTabChange('loot');
                 onToggleCollapse?.();
               }}
             >
               <IconFile size={18} />
+            </ActionIcon>
+          </Tooltip>
+
+          <Tooltip label="Findings" position="left">
+            <ActionIcon
+              variant={activeTab === 'findings' ? 'light' : 'subtle'}
+              color={activeTab === 'findings' ? 'red' : 'gray'}
+              size="lg"
+              onClick={() => {
+                handleTabChange('findings');
+                onToggleCollapse?.();
+              }}
+            >
+              <IconBug size={18} />
+            </ActionIcon>
+          </Tooltip>
+
+          <Tooltip label="Signals" position="left">
+            <ActionIcon
+              variant={activeTab === 'signals' ? 'light' : 'subtle'}
+              color={activeTab === 'signals' ? 'teal' : 'gray'}
+              size="lg"
+              onClick={() => {
+                handleTabChange('signals');
+                onToggleCollapse?.();
+              }}
+            >
+              <IconRadar size={18} />
             </ActionIcon>
           </Tooltip>
         </Stack>
@@ -131,7 +182,7 @@ export function ContextPanel({
       {/* Tab Header */}
       <Tabs
         value={activeTab}
-        onChange={setActiveTab}
+        onChange={handleTabChange}
         variant="pills"
         radius="xs"
         styles={{
@@ -160,6 +211,12 @@ export function ContextPanel({
             </Tabs.Tab>
             <Tabs.Tab value="loot" leftSection={<IconFile size={12} />}>
               Loot
+            </Tabs.Tab>
+            <Tabs.Tab value="findings" leftSection={<IconBug size={12} />}>
+              Findings
+            </Tabs.Tab>
+            <Tabs.Tab value="signals" leftSection={<IconRadar size={12} />}>
+              Signals
             </Tabs.Tab>
           </Tabs.List>
 
@@ -202,6 +259,19 @@ export function ContextPanel({
             onExecuteAction={onExecuteAction}
           />
         )}
+
+        {activeTab === 'findings' && (
+          <FindingsPanel
+            engagementId={engagementId}
+            onFindingClick={onFindingClick}
+          />
+        )}
+
+        {activeTab === 'signals' && (
+          <SignalsPanel
+            engagementId={engagementId}
+          />
+        )}
       </div>
     </Stack>
   );
@@ -210,3 +280,5 @@ export function ContextPanel({
 export { CredentialVault } from './CredentialVault';
 export { LootPanel } from './LootPanel';
 export { ActionsPanel } from './ActionsPanel';
+export { FindingsPanel } from './FindingsPanel';
+export { SignalsPanel } from './SignalsPanel';

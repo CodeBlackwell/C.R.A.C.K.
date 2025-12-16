@@ -38,6 +38,7 @@ export enum DebugCategory {
   PERFORMANCE = 'PERFORMANCE',
   PTY = 'PTY',
   SESSION = 'SESSION',
+  PRISM = 'PRISM',
 }
 
 /** Color codes for terminal output by category */
@@ -52,6 +53,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   PERFORMANCE: '\x1b[90m', // Gray
   PTY: '\x1b[95m',         // Light Magenta
   SESSION: '\x1b[96m',     // Light Cyan
+  PRISM: '\x1b[38;5;208m', // Orange (256-color)
   // Renderer categories (for bridged logs)
   UI: '\x1b[34m',          // Blue
   ACTION: '\x1b[91m',      // Light Red
@@ -84,6 +86,7 @@ const CATEGORY_EMOJIS: Record<string, string> = {
   PERFORMANCE: '⏱️',
   PTY: '💻',
   SESSION: '🔗',
+  PRISM: '🔬',
   // Renderer
   UI: '🖥️',
   ACTION: '🎯',
@@ -337,6 +340,10 @@ export class DebugLogger {
     this.log(DebugCategory.SESSION, message, data);
   }
 
+  prism(message: string, data?: unknown): void {
+    this.log(DebugCategory.PRISM, message, data);
+  }
+
   /** Measure execution time of async function */
   async measure<T>(
     category: string,
@@ -463,3 +470,4 @@ export const logStartup = (msg: string, data?: unknown): void => debug.startup(m
 export const logPerformance = (msg: string, data?: unknown): void => debug.performance(msg, data);
 export const logPty = (msg: string, data?: unknown): void => debug.pty(msg, data);
 export const logSession = (msg: string, data?: unknown): void => debug.session(msg, data);
+export const logPrism = (msg: string, data?: unknown): void => debug.prism(msg, data);

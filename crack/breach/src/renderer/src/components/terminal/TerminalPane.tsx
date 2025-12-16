@@ -127,6 +127,37 @@ export function TerminalPane({ sessionId, active }: TerminalPaneProps) {
     terminalRef.current = terminal;
     fitAddonRef.current = fitAddon;
 
+    // Handle keyboard shortcuts (CTRL+SHIFT+C for copy, CTRL+SHIFT+V for paste)
+    terminal.attachCustomKeyEventHandler((event) => {
+      // CTRL+SHIFT+C - Copy selection to clipboard
+      if (event.ctrlKey && event.shiftKey && event.code === 'KeyC') {
+        const selection = terminal.getSelection();
+        if (selection) {
+          navigator.clipboard.writeText(selection).then(() => {
+            log.action('Copied to clipboard', { length: selection.length });
+          }).catch((err) => {
+            log.error(LogCategory.UI, 'Failed to copy', err);
+          });
+        }
+        return false; // Prevent default handling
+      }
+
+      // CTRL+SHIFT+V - Paste from clipboard
+      if (event.ctrlKey && event.shiftKey && event.code === 'KeyV') {
+        navigator.clipboard.readText().then((text) => {
+          if (text) {
+            window.electronAPI.sessionWrite(sessionId, text);
+            log.action('Pasted from clipboard', { length: text.length });
+          }
+        }).catch((err) => {
+          log.error(LogCategory.UI, 'Failed to paste', err);
+        });
+        return false; // Prevent default handling
+      }
+
+      return true; // Allow default handling for other keys
+    });
+
     // Track onData for cleanup (prevents duplicate input)
     const onDataDisposable = terminal.onData((data) => {
       log.terminalIO('INPUT', {

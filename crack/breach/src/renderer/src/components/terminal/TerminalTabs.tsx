@@ -35,6 +35,7 @@ interface TerminalTabsProps {
   onSessionSelect: (sessionId: string) => void;
   onSessionKill: (sessionId: string) => void;
   onSessionBackground: (sessionId: string) => void;
+  onSessionScan?: (sessionId: string) => void;
   onNewSession: () => void;
 }
 
@@ -66,6 +67,7 @@ export function TerminalTabs({
   onSessionSelect,
   onSessionKill,
   onSessionBackground,
+  onSessionScan,
   onNewSession,
 }: TerminalTabsProps) {
   // Memoize session list to avoid unnecessary re-renders
@@ -161,6 +163,12 @@ export function TerminalTabs({
                       </Box>
                     </Menu.Target>
                     <Menu.Dropdown>
+                      <Menu.Item
+                        leftSection={<IconRadar size={14} />}
+                        onClick={() => onSessionScan?.(session.id)}
+                      >
+                        Scan with PRISM
+                      </Menu.Item>
                       <Menu.Item
                         leftSection={<IconPlayerPause size={14} />}
                         onClick={() => onSessionBackground(session.id)}

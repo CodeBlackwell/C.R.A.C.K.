@@ -19,7 +19,7 @@ import { TerminalTabs } from './components/terminal/TerminalTabs';
 import { TargetSidebar } from './components/layout/TargetSidebar';
 import { ContextPanel } from './components/context';
 import { EngagementSelector } from './components/header';
-import { EngagementManager } from './components/modals';
+import { EngagementManager, PrismScanModal, type PrismScanResults } from './components/modals';
 import { log, LogCategory } from '@shared/electron/debug-renderer';
 import type { TerminalSession } from '@shared/types/session';
 import type { Loot, PatternType } from '@shared/types/loot';
@@ -43,6 +43,9 @@ function App() {
     ip: string;
     hostname?: string;
   } | null>(null);
+  const [scanModalOpen, setScanModalOpen] = useState(false);
+  const [scanResults, setScanResults] = useState<PrismScanResults | null>(null);
+  const [contextTab, setContextTab] = useState<string>('actions');
 
   // Check Neo4j connection on mount
   useEffect(() => {
@@ -183,9 +186,38 @@ function App() {
       type: 'shell',
       label: 'bash',
       interactive: true,
+      engagementId: activeEngagement?.id,
     });
     log.action('New session created', { sessionId: session.id });
-  }, []);
+  }, [activeEngagement?.id]);
+
+  // Handle PRISM scan of session output
+  const handlePrismScan = useCallback(async (sessionId: string) => {
+    if (!activeEngagement) {
+      log.error(LogCategory.ACTION, 'Cannot scan: no active engagement');
+      return;
+    }
+
+    log.action('PRISM scan requested', { sessionId, engagementId: activeEngagement.id });
+
+    try {
+      const results = await window.electronAPI.sessionPrismScan(
+        sessionId,
+        activeEngagement.id,
+        selectedTarget?.id
+      );
+
+      log.data('PRISM scan completed', {
+        credentials: results.credentials.length,
+        findings: results.findings.length,
+      });
+
+      setScanResults(results);
+      setScanModalOpen(true);
+    } catch (error) {
+      log.error(LogCategory.IPC, 'PRISM scan failed', error);
+    }
+  }, [activeEngagement, selectedTarget?.id]);
 
   // Handle using a credential (spawn command in new session)
   const handleUseCredential = useCallback(async (command: string, credentialId: string) => {
@@ -195,9 +227,10 @@ function App() {
       type: 'shell',
       label: `cred-${credentialId.slice(0, 6)}`,
       interactive: true,
+      engagementId: activeEngagement?.id,
     });
     log.lifecycle('Credential session created', { sessionId: session.id, credentialId });
-  }, []);
+  }, [activeEngagement?.id]);
 
   // Handle extracting credentials from loot
   const handleExtractCredential = useCallback(async (loot: Loot, pattern: PatternType) => {
@@ -212,17 +245,33 @@ function App() {
   }, []);
 
   // Handle executing action from ActionsPanel
-  const handleExecuteAction = useCallback(async (command: string, label: string) => {
-    log.action('Executing action', { label, command: command.substring(0, 80), targetId: selectedTarget?.id });
-    // Create a new terminal session with the command
-    const session = await window.electronAPI.sessionCreate('bash', ['-c', command], {
-      type: 'shell',
-      label: label,
-      interactive: true,
-      targetId: selectedTarget?.id,
-    });
-    log.lifecycle('Action session created', { sessionId: session.id, label });
-  }, [selectedTarget]);
+  const handleExecuteAction = useCallback(async (command: string, label: string, autorun: boolean = true) => {
+    log.action('Executing action', { label, autorun, command: command.substring(0, 80), targetId: selectedTarget?.id });
+
+    if (autorun) {
+      // Execute immediately - current behavior
+      const session = await window.electronAPI.sessionCreate('bash', ['-c', command], {
+        type: 'shell',
+        label: label,
+        interactive: true,
+        targetId: selectedTarget?.id,
+        engagementId: activeEngagement?.id,
+      });
+      log.lifecycle('Action session created', { sessionId: session.id, label });
+    } else {
+      // Prefill mode - create shell and write command without executing
+      const session = await window.electronAPI.sessionCreate('bash', [], {
+        type: 'shell',
+        label: label,
+        interactive: true,
+        targetId: selectedTarget?.id,
+        engagementId: activeEngagement?.id,
+      });
+      // Write the command to terminal (without newline so it doesn't execute)
+      await window.electronAPI.sessionWrite(session.id, command);
+      log.lifecycle('Action session prefilled', { sessionId: session.id, label });
+    }
+  }, [selectedTarget, activeEngagement?.id]);
 
   // Handle target action (Nmap scan, etc.)
   const handleTargetAction = useCallback(async (command: string, targetId: string, actionLabel: string) => {
@@ -232,9 +281,11 @@ function App() {
       type: 'shell',
       label: actionLabel,
       interactive: true,
+      targetId: targetId,
+      engagementId: activeEngagement?.id,
     });
     log.lifecycle('Target action session created', { sessionId: session.id, targetId, label: actionLabel });
-  }, []);
+  }, [activeEngagement?.id]);
 
   return (
     <MantineProvider
@@ -353,6 +404,7 @@ function App() {
                   onSessionSelect={handleSessionSelect}
                   onSessionKill={handleSessionKill}
                   onSessionBackground={handleSessionBackground}
+                  onSessionScan={handlePrismScan}
                   onNewSession={handleNewSession}
                 />
               ) : (
@@ -381,6 +433,8 @@ function App() {
               selectedTargetIp={selectedTarget?.ip}
               selectedTargetHostname={selectedTarget?.hostname}
               onExecuteAction={handleExecuteAction}
+              activeTab={contextTab}
+              onTabChange={setContextTab}
             />
           </div>
         </AppShell.Main>
@@ -392,6 +446,25 @@ function App() {
         onClose={() => setEngagementManagerOpen(false)}
         activeEngagement={activeEngagement}
         onEngagementChange={handleEngagementChange}
+      />
+
+      {/* PRISM Scan Results Modal */}
+      <PrismScanModal
+        opened={scanModalOpen}
+        onClose={() => setScanModalOpen(false)}
+        results={scanResults}
+        onViewFindings={() => {
+          log.action('Navigate to Findings tab');
+          setContextTab('findings');
+          setContextPanelCollapsed(false);
+          setScanModalOpen(false);
+        }}
+        onViewCredentials={() => {
+          log.action('Navigate to Credentials tab');
+          setContextTab('credentials');
+          setContextPanelCollapsed(false);
+          setScanModalOpen(false);
+        }}
       />
     </MantineProvider>
   );

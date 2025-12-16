@@ -140,6 +140,18 @@ export function CredentialVault({
     loadCredentials();
   }, [loadCredentials]);
 
+  // Listen for new credential discoveries from PRISM parser
+  useEffect(() => {
+    const handleDiscovery = () => {
+      loadCredentials();
+    };
+
+    window.electronAPI.onCredentialDiscovered(handleDiscovery);
+    return () => {
+      window.electronAPI.removeCredentialDiscoveredListener(handleDiscovery);
+    };
+  }, [loadCredentials]);
+
   // Group and filter credentials
   const groupedCredentials = useMemo(() => {
     let filtered = credentials;

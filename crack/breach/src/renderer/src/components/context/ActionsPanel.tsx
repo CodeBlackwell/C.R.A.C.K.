@@ -34,6 +34,7 @@ import {
   IconWorldWww,
   IconSitemap,
   IconRefresh,
+  IconCode,
 } from '@tabler/icons-react';
 import {
   getRelevantCategories,
@@ -69,7 +70,7 @@ interface ActionsPanelProps {
   targetIp?: string;
   targetHostname?: string;
   engagementId?: string;
-  onExecuteAction?: (command: string, label: string) => void;
+  onExecuteAction?: (command: string, label: string, autorun: boolean) => void;
 }
 
 export function ActionsPanel({
@@ -83,6 +84,7 @@ export function ActionsPanel({
   const [loading, setLoading] = useState(false);
   const [expandedCategories, setExpandedCategories] = useState<string[]>(['port-scan']);
   const [expandedTools, setExpandedTools] = useState<string[]>([]);
+  const [verbose, setVerbose] = useState(false);
 
   // Load services when target changes
   useEffect(() => {
@@ -133,9 +135,10 @@ export function ActionsPanel({
         command = command.replace(/<HOSTNAME>/g, targetHostname);
       }
 
-      onExecuteAction(command, variant.label);
+      // When verbose is ON, prefill command without executing (autorun=false)
+      onExecuteAction(command, variant.label, !verbose);
     },
-    [targetIp, targetHostname, onExecuteAction]
+    [targetIp, targetHostname, onExecuteAction, verbose]
   );
 
   // Refresh services
@@ -184,6 +187,16 @@ export function ActionsPanel({
               {services.length} svc
             </Badge>
           )}
+          <Tooltip label={verbose ? "Verbose: ON (prefill mode)" : "Verbose: OFF (auto-execute)"}>
+            <ActionIcon
+              variant={verbose ? 'filled' : 'subtle'}
+              color={verbose ? 'cyan' : 'gray'}
+              size="sm"
+              onClick={() => setVerbose(!verbose)}
+            >
+              <IconCode size={14} />
+            </ActionIcon>
+          </Tooltip>
           <Tooltip label="Refresh Services">
             <ActionIcon
               variant="subtle"
@@ -233,6 +246,9 @@ export function ActionsPanel({
                 expandedTools={expandedTools}
                 onToolChange={(toolIds) => handleToolChange(category.id, toolIds)}
                 onExecuteAction={handleExecuteAction}
+                verbose={verbose}
+                targetIp={targetIp}
+                targetHostname={targetHostname}
               />
             ))}
           </Accordion>
@@ -276,6 +292,9 @@ interface CategoryAccordionItemProps {
   expandedTools: string[];
   onToolChange: (toolIds: string[]) => void;
   onExecuteAction: (variant: ActionVariant) => void;
+  verbose: boolean;
+  targetIp?: string;
+  targetHostname?: string;
 }
 
 function CategoryAccordionItem({
@@ -283,6 +302,9 @@ function CategoryAccordionItem({
   expandedTools,
   onToolChange,
   onExecuteAction,
+  verbose,
+  targetIp,
+  targetHostname,
 }: CategoryAccordionItemProps) {
   const Icon = CATEGORY_ICONS[category.id] || IconBolt;
 
@@ -309,6 +331,9 @@ function CategoryAccordionItem({
               tool={tool}
               categoryId={category.id}
               onExecuteAction={onExecuteAction}
+              verbose={verbose}
+              targetIp={targetIp}
+              targetHostname={targetHostname}
             />
           ))}
         </Stack>
@@ -322,9 +347,12 @@ interface ToolSectionProps {
   tool: ActionTool;
   categoryId: string;
   onExecuteAction: (variant: ActionVariant) => void;
+  verbose: boolean;
+  targetIp?: string;
+  targetHostname?: string;
 }
 
-function ToolSection({ tool, categoryId, onExecuteAction }: ToolSectionProps) {
+function ToolSection({ tool, categoryId, onExecuteAction, verbose, targetIp, targetHostname }: ToolSectionProps) {
   const [expanded, setExpanded] = useState(false);
 
   return (
@@ -359,6 +387,9 @@ function ToolSection({ tool, categoryId, onExecuteAction }: ToolSectionProps) {
               key={variant.id}
               variant={variant}
               onExecute={() => onExecuteAction(variant)}
+              verbose={verbose}
+              targetIp={targetIp}
+              targetHostname={targetHostname}
             />
           ))}
         </Stack>
@@ -371,9 +402,25 @@ function ToolSection({ tool, categoryId, onExecuteAction }: ToolSectionProps) {
 interface VariantItemProps {
   variant: ActionVariant;
   onExecute: () => void;
+  verbose: boolean;
+  targetIp?: string;
+  targetHostname?: string;
 }
 
-function VariantItem({ variant, onExecute }: VariantItemProps) {
+function VariantItem({ variant, onExecute, verbose, targetIp, targetHostname }: VariantItemProps) {
+  // Compute substituted command for display
+  const displayCommand = useMemo(() => {
+    let cmd = variant.command;
+    if (targetIp) {
+      cmd = cmd.replace(/<IP>/g, targetIp);
+      cmd = cmd.replace(/<TARGET>/g, targetIp);
+    }
+    if (targetHostname) {
+      cmd = cmd.replace(/<HOSTNAME>/g, targetHostname);
+    }
+    return cmd;
+  }, [variant.command, targetIp, targetHostname]);
+
   return (
     <UnstyledButton
       onClick={onExecute}
@@ -412,6 +459,21 @@ function VariantItem({ variant, onExecute }: VariantItemProps) {
               style={{ maxWidth: 220 }}
             >
               {variant.description}
+            </Text>
+          )}
+          {verbose && (
+            <Text
+              size="xs"
+              c="dimmed"
+              pl={20}
+              style={{
+                fontFamily: 'JetBrains Mono, monospace',
+                fontSize: 10,
+                opacity: 0.7,
+                wordBreak: 'break-all',
+              }}
+            >
+              {displayCommand}
             </Text>
           )}
         </Stack>

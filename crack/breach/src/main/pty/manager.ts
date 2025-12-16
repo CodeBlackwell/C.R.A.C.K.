@@ -8,17 +8,22 @@
 import * as pty from 'node-pty';
 import { BrowserWindow } from 'electron';
 import { debug } from '../debug';
+import { getCredentialParser } from '../parser';
+import { getNetworkParser } from '../parser/network-parser';
 import type {
   TerminalSession,
   SessionType,
   CreateSessionOptions,
 } from '@shared/types/session';
+import type { CommandProvenance } from '@shared/types/signal';
 
 /** Internal PTY process wrapper */
 interface PtyProcess {
   pty: pty.IPty;
   session: TerminalSession;
   outputBuffer: string[];
+  inputBuffer: string;           // Buffer for tracking user input
+  lastCommand: CommandProvenance | null;  // Last command entered
 }
 
 /** Generate unique session ID */
@@ -94,6 +99,8 @@ class PtyManager {
         pty: ptyProcess,
         session,
         outputBuffer: [],
+        inputBuffer: '',
+        lastCommand: null,
       };
 
       // Handle output
@@ -137,12 +144,65 @@ class PtyManager {
     }
 
     try {
+      // Track input for command provenance
+      this.trackInput(proc, data);
+
       proc.pty.write(data);
       return true;
     } catch (error) {
       debug.error('Failed to write to PTY', { sessionId, error });
       return false;
     }
+  }
+
+  /**
+   * Track user input for command provenance
+   * Captures the command when Enter is pressed
+   */
+  private trackInput(proc: PtyProcess, data: string): void {
+    // Check for Enter key (carriage return or newline)
+    if (data.includes('\r') || data.includes('\n')) {
+      // Capture the command before clearing the buffer
+      const command = proc.inputBuffer.trim();
+      if (command) {
+        proc.lastCommand = {
+          sessionId: proc.session.id,
+          command,
+          workingDirectory: proc.session.workingDir,
+          timestamp: new Date().toISOString(),
+        };
+        debug.pty('Command captured', {
+          sessionId: proc.session.id,
+          command: command.substring(0, 50),
+        });
+      }
+      // Clear buffer for next command
+      proc.inputBuffer = '';
+    } else if (data === '\x7f' || data === '\b') {
+      // Backspace - remove last character
+      proc.inputBuffer = proc.inputBuffer.slice(0, -1);
+    } else if (data === '\x03') {
+      // Ctrl+C - clear buffer
+      proc.inputBuffer = '';
+    } else if (data === '\x15') {
+      // Ctrl+U - clear line
+      proc.inputBuffer = '';
+    } else if (data.length === 1 && data.charCodeAt(0) >= 32) {
+      // Regular printable character
+      proc.inputBuffer += data;
+    } else if (data.length > 1 && !data.startsWith('\x1b')) {
+      // Pasted text (multiple chars, not escape sequence)
+      proc.inputBuffer += data;
+    }
+    // Ignore escape sequences (arrow keys, etc.)
+  }
+
+  /**
+   * Get the last command entered in a session
+   */
+  getLastCommand(sessionId: string): CommandProvenance | null {
+    const proc = this.processes.get(sessionId);
+    return proc?.lastCommand || null;
   }
 
   /**
@@ -333,8 +393,51 @@ class PtyManager {
       proc.outputBuffer = proc.outputBuffer.slice(-this.maxOutputBuffer);
     }
 
+    // Common context for parsers
+    const parserContext = {
+      engagementId: proc.session.engagementId,
+      targetId: proc.session.targetId,
+    };
+
+    // Feed to PRISM credential parser for credential/finding detection
+    getCredentialParser().ingestOutput(sessionId, data, parserContext);
+
+    // Feed to network parser for network signal detection
+    // Extract target IP from the session if available
+    const targetIp = this.extractTargetIp(proc.session);
+    getNetworkParser().parseText(
+      data,
+      sessionId,
+      { ...parserContext, targetIp },
+      proc.lastCommand || undefined
+    );
+
     // Send to renderer
     this.sendToRenderer('session-output', { sessionId, data });
+  }
+
+  /**
+   * Extract target IP from session context
+   */
+  private extractTargetIp(session: TerminalSession): string | undefined {
+    // Try to extract IP from various session properties
+    // 1. From command args (e.g., nmap 192.168.1.10)
+    if (session.args && session.args.length > 0) {
+      const ipPattern = /\d+\.\d+\.\d+\.\d+/;
+      for (const arg of session.args) {
+        const match = arg.match(ipPattern);
+        if (match) return match[0];
+      }
+    }
+
+    // 2. From session label
+    if (session.label) {
+      const ipPattern = /\d+\.\d+\.\d+\.\d+/;
+      const match = session.label.match(ipPattern);
+      if (match) return match[0];
+    }
+
+    return undefined;
   }
 
   private handleExit(sessionId: string, exitCode: number): void {
@@ -344,6 +447,15 @@ class PtyManager {
     proc.session.exitCode = exitCode;
     proc.session.status = exitCode === 0 ? 'completed' : 'error';
     proc.session.stoppedAt = new Date().toISOString();
+
+    // Flush any remaining buffered output to parser
+    getCredentialParser().flushSession(sessionId, {
+      engagementId: proc.session.engagementId,
+      targetId: proc.session.targetId,
+    });
+
+    // Clear network parser session cache
+    getNetworkParser().clearSession(sessionId);
 
     this.sendToRenderer('session-status', {
       sessionId,

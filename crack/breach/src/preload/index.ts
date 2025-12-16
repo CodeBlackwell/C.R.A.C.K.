@@ -8,6 +8,7 @@ import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron';
 import type { TerminalSession, CreateSessionOptions } from '@shared/types/session';
 import type { Credential } from '@shared/types/credential';
 import type { Loot, PatternType } from '@shared/types/loot';
+import type { Finding, CreateFindingData, FindingSummary } from '@shared/types/finding';
 import type {
   Engagement,
   CreateEngagementData,
@@ -15,12 +16,36 @@ import type {
   EngagementStatus,
 } from '@shared/types/engagement';
 import type { Target, CreateTargetData } from '@shared/types/target';
+import type {
+  Signal,
+  SignalType,
+  SignalSummary,
+  HostReachabilitySignal,
+  PortStatusSignal,
+  DnsResolutionSignal,
+  OsDetectionSignal,
+  UserEnumerationSignal,
+  CrackedHashSignal,
+} from '@shared/types/signal';
 
 /** Callback type for session events */
 type SessionOutputCallback = (event: IpcRendererEvent, data: { sessionId: string; data: string }) => void;
 type SessionStatusCallback = (event: IpcRendererEvent, data: { sessionId: string; status: string; exitCode?: number }) => void;
 type SessionCreatedCallback = (event: IpcRendererEvent, session: TerminalSession) => void;
 type SessionUpdatedCallback = (event: IpcRendererEvent, session: TerminalSession) => void;
+
+/** Callback types for discovery events */
+type CredentialDiscoveredCallback = (event: IpcRendererEvent, data: { credential: Credential; sessionId: string; isHighValue: boolean }) => void;
+type FindingDiscoveredCallback = (event: IpcRendererEvent, data: { finding: Finding; sessionId: string; isHighValue: boolean }) => void;
+
+/** Callback types for signal events */
+type SignalCallback<T extends Signal> = (event: IpcRendererEvent, data: { signal: T; sessionId: string; isHighValue: boolean }) => void;
+type HostReachabilityCallback = SignalCallback<HostReachabilitySignal>;
+type PortDiscoveredCallback = SignalCallback<PortStatusSignal>;
+type DnsResolvedCallback = SignalCallback<DnsResolutionSignal>;
+type OsDetectedCallback = SignalCallback<OsDetectionSignal>;
+type UserEnumeratedCallback = SignalCallback<UserEnumerationSignal>;
+type HashCrackedCallback = SignalCallback<CrackedHashSignal>;
 
 /** API exposed to renderer */
 const electronAPI = {
@@ -56,6 +81,11 @@ const electronAPI = {
     ipcRenderer.invoke('session-link', sourceId, targetId),
   sessionSetLabel: (sessionId: string, label: string) =>
     ipcRenderer.invoke('session-set-label', sessionId, label),
+  sessionPrismScan: (sessionId: string, engagementId: string, targetId?: string): Promise<{
+    credentials: Credential[];
+    findings: Finding[];
+  }> =>
+    ipcRenderer.invoke('session-prism-scan', sessionId, engagementId, targetId),
 
   // Session event listeners
   onSessionOutput: (callback: SessionOutputCallback) => {
@@ -137,6 +167,54 @@ const electronAPI = {
     ipcRenderer.invoke('loot-get-flags', engagementId),
   lootUpdateNotes: (id: string, notes: string): Promise<boolean> =>
     ipcRenderer.invoke('loot-update-notes', id, notes),
+
+  // =========================================================================
+  // FINDINGS
+  // =========================================================================
+
+  /** List all findings for an engagement */
+  findingList: (engagementId: string): Promise<Finding[]> =>
+    ipcRenderer.invoke('finding-list', engagementId),
+
+  /** Add a new finding */
+  findingAdd: (engagementId: string, findingData: CreateFindingData): Promise<Finding> =>
+    ipcRenderer.invoke('finding-add', engagementId, findingData),
+
+  /** Update a finding */
+  findingUpdate: (id: string, updates: Partial<Finding>): Promise<boolean> =>
+    ipcRenderer.invoke('finding-update', id, updates),
+
+  /** Delete a finding */
+  findingDelete: (id: string): Promise<boolean> =>
+    ipcRenderer.invoke('finding-delete', id),
+
+  /** Get findings by target */
+  findingByTarget: (targetId: string): Promise<Finding[]> =>
+    ipcRenderer.invoke('finding-by-target', targetId),
+
+  /** Get findings summary (counts by severity) */
+  findingSummary: (engagementId: string): Promise<FindingSummary> =>
+    ipcRenderer.invoke('finding-summary', engagementId),
+
+  // =========================================================================
+  // DISCOVERY EVENT LISTENERS (from parser)
+  // =========================================================================
+
+  /** Listen for credential discoveries from terminal output parsing */
+  onCredentialDiscovered: (callback: CredentialDiscoveredCallback) => {
+    ipcRenderer.on('credential-discovered', callback);
+  },
+  removeCredentialDiscoveredListener: (callback: CredentialDiscoveredCallback) => {
+    ipcRenderer.removeListener('credential-discovered', callback);
+  },
+
+  /** Listen for finding discoveries from terminal output parsing */
+  onFindingDiscovered: (callback: FindingDiscoveredCallback) => {
+    ipcRenderer.on('finding-discovered', callback);
+  },
+  removeFindingDiscoveredListener: (callback: FindingDiscoveredCallback) => {
+    ipcRenderer.removeListener('finding-discovered', callback);
+  },
 
   // Console bridge (renderer → terminal)
   logToTerminal: (level: string, message: string) =>
@@ -224,6 +302,129 @@ const electronAPI = {
     variables?: Array<{ name: string; description: string; example?: string }>;
   } | null> =>
     ipcRenderer.invoke('actions-get-command', commandId),
+
+  // =========================================================================
+  // SIGNALS (Network recon, enumeration, hash cracking)
+  // =========================================================================
+
+  /** List signals by engagement, optionally filtered by type */
+  signalList: (engagementId: string, type?: SignalType): Promise<Signal[]> =>
+    ipcRenderer.invoke('signals:list', engagementId, type),
+
+  /** Get host reachability signals (ping results) */
+  signalReachability: (engagementId: string): Promise<HostReachabilitySignal[]> =>
+    ipcRenderer.invoke('signals:reachability', engagementId),
+
+  /** Get port status signals */
+  signalPorts: (engagementId: string, targetIp?: string): Promise<PortStatusSignal[]> =>
+    ipcRenderer.invoke('signals:ports', engagementId, targetIp),
+
+  /** Get open ports only */
+  signalOpenPorts: (engagementId: string, targetIp?: string): Promise<PortStatusSignal[]> =>
+    ipcRenderer.invoke('signals:open-ports', engagementId, targetIp),
+
+  /** Get DNS resolution signals */
+  signalDns: (engagementId: string): Promise<DnsResolutionSignal[]> =>
+    ipcRenderer.invoke('signals:dns', engagementId),
+
+  /** Get OS detection signals */
+  signalOs: (engagementId: string, targetIp?: string): Promise<OsDetectionSignal[]> =>
+    ipcRenderer.invoke('signals:os', engagementId, targetIp),
+
+  /** Get user enumeration signals */
+  signalUsers: (engagementId: string): Promise<UserEnumerationSignal[]> =>
+    ipcRenderer.invoke('signals:users', engagementId),
+
+  /** Get cracked hash signals */
+  signalCrackedHashes: (engagementId: string): Promise<CrackedHashSignal[]> =>
+    ipcRenderer.invoke('signals:cracked-hashes', engagementId),
+
+  /** Get signal summary (counts) */
+  signalSummary: (engagementId: string): Promise<SignalSummary> =>
+    ipcRenderer.invoke('signals:summary', engagementId),
+
+  /** Get signals by target */
+  signalByTarget: (engagementId: string, targetId: string): Promise<Signal[]> =>
+    ipcRenderer.invoke('signals:by-target', engagementId, targetId),
+
+  /** Get parser statistics */
+  signalParserStats: (): Promise<{
+    networkParser: { enabled: boolean; sessions: number; signalCounts: Record<string, number> };
+    potfileWatcher: { enabled: boolean; watchedFiles: string[]; seenHashesCount: number };
+  }> =>
+    ipcRenderer.invoke('signals:parser-stats'),
+
+  /** Start potfile watcher */
+  signalStartPotfileWatcher: (engagementId: string): Promise<{ success: boolean; error?: string }> =>
+    ipcRenderer.invoke('signals:start-potfile-watcher', engagementId),
+
+  /** Stop potfile watcher */
+  signalStopPotfileWatcher: (): Promise<{ success: boolean; error?: string }> =>
+    ipcRenderer.invoke('signals:stop-potfile-watcher'),
+
+  /** Add custom potfile to watch */
+  signalAddPotfile: (path: string, type: 'hashcat' | 'john'): Promise<{ success: boolean; error?: string }> =>
+    ipcRenderer.invoke('signals:add-potfile', path, type),
+
+  // =========================================================================
+  // SIGNAL EVENT LISTENERS
+  // =========================================================================
+
+  /** Listen for host reachability discoveries */
+  onHostReachability: (callback: HostReachabilityCallback) => {
+    ipcRenderer.on('host-reachability', callback);
+  },
+  removeHostReachabilityListener: (callback: HostReachabilityCallback) => {
+    ipcRenderer.removeListener('host-reachability', callback);
+  },
+
+  /** Listen for port discoveries */
+  onPortDiscovered: (callback: PortDiscoveredCallback) => {
+    ipcRenderer.on('port-discovered', callback);
+  },
+  removePortDiscoveredListener: (callback: PortDiscoveredCallback) => {
+    ipcRenderer.removeListener('port-discovered', callback);
+  },
+
+  /** Listen for DNS resolution discoveries */
+  onDnsResolved: (callback: DnsResolvedCallback) => {
+    ipcRenderer.on('dns-resolved', callback);
+  },
+  removeDnsResolvedListener: (callback: DnsResolvedCallback) => {
+    ipcRenderer.removeListener('dns-resolved', callback);
+  },
+
+  /** Listen for OS detection discoveries */
+  onOsDetected: (callback: OsDetectedCallback) => {
+    ipcRenderer.on('os-detected', callback);
+  },
+  removeOsDetectedListener: (callback: OsDetectedCallback) => {
+    ipcRenderer.removeListener('os-detected', callback);
+  },
+
+  /** Listen for user enumeration discoveries */
+  onUserEnumerated: (callback: UserEnumeratedCallback) => {
+    ipcRenderer.on('user-enumerated', callback);
+  },
+  removeUserEnumeratedListener: (callback: UserEnumeratedCallback) => {
+    ipcRenderer.removeListener('user-enumerated', callback);
+  },
+
+  /** Listen for cracked hash discoveries */
+  onHashCracked: (callback: HashCrackedCallback) => {
+    ipcRenderer.on('hash-cracked', callback);
+  },
+  removeHashCrackedListener: (callback: HashCrackedCallback) => {
+    ipcRenderer.removeListener('hash-cracked', callback);
+  },
+
+  /** Listen for host identity discoveries */
+  onHostIdentity: (callback: SignalCallback<Signal>) => {
+    ipcRenderer.on('host-identity', callback);
+  },
+  removeHostIdentityListener: (callback: SignalCallback<Signal>) => {
+    ipcRenderer.removeListener('host-identity', callback);
+  },
 };
 
 // Expose to renderer
