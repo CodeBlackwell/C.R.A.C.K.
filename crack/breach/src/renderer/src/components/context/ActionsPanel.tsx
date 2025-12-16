@@ -18,6 +18,9 @@ import {
   Loader,
   ThemeIcon,
   UnstyledButton,
+  Paper,
+  Box,
+  Divider,
 } from '@mantine/core';
 import {
   IconBolt,
@@ -35,10 +38,17 @@ import {
   IconSitemap,
   IconRefresh,
   IconCode,
+  IconPlayerPlay,
+  IconSparkles,
 } from '@tabler/icons-react';
 import { SERVICE_MATCHERS } from '@shared/actions/service-mapping';
 import type { ServiceInfo } from '@shared/types/actions-panel';
 import type { CommandModule, CommandTool, CommandVariant } from '@shared/types/module-preferences';
+import type { Credential } from '@shared/types/credential';
+import type { Loot } from '@shared/types/loot';
+import type { TerminalSession } from '@shared/types/session';
+import type { RecommendedAction, RecommendationResult } from '@shared/types/recommendation';
+import { getRecommendations, getPhaseLabel } from '@shared/recommendation/engine';
 import { useModuleStore } from '../../stores/moduleStore';
 import { ModuleSelector } from './ModuleSelector';
 import { CommandSearchBar, DEFAULT_FILTERS, type SearchFilters } from './CommandSearchBar';
@@ -77,10 +87,16 @@ export function ActionsPanel({
   onExecuteAction,
 }: ActionsPanelProps) {
   const [services, setServices] = useState<ServiceInfo[]>([]);
+  const [credentials, setCredentials] = useState<Credential[]>([]);
+  const [loot, setLoot] = useState<Loot[]>([]);
+  const [sessions, setSessions] = useState<TerminalSession[]>([]);
+  const [recommendations, setRecommendations] = useState<RecommendationResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [expandedCategories, setExpandedCategories] = useState<string[]>(['port-scan']);
   const [expandedTools, setExpandedTools] = useState<string[]>([]);
   const [verbose, setVerbose] = useState(true);
+  const [showRecommendations, setShowRecommendations] = useState(true);
+  const [lastExecutedRec, setLastExecutedRec] = useState<RecommendedAction | null>(null);
 
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
@@ -119,6 +135,68 @@ export function ActionsPanel({
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [targetId]);
+
+  // Load credentials when engagement changes
+  useEffect(() => {
+    if (!engagementId) {
+      setCredentials([]);
+      return;
+    }
+
+    window.electronAPI
+      .credentialList(engagementId)
+      .then((result) => setCredentials(result || []))
+      .catch(console.error);
+  }, [engagementId]);
+
+  // Load loot when engagement changes
+  useEffect(() => {
+    if (!engagementId) {
+      setLoot([]);
+      return;
+    }
+
+    window.electronAPI
+      .lootList(engagementId)
+      .then((result) => setLoot(result || []))
+      .catch(console.error);
+  }, [engagementId]);
+
+  // Load sessions (for shell detection)
+  useEffect(() => {
+    window.electronAPI
+      .sessionList()
+      .then((result) => setSessions(result || []))
+      .catch(console.error);
+
+    // Re-fetch sessions periodically to detect new shells
+    const interval = setInterval(() => {
+      window.electronAPI
+        .sessionList()
+        .then((result) => setSessions(result || []))
+        .catch(console.error);
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // Compute recommendations when services/credentials/loot/sessions/target change
+  useEffect(() => {
+    if (!targetIp) {
+      setRecommendations(null);
+      return;
+    }
+
+    const result = getRecommendations({
+      services,
+      credentials,
+      loot,
+      sessions,
+      targetIp,
+      domain: credentials.find((c) => c.domain)?.domain,
+    });
+    setRecommendations(result);
+  }, [services, credentials, loot, sessions, targetIp]);
 
   // Compute which modules SHOULD be shown (regardless of loaded state)
   const modulesToShow = useMemo(() => {
@@ -243,6 +321,25 @@ export function ActionsPanel({
     );
   }, [filteredModules]);
 
+  // Get next step recommendations based on last executed action
+  const nextStepRecs = useMemo(() => {
+    if (!lastExecutedRec?.nextSteps || !recommendations) return [];
+
+    // Find recommendations matching the next step IDs
+    // Look in all phases' recommendations, not just current
+    const allRecs = recommendations.recommendations;
+    return lastExecutedRec.nextSteps
+      .map((stepId) => {
+        // Try exact match first
+        const exact = allRecs.find((r) => r.id === stepId);
+        if (exact) return exact;
+        // Try prefix match (e.g., 'rec-kerberoast' matches 'rec-kerberoast-cred123')
+        return allRecs.find((r) => r.id.startsWith(stepId) || stepId.startsWith(r.id.split('-').slice(0, 3).join('-')));
+      })
+      .filter((r): r is RecommendedAction => r !== undefined)
+      .slice(0, 3);
+  }, [lastExecutedRec, recommendations]);
+
   // Handle accordion change
   const handleAccordionChange = (value: string[]) => {
     setExpandedCategories(value);
@@ -272,6 +369,20 @@ export function ActionsPanel({
       onExecuteAction(command, variant.label, !verbose);
     },
     [targetIp, targetHostname, onExecuteAction, verbose]
+  );
+
+  // Execute recommendation
+  const handleExecuteRecommendation = useCallback(
+    (rec: RecommendedAction) => {
+      if (!onExecuteAction) return;
+      // Command is already substituted by the engine
+      onExecuteAction(rec.command, rec.label, !verbose);
+      // Track for next steps
+      if (rec.nextSteps && rec.nextSteps.length > 0) {
+        setLastExecutedRec(rec);
+      }
+    },
+    [onExecuteAction, verbose]
   );
 
   // Refresh services
@@ -431,6 +542,173 @@ export function ActionsPanel({
         </Stack>
       ) : (
         <ScrollArea style={{ flex: 1 }}>
+          {/* Recommendations Section */}
+          {showRecommendations && recommendations && recommendations.recommendations.length > 0 && (
+            <Box p="xs" style={{ borderBottom: '1px solid #373A40', background: '#1a1b1e' }}>
+              <Group justify="space-between" mb="xs">
+                <Group gap="xs">
+                  <ThemeIcon size="sm" variant="light" color="cyan" radius="sm">
+                    <IconSparkles size={12} />
+                  </ThemeIcon>
+                  <Text size="xs" fw={600} c="cyan.4">
+                    RECOMMENDED
+                  </Text>
+                  <Badge size="xs" variant="light" color="cyan">
+                    {getPhaseLabel(recommendations.phase)}
+                  </Badge>
+                </Group>
+                <Tooltip label="Hide recommendations">
+                  <ActionIcon
+                    variant="subtle"
+                    color="gray"
+                    size="xs"
+                    onClick={() => setShowRecommendations(false)}
+                  >
+                    ×
+                  </ActionIcon>
+                </Tooltip>
+              </Group>
+              <Text size="xs" c="dimmed" mb="xs">
+                {recommendations.phaseReason}
+              </Text>
+              <Stack gap={4}>
+                {recommendations.recommendations.slice(0, 3).map((rec) => (
+                  <Paper
+                    key={rec.id}
+                    p="xs"
+                    withBorder
+                    style={{
+                      background: '#25262b',
+                      borderColor: '#373A40',
+                      cursor: 'pointer',
+                    }}
+                    onClick={() => handleExecuteRecommendation(rec)}
+                  >
+                    <Group justify="space-between" wrap="nowrap">
+                      <Stack gap={2} style={{ flex: 1, overflow: 'hidden' }}>
+                        <Group gap="xs" wrap="nowrap">
+                          <Text size="xs" fw={500} truncate>
+                            {rec.label}
+                          </Text>
+                          <Badge size="xs" variant="dot" color="cyan">
+                            {rec.score}
+                          </Badge>
+                        </Group>
+                        <Text size="xs" c="dimmed" truncate>
+                          {rec.rationale}
+                        </Text>
+                        {verbose && (
+                          <Text
+                            size="xs"
+                            c="dimmed"
+                            style={{
+                              fontFamily: 'JetBrains Mono, monospace',
+                              fontSize: 9,
+                              opacity: 0.6,
+                              wordBreak: 'break-all',
+                            }}
+                          >
+                            {rec.command}
+                          </Text>
+                        )}
+                      </Stack>
+                      <ActionIcon variant="subtle" color="cyan" size="sm">
+                        <IconPlayerPlay size={14} />
+                      </ActionIcon>
+                    </Group>
+                  </Paper>
+                ))}
+              </Stack>
+              {recommendations.recommendations.length > 3 && (
+                <Text size="xs" c="dimmed" ta="center" mt="xs">
+                  +{recommendations.recommendations.length - 3} more suggestions
+                </Text>
+              )}
+            </Box>
+          )}
+
+          {/* Show collapsed recommendations indicator */}
+          {!showRecommendations && recommendations && recommendations.recommendations.length > 0 && (
+            <UnstyledButton
+              onClick={() => setShowRecommendations(true)}
+              style={{
+                width: '100%',
+                padding: '6px 12px',
+                background: '#1a1b1e',
+                borderBottom: '1px solid #373A40',
+              }}
+            >
+              <Group gap="xs">
+                <IconSparkles size={12} color="#22b8cf" />
+                <Text size="xs" c="cyan.4">
+                  Show {recommendations.recommendations.length} recommendations
+                </Text>
+                <Badge size="xs" variant="light" color="cyan">
+                  {getPhaseLabel(recommendations.phase)}
+                </Badge>
+              </Group>
+            </UnstyledButton>
+          )}
+
+          {/* Next Steps Section - shown after executing an action with follow-ups */}
+          {nextStepRecs.length > 0 && lastExecutedRec && (
+            <Box p="xs" style={{ borderBottom: '1px solid #373A40', background: '#1f2125' }}>
+              <Group justify="space-between" mb="xs">
+                <Group gap="xs">
+                  <ThemeIcon size="sm" variant="light" color="green" radius="sm">
+                    <IconPlayerPlay size={12} />
+                  </ThemeIcon>
+                  <Text size="xs" fw={600} c="green.4">
+                    NEXT STEPS
+                  </Text>
+                  <Badge size="xs" variant="outline" color="gray">
+                    after {lastExecutedRec.label}
+                  </Badge>
+                </Group>
+                <Tooltip label="Dismiss">
+                  <ActionIcon
+                    variant="subtle"
+                    color="gray"
+                    size="xs"
+                    onClick={() => setLastExecutedRec(null)}
+                  >
+                    ×
+                  </ActionIcon>
+                </Tooltip>
+              </Group>
+              <Stack gap={4}>
+                {nextStepRecs.map((rec) => (
+                  <Paper
+                    key={rec.id}
+                    p="xs"
+                    withBorder
+                    style={{
+                      background: '#25262b',
+                      borderColor: '#2f9e44',
+                      borderWidth: 1,
+                      cursor: 'pointer',
+                    }}
+                    onClick={() => handleExecuteRecommendation(rec)}
+                  >
+                    <Group justify="space-between" wrap="nowrap">
+                      <Stack gap={2} style={{ flex: 1, overflow: 'hidden' }}>
+                        <Text size="xs" fw={500} truncate>
+                          {rec.label}
+                        </Text>
+                        <Text size="xs" c="dimmed" truncate>
+                          {rec.rationale}
+                        </Text>
+                      </Stack>
+                      <ActionIcon variant="subtle" color="green" size="sm">
+                        <IconPlayerPlay size={14} />
+                      </ActionIcon>
+                    </Group>
+                  </Paper>
+                ))}
+              </Stack>
+            </Box>
+          )}
+
           <Accordion
             multiple
             value={expandedCategories}

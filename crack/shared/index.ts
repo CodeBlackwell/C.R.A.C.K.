@@ -94,3 +94,26 @@ export {
   getPatternAction,
   generateLootId,
 } from './types/loot';
+
+// Recommendation types
+export type {
+  AttackPhase,
+  RecommendedAction,
+  RecommendationResult,
+  RecommendationContext,
+} from './types/recommendation';
+
+export {
+  PHASE_LABELS,
+  ACTIONABLE_LOOT_PATTERNS,
+  hasActionableLoot,
+  hasActiveShell,
+} from './types/recommendation';
+
+// Recommendation engine
+export {
+  detectPhase,
+  getPhaseReason,
+  getRecommendations,
+  getPhaseLabel,
+} from './recommendation/engine';

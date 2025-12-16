@@ -16,6 +16,7 @@ import { registerEngagementHandlers } from './ipc/engagements';
 import { registerActionsHandlers } from './ipc/actions';
 import { registerFindingHandlers } from './ipc/findings';
 import { registerSignalHandlers } from './ipc/signals';
+import { registerModulesHandlers } from './ipc/modules';
 import { getPotfileWatcher } from './parser';
 
 debug.section('B.R.E.A.C.H. STARTUP');
@@ -79,6 +80,7 @@ app.whenReady().then(async () => {
   registerActionsHandlers();
   registerFindingHandlers();
   registerSignalHandlers();
+  registerModulesHandlers();
 
   // Create main window
   await createWindow();
