@@ -113,3 +113,6 @@ pytest.ini
 blood-trail.md
 bloodtrail.md
 spray_tailored.md
+
+# Neo4j generated CSV files (regenerated from source JSON)
+db/data/neo4j/

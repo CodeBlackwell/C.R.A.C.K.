@@ -21,7 +21,7 @@ NEO4J_MIGRATION = SCRIPT_DIR.parent  # neo4j-migration/
 
 # Default paths
 DEFAULT_INPUT = PROJECT_ROOT / "db" / "data"
-DEFAULT_OUTPUT = NEO4J_MIGRATION / "data" / "neo4j"
+DEFAULT_OUTPUT = PROJECT_ROOT / "db" / "data" / "neo4j"
 DEFAULT_SCHEMA = NEO4J_MIGRATION / "schema" / "neo4j_schema.yaml"
 
 # Neo4j connection defaults

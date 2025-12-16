@@ -408,8 +408,8 @@ def main():
     )
     parser.add_argument(
         '--output-dir',
-        default='../data/neo4j',
-        help='Output directory (default: ../data/neo4j/)'
+        default='../../data/neo4j',
+        help='Output directory (default: db/data/neo4j/)'
     )
     parser.add_argument(
         '--validate',
