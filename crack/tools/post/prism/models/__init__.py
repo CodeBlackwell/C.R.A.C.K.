@@ -14,6 +14,9 @@ from .nmap_port import NmapPort, NmapScript, PortState
 from .nmap_host import NmapHost
 from .nmap_scan import NmapScanSummary
 
+# SMBMap models
+from .smbmap_scan import SmbmapSummary, SmbShare, SmbEntry, SmbPermission, SmbEntryType
+
 __all__ = [
     # Credential models
     "Credential",
@@ -27,4 +30,10 @@ __all__ = [
     "PortState",
     "NmapHost",
     "NmapScanSummary",
+    # SMBMap models
+    "SmbmapSummary",
+    "SmbShare",
+    "SmbEntry",
+    "SmbPermission",
+    "SmbEntryType",
 ]
