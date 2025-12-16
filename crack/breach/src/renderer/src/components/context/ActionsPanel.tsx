@@ -36,16 +36,12 @@ import {
   IconRefresh,
   IconCode,
 } from '@tabler/icons-react';
-import {
-  getRelevantCategories,
-  ACTION_CATEGORIES,
-} from '@shared/actions/service-mapping';
-import type {
-  ActionCategory,
-  ActionVariant,
-  ActionTool,
-  ServiceInfo,
-} from '@shared/types/actions-panel';
+import { SERVICE_MATCHERS } from '@shared/actions/service-mapping';
+import type { ServiceInfo } from '@shared/types/actions-panel';
+import type { CommandModule, CommandTool, CommandVariant } from '@shared/types/module-preferences';
+import { useModuleStore } from '../../stores/moduleStore';
+import { ModuleSelector } from './ModuleSelector';
+import { CommandSearchBar, DEFAULT_FILTERS, type SearchFilters } from './CommandSearchBar';
 
 /** Icon mapping for categories */
 const CATEGORY_ICONS: Record<string, typeof IconBolt> = {
@@ -86,6 +82,29 @@ export function ActionsPanel({
   const [expandedTools, setExpandedTools] = useState<string[]>([]);
   const [verbose, setVerbose] = useState(false);
 
+  // Search state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchFilters, setSearchFilters] = useState<SearchFilters>(DEFAULT_FILTERS);
+  const [filterLogic, setFilterLogic] = useState<'AND' | 'OR'>('OR');
+  const [globalSearching, setGlobalSearching] = useState(false);
+  const [globalResults, setGlobalResults] = useState<CommandVariant[]>([]);
+
+  // Get module store
+  const {
+    preferences,
+    loadedModules,
+    loadingModules,
+    initialized,
+    initialize,
+    loadModule,
+    getVisibleModules,
+  } = useModuleStore();
+
+  // Initialize module store on mount
+  useEffect(() => {
+    initialize();
+  }, [initialize]);
+
   // Load services when target changes
   useEffect(() => {
     if (!targetId) {
@@ -101,14 +120,128 @@ export function ActionsPanel({
       .finally(() => setLoading(false));
   }, [targetId]);
 
-  // Get relevant categories based on services
-  const relevantCategories = useMemo(() => {
+  // Compute which modules SHOULD be shown (regardless of loaded state)
+  const modulesToShow = useMemo(() => {
+    const enabledModules = preferences.modules.filter((m) => m.enabled);
+
     if (!targetId) {
-      // If no target selected, show Port Scan only
-      return ACTION_CATEGORIES.filter((c) => c.alwaysShow);
+      // No target: show only port-scan
+      return enabledModules.filter((m) => m.id === 'port-scan');
     }
-    return getRelevantCategories(services);
-  }, [services, targetId]);
+
+    if (preferences.serviceMatchMode === 'all_enabled') {
+      // Show all enabled modules
+      return enabledModules;
+    }
+
+    // Relevant mode: filter by pinned or service match
+    return enabledModules.filter((m) => {
+      if (m.pinned || m.id === 'port-scan') return true;
+      const matcher = SERVICE_MATCHERS[m.id];
+      if (!matcher) return false;
+      return services.some((svc) => {
+        if (matcher.ports?.includes(svc.port)) return true;
+        if (matcher.serviceNames && svc.service_name) {
+          const serviceLower = svc.service_name.toLowerCase();
+          return matcher.serviceNames.some((name) =>
+            serviceLower.includes(name.toLowerCase())
+          );
+        }
+        return false;
+      });
+    });
+  }, [targetId, services, preferences]);
+
+  // Trigger loading for modules that should be shown
+  useEffect(() => {
+    if (!initialized) return;
+
+    for (const mod of modulesToShow) {
+      if (!loadedModules.has(mod.id) && !loadingModules.has(mod.id)) {
+        console.log('[ActionsPanel] Loading module:', mod.id);
+        loadModule(mod.id);
+      }
+    }
+    // NOTE: Intentionally NOT including loadedModules/loadingModules in deps
+    // to avoid circular dependency. The effect should only trigger when
+    // modulesToShow changes (new services detected, prefs changed, etc.)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [modulesToShow, initialized, loadModule]);
+
+  // Visible modules = should show AND is loaded
+  const visibleModules = useMemo(() => {
+    return modulesToShow
+      .filter((m) => loadedModules.has(m.id))
+      .map((m) => loadedModules.get(m.id)!);
+  }, [modulesToShow, loadedModules]);
+
+  // Filter modules based on search query and filters
+  const filteredModules = useMemo(() => {
+    // If no search active, return all visible modules
+    if (!searchQuery && !searchFilters.oscpHigh) return visibleModules;
+
+    const lower = searchQuery.toLowerCase();
+
+    // Check if a variant matches the search criteria
+    const matchesVariant = (v: CommandVariant): boolean => {
+      const checks: boolean[] = [];
+
+      // Text-based filters
+      if (searchQuery) {
+        if (searchFilters.name) {
+          checks.push(v.label.toLowerCase().includes(lower));
+        }
+        if (searchFilters.command) {
+          checks.push(v.command.toLowerCase().includes(lower));
+        }
+        if (searchFilters.description && v.description) {
+          checks.push(v.description.toLowerCase().includes(lower));
+        }
+      }
+
+      // OSCP:HIGH filter (standalone or combined)
+      if (searchFilters.oscpHigh) {
+        checks.push(v.oscpRelevance === 'high');
+      }
+
+      // No checks means no filters active (shouldn't reach here, but safety)
+      if (checks.length === 0) return true;
+
+      // Apply AND/OR logic
+      return filterLogic === 'AND'
+        ? checks.every(Boolean)
+        : checks.some(Boolean);
+    };
+
+    // Filter modules -> tools -> variants
+    return visibleModules
+      .map((module) => ({
+        ...module,
+        tools: module.tools
+          .map((tool) => ({
+            ...tool,
+            variants: tool.variants.filter(matchesVariant),
+          }))
+          .filter((tool) => tool.variants.length > 0),
+      }))
+      .filter((module) => module.tools.length > 0);
+  }, [visibleModules, searchQuery, searchFilters, filterLogic]);
+
+  // Total command count for search result display
+  const totalCommandCount = useMemo(() => {
+    return visibleModules.reduce(
+      (acc, m) => acc + m.tools.reduce((t, tool) => t + tool.variants.length, 0),
+      0
+    );
+  }, [visibleModules]);
+
+  // Filtered command count
+  const filteredCommandCount = useMemo(() => {
+    return filteredModules.reduce(
+      (acc, m) => acc + m.tools.reduce((t, tool) => t + tool.variants.length, 0),
+      0
+    );
+  }, [filteredModules]);
 
   // Handle accordion change
   const handleAccordionChange = (value: string[]) => {
@@ -122,7 +255,7 @@ export function ActionsPanel({
 
   // Execute action
   const handleExecuteAction = useCallback(
-    (variant: ActionVariant) => {
+    (variant: CommandVariant) => {
       if (!onExecuteAction) return;
 
       // Substitute placeholders in command
@@ -150,6 +283,38 @@ export function ActionsPanel({
       .then((result) => setServices(result || []))
       .finally(() => setLoading(false));
   }, [targetId]);
+
+  // Global search (Neo4j query for all commands)
+  const handleGlobalSearch = useCallback(async () => {
+    if (searchQuery.length < 2) return;
+
+    setGlobalSearching(true);
+    try {
+      const results = await window.electronAPI.commandsSearchGlobal({
+        query: searchQuery,
+        filters: searchFilters,
+        filterLogic,
+        limit: 50,
+      });
+
+      // Transform results to CommandVariant format
+      const variants: CommandVariant[] = results.map((r) => ({
+        id: r.id,
+        label: r.name,
+        command: r.command,
+        description: r.description,
+        oscpRelevance: r.oscpRelevance as 'high' | 'medium' | 'low' | undefined,
+      }));
+
+      setGlobalResults(variants);
+      console.log('[ActionsPanel] Global search found', variants.length, 'results');
+    } catch (error) {
+      console.error('[ActionsPanel] Global search failed:', error);
+      setGlobalResults([]);
+    } finally {
+      setGlobalSearching(false);
+    }
+  }, [searchQuery, searchFilters, filterLogic]);
 
   if (!targetId && !engagementId) {
     return (
@@ -187,6 +352,11 @@ export function ActionsPanel({
               {services.length} svc
             </Badge>
           )}
+          {loadingModules.size > 0 && (
+            <Badge size="xs" variant="light" color="blue" leftSection={<Loader size={8} />}>
+              {loadingModules.size}
+            </Badge>
+          )}
           <Tooltip label={verbose ? "Verbose: ON (prefill mode)" : "Verbose: OFF (auto-execute)"}>
             <ActionIcon
               variant={verbose ? 'filled' : 'subtle'}
@@ -209,8 +379,23 @@ export function ActionsPanel({
               <IconRefresh size={14} />
             </ActionIcon>
           </Tooltip>
+          <ModuleSelector />
         </Group>
       </Group>
+
+      {/* Search Bar */}
+      <CommandSearchBar
+        query={searchQuery}
+        onQueryChange={setSearchQuery}
+        filters={searchFilters}
+        onFiltersChange={setSearchFilters}
+        filterLogic={filterLogic}
+        onFilterLogicToggle={() => setFilterLogic((l) => (l === 'AND' ? 'OR' : 'AND'))}
+        onGlobalSearch={handleGlobalSearch}
+        isSearching={globalSearching}
+        resultCount={filteredCommandCount}
+        totalCount={totalCommandCount}
+      />
 
       {/* Content */}
       {loading ? (
@@ -239,12 +424,12 @@ export function ActionsPanel({
               content: { padding: '0' },
             }}
           >
-            {relevantCategories.map((category) => (
-              <CategoryAccordionItem
-                key={category.id}
-                category={category}
+            {filteredModules.map((module) => (
+              <ModuleAccordionItem
+                key={module.id}
+                module={module}
                 expandedTools={expandedTools}
-                onToolChange={(toolIds) => handleToolChange(category.id, toolIds)}
+                onToolChange={(toolIds) => handleToolChange(module.id, toolIds)}
                 onExecuteAction={handleExecuteAction}
                 verbose={verbose}
                 targetIp={targetIp}
@@ -286,50 +471,50 @@ export function ActionsPanel({
   );
 }
 
-/** Category accordion item */
-interface CategoryAccordionItemProps {
-  category: ActionCategory;
+/** Module accordion item */
+interface ModuleAccordionItemProps {
+  module: CommandModule;
   expandedTools: string[];
   onToolChange: (toolIds: string[]) => void;
-  onExecuteAction: (variant: ActionVariant) => void;
+  onExecuteAction: (variant: CommandVariant) => void;
   verbose: boolean;
   targetIp?: string;
   targetHostname?: string;
 }
 
-function CategoryAccordionItem({
-  category,
+function ModuleAccordionItem({
+  module,
   expandedTools,
   onToolChange,
   onExecuteAction,
   verbose,
   targetIp,
   targetHostname,
-}: CategoryAccordionItemProps) {
-  const Icon = CATEGORY_ICONS[category.id] || IconBolt;
+}: ModuleAccordionItemProps) {
+  const Icon = CATEGORY_ICONS[module.id] || IconBolt;
 
   return (
-    <Accordion.Item value={category.id}>
+    <Accordion.Item value={module.id}>
       <Accordion.Control>
         <Group gap="xs">
           <ThemeIcon size="sm" variant="light" color="orange" radius="sm">
             <Icon size={12} />
           </ThemeIcon>
           <Text size="xs" fw={500}>
-            {category.name}
+            {module.name}
           </Text>
           <Badge size="xs" variant="light" color="gray">
-            {category.tools.reduce((sum, t) => sum + t.variants.length, 0)}
+            {module.commandCount}
           </Badge>
         </Group>
       </Accordion.Control>
       <Accordion.Panel>
         <Stack gap={0}>
-          {category.tools.map((tool) => (
+          {module.tools.map((tool) => (
             <ToolSection
               key={tool.id}
               tool={tool}
-              categoryId={category.id}
+              categoryId={module.id}
               onExecuteAction={onExecuteAction}
               verbose={verbose}
               targetIp={targetIp}
@@ -344,9 +529,9 @@ function CategoryAccordionItem({
 
 /** Tool section with variants */
 interface ToolSectionProps {
-  tool: ActionTool;
+  tool: CommandTool;
   categoryId: string;
-  onExecuteAction: (variant: ActionVariant) => void;
+  onExecuteAction: (variant: CommandVariant) => void;
   verbose: boolean;
   targetIp?: string;
   targetHostname?: string;
@@ -400,7 +585,7 @@ function ToolSection({ tool, categoryId, onExecuteAction, verbose, targetIp, tar
 
 /** Individual variant/command item */
 interface VariantItemProps {
-  variant: ActionVariant;
+  variant: CommandVariant;
   onExecute: () => void;
   verbose: boolean;
   targetIp?: string;

