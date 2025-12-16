@@ -43,7 +43,7 @@ export function ContextPanel({
   selectedTargetHostname,
   onExecuteAction,
 }: ContextPanelProps) {
-  const [activeTab, setActiveTab] = useState<string | null>('credentials');
+  const [activeTab, setActiveTab] = useState<string | null>('actions');
 
   // Collapsed view - just icons
   if (collapsed) {
@@ -71,6 +71,20 @@ export function ContextPanel({
         </Group>
 
         <Stack gap={0} align="center" pt="md">
+          <Tooltip label="Quick Actions" position="left">
+            <ActionIcon
+              variant={activeTab === 'actions' ? 'light' : 'subtle'}
+              color={activeTab === 'actions' ? 'orange' : 'gray'}
+              size="lg"
+              onClick={() => {
+                setActiveTab('actions');
+                onToggleCollapse?.();
+              }}
+            >
+              <IconBolt size={18} />
+            </ActionIcon>
+          </Tooltip>
+
           <Tooltip label="Credentials" position="left">
             <ActionIcon
               variant={activeTab === 'credentials' ? 'light' : 'subtle'}
@@ -96,20 +110,6 @@ export function ContextPanel({
               }}
             >
               <IconFile size={18} />
-            </ActionIcon>
-          </Tooltip>
-
-          <Tooltip label="Quick Actions" position="left">
-            <ActionIcon
-              variant={activeTab === 'actions' ? 'light' : 'subtle'}
-              color={activeTab === 'actions' ? 'orange' : 'gray'}
-              size="lg"
-              onClick={() => {
-                setActiveTab('actions');
-                onToggleCollapse?.();
-              }}
-            >
-              <IconBolt size={18} />
             </ActionIcon>
           </Tooltip>
         </Stack>
@@ -152,14 +152,14 @@ export function ContextPanel({
       >
         <Group justify="space-between" wrap="nowrap" style={{ width: '100%' }}>
           <Tabs.List>
+            <Tabs.Tab value="actions" leftSection={<IconBolt size={12} />}>
+              Actions
+            </Tabs.Tab>
             <Tabs.Tab value="credentials" leftSection={<IconKey size={12} />}>
               Creds
             </Tabs.Tab>
             <Tabs.Tab value="loot" leftSection={<IconFile size={12} />}>
               Loot
-            </Tabs.Tab>
-            <Tabs.Tab value="actions" leftSection={<IconBolt size={12} />}>
-              Actions
             </Tabs.Tab>
           </Tabs.List>
 

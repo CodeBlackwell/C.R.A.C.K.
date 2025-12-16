@@ -105,7 +105,13 @@ export function TargetSidebar({ engagementId, selectedTargetId, onTargetSelect, 
     window.electronAPI
       .targetList(engagementId)
       .then((list) => {
-        setTargets(list || []);
+        const targetList = list || [];
+        setTargets(targetList);
+        // Auto-select first target if none selected and targets exist
+        if (targetList.length > 0 && !selectedTargetId) {
+          const first = targetList[0];
+          onTargetSelect?.(first.id, first.ip_address, first.hostname);
+        }
       })
       .catch(console.error)
       .finally(() => setLoading(false));

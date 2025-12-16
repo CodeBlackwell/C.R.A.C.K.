@@ -58,12 +58,23 @@ function App() {
         setConnectionStatus({ connected: false, uri: 'Error' });
       });
 
-    // Load active engagement
+    // Load active engagement or auto-select first if none active
     window.electronAPI
       .getActiveEngagement()
-      .then((engagement) => {
-        log.data('Active engagement loaded', { name: (engagement as Engagement | null)?.name });
-        setActiveEngagement(engagement as Engagement | null);
+      .then(async (engagement) => {
+        if (engagement) {
+          log.data('Active engagement loaded', { name: (engagement as Engagement).name });
+          setActiveEngagement(engagement as Engagement);
+        } else {
+          // No active engagement - auto-select first if available
+          log.data('No active engagement, checking for available engagements');
+          const engagements = await window.electronAPI.engagementList();
+          if (engagements && engagements.length > 0) {
+            log.action('Auto-selecting first engagement', { name: engagements[0].name });
+            await window.electronAPI.engagementActivate(engagements[0].id);
+            setActiveEngagement(engagements[0] as Engagement);
+          }
+        }
       })
       .catch((err) => log.error(LogCategory.DATA, 'Failed to load engagement', err));
   }, []);
