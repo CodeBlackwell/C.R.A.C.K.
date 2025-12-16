@@ -80,7 +80,7 @@ export function ActionsPanel({
   const [loading, setLoading] = useState(false);
   const [expandedCategories, setExpandedCategories] = useState<string[]>(['port-scan']);
   const [expandedTools, setExpandedTools] = useState<string[]>([]);
-  const [verbose, setVerbose] = useState(false);
+  const [verbose, setVerbose] = useState(true);
 
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
@@ -348,11 +348,16 @@ export function ActionsPanel({
               <Tooltip label={`ping -c 3 ${targetIp}`}>
                 <ActionIcon
                   variant="subtle"
-                  color="blue"
+                  color="green"
                   size="xs"
-                  onClick={() => onExecuteAction?.(`ping -c 3 ${targetIp}`, 'Ping', true)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (onExecuteAction) {
+                      onExecuteAction(`ping -c 3 ${targetIp}`, 'Ping', true);
+                    }
+                  }}
                 >
-                  <IconRadar size={12} />
+                  <IconRadar size={14} />
                 </ActionIcon>
               </Tooltip>
             </>

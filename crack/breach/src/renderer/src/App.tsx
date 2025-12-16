@@ -246,30 +246,38 @@ function App() {
 
   // Handle executing action from ActionsPanel
   const handleExecuteAction = useCallback(async (command: string, label: string, autorun: boolean = true) => {
+    console.log('[App] handleExecuteAction called', { command, label, autorun, targetId: selectedTarget?.id });
     log.action('Executing action', { label, autorun, command: command.substring(0, 80), targetId: selectedTarget?.id });
 
-    if (autorun) {
-      // Execute immediately - current behavior
-      const session = await window.electronAPI.sessionCreate('bash', ['-c', command], {
-        type: 'shell',
-        label: label,
-        interactive: true,
-        targetId: selectedTarget?.id,
-        engagementId: activeEngagement?.id,
-      });
-      log.lifecycle('Action session created', { sessionId: session.id, label });
-    } else {
-      // Prefill mode - create shell and write command without executing
-      const session = await window.electronAPI.sessionCreate('bash', [], {
-        type: 'shell',
-        label: label,
-        interactive: true,
-        targetId: selectedTarget?.id,
-        engagementId: activeEngagement?.id,
-      });
-      // Write the command to terminal (without newline so it doesn't execute)
-      await window.electronAPI.sessionWrite(session.id, command);
-      log.lifecycle('Action session prefilled', { sessionId: session.id, label });
+    try {
+      if (autorun) {
+        // Execute immediately - create new terminal session
+        console.log('[App] Creating new session with command:', command);
+        const session = await window.electronAPI.sessionCreate('bash', ['-c', command], {
+          type: 'shell',
+          label: label,
+          interactive: true,
+          targetId: selectedTarget?.id,
+          engagementId: activeEngagement?.id,
+        });
+        console.log('[App] Session created successfully', { sessionId: session.id });
+        log.lifecycle('Action session created', { sessionId: session.id, label });
+      } else {
+        // Prefill mode - create shell and write command without executing
+        const session = await window.electronAPI.sessionCreate('bash', [], {
+          type: 'shell',
+          label: label,
+          interactive: true,
+          targetId: selectedTarget?.id,
+          engagementId: activeEngagement?.id,
+        });
+        // Write the command to terminal (without newline so it doesn't execute)
+        await window.electronAPI.sessionWrite(session.id, command);
+        log.lifecycle('Action session prefilled', { sessionId: session.id, label });
+      }
+    } catch (error) {
+      console.error('[App] handleExecuteAction failed:', error);
+      log.error(LogCategory.IPC, 'Failed to execute action', error);
     }
   }, [selectedTarget, activeEngagement?.id]);
 

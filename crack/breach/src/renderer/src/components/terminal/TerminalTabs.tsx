@@ -4,7 +4,7 @@
  * Manages multiple terminal sessions with tab navigation.
  */
 
-import { useMemo } from 'react';
+import { useMemo, useEffect } from 'react';
 import {
   Tabs,
   Group,
@@ -79,6 +79,21 @@ export function TerminalTabs({
       return new Date(a.startedAt).getTime() - new Date(b.startedAt).getTime();
     });
   }, [sessions]);
+
+  // Keyboard shortcut: Ctrl+W to close current tab
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.key === 'w') {
+        e.preventDefault();
+        if (activeSessionId) {
+          onSessionKill(activeSessionId);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [activeSessionId, onSessionKill]);
 
   if (sessions.length === 0) {
     return (

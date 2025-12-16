@@ -34,6 +34,7 @@ import {
   IconAlertCircle,
   IconRadar,
   IconTerminal2,
+  IconWifi,
 } from '@tabler/icons-react';
 import {
   NMAP_ACTIONS,
@@ -427,6 +428,20 @@ export function TargetSidebar({ engagementId, selectedTargetId, onTargetSelect, 
                       )}
                     </Group>
                   </Accordion.Control>
+                  {/* Quick Ping Button */}
+                  <Tooltip label={`ping -c 3 ${target.ip_address}`}>
+                    <ActionIcon
+                      variant="subtle"
+                      color="green"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onTargetAction?.(`ping -c 3 ${target.ip_address}`, target.id, 'Ping');
+                      }}
+                    >
+                      <IconWifi size={14} />
+                    </ActionIcon>
+                  </Tooltip>
                   {/* Nmap Scan Menu - Outside Accordion.Control to avoid nested buttons */}
                   <Menu shadow="md" width={240} position="bottom-end">
                     <Menu.Target>
