@@ -234,7 +234,7 @@ export function TerminalPane({ sessionId, active, onPrismScan }: TerminalPanePro
         hasContent: existingOutput && existingOutput.length > 0
       });
 
-      // Write buffered output
+      // Write buffered output - chunks already contain newlines, just concatenate
       if (existingOutput && existingOutput.length > 0) {
         terminal.write(existingOutput.join(''));
       }

@@ -143,7 +143,8 @@ export function registerSessionHandlers(): void {
 
       try {
         const output = ptyManager.getOutputBuffer(sessionId);
-        const text = output.join('\n');
+        // Buffer contains raw chunks with embedded newlines, just concatenate
+        const text = output.join('');
 
         // Use existing parser patterns
         const parsedCredentials = matchCredentials(text);

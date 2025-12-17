@@ -275,6 +275,14 @@ class PtyManager {
         sessionId,
         status: 'stopped',
       });
+
+      // Persist the session immediately so it can be restored
+      if (proc.session.engagementId) {
+        this.persistSession(sessionId).catch((error) => {
+          debug.error('Failed to persist killed session', { sessionId, error });
+        });
+      }
+
       return true;
     } catch (error) {
       debug.error('Failed to kill PTY', { sessionId, error });
@@ -424,6 +432,31 @@ class PtyManager {
   }
 
   /**
+   * Persist a single session to disk (called when session is killed)
+   */
+  async persistSession(sessionId: string): Promise<void> {
+    const proc = this.processes.get(sessionId);
+    if (!proc) {
+      debug.error('Cannot persist session - not found', { sessionId });
+      return;
+    }
+
+    const engagementId = proc.session.engagementId;
+    if (!engagementId) {
+      debug.pty('Skipping persistence - no engagement', { sessionId });
+      return;
+    }
+
+    await sessionPersistence.saveSession(
+      engagementId,
+      proc.session,
+      proc.outputBuffer,
+      proc.tmuxSession
+    );
+    debug.pty('Persisted single session', { sessionId, engagementId });
+  }
+
+  /**
    * Get restore info for UI (lightweight, no output buffers)
    */
   async getRestoreInfo(engagementId: string): Promise<RestoreSessionInfo[]> {
@@ -535,7 +568,8 @@ class PtyManager {
         if (proc && persisted.outputBuffer.length > 0) {
           // Add a separator and then the historical output
           const separator = '\r\n\x1b[90m--- Restored session history ---\x1b[0m\r\n';
-          const historicalOutput = persisted.outputBuffer.join('\n');
+          // Buffer now contains raw chunks with embedded newlines, just concatenate
+          const historicalOutput = persisted.outputBuffer.join('');
 
           // Write to the terminal (renderer will receive this)
           this.sendToRenderer('session-output', {
@@ -574,9 +608,9 @@ class PtyManager {
     // Update activity timestamp
     proc.session.lastActivityAt = new Date().toISOString();
 
-    // Buffer output (ring buffer)
-    const lines = data.split('\n');
-    proc.outputBuffer.push(...lines);
+    // Buffer output (ring buffer) - store raw chunks, don't split by \n
+    // The sanitizer will handle line breaks when persisting
+    proc.outputBuffer.push(data);
     if (proc.outputBuffer.length > this.maxOutputBuffer) {
       proc.outputBuffer = proc.outputBuffer.slice(-this.maxOutputBuffer);
     }
