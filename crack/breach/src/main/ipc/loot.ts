@@ -9,6 +9,7 @@ import { debug } from '../debug';
 import { runQuery, runWrite } from '@shared/neo4j/query';
 import { detectPatterns, isFlagFile, generateLootId } from '@shared/types/loot';
 import type { Loot, LootType, PatternType } from '@shared/types/loot';
+import { extractFromLoot } from '../parser';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -319,6 +320,59 @@ export function registerLootHandlers(): void {
     } catch (error) {
       debug.error('loot-update-notes failed', error);
       return false;
+    }
+  });
+
+  // Extract credential from loot file (PRISM integration)
+  ipcMain.handle('loot-extract', async (
+    _,
+    lootId: string,
+    pattern: PatternType,
+    engagementId: string,
+    targetId?: string
+  ) => {
+    debug.ipc('loot-extract called', { lootId, pattern, engagementId });
+
+    try {
+      // 1. Get loot file path from Neo4j
+      const pathQuery = `
+        MATCH (l:Loot {id: $lootId})
+        RETURN l.path AS path, l.name AS name
+      `;
+      const pathResults = await runQuery(pathQuery, { lootId });
+
+      if (pathResults.length === 0) {
+        return { success: false, error: 'Loot not found' };
+      }
+
+      const filePath = pathResults[0].path as string;
+      const lootName = pathResults[0].name as string;
+
+      // 2. Read file content
+      if (!fs.existsSync(filePath)) {
+        return { success: false, error: `File not found: ${filePath}` };
+      }
+
+      const content = fs.readFileSync(filePath, 'utf-8');
+
+      // 3. Extract using PRISM loot-extractor
+      const result = await extractFromLoot(content, pattern, {
+        engagementId,
+        targetId,
+        lootId,
+        lootName,
+      });
+
+      debug.ipc('loot-extract completed', {
+        success: result.success,
+        hasCredential: !!result.credential,
+        hasHash: !!result.hash,
+      });
+
+      return result;
+    } catch (error) {
+      debug.error('loot-extract failed', error);
+      return { success: false, error: String(error) };
     }
   });
 

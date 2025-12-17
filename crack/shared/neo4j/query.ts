@@ -116,8 +116,9 @@ export async function runQuery<T = Record<string, unknown>>(
 
     const mapped = result.records.map((record: Neo4jRecord) => {
       const obj: Record<string, unknown> = {};
-      record.keys.forEach((key: string) => {
-        obj[key] = convertNeo4jValue(record.get(key));
+      record.keys.forEach((key) => {
+        const keyStr = String(key);
+        obj[keyStr] = convertNeo4jValue(record.get(keyStr));
       });
       return obj as T;
     });

@@ -336,9 +336,44 @@ function App() {
 
   // Handle extracting credentials from loot
   const handleExtractCredential = useCallback(async (loot: Loot, pattern: PatternType) => {
+    if (!activeEngagement) {
+      log.error(LogCategory.ACTION, 'Cannot extract: no active engagement');
+      return;
+    }
+
     log.action('Extracting credential from loot', { lootName: loot.name, pattern });
-    // TODO: Implement PRISM integration to extract and add credential
-  }, []);
+
+    try {
+      const result = await window.electronAPI.lootExtract(
+        loot.id,
+        pattern,
+        activeEngagement.id,
+        selectedTarget?.id
+      );
+
+      if (result.success) {
+        log.data('Extraction successful', {
+          hasCredential: !!result.credential,
+          hasHash: !!result.hash,
+        });
+
+        // Switch to credentials tab to show the new credential
+        if (result.credential) {
+          setContextTab('credentials');
+          setContextPanelCollapsed(false);
+        }
+
+        // Log hash if extracted (user can copy from CredentialVault)
+        if (result.hash) {
+          log.data('Hash extracted', { formatted: result.formatted?.substring(0, 50) });
+        }
+      } else {
+        log.error(LogCategory.ACTION, 'Extraction failed', { error: result.error });
+      }
+    } catch (error) {
+      log.error(LogCategory.IPC, 'Extraction IPC failed', error);
+    }
+  }, [activeEngagement, selectedTarget?.id]);
 
   // Handle target selection from sidebar
   const handleTargetSelect = useCallback((targetId: string, targetIp: string, targetHostname?: string) => {

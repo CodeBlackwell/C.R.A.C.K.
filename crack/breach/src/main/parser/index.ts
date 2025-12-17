@@ -21,12 +21,16 @@ export { PotfileWatcher, getPotfileWatcher } from './potfile-watcher';
 // Deduplicator
 export { Deduplicator } from './deduplicator';
 
+// Loot Extractor
+export { extractFromLoot, type ExtractionResult, type ExtractionContext } from './loot-extractor';
+
 // Credential patterns and matchers
 export {
   CREDENTIAL_PATTERNS,
   FINDING_PATTERNS,
   matchCredentials,
   matchFindings,
+  decryptGppPassword,
   type ParsedCredential,
   type ParsedFinding,
 } from './patterns';

@@ -20,6 +20,68 @@ import type {
   CrackedHashSignal,
 } from '@shared/types/signal';
 import { inferOsFromTtl, getServiceFromPort } from '@shared/types/signal';
+import * as crypto from 'crypto';
+
+// ============================================================================
+// GPP DECRYPTION (MS14-025)
+// ============================================================================
+
+/**
+ * Microsoft's published AES-256 key for GPP cpassword decryption
+ * Disclosed in MSDN documentation (MS14-025)
+ */
+const GPP_AES_KEY = Buffer.from(
+  '4e9906e8fcb66cc9faf49310620ffee8f496e806cc057990209b09a433b66c1b',
+  'hex'
+);
+
+/** Null IV for GPP AES-CBC */
+const GPP_IV = Buffer.alloc(16, 0);
+
+/**
+ * Decrypt GPP cpassword using Microsoft's published AES key
+ *
+ * @param cpassword Base64-encoded encrypted password from GPP XML
+ * @returns Decrypted plaintext password or null if decryption fails
+ */
+export function decryptGppPassword(cpassword: string): string | null {
+  if (!cpassword || cpassword.trim() === '') {
+    return null;
+  }
+
+  try {
+    // Pad to 4-byte boundary for base64 decoding
+    let padded = cpassword;
+    const padding = 4 - (padded.length % 4);
+    if (padding !== 4) {
+      padded += '='.repeat(padding);
+    }
+
+    // Decode base64
+    const encrypted = Buffer.from(padded, 'base64');
+
+    // AES-256-CBC decrypt with null IV
+    const decipher = crypto.createDecipheriv('aes-256-cbc', GPP_AES_KEY, GPP_IV);
+    decipher.setAutoPadding(false); // Manual PKCS7 removal
+
+    let decrypted = Buffer.concat([
+      decipher.update(encrypted),
+      decipher.final(),
+    ]);
+
+    // Remove PKCS7 padding manually
+    const padLen = decrypted[decrypted.length - 1];
+    if (padLen > 0 && padLen <= 16) {
+      decrypted = decrypted.subarray(0, decrypted.length - padLen);
+    }
+
+    // Decode UTF-16LE (Windows default encoding)
+    return decrypted.toString('utf16le');
+  } catch (error) {
+    // Decryption failed - return null, caller handles gracefully
+    return null;
+  }
+}
 
 /** Parsed credential from terminal output */
 export interface ParsedCredential {
@@ -630,16 +692,46 @@ export function matchCredentials(text: string): ParsedCredential[] {
     });
   }
 
-  // GPP cpassword
+  // GPP cpassword - decrypt using MS14-025 published key
   const cpassMatch = text.match(CREDENTIAL_PATTERNS.gpp.cpassword);
   if (cpassMatch) {
     const userMatch = text.match(CREDENTIAL_PATTERNS.gpp.userName);
-    credentials.push({
-      username: userMatch?.[1] || 'unknown',
-      secret: cpassMatch[1],
-      secretType: 'gpp',
-      source: 'gpp',
-    });
+    const encryptedPass = cpassMatch[1];
+    const decrypted = decryptGppPassword(encryptedPass);
+
+    // Parse domain from username (DOMAIN\user or user@domain)
+    let username = userMatch?.[1] || 'unknown';
+    let domain: string | undefined;
+
+    if (username.includes('\\')) {
+      const parts = username.split('\\');
+      domain = parts[0];
+      username = parts[1];
+    } else if (username.includes('@')) {
+      const parts = username.split('@');
+      username = parts[0];
+      domain = parts[1];
+    }
+
+    if (decrypted) {
+      // Store decrypted cleartext password
+      credentials.push({
+        username,
+        domain,
+        secret: decrypted,
+        secretType: 'gpp',
+        source: 'gpp',
+      });
+    } else {
+      // Decryption failed - store encrypted for manual processing
+      credentials.push({
+        username,
+        domain,
+        secret: encryptedPass,
+        secretType: 'gpp',
+        source: 'gpp (encrypted)',
+      });
+    }
   }
 
   // Generic NTLM hash

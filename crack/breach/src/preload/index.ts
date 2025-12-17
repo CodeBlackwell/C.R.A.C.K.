@@ -35,6 +35,10 @@ import type {
   SessionManifest,
   RestoreSessionInfo,
 } from '@shared/types/persistence';
+import type {
+  ReportOptions,
+  GenerateReportResult,
+} from '../main/report/types';
 
 /** Callback type for session events */
 type SessionOutputCallback = (event: IpcRendererEvent, data: { sessionId: string; data: string }) => void;
@@ -234,6 +238,21 @@ const electronAPI = {
     ipcRenderer.invoke('loot-get-flags', engagementId),
   lootUpdateNotes: (id: string, notes: string): Promise<boolean> =>
     ipcRenderer.invoke('loot-update-notes', id, notes),
+
+  /** Extract credential from loot file using PRISM patterns */
+  lootExtract: (
+    lootId: string,
+    pattern: PatternType,
+    engagementId: string,
+    targetId?: string
+  ): Promise<{
+    success: boolean;
+    credential?: Credential;
+    hash?: string;
+    formatted?: string;
+    error?: string;
+  }> =>
+    ipcRenderer.invoke('loot-extract', lootId, pattern, engagementId, targetId),
 
   // =========================================================================
   // FINDINGS
@@ -532,6 +551,18 @@ const electronAPI = {
   removeHostIdentityListener: (callback: SignalCallback<Signal>) => {
     ipcRenderer.removeListener('host-identity', callback);
   },
+
+  // =========================================================================
+  // REPORTS
+  // =========================================================================
+
+  /** Generate engagement report (returns content or writes to path) */
+  reportGenerate: (engagementId: string, options: ReportOptions): Promise<GenerateReportResult> =>
+    ipcRenderer.invoke('report-generate', engagementId, options),
+
+  /** Export engagement report with save dialog */
+  reportExport: (engagementId: string, options: Omit<ReportOptions, 'outputPath'>): Promise<GenerateReportResult> =>
+    ipcRenderer.invoke('report-export', engagementId, options),
 };
 
 // Expose to renderer

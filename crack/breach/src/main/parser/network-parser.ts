@@ -508,10 +508,10 @@ export class NetworkParser {
         crackedBy: signal.crackedBy || 'terminal',
       });
 
-      if (result && result.length > 0) {
+      if (result && result.propertiesSet > 0) {
         debug.prism('Correlated cracked hash with credentials', {
           hash: signal.originalHash.substring(0, 20) + '...',
-          count: result.length,
+          propertiesSet: result.propertiesSet,
         });
       }
     } catch (error) {

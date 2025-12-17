@@ -217,7 +217,8 @@ export function EngagementManager({
         }
       } else {
         await window.electronAPI.engagementUpdateStatus(eng.id, status);
-        if (activeEngagement?.id === eng.id && status !== 'active') {
+        // If we're deactivating the current active engagement, clear it
+        if (activeEngagement?.id === eng.id) {
           onEngagementChange(null);
         }
       }

@@ -390,10 +390,10 @@ export class PotfileWatcher {
         crackedBy: signal.crackedBy || 'potfile',
       });
 
-      if (result && result.length > 0) {
+      if (result && result.propertiesSet > 0) {
         debug.prism('Correlated cracked hash (exact match)', {
           hash: signal.originalHash.substring(0, 20) + '...',
-          credentials: result.length,
+          propertiesSet: result.propertiesSet,
         });
       }
     } catch (error) {
@@ -434,10 +434,10 @@ export class PotfileWatcher {
         crackedBy: signal.crackedBy || 'potfile',
       });
 
-      if (result && result.length > 0) {
+      if (result && result.propertiesSet > 0) {
         debug.prism('Correlated cracked hash (partial match)', {
           ntHash: ntHash.substring(0, 10) + '...',
-          credentials: result.length,
+          propertiesSet: result.propertiesSet,
         });
       }
     } catch (error) {

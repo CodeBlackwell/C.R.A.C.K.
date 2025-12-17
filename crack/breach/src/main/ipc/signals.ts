@@ -52,8 +52,8 @@ export function registerSignalHandlers(): void {
         `;
       }
 
-      const result = await runQuery(query, params);
-      return result.map((r: { s: Signal }) => r.s);
+      const result = await runQuery<{ s: Signal }>(query, params);
+      return result.map((r) => r.s);
     } catch (error) {
       debug.error('Failed to list signals', error);
       return [];
@@ -71,8 +71,8 @@ export function registerSignalHandlers(): void {
         ORDER BY s.timestamp DESC
       `;
 
-      const result = await runQuery(query, { engagementId });
-      return result.map((r: { s: HostReachabilitySignal }) => r.s);
+      const result = await runQuery<{ s: HostReachabilitySignal }>(query, { engagementId });
+      return result.map((r) => r.s);
     } catch (error) {
       debug.error('Failed to get reachability signals', error);
       return [];
@@ -102,8 +102,8 @@ export function registerSignalHandlers(): void {
         `;
       }
 
-      const result = await runQuery(query, params);
-      return result.map((r: { s: PortStatusSignal }) => r.s);
+      const result = await runQuery<{ s: PortStatusSignal }>(query, params);
+      return result.map((r) => r.s);
     } catch (error) {
       debug.error('Failed to get port signals', error);
       return [];
@@ -133,8 +133,8 @@ export function registerSignalHandlers(): void {
         `;
       }
 
-      const result = await runQuery(query, params);
-      return result.map((r: { s: PortStatusSignal }) => r.s);
+      const result = await runQuery<{ s: PortStatusSignal }>(query, params);
+      return result.map((r) => r.s);
     } catch (error) {
       debug.error('Failed to get open port signals', error);
       return [];
@@ -152,8 +152,8 @@ export function registerSignalHandlers(): void {
         ORDER BY s.hostname ASC
       `;
 
-      const result = await runQuery(query, { engagementId });
-      return result.map((r: { s: DnsResolutionSignal }) => r.s);
+      const result = await runQuery<{ s: DnsResolutionSignal }>(query, { engagementId });
+      return result.map((r) => r.s);
     } catch (error) {
       debug.error('Failed to get DNS signals', error);
       return [];
@@ -184,8 +184,8 @@ export function registerSignalHandlers(): void {
         `;
       }
 
-      const result = await runQuery(query, params);
-      return result.map((r: { s: OsDetectionSignal }) => r.s);
+      const result = await runQuery<{ s: OsDetectionSignal }>(query, params);
+      return result.map((r) => r.s);
     } catch (error) {
       debug.error('Failed to get OS detection signals', error);
       return [];
@@ -203,8 +203,8 @@ export function registerSignalHandlers(): void {
         ORDER BY s.isPrivileged DESC, s.username ASC
       `;
 
-      const result = await runQuery(query, { engagementId });
-      return result.map((r: { s: UserEnumerationSignal }) => r.s);
+      const result = await runQuery<{ s: UserEnumerationSignal }>(query, { engagementId });
+      return result.map((r) => r.s);
     } catch (error) {
       debug.error('Failed to get user enumeration signals', error);
       return [];
@@ -222,8 +222,8 @@ export function registerSignalHandlers(): void {
         ORDER BY s.timestamp DESC
       `;
 
-      const result = await runQuery(query, { engagementId });
-      return result.map((r: { s: CrackedHashSignal }) => r.s);
+      const result = await runQuery<{ s: CrackedHashSignal }>(query, { engagementId });
+      return result.map((r) => r.s);
     } catch (error) {
       debug.error('Failed to get cracked hash signals', error);
       return [];
@@ -264,9 +264,9 @@ export function registerSignalHandlers(): void {
         } AS summary
       `;
 
-      const result = await runQuery(query, { engagementId });
+      const result = await runQuery<{ summary: SignalSummary }>(query, { engagementId });
       if (result && result.length > 0) {
-        return result[0].summary as SignalSummary;
+        return result[0].summary;
       }
 
       return {
@@ -348,8 +348,8 @@ export function registerSignalHandlers(): void {
         ORDER BY s.timestamp DESC
       `;
 
-      const result = await runQuery(query, { engagementId, targetId });
-      return result.map((r: { s: Signal }) => r.s);
+      const result = await runQuery<{ s: Signal }>(query, { engagementId, targetId });
+      return result.map((r) => r.s);
     } catch (error) {
       debug.error('Failed to get signals by target', error);
       return [];
