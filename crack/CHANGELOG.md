@@ -2,6 +2,49 @@
 
 ## [Unreleased]
 
+### Fixed - B.R.E.A.C.H. Session Restore Output Format (2025-12-17)
+
+#### Issue
+Restored terminal sessions displayed incorrectly with progressive indentation:
+```
+└─$ whoami
+          kali
+              └─$ ls
+```
+
+#### Root Cause
+1. **PTY buffer split issue**: Raw PTY output was split by `\n`, losing information about which chunks were originally separated by newlines
+2. **Line ending mismatch**: xterm.js interprets `\n` as "move down" without returning cursor to column 0. Restored output used `\n` instead of `\r\n`
+3. **Buffer format inconsistency**: Live sessions stored raw chunks, restored sessions stored lines
+
+#### Files Modified
+- `breach/src/main/pty/persistence.ts`:
+  - Store raw PTY chunks without splitting by `\n`
+  - Changed save format from `join('\n')` to `join('\r\n')` for proper xterm.js line endings
+  - Return loaded output as single chunk to maintain consistent buffer format
+  - Added debug logging for save/load cycle tracing
+- `breach/src/main/pty/manager.ts`:
+  - Buffer raw PTY chunks directly instead of splitting
+  - Persist session immediately when killed (not just on app quit)
+  - Updated historical output join to use empty string
+- `breach/src/main/ipc/sessions.ts`:
+  - Updated PRISM scan to concatenate buffer chunks correctly
+- `breach/src/renderer/src/components/terminal/TerminalPane.tsx`:
+  - Updated buffer display to concatenate without adding newlines
+
+#### Solution
+- Raw PTY chunks now stored with embedded newlines preserved
+- Session persistence uses `\r\n` line endings for xterm.js compatibility
+- Buffer format consistent between live and restored sessions
+- Added comprehensive debug logging with `<CR>`, `<LF>`, `<ESC>` markers
+
+#### Result
+- Restored sessions display with correct line formatting
+- Killed sessions persist immediately for reliable restoration
+- Debug logs show line ending details for troubleshooting
+
+---
+
 ### Fixed - Writeup Attack Phases Migration (2025-11-21)
 
 #### Issue

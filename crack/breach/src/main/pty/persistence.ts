@@ -48,6 +48,14 @@ function sanitizeTerminalOutput(rawChunks: string[]): string[] {
   // The newlines are already embedded in the data itself
   const raw = rawChunks.join('');
 
+  debug.pty('Sanitize input', {
+    chunkCount: rawChunks.length,
+    totalLength: raw.length,
+    hasNewlines: raw.includes('\n'),
+    hasCR: raw.includes('\r'),
+    preview: raw.slice(0, 100).replace(/\x1b/g, '<ESC>').replace(/\r/g, '<CR>').replace(/\n/g, '<LF>'),
+  });
+
   // Process carriage returns: split by \r, process each segment
   // A \r means "return to beginning of line", so we simulate this
   const lines: string[] = [];
@@ -126,6 +134,11 @@ function sanitizeTerminalOutput(rawChunks: string[]): string[] {
     lastLine = line;
   }
 
+  debug.pty('Sanitize output', {
+    lineCount: deduped.length,
+    preview: deduped.slice(0, 5).map(l => l.slice(0, 50)),
+  });
+
   return deduped;
 }
 
@@ -192,15 +205,18 @@ export class SessionPersistence {
 
     // Sanitize the output to remove cursor control sequences and process \r
     const sanitized = sanitizeTerminalOutput(outputBuffer);
-    const text = sanitized.join('\n');
+    // Use \r\n for proper terminal line endings - xterm.js needs \r to return to column 0
+    const text = sanitized.join('\r\n');
 
     const compressed = await gzip(Buffer.from(text, 'utf-8'));
     await fs.writeFile(outputPath, compressed);
 
     debug.pty('Saved compressed output', {
       sessionId,
-      rawLines: outputBuffer.length,
+      rawChunks: outputBuffer.length,
       sanitizedLines: sanitized.length,
+      textLength: text.length,
+      textPreview: text.slice(0, 200).replace(/\x1b/g, '<ESC>').replace(/\r/g, '<CR>').replace(/\n/g, '<LF>'),
     });
 
     // Return relative path and sanitized line count
@@ -223,7 +239,18 @@ export class SessionPersistence {
       const decompressed = await gunzip(compressed);
       // Return as single chunk to preserve newlines - buffer format matches live sessions
       // (raw chunks that may contain \n characters)
-      return [decompressed.toString('utf-8')];
+      const text = decompressed.toString('utf-8');
+
+      debug.pty('Loaded compressed output', {
+        outputFile,
+        textLength: text.length,
+        hasCR: text.includes('\r'),
+        hasLF: text.includes('\n'),
+        crlfCount: (text.match(/\r\n/g) || []).length,
+        textPreview: text.slice(0, 200).replace(/\x1b/g, '<ESC>').replace(/\r/g, '<CR>').replace(/\n/g, '<LF>'),
+      });
+
+      return [text];
     } catch (error) {
       debug.error('Failed to load compressed output', { outputFile, error });
       return [];
