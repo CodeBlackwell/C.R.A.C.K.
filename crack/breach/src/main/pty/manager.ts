@@ -11,6 +11,7 @@ import { debug } from '../debug';
 import { getCredentialParser } from '../parser';
 import { getNetworkParser } from '../parser/network-parser';
 import { sessionPersistence } from './persistence';
+import { tmuxBackend } from './tmux-backend';
 import type {
   TerminalSession,
   SessionType,
@@ -34,6 +35,7 @@ interface PtyProcess {
   outputBuffer: string[];
   inputBuffer: string;           // Buffer for tracking user input
   lastCommand: CommandProvenance | null;  // Last command entered
+  tmuxSession?: string;          // Tmux session name (Phase 3)
 }
 
 /** Generate unique session ID */
@@ -90,17 +92,35 @@ class PtyManager {
     };
 
     try {
-      const ptyProcess = pty.spawn(command, args, {
-        name: 'xterm-256color',
-        cols: 120,
-        rows: 30,
-        cwd: session.workingDir,
-        env: {
-          ...process.env,
-          TERM: 'xterm-256color',
-          ...options.env,
-        } as Record<string, string>,
-      });
+      let ptyProcess: pty.IPty;
+      let tmuxSession: string | undefined;
+
+      // Use tmux for persistent sessions (listeners, tunnels, etc.)
+      const useTmux = session.persistent && await tmuxBackend.isAvailable();
+
+      if (useTmux) {
+        debug.pty('Creating persistent session via tmux', { sessionId, command });
+        const result = await tmuxBackend.createSession(sessionId, command, args, {
+          cwd: session.workingDir,
+          env: options.env,
+          cols: 120,
+          rows: 30,
+        });
+        ptyProcess = result.pty;
+        tmuxSession = result.tmuxSession;
+      } else {
+        ptyProcess = pty.spawn(command, args, {
+          name: 'xterm-256color',
+          cols: 120,
+          rows: 30,
+          cwd: session.workingDir,
+          env: {
+            ...process.env,
+            TERM: 'xterm-256color',
+            ...options.env,
+          } as Record<string, string>,
+        });
+      }
 
       session.pid = ptyProcess.pid;
       session.status = 'running';
@@ -111,6 +131,7 @@ class PtyManager {
         outputBuffer: [],
         inputBuffer: '',
         lastCommand: null,
+        tmuxSession,
       };
 
       // Handle output
@@ -120,7 +141,7 @@ class PtyManager {
 
       // Handle exit
       ptyProcess.onExit(({ exitCode, signal }) => {
-        debug.pty('PTY exited', { sessionId, exitCode, signal });
+        debug.pty('PTY exited', { sessionId, exitCode, signal, tmuxSession });
         this.handleExit(sessionId, exitCode);
       });
 
@@ -130,6 +151,7 @@ class PtyManager {
         sessionId,
         pid: session.pid,
         type: session.type,
+        tmuxSession,
       });
 
       // Notify renderer
@@ -410,7 +432,8 @@ class PtyManager {
 
   /**
    * Restore sessions from disk
-   * Creates new shell sessions with historical output as scroll-back
+   * For tmux sessions: reattach to live process
+   * For regular sessions: create new shell with historical output as scroll-back
    */
   async restoreSessions(sessionIds: string[], engagementId: string): Promise<TerminalSession[]> {
     debug.pty('Restoring sessions', { count: sessionIds.length, engagementId });
@@ -425,8 +448,80 @@ class PtyManager {
           continue;
         }
 
-        // Create a new shell session in the same working directory
-        const session = await this.createSession('bash', [], {
+        let session: TerminalSession;
+
+        // Try to reattach to tmux session if it exists
+        if (persisted.tmuxSession && await tmuxBackend.sessionExists(persisted.tmuxSession)) {
+          debug.pty('Reattaching to live tmux session', {
+            sessionId,
+            tmuxSession: persisted.tmuxSession,
+          });
+
+          const ptyProcess = await tmuxBackend.attachSession(persisted.tmuxSession, {
+            cols: 120,
+            rows: 30,
+          });
+
+          if (ptyProcess) {
+            // Successfully reattached - create session object
+            const newSessionId = generateSessionId();
+            session = {
+              id: newSessionId,
+              type: persisted.type,
+              status: 'running',
+              command: persisted.command,
+              args: persisted.args,
+              workingDir: persisted.workingDir,
+              env: persisted.env,
+              targetId: persisted.targetId,
+              engagementId: persisted.engagementId,
+              linkedSessions: persisted.linkedSessions || [],
+              parentSessionId: persisted.parentSessionId,
+              label: persisted.label ? `${persisted.label} (live)` : 'live',
+              persistent: true,
+              interactive: true,
+              startedAt: persisted.startedAt,
+              pid: ptyProcess.pid,
+            };
+
+            const processWrapper: PtyProcess = {
+              pty: ptyProcess,
+              session,
+              outputBuffer: [],
+              inputBuffer: '',
+              lastCommand: null,
+              tmuxSession: persisted.tmuxSession,
+            };
+
+            // Handle output
+            ptyProcess.onData((data: string) => {
+              this.handleOutput(newSessionId, data);
+            });
+
+            // Handle exit
+            ptyProcess.onExit(({ exitCode }) => {
+              this.handleExit(newSessionId, exitCode);
+            });
+
+            this.processes.set(newSessionId, processWrapper);
+            this.sendToRenderer('session-created', session);
+
+            debug.pty('Reattached to tmux session', {
+              originalId: sessionId,
+              newId: newSessionId,
+              tmuxSession: persisted.tmuxSession,
+            });
+
+            restored.push(session);
+
+            // Delete persisted file
+            await sessionPersistence.deleteSession(engagementId, sessionId);
+            continue;
+          }
+        }
+
+        // Fallback: Create a new shell session with historical output
+        session = await this.createSession('bash', [], {
           type: persisted.type,
           label: persisted.label ? `${persisted.label} (restored)` : 'restored',
           workingDir: persisted.workingDir,

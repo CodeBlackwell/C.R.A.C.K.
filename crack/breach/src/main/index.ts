@@ -4,7 +4,7 @@
  * Box Reconnaissance, Exploitation & Attack Command Hub
  */
 
-import { app, BrowserWindow } from 'electron';
+import { app, BrowserWindow, dialog } from 'electron';
 import path from 'path';
 import { debug } from './debug';
 import { registerSessionHandlers, setPtyMainWindow } from './ipc/sessions';
@@ -19,6 +19,7 @@ import { registerSignalHandlers } from './ipc/signals';
 import { registerModulesHandlers } from './ipc/modules';
 import { getPotfileWatcher } from './parser';
 import { ptyManager } from './pty/manager';
+import { tmuxBackend } from './pty/tmux-backend';
 
 debug.section('B.R.E.A.C.H. STARTUP');
 
@@ -106,11 +107,54 @@ let isQuitting = false;
 app.on('before-quit', async (event) => {
   if (isQuitting) return;
 
-  debug.startup('Application quitting - persisting sessions...');
-
-  // Prevent default quit to allow async persistence
+  // Prevent default to show dialog
   event.preventDefault();
+
+  const sessions = ptyManager.getAllSessions();
+  const tmuxSessions = await tmuxBackend.listSessions();
+  const hasActiveSessions = sessions.length > 0 || tmuxSessions.length > 0;
+
+  // If no active sessions, just quit
+  if (!hasActiveSessions) {
+    isQuitting = true;
+    app.exit();
+    return;
+  }
+
+  // Build message with session counts
+  let message = 'You have active sessions:\n';
+  if (sessions.length > 0) {
+    message += `• ${sessions.length} terminal session${sessions.length > 1 ? 's' : ''}\n`;
+  }
+  if (tmuxSessions.length > 0) {
+    message += `• ${tmuxSessions.length} persistent tmux session${tmuxSessions.length > 1 ? 's' : ''}\n`;
+  }
+  message += '\nWhat would you like to do?';
+
+  debug.startup('Showing quit confirmation dialog', {
+    sessions: sessions.length,
+    tmuxSessions: tmuxSessions.length,
+  });
+
+  const { response } = await dialog.showMessageBox(mainWindow!, {
+    type: 'question',
+    buttons: ['Keep Running', 'Kill All', 'Cancel'],
+    defaultId: 0,
+    cancelId: 2,
+    title: 'Exit B.R.E.A.C.H.',
+    message: 'Exit Application?',
+    detail: message,
+  });
+
+  if (response === 2) {
+    // Cancel - abort quit
+    debug.startup('Quit cancelled by user');
+    return;
+  }
+
   isQuitting = true;
+
+  debug.startup('Application quitting - persisting sessions...');
 
   try {
     // Persist all active sessions before quitting
@@ -120,8 +164,16 @@ app.on('before-quit', async (event) => {
     debug.error('Failed to persist sessions', error);
   }
 
-  // Clean up PTY processes
-  await ptyManager.cleanup();
+  if (response === 1) {
+    // Kill All - terminate all processes including tmux
+    debug.startup('Killing all sessions including tmux');
+    await tmuxBackend.killAllSessions();
+    await ptyManager.cleanup();
+  } else {
+    // Keep Running - just detach PTY but leave tmux running
+    debug.startup('Keeping tmux sessions alive');
+    await ptyManager.cleanup();
+  }
 
   // Now actually quit
   app.exit();

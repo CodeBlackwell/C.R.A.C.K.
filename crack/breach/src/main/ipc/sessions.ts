@@ -9,6 +9,7 @@ import { ptyManager, setPtyMainWindow as setPtyWindow } from '../pty/manager';
 import { debug } from '../debug';
 import { matchCredentials, matchFindings } from '../parser/patterns';
 import { getCredentialParser } from '../parser';
+import { tmuxBackend } from '../pty/tmux-backend';
 import { runWrite } from '@shared/neo4j/query';
 import { generateFindingId } from '@shared/types/finding';
 import type { CreateSessionOptions } from '@shared/types/session';
@@ -501,6 +502,37 @@ export function registerSessionHandlers(): void {
   // Get PRISM parser statistics
   ipcMain.handle('prism-get-stats', () => {
     return getCredentialParser().getStats();
+  });
+
+  // =========================================================================
+  // TMUX BACKEND (Phase 3)
+  // =========================================================================
+
+  // Check if tmux is available
+  ipcMain.handle('tmux-is-available', async () => {
+    const available = await tmuxBackend.isAvailable();
+    debug.ipc('tmux-is-available', { available });
+    return available;
+  });
+
+  // List B.R.E.A.C.H. managed tmux sessions
+  ipcMain.handle('tmux-list-sessions', async () => {
+    const sessions = await tmuxBackend.listSessions();
+    debug.ipc('tmux-list-sessions', { count: sessions.length });
+    return sessions;
+  });
+
+  // Kill a tmux session
+  ipcMain.handle('tmux-kill-session', async (_, tmuxSession: string) => {
+    debug.ipc('tmux-kill-session', { tmuxSession });
+    return tmuxBackend.killSession(tmuxSession);
+  });
+
+  // Kill all B.R.E.A.C.H. tmux sessions
+  ipcMain.handle('tmux-kill-all', async () => {
+    const killed = await tmuxBackend.killAllSessions();
+    debug.ipc('tmux-kill-all', { killed });
+    return killed;
   });
 
   debug.ipc('Session IPC handlers registered');

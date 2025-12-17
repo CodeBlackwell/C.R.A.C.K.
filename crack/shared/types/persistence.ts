@@ -7,7 +7,7 @@
 import type { SessionType, SessionStatus } from './session';
 
 /** Version for schema migrations */
-export const PERSISTENCE_VERSION = 1;
+export const PERSISTENCE_VERSION = 2;
 
 /** Session manifest - index of all persisted sessions */
 export interface SessionManifest {
@@ -53,8 +53,17 @@ export interface PersistedSession {
   lastActivityAt?: string;
   savedAt: string;
 
-  /** Output buffer (stored directly for Phase 1, compressed in Phase 2) */
+  /** Output buffer - Phase 1 stored inline, Phase 2+ uses compressed file */
   outputBuffer: string[];
+
+  /** Path to compressed output buffer file (Phase 2+) */
+  outputBufferFile?: string;
+
+  /** Number of lines in output buffer (for UI display without decompressing) */
+  outputLineCount?: number;
+
+  /** Tmux session name for live reconnection (Phase 3) */
+  tmuxSession?: string;
 }
 
 /** Restore options for UI */

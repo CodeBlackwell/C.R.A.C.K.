@@ -115,6 +115,26 @@ const electronAPI = {
     ipcRenderer.invoke('prism-get-stats'),
 
   // =========================================================================
+  // TMUX BACKEND (Phase 3)
+  // =========================================================================
+
+  /** Check if tmux is available on the system */
+  tmuxIsAvailable: (): Promise<boolean> =>
+    ipcRenderer.invoke('tmux-is-available'),
+
+  /** List B.R.E.A.C.H. managed tmux sessions */
+  tmuxListSessions: (): Promise<Array<{ name: string; created: Date; attached: boolean; windows: number }>> =>
+    ipcRenderer.invoke('tmux-list-sessions'),
+
+  /** Kill a specific tmux session */
+  tmuxKillSession: (tmuxSession: string): Promise<boolean> =>
+    ipcRenderer.invoke('tmux-kill-session', tmuxSession),
+
+  /** Kill all B.R.E.A.C.H. tmux sessions */
+  tmuxKillAll: (): Promise<number> =>
+    ipcRenderer.invoke('tmux-kill-all'),
+
+  // =========================================================================
   // SESSION PERSISTENCE / RESTORE
   // =========================================================================
 

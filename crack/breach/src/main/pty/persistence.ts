@@ -8,7 +8,13 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as os from 'os';
+import * as zlib from 'zlib';
+import { promisify } from 'util';
 import { debug } from '../debug';
+
+/** Promisified gzip functions */
+const gzip = promisify(zlib.gzip);
+const gunzip = promisify(zlib.gunzip);
 import type {
   SessionManifest,
   PersistedSession,
@@ -59,10 +65,52 @@ export class SessionPersistence {
   }
 
   /**
-   * Get path to session file
+   * Get path to session metadata file
    */
   private getSessionPath(engagementId: string, sessionId: string): string {
     return path.join(this.basePath, engagementId, `${sessionId}.json`);
+  }
+
+  /**
+   * Get path to compressed output buffer file
+   */
+  private getOutputPath(engagementId: string, sessionId: string): string {
+    return path.join(this.basePath, engagementId, `${sessionId}.output.gz`);
+  }
+
+  /**
+   * Compress and save output buffer to file
+   */
+  private async saveCompressedOutput(
+    engagementId: string,
+    sessionId: string,
+    outputBuffer: string[]
+  ): Promise<string> {
+    const outputPath = this.getOutputPath(engagementId, sessionId);
+    const text = outputBuffer.join('\n');
+    const compressed = await gzip(Buffer.from(text, 'utf-8'));
+    await fs.writeFile(outputPath, compressed);
+
+    // Return relative path for storage in metadata
+    return `${sessionId}.output.gz`;
+  }
+
+  /**
+   * Load and decompress output buffer from file
+   */
+  private async loadCompressedOutput(
+    engagementId: string,
+    outputFile: string
+  ): Promise<string[]> {
+    try {
+      const outputPath = path.join(this.basePath, engagementId, outputFile);
+      const compressed = await fs.readFile(outputPath);
+      const decompressed = await gunzip(compressed);
+      return decompressed.toString('utf-8').split('\n');
+    } catch (error) {
+      debug.error('Failed to load compressed output', { outputFile, error });
+      return [];
+    }
   }
 
   /**
@@ -109,7 +157,7 @@ export class SessionPersistence {
    * Save all sessions from the given processes map
    */
   async saveAll(
-    processes: Map<string, { session: TerminalSession; outputBuffer: string[] }>
+    processes: Map<string, { session: TerminalSession; outputBuffer: string[]; tmuxSession?: string }>
   ): Promise<void> {
     if (processes.size === 0) {
       debug.pty('No sessions to persist');
@@ -128,7 +176,7 @@ export class SessionPersistence {
     const byEngagement = new Map<string, PersistedSession[]>();
 
     for (const [, proc] of processes) {
-      const { session, outputBuffer } = proc;
+      const { session, outputBuffer, tmuxSession } = proc;
       const engagementId = session.engagementId || 'no-engagement';
 
       const persisted: PersistedSession = {
@@ -152,6 +200,7 @@ export class SessionPersistence {
         lastActivityAt: session.lastActivityAt,
         savedAt: new Date().toISOString(),
         outputBuffer: outputBuffer,
+        tmuxSession: tmuxSession, // Phase 3: save tmux session name
       };
 
       if (!byEngagement.has(engagementId)) {
@@ -168,13 +217,31 @@ export class SessionPersistence {
 
       for (const session of sessions) {
         try {
+          const outputLineCount = session.outputBuffer.length;
+
+          // Save compressed output buffer to separate file
+          const outputFile = await this.saveCompressedOutput(
+            engagementId,
+            session.id,
+            session.outputBuffer
+          );
+
+          // Create metadata without inline output buffer (use compressed file)
+          const metadata: PersistedSession = {
+            ...session,
+            outputBuffer: [], // Don't store inline - use compressed file
+            outputBufferFile: outputFile,
+            outputLineCount: outputLineCount,
+          };
+
           const sessionPath = this.getSessionPath(engagementId, session.id);
-          await fs.writeFile(sessionPath, JSON.stringify(session, null, 2));
+          await fs.writeFile(sessionPath, JSON.stringify(metadata, null, 2));
           activeIds.push(session.id);
-          debug.pty('Persisted session', {
+          debug.pty('Persisted session (compressed)', {
             sessionId: session.id,
             engagementId,
-            outputLines: session.outputBuffer.length,
+            outputLines: outputLineCount,
+            outputFile,
           });
         } catch (error) {
           debug.error('Failed to persist session', { sessionId: session.id, error });
@@ -249,13 +316,15 @@ export class SessionPersistence {
       command: s.command,
       workingDir: s.workingDir,
       lastActivityAt: s.lastActivityAt,
-      outputLineCount: s.outputBuffer.length,
-      canReconnect: false, // Phase 3: will check tmux
+      // Phase 2+: use stored count, Phase 1 fallback: inline buffer length
+      outputLineCount: s.outputLineCount ?? s.outputBuffer.length,
+      canReconnect: !!s.tmuxSession, // Phase 3: true if tmux session exists
     }));
   }
 
   /**
    * Load a single persisted session with its output buffer
+   * Decompresses output from .gz file if using Phase 2+ format
    */
   async loadSession(
     engagementId: string,
@@ -264,7 +333,21 @@ export class SessionPersistence {
     try {
       const sessionPath = this.getSessionPath(engagementId, sessionId);
       const data = await fs.readFile(sessionPath, 'utf-8');
-      return JSON.parse(data) as PersistedSession;
+      const session = JSON.parse(data) as PersistedSession;
+
+      // Phase 2+: Load compressed output from separate file
+      if (session.outputBufferFile) {
+        session.outputBuffer = await this.loadCompressedOutput(
+          engagementId,
+          session.outputBufferFile
+        );
+        debug.pty('Loaded compressed output', {
+          sessionId,
+          lines: session.outputBuffer.length,
+        });
+      }
+
+      return session;
     } catch (error) {
       debug.error('Failed to load session', { sessionId, error });
       return null;
