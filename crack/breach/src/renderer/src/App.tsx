@@ -13,17 +13,20 @@ import {
   Group,
   Paper,
   Button,
+  Tooltip,
 } from '@mantine/core';
+import { IconRadar } from '@tabler/icons-react';
 import '@mantine/core/styles.css';
 import { TerminalTabs } from './components/terminal/TerminalTabs';
 import { TargetSidebar } from './components/layout/TargetSidebar';
 import { ContextPanel } from './components/context';
 import { EngagementSelector } from './components/header';
-import { EngagementManager, PrismScanModal, type PrismScanResults } from './components/modals';
+import { EngagementManager, PrismScanModal, RestoreSessionsModal, type PrismScanResults } from './components/modals';
 import { log, LogCategory } from '@shared/electron/debug-renderer';
 import type { TerminalSession } from '@shared/types/session';
 import type { Loot, PatternType } from '@shared/types/loot';
 import type { Engagement } from '@shared/types/engagement';
+import type { RestoreSessionInfo } from '@shared/types/persistence';
 
 type WorkspaceView = 'terminals' | 'topology';
 
@@ -46,8 +49,11 @@ function App() {
   const [scanModalOpen, setScanModalOpen] = useState(false);
   const [scanResults, setScanResults] = useState<PrismScanResults | null>(null);
   const [contextTab, setContextTab] = useState<string>('actions');
+  const [restoreModalOpen, setRestoreModalOpen] = useState(false);
+  const [persistedSessions, setPersistedSessions] = useState<RestoreSessionInfo[]>([]);
+  const [autoscanEnabled, setAutoscanEnabled] = useState(true);
 
-  // Check Neo4j connection on mount
+  // Check Neo4j connection and load autoscan state on mount
   useEffect(() => {
     log.ipc('Checking Neo4j connection...');
     window.electronAPI
@@ -61,13 +67,25 @@ function App() {
         setConnectionStatus({ connected: false, uri: 'Error' });
       });
 
+    // Load PRISM autoscan state
+    window.electronAPI
+      .prismGetAutoscan()
+      .then((enabled) => {
+        log.data('PRISM autoscan state loaded', { enabled });
+        setAutoscanEnabled(enabled);
+      })
+      .catch((err) => log.error(LogCategory.IPC, 'Failed to load autoscan state', err));
+
     // Load active engagement or auto-select first if none active
     window.electronAPI
       .getActiveEngagement()
       .then(async (engagement) => {
+        let activeEng: Engagement | null = null;
+
         if (engagement) {
           log.data('Active engagement loaded', { name: (engagement as Engagement).name });
-          setActiveEngagement(engagement as Engagement);
+          activeEng = engagement as Engagement;
+          setActiveEngagement(activeEng);
         } else {
           // No active engagement - auto-select first if available
           log.data('No active engagement, checking for available engagements');
@@ -75,7 +93,22 @@ function App() {
           if (engagements && engagements.length > 0) {
             log.action('Auto-selecting first engagement', { name: engagements[0].name });
             await window.electronAPI.engagementActivate(engagements[0].id);
-            setActiveEngagement(engagements[0] as Engagement);
+            activeEng = engagements[0] as Engagement;
+            setActiveEngagement(activeEng);
+          }
+        }
+
+        // Check for persisted sessions after engagement is loaded
+        if (activeEng) {
+          try {
+            const restoreInfo = await window.electronAPI.sessionGetRestoreInfo(activeEng.id);
+            if (restoreInfo && restoreInfo.length > 0) {
+              log.data('Found persisted sessions', { count: restoreInfo.length });
+              setPersistedSessions(restoreInfo);
+              setRestoreModalOpen(true);
+            }
+          } catch (err) {
+            log.error(LogCategory.DATA, 'Failed to check persisted sessions', err);
           }
         }
       })
@@ -88,6 +121,46 @@ function App() {
     setActiveEngagement(engagement);
     // Future: reload targets, credentials, loot for new engagement
   }, []);
+
+  // Handle PRISM autoscan toggle
+  const handleAutoscanToggle = useCallback(async (enabled: boolean) => {
+    log.action('PRISM autoscan toggled', { enabled });
+    try {
+      await window.electronAPI.prismSetAutoscan(enabled);
+      setAutoscanEnabled(enabled);
+    } catch (error) {
+      log.error(LogCategory.IPC, 'Failed to toggle autoscan', error);
+    }
+  }, []);
+
+  // Handle restoring persisted sessions
+  const handleRestoreSessions = useCallback(async (sessionIds: string[]) => {
+    if (!activeEngagement) return;
+
+    log.action('Restoring sessions', { count: sessionIds.length });
+
+    try {
+      const restored = await window.electronAPI.sessionRestore(sessionIds, activeEngagement.id);
+      log.data('Sessions restored', { count: restored.length });
+      // Sessions will be added via session-created event
+    } catch (error) {
+      log.error(LogCategory.IPC, 'Failed to restore sessions', error);
+    }
+  }, [activeEngagement]);
+
+  // Handle starting fresh (clearing persisted sessions)
+  const handleStartFresh = useCallback(async () => {
+    if (!activeEngagement) return;
+
+    log.action('Starting fresh, clearing persisted sessions');
+
+    try {
+      await window.electronAPI.sessionClearPersisted(activeEngagement.id);
+      setPersistedSessions([]);
+    } catch (error) {
+      log.error(LogCategory.IPC, 'Failed to clear persisted sessions', error);
+    }
+  }, [activeEngagement]);
 
   // Listen for session events - use window to survive HMR
   useEffect(() => {
@@ -216,6 +289,35 @@ function App() {
       setScanModalOpen(true);
     } catch (error) {
       log.error(LogCategory.IPC, 'PRISM scan failed', error);
+    }
+  }, [activeEngagement, selectedTarget?.id]);
+
+  // Handle PRISM scan of selected text from terminal
+  const handlePrismScanSelection = useCallback(async (text: string, sessionId: string) => {
+    if (!activeEngagement) {
+      log.error(LogCategory.ACTION, 'Cannot scan selection: no active engagement');
+      return;
+    }
+
+    log.action('PRISM scan selection', { textLength: text.length, sessionId, engagementId: activeEngagement.id });
+
+    try {
+      const results = await window.electronAPI.prismScanText(
+        text,
+        activeEngagement.id,
+        selectedTarget?.id,
+        sessionId
+      );
+
+      log.data('PRISM scan selection completed', {
+        credentials: results.credentials.length,
+        findings: results.findings.length,
+      });
+
+      setScanResults(results);
+      setScanModalOpen(true);
+    } catch (error) {
+      log.error(LogCategory.IPC, 'PRISM scan selection failed', error);
     }
   }, [activeEngagement, selectedTarget?.id]);
 
@@ -367,6 +469,22 @@ function App() {
                 </Button>
               </Group>
 
+              {/* PRISM Autoscan Toggle */}
+              <Tooltip
+                label={autoscanEnabled ? 'Click to disable PRISM autoscan' : 'Click to enable PRISM autoscan'}
+                position="bottom"
+              >
+                <Badge
+                  color={autoscanEnabled ? 'cyan' : 'gray'}
+                  variant={autoscanEnabled ? 'filled' : 'outline'}
+                  leftSection={<IconRadar size={12} />}
+                  style={{ cursor: 'pointer', userSelect: 'none' }}
+                  onClick={() => handleAutoscanToggle(!autoscanEnabled)}
+                >
+                  {autoscanEnabled ? 'PRISM' : 'PRISM Off'}
+                </Badge>
+              </Tooltip>
+
               <Badge
                 color={connectionStatus.connected ? 'teal' : 'red'}
                 variant="light"
@@ -414,6 +532,7 @@ function App() {
                   onSessionBackground={handleSessionBackground}
                   onSessionScan={handlePrismScan}
                   onNewSession={handleNewSession}
+                  onPrismScanSelection={handlePrismScanSelection}
                 />
               ) : (
                 <Paper
@@ -473,6 +592,16 @@ function App() {
           setContextPanelCollapsed(false);
           setScanModalOpen(false);
         }}
+      />
+
+      {/* Session Restore Modal */}
+      <RestoreSessionsModal
+        opened={restoreModalOpen}
+        onClose={() => setRestoreModalOpen(false)}
+        sessions={persistedSessions}
+        engagementName={activeEngagement?.name}
+        onRestore={handleRestoreSessions}
+        onStartFresh={handleStartFresh}
       />
     </MantineProvider>
   );

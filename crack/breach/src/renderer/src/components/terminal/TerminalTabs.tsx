@@ -37,6 +37,8 @@ interface TerminalTabsProps {
   onSessionBackground: (sessionId: string) => void;
   onSessionScan?: (sessionId: string) => void;
   onNewSession: () => void;
+  /** Callback for PRISM scanning selected text */
+  onPrismScanSelection?: (text: string, sessionId: string) => void;
 }
 
 /** Icon map for session types */
@@ -69,6 +71,7 @@ export function TerminalTabs({
   onSessionBackground,
   onSessionScan,
   onNewSession,
+  onPrismScanSelection,
 }: TerminalTabsProps) {
   // Memoize session list to avoid unnecessary re-renders
   const sortedSessions = useMemo(() => {
@@ -239,6 +242,7 @@ export function TerminalTabs({
             <TerminalPane
               sessionId={session.id}
               active={session.id === activeSessionId}
+              onPrismScan={onPrismScanSelection ? (text) => onPrismScanSelection(text, session.id) : undefined}
             />
           </Tabs.Panel>
         ))}

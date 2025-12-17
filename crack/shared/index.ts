@@ -117,3 +117,14 @@ export {
   getRecommendations,
   getPhaseLabel,
 } from './recommendation/engine';
+
+// Persistence types
+export type {
+  SessionManifest,
+  PersistedSession,
+  RestoreSessionInfo,
+  RestoreRequest,
+  RestoreResult,
+} from './types/persistence';
+
+export { PERSISTENCE_VERSION } from './types/persistence';

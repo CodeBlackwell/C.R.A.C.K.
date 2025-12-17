@@ -31,6 +31,10 @@ import type {
   UserEnumerationSignal,
   CrackedHashSignal,
 } from '@shared/types/signal';
+import type {
+  SessionManifest,
+  RestoreSessionInfo,
+} from '@shared/types/persistence';
 
 /** Callback type for session events */
 type SessionOutputCallback = (event: IpcRendererEvent, data: { sessionId: string; data: string }) => void;
@@ -90,6 +94,45 @@ const electronAPI = {
     findings: Finding[];
   }> =>
     ipcRenderer.invoke('session-prism-scan', sessionId, engagementId, targetId),
+
+  /** PRISM scan arbitrary text (from terminal selection) */
+  prismScanText: (text: string, engagementId: string, targetId?: string, sessionId?: string): Promise<{
+    credentials: Credential[];
+    findings: Finding[];
+  }> =>
+    ipcRenderer.invoke('prism-scan-text', text, engagementId, targetId, sessionId),
+
+  /** Set PRISM autoscan enabled state */
+  prismSetAutoscan: (enabled: boolean): Promise<boolean> =>
+    ipcRenderer.invoke('prism-set-autoscan', enabled),
+
+  /** Get PRISM autoscan enabled state */
+  prismGetAutoscan: (): Promise<boolean> =>
+    ipcRenderer.invoke('prism-get-autoscan'),
+
+  /** Get PRISM parser statistics */
+  prismGetStats: (): Promise<{ enabled: boolean; sessions: number; dedup: { credentials: number; findings: number } }> =>
+    ipcRenderer.invoke('prism-get-stats'),
+
+  // =========================================================================
+  // SESSION PERSISTENCE / RESTORE
+  // =========================================================================
+
+  /** Get session manifest (list of engagements with persisted sessions) */
+  sessionGetManifest: (): Promise<SessionManifest | null> =>
+    ipcRenderer.invoke('session-get-manifest'),
+
+  /** Get restore info for an engagement (lightweight, no output buffers) */
+  sessionGetRestoreInfo: (engagementId: string): Promise<RestoreSessionInfo[]> =>
+    ipcRenderer.invoke('session-get-restore-info', engagementId),
+
+  /** Restore specific sessions */
+  sessionRestore: (sessionIds: string[], engagementId: string): Promise<TerminalSession[]> =>
+    ipcRenderer.invoke('session-restore', sessionIds, engagementId),
+
+  /** Clear persisted sessions for an engagement */
+  sessionClearPersisted: (engagementId: string): Promise<boolean> =>
+    ipcRenderer.invoke('session-clear-persisted', engagementId),
 
   // Session event listeners
   onSessionOutput: (callback: SessionOutputCallback) => {

@@ -18,6 +18,7 @@ import { registerFindingHandlers } from './ipc/findings';
 import { registerSignalHandlers } from './ipc/signals';
 import { registerModulesHandlers } from './ipc/modules';
 import { getPotfileWatcher } from './parser';
+import { ptyManager } from './pty/manager';
 
 debug.section('B.R.E.A.C.H. STARTUP');
 
@@ -99,9 +100,31 @@ app.on('window-all-closed', () => {
   }
 });
 
-app.on('before-quit', () => {
-  debug.startup('Application quitting');
-  // Cleanup will be handled by PtyManager
+// Track if we're already quitting (to prevent double-save)
+let isQuitting = false;
+
+app.on('before-quit', async (event) => {
+  if (isQuitting) return;
+
+  debug.startup('Application quitting - persisting sessions...');
+
+  // Prevent default quit to allow async persistence
+  event.preventDefault();
+  isQuitting = true;
+
+  try {
+    // Persist all active sessions before quitting
+    await ptyManager.persistAll();
+    debug.startup('Sessions persisted successfully');
+  } catch (error) {
+    debug.error('Failed to persist sessions', error);
+  }
+
+  // Clean up PTY processes
+  await ptyManager.cleanup();
+
+  // Now actually quit
+  app.exit();
 });
 
 debug.startup('Main process initialized');

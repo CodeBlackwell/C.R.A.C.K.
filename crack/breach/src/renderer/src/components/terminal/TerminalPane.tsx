@@ -5,16 +5,19 @@
  * Uses fetch-then-listen pattern: fetch buffered output first, then register for live updates.
  */
 
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback, useState } from 'react';
 import { Terminal, IDisposable } from 'xterm';
 import { FitAddon } from 'xterm-addon-fit';
 import { WebLinksAddon } from 'xterm-addon-web-links';
 import { log, LogCategory } from '@shared/electron/debug-renderer';
+import { TerminalContextMenu } from './TerminalContextMenu';
 import 'xterm/css/xterm.css';
 
 interface TerminalPaneProps {
   sessionId: string;
   active: boolean;
+  /** Callback when user requests PRISM scan of selected text */
+  onPrismScan?: (text: string) => void;
 }
 
 /** Terminal theme matching B.R.E.A.C.H. dark UI */
@@ -58,10 +61,21 @@ const terminalInstances: Map<string, TerminalInstance> =
   (window as any)[TERMINAL_INSTANCES_KEY] ||
   ((window as any)[TERMINAL_INSTANCES_KEY] = new Map());
 
-export function TerminalPane({ sessionId, active }: TerminalPaneProps) {
+export function TerminalPane({ sessionId, active, onPrismScan }: TerminalPaneProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const terminalRef = useRef<Terminal | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
+
+  // Context menu state
+  const [contextMenu, setContextMenu] = useState<{
+    opened: boolean;
+    position: { x: number; y: number };
+    selection: string;
+  }>({
+    opened: false,
+    position: { x: 0, y: 0 },
+    selection: '',
+  });
 
   // Initialize terminal - fetch-then-listen pattern
   useEffect(() => {
@@ -152,6 +166,16 @@ export function TerminalPane({ sessionId, active }: TerminalPaneProps) {
         }).catch((err) => {
           log.error(LogCategory.UI, 'Failed to paste', err);
         });
+        return false; // Prevent default handling
+      }
+
+      // CTRL+SHIFT+P - PRISM scan selection
+      if (event.ctrlKey && event.shiftKey && event.code === 'KeyP') {
+        const selection = terminal.getSelection();
+        if (selection && onPrismScan) {
+          log.action('PRISM scan triggered via keyboard', { length: selection.length });
+          onPrismScan(selection);
+        }
         return false; // Prevent default handling
       }
 
@@ -297,15 +321,86 @@ export function TerminalPane({ sessionId, active }: TerminalPaneProps) {
     }
   }, [active]);
 
+  // Context menu handlers
+  const handleContextMenu = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      const selection = terminalRef.current?.getSelection() || '';
+      setContextMenu({
+        opened: true,
+        position: { x: e.clientX, y: e.clientY },
+        selection,
+      });
+    },
+    []
+  );
+
+  const closeContextMenu = useCallback(() => {
+    setContextMenu((prev) => ({ ...prev, opened: false }));
+  }, []);
+
+  const handleCopy = useCallback(() => {
+    const selection = terminalRef.current?.getSelection();
+    if (selection) {
+      navigator.clipboard.writeText(selection).then(() => {
+        log.action('Copied to clipboard via context menu', { length: selection.length });
+      });
+    }
+  }, []);
+
+  const handlePaste = useCallback(() => {
+    navigator.clipboard.readText().then((text) => {
+      if (text) {
+        window.electronAPI.sessionWrite(sessionId, text);
+        log.action('Pasted from clipboard via context menu', { length: text.length });
+      }
+    });
+  }, [sessionId]);
+
+  const handleSelectAll = useCallback(() => {
+    terminalRef.current?.selectAll();
+  }, []);
+
+  const handlePrismScan = useCallback(() => {
+    if (contextMenu.selection && onPrismScan) {
+      log.action('PRISM scan triggered via context menu', { length: contextMenu.selection.length });
+      onPrismScan(contextMenu.selection);
+    }
+  }, [contextMenu.selection, onPrismScan]);
+
+  // Close context menu when clicking elsewhere
+  useEffect(() => {
+    const handleClick = () => {
+      if (contextMenu.opened) {
+        closeContextMenu();
+      }
+    };
+    window.addEventListener('click', handleClick);
+    return () => window.removeEventListener('click', handleClick);
+  }, [contextMenu.opened, closeContextMenu]);
+
   return (
-    <div
-      ref={containerRef}
-      style={{
-        width: '100%',
-        height: '100%',
-        display: active ? 'block' : 'none',
-        background: TERMINAL_THEME.background,
-      }}
-    />
+    <>
+      <div
+        ref={containerRef}
+        onContextMenu={handleContextMenu}
+        style={{
+          width: '100%',
+          height: '100%',
+          display: active ? 'block' : 'none',
+          background: TERMINAL_THEME.background,
+        }}
+      />
+      <TerminalContextMenu
+        opened={contextMenu.opened}
+        position={contextMenu.position}
+        selection={contextMenu.selection}
+        onClose={closeContextMenu}
+        onCopy={handleCopy}
+        onPaste={handlePaste}
+        onSelectAll={handleSelectAll}
+        onPrismScan={handlePrismScan}
+      />
+    </>
   );
 }

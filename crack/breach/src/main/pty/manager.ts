@@ -10,12 +10,14 @@ import { BrowserWindow } from 'electron';
 import { debug } from '../debug';
 import { getCredentialParser } from '../parser';
 import { getNetworkParser } from '../parser/network-parser';
+import { sessionPersistence } from './persistence';
 import type {
   TerminalSession,
   SessionType,
   CreateSessionOptions,
 } from '@shared/types/session';
 import type { CommandProvenance } from '@shared/types/signal';
+import type { PersistedSession, RestoreSessionInfo } from '@shared/types/persistence';
 
 /**
  * Capture the launch directory at module load time.
@@ -383,6 +385,89 @@ class PtyManager {
 
     this.processes.clear();
     debug.pty('All sessions cleaned up');
+  }
+
+  /**
+   * Persist all sessions to disk before app quit
+   */
+  async persistAll(): Promise<void> {
+    debug.pty('Persisting all sessions', { count: this.processes.size });
+
+    if (this.processes.size === 0) {
+      debug.pty('No sessions to persist');
+      return;
+    }
+
+    await sessionPersistence.saveAll(this.processes);
+  }
+
+  /**
+   * Get restore info for UI (lightweight, no output buffers)
+   */
+  async getRestoreInfo(engagementId: string): Promise<RestoreSessionInfo[]> {
+    return sessionPersistence.getRestoreInfo(engagementId);
+  }
+
+  /**
+   * Restore sessions from disk
+   * Creates new shell sessions with historical output as scroll-back
+   */
+  async restoreSessions(sessionIds: string[], engagementId: string): Promise<TerminalSession[]> {
+    debug.pty('Restoring sessions', { count: sessionIds.length, engagementId });
+
+    const restored: TerminalSession[] = [];
+
+    for (const sessionId of sessionIds) {
+      try {
+        const persisted = await sessionPersistence.loadSession(engagementId, sessionId);
+        if (!persisted) {
+          debug.error('Could not load persisted session', { sessionId });
+          continue;
+        }
+
+        // Create a new shell session in the same working directory
+        const session = await this.createSession('bash', [], {
+          type: persisted.type,
+          label: persisted.label ? `${persisted.label} (restored)` : 'restored',
+          workingDir: persisted.workingDir,
+          engagementId: persisted.engagementId,
+          targetId: persisted.targetId,
+          interactive: true,
+        });
+
+        // Prepend historical output to the new session's buffer
+        const proc = this.processes.get(session.id);
+        if (proc && persisted.outputBuffer.length > 0) {
+          // Add a separator and then the historical output
+          const separator = '\r\n\x1b[90m--- Restored session history ---\x1b[0m\r\n';
+          const historicalOutput = persisted.outputBuffer.join('\n');
+
+          // Write to the terminal (renderer will receive this)
+          this.sendToRenderer('session-output', {
+            sessionId: session.id,
+            data: separator + historicalOutput + '\r\n\x1b[90m--- End of history ---\x1b[0m\r\n\r\n',
+          });
+
+          // Also add to buffer
+          proc.outputBuffer.push(...persisted.outputBuffer);
+        }
+
+        restored.push(session);
+
+        // Delete the persisted session file after successful restore
+        await sessionPersistence.deleteSession(engagementId, sessionId);
+
+        debug.pty('Restored session', {
+          originalId: sessionId,
+          newId: session.id,
+          outputLines: persisted.outputBuffer.length,
+        });
+      } catch (error) {
+        debug.error('Failed to restore session', { sessionId, error });
+      }
+    }
+
+    return restored;
   }
 
   // Private methods
