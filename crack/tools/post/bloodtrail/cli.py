@@ -166,6 +166,19 @@ Supported Edge Types:
         help="Set DC IP for DNS resolution and command auto-population. Can be used standalone (bt --dc-ip 192.168.50.70) or during import.",
     )
 
+    # Property import options (Kerberoasting, AS-REP, delegation detection)
+    prop_group = parser.add_mutually_exclusive_group()
+    prop_group.add_argument(
+        "--no-properties",
+        action="store_true",
+        help="Skip property import (edges only). Use if you already have nodes in Neo4j.",
+    )
+    prop_group.add_argument(
+        "--properties-only",
+        action="store_true",
+        help="Import properties without edges. Fast mode for quick-wins detection.",
+    )
+
     # IP refresh mode options
     ip_refresh_group = parser.add_mutually_exclusive_group()
     ip_refresh_group.add_argument(
@@ -2584,6 +2597,8 @@ def main():
         verbose=args.verbose,
         dc_ip=getattr(args, 'dc_ip', None),
         clean_ips=not getattr(args, 'update', False),  # True if --clean (default), False if --update
+        import_properties=not getattr(args, 'no_properties', False),  # Default: import properties
+        properties_only=getattr(args, 'properties_only', False),  # Default: full import
     )
 
     # Check if we should run the report

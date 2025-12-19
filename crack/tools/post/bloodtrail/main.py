@@ -24,6 +24,7 @@ from .extractors import (
 from .data_source import DataSource, create_data_source
 from .ip_resolver import IPResolver
 from .pwned_tracker import PwnedTracker
+from .property_importer import PropertyImporter, PropertyImportStats
 
 
 class Colors:
@@ -457,7 +458,9 @@ class BHEnhancer:
         dry_run: bool = False,
         verbose: bool = False,
         dc_ip: Optional[str] = None,
-        clean_ips: bool = True
+        clean_ips: bool = True,
+        import_properties: bool = True,
+        properties_only: bool = False
     ) -> ImportStats:
         """
         Run the edge enhancement pipeline.
@@ -470,6 +473,8 @@ class BHEnhancer:
             dc_ip: Optional DC IP for DNS resolution and command placeholder population
             clean_ips: If True, clear all IPs before regenerating (default, --clean mode).
                        If False, incremental update (--update mode)
+            import_properties: If True, import node properties (hasspn, etc.) before edges
+            properties_only: If True, only import properties (skip edge extraction)
 
         Returns:
             ImportStats with results
@@ -481,43 +486,46 @@ class BHEnhancer:
         if not self.initialize():
             return stats
 
-        # Determine edge filter
-        if edge_filter:
-            filter_set = edge_filter
-        elif preset == "attack-paths":
-            filter_set = ATTACK_PATH_EDGES
-            print(f"{C.CYAN}[*]{C.RESET} Using {C.BOLD}attack-paths{C.RESET} preset ({C.CYAN}{len(filter_set)}{C.RESET} edge types)")
-        else:
-            filter_set = None  # All edges
+        # Properties-only mode: skip edge extraction
+        result = None
+        if not properties_only:
+            # Determine edge filter
+            if edge_filter:
+                filter_set = edge_filter
+            elif preset == "attack-paths":
+                filter_set = ATTACK_PATH_EDGES
+                print(f"{C.CYAN}[*]{C.RESET} Using {C.BOLD}attack-paths{C.RESET} preset ({C.CYAN}{len(filter_set)}{C.RESET} edge types)")
+            else:
+                filter_set = None  # All edges
 
-        # Extract edges
-        source_label = "ZIP" if self.data_source.source_type == "zip" else "directory"
-        print(f"{C.CYAN}[*]{C.RESET} Extracting edges from {source_label} {C.BOLD}{self.bh_data_dir}{C.RESET}...")
-        result = self.registry.extract_from_source(
-            self.data_source,
-            edge_filter=filter_set
-        )
+            # Extract edges
+            source_label = "ZIP" if self.data_source.source_type == "zip" else "directory"
+            print(f"{C.CYAN}[*]{C.RESET} Extracting edges from {source_label} {C.BOLD}{self.bh_data_dir}{C.RESET}...")
+            result = self.registry.extract_from_source(
+                self.data_source,
+                edge_filter=filter_set
+            )
 
-        stats.edges_extracted = result.edge_count
-        if result.errors:
-            stats.errors.extend(result.errors)
+            stats.edges_extracted = result.edge_count
+            if result.errors:
+                stats.errors.extend(result.errors)
 
-        # Summary by edge type (always show, more verbose)
-        edge_counts: Dict[str, int] = {}
-        for edge in result.edges:
-            edge_counts[edge.edge_type] = edge_counts.get(edge.edge_type, 0) + 1
+            # Summary by edge type (always show, more verbose)
+            edge_counts: Dict[str, int] = {}
+            for edge in result.edges:
+                edge_counts[edge.edge_type] = edge_counts.get(edge.edge_type, 0) + 1
 
-        print(f"{C.GREEN}[+]{C.RESET} Extracted {C.BOLD}{C.GREEN}{result.edge_count}{C.RESET} edges:")
-        for etype, count in sorted(edge_counts.items(), key=lambda x: -x[1]):
-            print(f"    {C.CYAN}•{C.RESET} {etype}: {C.BOLD}{count}{C.RESET}")
+            print(f"{C.GREEN}[+]{C.RESET} Extracted {C.BOLD}{C.GREEN}{result.edge_count}{C.RESET} edges:")
+            for etype, count in sorted(edge_counts.items(), key=lambda x: -x[1]):
+                print(f"    {C.CYAN}•{C.RESET} {etype}: {C.BOLD}{count}{C.RESET}")
 
-        if result.skipped:
-            print(f"{C.YELLOW}[*]{C.RESET} Skipped {C.YELLOW}{result.skipped}{C.RESET} edges (filtered out)")
+            if result.skipped:
+                print(f"{C.YELLOW}[*]{C.RESET} Skipped {C.YELLOW}{result.skipped}{C.RESET} edges (filtered out)")
 
-        # Dry run - stop here
-        if dry_run:
-            print(f"{C.GREEN}[*]{C.RESET} Dry run complete. Would import {C.BOLD}{result.edge_count}{C.RESET} edges.")
-            return stats
+            # Dry run - stop here
+            if dry_run:
+                print(f"{C.GREEN}[*]{C.RESET} Dry run complete. Would import {C.BOLD}{result.edge_count}{C.RESET} edges.")
+                return stats
 
         # Connect to Neo4j
         print(f"{C.CYAN}[*]{C.RESET} Connecting to Neo4j at {C.BOLD}{self.config.uri}{C.RESET}...")
@@ -526,31 +534,44 @@ class BHEnhancer:
         print(f"{C.GREEN}[+]{C.RESET} Connected to Neo4j")
 
         try:
-            # Import edges
-            print(f"{C.CYAN}[*]{C.RESET} Importing edges to Neo4j...")
-            executor = BatchExecutor(self.driver, self.config.batch_size)
-            import_stats = executor.create_edges(result.edges, verbose=verbose)
+            # Import node properties (enables quick-wins queries like Kerberoasting)
+            if import_properties:
+                print(f"\n{C.CYAN}[*]{C.RESET} Importing node properties...")
+                prop_importer = PropertyImporter(self.driver, self.config.batch_size)
+                prop_stats = prop_importer.import_from_source(self.data_source, verbose=verbose)
+                prop_stats.print_summary()
 
-            # Merge stats
-            stats.edges_imported = import_stats.edges_imported
-            stats.edges_already_existed = import_stats.edges_already_existed
-            stats.edges_failed = import_stats.edges_failed
-            stats.edges_deduplicated = import_stats.edges_deduplicated
-            stats.batches_processed = import_stats.batches_processed
-            stats.duration_seconds = import_stats.duration_seconds
-            stats.errors.extend(import_stats.errors)
+                # If properties_only mode, skip edge import
+                if properties_only:
+                    print(f"{C.GREEN}[+]{C.RESET} Properties-only mode complete.")
+                    return stats
 
-            # Use colored summary
-            stats.print_colored_summary()
+            # Import edges (only if we have edges to import)
+            if result is not None and result.edges:
+                print(f"{C.CYAN}[*]{C.RESET} Importing edges to Neo4j...")
+                executor = BatchExecutor(self.driver, self.config.batch_size)
+                import_stats = executor.create_edges(result.edges, verbose=verbose)
 
-            if import_stats.errors and verbose:
-                print(f"{C.RED}[!]{C.RESET} Errors encountered:")
-                for err in import_stats.errors[:5]:
-                    print(f"    {C.RED}•{C.RESET} {err}")
+                # Merge stats
+                stats.edges_imported = import_stats.edges_imported
+                stats.edges_already_existed = import_stats.edges_already_existed
+                stats.edges_failed = import_stats.edges_failed
+                stats.edges_deduplicated = import_stats.edges_deduplicated
+                stats.batches_processed = import_stats.batches_processed
+                stats.duration_seconds = import_stats.duration_seconds
+                stats.errors.extend(import_stats.errors)
+
+                # Use colored summary
+                stats.print_colored_summary()
+
+                if import_stats.errors and verbose:
+                    print(f"{C.RED}[!]{C.RESET} Errors encountered:")
+                    for err in import_stats.errors[:5]:
+                        print(f"    {C.RED}•{C.RESET} {err}")
 
             # NEW: IP Address Enrichment
             # Only if edges were successfully imported
-            if import_stats.edges_imported > 0 or import_stats.edges_already_existed > 0:
+            if result is not None and (stats.edges_imported > 0 or stats.edges_already_existed > 0):
                 print()
                 print(f"{C.CYAN}[*]{C.RESET} Resolving IP addresses for Computer nodes...")
 
