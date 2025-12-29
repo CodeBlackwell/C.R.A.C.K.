@@ -1,0 +1,81 @@
+# CRACK - Comprehensive Recon & Attack Creation Kit
+
+# Default - show available commands
+default:
+    @just --list
+
+# === Database Recipes ===
+
+# Full import pipeline: JSON -> CSV -> Neo4j with health check
+db-import:
+    python3 db/neo4j-migration/scripts/migrate.py --check
+
+# Transform JSON to CSV only (no Neo4j import)
+db-transform:
+    python3 db/neo4j-migration/scripts/migrate.py --transform-only
+
+# Validate all command definitions against schema
+db-validate:
+    python3 db/neo4j-migration/scripts/validation/validate_all_commands.py
+
+# Show JSON command database statistics
+db-stats:
+    python3 db/neo4j-migration/scripts/validation/json_stats.py
+
+# Show Neo4j database statistics
+db-neo4j-stats:
+    python3 db/neo4j-migration/scripts/validation/neo4j_stats.py
+
+# Quick Neo4j connectivity health check
+db-health:
+    python3 db/neo4j-migration/scripts/health_check.py
+
+# === Testing Recipes ===
+
+# Run all tests (excluding reference/engagement which have known issues)
+test:
+    python -m pytest tests/ --ignore=tests/reference --ignore=tests/tools/engagement -q
+
+# Run all tests with verbose output
+test-v:
+    python -m pytest tests/ --ignore=tests/reference --ignore=tests/tools/engagement -v
+
+# Run tests with coverage report
+test-cov:
+    python -m pytest tests/ --ignore=tests/reference --ignore=tests/tools/engagement --cov=tools --cov=core --cov=reference --cov-report=term-missing -q
+
+# Run session tests only
+test-sessions:
+    python -m pytest tests/tools/post/sessions/ -q
+
+# Run BloodTrail tests only
+test-bloodtrail:
+    python -m pytest tests/tools/post/bloodtrail/ -q
+
+# Run recon tests only
+test-recon:
+    python -m pytest tests/tools/recon/ -q
+
+# Run core tests only
+test-core:
+    python -m pytest tests/core/ -q
+
+# Run a specific test file
+test-file FILE:
+    python -m pytest {{FILE}} -v --tb=short
+
+# Run tests matching a pattern
+test-k PATTERN:
+    python -m pytest tests/ --ignore=tests/reference --ignore=tests/tools/engagement -k "{{PATTERN}}" -v
+
+# Run failed tests from last run
+test-failed:
+    python -m pytest tests/ --ignore=tests/reference --ignore=tests/tools/engagement --lf -v
+
+# Quick smoke test (fast tests only, stop on first failure)
+test-quick:
+    python -m pytest tests/ --ignore=tests/reference --ignore=tests/tools/engagement -x -q --timeout=10
+
+# Show test statistics without running
+test-collect:
+    python -m pytest tests/ --ignore=tests/reference --ignore=tests/tools/engagement --collect-only -q | tail -5
