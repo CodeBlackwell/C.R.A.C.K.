@@ -1,0 +1,162 @@
+sudo nmap -A 10.10.11.95 -vvv -T4                         
+Starting Nmap 7.95 ( https://nmap.org ) at 2025-12-23 17:07 HST
+NSE: Loaded 157 scripts for scanning.
+NSE: Script Pre-scanning.
+NSE: Starting runlevel 1 (of 3) scan.
+Initiating NSE at 17:07
+Completed NSE at 17:07, 0.00s elapsed
+NSE: Starting runlevel 2 (of 3) scan.
+Initiating NSE at 17:07
+Completed NSE at 17:07, 0.00s elapsed
+NSE: Starting runlevel 3 (of 3) scan.
+Initiating NSE at 17:07
+Completed NSE at 17:07, 0.00s elapsed
+Initiating Ping Scan at 17:07
+Scanning 10.10.11.95 [4 ports]
+Completed Ping Scan at 17:07, 0.23s elapsed (1 total hosts)
+Initiating Parallel DNS resolution of 1 host. at 17:07
+Completed Parallel DNS resolution of 1 host. at 17:07, 0.15s elapsed
+DNS resolution of 1 IPs took 0.15s. Mode: Async [#: 2, OK: 0, NX: 1, DR: 0, SF: 0, TR: 1, CN: 0]
+Initiating SYN Stealth Scan at 17:07
+Scanning 10.10.11.95 [1000 ports]
+Discovered open port 80/tcp on 10.10.11.95
+Discovered open port 5985/tcp on 10.10.11.95
+Discovered open port 1433/tcp on 10.10.11.95
+Discovered open port 1433/tcp on 10.10.11.95
+Completed SYN Stealth Scan at 17:08, 49.77s elapsed (1000 total ports)
+Initiating Service scan at 17:08
+Scanning 3 services on 10.10.11.95
+Completed Service scan at 17:08, 8.11s elapsed (3 services on 1 host)
+Initiating OS detection (try #1) against 10.10.11.95
+Retrying OS detection (try #2) against 10.10.11.95
+Initiating Traceroute at 17:08
+Completed Traceroute at 17:08, 0.53s elapsed
+Initiating Parallel DNS resolution of 2 hosts. at 17:08
+Completed Parallel DNS resolution of 2 hosts. at 17:08, 0.00s elapsed
+DNS resolution of 2 IPs took 0.00s. Mode: Async [#: 2, OK: 0, NX: 2, DR: 0, SF: 0, TR: 2, CN: 0]
+NSE: Script scanning 10.10.11.95.
+NSE: Starting runlevel 1 (of 3) scan.
+Initiating NSE at 17:08
+Completed NSE at 17:08, 11.76s elapsed
+NSE: Starting runlevel 2 (of 3) scan.
+Initiating NSE at 17:08
+Completed NSE at 17:09, 4.35s elapsed
+NSE: Starting runlevel 3 (of 3) scan.
+Initiating NSE at 17:09
+Completed NSE at 17:09, 0.00s elapsed
+Nmap scan report for 10.10.11.95
+Host is up, received echo-reply ttl 127 (0.54s latency).
+Scanned at 2025-12-23 17:07:34 HST for 88s
+Not shown: 997 filtered tcp ports (no-response)
+PORT     STATE SERVICE  REASON          VERSION
+80/tcp   open  http     syn-ack ttl 127 Microsoft IIS httpd 10.0
+|_http-title: Did not follow redirect to http://eighteen.htb/
+| http-methods: 
+|_  Supported Methods: GET HEAD POST OPTIONS
+|_http-server-header: Microsoft-IIS/10.0
+1433/tcp open  ms-sql-s syn-ack ttl 127 Microsoft SQL Server 2022 16.00.1000.00; RTM
+| ms-sql-info: 
+|   10.10.11.95:1433: 
+|     Version: 
+|       name: Microsoft SQL Server 2022 RTM
+|       number: 16.00.1000.00
+|       Product: Microsoft SQL Server 2022
+|       Service pack level: RTM
+|       Post-SP patches applied: false
+|_    TCP port: 1433
+|_ssl-date: 2025-12-24T10:08:57+00:00; +6h59m55s from scanner time.
+| ms-sql-ntlm-info: 
+|   10.10.11.95:1433: 
+|     Target_Name: EIGHTEEN
+|     NetBIOS_Domain_Name: EIGHTEEN
+|     NetBIOS_Computer_Name: DC01
+|     DNS_Domain_Name: eighteen.htb
+|     DNS_Computer_Name: DC01.eighteen.htb
+|     DNS_Tree_Name: eighteen.htb
+|_    Product_Version: 10.0.26100
+| ssl-cert: Subject: commonName=SSL_Self_Signed_Fallback
+| Issuer: commonName=SSL_Self_Signed_Fallback
+| Public Key type: rsa
+| Public Key bits: 3072
+| Signature Algorithm: sha256WithRSAEncryption
+| Not valid before: 2025-12-24T09:46:30
+| Not valid after:  2055-12-24T09:46:30
+| MD5:   dd23:a22c:5c9d:6f28:cc26:457b:6d36:429c
+| SHA-1: 6f5f:a12e:0bc5:1608:4bcf:dc37:40cf:fb84:ddc0:2489
+| -----BEGIN CERTIFICATE-----
+| MIIEADCCAmigAwIBAgIQdI933DNph7BMQwEs47lUXzANBgkqhkiG9w0BAQsFADA7
+| MTkwNwYDVQQDHjAAUwBTAEwAXwBTAGUAbABmAF8AUwBpAGcAbgBlAGQAXwBGAGEA
+| bABsAGIAYQBjAGswIBcNMjUxMjI0MDk0NjMwWhgPMjA1NTEyMjQwOTQ2MzBaMDsx
+| OTA3BgNVBAMeMABTAFMATABfAFMAZQBsAGYAXwBTAGkAZwBuAGUAZABfAEYAYQBs
+| AGwAYgBhAGMAazCCAaIwDQYJKoZIhvcNAQEBBQADggGPADCCAYoCggGBALQAA+NP
+| jat4bm03338Rwj1/ogHzx8RaRuzaJUoR3o3jIGWbqXuxpb6/7VWoYi7Ij6xU4F/r
+| fYaIJpbC7W0DPgQ5PXWJVI1gdDijGaSCdKVsszP3JlsM+GAdRRDzUfVfV5spkXPh
+| 6vnJpas9pbGtuu++UhWw1Z0Q4HR87MzZM9sUTrloaaMSfkOEHinvTPRBcxeDcGko
+| C+XprqrPt/Ls8wpuxltdCdcqZPmbv/iEBsBjJn+ng6lH5O7G4gGYsBXYr+nDcjfL
+| Yq+ZtrQUKjQcyi9213V5Wnklvd09k7ZjY5hDjr1sSZXsIzRMq5gvYrSirS521mRd
+| yVKrZoKf4lsRlCAKk5LfsbpuJEFG3jhl9JyM1G2zxa8fSWvYSmxktEHbB2AV40bW
+| N9za+JnNe6SL4cWAq6BkUyT2Lg4jxdjXuqeWLrPgxkMsiI21C6stzQCs3lxVIVHJ
+| RmNndaL5Tvsh+GCh9oCZ/RaV4bWELXtKsq4ZMHhMZ8zu+0CV1oFHWsqunQIDAQAB
+| MA0GCSqGSIb3DQEBCwUAA4IBgQABz1lsHmOkBHXPZoE7xfpcOHj2/GCfRb7lr2z3
+| i1qTvLPqu83mi1neSAK3MFZXo+5y/7Z3cK7gD98ffq1HDF4cO1BK+g5GyLYngsCW
+| 1QcQkfEULDe/vyI2yKTvSIMlxr5oq/koQrKSIKpTH/0HKjlTd6K/c8mQY1wGuZHz
+| OPqFryW/jSB5Mq44ehTGoQeAC9wDgG3nt4cVS6MF8zsX3kWrkvzW6O6ts5OMNjbL
+| YX1FoySKdCRAkY3/jh7DVb7MKcBLkR+tTxna2MDQHF4/VF482+JICtDql+xxXB+h
+| HOIozyyDU1p7Sxzm23UuZHYAGAJcFZRglnlRREE4J+jkOyJo1Q9VBnYiFnW3ZN/w
+| +bqU+hiu6g84lYItXmzPmOLmJvtH9CV8eyS8M2aznmegrVUDegIQl9NHiY4hDqxF
+| bsqvOdJnNbeQwDWB19sEXysV+VspE87u/rVUcpbzDH9rMMAAL1P7TKW9/2L3smw0
+| 0wCCe9hSu7eDH3mIJ2ljeoYmU5o=
+|_-----END CERTIFICATE-----
+5985/tcp open  http     syn-ack ttl 127 Microsoft HTTPAPI httpd 2.0 (SSDP/UPnP)
+|_http-server-header: Microsoft-HTTPAPI/2.0
+|_http-title: Not Found
+Warning: OSScan results may be unreliable because we could not find at least 1 open and 1 closed port
+Device type: general purpose
+Running (JUST GUESSING): Microsoft Windows 2022 (88%)
+OS CPE: cpe:/o:microsoft:windows_server_2022
+OS fingerprint not ideal because: Missing a closed TCP port so results incomplete
+Aggressive OS guesses: Microsoft Windows Server 2022 (88%)
+No exact OS matches for host (test conditions non-ideal).
+TCP/IP fingerprint:
+SCAN(V=7.95%E=4%D=12/23%OT=80%CT=%CU=%PV=Y%DS=2%DC=T%G=N%TM=694B594E%P=x86_64-pc-linux-gnu)
+SEQ(SP=104%GCD=1%ISR=10A%TI=RD%II=I%TS=A)
+SEQ(SP=105%GCD=1%ISR=10D%TI=RD%II=I%TS=A)
+OPS(O1=M542NW8ST11%O2=M542NW8ST11%O3=M542NW8NNT11%O4=M542NW8ST11%O5=M542NW8ST11%O6=M542ST11)
+WIN(W1=FFFF%W2=FFFF%W3=FFFF%W4=FFFF%W5=FFFF%W6=FFFF)
+ECN(R=Y%DF=Y%TG=80%W=FFFF%O=M542NW8NNS%CC=Y%Q=)
+T1(R=Y%DF=Y%TG=80%S=O%A=S+%F=AS%RD=0%Q=)
+T2(R=N)
+T3(R=N)
+T4(R=N)
+U1(R=N)
+IE(R=Y%DFI=N%TG=80%CD=Z)
+
+Uptime guess: 0.017 days (since Tue Dec 23 16:44:02 2025)
+Network Distance: 2 hops
+TCP Sequence Prediction: Difficulty=261 (Good luck!)
+IP ID Sequence Generation: Randomized
+Service Info: OS: Windows; CPE: cpe:/o:microsoft:windows
+
+Host script results:
+|_clock-skew: mean: 6h59m54s, deviation: 0s, median: 6h59m54s
+
+TRACEROUTE (using port 80/tcp)
+HOP RTT       ADDRESS
+1   521.16 ms 10.10.16.1
+2   521.33 ms 10.10.11.95
+
+NSE: Script Post-scanning.
+NSE: Starting runlevel 1 (of 3) scan.
+Initiating NSE at 17:09
+Completed NSE at 17:09, 0.00s elapsed
+NSE: Starting runlevel 2 (of 3) scan.
+Initiating NSE at 17:09
+Completed NSE at 17:09, 0.00s elapsed
+NSE: Starting runlevel 3 (of 3) scan.
+Initiating NSE at 17:09
+Completed NSE at 17:09, 0.00s elapsed
+Read data files from: /usr/share/nmap
+OS and Service detection performed. Please report any incorrect results at https://nmap.org/submit/ .
+Nmap done: 1 IP address (1 host up) scanned in 88.37 seconds
+           Raw packets sent: 3108 (140.436KB) | Rcvd: 61 (3.388KB)
+                                           

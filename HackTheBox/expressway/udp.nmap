@@ -1,0 +1,29 @@
+# Nmap 7.95 scan initiated Mon Dec 22 17:28:29 2025 as: /usr/lib/nmap/nmap -sU --top-ports 20 -vv -oN udp.nmap 10.10.11.87
+Nmap scan report for 10.10.11.87
+Host is up, received echo-reply ttl 63 (0.21s latency).
+Scanned at 2025-12-22 17:28:30 HST for 17s
+
+PORT      STATE         SERVICE      REASON
+53/udp    closed        domain       port-unreach ttl 63
+67/udp    closed        dhcps        port-unreach ttl 63
+68/udp    open|filtered dhcpc        no-response
+69/udp    open|filtered tftp         no-response
+123/udp   closed        ntp          port-unreach ttl 63
+135/udp   closed        msrpc        port-unreach ttl 63
+137/udp   closed        netbios-ns   port-unreach ttl 63
+138/udp   closed        netbios-dgm  port-unreach ttl 63
+139/udp   closed        netbios-ssn  port-unreach ttl 63
+161/udp   closed        snmp         port-unreach ttl 63
+162/udp   closed        snmptrap     port-unreach ttl 63
+445/udp   closed        microsoft-ds port-unreach ttl 63
+500/udp   open          isakmp       udp-response ttl 63
+514/udp   closed        syslog       port-unreach ttl 63
+520/udp   closed        route        port-unreach ttl 63
+631/udp   closed        ipp          port-unreach ttl 63
+1434/udp  closed        ms-sql-m     port-unreach ttl 63
+1900/udp  closed        upnp         port-unreach ttl 63
+4500/udp  open|filtered nat-t-ike    no-response
+49152/udp closed        unknown      port-unreach ttl 63
+
+Read data files from: /usr/share/nmap
+# Nmap done at Mon Dec 22 17:28:47 2025 -- 1 IP address (1 host up) scanned in 18.13 seconds

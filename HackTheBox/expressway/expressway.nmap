@@ -1,0 +1,12 @@
+# Nmap 7.95 scan initiated Mon Dec 22 16:29:39 2025 as: /usr/lib/nmap/nmap --privileged -p22 -sC -sV -oN expressway -vvv 10.10.11.87
+Nmap scan report for 10.10.11.87
+Host is up, received reset ttl 63 (2.3s latency).
+Scanned at 2025-12-22 16:29:42 HST for 17s
+
+PORT   STATE SERVICE REASON         VERSION
+22/tcp open  ssh     syn-ack ttl 63 OpenSSH 10.0p2 Debian 8 (protocol 2.0)
+Service Info: OS: Linux; CPE: cpe:/o:linux:linux_kernel
+
+Read data files from: /usr/share/nmap
+Service detection performed. Please report any incorrect results at https://nmap.org/submit/ .
+# Nmap done at Mon Dec 22 16:29:59 2025 -- 1 IP address (1 host up) scanned in 19.67 seconds
