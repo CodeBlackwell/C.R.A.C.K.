@@ -112,6 +112,8 @@ export function registerCredentialHandlers(): void {
         ...credential,
         id,
         createdAt,
+        validatedAccess: credential.validatedAccess || [],
+        isAdmin: credential.isAdmin || false,
       };
 
       debug.ipc('credential-add completed', { id });
