@@ -13,6 +13,12 @@ from pathlib import Path
 from typing import Dict, List, Any, Tuple, Set, Callable
 import argparse
 from load_existing_json import load_command_jsons, load_attack_chain_jsons, load_cheatsheet_jsons, load_writeup_jsons
+
+# Resolve paths relative to this script (works regardless of cwd)
+SCRIPT_DIR = Path(__file__).parent.resolve()
+PROJECT_ROOT = SCRIPT_DIR.parent.parent.parent  # crack/
+DEFAULT_INPUT = PROJECT_ROOT / "db" / "data"
+DEFAULT_OUTPUT = PROJECT_ROOT / "db" / "data" / "neo4j"
 from writeup_extractors import WRITEUP_EXTRACTORS
 
 # Add parent directory to path to import schema module
@@ -403,13 +409,13 @@ def main():
     )
     parser.add_argument(
         '--input-dir',
-        default='db/data',
-        help='Input directory (default: db/data/)'
+        default=str(DEFAULT_INPUT),
+        help=f'Input directory (default: {DEFAULT_INPUT})'
     )
     parser.add_argument(
         '--output-dir',
-        default='../../data/neo4j',
-        help='Output directory (default: db/data/neo4j/)'
+        default=str(DEFAULT_OUTPUT),
+        help=f'Output directory (default: {DEFAULT_OUTPUT})'
     )
     parser.add_argument(
         '--validate',
@@ -424,16 +430,9 @@ def main():
 
     args = parser.parse_args()
 
-    # Determine directories
-    if os.path.isabs(args.input_dir):
-        input_dir = Path(args.input_dir)
-    else:
-        input_dir = Path.cwd() / args.input_dir
-
-    if os.path.isabs(args.output_dir):
-        output_dir = Path(args.output_dir)
-    else:
-        output_dir = Path.cwd() / args.output_dir
+    # Resolve directories (defaults are already absolute)
+    input_dir = Path(args.input_dir).resolve()
+    output_dir = Path(args.output_dir).resolve()
 
     # Load JSON data
     print(f"Loading JSON from: {input_dir}")

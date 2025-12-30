@@ -127,7 +127,7 @@ class CheatsheetRegistry:
 
     def _load_cheatsheets(self):
         """Load cheatsheets from JSON files (recursively searches subdirectories)"""
-        cheatsheets_path = self.base_path / 'data' / 'cheatsheets'
+        cheatsheets_path = self.base_path / 'db' / 'data' / 'cheatsheets'
         if not cheatsheets_path.exists():
             cheatsheets_path.mkdir(parents=True, exist_ok=True)
             return

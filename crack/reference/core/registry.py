@@ -238,7 +238,7 @@ class HybridCommandRegistry:
 
     def _load_json_commands(self):
         """Load commands from JSON files (supports both flat and subdirectory structure)"""
-        json_path = self.base_path / 'data' / 'commands'
+        json_path = self.base_path / 'db' / 'data' / 'commands'
         if not json_path.exists():
             json_path.mkdir(parents=True, exist_ok=True)
             return
@@ -361,7 +361,7 @@ class HybridCommandRegistry:
         if not commands:
             return
 
-        json_path = self.base_path / 'data' / 'commands' / f'{category}.json'
+        json_path = self.base_path / 'db' / 'data' / 'commands' / f'{category}.json'
         json_path.parent.mkdir(parents=True, exist_ok=True)
 
         data = {
