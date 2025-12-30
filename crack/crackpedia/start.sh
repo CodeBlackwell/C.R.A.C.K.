@@ -12,6 +12,20 @@
 
 echo "🚀 Starting Crackpedia..."
 
+# Function to wait for bolt port to be ready
+wait_for_bolt() {
+    echo "⏳ Waiting for Neo4j bolt port (7687)..."
+    for i in {1..30}; do
+        if nc -z 127.0.0.1 7687 2>/dev/null; then
+            echo "✅ Neo4j bolt port is ready"
+            return 0
+        fi
+        sleep 1
+    done
+    echo "⚠️  Neo4j bolt port may not be ready"
+    return 1
+}
+
 # Check if Neo4j is running
 if ! pgrep -f "org.neo4j.server" > /dev/null; then
     echo "📊 Starting Neo4j..."
@@ -27,11 +41,11 @@ if ! pgrep -f "org.neo4j.server" > /dev/null; then
         exit 1
     fi
 
-    # Wait for Neo4j to be ready
-    echo "⏳ Waiting for Neo4j to start..."
+    # Wait for Neo4j process to appear
+    echo "⏳ Waiting for Neo4j process..."
     for i in {1..10}; do
         if pgrep -f "org.neo4j.server" > /dev/null; then
-            echo "✅ Neo4j is running"
+            echo "✅ Neo4j process started"
             break
         fi
         sleep 1
@@ -40,8 +54,17 @@ if ! pgrep -f "org.neo4j.server" > /dev/null; then
     if ! pgrep -f "org.neo4j.server" > /dev/null; then
         echo "⚠️  Neo4j may not have started properly"
     fi
+
+    # Wait for bolt port
+    wait_for_bolt
 else
-    echo "✅ Neo4j is already running"
+    echo "✅ Neo4j process is running"
+    # Still verify bolt port is ready (might have just started)
+    if ! nc -z 127.0.0.1 7687 2>/dev/null; then
+        wait_for_bolt
+    else
+        echo "✅ Neo4j bolt port is ready"
+    fi
 fi
 
 # Determine which mode to run
