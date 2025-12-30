@@ -23,8 +23,10 @@ import {
   IconSettings,
   IconBriefcase,
   IconCircleFilled,
+  IconFileExport,
 } from '@tabler/icons-react';
 import type { Engagement } from '@shared/types/engagement';
+import { ExportReportModal } from '../modals/ExportReportModal';
 
 interface EngagementSelectorProps {
   /** Currently active engagement */
@@ -46,6 +48,7 @@ export function EngagementSelector({
   const [opened, setOpened] = useState(false);
   const [loading, setLoading] = useState(false);
   const [engagements, setEngagements] = useState<Engagement[]>([]);
+  const [showExportModal, setShowExportModal] = useState(false);
 
   // Load engagements when dropdown opens
   const loadData = useCallback(async () => {
@@ -100,6 +103,7 @@ export function EngagementSelector({
   };
 
   return (
+    <>
     <Menu
       opened={opened}
       onChange={setOpened}
@@ -223,21 +227,47 @@ export function EngagementSelector({
               >
                 New
               </Button>
-              <ActionIcon
-                variant="subtle"
-                color="gray"
-                onClick={() => {
-                  setOpened(false);
-                  onOpenManager();
-                }}
-              >
-                <IconSettings size={18} />
-              </ActionIcon>
+              <Group gap={4}>
+                <ActionIcon
+                  variant="subtle"
+                  color="gray"
+                  onClick={() => {
+                    setOpened(false);
+                    setShowExportModal(true);
+                  }}
+                  disabled={!activeEngagement}
+                  title="Export Report"
+                >
+                  <IconFileExport size={18} />
+                </ActionIcon>
+                <ActionIcon
+                  variant="subtle"
+                  color="gray"
+                  onClick={() => {
+                    setOpened(false);
+                    onOpenManager();
+                  }}
+                  title="Manage Engagements"
+                >
+                  <IconSettings size={18} />
+                </ActionIcon>
+              </Group>
             </Group>
           </>
         )}
       </Menu.Dropdown>
     </Menu>
+
+    {/* Export Report Modal */}
+    {activeEngagement && (
+      <ExportReportModal
+        opened={showExportModal}
+        onClose={() => setShowExportModal(false)}
+        engagementId={activeEngagement.id}
+        engagementName={activeEngagement.name}
+      />
+    )}
+    </>
   );
 }
 

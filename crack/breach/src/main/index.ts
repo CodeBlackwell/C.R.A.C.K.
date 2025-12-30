@@ -17,6 +17,7 @@ import { registerActionsHandlers } from './ipc/actions';
 import { registerFindingHandlers } from './ipc/findings';
 import { registerSignalHandlers } from './ipc/signals';
 import { registerModulesHandlers } from './ipc/modules';
+import { registerReportHandlers } from './ipc/report';
 import { getPotfileWatcher } from './parser';
 import { ptyManager } from './pty/manager';
 import { tmuxBackend } from './pty/tmux-backend';
@@ -83,6 +84,7 @@ app.whenReady().then(async () => {
   registerFindingHandlers();
   registerSignalHandlers();
   registerModulesHandlers();
+  registerReportHandlers();
 
   // Create main window
   await createWindow();
