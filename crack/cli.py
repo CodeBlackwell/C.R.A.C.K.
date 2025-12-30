@@ -208,7 +208,7 @@ def _list_subjects(cheatsheet_registry):
     from pathlib import Path
 
     # Get cheatsheet base directory
-    cheatsheet_path = Path(cheatsheet_registry.base_path) / 'data' / 'cheatsheets'
+    cheatsheet_path = Path(cheatsheet_registry.base_path) / 'db' / 'data' / 'cheatsheets'
 
     # Find all subdirectories (categories)
     categories = {}
@@ -246,7 +246,7 @@ def _filter_by_subject(cli, cheatsheet_registry, subject, remaining_args):
     theme = cheatsheet_registry.theme
 
     # Get cheatsheets from specific subdirectory
-    base_path = Path(cheatsheet_registry.base_path) / 'data' / 'cheatsheets'
+    base_path = Path(cheatsheet_registry.base_path) / 'db' / 'data' / 'cheatsheets'
     cheatsheet_path = base_path / subject
 
     # Check if category directory exists
@@ -433,6 +433,20 @@ def breach_command(args):
     except KeyboardInterrupt:
         print(f"\n{Colors.YELLOW}B.R.E.A.C.H. terminated{Colors.END}")
         sys.exit(0)
+
+
+def breach_report_command(args):
+    """Generate B.R.E.A.C.H. engagement report"""
+    from crack.tools.breach.report import main as report_main
+    sys.argv = ['crack-breach-report'] + args
+    report_main()
+
+
+def snapsploit_command(args):
+    """Execute the snap exploit generator"""
+    from crack.tools.exploit import snap_exploit
+    sys.argv = ['snap_exploit'] + args
+    snap_exploit.main()
 
 
 def engagement_cmd_command(args):
@@ -958,6 +972,12 @@ def main():
                                           add_help=False)
     breach_parser.set_defaults(func=breach_command)
 
+    # B.R.E.A.C.H. Report Generator
+    breach_report_parser = subparsers.add_parser('breach-report',
+                                                  help='Generate engagement report (markdown/json)',
+                                                  add_help=False)
+    breach_report_parser.set_defaults(func=breach_report_command)
+
     # Engagement Tracking subcommand
     engagement_parser = subparsers.add_parser('engagement',
                                               help='Engagement Tracking - Client/engagement management',
@@ -976,13 +996,19 @@ def main():
                                            add_help=False)
     finding_parser.set_defaults(func=finding_cmd_command)
 
+    # Snap Exploit Generator subcommand
+    snapsploit_parser = subparsers.add_parser('snapsploit',
+                                               help='Snap Exploit Generator - Create malicious snap packages for privesc',
+                                               add_help=False)
+    snapsploit_parser.set_defaults(func=snapsploit_command)
+
     # Parse known args to allow passing through tool-specific args
     args, remaining = parser.parse_known_args()
 
     # Show banner unless suppressed
-    # Note: reference, db, ports, prism, and breach commands have no banner by default
+    # Note: reference, db, ports, prism, breach, and snapsploit commands have no banner by default
     if not args.no_banner and args.tool:
-        if args.tool not in ['reference', 'db', 'ports', 'prism', 'breach'] or '--banner' in remaining:
+        if args.tool not in ['reference', 'db', 'ports', 'prism', 'breach', 'snapsploit'] or '--banner' in remaining:
             print_banner()
 
     # Execute the selected tool
