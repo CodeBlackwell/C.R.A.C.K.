@@ -21,7 +21,11 @@ except ImportError:
     Console = None
 
 from .parsers.registry import PrismParserRegistry
-from .display.formatter import PrismFormatter, JSONFormatter, MarkdownFormatter
+from .display.formatter import (
+    PrismFormatter, JSONFormatter, MarkdownFormatter,
+    LdapFormatter, LdapJSONFormatter, LdapMarkdownFormatter
+)
+from .models import LdapSummary
 
 
 def create_parser() -> argparse.ArgumentParser:
@@ -195,24 +199,42 @@ def main(args: Optional[list] = None) -> int:
         print_error(f"Parse failed: {e}", console)
         return 1
 
+    # Determine formatter type based on summary
+    is_ldap = isinstance(summary, LdapSummary)
+
     # Stats only mode
     if parsed_args.stats_only:
         stats = summary.stats
-        if console and RICH_AVAILABLE:
-            console.print(f"Sessions: {stats['sessions']}")
-            console.print(f"Credentials: {stats['total_creds']}")
-            console.print(f"  Cleartext: {stats['cleartext']}")
-            console.print(f"  NTLM: {stats['ntlm']}")
-            console.print(f"  High Value: {stats['high_value']}")
-            console.print(f"TGT Tickets: {stats['tgt_tickets']}")
-            console.print(f"TGS Tickets: {stats['tgs_tickets']}")
+        if is_ldap:
+            if console and RICH_AVAILABLE:
+                console.print(f"Users: {stats['users']} ({stats['enabled_users']} enabled)")
+                console.print(f"Computers: {stats['computers']}")
+                console.print(f"Groups: {stats['groups']}")
+                console.print(f"Kerberoastable: {stats['kerberoastable']}")
+                console.print(f"AS-REP Roastable: {stats['asrep_roastable']}")
+                console.print(f"With Descriptions: {stats['with_descriptions']}")
+            else:
+                print(f"Users: {stats['users']} ({stats['enabled_users']} enabled)")
+                print(f"Computers: {stats['computers']}")
+                print(f"Groups: {stats['groups']}")
+                print(f"Kerberoastable: {stats['kerberoastable']}")
+                print(f"AS-REP Roastable: {stats['asrep_roastable']}")
         else:
-            print(f"Sessions: {stats['sessions']}")
-            print(f"Credentials: {stats['total_creds']}")
-            print(f"  Cleartext: {stats['cleartext']}")
-            print(f"  NTLM: {stats['ntlm']}")
-            print(f"TGT Tickets: {stats['tgt_tickets']}")
-            print(f"TGS Tickets: {stats['tgs_tickets']}")
+            if console and RICH_AVAILABLE:
+                console.print(f"Sessions: {stats.get('sessions', 0)}")
+                console.print(f"Credentials: {stats.get('total_creds', 0)}")
+                console.print(f"  Cleartext: {stats.get('cleartext', 0)}")
+                console.print(f"  NTLM: {stats.get('ntlm', 0)}")
+                console.print(f"  High Value: {stats.get('high_value', 0)}")
+                console.print(f"TGT Tickets: {stats.get('tgt_tickets', 0)}")
+                console.print(f"TGS Tickets: {stats.get('tgs_tickets', 0)}")
+            else:
+                print(f"Sessions: {stats.get('sessions', 0)}")
+                print(f"Credentials: {stats.get('total_creds', 0)}")
+                print(f"  Cleartext: {stats.get('cleartext', 0)}")
+                print(f"  NTLM: {stats.get('ntlm', 0)}")
+                print(f"TGT Tickets: {stats.get('tgt_tickets', 0)}")
+                print(f"TGS Tickets: {stats.get('tgs_tickets', 0)}")
         return 0
 
     # Console output based on format
@@ -220,15 +242,24 @@ def main(args: Optional[list] = None) -> int:
         if not RICH_AVAILABLE:
             print_error("Rich library required for table output. Use -f json instead.", console)
             return 1
-        formatter = PrismFormatter(console)
+        if is_ldap:
+            formatter = LdapFormatter(console)
+        else:
+            formatter = PrismFormatter(console)
         formatter.render_summary(summary, verbose=parsed_args.verbose)
 
     elif parsed_args.format == "json":
-        formatter = JSONFormatter()
+        if is_ldap:
+            formatter = LdapJSONFormatter()
+        else:
+            formatter = JSONFormatter()
         print(formatter.format(summary))
 
     elif parsed_args.format == "markdown":
-        formatter = MarkdownFormatter()
+        if is_ldap:
+            formatter = LdapMarkdownFormatter()
+        else:
+            formatter = MarkdownFormatter()
         print(formatter.format(summary))
 
     # File output (optional)
@@ -238,12 +269,12 @@ def main(args: Optional[list] = None) -> int:
 
         # Auto-detect format from extension
         if ext == '.json':
-            content = JSONFormatter().format(summary)
+            content = (LdapJSONFormatter() if is_ldap else JSONFormatter()).format(summary)
         elif ext in ('.md', '.markdown'):
-            content = MarkdownFormatter().format(summary)
+            content = (LdapMarkdownFormatter() if is_ldap else MarkdownFormatter()).format(summary)
         else:
             # Default to JSON for unknown extensions
-            content = JSONFormatter().format(summary)
+            content = (LdapJSONFormatter() if is_ldap else JSONFormatter()).format(summary)
 
         try:
             output_path.write_text(content)

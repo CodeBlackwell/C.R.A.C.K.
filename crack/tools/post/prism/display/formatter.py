@@ -12,6 +12,7 @@ from rich import box
 
 from ..models import ParsedSummary, Credential, CredentialType, KerberosTicket
 from ..models import NmapScanSummary, NmapHost, NmapPort
+from ..models import LdapSummary, LdapUser, LdapComputer, LdapGroup
 
 
 class PrismFormatter:
@@ -606,6 +607,412 @@ class NmapMarkdownFormatter:
             )[:10]
             for port, count in sorted_ports:
                 lines.append(f"| {port} | {count} |")
+            lines.append("")
+
+        return "\n".join(lines)
+
+
+class LdapFormatter:
+    """Rich library formatter for LDAP output"""
+
+    def __init__(self, console: Optional[Console] = None):
+        self.console = console or Console()
+
+    def render_summary(self, summary: LdapSummary, verbose: bool = False) -> None:
+        """Render LDAP summary to console
+
+        Args:
+            summary: LdapSummary to render
+            verbose: If True, show all entries including disabled accounts
+        """
+        # Header panel
+        self._render_header(summary)
+
+        # Domain info / Password Policy
+        if summary.domain_info:
+            self._render_domain_info(summary.domain_info)
+
+        # Kerberoastable users (HIGH VALUE)
+        if summary.kerberoastable_users:
+            self._render_kerberoastable_table(summary.kerberoastable_users)
+
+        # AS-REP roastable users (HIGH VALUE)
+        if summary.asrep_roastable_users:
+            self._render_asrep_table(summary.asrep_roastable_users)
+
+        # Users with descriptions (potential password hints)
+        if summary.users_with_descriptions:
+            self._render_description_table(summary.users_with_descriptions)
+
+        # Admin users
+        if summary.admin_users:
+            self._render_admin_table(summary.admin_users)
+
+        # All users (verbose mode)
+        if verbose and summary.enabled_users:
+            self._render_all_users_table(summary.enabled_users)
+
+        # Domain Controllers
+        if summary.domain_controllers:
+            self._render_dc_table(summary.domain_controllers)
+
+        # High-value groups
+        if summary.high_value_groups:
+            self._render_groups_table(summary.high_value_groups)
+
+        # Stats footer
+        self._render_stats(summary)
+
+    def _render_header(self, summary: LdapSummary) -> None:
+        """Render summary header panel"""
+        domain = summary.domain_name or "Unknown Domain"
+        stats = summary.stats
+
+        header_text = (
+            f"Domain: [bold cyan]{domain}[/]\n"
+            f"Users: [bold]{stats['enabled_users']}[/] enabled / "
+            f"[dim]{stats['disabled_users']}[/] disabled | "
+            f"Computers: [bold]{stats['computers']}[/] | "
+            f"Groups: [bold]{stats['groups']}[/]"
+        )
+
+        # High-value summary
+        high_value_line = (
+            f"[bold yellow]Attack Targets:[/] "
+            f"Kerberoast: {stats['kerberoastable']} | "
+            f"AS-REP: {stats['asrep_roastable']} | "
+            f"Descriptions: {stats['with_descriptions']} | "
+            f"Admins: {stats['admin_users']}"
+        )
+
+        panel = Panel(
+            f"{header_text}\n{high_value_line}",
+            title="[bold white]PRISM - LDAP Enumeration Summary[/]",
+            border_style="cyan",
+            box=box.ROUNDED
+        )
+        self.console.print(panel)
+
+    def _render_domain_info(self, domain_info) -> None:
+        """Render domain and password policy info"""
+        self.console.print("\n[bold blue]DOMAIN INFORMATION[/]\n")
+
+        # Policy table
+        table = Table(box=box.SIMPLE, border_style="blue", show_header=False)
+        table.add_column("Property", style="cyan")
+        table.add_column("Value", style="white")
+
+        table.add_row("Domain", domain_info.dns_name or domain_info.domain_name)
+        table.add_row("Functional Level", domain_info.functional_level_name)
+        table.add_row("Machine Account Quota", str(domain_info.machine_account_quota))
+
+        self.console.print(table)
+
+        # Password policy
+        self.console.print("\n[bold magenta]PASSWORD POLICY[/]\n")
+
+        policy_table = Table(box=box.SIMPLE, border_style="magenta", show_header=False)
+        policy_table.add_column("Property", style="cyan")
+        policy_table.add_column("Value", style="white")
+        policy_table.add_column("Notes", style="dim")
+
+        # Min length with weakness check
+        min_len = domain_info.min_pwd_length
+        min_note = "[red]WEAK[/]" if min_len < 8 else ""
+        policy_table.add_row("Min Password Length", str(min_len), min_note)
+
+        # Complexity
+        complexity = "Required" if domain_info.pwd_complexity_required else "Not Required"
+        complexity_note = "[red]WEAK[/]" if not domain_info.pwd_complexity_required else ""
+        policy_table.add_row("Complexity", complexity, complexity_note)
+
+        # Lockout
+        lockout = domain_info.lockout_threshold
+        if lockout == 0:
+            lockout_str = "Disabled"
+            lockout_note = "[red]NO LOCKOUT[/]"
+        else:
+            lockout_str = f"{lockout} attempts"
+            lockout_note = "[red]HIGH[/]" if lockout > 10 else ""
+        policy_table.add_row("Lockout Threshold", lockout_str, lockout_note)
+
+        if domain_info.lockout_duration:
+            policy_table.add_row("Lockout Duration", f"{domain_info.lockout_duration_minutes} min", "")
+
+        policy_table.add_row("Password History", str(domain_info.pwd_history_length), "")
+        policy_table.add_row("Max Password Age", f"{domain_info.max_pwd_age_days} days", "")
+
+        self.console.print(policy_table)
+
+        if domain_info.is_weak_policy:
+            self.console.print("\n[bold red]WARNING: Weak password policy detected![/]")
+
+    def _render_kerberoastable_table(self, users: list) -> None:
+        """Render Kerberoastable users (HIGH VALUE)"""
+        self.console.print(
+            "\n[bold yellow]KERBEROASTABLE USERS (HIGH VALUE)[/]\n"
+        )
+
+        table = Table(box=box.ROUNDED, border_style="yellow")
+        table.add_column("Username", style="bold white")
+        table.add_column("Display Name", style="cyan")
+        table.add_column("SPNs", style="yellow")
+        table.add_column("Admin", style="red")
+
+        for user in users:
+            spns = user.service_principal_names
+            spn_display = spns[0] if spns else ""
+            if len(spns) > 1:
+                spn_display += f" (+{len(spns)-1})"
+
+            admin = "[red]Yes[/]" if user.admin_count else ""
+
+            table.add_row(
+                user.sam_account_name,
+                user.display_name,
+                spn_display,
+                admin
+            )
+
+        self.console.print(table)
+        self.console.print(
+            "[dim]Attack: GetUserSPNs.py DOMAIN/user:pass -dc-ip DC_IP -request[/]"
+        )
+
+    def _render_asrep_table(self, users: list) -> None:
+        """Render AS-REP roastable users (HIGH VALUE)"""
+        self.console.print(
+            "\n[bold red]AS-REP ROASTABLE USERS (HIGH VALUE)[/]\n"
+        )
+
+        table = Table(box=box.ROUNDED, border_style="red")
+        table.add_column("Username", style="bold white")
+        table.add_column("Display Name", style="cyan")
+        table.add_column("Admin", style="red")
+
+        for user in users:
+            admin = "[red]Yes[/]" if user.admin_count else ""
+            table.add_row(
+                user.sam_account_name,
+                user.display_name,
+                admin
+            )
+
+        self.console.print(table)
+        self.console.print(
+            "[dim]Attack: GetNPUsers.py DOMAIN/ -usersfile users.txt -dc-ip DC_IP -format hashcat[/]"
+        )
+
+    def _render_description_table(self, users: list) -> None:
+        """Render users with descriptions (potential password hints)"""
+        self.console.print(
+            "\n[bold green]USERS WITH DESCRIPTIONS (CHECK FOR PASSWORDS!)[/]\n"
+        )
+
+        table = Table(box=box.ROUNDED, border_style="green")
+        table.add_column("Username", style="bold white")
+        table.add_column("Description", style="green")
+
+        for user in users:
+            desc = user.description or ""
+            # Truncate long descriptions
+            if len(desc) > 60:
+                desc = desc[:57] + "..."
+            table.add_row(user.sam_account_name, desc)
+
+        self.console.print(table)
+
+    def _render_admin_table(self, users: list) -> None:
+        """Render admin/privileged users"""
+        self.console.print("\n[bold red]ADMIN USERS (adminCount=1)[/]\n")
+
+        table = Table(box=box.ROUNDED, border_style="red")
+        table.add_column("Username", style="bold white")
+        table.add_column("Display Name", style="cyan")
+        table.add_column("Attack Paths", style="yellow")
+
+        for user in users:
+            paths = ", ".join(user.attack_paths) if user.attack_paths else "-"
+            table.add_row(
+                user.sam_account_name,
+                user.display_name,
+                paths
+            )
+
+        self.console.print(table)
+
+    def _render_all_users_table(self, users: list) -> None:
+        """Render all enabled users (verbose mode)"""
+        self.console.print("\n[bold blue]ALL ENABLED USERS[/]\n")
+
+        table = Table(box=box.ROUNDED, border_style="blue")
+        table.add_column("Username", style="bold white")
+        table.add_column("Display Name", style="cyan")
+        table.add_column("Flags", style="dim")
+
+        for user in users[:50]:  # Limit to 50
+            flags = []
+            if user.admin_count:
+                flags.append("Admin")
+            if user.is_kerberoastable:
+                flags.append("SPN")
+            if user.dont_require_preauth:
+                flags.append("NoPreAuth")
+            if user.password_never_expires:
+                flags.append("NoPwdExpire")
+
+            table.add_row(
+                user.sam_account_name,
+                user.display_name,
+                ", ".join(flags) if flags else "-"
+            )
+
+        if len(users) > 50:
+            self.console.print(f"[dim]... and {len(users) - 50} more users[/]")
+
+        self.console.print(table)
+
+    def _render_dc_table(self, dcs: list) -> None:
+        """Render domain controllers"""
+        self.console.print("\n[bold cyan]DOMAIN CONTROLLERS[/]\n")
+
+        table = Table(box=box.ROUNDED, border_style="cyan")
+        table.add_column("Name", style="bold white")
+        table.add_column("DNS Hostname", style="cyan")
+        table.add_column("OS", style="dim")
+
+        for dc in dcs:
+            table.add_row(
+                dc.sam_account_name.rstrip('$'),
+                dc.dns_hostname or "-",
+                dc.os_display
+            )
+
+        self.console.print(table)
+
+    def _render_groups_table(self, groups: list) -> None:
+        """Render high-value groups"""
+        self.console.print("\n[bold magenta]HIGH-VALUE GROUPS[/]\n")
+
+        table = Table(box=box.ROUNDED, border_style="magenta")
+        table.add_column("Group", style="bold white")
+        table.add_column("Members", style="cyan")
+        table.add_column("Description", style="dim")
+
+        for group in groups:
+            members = group.members
+            member_str = str(len(members)) if members else "0"
+
+            desc = group.description or ""
+            if len(desc) > 40:
+                desc = desc[:37] + "..."
+
+            table.add_row(
+                group.sam_account_name,
+                member_str,
+                desc
+            )
+
+        self.console.print(table)
+
+    def _render_stats(self, summary: LdapSummary) -> None:
+        """Render statistics footer"""
+        stats = summary.stats
+
+        self.console.print("\n[dim]---[/]")
+
+        stats_line = (
+            f"[dim]Parsed {summary.lines_parsed} lines | "
+            f"{stats['total_entries']} entries | "
+            f"{stats['users']} users | "
+            f"{stats['computers']} computers | "
+            f"{stats['groups']} groups[/]"
+        )
+        self.console.print(stats_line)
+
+
+class LdapJSONFormatter:
+    """JSON output formatter for LDAP"""
+
+    def format(self, summary: LdapSummary) -> str:
+        """Format LDAP summary as JSON"""
+        import json
+        return json.dumps(summary.to_dict(), indent=2, default=str)
+
+
+class LdapMarkdownFormatter:
+    """Markdown output formatter for LDAP"""
+
+    def format(self, summary: LdapSummary) -> str:
+        """Format LDAP summary as Markdown"""
+        lines = [
+            "# LDAP Enumeration Summary",
+            "",
+            f"**Domain:** {summary.domain_name}",
+            f"**Source:** {summary.source_file}",
+            "",
+            "## Statistics",
+            "",
+            f"- **Users:** {len(summary.users)} ({len(summary.enabled_users)} enabled)",
+            f"- **Computers:** {len(summary.computers)}",
+            f"- **Groups:** {len(summary.groups)}",
+            f"- **Domain Controllers:** {len(summary.domain_controllers)}",
+            "",
+        ]
+
+        # Password Policy
+        if summary.domain_info:
+            di = summary.domain_info
+            lines.extend([
+                "## Password Policy",
+                "",
+                f"- **Min Length:** {di.min_pwd_length}",
+                f"- **Complexity:** {'Required' if di.pwd_complexity_required else 'Not Required'}",
+                f"- **Lockout Threshold:** {di.lockout_threshold or 'Disabled'}",
+                f"- **Max Age:** {di.max_pwd_age_days} days",
+                "",
+            ])
+
+        # Kerberoastable
+        if summary.kerberoastable_users:
+            lines.extend([
+                "## Kerberoastable Users",
+                "",
+                "| Username | SPNs |",
+                "|----------|------|",
+            ])
+            for u in summary.kerberoastable_users:
+                spns = "; ".join(u.service_principal_names[:2])
+                if len(u.service_principal_names) > 2:
+                    spns += "..."
+                lines.append(f"| {u.sam_account_name} | {spns} |")
+            lines.append("")
+
+        # AS-REP Roastable
+        if summary.asrep_roastable_users:
+            lines.extend([
+                "## AS-REP Roastable Users",
+                "",
+                "| Username | Display Name |",
+                "|----------|--------------|",
+            ])
+            for u in summary.asrep_roastable_users:
+                lines.append(f"| {u.sam_account_name} | {u.display_name} |")
+            lines.append("")
+
+        # Descriptions
+        if summary.users_with_descriptions:
+            lines.extend([
+                "## Users with Descriptions",
+                "",
+                "| Username | Description |",
+                "|----------|-------------|",
+            ])
+            for u in summary.users_with_descriptions:
+                desc = u.description or ""
+                if len(desc) > 50:
+                    desc = desc[:47] + "..."
+                lines.append(f"| {u.sam_account_name} | {desc} |")
             lines.append("")
 
         return "\n".join(lines)

@@ -17,6 +17,13 @@ from .nmap_scan import NmapScanSummary
 # SMBMap models
 from .smbmap_scan import SmbmapSummary, SmbShare, SmbEntry, SmbPermission, SmbEntryType
 
+# LDAP models
+from .ldap_entry import (
+    LdapEntry, LdapUser, LdapComputer, LdapGroup,
+    LdapDomainInfo, UserAccountControl
+)
+from .ldap_summary import LdapSummary
+
 __all__ = [
     # Credential models
     "Credential",
@@ -36,4 +43,12 @@ __all__ = [
     "SmbEntry",
     "SmbPermission",
     "SmbEntryType",
+    # LDAP models
+    "LdapEntry",
+    "LdapUser",
+    "LdapComputer",
+    "LdapGroup",
+    "LdapDomainInfo",
+    "LdapSummary",
+    "UserAccountControl",
 ]
