@@ -391,11 +391,17 @@ class CommandSuggester:
                 domain = extract_domain(discovered) if discovered else ""
 
                 # For auth-free commands (AS-REP roast), discovered user IS the target
-                # For auth-required commands (Kerberoast), attacker provides creds
+                # For auth-required commands (Kerberoast), use pwned credentials
                 if mapping.get("auth_free"):
                     user = discovered  # Discovered user is the command target
                 else:
-                    user = "<USER>"  # Attacker provides creds
+                    # Pick first pwned user with password for auth-required discovery
+                    user = "<USER>"
+                    if pwned_users:
+                        for upn, pwned in pwned_users.items():
+                            if pwned.get_credential("password"):
+                                user = upn
+                                break
 
                 targets = [discovered]  # What we found
                 target_ips = []  # Discovery commands don't have IPs
