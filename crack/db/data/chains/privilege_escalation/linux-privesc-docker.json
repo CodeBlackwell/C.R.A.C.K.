@@ -1,5 +1,5 @@
 {
-  "id": "linux-privesc-docker-mount",
+  "id": "linux-privesc-docker",
   "name": "Docker Group Privilege Escalation",
   "description": "Exploit Docker group membership to escalate privileges from low-privilege user to root via container filesystem mounting.\n\nDocker group membership is equivalent to root access on the host system.",
   "version": "1.0.0",
@@ -66,7 +66,9 @@
         "docker ps executes without permission errors",
         "CONTAINER ID header visible (even if no containers)"
       ],
-      "dependencies": ["verify-docker-group"],
+      "dependencies": [
+        "verify-docker-group"
+      ],
       "repeatable": false,
       "success_criteria": [
         "Socket accessible to user",
@@ -91,7 +93,9 @@
         "Available images: alpine, ubuntu, busybox, etc.",
         "Image count and sizes shown"
       ],
-      "dependencies": ["check-docker-socket"],
+      "dependencies": [
+        "check-docker-socket"
+      ],
       "repeatable": false,
       "success_criteria": [
         "At least one image available",
@@ -103,7 +107,9 @@
         "All images are very large (slow)",
         "Permission issues accessing image cache"
       ],
-      "next_steps": ["mount-host-escape"]
+      "next_steps": [
+        "mount-host-escape"
+      ]
     },
     {
       "id": "mount-host-escape",
@@ -117,7 +123,9 @@
         "Can access /mnt directory containing host filesystem",
         "Files at /mnt/etc, /mnt/root visible"
       ],
-      "dependencies": ["check-available-images"],
+      "dependencies": [
+        "check-available-images"
+      ],
       "repeatable": true,
       "success_criteria": [
         "Shell spawned successfully",
@@ -131,7 +139,9 @@
         "Permission denied (docker group issue)",
         "Container exits immediately"
       ],
-      "next_steps": ["verify-root"]
+      "next_steps": [
+        "verify-root"
+      ]
     },
     {
       "id": "verify-root",
@@ -145,7 +155,9 @@
         "SSH private key accessible (if exists)",
         "Full host filesystem traversal possible"
       ],
-      "dependencies": ["mount-host-escape"],
+      "dependencies": [
+        "mount-host-escape"
+      ],
       "repeatable": true,
       "success_criteria": [
         "Can read /mnt/etc/shadow",

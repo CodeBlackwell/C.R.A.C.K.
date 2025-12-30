@@ -1,5 +1,5 @@
 {
-  "id": "linux-privesc-capabilities-enum",
+  "id": "linux-privesc-capabilities",
   "name": "Linux Capabilities Privilege Escalation",
   "description": "Enumerate and exploit Linux file capabilities to escalate privileges.\n\nCapabilities are a modern alternative to SUID binaries that grant specific elevated permissions.\n\nDangerous capabilities like cap_setuid, cap_dac_override, and cap_dac_read_search enable privilege escalation through various exploitation techniques.",
   "version": "1.0.0",
