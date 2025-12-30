@@ -1,0 +1,262 @@
+{
+  "category": "monitoring",
+  "subcategory": "network-enumeration",
+  "description": "Linux network enumeration commands for discovering services, connections, and internal hosts",
+  "commands": [
+    {
+      "id": "linux-ss-listen",
+      "name": "List Listening Services",
+      "category": "monitoring",
+      "subcategory": "network-enumeration",
+      "command": "ss -tulnp",
+      "description": "Display listening TCP/UDP services with process info - modern replacement for netstat",
+      "variables": [],
+      "flag_explanations": {
+        "-t": "TCP sockets only",
+        "-u": "UDP sockets only",
+        "-l": "Listening sockets only (not established connections)",
+        "-n": "Numeric addresses (don't resolve hostnames - faster)",
+        "-p": "Show process using socket (may need root for all)"
+      },
+      "tags": [
+        "DISCOVERY",
+        "ENUMERATION",
+        "LINUX",
+        "NETWORK",
+        "OSCP:HIGH",
+        "POST_EXPLOITATION",
+        "SERVICE_DISCOVERY"
+      ],
+      "oscp_relevance": "high",
+      "success_indicators": [
+        "LISTEN state sockets",
+        "127.0.0.1:PORT (localhost services)",
+        "0.0.0.0:PORT (all interfaces)",
+        "Process names shown"
+      ],
+      "failure_indicators": [
+        "ss: command not found",
+        "Permission denied on -p"
+      ],
+      "prerequisites": [],
+      "next_steps": [
+        "linux-netstat",
+        "ip-addr"
+      ],
+      "alternatives": [
+        "linux-netstat",
+        "linux-proc-net-tcp"
+      ],
+      "troubleshooting": {
+        "Command not found": "Use netstat -tulnp or cat /proc/net/tcp instead",
+        "No process info": "Need root for -p flag to show all processes"
+      },
+      "notes": "CRITICAL: Services on 127.0.0.1 are internal only - may be exploitable!\n\nCommon internal services:\n- 127.0.0.1:3306 = MySQL (local only)\n- 127.0.0.1:5432 = PostgreSQL (local only)\n- 127.0.0.1:6379 = Redis (often unauthenticated!)\n- 127.0.0.1:8080 = Internal web app\n\nTime estimate: 1 second.\n\nOSCP tip: Localhost services often have weaker security. Port forward with SSH for exploitation.\n\nss vs netstat: ss is faster and more detailed on modern systems.",
+      "methodology_guidance": {
+        "after_success": "Note localhost-bound services for port forwarding. Check if can curl/wget localhost:PORT",
+        "oscp_tips": "Internal services often have default creds or no auth. Forward with: ssh -L LOCAL:127.0.0.1:REMOTE target"
+      }
+    },
+    {
+      "id": "linux-netstat",
+      "name": "Display Network Connections",
+      "category": "monitoring",
+      "subcategory": "network-enumeration",
+      "command": "netstat -tulnp 2>/dev/null || netstat -ano",
+      "description": "Display active network connections and listening ports - legacy but widely available",
+      "variables": [],
+      "flag_explanations": {
+        "-t": "TCP connections",
+        "-u": "UDP connections",
+        "-l": "Listening sockets",
+        "-n": "Numeric addresses",
+        "-p": "Show process ID and name",
+        "-a": "All sockets (listening + established)",
+        "-o": "Show timers"
+      },
+      "tags": [
+        "DISCOVERY",
+        "ENUMERATION",
+        "LINUX",
+        "NETWORK",
+        "OSCP:HIGH",
+        "POST_EXPLOITATION",
+        "SERVICE_DISCOVERY"
+      ],
+      "oscp_relevance": "high",
+      "success_indicators": [
+        "LISTEN or ESTABLISHED states",
+        "Local and foreign addresses",
+        "Process info displayed"
+      ],
+      "failure_indicators": [
+        "netstat: command not found",
+        "Permission denied"
+      ],
+      "prerequisites": [],
+      "next_steps": [
+        "linux-ss-listen",
+        "ip-addr"
+      ],
+      "alternatives": [
+        "linux-ss-listen",
+        "linux-proc-net-tcp"
+      ],
+      "troubleshooting": {
+        "Command not found": "Use ss -tulnp instead (modern replacement)",
+        "No process info": "Need root for -p to show process names"
+      },
+      "notes": "Legacy command but universally available.\n\nESTABLISHED connections show:\n- Who is connected to the machine\n- What the machine is connected TO\n- Active communication channels\n\nLISTEN shows available services.\n\nTime estimate: 1 second.\n\nOSCP tip: ESTABLISHED connections may reveal other targets or data exfiltration.\n\nOn minimal systems, netstat may not be installed - use ss or /proc/net/tcp.",
+      "methodology_guidance": {
+        "after_success": "Document listening ports and established connections. Note internal vs external services.",
+        "oscp_tips": "Established connections may reveal other machines to pivot to"
+      }
+    },
+    {
+      "id": "linux-arp",
+      "name": "Display ARP Cache",
+      "category": "monitoring",
+      "subcategory": "network-enumeration",
+      "command": "arp -a 2>/dev/null || ip neigh",
+      "description": "Display ARP cache showing recently contacted hosts on local network",
+      "variables": [],
+      "flag_explanations": {
+        "-a": "BSD style output, show all entries",
+        "ip neigh": "Modern alternative using iproute2"
+      },
+      "tags": [
+        "DISCOVERY",
+        "ENUMERATION",
+        "LINUX",
+        "NETWORK",
+        "OSCP:MEDIUM",
+        "PIVOT",
+        "POST_EXPLOITATION"
+      ],
+      "oscp_relevance": "medium",
+      "success_indicators": [
+        "IP addresses with MAC addresses",
+        "Gateway identified",
+        "Other hosts on network"
+      ],
+      "failure_indicators": [
+        "arp: command not found",
+        "Empty cache"
+      ],
+      "prerequisites": [],
+      "next_steps": [
+        "linux-hosts-file",
+        "ip-addr"
+      ],
+      "alternatives": [
+        "ip neigh",
+        "cat /proc/net/arp"
+      ],
+      "troubleshooting": {
+        "Command not found": "Use 'ip neigh' or 'cat /proc/net/arp' instead",
+        "Empty output": "No recent communication - try pinging subnet"
+      },
+      "notes": "ARP cache reveals hosts the machine has communicated with.\n\nUseful for:\n- Identifying gateway (router)\n- Finding other hosts without scanning\n- Understanding network topology\n- Passive reconnaissance\n\nTime estimate: 1 second.\n\nOSCP tip: ARP cache shows hosts without active scanning.\n\nStale entries (STALE) indicate past communication.",
+      "methodology_guidance": {
+        "after_success": "Note other hosts for potential pivot targets. Gateway IP useful for routing.",
+        "oscp_tips": "Passive discovery - won't trigger IDS like active scanning would"
+      }
+    },
+    {
+      "id": "linux-hosts-file",
+      "name": "Display Hosts File",
+      "category": "monitoring",
+      "subcategory": "network-enumeration",
+      "command": "cat /etc/hosts",
+      "description": "Display static hostname mappings - reveals internal systems and domain names",
+      "variables": [],
+      "flag_explanations": {
+        "/etc/hosts": "Static hostname to IP mapping file, checked before DNS"
+      },
+      "tags": [
+        "DISCOVERY",
+        "ENUMERATION",
+        "LINUX",
+        "NETWORK",
+        "OSCP:MEDIUM",
+        "POST_EXPLOITATION"
+      ],
+      "oscp_relevance": "medium",
+      "success_indicators": [
+        "Internal hostnames revealed",
+        "IP addresses for internal systems",
+        "Domain names discovered"
+      ],
+      "failure_indicators": [
+        "Only localhost entries",
+        "Permission denied"
+      ],
+      "prerequisites": [],
+      "next_steps": [
+        "linux-arp",
+        "ip-addr"
+      ],
+      "alternatives": [
+        "getent hosts"
+      ],
+      "troubleshooting": {
+        "Only localhost": "May need to check DNS config or application configs for hostnames"
+      },
+      "notes": "Hosts file reveals:\n- Internal naming conventions\n- IP addresses for internal systems\n- Development/staging environments\n- Database servers, internal web apps\n\nCommon entries:\n- 192.168.x.x db.internal\n- 10.0.0.x intranet.corp\n- 127.0.0.1 dev.local\n\nTime estimate: 1 second.\n\nOSCP tip: Internal hostnames may be required for web apps (virtual hosts).\n\nAdd discovered hosts to your own /etc/hosts for access.",
+      "methodology_guidance": {
+        "after_success": "Add discovered hostnames to your /etc/hosts for vhost access",
+        "oscp_tips": "Virtual hosts often require correct hostname - check hosts file for hints"
+      }
+    },
+    {
+      "id": "linux-proc-net-tcp",
+      "name": "Read Network Connections from /proc",
+      "category": "monitoring",
+      "subcategory": "network-enumeration",
+      "command": "cat /proc/net/tcp; cat /proc/net/tcp6 2>/dev/null",
+      "description": "Read TCP connections directly from /proc - works when netstat/ss unavailable",
+      "variables": [],
+      "flag_explanations": {
+        "/proc/net/tcp": "IPv4 TCP connections in hex format",
+        "/proc/net/tcp6": "IPv6 TCP connections in hex format"
+      },
+      "tags": [
+        "DISCOVERY",
+        "ENUMERATION",
+        "LINUX",
+        "MANUAL",
+        "NETWORK",
+        "OSCP:MEDIUM",
+        "POST_EXPLOITATION"
+      ],
+      "oscp_relevance": "medium",
+      "success_indicators": [
+        "Hex-encoded connections displayed",
+        "Multiple listening sockets",
+        "Established connections visible"
+      ],
+      "failure_indicators": [
+        "File not found",
+        "Permission denied"
+      ],
+      "prerequisites": [],
+      "next_steps": [
+        "linux-ss-listen",
+        "linux-netstat"
+      ],
+      "alternatives": [
+        "linux-ss-listen",
+        "linux-netstat"
+      ],
+      "troubleshooting": {
+        "Hex format": "Decode: local_address field, bytes reversed, hex to decimal",
+        "Too complex": "Use ss or netstat if available"
+      },
+      "notes": "Manual alternative when netstat/ss unavailable.\n\nFormat (hex):\nlocal_address: XXXXXXXX:XXXX = IP:PORT (little-endian)\nState: 0A = LISTEN, 01 = ESTABLISHED\n\nDecoding example:\n0100007F:0CEA = 127.0.0.1:3306\n\nPython decoder:\nimport socket\nip = socket.inet_ntoa(bytes.fromhex('0100007F')[::-1])\nport = int('0CEA', 16)\n\nTime estimate: 1-5 minutes (manual decode).\n\nOSCP tip: Backup method for restricted shells. Know this for exam.",
+      "methodology_guidance": {
+        "after_success": "Decode hex to find listening ports and connections",
+        "oscp_tips": "Essential backup skill when tools unavailable. Practice decoding before exam."
+      }
+    }
+  ]
+}
