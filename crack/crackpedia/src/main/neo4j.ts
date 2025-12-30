@@ -547,6 +547,16 @@ ipcMain.handle('neo4j-health-check', async () => {
 });
 logIPC('Registered IPC handler: neo4j-health-check');
 
+// IPC Handler: Get project root path (for source file references)
+ipcMain.handle('get-project-root', () => {
+  // In dev: __dirname = .../crack/crackpedia/dist-electron/main
+  // Project root (crack) = 3 levels up from dist-electron/main
+  const projectRoot = path.resolve(__dirname, '..', '..', '..');
+  logIPC('IPC: get-project-root called', { projectRoot });
+  return projectRoot;
+});
+logIPC('Registered IPC handler: get-project-root');
+
 // IPC Handler: Search cheatsheets
 ipcMain.handle('search-cheatsheets', async (_event, searchQuery: string, filters?: {
   tags?: string[];

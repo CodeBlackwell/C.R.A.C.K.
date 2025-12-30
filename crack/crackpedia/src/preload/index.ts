@@ -50,6 +50,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Console bridge - send renderer logs to terminal
   logToTerminal: (level: string, message: string) =>
     ipcRenderer.send('log-to-terminal', level, message),
+
+  // Get project root path for source file references
+  getProjectRoot: () => ipcRenderer.invoke('get-project-root'),
 });
 
 // Type definitions for TypeScript
@@ -85,6 +88,7 @@ export interface ElectronAPI {
   getWriteup: (writeupId: string) => Promise<any>;
   getWriteupImages: (imagesPath: string) => Promise<any[]>;
   logToTerminal: (level: string, message: string) => void;
+  getProjectRoot: () => Promise<string>;
 }
 
 declare global {

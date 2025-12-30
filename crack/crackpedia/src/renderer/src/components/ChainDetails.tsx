@@ -24,10 +24,16 @@ export default function ChainDetails({
   const [chain, setChain] = useState<AttackChain | null>(null);
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [projectRoot, setProjectRoot] = useState('');
+
+  // Fetch project root on mount
+  useEffect(() => {
+    window.electronAPI.getProjectRoot().then(setProjectRoot);
+  }, []);
 
   // Derive source file path from chain ID
   const getSourcePath = (id: string): string => {
-    const basePath = '/home/kali/Desktop/OSCP/crack/reference/data/attack_chains';
+    const basePath = `${projectRoot}/db/data/chains`;
 
     // Determine subdirectory based on chain ID prefix
     let subdirectory = '';

@@ -1,5 +1,5 @@
 import { Paper, Text, Stack, Accordion, Badge, Group, Divider, ScrollArea } from '@mantine/core';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Cheatsheet, SectionCommand } from '../types/cheatsheet';
 
 // Helper to extract command ID from string or SectionCommand
@@ -23,10 +23,16 @@ interface CheatsheetDetailsProps {
 
 export default function CheatsheetDetails({ cheatsheet, onCommandClick }: CheatsheetDetailsProps) {
   const [copied, setCopied] = useState(false);
+  const [projectRoot, setProjectRoot] = useState('');
+
+  // Fetch project root on mount
+  useEffect(() => {
+    window.electronAPI.getProjectRoot().then(setProjectRoot);
+  }, []);
 
   // Derive source file path from cheatsheet ID
   const getSourcePath = (id: string): string => {
-    const basePath = '/home/kali/Desktop/OSCP/crack/reference/data/cheatsheets';
+    const basePath = `${projectRoot}/db/data/cheatsheets`;
 
     if (id.startsWith('ad-')) {
       return `${basePath}/active-directory/${id}.json`;
