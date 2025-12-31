@@ -394,6 +394,9 @@ class CommandSuggester:
                 # For auth-required commands (Kerberoast), use pwned credentials
                 if mapping.get("auth_free"):
                     user = discovered  # Discovered user is the command target
+                elif mapping.get("user_is_discovered"):
+                    # Password-in-description: discovered user is who we authenticate AS
+                    user = extract_username(discovered)
                 else:
                     # Pick first pwned user with password for auth-required discovery
                     user = "<USER>"
@@ -403,8 +406,15 @@ class CommandSuggester:
                                 user = upn
                                 break
 
-                targets = [discovered]  # What we found
-                target_ips = []  # Discovery commands don't have IPs
+                # Determine target: DC for user-centric discovery, otherwise discovered item
+                if mapping.get("target_is_dc"):
+                    # Target is the DC, not the discovered user
+                    dc_host = infer_dc_hostname(domain) if domain else ""
+                    targets = [dc_host] if dc_host else [discovered]
+                    target_ips = [dc_ip] if dc_ip else []
+                else:
+                    targets = [discovered]  # What we found
+                    target_ips = []  # Discovery commands don't have IPs
             else:
                 # Standard command: user has access to target
 
@@ -671,6 +681,11 @@ class CommandSuggester:
                     if is_discovery:
                         # For discovery commands, reason explains what was found
                         reason = context if context else "Discovered target"
+                        # Include Description field if present (for password-in-description, etc.)
+                        description = record.get("Description", "")
+                        if description:
+                            # Show the actual description (e.g., "Temp password is Thestrokes23")
+                            reason = description
                     else:
                         reason = get_reason(
                             access_type=record_access_type,
@@ -1128,3 +1143,199 @@ class CommandSuggester:
                     suggestions.append(suggestion)
 
         return suggestions
+
+    # =========================================================================
+    # ATTACK PATH RECOMMENDATIONS - DRY orchestration of existing components
+    # =========================================================================
+
+    def recommend_attack_paths(
+        self,
+        pwned_user: str,
+        domain: str,
+        query_runner: Any,  # QueryRunner - avoid circular import
+        dc_ip: Optional[str] = None,
+    ) -> List[AttackSequence]:
+        """
+        Recommend attack paths for a pwned user based on their AD position.
+
+        Composes existing queries and command mappings - no new infrastructure.
+        Checks prerequisite queries to validate attack chains are viable.
+
+        Args:
+            pwned_user: User principal name (e.g., "SVC-ALFRESCO@HTB.LOCAL")
+            domain: Domain name (e.g., "htb.local")
+            query_runner: QueryRunner instance for executing Cypher queries
+            dc_ip: Domain Controller IP for command templates
+
+        Returns:
+            List of viable AttackSequence objects ranked by impact
+        """
+        recommendations = []
+
+        # Find all mappings with attack_chain definitions
+        for query_id, mapping in QUERY_COMMAND_MAPPINGS.items():
+            if not isinstance(mapping, dict):
+                continue
+
+            chain = mapping.get("attack_chain")
+            if not chain:
+                continue
+
+            # Check prerequisite queries
+            prereq_queries = mapping.get("prerequisite_queries", [])
+            prereqs_met = True
+            prereq_results = {}
+
+            for prereq_id in prereq_queries:
+                try:
+                    result = query_runner.run_query(
+                        prereq_id,
+                        {"USER": pwned_user}
+                    )
+                    if not result.records:
+                        prereqs_met = False
+                        break
+                    prereq_results[prereq_id] = result.records
+                except Exception:
+                    prereqs_met = False
+                    break
+
+            if prereqs_met:
+                # Build AttackSequence from chain definition
+                sequence = self._build_attack_chain(
+                    chain,
+                    pwned_user,
+                    domain,
+                    dc_ip or "",
+                    prereq_results
+                )
+                if sequence:
+                    recommendations.append(sequence)
+
+        return self._rank_attack_sequences(recommendations)
+
+    def _build_attack_chain(
+        self,
+        chain: Dict,
+        user: str,
+        domain: str,
+        dc_ip: str,
+        prereq_results: Dict[str, List[Dict]],
+    ) -> Optional[AttackSequence]:
+        """
+        Build AttackSequence from chain definition using existing infrastructure.
+
+        Args:
+            chain: Attack chain definition from query_mappings.json
+            user: Pwned user principal name
+            domain: Domain name
+            dc_ip: Domain Controller IP
+            prereq_results: Results from prerequisite queries
+
+        Returns:
+            AttackSequence with steps, or None if chain is invalid
+        """
+        steps = []
+
+        for step_def in chain.get("steps", []):
+            cmd_id = step_def.get("command")
+            if not cmd_id:
+                continue
+
+            # Build context record for command generation
+            record = {
+                "User": user,
+                "Domain": domain,
+            }
+
+            # Create suggestion using existing method
+            suggestion = self._create_suggestion(
+                cmd_id,
+                step_def.get("why", step_def.get("name", "")),
+                record
+            )
+
+            if suggestion:
+                # Enhance with step metadata
+                suggestion.context = f"Step {step_def.get('step_id', len(steps)+1)}: {step_def.get('name', '')}"
+                if step_def.get("why"):
+                    suggestion.context += f"\nWHY: {step_def['why']}"
+                if step_def.get("verification"):
+                    suggestion.context += f"\nVERIFY: {step_def['verification']}"
+                if step_def.get("context") == "on_target":
+                    suggestion.context += "\n[Run on target]"
+                elif step_def.get("context") == "kali":
+                    suggestion.context += "\n[Run on Kali]"
+
+                steps.append(suggestion)
+
+        if not steps:
+            return None
+
+        # Build path nodes from prereq results
+        path_nodes = [user]
+        if prereq_results:
+            for prereq_id, records in prereq_results.items():
+                for record in records:
+                    if "Group" in record:
+                        path_nodes.append(record["Group"])
+                    if "Domain" in record:
+                        path_nodes.append(record["Domain"])
+
+        return AttackSequence(
+            name=chain.get("name", "Unknown Attack Chain"),
+            description=chain.get("description", ""),
+            path_nodes=path_nodes,
+            edge_types=[],  # Could be populated from chain definition
+            steps=steps,
+        )
+
+    def _rank_attack_sequences(
+        self,
+        sequences: List[AttackSequence]
+    ) -> List[AttackSequence]:
+        """
+        Rank attack sequences by impact and complexity.
+
+        Priority:
+        1. DCSync paths (domain compromise)
+        2. Shorter paths (fewer steps)
+        3. Paths with fewer prerequisites
+        """
+        def score(seq: AttackSequence) -> tuple:
+            # Higher score = higher priority
+            is_dcsync = any(
+                "dcsync" in step.name.lower() or "dcsync" in step.context.lower()
+                for step in seq.steps
+            )
+            return (
+                1 if is_dcsync else 0,  # DCSync paths first
+                -seq.total_steps,       # Fewer steps preferred
+            )
+
+        return sorted(sequences, key=score, reverse=True)
+
+    def get_attack_chains(self) -> List[Dict]:
+        """
+        Get all defined attack chains from query mappings.
+
+        Returns:
+            List of attack chain definitions with metadata
+        """
+        chains = []
+        for query_id, mapping in QUERY_COMMAND_MAPPINGS.items():
+            if not isinstance(mapping, dict):
+                continue
+            chain = mapping.get("attack_chain")
+            if chain:
+                chains.append({
+                    "query_id": query_id,
+                    "chain_id": chain.get("id"),
+                    "name": chain.get("name"),
+                    "description": chain.get("description"),
+                    "severity": chain.get("severity", "unknown"),
+                    "oscp_relevance": chain.get("oscp_relevance", "unknown"),
+                    "step_count": len(chain.get("steps", [])),
+                    "prerequisite_queries": mapping.get("prerequisite_queries", []),
+                })
+        return chains
