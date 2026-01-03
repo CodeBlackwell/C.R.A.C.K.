@@ -69,7 +69,8 @@ class KerbruteEnumerator(Enumerator):
             cmd.extend(["-d", domain])
         else:
             cmd.extend(["-d", "<auto-detected>"])
-        cmd.append("<wordlist>")
+        # Show what wordlist is actually used
+        cmd.append(f"(internal: {len(self.COMMON_USERS)} common usernames)")
 
         desc = f"Kerberos user validation via AS-REQ - detects valid users + AS-REP roastable"
         return (cmd, desc)

@@ -277,6 +277,97 @@
       "next_steps": [],
       "attack_technique": "T1003.006",
       "tags": ["OSCP:HIGH", "privilege_escalation", "DCSync", "domain_compromise", "critical"]
+    },
+    {
+      "id": "prereq-account-operators",
+      "name": "Check Account Operators Membership",
+      "description": "Check if user is member of Account Operators group (directly or nested). Account Operators can create users and add to non-protected groups.",
+      "cypher": "MATCH (u:User {name:'<USER>'})-[:MemberOf*1..]->(g:Group)\nWHERE g.name =~ '(?i)ACCOUNT OPERATORS@.*'\nRETURN u.name AS User,\n       g.name AS Group,\n       'Can create users and modify non-protected groups' AS Capability",
+      "variables": {
+        "USER": {
+          "description": "User to check (UPN format)",
+          "example": "SVC-ALFRESCO@HTB.LOCAL",
+          "required": true
+        }
+      },
+      "edge_types_used": ["MemberOf"],
+      "oscp_relevance": "high",
+      "expected_results": "User's Account Operators membership if present",
+      "example_output": "SVC-ALFRESCO@HTB.LOCAL -> ACCOUNT OPERATORS@HTB.LOCAL",
+      "purpose": "prerequisite_check",
+      "tags": ["prerequisite", "account_operators", "privilege_check"]
+    },
+    {
+      "id": "prereq-exchange-writedacl",
+      "name": "Check Exchange WriteDACL on Domain",
+      "description": "Check if Exchange Windows Permissions group has WriteDACL on the domain. This is the prerequisite for the Exchange WriteDACL to DCSync attack chain.",
+      "cypher": "MATCH (g:Group)-[:WriteDacl]->(d:Domain)\nWHERE g.name =~ '(?i)EXCHANGE WINDOWS PERMISSIONS@.*'\nRETURN g.name AS ExchangeGroup,\n       d.name AS Domain,\n       'Can grant DCSync rights via WriteDACL' AS AttackPotential",
+      "variables": {},
+      "edge_types_used": ["WriteDacl"],
+      "oscp_relevance": "high",
+      "expected_results": "Exchange Windows Permissions group with WriteDACL on domain",
+      "example_output": "EXCHANGE WINDOWS PERMISSIONS@HTB.LOCAL -> HTB.LOCAL (WriteDacl)",
+      "purpose": "prerequisite_check",
+      "tags": ["prerequisite", "exchange", "writedacl", "dcsync_path"]
+    },
+    {
+      "id": "prereq-backup-operators",
+      "name": "Check Backup Operators Membership",
+      "description": "Check if user is member of Backup Operators. Can backup SAM/SYSTEM hives for offline credential extraction.",
+      "cypher": "MATCH (u:User {name:'<USER>'})-[:MemberOf*1..]->(g:Group)\nWHERE g.name =~ '(?i)BACKUP OPERATORS@.*'\nRETURN u.name AS User,\n       g.name AS Group,\n       'Can backup SAM/SYSTEM hives' AS Capability",
+      "variables": {
+        "USER": {
+          "description": "User to check (UPN format)",
+          "example": "BACKUP_SVC@CORP.COM",
+          "required": true
+        }
+      },
+      "edge_types_used": ["MemberOf"],
+      "oscp_relevance": "high",
+      "expected_results": "User's Backup Operators membership if present",
+      "purpose": "prerequisite_check",
+      "tags": ["prerequisite", "backup_operators", "privilege_check"]
+    },
+    {
+      "id": "prereq-server-operators",
+      "name": "Check Server Operators Membership",
+      "description": "Check if user is member of Server Operators. Can log on to DCs, manage services, and potentially escalate.",
+      "cypher": "MATCH (u:User {name:'<USER>'})-[:MemberOf*1..]->(g:Group)\nWHERE g.name =~ '(?i)SERVER OPERATORS@.*'\nRETURN u.name AS User,\n       g.name AS Group,\n       'Can manage services on DCs' AS Capability",
+      "variables": {
+        "USER": {
+          "description": "User to check (UPN format)",
+          "example": "SVC_ADMIN@CORP.COM",
+          "required": true
+        }
+      },
+      "edge_types_used": ["MemberOf"],
+      "oscp_relevance": "high",
+      "expected_results": "User's Server Operators membership if present",
+      "purpose": "prerequisite_check",
+      "tags": ["prerequisite", "server_operators", "privilege_check"]
+    },
+    {
+      "id": "prereq-can-add-to-group",
+      "name": "Check AddMember to Specific Group",
+      "description": "Check if user can add members to a specific group (directly or via group membership).",
+      "cypher": "MATCH (u:User {name:'<USER>'})-[:AddMember|MemberOf*1..5]->(target:Group {name:'<TARGET_GROUP>'})\nRETURN u.name AS User,\n       target.name AS TargetGroup,\n       'Can add members to group' AS Capability",
+      "variables": {
+        "USER": {
+          "description": "User to check (UPN format)",
+          "example": "HELPDESK@CORP.COM",
+          "required": true
+        },
+        "TARGET_GROUP": {
+          "description": "Target group to check AddMember permission",
+          "example": "EXCHANGE WINDOWS PERMISSIONS@CORP.COM",
+          "required": true
+        }
+      },
+      "edge_types_used": ["AddMember", "MemberOf"],
+      "oscp_relevance": "high",
+      "expected_results": "User's ability to add members to target group",
+      "purpose": "prerequisite_check",
+      "tags": ["prerequisite", "addmember", "group_modification"]
     }
   ]
 }

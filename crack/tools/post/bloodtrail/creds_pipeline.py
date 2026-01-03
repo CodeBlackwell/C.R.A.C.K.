@@ -44,7 +44,8 @@ class PipelineOptions:
     skip_collect: bool = False     # --no-collect: Skip BloodHound collection
     skip_pwn: bool = False         # --no-pwn: Don't mark as pwned
     skip_import: bool = False      # --no-import: Don't import BH data
-    output_dir: Optional[Path] = None  # Where to save BH output
+    output_dir: Optional[Path] = None  # Where to save BH output (default: CWD)
+    use_zip: bool = False          # --zip: Output as ZIP instead of directory
     verbose: bool = False
     domain: Optional[str] = None   # Override domain
 
@@ -168,7 +169,8 @@ class BloodHoundCollector:
     def __init__(self, target: str, domain: str, output_dir: Optional[Path] = None):
         self.target = target
         self.domain = domain
-        self.output_dir = output_dir or Path(tempfile.mkdtemp(prefix="bloodtrail_bh_"))
+        # Default to CWD, not temp dir
+        self.output_dir = output_dir or Path.cwd()
 
     def is_available(self) -> bool:
         """Check if bloodhound-python is installed."""
@@ -178,7 +180,8 @@ class BloodHoundCollector:
         self,
         cred: ParsedCredential,
         collection_method: str = "All",
-        timeout: int = 300
+        timeout: int = 300,
+        use_zip: bool = False
     ) -> Path:
         """
         Run bloodhound-python collection.
@@ -187,9 +190,10 @@ class BloodHoundCollector:
             cred: Validated credential to use
             collection_method: BloodHound collection method (All, DCOnly, etc.)
             timeout: Collection timeout in seconds
+            use_zip: Output as ZIP file instead of JSON directory
 
         Returns:
-            Path to output directory containing JSON files
+            Path to output directory containing JSON files (or ZIP if use_zip=True)
 
         Raises:
             RuntimeError: If collection fails
@@ -199,6 +203,10 @@ class BloodHoundCollector:
 
         domain = cred.domain or self.domain
 
+        # Create domain-specific output directory
+        domain_dir = self.output_dir / f"bloodhound-{domain.upper()}"
+        domain_dir.mkdir(parents=True, exist_ok=True)
+
         cmd = [
             "bloodhound-python",
             "-d", domain.lower(),
@@ -206,8 +214,11 @@ class BloodHoundCollector:
             "-c", collection_method,
             "--dns-tcp",  # More reliable
             "-ns", self.target,  # Use target as nameserver
-            "--zip",  # Output as ZIP for easier handling
         ]
+
+        # Add --zip only if requested
+        if use_zip:
+            cmd.append("--zip")
 
         # Add credential based on type
         if cred.cred_type == CredType.PASSWORD:
@@ -221,18 +232,18 @@ class BloodHoundCollector:
                 capture_output=True,
                 text=True,
                 timeout=timeout,
-                cwd=str(self.output_dir)
+                cwd=str(domain_dir)
             )
 
             if result.returncode != 0:
                 raise RuntimeError(f"BloodHound collection failed: {result.stderr}")
 
             # Find output files (ZIP or JSON)
-            output_files = list(self.output_dir.glob("*.zip")) + list(self.output_dir.glob("*.json"))
+            output_files = list(domain_dir.glob("*.zip")) + list(domain_dir.glob("*.json"))
             if not output_files:
                 raise RuntimeError("No output files generated")
 
-            return self.output_dir
+            return domain_dir
 
         except subprocess.TimeoutExpired:
             raise RuntimeError(f"BloodHound collection timed out ({timeout}s)")
@@ -381,7 +392,7 @@ class CredentialPipeline:
                 else:
                     try:
                         print(f"\n[*] Running BloodHound collection as {primary_cred.username}...")
-                        bh_output = collector.collect(primary_cred)
+                        bh_output = collector.collect(primary_cred, use_zip=self.options.use_zip)
                         result.bloodhound_collected = True
                         result.bloodhound_output_dir = bh_output
                         print(f"{self.G}[+] BloodHound data saved to: {bh_output}{self.X}")
@@ -396,15 +407,36 @@ class CredentialPipeline:
         elif result.bloodhound_collected and result.bloodhound_output_dir:
             try:
                 from .main import BHEnhancer
+                from pathlib import Path
 
                 print(f"\n[*] Importing BloodHound data to Neo4j...")
-                enhancer = BHEnhancer(result.bloodhound_output_dir, self.neo4j_config)
+                # Resolve ZIP file if output_dir contains one
+                bh_path = Path(result.bloodhound_output_dir)
+                zip_files = list(bh_path.glob("*.zip"))
+                import_path = zip_files[0] if zip_files else bh_path
+                enhancer = BHEnhancer(import_path, self.neo4j_config)
                 stats = enhancer.run(preset="attack-paths", dc_ip=self.target)
                 result.neo4j_imported = True
                 result.edges_imported = stats.edges_imported
                 print(f"{self.G}[+] Imported {stats.edges_imported} edges{self.X}")
             except Exception as e:
                 print(f"{self.Y}[!] Import failed: {e}{self.X}")
+
+        # ─────────────────────────────────────────────────────────────────────
+        # Stage 4.5: Generate bloodtrail.md report
+        # ─────────────────────────────────────────────────────────────────────
+        if result.neo4j_imported and result.bloodhound_output_dir:
+            try:
+                from .report_generator import run_all_queries
+                from .query_runner import QueryRunner
+
+                report_path = Path(result.bloodhound_output_dir) / "bloodtrail.md"
+                print(f"\n[*] Generating attack path report...")
+                runner = QueryRunner(self.neo4j_config)
+                run_all_queries(runner, output_path=report_path)
+                print(f"{self.G}[+] Report saved to: {report_path}{self.X}")
+            except Exception as e:
+                print(f"{self.Y}[!] Report generation failed: {e}{self.X}")
 
         # ─────────────────────────────────────────────────────────────────────
         # Stage 5: MARK PWNED (unless --no-pwn)
@@ -466,7 +498,7 @@ class CredentialPipeline:
     def _print_attack_paths(self, credentials: List[ParsedCredential]):
         """Display attack commands for pwned users."""
         tracker = self._get_tracker()
-        if not tracker.connected:
+        if not tracker._ensure_connected():
             return
 
         print()

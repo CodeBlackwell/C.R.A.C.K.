@@ -12,6 +12,7 @@ from .enum4linux import Enum4linuxEnumerator
 from .ldapsearch import LdapsearchEnumerator
 from .kerbrute import KerbruteEnumerator
 from .getnpusers import GetNPUsersEnumerator
+from .smb_crawler import SMBCrawler, ShareInfo, CrawlResult, create_smb_crawler
 
 # Registry: ordered by preference
 # Anonymous-capable tools first, then authenticated-only
@@ -88,4 +89,9 @@ __all__ = [
     "LdapsearchEnumerator",
     "KerbruteEnumerator",
     "GetNPUsersEnumerator",
+    # SMB Crawler
+    "SMBCrawler",
+    "ShareInfo",
+    "CrawlResult",
+    "create_smb_crawler",
 ]

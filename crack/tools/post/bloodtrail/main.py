@@ -619,8 +619,8 @@ class BHEnhancer:
                     try:
                         tracker = PwnedTracker(self.config)
                         if tracker.connect():
-                            result = tracker.set_dc_ip(dc_ip=dc_ip)
-                            if result.success:
+                            dc_result = tracker.set_dc_ip(dc_ip=dc_ip)
+                            if dc_result.success:
                                 if verbose:
                                     print(f"{C.GREEN}[+]{C.RESET} DC IP stored: {dc_ip}")
                             tracker.close()
