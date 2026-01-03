@@ -207,8 +207,8 @@ class AzureADConnectDetector(DetectorBase):
 
         # Check for sync accounts (AAD_, MSOL_)
         for user in users:
-            name = user.get('name', '').upper()
-            upn = user.get('upn', '').upper()
+            name = (user.get('name') or '').upper()
+            upn = (user.get('upn') or '').upper()
 
             for pattern in self.SYNC_ACCOUNT_PATTERNS:
                 if name.startswith(pattern) or upn.startswith(pattern):
@@ -217,7 +217,7 @@ class AzureADConnectDetector(DetectorBase):
 
         # Check for Azure-related groups
         for group in groups:
-            group_name = group.get('name', '')
+            group_name = group.get('name') or ''
             for azure_group in self.AZURE_GROUPS:
                 if azure_group.lower() in group_name.lower():
                     evidence.append(f"Azure group found: {group_name}")
@@ -276,8 +276,8 @@ class AzureADConnectDetector(DetectorBase):
         try:
             result = neo4j_session.run(query_sync)
             for record in result:
-                name = record.get('name', '')
-                desc = record.get('description', '')
+                name = record.get('name') or ''
+                desc = record.get('description') or ''
                 evidence.append(f"Sync account: {name}")
                 if desc:
                     evidence.append(f"  Description: {desc}")
@@ -295,11 +295,14 @@ class AzureADConnectDetector(DetectorBase):
         try:
             result = neo4j_session.run(query_groups)
             for record in result:
-                group_name = record.get('group_name', '')
-                members = record.get('members', [])
+                group_name = record.get('group_name') or ''
+                members = record.get('members') or []
                 evidence.append(f"Azure group: {group_name}")
                 if members:
-                    evidence.append(f"  Members: {', '.join(members)}")
+                    # Filter out None values from members list
+                    valid_members = [m for m in members if m]
+                    if valid_members:
+                        evidence.append(f"  Members: {', '.join(valid_members)}")
         except Exception:
             pass
 
