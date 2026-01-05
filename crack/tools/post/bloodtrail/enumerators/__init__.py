@@ -12,14 +12,18 @@ from .enum4linux import Enum4linuxEnumerator
 from .ldapsearch import LdapsearchEnumerator
 from .kerbrute import KerbruteEnumerator
 from .getnpusers import GetNPUsersEnumerator
+from .rpcclient import RpcclientEnumerator
+from .domain_detect import detect_domain, DomainInfo
 from .smb_crawler import SMBCrawler, ShareInfo, CrawlResult, create_smb_crawler
 
 # Registry: ordered by preference
 # Anonymous-capable tools first, then authenticated-only
 # Note: GetNPUsersEnumerator is run separately in Phase 2 (needs user list from Phase 1)
+# Note: RpcclientEnumerator runs before Kerbrute to provide user list for kerberos validation
 ENUMERATORS: List[Type[Enumerator]] = [
     Enum4linuxEnumerator,   # SMB/RPC - richest data (users, groups, policy)
     LdapsearchEnumerator,   # LDAP - good for UAC flags
+    RpcclientEnumerator,    # RPC - fast user enum, provides list for kerbrute
     KerbruteEnumerator,     # Kerberos - validates users, detects AS-REP
 ]
 
@@ -87,8 +91,12 @@ __all__ = [
     "list_enumerators",
     "Enum4linuxEnumerator",
     "LdapsearchEnumerator",
+    "RpcclientEnumerator",
     "KerbruteEnumerator",
     "GetNPUsersEnumerator",
+    # Domain Detection
+    "detect_domain",
+    "DomainInfo",
     # SMB Crawler
     "SMBCrawler",
     "ShareInfo",

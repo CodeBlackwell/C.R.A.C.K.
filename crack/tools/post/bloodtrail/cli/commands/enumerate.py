@@ -60,6 +60,7 @@ class EnumerateCommands(BaseCommandGroup):
                     verbose=getattr(args, 'verbose', 2),
                     show_commands=getattr(args, 'commands', False),
                     show_data=getattr(args, 'data', False),
+                    interactive=getattr(args, 'interactive', False),
                 )
 
         return -1
@@ -90,6 +91,7 @@ class EnumerateCommands(BaseCommandGroup):
         verbose: int = 2,
         show_commands: bool = False,
         show_data: bool = False,
+        interactive: bool = False,
     ) -> int:
         """
         Execute auto-enumeration mode.
@@ -123,6 +125,21 @@ class EnumerateCommands(BaseCommandGroup):
             print(f"  {D}Auth level:{X}   {B}Authenticated{X}")
         else:
             print(f"  {D}Auth level:{X}   {B}Anonymous{X}")
+
+        # Pre-flight domain detection if not provided
+        if not domain:
+            from ...enumerators.domain_detect import detect_domain
+
+            print(f"  {D}Domain:{X}       {Y}detecting...{X}", end="", flush=True)
+            domain_info = detect_domain(target, timeout=10)
+
+            if domain_info.domain:
+                domain = domain_info.domain
+                print(f"\r  {D}Domain:{X}       {B}{domain}{X} {D}(via {domain_info.detection_method}){X}")
+            else:
+                print(f"\r  {D}Domain:{X}       {Y}not detected (use --domain){X}")
+        else:
+            print(f"  {D}Domain:{X}       {B}{domain}{X}")
 
         print()
 
@@ -297,6 +314,16 @@ class EnumerateCommands(BaseCommandGroup):
 
         # Auto-run service account analysis (integrated flow)
         cls._run_service_account_analysis(aggregated, target, domain)
+
+        # Process findings through recommendation engine
+        cls._process_recommendations(
+            aggregated=aggregated,
+            target=target,
+            domain=domain,
+            username=username,
+            password=password,
+            interactive=interactive,
+        )
 
         # Generate files (uses pre-computed output_dir)
         cls._generate_enum_files(aggregated, target, output_dir)
@@ -780,3 +807,148 @@ class EnumerateCommands(BaseCommandGroup):
                 print(f"    {G}$ {step['command']}{X}")
                 print(f"      {D}{step['explanation']}{X}")
             print()
+
+    @classmethod
+    def _process_recommendations(
+        cls,
+        aggregated,
+        target: str,
+        domain: Optional[str] = None,
+        username: Optional[str] = None,
+        password: Optional[str] = None,
+        interactive: bool = False,
+    ) -> None:
+        """
+        Process findings through the recommendation engine.
+
+        In non-interactive mode: displays prioritized recommendations
+        In interactive mode: runs the interactive session for guided attack
+        """
+        from ...recommendation import (
+            RecommendationEngine,
+            findings_from_enumeration,
+            RecommendationPriority,
+        )
+
+        # Colors
+        C = "\033[96m"
+        G = "\033[92m"
+        Y = "\033[93m"
+        R = "\033[91m"
+        B = "\033[1m"
+        D = "\033[2m"
+        X = "\033[0m"
+
+        # Create recommendation engine
+        engine = RecommendationEngine(
+            target=target,
+            domain=domain or aggregated.domain,
+        )
+
+        # If we have credentials, add them
+        if username and password:
+            engine.add_credential(
+                username=username,
+                password=password,
+                validated=True,
+                access_level="user",
+            )
+
+        # Convert enumeration results to findings
+        findings = findings_from_enumeration(aggregated)
+
+        # Add findings to engine (this triggers recommendation generation)
+        for finding in findings:
+            engine.add_finding(finding)
+
+        # Check if we have any recommendations
+        if not engine.state.pending_recommendations:
+            return  # No special findings to highlight
+
+        # Show prioritized findings section
+        print()
+        print(f"{C}{B}{'=' * 74}{X}")
+        print(f"{C}{B}  PRIORITIZED FINDINGS (Recommendation Engine){X}")
+        print(f"{C}{B}{'=' * 74}{X}")
+        print()
+
+        # Group recommendations by priority
+        critical = [r for r in engine.state.pending_recommendations
+                   if r.priority == RecommendationPriority.CRITICAL]
+        high = [r for r in engine.state.pending_recommendations
+               if r.priority == RecommendationPriority.HIGH]
+        medium = [r for r in engine.state.pending_recommendations
+                 if r.priority == RecommendationPriority.MEDIUM]
+
+        # Show findings with decoded values
+        decoded_findings = [f for f in engine.state.findings.values()
+                          if f.decoded_value]
+        if decoded_findings:
+            print(f"  {B}AUTO-DECODED VALUES{X}")
+            print(f"  {D}{'─' * 60}{X}")
+            for finding in decoded_findings[:5]:
+                username_ctx = finding.metadata.get("username", "")
+                attr = finding.target
+                print(f"    {B}{username_ctx}{X}.{C}{attr}{X}")
+                print(f"      Raw:     {D}{finding.raw_value}{X}")
+                print(f"      Decoded: {G}{finding.decoded_value}{X} {D}({finding.decode_method}){X}")
+                if "likely_password" in finding.tags:
+                    print(f"      {Y}⚠ Likely password{X}")
+                print()
+            if len(decoded_findings) > 5:
+                print(f"    {D}... and {len(decoded_findings) - 5} more{X}")
+                print()
+
+        # Critical recommendations
+        if critical:
+            print(f"  {R}{B}CRITICAL ACTIONS ({len(critical)}){X}")
+            print(f"  {D}{'─' * 60}{X}")
+            for rec in critical[:3]:
+                print(f"    {R}●{X} {rec.description}")
+                if rec.command:
+                    print(f"      {G}$ {rec.command}{X}")
+                if rec.why:
+                    print(f"      {D}Why: {rec.why[:60]}...{X}" if len(rec.why) > 60 else f"      {D}Why: {rec.why}{X}")
+                print()
+            if len(critical) > 3:
+                print(f"    {D}... and {len(critical) - 3} more critical{X}")
+                print()
+
+        # High priority recommendations
+        if high:
+            print(f"  {Y}{B}HIGH PRIORITY ({len(high)}){X}")
+            print(f"  {D}{'─' * 60}{X}")
+            for rec in high[:3]:
+                print(f"    {Y}●{X} {rec.description}")
+                if rec.command:
+                    print(f"      {G}$ {rec.command}{X}")
+            if len(high) > 3:
+                print(f"    {D}... and {len(high) - 3} more{X}")
+            print()
+
+        # Medium priority summary
+        if medium:
+            print(f"  {D}MEDIUM PRIORITY: {len(medium)} additional recommendations{X}")
+            print()
+
+        # Interactive mode prompt
+        if interactive:
+            from ...interactive import InteractiveSession
+
+            print(f"  {C}Starting interactive session...{X}")
+            print(f"  {D}Press Ctrl+C to exit, '?' for help{X}")
+            print()
+
+            session = InteractiveSession(engine, verbose=True)
+            session.start()
+
+            try:
+                session.run_recommendation_loop()
+            except KeyboardInterrupt:
+                print("\n  Exiting interactive mode...")
+        else:
+            # Hint about interactive mode
+            total = len(critical) + len(high) + len(medium)
+            if total > 0:
+                print(f"  {D}Tip: Use -i for interactive guided attack mode{X}")
+                print()

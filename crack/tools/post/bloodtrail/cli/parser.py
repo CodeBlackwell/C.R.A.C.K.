@@ -227,6 +227,11 @@ def _add_enumerate_options(parser: argparse.ArgumentParser) -> None:
         metavar="FILE",
         help="Username file for AS-REP roasting spray (one username per line)",
     )
+    cred_group.add_argument(
+        "-i", "--interactive",
+        action="store_true",
+        help="Interactive mode: guided recommendations one at a time",
+    )
 
 
 def _add_property_options(parser: argparse.ArgumentParser) -> None:

@@ -41,6 +41,7 @@ crack/
 |--------|-----------|---------|
 | db | `db/CLAUDE.md` | Command schema, validation, enrichment |
 | reference | `reference/CLAUDE.md` | Registry, backends, CLI usage |
+| bloodtrail | `tools/post/bloodtrail/CLAUDE.md` | AD attack paths, recommendation engine |
 | crackpedia | `crackpedia/CLAUDE.md` | GUI command encyclopedia |
 | breach | `breach/CLAUDE.md` | GUI pentesting workspace |
 
