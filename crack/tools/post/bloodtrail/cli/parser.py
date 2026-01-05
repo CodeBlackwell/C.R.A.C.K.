@@ -717,3 +717,27 @@ def _add_analyze_options(parser: argparse.ArgumentParser) -> None:
         metavar="NAME",
         help="Specific share to crawl (with --crawl-smb)",
     )
+
+    analyze_group.add_argument(
+        "--hunt-sqlite",
+        metavar="DB_FILE",
+        help="Hunt SQLite database for credentials",
+    )
+
+    analyze_group.add_argument(
+        "--target",
+        metavar="IP",
+        help="Target IP for credential testing (with --hunt-sqlite)",
+    )
+
+    analyze_group.add_argument(
+        "--hunt-dotnet",
+        metavar="FILE",
+        help="Hunt .NET assembly for secrets (exe/dll)",
+    )
+
+    analyze_group.add_argument(
+        "--parse-deleted",
+        metavar="LDIF_FILE",
+        help="Parse AD Recycle Bin ldapsearch output for legacy passwords",
+    )

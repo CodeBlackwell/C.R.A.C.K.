@@ -46,6 +46,19 @@ from .findings_converter import (
     findings_from_smb_crawl,
     findings_from_group_memberships,
 )
+from .smb_integration import (
+    process_smb_crawl,
+    SMBCrawlSummary,
+    generate_smb_crawl_command,
+    generate_file_retrieval_commands,
+    display_smb_summary,
+)
+from .sqlite_integration import (
+    process_sqlite_hunt,
+    SqliteHuntSummary,
+    display_sqlite_summary,
+    hunt_and_display as sqlite_hunt_and_display,
+)
 
 __all__ = [
     # Models
@@ -78,4 +91,15 @@ __all__ = [
     "findings_from_enumeration",
     "findings_from_smb_crawl",
     "findings_from_group_memberships",
+    # SMB Integration
+    "process_smb_crawl",
+    "SMBCrawlSummary",
+    "generate_smb_crawl_command",
+    "generate_file_retrieval_commands",
+    "display_smb_summary",
+    # SQLite Integration
+    "process_sqlite_hunt",
+    "SqliteHuntSummary",
+    "display_sqlite_summary",
+    "sqlite_hunt_and_display",
 ]

@@ -97,17 +97,26 @@ def create_decrypt_vnc_recommendation(
     target: str,
 ) -> Recommendation:
     """Create recommendation to decrypt VNC password."""
+    inferred_user = finding.metadata.get("inferred_user")
+    file_path = finding.metadata.get("file_path", finding.target)
+
+    why = "VNC stores passwords encrypted with a known hardcoded DES key - this can be decrypted offline"
+    if inferred_user:
+        why = f"VNC registry found in {inferred_user}'s folder - password is likely theirs. " + why
+
     return Recommendation(
         id=f"decrypt_vnc_{finding.id}",
         priority=RecommendationPriority.CRITICAL,
         trigger_finding_id=finding.id,
         action_type="tool_use",
-        description="Decrypt VNC password from registry backup",
-        why="VNC stores passwords encrypted with a known hardcoded DES key - this can be decrypted offline",
+        description=f"Decrypt VNC password from {file_path}",
+        why=why,
         command=None,  # Handled internally
         metadata={
             "encrypted_hex": encrypted_hex,
             "decrypt_type": "vnc_des",
+            "inferred_user": inferred_user,
+            "file_path": file_path,
         },
     )
 
@@ -186,19 +195,122 @@ def create_bloodhound_recommendation(
 def create_sqlite_hunt_recommendation(
     finding: Finding,
     file_path: str,
+    target: str,
 ) -> Recommendation:
     """Create recommendation to hunt credentials in SQLite database."""
+    file_name = finding.metadata.get("file_name", file_path.split('/')[-1])
+    share = finding.metadata.get("share", "")
+
+    # Build download command if it's a remote file
+    download_cmd = None
+    if share:
+        download_cmd = f"smbclient //{target}/{share} -c 'get {file_path}'"
+
     return Recommendation(
         id=f"sqlite_hunt_{finding.id}",
-        priority=RecommendationPriority.MEDIUM,
+        priority=RecommendationPriority.HIGH,  # Elevated - databases often have creds
         trigger_finding_id=finding.id,
         action_type="manual_step",
-        description="Search SQLite database for credential tables",
-        why="SQLite databases often contain application credentials in plaintext",
-        command=f"sqlite3 '{file_path}' '.tables'",
+        description=f"Search SQLite database '{file_name}' for credentials",
+        why="SQLite databases often contain application credentials - check for user/password tables",
+        command=f"sqlite3 '{file_name}' '.tables' && sqlite3 '{file_name}' 'SELECT * FROM users LIMIT 5;'",
+        on_success=["extract_sqlite_creds"],
         metadata={
             "file_path": file_path,
-            "hunt_tables": ["users", "accounts", "credentials", "passwords", "auth"],
+            "file_name": file_name,
+            "download_cmd": download_cmd,
+            "hunt_tables": ["users", "accounts", "credentials", "passwords", "auth", "ldap", "login"],
+            "hunt_columns": ["password", "pwd", "pass", "secret", "hash", "cred"],
+        },
+    )
+
+
+def create_test_vnc_credential_recommendation(
+    finding: Finding,
+    decrypted_password: str,
+    inferred_user: str,
+    target: str,
+    domain: Optional[str] = None,
+) -> Recommendation:
+    """Create recommendation to test decrypted VNC password."""
+    domain_flag = f"-d {domain}" if domain else ""
+    return Recommendation(
+        id=f"test_vnc_cred_{finding.id}",
+        priority=RecommendationPriority.CRITICAL,
+        trigger_finding_id=finding.id,
+        action_type="run_command",
+        description=f"Test decrypted VNC password for {inferred_user}",
+        why=f"VNC password was in {inferred_user}'s folder - this is likely their password",
+        command=f"crackmapexec smb {target} -u {inferred_user} -p '{decrypted_password}' {domain_flag}".strip(),
+        on_success=["enumerate_smb_shares", "check_winrm"],
+        metadata={
+            "username": inferred_user,
+            "password": decrypted_password,
+            "credential_type": "vnc_decrypted",
+        },
+    )
+
+
+def create_decrypt_sqlite_credential_recommendation(
+    finding: Finding,
+    target: str,
+    username: str,
+    encrypted_value: str,
+    encryption_type: str,
+    table_name: str,
+) -> Recommendation:
+    """Create recommendation to decrypt AES-encrypted SQLite credential."""
+    return Recommendation(
+        id=f"decrypt_sqlite_{finding.id}",
+        priority=RecommendationPriority.CRITICAL,
+        trigger_finding_id=finding.id,
+        action_type="manual_step",
+        description=f"Decrypt {encryption_type} password for {username} from {table_name}",
+        why=(
+            f"SQLite database contains encrypted credential for '{username}'. "
+            f"Look for decryption key in .NET assemblies (search for AesManaged, RijndaelManaged) "
+            f"or config files in same directory."
+        ),
+        command=None,  # Manual investigation needed
+        metadata={
+            "username": username,
+            "encrypted_value": encrypted_value,
+            "encryption_type": encryption_type,
+            "table_name": table_name,
+            "hunt_locations": [
+                "Same directory as database for .exe/.dll files",
+                "App.config, web.config in application folder",
+                "Registry keys for application settings",
+            ],
+        },
+    )
+
+
+def create_test_sqlite_credential_recommendation(
+    finding: Finding,
+    target: str,
+    username: str,
+    password: str,
+    domain: Optional[str] = None,
+    source_table: Optional[str] = None,
+) -> Recommendation:
+    """Create recommendation to test a credential extracted from SQLite."""
+    domain_flag = f"-d {domain}" if domain else ""
+    why = f"Credential extracted from SQLite database table '{source_table}'" if source_table else "Credential extracted from SQLite database"
+    return Recommendation(
+        id=f"test_sqlite_cred_{finding.id}",
+        priority=RecommendationPriority.CRITICAL,
+        trigger_finding_id=finding.id,
+        action_type="run_command",
+        description=f"Test SQLite credential for {username}",
+        why=why,
+        command=f"crackmapexec smb {target} -u {username} -p '{password}' {domain_flag}".strip(),
+        on_success=["enumerate_smb_shares", "check_winrm"],
+        metadata={
+            "username": username,
+            "password": password,
+            "source": "sqlite",
+            "source_table": source_table,
         },
     )
 
@@ -585,7 +697,7 @@ def _process_action(
             encrypted = finding.metadata.get("encrypted_hex", str(finding.raw_value))
             return create_decrypt_vnc_recommendation(finding, encrypted, target)
         elif template == "hunt_sqlite_creds":
-            return create_sqlite_hunt_recommendation(finding, finding.target)
+            return create_sqlite_hunt_recommendation(finding, finding.target, target)
         elif template == "query_recycle_bin" and username and password and domain:
             return create_recycle_bin_recommendation(
                 finding, target, username, password, domain

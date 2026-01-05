@@ -185,57 +185,134 @@ def findings_from_smb_crawl(
     """
     findings = []
 
-    if not crawl_result or not hasattr(crawl_result, 'files'):
+    if not crawl_result:
         return findings
 
-    for file_info in crawl_result.files:
-        file_path = file_info.get('path', '')
-        file_name = file_info.get('name', '')
+    # Handle CrawlResult object (from SMBCrawler)
+    files = getattr(crawl_result, 'files', [])
+
+    for file_info in files:
+        # Handle DiscoveredFile objects
+        if hasattr(file_info, 'path'):
+            file_path = file_info.path
+            file_name = file_info.filename if hasattr(file_info, 'filename') else file_path.split('/')[-1]
+            file_content = file_info.content if hasattr(file_info, 'content') else None
+            file_size = file_info.size if hasattr(file_info, 'size') else None
+            file_source = file_info.source if hasattr(file_info, 'source') else source
+            file_score = file_info.interesting_score if hasattr(file_info, 'interesting_score') else 0
+        # Handle dict-style file info
+        elif isinstance(file_info, dict):
+            file_path = file_info.get('path', '')
+            file_name = file_info.get('name', file_path.split('/')[-1])
+            file_content = file_info.get('content')
+            file_size = file_info.get('size')
+            file_source = file_info.get('source', source)
+            file_score = file_info.get('score', 0)
+        else:
+            continue
 
         # Check for interesting file types
         tags = []
-
         lower_name = file_name.lower()
         lower_path = file_path.lower()
 
-        # VNC registry files
-        if 'vnc' in lower_name and lower_name.endswith('.reg'):
-            tags.append('vnc')
-            tags.append('registry')
+        # VNC registry files - HIGH PRIORITY
+        if 'vnc' in lower_path and lower_name.endswith('.reg'):
+            tags.extend(['vnc', 'registry', 'high_priority'])
 
-        # Database files
-        if any(lower_name.endswith(ext) for ext in ['.db', '.sqlite', '.sqlite3']):
-            tags.append('database')
+        # Database files - HIGH PRIORITY
+        elif any(lower_name.endswith(ext) for ext in ['.db', '.sqlite', '.sqlite3']):
+            tags.extend(['database', 'high_priority'])
 
         # Config files
-        if any(lower_name.endswith(ext) for ext in ['.ini', '.conf', '.config', '.cfg', '.xml']):
+        elif any(lower_name.endswith(ext) for ext in ['.ini', '.conf', '.config', '.cfg']):
             tags.append('config')
 
-        # Executable/DLL
-        if any(lower_name.endswith(ext) for ext in ['.exe', '.dll']):
+        # XML files (often contain creds)
+        elif lower_name.endswith('.xml'):
+            tags.extend(['config', 'xml'])
+
+        # Executable/DLL - check for .NET
+        elif any(lower_name.endswith(ext) for ext in ['.exe', '.dll']):
             tags.append('executable')
 
-        # Skip uninteresting files
-        if not tags:
+        # Scripts
+        elif any(lower_name.endswith(ext) for ext in ['.ps1', '.bat', '.cmd', '.vbs']):
+            tags.append('script')
+
+        # Text files with suspicious names
+        elif any(hint in lower_name for hint in ['pass', 'cred', 'secret', 'login', 'auth']):
+            tags.append('suspicious_name')
+
+        # Skip uninteresting files (unless high score)
+        if not tags and file_score < 30:
             continue
 
+        # Infer username from path (e.g., /Users/s.smith/ or /IT/Temp/s.smith/)
+        inferred_user = _infer_username_from_path(file_path)
+
+        # Extract share name from source URL
+        share_name = file_source.split('/')[-1] if '/' in str(file_source) else ''
+
         finding = Finding(
-            id=f"file_{file_path.replace('/', '_').replace('\\', '_')}",
+            id=f"file_{hash(file_path) & 0xFFFFFFFF:08x}",
             finding_type=FindingType.FILE,
             source=source,
             target=file_path,
-            raw_value=file_info.get('content'),
+            raw_value=file_content,
             tags=tags,
+            confidence=0.8 if 'high_priority' in tags else 0.5,
             metadata={
                 "file_path": file_path,
                 "file_name": file_name,
-                "file_size": file_info.get('size'),
-                "share": file_info.get('share'),
+                "file_size": file_size,
+                "share": share_name,
+                "full_source": file_source,
+                "score": file_score,
+                "inferred_user": inferred_user,
             },
         )
         findings.append(finding)
 
     return findings
+
+
+def _infer_username_from_path(path: str) -> Optional[str]:
+    """
+    Infer username from file path.
+
+    Looks for patterns like:
+    - /Users/username/
+    - /home/username/
+    - /IT/Temp/s.smith/
+    - \\share\\username\\
+
+    Returns username or None.
+    """
+    import re
+
+    # Normalize path separators
+    normalized = path.replace('\\', '/')
+
+    # Common patterns for user directories
+    patterns = [
+        r'/users?/([^/]+)/',           # /Users/username/ or /User/username/
+        r'/home/([^/]+)/',             # /home/username/
+        r'/profiles?/([^/]+)/',        # /Profiles/username/
+        r'/([a-z]\.[a-z]+)/',          # /s.smith/ (first.last format)
+        r'/temp/([^/]+)/',             # /Temp/username/
+    ]
+
+    for pattern in patterns:
+        match = re.search(pattern, normalized, re.IGNORECASE)
+        if match:
+            username = match.group(1)
+            # Validate it looks like a username (not a generic folder)
+            generic_folders = {'temp', 'tmp', 'data', 'files', 'documents', 'it', 'admin'}
+            if username.lower() not in generic_folders:
+                return username
+
+    return None
 
 
 def findings_from_group_memberships(

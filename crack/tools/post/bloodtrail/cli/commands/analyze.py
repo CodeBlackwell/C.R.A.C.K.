@@ -63,6 +63,12 @@ class AnalyzeCommands(BaseCommandGroup):
             help="Specific share to crawl (with --crawl-smb)",
         )
 
+        group.add_argument(
+            "--hunt-sqlite",
+            metavar="DB_FILE",
+            help="Hunt SQLite database for credentials",
+        )
+
     @classmethod
     def handle(cls, args: Namespace) -> int:
         if args.detect:
@@ -73,6 +79,12 @@ class AnalyzeCommands(BaseCommandGroup):
             return cls._handle_analyze_reuse(args)
         elif args.crawl_smb:
             return cls._handle_crawl_smb(args)
+        elif args.hunt_sqlite:
+            return cls._handle_hunt_sqlite(args)
+        elif getattr(args, 'hunt_dotnet', None):
+            return cls._handle_hunt_dotnet(args)
+        elif getattr(args, 'parse_deleted', None):
+            return cls._handle_parse_deleted(args)
         return -1  # Not handled
 
     @classmethod
@@ -95,18 +107,33 @@ class AnalyzeCommands(BaseCommandGroup):
         groups = []
 
         try:
-            # Query users
-            result = conn.session.run("MATCH (u:User) RETURN u.name AS name, u.description AS description LIMIT 500")
-            users = [dict(r) for r in result]
+            with conn.driver.session() as session:
+                # Query Domain Controllers first to enrich context
+                dc_result = session.run("""
+                    MATCH (c:Computer)-[:MemberOf*1..]->(g:Group)
+                    WHERE g.name STARTS WITH 'DOMAIN CONTROLLERS@'
+                    RETURN c.name AS name LIMIT 1
+                """)
+                dc_record = dc_result.single()
+                if dc_record and dc_record["name"]:
+                    dc_hostname = dc_record["name"].split("@")[0]  # Remove domain suffix
+                    context["dc_hostname"] = dc_hostname
+                    # Also set target_ip to DC hostname if not already set
+                    if context["target_ip"] == '<DC_IP>':
+                        context["target_ip"] = dc_hostname
 
-            # Query groups
-            result = conn.session.run("""
-                MATCH (g:Group)
-                OPTIONAL MATCH (u:User)-[:MemberOf*1..]->(g)
-                RETURN g.name AS name, collect(DISTINCT u.name)[..10] AS members
-                LIMIT 200
-            """)
-            groups = [dict(r) for r in result]
+                # Query users
+                result = session.run("MATCH (u:User) RETURN u.name AS name, u.description AS description LIMIT 500")
+                users = [dict(r) for r in result]
+
+                # Query groups
+                result = session.run("""
+                    MATCH (g:Group)
+                    OPTIONAL MATCH (u:User)-[:MemberOf*1..]->(g)
+                    RETURN g.name AS name, collect(DISTINCT u.name)[..10] AS members
+                    LIMIT 200
+                """)
+                groups = [dict(r) for r in result]
 
         except Exception as e:
             cls.print_error(f"Failed to query BloodHound: {e}")
@@ -137,7 +164,7 @@ class AnalyzeCommands(BaseCommandGroup):
             "likely": Colors.YELLOW,
             "possible": Colors.CYAN,
         }
-        color = confidence_colors.get(detection.confidence.value, Colors.WHITE)
+        color = confidence_colors.get(detection.confidence.value, "")
 
         print(f"\n{Colors.BOLD}{color}[{detection.confidence.value.upper()}] {detection.name}{Colors.RESET}")
         print(f"  Indicator: {detection.indicator}")
@@ -152,7 +179,7 @@ class AnalyzeCommands(BaseCommandGroup):
                 print(f"\n    [{i}] {cmd.description}")
                 print(f"        {Colors.CYAN}$ {cmd.command}{Colors.RESET}")
                 if cmd.explanation:
-                    print(f"        {Colors.DIM}Why: {cmd.explanation[:100]}...{Colors.RESET}")
+                    print(f"        {Colors.DIM}Why: {cmd.explanation}{Colors.RESET}")
 
         if detection.next_steps:
             print(f"\n  {Colors.BOLD}Next Steps:{Colors.RESET}")
@@ -181,7 +208,8 @@ class AnalyzeCommands(BaseCommandGroup):
         analyzer = ServiceAccountAnalyzer()
 
         try:
-            result = analyzer.analyze_from_bloodhound(conn.session, context)
+            with conn.driver.session() as session:
+                result = analyzer.analyze_from_bloodhound(session, context)
         except Exception as e:
             cls.print_error(f"Analysis failed: {e}")
             conn.close()
@@ -275,17 +303,24 @@ class AnalyzeCommands(BaseCommandGroup):
 
     @classmethod
     def _handle_crawl_smb(cls, args: Namespace) -> int:
-        """Crawl SMB shares for sensitive files."""
+        """Crawl SMB shares for sensitive files with recommendation engine."""
         try:
-            from ...enumerators.smb_crawler import SMBCrawler, create_smb_crawler
+            from ...enumerators.smb_crawler import (
+                SMBCrawler,
+                generate_retrieval_command,
+            )
+            from ...recommendation import (
+                process_smb_crawl,
+                display_smb_summary,
+            )
         except ImportError as e:
             cls.print_error(f"SMB crawler requires impacket: {e}")
             print("Install with: pip install impacket")
             return 1
 
         host = args.crawl_smb
-        username = getattr(args, 'username', None) or getattr(args, 'u', None)
-        password = getattr(args, 'password', None) or getattr(args, 'p', None)
+        username = getattr(args, 'ad_username', None)
+        password = getattr(args, 'ad_password', None)
         domain = getattr(args, 'domain', '')
 
         if not username or not password:
@@ -306,51 +341,223 @@ class AnalyzeCommands(BaseCommandGroup):
                 # List shares
                 shares = crawler.list_shares_detailed()
                 print(f"\n{Colors.BOLD}Accessible Shares:{Colors.RESET}")
+                readable_count = 0
                 for share in shares:
-                    status = f"{Colors.GREEN}readable{Colors.RESET}" if share.readable else f"{Colors.RED}denied{Colors.RESET}"
-                    print(f"  {share.name}: {status}")
-                    if share.remark:
-                        print(f"    Remark: {share.remark}")
+                    if share.readable:
+                        readable_count += 1
+                        print(f"  {Colors.GREEN}✓{Colors.RESET} {share.name}")
+                        if share.remark:
+                            print(f"    {Colors.DIM}{share.remark}{Colors.RESET}")
+                    else:
+                        print(f"  {Colors.RED}✗{Colors.RESET} {share.name} {Colors.DIM}(access denied){Colors.RESET}")
+
+                if readable_count == 0:
+                    print(f"\n{Colors.YELLOW}No readable shares found.{Colors.RESET}")
+                    return 0
 
                 # Filter to specific share if requested
                 target_shares = [args.share] if args.share else None
 
                 # Crawl and extract
                 print(f"\n{Colors.BOLD}Crawling for sensitive files...{Colors.RESET}")
-                result = crawler.crawl_and_extract(shares=target_shares)
+                crawl_result = crawler.crawl_and_extract(shares=target_shares)
 
-                # Display results
-                print(f"\n{Colors.BOLD}Discovery Summary:{Colors.RESET}")
-                print(f"  Shares accessed: {', '.join(result.shares_accessed)}")
-                print(f"  Files found: {len(result.files)}")
-                print(f"  Credentials extracted: {len(result.credentials)}")
+                # Process through recommendation engine
+                summary = process_smb_crawl(
+                    crawl_result=crawl_result,
+                    target=host,
+                    domain=domain,
+                )
 
-                if result.files:
-                    print(f"\n{Colors.BOLD}Top Interesting Files:{Colors.RESET}")
-                    for f in sorted(result.files, key=lambda x: -x.interesting_score)[:10]:
-                        print(f"  [{f.interesting_score:3d}] {f.path}")
-                        print(f"        Reasons: {', '.join(f.score_reasons)}")
+                # Display enhanced summary with recommendations
+                print(display_smb_summary(summary))
 
-                if result.credentials:
-                    print(f"\n{Colors.BOLD}Extracted Credentials:{Colors.RESET}")
-                    for cred in result.credentials:
+                # Show file retrieval commands for high-priority files
+                high_priority = [f for f in crawl_result.files
+                                if f.interesting_score >= 50]
+                if high_priority:
+                    print(f"\n{Colors.BOLD}FILE RETRIEVAL COMMANDS{Colors.RESET}")
+                    print(f"{Colors.DIM}{'─' * 60}{Colors.RESET}")
+                    for f in sorted(high_priority, key=lambda x: -x.interesting_score)[:5]:
+                        cmd = generate_retrieval_command(
+                            file=f,
+                            host=host,
+                            username=username,
+                            password=password,
+                            domain=domain,
+                        )
+                        print(f"  {Colors.DIM}# {f.path}{Colors.RESET}")
+                        print(f"  {Colors.CYAN}$ {cmd}{Colors.RESET}")
+                        print()
+
+                # Show raw credentials if any were extracted
+                if crawl_result.credentials:
+                    print(f"\n{Colors.BOLD}EXTRACTED CREDENTIALS{Colors.RESET}")
+                    print(f"{Colors.DIM}{'─' * 60}{Colors.RESET}")
+                    for cred in crawl_result.credentials:
                         print(f"  {Colors.GREEN}{cred.upn}{Colors.RESET}")
                         print(f"    Source: {cred.source}")
                         print(f"    Confidence: {cred.confidence.value}")
-
-                if result.next_steps:
-                    print(f"\n{Colors.BOLD}Next Steps:{Colors.RESET}")
-                    for step in result.next_steps[:5]:
-                        print(f"  [{step.priority}] {step.action}")
-                        print(f"      {Colors.CYAN}$ {step.command}{Colors.RESET}")
-
-                if result.errors:
-                    print(f"\n{Colors.YELLOW}Errors:{Colors.RESET}")
-                    for err in result.errors[:5]:
-                        print(f"  - {err}")
+                    print()
 
         except Exception as e:
             cls.print_error(f"SMB crawl failed: {e}")
+            import traceback
+            traceback.print_exc()
+            return 1
+
+        return 0
+
+    @classmethod
+    def _handle_hunt_sqlite(cls, args: Namespace) -> int:
+        """Hunt SQLite database for credentials."""
+        from ...recommendation import (
+            process_sqlite_hunt,
+            display_sqlite_summary,
+        )
+        from pathlib import Path
+
+        db_path = args.hunt_sqlite
+        target = getattr(args, 'dc_ip', None) or getattr(args, 'target', '<TARGET>')
+        domain = getattr(args, 'domain', None)
+
+        # Verify file exists
+        if not Path(db_path).exists():
+            cls.print_error(f"Database file not found: {db_path}")
+            return 1
+
+        cls.print_header(f"SQLITE CREDENTIAL HUNT: {db_path}")
+
+        try:
+            summary = process_sqlite_hunt(db_path, target, domain)
+            print(display_sqlite_summary(summary))
+
+            # If encrypted credentials found, provide guidance
+            if summary.encrypted_creds > 0:
+                print(f"\n{Colors.YELLOW}{Colors.BOLD}ENCRYPTED CREDENTIALS DETECTED{Colors.RESET}")
+                print(f"{Colors.DIM}{'─' * 60}{Colors.RESET}")
+                print("  To decrypt these credentials:")
+                print("  1. Look for .exe/.dll files in the same directory or share")
+                print("  2. Decompile .NET assemblies with dnSpy or ILSpy")
+                print("  3. Search for 'AesManaged', 'RijndaelManaged', or encryption keys")
+                print("  4. Check for IV/nonce values in the database or config files")
+                print()
+
+            # Show next steps based on findings
+            if summary.recommendations:
+                print(f"\n{Colors.BOLD}RECOMMENDED ACTIONS{Colors.RESET}")
+                print(f"{Colors.DIM}{'─' * 60}{Colors.RESET}")
+                for i, rec in enumerate(summary.recommendations[:5], 1):
+                    priority_color = (
+                        Colors.RED if rec.priority.value <= 1
+                        else Colors.YELLOW if rec.priority.value <= 2
+                        else Colors.CYAN
+                    )
+                    print(f"\n  {priority_color}[{rec.priority.name}]{Colors.RESET} {rec.description}")
+                    print(f"  {Colors.DIM}Why: {rec.why}{Colors.RESET}")
+                    if rec.command:
+                        print(f"  {Colors.CYAN}$ {rec.command}{Colors.RESET}")
+
+        except Exception as e:
+            cls.print_error(f"SQLite hunt failed: {e}")
+            import traceback
+            traceback.print_exc()
+            return 1
+
+        return 0
+
+    @classmethod
+    def _handle_hunt_dotnet(cls, args: Namespace) -> int:
+        """Hunt .NET assembly for secrets."""
+        from ...hunters import DotNetHunter, format_dotnet_result
+        from pathlib import Path
+
+        file_path = args.hunt_dotnet
+
+        # Verify file exists
+        if not Path(file_path).exists():
+            cls.print_error(f"File not found: {file_path}")
+            return 1
+
+        cls.print_header(f".NET ASSEMBLY HUNT: {file_path}")
+
+        try:
+            hunter = DotNetHunter()
+            result = hunter.hunt(file_path)
+            print(format_dotnet_result(result))
+
+            if not result.is_dotnet:
+                print(f"\n{Colors.YELLOW}Not a .NET assembly. Try with a .exe or .dll file.{Colors.RESET}")
+                return 1
+
+            # If encryption detected, show decryption workflow
+            if result.has_encryption:
+                print(f"\n{Colors.YELLOW}{Colors.BOLD}NEXT STEPS{Colors.RESET}")
+                print(f"{Colors.DIM}{'─' * 60}{Colors.RESET}")
+                print("  1. Download assembly to Windows machine with dnSpy")
+                print("  2. Open in dnSpy: File → Open → select the .exe/.dll")
+                print("  3. Search (Ctrl+Shift+K) for encryption patterns:")
+                for pattern in result.encryption_patterns[:3]:
+                    print(f"     - {pattern}")
+                print("  4. Find Key and IV assignments near CreateEncryptor()")
+                print("  5. Use extracted key to decrypt credentials")
+                print()
+
+                # Show example decryption command if we have secrets
+                if result.secrets:
+                    for secret in result.secrets[:1]:
+                        if secret.secret_type.value in ('base64_blob', 'aes_key'):
+                            print(f"  {Colors.CYAN}Potential key found: {secret.value[:40]}...{Colors.RESET}")
+                print()
+
+        except Exception as e:
+            cls.print_error(f".NET hunt failed: {e}")
+            import traceback
+            traceback.print_exc()
+            return 1
+
+        return 0
+
+    @classmethod
+    def _handle_parse_deleted(cls, args: Namespace) -> int:
+        """Parse AD Recycle Bin output for legacy passwords."""
+        from ...hunters import DeletedObjectsParser, format_deleted_objects_result
+        from pathlib import Path
+
+        file_path = args.parse_deleted
+        target = getattr(args, 'target', None) or getattr(args, 'dc_ip', '<TARGET>')
+        domain = getattr(args, 'domain', None)
+
+        # Verify file exists
+        if not Path(file_path).exists():
+            cls.print_error(f"File not found: {file_path}")
+            return 1
+
+        cls.print_header(f"AD RECYCLE BIN PARSER")
+
+        try:
+            parser = DeletedObjectsParser()
+            result = parser.parse_ldif(file_path)
+            print(format_deleted_objects_result(result))
+
+            # If legacy passwords found, show test commands
+            if result.found_passwords:
+                print(f"\n{Colors.BOLD}TEST THESE CREDENTIALS{Colors.RESET}")
+                print(f"{Colors.DIM}{'─' * 60}{Colors.RESET}")
+
+                for obj in result.objects_with_passwords:
+                    if obj.legacy_password and obj.samaccountname:
+                        domain_flag = f"-d {domain}" if domain else ""
+                        cmd = f"crackmapexec smb {target} -u {obj.samaccountname} -p '{obj.legacy_password}' {domain_flag}".strip()
+                        print(f"\n  {Colors.CYAN}$ {cmd}{Colors.RESET}")
+                        print(f"  {Colors.DIM}(Password from {obj.legacy_password_attr}){Colors.RESET}")
+
+                print()
+
+        except Exception as e:
+            cls.print_error(f"Parse failed: {e}")
+            import traceback
+            traceback.print_exc()
             return 1
 
         return 0
