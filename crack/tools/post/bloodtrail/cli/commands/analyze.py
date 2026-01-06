@@ -321,7 +321,7 @@ class AnalyzeCommands(BaseCommandGroup):
         host = args.crawl_smb
         username = getattr(args, 'ad_username', None)
         password = getattr(args, 'ad_password', None)
-        domain = getattr(args, 'domain', '')
+        domain = getattr(args, 'domain', None) or ''  # Handle None from argparse
 
         if not username or not password:
             cls.print_error("SMB crawling requires credentials (-u/-p)")

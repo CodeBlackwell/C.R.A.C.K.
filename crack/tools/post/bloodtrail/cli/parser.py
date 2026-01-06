@@ -158,8 +158,8 @@ def _add_neo4j_options(parser: argparse.ArgumentParser) -> None:
     )
     parser.add_argument(
         "--password",
-        default="Neo4j123",
-        help="Neo4j password (default: Neo4j123)",
+        default=None,
+        help="Neo4j password (default: from NEO4J_PASSWORD env var)",
     )
 
 
@@ -231,6 +231,48 @@ def _add_enumerate_options(parser: argparse.ArgumentParser) -> None:
         "-i", "--interactive",
         action="store_true",
         help="Interactive mode: guided recommendations one at a time",
+    )
+
+    # Auto-execute mode options
+    auto_group = parser.add_argument_group("Auto-Execute Mode")
+    auto_group.add_argument(
+        "--auto",
+        action="store_true",
+        help="Auto-execute recommendations (recon/enum/cred tests, pauses before shells)",
+    )
+    auto_group.add_argument(
+        "--auto-level",
+        type=str,
+        choices=["critical", "high", "medium"],
+        default="high",
+        help="Minimum priority to auto-execute (default: high)",
+    )
+    auto_group.add_argument(
+        "--cred",
+        type=str,
+        action="append",
+        metavar="USER:PASS",
+        help="Inject credential for resume (can be repeated)",
+    )
+    auto_group.add_argument(
+        "--max-depth",
+        type=int,
+        default=5,
+        help="Maximum credential chain depth (default: 5)",
+    )
+    auto_group.add_argument(
+        "--cmd-timeout",
+        type=int,
+        default=180,
+        help="Command timeout in seconds (default: 180)",
+    )
+
+    # Persistence options
+    persist_group = parser.add_argument_group("Data Persistence")
+    persist_group.add_argument(
+        "--no-prism",
+        action="store_true",
+        help="Disable data persistence (standalone mode). Results display only, no SQLite/Neo4j writes.",
     )
 
 

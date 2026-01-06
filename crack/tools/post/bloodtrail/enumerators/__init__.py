@@ -13,6 +13,7 @@ from .ldapsearch import LdapsearchEnumerator
 from .kerbrute import KerbruteEnumerator
 from .getnpusers import GetNPUsersEnumerator
 from .rpcclient import RpcclientEnumerator
+from .lookupsid import LookupsidEnumerator
 from .domain_detect import detect_domain, DomainInfo
 from .smb_crawler import SMBCrawler, ShareInfo, CrawlResult, create_smb_crawler
 
@@ -24,6 +25,7 @@ ENUMERATORS: List[Type[Enumerator]] = [
     Enum4linuxEnumerator,   # SMB/RPC - richest data (users, groups, policy)
     LdapsearchEnumerator,   # LDAP - good for UAC flags
     RpcclientEnumerator,    # RPC - fast user enum, provides list for kerbrute
+    LookupsidEnumerator,    # RID cycling - finds users when LDAP/RPC blocked
     KerbruteEnumerator,     # Kerberos - validates users, detects AS-REP
 ]
 
@@ -92,6 +94,7 @@ __all__ = [
     "Enum4linuxEnumerator",
     "LdapsearchEnumerator",
     "RpcclientEnumerator",
+    "LookupsidEnumerator",
     "KerbruteEnumerator",
     "GetNPUsersEnumerator",
     # Domain Detection

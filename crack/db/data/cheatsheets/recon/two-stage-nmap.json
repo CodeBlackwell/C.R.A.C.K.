@@ -1,0 +1,122 @@
+{
+  "cheatsheets": [
+    {
+      "id": "two-stage-nmap-workflow",
+      "name": "Two-Stage Nmap Scanning",
+      "description": "Fast port discovery followed by targeted service enumeration - OSCP exam optimized",
+      "educational_header": {
+        "how_to_recognize": [
+          "Need to scan all 65535 ports but time-constrained",
+          "Want detailed service info only on discovered open ports"
+        ],
+        "when_to_look_for": [
+          "Starting any network assessment (internal/external)",
+          "OSCP exam - first 5 minutes of any machine"
+        ]
+      },
+      "scenarios": [
+        {
+          "title": "Scenario 1: Standard Two-Stage Assessment",
+          "context": "New target IP with unknown services. Need comprehensive port coverage with detailed service info.",
+          "approach": "Use combined one-liner: fast discovery scan pipes directly to targeted service enumeration. Single command handles both stages automatically.",
+          "commands": ["nmap-two-stage-chain"],
+          "expected_outcome": "All open ports discovered with service versions and script output in nmap/targeted.nmap",
+          "why_this_works": "Stage 1 uses -oG - (greppable output to stdout) which grep/cut/paste extract into comma-separated port list. Stage 2 only scans those ports, saving significant time vs full -sV -sC on all 65535."
+        },
+        {
+          "title": "Scenario 2: Manual Two-Stage (Separate Commands)",
+          "context": "Need to review discovered ports before running service scan. Want control over which ports get detailed enumeration.",
+          "approach": "Run fast discovery first, review output, manually select ports of interest, then run service scan on those specific ports.",
+          "commands": ["nmap-quick-scan", "nmap-service-scan"],
+          "expected_outcome": "Controlled enumeration where analyst decides which ports warrant detailed scanning",
+          "why_this_works": "Separation allows prioritization - scan high-value ports (80, 443, 445) first while background scanning remaining ports."
+        },
+        {
+          "title": "Scenario 3: Active Directory Target Detection",
+          "context": "Target shows AD-typical ports: 88 (Kerberos), 389 (LDAP), 445 (SMB), 636 (LDAPS), 3268 (GC).",
+          "approach": "Run two-stage scan to identify all ports, recognize DC signature from results, pivot to AD-specific enumeration.",
+          "commands": ["nmap-two-stage-chain", "smb-enum"],
+          "expected_outcome": "Domain Controller identified, ready for AD enumeration (users, groups, SPNs)",
+          "why_this_works": "Port 88 (Kerberos) is the definitive DC indicator. Once identified, switch to AD-focused tools like enum4linux, ldapsearch, kerbrute."
+        },
+        {
+          "title": "Scenario 4: UDP Service Discovery (SNMP/DNS/TFTP)",
+          "context": "TCP scan complete but looking for additional attack surface. Common UDP services like SNMP often misconfigured.",
+          "approach": "Run UDP two-stage scan on top 100 ports while continuing TCP exploitation. Check SNMP with 'public' community string.",
+          "commands": ["nmap-two-stage-udp", "snmp-enum"],
+          "expected_outcome": "UDP services discovered - SNMP (161) often reveals system info, users, running processes",
+          "why_this_works": "UDP services frequently overlooked. SNMP with default 'public' community string is a common quick win for information disclosure."
+        }
+      ],
+      "sections": [
+        {
+          "title": "Phase 1: Combined One-Liner (Recommended)",
+          "notes": "Single command handles discovery + enumeration. Creates nmap/ directory automatically. Best for time-constrained situations like OSCP exam.",
+          "commands": [
+            {
+              "id": "nmap-two-stage-chain",
+              "example": "TARGET=10.10.11.152 && mkdir -p nmap && PORTS=$(sudo nmap -p- -Pn --min-rate=1000 -T4 $TARGET -oG - | grep -oP '\\d+/open' | cut -d/ -f1 | paste -sd,) && echo \"[+] Discovered ports: $PORTS\" && sudo nmap -sC -sV -Pn -p$PORTS $TARGET -oA nmap/targeted",
+              "shows": "[+] Discovered ports: 53,88,135,139,389,445,464,593,636,3268,3269,5986,9389"
+            }
+          ]
+        },
+        {
+          "title": "Phase 2: Manual Workflow (Separate Steps)",
+          "notes": "Use when you need to review ports between stages or prioritize specific services. Good for learning the methodology.",
+          "commands": [
+            {
+              "id": "nmap-quick-scan",
+              "example": "sudo nmap -Pn -p- --min-rate=1000 10.10.11.152 -oA nmap/discovery",
+              "shows": "Discovered open port 445/tcp on 10.10.11.152"
+            },
+            {
+              "id": "nmap-service-scan",
+              "example": "sudo nmap -sV -sC -p 53,88,135,139,389,445 10.10.11.152 -oA nmap/services",
+              "shows": "Service detection performed. 6 services scanned."
+            }
+          ]
+        },
+        {
+          "title": "Phase 3: Post-Scan Actions",
+          "notes": "After nmap completes, search for exploits and continue enumeration based on discovered services.",
+          "commands": [
+            {
+              "id": "nmap-vuln-scan",
+              "example": "sudo nmap --script vuln -p 445,139 10.10.11.152",
+              "shows": "VULNERABLE: SMB signing not required"
+            },
+            {
+              "id": "smb-enum",
+              "example": "enum4linux -a 10.10.11.152",
+              "shows": "Got domain/workgroup name: TIMELAPSE"
+            }
+          ]
+        },
+        {
+          "title": "Phase 4: UDP Scanning",
+          "notes": "Run UDP scan in background while doing TCP enumeration. UDP is slower but SNMP/DNS/TFTP can be quick wins.",
+          "commands": [
+            {
+              "id": "nmap-two-stage-udp",
+              "example": "TARGET=10.10.11.152 && mkdir -p nmap && PORTS=$(sudo nmap -sU --top-ports 100 -Pn --min-rate=500 $TARGET -oG - | grep -oP '\\d+/open' | cut -d/ -f1 | paste -sd,) && echo \"[+] Discovered UDP ports: $PORTS\" && [ -n \"$PORTS\" ] && sudo nmap -sU -sV -Pn -p$PORTS $TARGET -oA nmap/udp-targeted || echo \"[-] No open UDP ports found\"",
+              "shows": "[+] Discovered UDP ports: 53,161"
+            },
+            {
+              "id": "snmp-enum",
+              "example": "snmpwalk -c public -v2c 10.10.11.152",
+              "shows": "iso.3.6.1.2.1.1.1.0 = STRING: Hardware: Intel64..."
+            }
+          ]
+        }
+      ],
+      "tags": [
+        "NMAP",
+        "OSCP:HIGH",
+        "QUICK_WIN",
+        "RECONNAISSANCE",
+        "STARTER",
+        "UDP"
+      ]
+    }
+  ]
+}

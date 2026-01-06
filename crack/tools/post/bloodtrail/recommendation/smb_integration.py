@@ -12,11 +12,16 @@ from typing import List, Optional, Dict, Any
 from dataclasses import dataclass
 
 from .models import Finding, FindingType, Recommendation
-from .findings_converter import findings_from_smb_crawl, _infer_username_from_path
+from .findings_converter import (
+    findings_from_smb_crawl,
+    findings_from_extracted_credentials,
+    _infer_username_from_path,
+)
 from .decoders import decrypt_vnc_password, extract_vnc_password_from_reg
 from .triggers import (
     create_test_vnc_credential_recommendation,
     create_sqlite_hunt_recommendation,
+    create_password_spray_recommendation,
 )
 
 
@@ -66,6 +71,14 @@ def process_smb_crawl(
 
     # Convert crawl results to findings
     findings = findings_from_smb_crawl(crawl_result)
+
+    # Process extracted credentials and create findings with proper tags
+    # Pass target so user_file path is set in finding metadata for trigger rules
+    extracted_creds = getattr(crawl_result, 'credentials', [])
+    if extracted_creds:
+        cred_findings = findings_from_extracted_credentials(extracted_creds, target=target)
+        findings.extend(cred_findings)
+
     summary.findings = findings
 
     # Process each finding for recommendations
@@ -199,7 +212,7 @@ def generate_file_retrieval_commands(
     return commands
 
 
-def display_smb_summary(summary: SMBCrawlSummary, verbose: bool = True) -> str:
+def display_smb_summary(summary: SMBCrawlSummary, verbose: bool = True, target: str = "<TARGET>") -> str:
     """Format SMB crawl summary for terminal display."""
     # Colors
     C = "\033[96m"
@@ -235,6 +248,19 @@ def display_smb_summary(summary: SMBCrawlSummary, verbose: bool = True) -> str:
             if vnc.get('decrypted_password'):
                 lines.append(f"      {G}Decrypted:{X} {B}{vnc['decrypted_password']}{X}")
         lines.append("")
+
+        # TEST CREDENTIALS section for decrypted VNC passwords
+        has_decrypted = any(v.get('decrypted_password') and v.get('inferred_user') for v in summary.vnc_files)
+        if has_decrypted:
+            lines.append(f"  {G}{B}TEST THESE CREDENTIALS{X}")
+            lines.append(f"  {D}{'─' * 60}{X}")
+            for vnc in summary.vnc_files:
+                if vnc.get('decrypted_password') and vnc.get('inferred_user'):
+                    user = vnc['inferred_user']
+                    pwd = vnc['decrypted_password']
+                    lines.append(f"    {B}{user}:{pwd}{X}")
+                    lines.append(f"    {G}$ crackmapexec smb {target} -u {user} -p '{pwd}'{X}")
+                    lines.append("")
 
     # SQLite files
     if summary.sqlite_files:

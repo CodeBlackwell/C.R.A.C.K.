@@ -37,7 +37,7 @@ def print_banner():
 ║              BloodHound Trail (bloodtrail)               ║
 ║                                                           ║
 ║  63+ pre-built Cypher queries for attack path discovery   ║
-║  Credentials: neo4j/Neo4j123 | admin/1PlaySmarter*        ║
+║  Set NEO4J_PASSWORD env var for authentication            ║
 ╚═══════════════════════════════════════════════════════════╝
 """)
 

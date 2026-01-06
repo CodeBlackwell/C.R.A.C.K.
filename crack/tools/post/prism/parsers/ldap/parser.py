@@ -22,7 +22,7 @@ from typing import Optional, List, Dict, Tuple, Any
 
 from ..base import PrismParser
 from ..registry import PrismParserRegistry
-from ...models import LdapSummary
+from ...models import LdapSummary, PartialEntry
 from ...models.ldap_entry import (
     LdapEntry, LdapUser, LdapComputer, LdapGroup, LdapDomainInfo
 )
@@ -103,7 +103,17 @@ class LdapParser(PrismParser):
         for entry in entries:
             obj = self._classify_entry(entry)
             if obj is None:
-                summary.other_entries += 1
+                # No objectClass - create partial entry from DN
+                dn_list = entry.get('dn', [])
+                if dn_list:
+                    partial = PartialEntry(dn=dn_list[0])
+                    # Only keep user/computer hints, skip containers
+                    if partial.entry_type in ('user_hint', 'computer_hint'):
+                        summary.partial_entries.append(partial)
+                    else:
+                        summary.other_entries += 1
+                else:
+                    summary.other_entries += 1
             elif isinstance(obj, LdapDomainInfo):
                 summary.domain_info = obj
             elif isinstance(obj, LdapUser):

@@ -120,3 +120,19 @@ db/data/neo4j/
 # Electron build artifacts
 crackpedia/dist-electron/
 breach/dist-electron/
+
+# Environment files (contain secrets)
+.env
+.env.local
+.env.*.local
+
+# Lab/operational data (never commit)
+Notice from HR.txt
+enum_*/
+*_enum/
+
+# Credential files
+creds
+creds.txt
+passwords.txt
+hashes.txt

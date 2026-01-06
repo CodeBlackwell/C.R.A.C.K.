@@ -20,6 +20,8 @@ except ImportError:
 
 from ..models import ParsedSummary, Credential, KerberosTicket
 from ..models import NmapScanSummary, NmapHost, NmapPort
+from ..models import LdapSummary
+from ..models.ldap_entry import LdapUser, LdapComputer, LdapGroup, LdapDomainInfo
 
 logger = logging.getLogger(__name__)
 
@@ -73,7 +75,7 @@ class PrismNeo4jAdapter:
             return
 
         try:
-            from db.config import Neo4jConfig
+            from crack.db.config import Neo4jConfig
             config = neo4j_config or Neo4jConfig.from_env().to_dict()
 
             self.driver = GraphDatabase.driver(
@@ -114,17 +116,11 @@ class PrismNeo4jAdapter:
             logger.error(f"Neo4j connection failed: {e}")
             return False
 
-    def import_summary(self, summary: ParsedSummary) -> Dict[str, int]:
-        """Import parsed summary to Neo4j
-
-        Creates:
-        - Credential nodes for each credential
-        - Computer node for source host
-        - Domain node if detected
-        - Relationships between them
+    def import_summary(self, summary) -> Dict[str, int]:
+        """Unified import - dispatches based on summary type
 
         Args:
-            summary: ParsedSummary to import
+            summary: ParsedSummary, NmapScanSummary, or LdapSummary
 
         Returns:
             Dict with counts of imported items
@@ -132,6 +128,20 @@ class PrismNeo4jAdapter:
         if not self._connected and not self.connect():
             raise RuntimeError("Not connected to Neo4j")
 
+        handlers = {
+            ParsedSummary: self._import_credentials,
+            NmapScanSummary: self._import_nmap,
+            LdapSummary: self._import_ldap,
+        }
+
+        handler = handlers.get(type(summary))
+        if not handler:
+            raise ValueError(f"Unsupported summary type: {type(summary).__name__}")
+
+        return handler(summary)
+
+    def _import_credentials(self, summary: ParsedSummary) -> Dict[str, int]:
+        """Import credential summary to Neo4j (internal handler)"""
         results = {
             'credentials': 0,
             'tickets': 0,
@@ -372,24 +382,8 @@ class PrismNeo4jAdapter:
     # Nmap Import Methods
     # ========================================================================
 
-    def import_nmap_summary(self, summary: NmapScanSummary) -> Dict[str, int]:
-        """Import nmap scan summary to Neo4j
-
-        Creates:
-        - Computer nodes for each discovered host
-        - Port nodes for each open port
-        - Domain nodes for discovered domains
-        - Relationships between them
-
-        Args:
-            summary: NmapScanSummary to import
-
-        Returns:
-            Dict with counts of imported items
-        """
-        if not self._connected and not self.connect():
-            raise RuntimeError("Not connected to Neo4j")
-
+    def _import_nmap(self, summary: NmapScanSummary) -> Dict[str, int]:
+        """Import nmap scan summary to Neo4j (internal handler)"""
         results = {
             'hosts': 0,
             'ports': 0,
@@ -643,3 +637,367 @@ class PrismNeo4jAdapter:
             if record:
                 return dict(record)
             return {}
+
+    # ========================================================================
+    # LDAP Import Methods
+    # ========================================================================
+
+    def _import_ldap(self, summary: LdapSummary) -> Dict[str, int]:
+        """Import LDAP summary to Neo4j (internal handler)"""
+        results = {'users': 0, 'computers': 0, 'groups': 0, 'domains': 0}
+        domain = summary.domain_name
+
+        with self.driver.session(database=self.database) as session:
+            # Domain + password policy
+            if summary.domain_info:
+                session.execute_write(self._create_ldap_domain, summary.domain_info)
+                results['domains'] = 1
+
+            # Users
+            for user in summary.users:
+                if not user.is_machine_account:
+                    session.execute_write(self._create_ldap_user, user, domain)
+                    results['users'] += 1
+
+            # Computers
+            for computer in summary.computers:
+                session.execute_write(self._create_ldap_computer, computer, domain)
+                results['computers'] += 1
+
+            # Groups
+            for group in summary.groups:
+                session.execute_write(self._create_ldap_group, group, domain)
+                results['groups'] += 1
+
+        return results
+
+    @staticmethod
+    def _create_ldap_domain(tx, domain_info: LdapDomainInfo) -> None:
+        """Create Domain and PasswordPolicy nodes"""
+        query = """
+        MERGE (d:Domain {name: $name})
+        SET d.dns_name = $dns_name,
+            d.functional_level = $functional_level,
+            d.functional_level_name = $functional_level_name,
+            d.source = 'ldapsearch'
+
+        MERGE (p:PasswordPolicy {domain: $name})
+        SET p.min_length = $min_length,
+            p.history_length = $history_length,
+            p.lockout_threshold = $lockout_threshold,
+            p.lockout_duration_minutes = $lockout_duration,
+            p.max_pwd_age_days = $max_pwd_age,
+            p.complexity_required = $complexity,
+            p.is_weak = $is_weak
+
+        MERGE (d)-[:HAS_POLICY]->(p)
+        """
+        tx.run(query,
+               name=domain_info.domain_name.upper() or domain_info.dns_name.upper(),
+               dns_name=domain_info.dns_name,
+               functional_level=domain_info.functional_level,
+               functional_level_name=domain_info.functional_level_name,
+               min_length=domain_info.min_pwd_length,
+               history_length=domain_info.pwd_history_length,
+               lockout_threshold=domain_info.lockout_threshold,
+               lockout_duration=domain_info.lockout_duration_minutes,
+               max_pwd_age=domain_info.max_pwd_age_days,
+               complexity=domain_info.pwd_complexity_required,
+               is_weak=domain_info.is_weak_policy)
+
+    @staticmethod
+    def _create_ldap_user(tx, user: LdapUser, domain: str) -> None:
+        """Create User node with properties and domain relationship"""
+        query = """
+        MERGE (u:User {name: $name, domain: $domain})
+        SET u.display_name = $display_name,
+            u.description = $description,
+            u.dn = $dn,
+            u.uac = $uac,
+            u.spns = $spns,
+            u.is_enabled = $is_enabled,
+            u.is_kerberoastable = $is_kerberoastable,
+            u.is_asrep_roastable = $is_asrep_roastable,
+            u.admin_count = $admin_count,
+            u.trusted_for_delegation = $trusted_for_delegation,
+            u.high_value = $high_value,
+            u.source = 'ldapsearch'
+
+        WITH u
+        MATCH (d:Domain {name: $domain})
+        MERGE (u)-[:BELONGS_TO]->(d)
+        """
+        tx.run(query,
+               name=user.sam_account_name.upper(),
+               domain=domain.upper(),
+               display_name=user.display_name,
+               description=user.description or "",
+               dn=user.dn,
+               uac=user.user_account_control,
+               spns=user.service_principal_names,
+               is_enabled=not user.is_disabled,
+               is_kerberoastable=user.is_kerberoastable,
+               is_asrep_roastable=user.dont_require_preauth,
+               admin_count=user.admin_count,
+               trusted_for_delegation=user.trusted_for_delegation,
+               high_value=user.high_value)
+
+    @staticmethod
+    def _create_ldap_computer(tx, computer: LdapComputer, domain: str) -> None:
+        """Create Computer node with properties and domain relationship"""
+        query = """
+        MERGE (c:Computer {name: $name})
+        SET c.dns_hostname = $dns_hostname,
+            c.os = $os,
+            c.os_version = $os_version,
+            c.dn = $dn,
+            c.is_dc = $is_dc,
+            c.trusted_for_delegation = $trusted_for_delegation,
+            c.source = 'ldapsearch'
+
+        WITH c
+        MATCH (d:Domain {name: $domain})
+        MERGE (c)-[:MEMBER_OF]->(d)
+        """
+        tx.run(query,
+               name=computer.sam_account_name.upper().rstrip('$'),
+               dns_hostname=computer.dns_hostname or "",
+               os=computer.operating_system or "",
+               os_version=computer.os_version or "",
+               dn=computer.dn,
+               is_dc=computer.is_domain_controller,
+               trusted_for_delegation=computer.trusted_for_delegation,
+               domain=domain.upper())
+
+    @staticmethod
+    def _create_ldap_group(tx, group: LdapGroup, domain: str) -> None:
+        """Create Group node with properties"""
+        query = """
+        MERGE (g:Group {name: $name, domain: $domain})
+        SET g.description = $description,
+            g.dn = $dn,
+            g.admin_count = $admin_count,
+            g.is_high_value = $is_high_value,
+            g.member_count = $member_count,
+            g.source = 'ldapsearch'
+        """
+        tx.run(query,
+               name=group.sam_account_name.upper(),
+               domain=domain.upper(),
+               description=group.description or "",
+               dn=group.dn,
+               admin_count=group.admin_count,
+               is_high_value=group.is_high_value,
+               member_count=len(group.members))
+
+    # ========================================================================
+    # Domain Report Query Methods
+    # ========================================================================
+
+    def list_domains(self) -> List[Dict[str, Any]]:
+        """List all domains in database with counts
+
+        Returns:
+            List of domain dicts with name, dns_name, source, user_count
+        """
+        if not self._connected and not self.connect():
+            return []
+
+        query = """
+        MATCH (d:Domain)
+        OPTIONAL MATCH (u:User)-[:BELONGS_TO]->(d)
+        OPTIONAL MATCH (c:Computer)-[:MEMBER_OF]->(d)
+        OPTIONAL MATCH (cr:Credential)-[:BELONGS_TO]->(d)
+        RETURN d.name AS name,
+               d.dns_name AS dns_name,
+               d.source AS source,
+               d.functional_level_name AS functional_level,
+               COUNT(DISTINCT u) AS user_count,
+               COUNT(DISTINCT c) AS computer_count,
+               COUNT(DISTINCT cr) AS credential_count
+        ORDER BY d.name
+        """
+
+        with self.driver.session(database=self.database) as session:
+            result = session.run(query)
+            return [dict(record) for record in result]
+
+    def query_domain_report(self, domain: str) -> Dict[str, Any]:
+        """Get comprehensive report for a domain
+
+        Args:
+            domain: Domain name (case-insensitive)
+
+        Returns:
+            Dict with domain, policy, users, computers, credentials, groups, tickets, stats
+        """
+        if not self._connected and not self.connect():
+            return {}
+
+        domain_upper = domain.upper()
+
+        return {
+            'domain': self._get_domain_info(domain_upper),
+            'policy': self._get_password_policy(domain_upper),
+            'users': self._get_domain_users(domain_upper),
+            'computers': self._get_domain_computers(domain_upper),
+            'credentials': self._get_domain_credentials(domain_upper),
+            'groups': self._get_domain_groups(domain_upper),
+            'tickets': self._get_domain_tickets(domain_upper),
+            'stats': self._get_domain_stats(domain_upper),
+        }
+
+    def _get_domain_info(self, domain: str) -> Dict[str, Any]:
+        """Get domain information"""
+        query = """
+        MATCH (d:Domain)
+        WHERE d.name = $domain OR toUpper(d.dns_name) CONTAINS $domain
+        RETURN d.name AS name,
+               d.dns_name AS dns_name,
+               d.functional_level AS functional_level,
+               d.functional_level_name AS functional_level_name,
+               d.source AS source
+        LIMIT 1
+        """
+        with self.driver.session(database=self.database) as session:
+            result = session.run(query, domain=domain)
+            record = result.single()
+            return dict(record) if record else {}
+
+    def _get_password_policy(self, domain: str) -> Dict[str, Any]:
+        """Get password policy for domain"""
+        query = """
+        MATCH (d:Domain)-[:HAS_POLICY]->(p:PasswordPolicy)
+        WHERE d.name = $domain OR toUpper(d.dns_name) CONTAINS $domain
+        RETURN p.min_length AS min_length,
+               p.history_length AS history_length,
+               p.lockout_threshold AS lockout_threshold,
+               p.lockout_duration_minutes AS lockout_duration,
+               p.max_pwd_age_days AS max_pwd_age,
+               p.complexity_required AS complexity,
+               p.is_weak AS is_weak
+        LIMIT 1
+        """
+        with self.driver.session(database=self.database) as session:
+            result = session.run(query, domain=domain)
+            record = result.single()
+            return dict(record) if record else {}
+
+    def _get_domain_users(self, domain: str) -> List[Dict[str, Any]]:
+        """Get users for domain with attack flags"""
+        query = """
+        MATCH (u:User)-[:BELONGS_TO]->(d:Domain)
+        WHERE d.name = $domain OR toUpper(d.dns_name) CONTAINS $domain
+        RETURN u.name AS name,
+               u.display_name AS display_name,
+               u.description AS description,
+               u.is_enabled AS is_enabled,
+               u.is_kerberoastable AS is_kerberoastable,
+               u.is_asrep_roastable AS is_asrep_roastable,
+               u.admin_count AS admin_count,
+               u.trusted_for_delegation AS trusted_for_delegation,
+               u.high_value AS high_value,
+               u.spns AS spns
+        ORDER BY u.high_value DESC, u.name
+        """
+        with self.driver.session(database=self.database) as session:
+            result = session.run(query, domain=domain)
+            return [dict(record) for record in result]
+
+    def _get_domain_computers(self, domain: str) -> List[Dict[str, Any]]:
+        """Get computers for domain"""
+        query = """
+        MATCH (c:Computer)-[:MEMBER_OF]->(d:Domain)
+        WHERE d.name = $domain OR toUpper(d.dns_name) CONTAINS $domain
+        RETURN c.name AS name,
+               c.dns_hostname AS dns_hostname,
+               c.os AS os,
+               c.os_version AS os_version,
+               c.ip AS ip,
+               c.is_dc AS is_dc,
+               c.trusted_for_delegation AS trusted_for_delegation
+        ORDER BY c.is_dc DESC, c.name
+        """
+        with self.driver.session(database=self.database) as session:
+            result = session.run(query, domain=domain)
+            return [dict(record) for record in result]
+
+    def _get_domain_credentials(self, domain: str) -> List[Dict[str, Any]]:
+        """Get credentials for domain"""
+        query = """
+        MATCH (c:Credential)-[:BELONGS_TO]->(d:Domain)
+        WHERE d.name = $domain OR toUpper(d.dns_name) CONTAINS $domain
+        RETURN c.username AS username,
+               c.cred_type AS cred_type,
+               c.value AS value,
+               c.source_tool AS source_tool,
+               c.high_value AS high_value,
+               c.is_machine AS is_machine
+        ORDER BY c.high_value DESC, c.username
+        """
+        with self.driver.session(database=self.database) as session:
+            result = session.run(query, domain=domain)
+            return [dict(record) for record in result]
+
+    def _get_domain_groups(self, domain: str) -> List[Dict[str, Any]]:
+        """Get groups for domain (high-value first)"""
+        query = """
+        MATCH (g:Group)
+        WHERE g.domain = $domain
+        RETURN g.name AS name,
+               g.description AS description,
+               g.is_high_value AS is_high_value,
+               g.admin_count AS admin_count,
+               g.member_count AS member_count
+        ORDER BY g.is_high_value DESC, g.admin_count DESC, g.name
+        """
+        with self.driver.session(database=self.database) as session:
+            result = session.run(query, domain=domain)
+            return [dict(record) for record in result]
+
+    def _get_domain_tickets(self, domain: str) -> List[Dict[str, Any]]:
+        """Get Kerberos tickets for domain"""
+        query = """
+        MATCH (t:KerberosTicket)
+        WHERE toUpper(t.client_realm) CONTAINS $domain
+        RETURN t.client_name AS client_name,
+               t.client_realm AS client_realm,
+               t.service_type AS service_type,
+               t.service_target AS service_target,
+               t.is_tgt AS is_tgt,
+               t.end_time AS end_time,
+               t.saved_path AS saved_path
+        ORDER BY t.is_tgt DESC, t.client_name
+        """
+        with self.driver.session(database=self.database) as session:
+            result = session.run(query, domain=domain)
+            return [dict(record) for record in result]
+
+    def _get_domain_stats(self, domain: str) -> Dict[str, int]:
+        """Get statistics for domain"""
+        query = """
+        MATCH (d:Domain)
+        WHERE d.name = $domain OR toUpper(d.dns_name) CONTAINS $domain
+        OPTIONAL MATCH (u:User)-[:BELONGS_TO]->(d)
+        OPTIONAL MATCH (c:Computer)-[:MEMBER_OF]->(d)
+        OPTIONAL MATCH (cr:Credential)-[:BELONGS_TO]->(d)
+        OPTIONAL MATCH (g:Group {domain: $domain})
+        OPTIONAL MATCH (t:KerberosTicket)
+        WHERE toUpper(t.client_realm) CONTAINS $domain
+        WITH d, u, c, cr, g, t
+        RETURN COUNT(DISTINCT u) AS total_users,
+               COUNT(DISTINCT CASE WHEN u.is_enabled THEN u END) AS enabled_users,
+               COUNT(DISTINCT CASE WHEN u.is_kerberoastable THEN u END) AS kerberoastable,
+               COUNT(DISTINCT CASE WHEN u.is_asrep_roastable THEN u END) AS asrep_roastable,
+               COUNT(DISTINCT CASE WHEN u.high_value THEN u END) AS high_value_users,
+               COUNT(DISTINCT c) AS total_computers,
+               COUNT(DISTINCT CASE WHEN c.is_dc THEN c END) AS domain_controllers,
+               COUNT(DISTINCT cr) AS total_credentials,
+               COUNT(DISTINCT g) AS total_groups,
+               COUNT(DISTINCT CASE WHEN g.is_high_value THEN g END) AS high_value_groups,
+               COUNT(DISTINCT t) AS total_tickets
+        """
+        with self.driver.session(database=self.database) as session:
+            result = session.run(query, domain=domain)
+            record = result.single()
+            return dict(record) if record else {}

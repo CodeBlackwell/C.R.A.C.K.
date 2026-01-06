@@ -94,7 +94,9 @@ class LdapsearchEnumerator(Enumerator):
 
         try:
             # Step 1: Get naming context (base DN)
-            base_dn = self._get_naming_context(target, timeout)
+            base_dn = self._get_naming_context(
+                target, timeout, username, password, domain
+            )
             if not base_dn:
                 result.error = "Could not determine base DN"
                 result.duration_seconds = time.time() - start
@@ -110,7 +112,7 @@ class LdapsearchEnumerator(Enumerator):
 
             # Step 3: Enumerate computers
             result.computers = self._enumerate_computers(
-                target, base_dn, username, password, timeout
+                target, base_dn, username, password, domain, timeout
             )
 
             result.success = True
@@ -126,13 +128,33 @@ class LdapsearchEnumerator(Enumerator):
             result.duration_seconds = time.time() - start
             return result
 
-    def _get_naming_context(self, target: str, timeout: int) -> Optional[str]:
+    def _get_naming_context(
+        self,
+        target: str,
+        timeout: int,
+        username: Optional[str] = None,
+        password: Optional[str] = None,
+        domain: Optional[str] = None,
+    ) -> Optional[str]:
         """Get the default naming context (base DN)"""
+        # If domain is provided, compute base DN directly
+        if domain:
+            return ",".join(f"DC={p}" for p in domain.split("."))
+
         cmd = [
             "ldapsearch", "-x", "-H", f"ldap://{target}",
             "-s", "base", "-b", "",
             "defaultNamingContext"
         ]
+
+        # Add credentials if provided
+        if username and password:
+            # Format bind DN properly
+            if domain:
+                bind_dn = f"{username}@{domain}"
+            else:
+                bind_dn = username
+            cmd.extend(["-D", bind_dn, "-w", password])
 
         proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
         output = strip_ansi(proc.stdout)
@@ -166,7 +188,9 @@ class LdapsearchEnumerator(Enumerator):
         ]
 
         if username and password:
-            cmd.extend(["-D", username, "-w", password])
+            # Format bind DN for AD (UPN format: user@domain)
+            bind_dn = f"{username}@{domain}" if domain else username
+            cmd.extend(["-D", bind_dn, "-w", password])
 
         proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
         output = strip_ansi(proc.stdout)
@@ -219,6 +243,7 @@ class LdapsearchEnumerator(Enumerator):
         base_dn: str,
         username: Optional[str],
         password: Optional[str],
+        domain: Optional[str],
         timeout: int
     ) -> List[Dict[str, Any]]:
         """Enumerate computer objects"""
@@ -230,7 +255,9 @@ class LdapsearchEnumerator(Enumerator):
         ]
 
         if username and password:
-            cmd.extend(["-D", username, "-w", password])
+            # Format bind DN for AD (UPN format: user@domain)
+            bind_dn = f"{username}@{domain}" if domain else username
+            cmd.extend(["-D", bind_dn, "-w", password])
 
         proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
         output = strip_ansi(proc.stdout)

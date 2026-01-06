@@ -121,8 +121,8 @@ class Neo4jConfig:
     search_result_limit: int = 50
     encrypted: bool = False
 
-    # Development default (logged with warning)
-    DEV_DEFAULT_PASSWORD: str = field(default='Neo4j123', repr=False, init=False)
+    # No default password - must be set via environment
+    # DEV_DEFAULT_PASSWORD removed for security
 
     @classmethod
     def from_env(cls, require_password: bool = False) -> 'Neo4jConfig':
@@ -175,16 +175,15 @@ class Neo4jConfig:
         if not password:
             if require_password:
                 raise ValueError(
-                    "NEO4J_PASSWORD environment variable is required for production. "
+                    "NEO4J_PASSWORD environment variable is required. "
                     "Set via: export NEO4J_PASSWORD='your_password'"
                 )
             else:
-                # Use development default with warning
-                config.password = config.DEV_DEFAULT_PASSWORD
+                # No default password - warn user
+                config.password = ''
                 logger.warning(
-                    "Using default Neo4j password for development. "
-                    "For production, set NEO4J_PASSWORD environment variable. "
-                    f"Current default: {config.DEV_DEFAULT_PASSWORD[:3]}***"
+                    "NEO4J_PASSWORD not set. Neo4j connection will fail. "
+                    "Set via: export NEO4J_PASSWORD='your_password'"
                 )
         else:
             config.password = password
@@ -223,7 +222,7 @@ def get_neo4j_config() -> Dict[str, Any]:
     Environment variables (optional overrides):
         NEO4J_URI - Bolt connection URI (default: bolt://localhost:7687)
         NEO4J_USER - Neo4j username (default: neo4j)
-        NEO4J_PASSWORD - Neo4j password (default: Neo4j123 with warning)
+        NEO4J_PASSWORD - Neo4j password (REQUIRED - no default)
         NEO4J_DATABASE - Database name (default: neo4j)
         NEO4J_MAX_POOL_SIZE - Max connection pool size (default: 50)
         NEO4J_CONNECTION_TIMEOUT - Connection timeout in seconds (default: 60)

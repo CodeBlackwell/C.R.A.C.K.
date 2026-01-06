@@ -1171,6 +1171,135 @@
         "on_failure": "If failed: Try subdomain brute force: gobuster dns -d <DOMAIN> -w <WORDLIST>"
       },
       "filled_example": "dig axfr @192.168.45.100 example.com"
+    },
+    {
+      "id": "nmap-two-stage-chain",
+      "name": "Two-Stage Nmap Chain",
+      "category": "recon",
+      "command": "TARGET=<TARGET> && mkdir -p nmap && PORTS=$(sudo nmap -p- -Pn --min-rate=1000 -T4 $TARGET -oG - | grep -oP '\\d+/open' | cut -d/ -f1 | paste -sd,) && echo \"[+] Discovered ports: $PORTS\" && sudo nmap -sC -sV -Pn -p$PORTS $TARGET -oA nmap/targeted",
+      "description": "Two-stage scan: fast port discovery piped to targeted service enumeration",
+      "tags": [
+        "NMAP",
+        "OSCP:HIGH",
+        "QUICK_WIN",
+        "RECONNAISSANCE",
+        "STARTER"
+      ],
+      "variables": [
+        {
+          "name": "<TARGET>",
+          "description": "Target IP address",
+          "example": "10.10.11.152",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "-p-": "Scan all 65535 ports - ensures no port is missed",
+        "-Pn": "Skip host discovery - assume host is up (useful when ICMP blocked)",
+        "--min-rate=1000": "Minimum 1000 packets/sec - speeds up discovery significantly",
+        "-T4": "Aggressive timing template - balances speed and reliability",
+        "-oG -": "Greppable output to stdout - enables piping to grep/awk for port extraction",
+        "-sC": "Default scripts - runs safe enumeration scripts on discovered services",
+        "-sV": "Service version detection - identifies service versions for exploit research",
+        "-oA": "Output all formats - saves .nmap, .xml, .gnmap for documentation"
+      },
+      "success_indicators": [
+        "[+] Discovered ports:",
+        "Service detection performed",
+        "Nmap done:"
+      ],
+      "failure_indicators": [
+        "0 hosts up",
+        "All 65535 scanned ports are filtered",
+        "Note: Host seems down"
+      ],
+      "prerequisites": [],
+      "next_steps": [
+        "nmap-vuln-scan",
+        "gobuster-dir",
+        "smb-enum"
+      ],
+      "alternatives": [
+        "nmap-quick-scan",
+        "nmap-service-scan"
+      ],
+      "troubleshooting": {
+        "No ports discovered": "Host may be down or firewalled. Try: sudo nmap -Pn -sS -p 80,443,22,445 <TARGET>",
+        "Scan too slow": "Increase rate: --min-rate=5000 (may miss ports on unstable networks)",
+        "PORTS variable empty": "No open ports found. Check if target is reachable: ping <TARGET>",
+        "Permission denied": "Requires sudo for SYN scan. Run with sudo prefix."
+      },
+      "notes": "OSCP exam time-saver. Stage 1 (~3 min) uses fast SYN scan with greppable output to discover all open ports. Port numbers are extracted via grep/cut/paste and passed to Stage 2 for detailed service enumeration with version detection and default scripts.\n\nCreates nmap/ directory with targeted.nmap, targeted.xml, targeted.gnmap output files.\n\nTime estimate: 5-8 minutes total depending on target.\n\nManual alternative: Run nmap -p- first, note open ports, then run nmap -sV -sC on those ports.\n\nExam tip: Start this immediately when you get a new target IP - let it run while you read the machine description.",
+      "oscp_relevance": "high",
+      "methodology_guidance": {
+        "after_success": "Review targeted.nmap for service versions. Search each version: searchsploit <service> <version>. Check for web services (80, 443, 8080) and enumerate with gobuster. Check for SMB (445) and enumerate with enum4linux.",
+        "on_failure": "If no ports found, try UDP: sudo nmap -sU --top-ports 20 <TARGET>. Check if target is behind VPN or firewall."
+      },
+      "filled_example": "TARGET=10.10.11.152 && mkdir -p nmap && PORTS=$(sudo nmap -p- -Pn --min-rate=1000 -T4 $TARGET -oG - | grep -oP '\\d+/open' | cut -d/ -f1 | paste -sd,) && echo \"[+] Discovered ports: $PORTS\" && sudo nmap -sC -sV -Pn -p$PORTS $TARGET -oA nmap/targeted"
+    },
+    {
+      "id": "nmap-two-stage-udp",
+      "name": "Two-Stage Nmap UDP Chain",
+      "category": "recon",
+      "command": "TARGET=<TARGET> && mkdir -p nmap && PORTS=$(sudo nmap -sU --top-ports 100 -Pn --min-rate=500 $TARGET -oG - | grep -oP '\\d+/open' | cut -d/ -f1 | paste -sd,) && echo \"[+] Discovered UDP ports: $PORTS\" && [ -n \"$PORTS\" ] && sudo nmap -sU -sV -Pn -p$PORTS $TARGET -oA nmap/udp-targeted || echo \"[-] No open UDP ports found\"",
+      "description": "Two-stage UDP scan: fast top-100 port discovery piped to targeted service enumeration",
+      "tags": [
+        "NMAP",
+        "OSCP:HIGH",
+        "RECONNAISSANCE",
+        "STARTER",
+        "UDP"
+      ],
+      "variables": [
+        {
+          "name": "<TARGET>",
+          "description": "Target IP address",
+          "example": "10.10.11.152",
+          "required": true
+        }
+      ],
+      "flag_explanations": {
+        "-sU": "UDP scan - required for UDP port discovery (slower than TCP SYN)",
+        "--top-ports 100": "Scan top 100 most common UDP ports - balances coverage vs time",
+        "-Pn": "Skip host discovery - assume host is up",
+        "--min-rate=500": "Minimum 500 packets/sec - slower than TCP due to UDP characteristics",
+        "-sV": "Service version detection - identifies UDP services (DNS, SNMP, TFTP)",
+        "-oG -": "Greppable output to stdout - enables piping for port extraction",
+        "-oA": "Output all formats - saves .nmap, .xml, .gnmap"
+      },
+      "success_indicators": [
+        "[+] Discovered UDP ports:",
+        "open",
+        "Service detection performed"
+      ],
+      "failure_indicators": [
+        "[-] No open UDP ports found",
+        "All 100 scanned ports are closed",
+        "open|filtered"
+      ],
+      "prerequisites": [
+        "nmap-two-stage-chain"
+      ],
+      "next_steps": [
+        "snmp-enum",
+        "dns-enum"
+      ],
+      "alternatives": [
+        "nmap-udp-scan"
+      ],
+      "troubleshooting": {
+        "Scan extremely slow": "UDP is inherently slow. Reduce ports: --top-ports 20 for quick check",
+        "All ports open|filtered": "Firewall not responding to UDP probes. Try specific ports: -p 53,161,500",
+        "PORTS variable empty": "No open UDP ports or all filtered. Common - many hosts block UDP",
+        "Permission denied": "UDP scan requires root. Run with sudo."
+      },
+      "notes": "UDP scanning is MUCH slower than TCP due to protocol characteristics (no handshake, rate limiting). Run this AFTER TCP scan completes.\n\nCommon valuable UDP ports:\n- 53 (DNS) - zone transfer, enumeration\n- 67/68 (DHCP) - rogue DHCP attacks\n- 69 (TFTP) - unauthenticated file access\n- 123 (NTP) - amplification, enumeration\n- 161 (SNMP) - major info disclosure if community string known\n- 500 (IKE/IPSec) - VPN enumeration\n- 514 (Syslog) - log injection\n\nTime estimate: 10-20 minutes for top 100 ports.\n\nExam tip: Start UDP scan in background terminal while doing TCP enumeration. SNMP (161) is often a quick win if 'public' community string works.",
+      "oscp_relevance": "high",
+      "methodology_guidance": {
+        "after_success": "If SNMP (161) open: snmpwalk -c public -v2c <TARGET>. If DNS (53) open: dig axfr @<TARGET> <DOMAIN>. If TFTP (69) open: tftp <TARGET> and try 'get' on common files.",
+        "on_failure": "UDP often filtered. Focus on TCP exploitation. Return to UDP only if stuck."
+      },
+      "filled_example": "TARGET=10.10.11.152 && mkdir -p nmap && PORTS=$(sudo nmap -sU --top-ports 100 -Pn --min-rate=500 $TARGET -oG - | grep -oP '\\d+/open' | cut -d/ -f1 | paste -sd,) && echo \"[+] Discovered UDP ports: $PORTS\" && [ -n \"$PORTS\" ] && sudo nmap -sU -sV -Pn -p$PORTS $TARGET -oA nmap/udp-targeted || echo \"[-] No open UDP ports found\""
     }
   ]
 }

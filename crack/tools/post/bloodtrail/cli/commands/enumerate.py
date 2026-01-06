@@ -61,6 +61,11 @@ class EnumerateCommands(BaseCommandGroup):
                     show_commands=getattr(args, 'commands', False),
                     show_data=getattr(args, 'data', False),
                     interactive=getattr(args, 'interactive', False),
+                    auto=getattr(args, 'auto', False),
+                    auto_level=getattr(args, 'auto_level', 'high'),
+                    injected_creds=getattr(args, 'cred', None),
+                    max_depth=getattr(args, 'max_depth', 5),
+                    cmd_timeout=getattr(args, 'cmd_timeout', 180),
                 )
 
         return -1
@@ -92,6 +97,11 @@ class EnumerateCommands(BaseCommandGroup):
         show_commands: bool = False,
         show_data: bool = False,
         interactive: bool = False,
+        auto: bool = False,
+        auto_level: str = "high",
+        injected_creds: Optional[list] = None,
+        max_depth: int = 5,
+        cmd_timeout: int = 180,
     ) -> int:
         """
         Execute auto-enumeration mode.
@@ -231,6 +241,29 @@ class EnumerateCommands(BaseCommandGroup):
         if domain:
             aggregated.domain = domain.upper()
 
+        # Guest account fallback: If anonymous failed to find users, try guest:''
+        # This is common on newer AD (Cicada pattern - guest access lists shares)
+        if not username and len(aggregated.users) < 3:
+            from ...enumerators.guest_probe import try_guest_access
+
+            print(f"[*] Few users found anonymously, probing guest account...")
+            guest_result = try_guest_access(target, domain, timeout=60)
+
+            if guest_result["success"]:
+                print(f"  {G}[OK]{X} Guest SMB access works (guest:'')")
+                if guest_result["shares"]:
+                    print(f"       Accessible shares: {len(guest_result['shares'])}")
+                    for share in guest_result["shares"][:5]:
+                        access = share.get('access', share.get('type', ''))
+                        print(f"         - {share['name']} ({access})")
+
+                # Store guest credential in aggregated for later use
+                aggregated.metadata["guest_access"] = True
+                aggregated.metadata["guest_shares"] = guest_result["shares"]
+            else:
+                print(f"  {D}[INFO]{X} Guest access: {guest_result.get('error', 'denied')}")
+            print()
+
         # Debug: Show AS-REP users found in Phase 1
         if verbose >= 2:
             asrep_users = [u["name"] for u in aggregated.users.values() if u.get("asrep")]
@@ -323,6 +356,11 @@ class EnumerateCommands(BaseCommandGroup):
             username=username,
             password=password,
             interactive=interactive,
+            auto=auto,
+            auto_level=auto_level,
+            injected_creds=injected_creds,
+            max_depth=max_depth,
+            cmd_timeout=cmd_timeout,
         )
 
         # Generate files (uses pre-computed output_dir)
@@ -817,12 +855,18 @@ class EnumerateCommands(BaseCommandGroup):
         username: Optional[str] = None,
         password: Optional[str] = None,
         interactive: bool = False,
+        auto: bool = False,
+        auto_level: str = "high",
+        injected_creds: Optional[list] = None,
+        max_depth: int = 5,
+        cmd_timeout: int = 180,
     ) -> None:
         """
         Process findings through the recommendation engine.
 
         In non-interactive mode: displays prioritized recommendations
         In interactive mode: runs the interactive session for guided attack
+        In auto mode: runs the auto-orchestrator for automatic attack chaining
         """
         from ...recommendation import (
             RecommendationEngine,
@@ -860,6 +904,130 @@ class EnumerateCommands(BaseCommandGroup):
         # Add findings to engine (this triggers recommendation generation)
         for finding in findings:
             engine.add_finding(finding)
+
+        # AUTO MODE: Use orchestrator for automatic attack chaining
+        if auto:
+            from ...auto import AutoOrchestrator
+
+            # Parse priority level
+            priority_map = {
+                "critical": RecommendationPriority.CRITICAL,
+                "high": RecommendationPriority.HIGH,
+                "medium": RecommendationPriority.MEDIUM,
+            }
+            auto_priority = priority_map.get(auto_level, RecommendationPriority.HIGH)
+
+            # Parse injected credentials (format: USER:PASS)
+            initial_creds = []
+            if injected_creds:
+                for cred_str in injected_creds:
+                    if ':' in cred_str:
+                        cred_user, cred_pass = cred_str.split(':', 1)
+                        initial_creds.append({
+                            "username": cred_user,
+                            "password": cred_pass,
+                            "validated": True,
+                        })
+
+            # Create orchestrator with existing engine
+            orchestrator = AutoOrchestrator(
+                target=target,
+                domain=domain or aggregated.domain,
+                auto_level=auto_priority,
+                max_depth=max_depth,
+                timeout=cmd_timeout,
+                initial_credentials=initial_creds,
+            )
+
+            # Transfer findings from our engine to orchestrator's engine
+            for finding in findings:
+                orchestrator.engine.add_finding(finding)
+
+            # If guest access works, add it and trigger SMB crawl
+            if aggregated.metadata.get("guest_access"):
+                from ...recommendation.models import Finding, FindingType
+                from ...recommendation.triggers import create_smb_crawl_recommendation
+
+                # Add guest credential to engine
+                orchestrator.engine.add_credential(
+                    username="guest",
+                    password="",
+                    validated=True,
+                    access_level="guest",
+                )
+                print(f"  {G}[+]{X} Guest credential added for SMB crawl")
+
+                # Create SMB crawl recommendation for guest shares
+                guest_shares = aggregated.metadata.get("guest_shares", [])
+                if guest_shares:
+                    # Create a finding for guest SMB access
+                    guest_finding = Finding(
+                        id="guest_smb_access",
+                        finding_type=FindingType.CREDENTIAL,
+                        source="enumeration",
+                        target="guest_smb",
+                        raw_value="guest:''",
+                        tags=["validated", "guest_access"],
+                        metadata={
+                            "username": "guest",
+                            "password": "",
+                            "shares": guest_shares,
+                        },
+                    )
+                    orchestrator.engine.add_finding(guest_finding)
+
+                    # Create SMB crawl recommendation
+                    crawl_rec = create_smb_crawl_recommendation(
+                        finding=guest_finding,
+                        target=target,
+                        username="guest",
+                        password="",
+                        domain=domain or aggregated.domain,
+                    )
+                    orchestrator.engine.state.pending_recommendations.append(crawl_rec)
+                    print(f"  {G}[+]{X} SMB crawl recommendation queued for {len(guest_shares)} shares")
+
+            # Also add credentials from command line (-u/-p)
+            if username and password:
+                orchestrator.engine.add_credential(
+                    username=username,
+                    password=password,
+                    validated=True,
+                    access_level="user",
+                )
+
+            # Run auto-execute loop
+            print()
+            print(f"{C}{B}{'=' * 74}{X}")
+            print(f"{C}{B}  AUTO-EXECUTE MODE{X}")
+            print(f"{C}{B}{'=' * 74}{X}")
+            print()
+
+            final_state = orchestrator.run()
+
+            # Show final status
+            print()
+            print(f"{C}{B}{'=' * 74}{X}")
+            print(f"{C}{B}  AUTO-EXECUTE COMPLETE{X}")
+            print(f"{C}{B}{'=' * 74}{X}")
+            print()
+            print(f"  {D}Status:{X}      {B}{final_state.status.value}{X}")
+            print(f"  {D}Depth:{X}       {B}{final_state.current_depth}{X}")
+            print(f"  {D}Credentials:{X} {B}{len(final_state.validated_credentials)}{X}")
+            print(f"  {D}Completed:{X}   {B}{len(final_state.completed_recommendations)}{X}")
+            print()
+
+            # If paused for manual step, show resume instructions
+            from ...auto import ExecutionStatus
+            if final_state.status == ExecutionStatus.PAUSED_MANUAL:
+                print(f"  {Y}Paused for manual step. After completing, resume with:{X}")
+                print(f"  {G}$ crack bloodtrail {target} --auto --cred USER:PASS{X}")
+                print()
+            elif final_state.status == ExecutionStatus.PAUSED_SHELL:
+                print(f"  {Y}Paused before shell access. Review the command and run manually.{X}")
+                print()
+
+            return  # Skip normal recommendation display in auto mode
 
         # Check if we have any recommendations
         if not engine.state.pending_recommendations:
@@ -929,6 +1097,22 @@ class EnumerateCommands(BaseCommandGroup):
         # Medium priority summary
         if medium:
             print(f"  {D}MEDIUM PRIORITY: {len(medium)} additional recommendations{X}")
+            print()
+
+        # Show SMB crawl next steps when credentials are available
+        if username and password:
+            from ...recommendation import generate_smb_crawl_command
+
+            print(f"  {B}NEXT STEPS WITH CREDENTIALS{X}")
+            print(f"  {D}{'─' * 60}{X}")
+            print(f"  {D}# Enumerate SMB shares:{X}")
+            smb_cmd = generate_smb_crawl_command(target, username, password, domain)
+            print(f"  {G}$ {smb_cmd}{X}")
+            print()
+            print(f"  {D}# Deep crawl with BloodTrail (auto-detects VNC, SQLite, etc):{X}")
+            crawl_opt = f"-u {username} -p '{password}'"
+            domain_opt = f"--domain {domain}" if domain else ""
+            print(f"  {G}$ crack bloodtrail {target} {crawl_opt} {domain_opt} --crawl-smb{X}".strip())
             print()
 
         # Interactive mode prompt

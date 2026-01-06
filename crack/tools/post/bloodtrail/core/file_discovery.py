@@ -128,6 +128,10 @@ class FileDiscoveryBase(ABC):
         # Misc
         'shadow', 'passwd', 'htpasswd', '.htpasswd',
         'wp-config.php', 'config.php', 'settings.php',
+        # Corporate notices (may contain default passwords)
+        'notice.txt', 'readme.txt', 'instructions.txt',
+        'welcome.txt', 'getting_started.txt', 'new_employee.txt',
+        'onboarding.txt', 'setup.txt', 'install.txt',
     }
 
     # Directories to prioritize
@@ -142,6 +146,11 @@ class FileDiscoveryBase(ABC):
         'key', 'keys',
         '.ssh', '.gnupg',
         'www', 'wwwroot', 'htdocs', 'public_html',
+        # HR/Corporate directories (Cicada pattern - default passwords in notices)
+        'hr', 'human_resources', 'humanresources',
+        'it', 'helpdesk', 'support',
+        'onboarding', 'new_hire', 'newhire',
+        'shared', 'public', 'common',
     }
 
     # Patterns to skip (performance optimization)

@@ -899,6 +899,384 @@ class GenericJsonParser(ConfigParserBase):
         return steps
 
 
+class PowerShellCredentialParser(ConfigParserBase):
+    """
+    Parse PowerShell scripts for hardcoded credentials.
+
+    Found in: Automation scripts, deployment scripts, scheduled tasks
+    Contains: Hardcoded passwords in ConvertTo-SecureString, PSCredential objects
+
+    Common patterns:
+        $secpasswd = ConvertTo-SecureString "PlainPassword" -AsPlainText -Force
+        New-Object PSCredential("user", $secpasswd)
+        $password = "hardcoded"
+        Invoke-Command -Credential $cred -ComputerName ...
+    """
+
+    @property
+    def name(self) -> str:
+        return "powershell_credential"
+
+    @property
+    def supported_extensions(self) -> Set[str]:
+        return {".ps1", ".psm1", ".psd1"}
+
+    @property
+    def file_signatures(self) -> List[bytes]:
+        return [
+            b"ConvertTo-SecureString",
+            b"PSCredential",
+            b"Get-Credential",
+            b"-Credential",
+        ]
+
+    def parse(self, content: bytes, source_path: str) -> List[DiscoveredCredential]:
+        credentials = []
+
+        try:
+            # Try multiple encodings (PS scripts can be UTF-8, UTF-16, etc.)
+            text = None
+            for encoding in ['utf-8-sig', 'utf-16', 'utf-8', 'latin-1']:
+                try:
+                    text = content.decode(encoding)
+                    break
+                except:
+                    continue
+            if not text:
+                text = content.decode('utf-8', errors='ignore')
+
+            # Pattern 1: ConvertTo-SecureString "password" -AsPlainText
+            # This is the most reliable - plaintext password exposed
+            cts_pattern = r'ConvertTo-SecureString\s+["\']([^"\']+)["\']\s+-AsPlainText'
+            for match in re.finditer(cts_pattern, text, re.IGNORECASE):
+                password = match.group(1)
+                # Try to find associated username
+                username = self._find_nearby_username(text, match.start())
+
+                credentials.append(DiscoveredCredential(
+                    username=username or "unknown",
+                    secret=password,
+                    secret_type=SecretType.PASSWORD,
+                    source=source_path,
+                    source_type=SourceType.CONFIG_FILE,
+                    confidence=Confidence.CONFIRMED,
+                    notes="PowerShell ConvertTo-SecureString with -AsPlainText",
+                ))
+
+            # Pattern 2: PSCredential("user", $secpasswd) or PSCredential("user", (ConvertTo...))
+            pscred_pattern = r'(?:New-Object\s+)?(?:System\.Management\.Automation\.)?PSCredential\s*\(\s*["\']([^"\']+)["\']'
+            for match in re.finditer(pscred_pattern, text, re.IGNORECASE):
+                username = match.group(1)
+                # If we already found passwords from ConvertTo-SecureString, link them
+                if credentials:
+                    for cred in credentials:
+                        if cred.username == "unknown":
+                            cred.username = username
+                            cred.notes += f" - PSCredential username: {username}"
+
+            # Pattern 3: Simple variable assignments with password-like names
+            var_pattern = r'\$(?:password|passwd|pwd|secret|cred(?:ential)?|pass)\s*=\s*["\']([^"\']+)["\']'
+            for match in re.finditer(var_pattern, text, re.IGNORECASE):
+                password = match.group(1)
+                # Skip if it looks like a variable reference
+                if password.startswith('$'):
+                    continue
+
+                # Try to find username in nearby lines
+                username = self._find_nearby_username(text, match.start())
+
+                credentials.append(DiscoveredCredential(
+                    username=username or "unknown",
+                    secret=password,
+                    secret_type=SecretType.PASSWORD,
+                    source=source_path,
+                    source_type=SourceType.CONFIG_FILE,
+                    confidence=Confidence.LIKELY,
+                    notes="PowerShell password variable assignment",
+                ))
+
+            # Pattern 4: Invoke-Command with inline credentials
+            # -Credential (New-Object PSCredential("user", (ConvertTo-SecureString "pass" ...)))
+            inline_cred_pattern = r'PSCredential\s*\(\s*["\']([^"\']+)["\']\s*,\s*\(?\s*ConvertTo-SecureString\s+["\']([^"\']+)["\']\s+-AsPlainText'
+            for match in re.finditer(inline_cred_pattern, text, re.IGNORECASE):
+                username, password = match.groups()
+                credentials.append(DiscoveredCredential(
+                    username=username,
+                    secret=password,
+                    secret_type=SecretType.PASSWORD,
+                    source=source_path,
+                    source_type=SourceType.CONFIG_FILE,
+                    confidence=Confidence.CONFIRMED,
+                    notes="PowerShell inline PSCredential with plaintext password",
+                ))
+
+            # Pattern 5: Connect-* cmdlets with explicit credentials
+            connect_pattern = r'-(?:User(?:name)?|Credential)\s+["\']?([^\s"\']+)["\']?\s+-(?:Password|Pass)\s+["\']([^"\']+)["\']'
+            for match in re.finditer(connect_pattern, text, re.IGNORECASE):
+                username, password = match.groups()
+                credentials.append(DiscoveredCredential(
+                    username=username,
+                    secret=password,
+                    secret_type=SecretType.PASSWORD,
+                    source=source_path,
+                    source_type=SourceType.CONFIG_FILE,
+                    confidence=Confidence.LIKELY,
+                    notes="PowerShell cmdlet with explicit credentials",
+                ))
+
+        except Exception:
+            pass
+
+        # Deduplicate
+        seen = set()
+        unique = []
+        for cred in credentials:
+            key = (cred.username.lower(), cred.secret)
+            if key not in seen:
+                seen.add(key)
+                unique.append(cred)
+
+        return unique
+
+    def _find_nearby_username(self, text: str, position: int, search_range: int = 500) -> Optional[str]:
+        """Search nearby text for username patterns."""
+        # Get surrounding context
+        start = max(0, position - search_range)
+        end = min(len(text), position + search_range)
+        context = text[start:end]
+
+        # Look for username variable assignments
+        patterns = [
+            r'\$(?:user(?:name)?|usr)\s*=\s*["\']([^"\']+)["\']',
+            r'-User(?:name)?\s+["\']([^"\']+)["\']',
+            r'# User(?:name)?:\s*(\S+)',
+        ]
+
+        for pattern in patterns:
+            match = re.search(pattern, context, re.IGNORECASE)
+            if match:
+                return match.group(1)
+
+        return None
+
+    def get_next_steps(
+        self,
+        credentials: List[DiscoveredCredential],
+        context: Dict[str, str]
+    ) -> List[NextStep]:
+        steps = []
+        target = context.get("target_ip", "<TARGET>")
+        domain = context.get("domain", "<DOMAIN>")
+
+        for cred in credentials:
+            # Test the credential
+            steps.append(NextStep(
+                action=f"Validate PowerShell credential: {cred.username}",
+                command=f"crackmapexec smb {target} -u '{cred.username}' -p '{cred.secret}' -d {domain}",
+                explanation="Hardcoded credentials in scripts are often valid and may have elevated privileges",
+                priority=1,
+            ))
+
+            # Check for WinRM access (common for automation accounts)
+            steps.append(NextStep(
+                action="Test WinRM access (common for automation)",
+                command=f"evil-winrm -i {target} -u '{cred.username}' -p '{cred.secret}'",
+                explanation="Automation accounts typically need remote management access",
+                priority=1,
+            ))
+
+        # If we found creds, suggest looking for more scripts
+        if credentials:
+            steps.append(NextStep(
+                action="Search for more PowerShell scripts",
+                command=f"crackmapexec smb {target} -u '{credentials[0].username}' -p '{credentials[0].secret}' -M spider_plus -o EXTENSIONS=ps1",
+                explanation="There may be more scripts with credentials or privilege escalation paths",
+                priority=2,
+            ))
+
+        return steps
+
+
+class TextFilePasswordParser(ConfigParserBase):
+    """
+    Parse text files for password patterns.
+
+    Found in: HR notices, readme files, documentation, notes
+    Contains: Default passwords, shared credentials, instructions
+
+    This parser catches the common "password is X" patterns found in
+    corporate documents like HR notices (Cicada pattern).
+
+    Example patterns:
+        "the default password is Cicada$M6Cicada"
+        "Password: Welcome123"
+        "your new password: TempPass1"
+        "credentials are admin:secret"
+    """
+
+    @property
+    def name(self) -> str:
+        return "text_file_password"
+
+    @property
+    def supported_extensions(self) -> Set[str]:
+        return {".txt", ".md", ".log", ".readme", ".doc", ".rtf"}
+
+    @property
+    def file_signatures(self) -> List[bytes]:
+        # Match on keywords in content (case-insensitive)
+        return [
+            b"password",
+            b"credential",
+            b"login",
+        ]
+
+    def parse(self, content: bytes, source_path: str) -> List[DiscoveredCredential]:
+        credentials = []
+
+        try:
+            # Try multiple encodings
+            text = None
+            for encoding in ['utf-8', 'utf-16', 'latin-1', 'cp1252']:
+                try:
+                    text = content.decode(encoding, errors='strict')
+                    break
+                except:
+                    continue
+            if not text:
+                text = content.decode('utf-8', errors='ignore')
+
+            # Password patterns to search for
+            # Format: (pattern, group_index_for_password, optional_group_for_username)
+            patterns = [
+                # "Your default password is: Cicada$M6Corpb*@Lp#nZp!8" (Cicada exact pattern)
+                # Must match: "Your default password is:" followed by the actual password
+                (r'(?:your|the)\s+(?:default|initial|temporary|new)\s+password\s+is[:\s]+([^\s\n]+)', 1, None),
+                # "the default password is Cicada$M6Cicada"
+                (r'(?:the\s+)?(?:default\s+)?password\s+is[:\s]+([^\s\n"\']+)', 1, None),
+                # "Password: Welcome123" or "password = abc"
+                (r'password\s*[=:]\s*["\']?([^\s\n"\']+)["\']?', 1, None),
+                # "credentials are admin:secret" or "use credentials admin/secret"
+                (r'credentials?\s+(?:are|is|:)\s*["\']?([^\s\n"\':/]+)[:/]([^\s\n"\']+)["\']?', 2, 1),
+                # "username: admin password: secret"
+                (r'username[=:\s]+["\']?([^\s\n"\']+)["\']?\s+password[=:\s]+["\']?([^\s\n"\']+)["\']?', 2, 1),
+                # "user/pass: admin:secret" or "login: admin/password"
+                (r'(?:user/?pass|login)[=:\s]+["\']?([^\s\n"\':/]+)[:/]([^\s\n"\']+)["\']?', 2, 1),
+                # "your temporary password is: TempPass"
+                (r'(?:your|the|new|temp(?:orary)?)\s+password\s+(?:is|will be|=|:)\s*["\']?([^\s\n"\']+)["\']?', 1, None),
+                # "initial password: Pass123"
+                (r'initial\s+password[=:\s]+["\']?([^\s\n"\']+)["\']?', 1, None),
+                # "Password for <user>: <pass>"
+                (r'password\s+for\s+["\']?([^\s\n"\']+)["\']?\s*[=:]\s*["\']?([^\s\n"\']+)["\']?', 2, 1),
+                # "set password to: <pass>"
+                (r'set\s+password\s+to[=:\s]+["\']?([^\s\n"\']+)["\']?', 1, None),
+            ]
+
+            for pattern, pass_group, user_group in patterns:
+                for match in re.finditer(pattern, text, re.IGNORECASE | re.MULTILINE):
+                    password = match.group(pass_group).strip().rstrip('.,;:!?')
+                    username = match.group(user_group).strip() if user_group and match.lastindex >= user_group else None
+
+                    # Skip obvious non-passwords
+                    if self._is_invalid_password(password):
+                        continue
+
+                    # Determine confidence based on pattern specificity
+                    confidence = Confidence.LIKELY
+                    if 'default' in match.group(0).lower() or 'initial' in match.group(0).lower():
+                        confidence = Confidence.CONFIRMED
+
+                    credentials.append(DiscoveredCredential(
+                        username=username or "default_user",
+                        secret=password,
+                        secret_type=SecretType.PASSWORD,
+                        source=source_path,
+                        source_type=SourceType.CONFIG_FILE,
+                        confidence=confidence,
+                        notes=f"Extracted from text: '{match.group(0)[:60]}...' - likely default/shared password",
+                    ))
+
+        except Exception as e:
+            pass  # Errors handled by registry
+
+        # Deduplicate by password
+        seen_passwords = set()
+        unique_creds = []
+        for cred in credentials:
+            if cred.secret.lower() not in seen_passwords:
+                seen_passwords.add(cred.secret.lower())
+                unique_creds.append(cred)
+
+        return unique_creds
+
+    def _is_invalid_password(self, password: str) -> bool:
+        """Check if extracted value is likely not a real password."""
+        # Too short
+        if len(password) < 4:
+            return True
+
+        # Common false positives
+        invalid = {
+            'the', 'your', 'new', 'old', 'same', 'this', 'that',
+            'required', 'changed', 'reset', 'expired', 'here',
+            'below', 'above', 'following', 'provided', 'given',
+            'http', 'https', 'www', 'email', 'mail',
+            # Adjectives commonly used to describe passwords (not actual passwords)
+            'strong', 'secure', 'unique', 'complex', 'random', 'safe',
+            'weak', 'simple', 'easy', 'hard', 'difficult', 'good',
+            'temporary', 'permanent', 'valid', 'invalid', 'correct',
+        }
+        if password.lower() in invalid:
+            return True
+
+        # Looks like a URL
+        if password.startswith(('http://', 'https://', 'www.')):
+            return True
+
+        # All common words
+        if password.lower() in {'username', 'password', 'secret', 'credential'}:
+            return True
+
+        return False
+
+    def get_next_steps(
+        self,
+        credentials: List[DiscoveredCredential],
+        context: Dict[str, str]
+    ) -> List[NextStep]:
+        steps = []
+        target = context.get("target_ip", "<TARGET>")
+        domain = context.get("domain", "<DOMAIN>")
+
+        if credentials:
+            # Get unique passwords for spray
+            passwords = list(set(c.secret for c in credentials))
+
+            steps.append(NextStep(
+                action="Password spray with discovered default password",
+                command=f"crackmapexec smb {target} -u users.txt -p '{passwords[0]}' --continue-on-success",
+                explanation="Default passwords from documentation are often still in use - spray against all users",
+                priority=1,
+            ))
+
+            steps.append(NextStep(
+                action="Test against common service accounts",
+                command=f"crackmapexec smb {target} -u administrator,admin,svc_admin -p '{passwords[0]}'",
+                explanation="Service accounts and admin accounts often use default passwords",
+                priority=1,
+            ))
+
+            if len(passwords) > 1:
+                steps.append(NextStep(
+                    action="Spray all discovered passwords",
+                    command=f"crackmapexec smb {target} -u users.txt -p passwords.txt --continue-on-success",
+                    explanation=f"Found {len(passwords)} passwords - test all against user list",
+                    priority=2,
+                ))
+
+        return steps
+
+
 class GenericXmlParser(ConfigParserBase):
     """
     Parse XML files for credential-like elements.
@@ -1088,13 +1466,15 @@ def get_default_registry() -> ConfigParserRegistry:
     registry = ConfigParserRegistry()
 
     # Register in order of specificity (most specific first)
-    registry.register(GroupsPolicyParser())      # GPP - very specific
-    registry.register(AzurePSCredentialParser()) # Azure PS - specific
-    registry.register(UnattendXmlParser())       # Unattend - specific
-    registry.register(WebConfigParser())         # .NET config
-    registry.register(EnvFileParser())           # .env files
-    registry.register(GenericJsonParser())       # JSON fallback
-    registry.register(GenericXmlParser())        # XML fallback (last)
+    registry.register(GroupsPolicyParser())        # GPP - very specific
+    registry.register(AzurePSCredentialParser())   # Azure PS - specific
+    registry.register(UnattendXmlParser())         # Unattend - specific
+    registry.register(WebConfigParser())           # .NET config
+    registry.register(EnvFileParser())             # .env files
+    registry.register(PowerShellCredentialParser())  # PowerShell scripts
+    registry.register(TextFilePasswordParser())    # Text files with password patterns
+    registry.register(GenericJsonParser())         # JSON fallback
+    registry.register(GenericXmlParser())          # XML fallback (last)
 
     return registry
 

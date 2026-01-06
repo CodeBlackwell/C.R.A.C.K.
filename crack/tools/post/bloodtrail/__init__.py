@@ -12,9 +12,9 @@ Features:
   - Query Runner: Execute queries via CLI or programmatically
   - ZIP Support: Process SharpHound ZIP output directly (no extraction needed)
 
-Credentials (for reference):
-  - Neo4j:      neo4j / Neo4j123
-  - BloodHound: admin / 1PlaySmarter*
+Credentials:
+  - Neo4j:      Set via NEO4J_PASSWORD environment variable
+  - BloodHound: Set via BloodHound UI
 
 Usage:
     # Full import (properties + edges)

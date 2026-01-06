@@ -4,11 +4,89 @@ LDAP Summary Model
 Aggregated results from parsing ldapsearch output.
 """
 
+import re
 from dataclasses import dataclass, field
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 
 from .ldap_entry import LdapUser, LdapComputer, LdapGroup, LdapDomainInfo
+
+
+@dataclass
+class PartialEntry:
+    """Entry with DN but missing objectClass (common in anonymous LDAP)"""
+
+    dn: str
+    cn: str = ""
+    entry_type: str = "unknown"  # 'user_hint', 'computer_hint', 'container', 'unknown'
+
+    def __post_init__(self):
+        # Extract CN from DN
+        match = re.match(r'CN=([^,]+)', self.dn, re.IGNORECASE)
+        if match:
+            self.cn = match.group(1)
+
+        # Classify based on DN patterns
+        dn_upper = self.dn.upper()
+        if ',OU=DOMAIN CONTROLLERS,' in dn_upper:
+            self.entry_type = 'computer_hint'
+        elif ',CN=COMPUTERS,' in dn_upper:
+            self.entry_type = 'computer_hint'
+        elif ',CN=USERS,' in dn_upper or ',OU=USERS,' in dn_upper:
+            self.entry_type = 'user_hint'
+        elif self.dn.upper().startswith('CN=') and ',DC=' in dn_upper:
+            # Direct child of domain - could be user, check for common containers
+            if self.cn.upper() in ('USERS', 'COMPUTERS', 'SYSTEM', 'BUILTIN',
+                                   'FOREIGNSECURITYPRINCIPALS', 'INFRASTRUCTURE',
+                                   'LOSTANDFOUND', 'NTDS QUOTAS', 'PROGRAM DATA',
+                                   'MANAGED SERVICE ACCOUNTS', 'KEYS', 'TPM DEVICES'):
+                self.entry_type = 'container'
+            elif self.cn.endswith('$'):
+                self.entry_type = 'computer_hint'
+            else:
+                # Likely a user - has a name-like CN directly under domain
+                self.entry_type = 'user_hint'
+        elif self.dn.upper().startswith('OU='):
+            self.entry_type = 'container'
+
+    @property
+    def username_guesses(self) -> List[str]:
+        """Generate possible usernames from CN"""
+        if self.entry_type != 'user_hint' or not self.cn:
+            return []
+
+        guesses = []
+        name = self.cn.strip()
+
+        # Handle "First Last" format
+        parts = name.split()
+        if len(parts) >= 2:
+            first = parts[0].lower()
+            last = parts[-1].lower()
+            # Common patterns
+            guesses.extend([
+                f"{first[0]}{last}",      # jsmith
+                f"{first}.{last}",         # john.smith
+                f"{first}{last}",          # johnsmith
+                f"{last}{first[0]}",       # smithj
+                f"{first}_{last}",         # john_smith
+                f"{first[0]}.{last}",      # j.smith
+                first,                      # john
+                last,                       # smith
+            ])
+        else:
+            # Single name
+            guesses.append(name.lower())
+
+        return list(dict.fromkeys(guesses))  # Dedupe, preserve order
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            'dn': self.dn,
+            'cn': self.cn,
+            'entry_type': self.entry_type,
+            'username_guesses': self.username_guesses,
+        }
 
 
 @dataclass
@@ -27,6 +105,9 @@ class LdapSummary:
     users: List[LdapUser] = field(default_factory=list)
     computers: List[LdapComputer] = field(default_factory=list)
     groups: List[LdapGroup] = field(default_factory=list)
+
+    # Partial entries (DN only, no objectClass - common in anonymous LDAP)
+    partial_entries: List[PartialEntry] = field(default_factory=list)
 
     # Raw entries that didn't fit other categories
     other_entries: int = 0
@@ -49,6 +130,11 @@ class LdapSummary:
     def users_with_descriptions(self) -> List[LdapUser]:
         """Users with descriptions (potential password hints)"""
         return [u for u in self.users if u.description and not u.is_machine_account]
+
+    @property
+    def users_with_legacy_passwords(self) -> List[LdapUser]:
+        """Users with legacy password attributes (CRITICAL - instant credentials!)"""
+        return [u for u in self.users if u.has_legacy_password and not u.is_machine_account]
 
     @property
     def admin_users(self) -> List[LdapUser]:
@@ -91,6 +177,24 @@ class LdapSummary:
         return [u for u in self.users if u.high_value and not u.is_machine_account]
 
     @property
+    def user_hints(self) -> List[PartialEntry]:
+        """Partial entries that look like users"""
+        return [p for p in self.partial_entries if p.entry_type == 'user_hint']
+
+    @property
+    def computer_hints(self) -> List[PartialEntry]:
+        """Partial entries that look like computers"""
+        return [p for p in self.partial_entries if p.entry_type == 'computer_hint']
+
+    @property
+    def all_username_guesses(self) -> List[str]:
+        """All username guesses from partial entries"""
+        guesses = []
+        for entry in self.user_hints:
+            guesses.extend(entry.username_guesses)
+        return list(dict.fromkeys(guesses))
+
+    @property
     def domain_name(self) -> str:
         """Domain name from domain_info or first DC"""
         if self.domain_info:
@@ -110,10 +214,13 @@ class LdapSummary:
             'kerberoastable': len(self.kerberoastable_users),
             'asrep_roastable': len(self.asrep_roastable_users),
             'with_descriptions': len(self.users_with_descriptions),
+            'with_legacy_passwords': len(self.users_with_legacy_passwords),  # CRITICAL!
             'admin_users': len(self.admin_users),
             'delegation_users': len(self.delegation_users),
             'domain_controllers': len(self.domain_controllers),
             'high_value_groups': len(self.high_value_groups),
+            'user_hints': len(self.user_hints),
+            'computer_hints': len(self.computer_hints),
         }
 
     def to_dict(self) -> Dict[str, Any]:
@@ -127,6 +234,8 @@ class LdapSummary:
             'users': [u.to_dict() for u in self.users],
             'computers': [c.to_dict() for c in self.computers],
             'groups': [g.to_dict() for g in self.groups],
+            'partial_entries': [p.to_dict() for p in self.partial_entries],
+            'username_guesses': self.all_username_guesses,
         }
 
     def __repr__(self) -> str:

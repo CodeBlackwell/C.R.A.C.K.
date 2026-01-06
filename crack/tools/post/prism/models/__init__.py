@@ -22,7 +22,7 @@ from .ldap_entry import (
     LdapEntry, LdapUser, LdapComputer, LdapGroup,
     LdapDomainInfo, UserAccountControl
 )
-from .ldap_summary import LdapSummary
+from .ldap_summary import LdapSummary, PartialEntry
 
 __all__ = [
     # Credential models
@@ -50,5 +50,6 @@ __all__ = [
     "LdapGroup",
     "LdapDomainInfo",
     "LdapSummary",
+    "PartialEntry",
     "UserAccountControl",
 ]

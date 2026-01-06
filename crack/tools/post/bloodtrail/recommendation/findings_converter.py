@@ -140,6 +140,60 @@ def _findings_from_user(
         )
         findings.append(finding)
 
+    # Group memberships (member_of) - detect privileged groups
+    member_of = user_data.get('member_of', [])
+    if not member_of:
+        member_of = user_data.get('memberOf', [])
+
+    for group_dn in member_of:
+        group_lower = group_dn.lower()
+
+        # Detect AD Recycle Bin membership
+        if 'recycle' in group_lower and 'bin' in group_lower:
+            import re
+            match = re.match(r'CN=([^,]+)', group_dn, re.IGNORECASE)
+            group_name = match.group(1) if match else group_dn
+
+            finding = Finding(
+                id=f"group_{username}_{group_name.replace(' ', '_').replace(',', '_')}",
+                finding_type=FindingType.GROUP_MEMBERSHIP,
+                source=source,
+                target=group_name,
+                raw_value=group_dn,
+                tags=["group_membership", "ad_recycle_bin"],
+                metadata={
+                    "username": username,
+                    "group_name": group_name,
+                    "group_dn": group_dn,
+                },
+            )
+            findings.append(finding)
+
+        # Detect other privileged groups
+        elif any(priv in group_lower for priv in [
+            'domain admin', 'enterprise admin', 'administrator',
+            'backup operator', 'server operator', 'account operator',
+            'dnsadmin', 'schema admin', 'key admin',
+        ]):
+            import re
+            match = re.match(r'CN=([^,]+)', group_dn, re.IGNORECASE)
+            group_name = match.group(1) if match else group_dn
+
+            finding = Finding(
+                id=f"group_{username}_{group_name.replace(' ', '_').replace(',', '_')}",
+                finding_type=FindingType.GROUP_MEMBERSHIP,
+                source=source,
+                target=group_name,
+                raw_value=group_dn,
+                tags=["group_membership", "privileged_group"],
+                metadata={
+                    "username": username,
+                    "group_name": group_name,
+                    "group_dn": group_dn,
+                },
+            )
+            findings.append(finding)
+
     return findings
 
 
@@ -313,6 +367,102 @@ def _infer_username_from_path(path: str) -> Optional[str]:
                 return username
 
     return None
+
+
+def findings_from_extracted_credentials(
+    credentials,
+    source: str = "smb_crawl",
+    target: Optional[str] = None,
+) -> List[Finding]:
+    """
+    Convert extracted credentials from SMB crawl or config files to Finding objects.
+
+    These findings are tagged appropriately to trigger password spray recommendations
+    when default/shared passwords are discovered.
+
+    Args:
+        credentials: List of DiscoveredCredential objects from parsers
+        source: Source identifier
+        target: Target IP for spray command user_file path
+
+    Returns:
+        List of Finding objects for credentials
+    """
+    # Calculate user_file path if target provided
+    user_file = None
+    if target:
+        target_sanitized = target.replace('.', '_')
+        user_file = f"./enum_{target_sanitized}/users_real.txt"
+    findings = []
+
+    for cred in credentials:
+        # Handle DiscoveredCredential objects
+        if hasattr(cred, 'username'):
+            username = cred.username
+            password = cred.secret
+            cred_source = cred.source if hasattr(cred, 'source') else source
+            notes = cred.notes if hasattr(cred, 'notes') else ""
+            confidence = getattr(cred, 'confidence', None)
+        elif isinstance(cred, dict):
+            username = cred.get('username', 'unknown')
+            password = cred.get('password') or cred.get('secret', '')
+            cred_source = cred.get('source', source)
+            notes = cred.get('notes', '')
+            confidence = cred.get('confidence')
+        else:
+            continue
+
+        if not password:
+            continue
+
+        # Determine tags based on source and characteristics
+        tags = ["from_file", "plaintext"]
+
+        # Check for default/shared password indicators
+        is_default = False
+        notes_lower = notes.lower() if notes else ""
+        if any(hint in notes_lower for hint in ['default', 'initial', 'shared', 'common']):
+            is_default = True
+            tags.append("default_password")
+
+        # High confidence from text file extraction often indicates explicit password mention
+        if confidence and hasattr(confidence, 'name') and confidence.name == 'CONFIRMED':
+            tags.append("default_password")
+            is_default = True
+
+        # Source indicators for default passwords
+        source_lower = str(cred_source).lower()
+        if any(hint in source_lower for hint in ['hr', 'notice', 'readme', 'welcome', 'onboard', 'setup']):
+            tags.append("default_password")
+            is_default = True
+
+        # Build metadata dict
+        cred_metadata = {
+            "username": username,
+            "password": password,
+            "cred_source": cred_source,
+            "notes": notes,
+            "source_description": notes,
+            "is_default_password": is_default,
+        }
+        # Add user_file if we have a target
+        if user_file:
+            cred_metadata["user_file"] = user_file
+
+        finding = Finding(
+            id=f"cred_{hash(f'{username}:{password}') & 0xFFFFFFFF:08x}",
+            finding_type=FindingType.CREDENTIAL,
+            source=source,
+            target=cred_source,
+            raw_value=password,
+            decoded_value=password,  # Already plaintext
+            tags=tags,
+            confidence=0.9 if is_default else 0.7,
+            metadata=cred_metadata,
+        )
+        findings.append(finding)
+
+    return findings
 
 
 def findings_from_group_memberships(

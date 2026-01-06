@@ -186,6 +186,147 @@ class RecommendationEngine:
         """Mark a recommendation as completed."""
         self.state.complete_recommendation(rec_id)
 
+    def complete_recommendation_with_result(
+        self,
+        rec_id: str,
+        success: bool,
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> List[Recommendation]:
+        """
+        Complete a recommendation and process on_success/on_failure chains.
+
+        This is used by the auto-orchestrator to chain recommendations together.
+
+        Args:
+            rec_id: Recommendation ID
+            success: Whether execution succeeded
+            metadata: Additional context (e.g., access_level for creds)
+
+        Returns:
+            List of new recommendations queued from the chain
+        """
+        # Find the recommendation before completing it
+        rec = None
+        for r in self.state.pending_recommendations:
+            if r.id == rec_id:
+                rec = r
+                break
+
+        if not rec:
+            return []
+
+        # Mark as complete
+        self.complete_recommendation(rec_id)
+
+        # Process chain
+        new_recs = []
+        chain_templates = rec.on_success if success else rec.on_failure
+
+        if not chain_templates:
+            return new_recs
+
+        # Create chained recommendations
+        for template_name in chain_templates:
+            chained_rec = self._create_chained_recommendation(
+                template_name=template_name,
+                source_rec=rec,
+                metadata=metadata or {},
+            )
+            if chained_rec:
+                self.state.add_recommendation(chained_rec)
+                new_recs.append(chained_rec)
+
+                # Notify callbacks
+                for callback in self._recommendation_callbacks:
+                    callback(chained_rec)
+
+        return new_recs
+
+    def _create_chained_recommendation(
+        self,
+        template_name: str,
+        source_rec: Recommendation,
+        metadata: Dict[str, Any],
+    ) -> Optional[Recommendation]:
+        """
+        Create a recommendation from an on_success/on_failure template.
+
+        Args:
+            template_name: Name of the template to instantiate
+            source_rec: The source recommendation that triggered this
+            metadata: Additional context from execution result
+
+        Returns:
+            New recommendation or None if template not found
+        """
+        from .triggers import (
+            create_smb_enum_recommendation,
+            create_winrm_check_recommendation,
+            create_bloodhound_recommendation,
+            create_smb_crawl_recommendation,
+        )
+
+        # Get credential context from source rec or metadata
+        username = metadata.get("username") or source_rec.metadata.get("username")
+        password = metadata.get("password") or source_rec.metadata.get("password")
+        access_level = metadata.get("access_level", "user")
+
+        # Create a synthetic finding for the chained recommendation
+        finding = Finding(
+            id=f"chain_{source_rec.id}_{template_name}",
+            finding_type=FindingType.CREDENTIAL,
+            source="auto_chain",
+            target=username or "unknown",
+            raw_value="chained",
+            tags=["validated", "chained"],
+            metadata={
+                "username": username,
+                "password": password,
+                "access_level": access_level,
+                "source_rec": source_rec.id,
+            },
+        )
+
+        # Map template names to creation functions
+        if template_name == "enumerate_smb_shares" and username and password:
+            return create_smb_enum_recommendation(
+                finding=finding,
+                target=self.state.target,
+                username=username,
+                password=password,
+                domain=self.state.domain,
+            )
+
+        elif template_name == "check_winrm" and username and password:
+            return create_winrm_check_recommendation(
+                finding=finding,
+                target=self.state.target,
+                username=username,
+                password=password,
+                domain=self.state.domain,
+            )
+
+        elif template_name == "collect_bloodhound" and username and password:
+            return create_bloodhound_recommendation(
+                finding=finding,
+                target=self.state.target,
+                username=username,
+                password=password,
+                domain=self.state.domain,
+            )
+
+        elif template_name == "crawl_smb_shares" and username and password:
+            return create_smb_crawl_recommendation(
+                finding=finding,
+                target=self.state.target,
+                username=username,
+                password=password,
+                domain=self.state.domain,
+            )
+
+        # Unknown template
+        return None
+
     def skip_recommendation(self, rec_id: str) -> None:
         """Mark a recommendation as skipped."""
         self.state.skip_recommendation(rec_id)

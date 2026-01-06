@@ -180,6 +180,50 @@ class LdapUser(LdapEntry):
     def pwd_last_set(self) -> Optional[str]:
         return self.get_attr('pwdLastSet')
 
+    # Legacy password attributes (custom AD attributes that may contain passwords)
+    LEGACY_PWD_ATTRS = [
+        'cascadelegacypwd', 'legacypwd', 'legacypassword',
+        'oldpassword', 'previouspassword', 'userpassword',
+        'unixuserpassword', 'mssfu30password',
+    ]
+
+    @property
+    def legacy_password_raw(self) -> Optional[str]:
+        """Check for custom password attributes (like cascadeLegacyPwd)"""
+        for attr in self.LEGACY_PWD_ATTRS:
+            value = self.get_attr(attr)
+            if value:
+                return value
+        return None
+
+    @property
+    def legacy_password_attr(self) -> Optional[str]:
+        """Which attribute contained the legacy password"""
+        for attr in self.LEGACY_PWD_ATTRS:
+            if self.get_attr(attr):
+                return attr
+        return None
+
+    @property
+    def legacy_password_decoded(self) -> Optional[str]:
+        """Try to decode legacy password (base64)"""
+        raw = self.legacy_password_raw
+        if not raw:
+            return None
+        try:
+            decoded = base64.b64decode(raw).decode('utf-8', errors='ignore')
+            # Check if it looks like readable text
+            if all(32 <= ord(c) < 127 or c in '\t\n\r' for c in decoded):
+                return decoded
+        except:
+            pass
+        return raw  # Return raw if decode fails
+
+    @property
+    def has_legacy_password(self) -> bool:
+        """Does this user have a legacy password attribute?"""
+        return self.legacy_password_raw is not None
+
     @property
     def high_value(self) -> bool:
         """Is this a high-value target?"""
@@ -188,6 +232,7 @@ class LdapUser(LdapEntry):
             self.dont_require_preauth or
             self.admin_count or
             self.trusted_for_delegation or
+            self.has_legacy_password or  # Legacy password = instant win!
             bool(self.description)  # Descriptions may contain password hints
         )
 
@@ -195,6 +240,8 @@ class LdapUser(LdapEntry):
     def attack_paths(self) -> List[str]:
         """List applicable attack paths"""
         paths = []
+        if self.has_legacy_password:
+            paths.append('Legacy Password (CRITICAL)')  # Most important first!
         if self.is_kerberoastable:
             paths.append('Kerberoast')
         if self.dont_require_preauth:
@@ -222,6 +269,9 @@ class LdapUser(LdapEntry):
             'adminCount': self.admin_count,
             'highValue': self.high_value,
             'attackPaths': self.attack_paths,
+            'hasLegacyPassword': self.has_legacy_password,
+            'legacyPasswordAttr': self.legacy_password_attr,
+            'legacyPasswordDecoded': self.legacy_password_decoded,
         })
         return base
 

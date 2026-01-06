@@ -628,6 +628,10 @@ class LdapFormatter:
         # Header panel
         self._render_header(summary)
 
+        # CRITICAL: Users with legacy passwords (INSTANT WIN - show first!)
+        if summary.users_with_legacy_passwords:
+            self._render_legacy_password_table(summary.users_with_legacy_passwords)
+
         # Domain info / Password Policy
         if summary.domain_info:
             self._render_domain_info(summary.domain_info)
@@ -648,10 +652,6 @@ class LdapFormatter:
         if summary.admin_users:
             self._render_admin_table(summary.admin_users)
 
-        # All users (verbose mode)
-        if verbose and summary.enabled_users:
-            self._render_all_users_table(summary.enabled_users)
-
         # Domain Controllers
         if summary.domain_controllers:
             self._render_dc_table(summary.domain_controllers)
@@ -659,6 +659,30 @@ class LdapFormatter:
         # High-value groups
         if summary.high_value_groups:
             self._render_groups_table(summary.high_value_groups)
+
+        # Partial entries (user hints from anonymous LDAP)
+        if summary.user_hints:
+            self._render_user_hints(summary)
+
+        # Verbose mode: Additional detailed sections
+        if verbose:
+            # Delegation analysis (critical attack path)
+            self._render_delegation_analysis(summary)
+
+            # Full UAC flag breakdown for high-value users
+            high_value = [u for u in summary.enabled_users if u.high_value]
+            if high_value:
+                self._render_uac_analysis(high_value)
+
+            # Group membership details
+            self._render_group_members(summary)
+
+            # Stale/suspicious accounts
+            self._render_stale_accounts(summary)
+
+            # Enhanced all-users table
+            if summary.enabled_users:
+                self._render_all_users_verbose(summary.enabled_users)
 
         # Stats footer
         self._render_stats(summary)
@@ -676,9 +700,12 @@ class LdapFormatter:
             f"Groups: [bold]{stats['groups']}[/]"
         )
 
-        # High-value summary
+        # High-value summary - include legacy passwords!
+        legacy_count = stats.get('with_legacy_passwords', 0)
+        legacy_part = f"[bold red]LegacyPwd: {legacy_count}[/] | " if legacy_count else ""
         high_value_line = (
             f"[bold yellow]Attack Targets:[/] "
+            f"{legacy_part}"
             f"Kerberoast: {stats['kerberoastable']} | "
             f"AS-REP: {stats['asrep_roastable']} | "
             f"Descriptions: {stats['with_descriptions']} | "
@@ -692,6 +719,43 @@ class LdapFormatter:
             box=box.ROUNDED
         )
         self.console.print(panel)
+
+    def _render_legacy_password_table(self, users: list) -> None:
+        """Render users with legacy passwords (CRITICAL - INSTANT WIN!)"""
+        self.console.print(
+            "\n[bold red]🔓 LEGACY PASSWORDS FOUND (CRITICAL - TEST IMMEDIATELY!)[/]\n"
+        )
+
+        table = Table(box=box.DOUBLE, border_style="red")
+        table.add_column("Username", style="bold white")
+        table.add_column("Attribute", style="yellow")
+        table.add_column("Decoded Password", style="bold green")
+        table.add_column("Groups", style="dim")
+
+        for user in users:
+            groups = len(user.member_of)
+            group_str = str(groups) if groups else "0"
+
+            table.add_row(
+                user.sam_account_name,
+                user.legacy_password_attr or "unknown",
+                user.legacy_password_decoded or user.legacy_password_raw or "",
+                group_str
+            )
+
+        self.console.print(table)
+
+        # Show test commands
+        self.console.print("\n[bold]TEST THESE CREDENTIALS:[/]")
+        for user in users:
+            pwd = user.legacy_password_decoded or user.legacy_password_raw
+            self.console.print(
+                f"  [cyan]$ crackmapexec smb DC_IP -u '{user.sam_account_name}' -p '{pwd}'[/]"
+            )
+            self.console.print(
+                f"  [cyan]$ evil-winrm -i DC_IP -u '{user.sam_account_name}' -p '{pwd}'[/]"
+            )
+        self.console.print()
 
     def _render_domain_info(self, domain_info) -> None:
         """Render domain and password policy info"""
@@ -915,6 +979,260 @@ class LdapFormatter:
 
         self.console.print(table)
 
+    def _render_delegation_analysis(self, summary: LdapSummary) -> None:
+        """Render delegation targets (verbose mode) - CRITICAL for attack paths"""
+        # Find users and computers with delegation
+        delegation_targets = []
+
+        for user in summary.enabled_users:
+            if user.trusted_for_delegation:
+                delegation_targets.append({
+                    'account': user.sam_account_name,
+                    'type': 'User',
+                    'delegation': 'Unconstrained',
+                    'admin': user.admin_count
+                })
+
+        for computer in summary.computers:
+            if computer.trusted_for_delegation:
+                delegation_targets.append({
+                    'account': computer.sam_account_name,
+                    'type': 'DC' if computer.is_domain_controller else 'Computer',
+                    'delegation': 'Unconstrained',
+                    'admin': False
+                })
+
+        if not delegation_targets:
+            return
+
+        self.console.print(
+            "\n[bold red]DELEGATION TARGETS (CRITICAL)[/]\n"
+        )
+
+        table = Table(box=box.ROUNDED, border_style="red")
+        table.add_column("Account", style="bold white")
+        table.add_column("Type", style="cyan")
+        table.add_column("Delegation", style="yellow")
+        table.add_column("Admin", style="red")
+
+        for target in delegation_targets:
+            admin_str = "[red]Yes[/]" if target['admin'] else ""
+            table.add_row(
+                target['account'],
+                target['type'],
+                target['delegation'],
+                admin_str
+            )
+
+        self.console.print(table)
+        self.console.print(
+            "[dim]Attack: Unconstrained delegation allows TGT capture. "
+            "Use Rubeus monitor or printer bug.[/]"
+        )
+
+    def _render_uac_analysis(self, users: list) -> None:
+        """Render full UAC flag breakdown for high-value users (verbose mode)"""
+        if not users:
+            return
+
+        self.console.print("\n[bold magenta]UAC FLAG ANALYSIS[/]\n")
+
+        table = Table(box=box.ROUNDED, border_style="magenta")
+        table.add_column("Username", style="bold white")
+        table.add_column("UAC Value", style="cyan")
+        table.add_column("Flags", style="yellow", max_width=50)
+
+        for user in users:
+            uac_hex = f"0x{user.user_account_control:06X}"
+            flags = ", ".join(sorted(user.uac_flags)) if user.uac_flags else "-"
+
+            table.add_row(
+                user.sam_account_name,
+                uac_hex,
+                flags
+            )
+
+        self.console.print(table)
+
+    def _render_group_members(self, summary: LdapSummary) -> None:
+        """Render members of high-value groups (verbose mode)"""
+        high_value_groups = summary.high_value_groups
+        if not high_value_groups:
+            return
+
+        self.console.print("\n[bold green]HIGH-VALUE GROUP MEMBERS[/]\n")
+
+        for group in high_value_groups:
+            members = group.members
+            if not members:
+                continue
+
+            # Extract CN from DN for member names
+            member_names = []
+            for member_dn in members[:10]:  # Limit to 10
+                # Extract CN from "CN=Name,OU=..."
+                import re
+                match = re.match(r'CN=([^,]+)', member_dn, re.IGNORECASE)
+                if match:
+                    member_names.append(match.group(1))
+                else:
+                    member_names.append(member_dn[:30])
+
+            count = len(members)
+            self.console.print(
+                f"[bold cyan]{group.sam_account_name}[/] ({count} member{'s' if count != 1 else ''}):"
+            )
+            for name in member_names:
+                self.console.print(f"  [dim]-[/] {name}")
+
+            if len(members) > 10:
+                self.console.print(f"  [dim]... and {len(members) - 10} more[/]")
+
+            self.console.print()
+
+    def _render_stale_accounts(self, summary: LdapSummary) -> None:
+        """Render accounts with old passwords or no recent activity (verbose mode)"""
+        from datetime import datetime
+
+        stale_users = []
+        for user in summary.enabled_users:
+            # Check for indicators of stale accounts
+            pwd_last_set = user.pwd_last_set
+            last_logon = user.last_logon
+
+            # These are often stored as Windows FILETIME or string dates
+            # For now, just check if they exist and look old
+            is_stale = False
+            stale_reason = []
+
+            if pwd_last_set:
+                # If pwdLastSet is 0 or very old, flag it
+                try:
+                    if pwd_last_set == '0' or int(pwd_last_set) == 0:
+                        is_stale = True
+                        stale_reason.append("Password never set")
+                except (ValueError, TypeError):
+                    pass
+
+            if last_logon:
+                try:
+                    if last_logon == '0' or int(last_logon) == 0:
+                        is_stale = True
+                        stale_reason.append("Never logged on")
+                except (ValueError, TypeError):
+                    pass
+
+            if is_stale:
+                stale_users.append({
+                    'username': user.sam_account_name,
+                    'display': user.display_name,
+                    'reason': ", ".join(stale_reason)
+                })
+
+        if not stale_users:
+            return
+
+        self.console.print(
+            "\n[bold yellow]STALE/SUSPICIOUS ACCOUNTS[/]\n"
+        )
+
+        table = Table(box=box.ROUNDED, border_style="yellow")
+        table.add_column("Username", style="bold white")
+        table.add_column("Display Name", style="cyan")
+        table.add_column("Issue", style="yellow")
+
+        for user in stale_users[:20]:  # Limit to 20
+            table.add_row(
+                user['username'],
+                user['display'],
+                user['reason']
+            )
+
+        self.console.print(table)
+
+        if len(stale_users) > 20:
+            self.console.print(f"[dim]... and {len(stale_users) - 20} more[/]")
+
+    def _render_all_users_verbose(self, users: list) -> None:
+        """Render all enabled users with detailed info (verbose mode)"""
+        self.console.print("\n[bold blue]ALL ENABLED USERS (DETAILED)[/]\n")
+
+        table = Table(box=box.ROUNDED, border_style="blue")
+        table.add_column("Username", style="bold white")
+        table.add_column("Display Name", style="cyan", max_width=20)
+        table.add_column("Groups", style="dim")
+        table.add_column("UAC", style="dim")
+        table.add_column("Flags", style="yellow", max_width=30)
+
+        for user in users[:100]:  # Limit to 100
+            # Count groups
+            groups = len(user.member_of)
+            group_str = str(groups) if groups else "0"
+
+            # UAC hex
+            uac_hex = f"0x{user.user_account_control:04X}"
+
+            # Important flags only
+            flags = []
+            if user.admin_count:
+                flags.append("[red]Admin[/]")
+            if user.is_kerberoastable:
+                flags.append("[yellow]SPN[/]")
+            if user.dont_require_preauth:
+                flags.append("[red]NoPreAuth[/]")
+            if user.trusted_for_delegation:
+                flags.append("[red]Deleg[/]")
+            if user.password_never_expires:
+                flags.append("NoPwdExp")
+            if user.is_locked:
+                flags.append("[dim]Locked[/]")
+
+            table.add_row(
+                user.sam_account_name,
+                user.display_name[:20] if user.display_name else "-",
+                group_str,
+                uac_hex,
+                ", ".join(flags) if flags else "-"
+            )
+
+        self.console.print(table)
+
+        if len(users) > 100:
+            self.console.print(f"[dim]... and {len(users) - 100} more users[/]")
+
+    def _render_user_hints(self, summary: LdapSummary) -> None:
+        """Render possible users from partial LDAP entries (anonymous bind)"""
+        user_hints = summary.user_hints
+
+        self.console.print("\n[bold yellow]POSSIBLE USERS (Anonymous LDAP - unconfirmed)[/]\n")
+        self.console.print(
+            "[dim]These entries have DN but no objectClass (common with anonymous bind).[/]\n"
+            "[dim]Verify with: kerbrute userenum or GetNPUsers.py[/]\n"
+        )
+
+        table = Table(box=box.ROUNDED, border_style="yellow")
+        table.add_column("CN (Display Name)", style="white")
+        table.add_column("Username Guesses", style="cyan")
+
+        for hint in user_hints[:20]:  # Limit to first 20
+            guesses = ", ".join(hint.username_guesses[:4])  # First 4 guesses
+            if len(hint.username_guesses) > 4:
+                guesses += f" (+{len(hint.username_guesses) - 4})"
+            table.add_row(hint.cn, guesses)
+
+        self.console.print(table)
+
+        if len(user_hints) > 20:
+            self.console.print(f"[dim]... and {len(user_hints) - 20} more hints[/]")
+
+        # All username guesses for easy copy
+        all_guesses = summary.all_username_guesses
+        if all_guesses:
+            self.console.print(f"\n[bold]Username Wordlist:[/] [cyan]{', '.join(all_guesses)}[/]")
+            self.console.print(
+                "\n[dim]Save to file: crack prism <file> -f json | jq -r '.username_guesses[]' > users.txt[/]"
+            )
+
     def _render_stats(self, summary: LdapSummary) -> None:
         """Render statistics footer"""
         stats = summary.stats
@@ -1016,3 +1334,516 @@ class LdapMarkdownFormatter:
             lines.append("")
 
         return "\n".join(lines)
+
+
+class DomainReportFormatter:
+    """Rich library formatter for Domain Report from Neo4j"""
+
+    def __init__(self, console: Optional[Console] = None):
+        self.console = console or Console()
+
+    def render_report(
+        self,
+        report: dict,
+        section: str = 'all',
+        verbose: bool = False
+    ) -> None:
+        """Render domain report to console
+
+        Args:
+            report: Dict from adapter.query_domain_report()
+            section: 'all', 'policy', 'users', 'computers', 'credentials', 'groups', 'tickets'
+            verbose: If True, show additional details
+        """
+        if not report or not report.get('domain'):
+            self.console.print("[red]No domain data found[/]")
+            return
+
+        # Header
+        self._render_header(report['domain'])
+
+        # Sections based on filter
+        if section in ('all', 'policy') and report.get('policy'):
+            self._render_password_policy(report['policy'])
+
+        if section in ('all', 'users') and report.get('users'):
+            self._render_attack_targets(report['users'])
+            self._render_users_table(report['users'], verbose)
+
+        if section in ('all', 'groups') and report.get('groups'):
+            self._render_groups_table(report['groups'])
+
+        if section in ('all', 'computers') and report.get('computers'):
+            self._render_computers_table(report['computers'])
+
+        if section in ('all', 'credentials') and report.get('credentials'):
+            self._render_credentials_table(report['credentials'])
+
+        if section in ('all', 'tickets') and report.get('tickets'):
+            self._render_tickets_table(report['tickets'])
+
+        # Stats summary
+        if section == 'all' and report.get('stats'):
+            self._render_stats_summary(report['stats'])
+
+    def _render_header(self, domain: dict) -> None:
+        """Render domain header panel"""
+        name = domain.get('name', 'Unknown')
+        dns_name = domain.get('dns_name', '')
+        level = domain.get('functional_level_name', '')
+        source = domain.get('source', '')
+
+        header_lines = [f"[bold cyan]{name}[/]"]
+        if dns_name:
+            header_lines.append(f"DNS: {dns_name}")
+        if level:
+            header_lines.append(f"Functional Level: {level}")
+        if source:
+            header_lines.append(f"[dim]Source: {source}[/]")
+
+        panel = Panel(
+            "\n".join(header_lines),
+            title="[bold white]PRISM Domain Report[/]",
+            border_style="cyan",
+            box=box.DOUBLE
+        )
+        self.console.print(panel)
+
+    def _render_password_policy(self, policy: dict) -> None:
+        """Render password policy with weakness indicators"""
+        self.console.print("\n[bold magenta]PASSWORD POLICY[/]\n")
+
+        table = Table(box=box.ROUNDED, border_style="magenta")
+        table.add_column("Setting", style="cyan")
+        table.add_column("Value", style="white")
+        table.add_column("Status", style="dim")
+
+        # Min length
+        min_len = policy.get('min_length', 0)
+        status = "[red]WEAK[/]" if min_len < 8 else "[green]OK[/]"
+        table.add_row("Min Length", str(min_len), status)
+
+        # Complexity
+        complexity = policy.get('complexity', False)
+        status = "[green]OK[/]" if complexity else "[red]WEAK[/]"
+        table.add_row("Complexity", "Yes" if complexity else "No", status)
+
+        # Lockout
+        lockout = policy.get('lockout_threshold', 0)
+        if lockout == 0:
+            status = "[red]NO LOCKOUT[/]"
+            lockout_str = "Disabled"
+        else:
+            status = "[green]OK[/]" if lockout <= 5 else "[yellow]HIGH[/]"
+            lockout_str = f"{lockout} attempts"
+        table.add_row("Lockout", lockout_str, status)
+
+        # Lockout duration
+        duration = policy.get('lockout_duration', 0)
+        if duration and lockout:
+            table.add_row("Lockout Duration", f"{duration} min", "")
+
+        # Max age
+        max_age = policy.get('max_pwd_age', 0)
+        if max_age:
+            status = "[yellow]LONG[/]" if max_age > 90 else ""
+            table.add_row("Max Password Age", f"{max_age} days", status)
+
+        # History
+        history = policy.get('history_length', 0)
+        if history:
+            table.add_row("Password History", str(history), "")
+
+        self.console.print(table)
+
+        # Weak policy warning
+        if policy.get('is_weak'):
+            self.console.print("\n[bold red]WARNING: Weak password policy detected![/]")
+
+    def _render_attack_targets(self, users: list) -> None:
+        """Render high-value attack targets"""
+        targets = [u for u in users if (
+            u.get('is_kerberoastable') or
+            u.get('is_asrep_roastable') or
+            u.get('description') or
+            u.get('admin_count') or
+            u.get('trusted_for_delegation')
+        )]
+
+        if not targets:
+            return
+
+        self.console.print("\n[bold yellow]ATTACK TARGETS (High Value)[/]\n")
+
+        table = Table(box=box.ROUNDED, border_style="yellow")
+        table.add_column("Username", style="bold white")
+        table.add_column("Attack Path", style="red")
+        table.add_column("Description", style="green", max_width=30)
+        table.add_column("SPNs", style="cyan", max_width=30)
+
+        for user in targets[:15]:  # Limit to 15
+            # Determine attack path
+            paths = []
+            if user.get('is_kerberoastable'):
+                paths.append("Kerberoast")
+            if user.get('is_asrep_roastable'):
+                paths.append("AS-REP")
+            if user.get('description'):
+                paths.append("Description")
+            if user.get('admin_count'):
+                paths.append("Admin")
+            if user.get('trusted_for_delegation'):
+                paths.append("Delegation")
+
+            path_str = ", ".join(paths)
+
+            # Description
+            desc = user.get('description', '') or ''
+            if len(desc) > 30:
+                desc = desc[:27] + "..."
+
+            # SPNs
+            spns = user.get('spns') or []
+            spn_str = spns[0] if spns else ""
+            if len(spns) > 1:
+                spn_str += f" (+{len(spns)-1})"
+
+            table.add_row(
+                user.get('name', ''),
+                path_str,
+                desc,
+                spn_str
+            )
+
+        self.console.print(table)
+
+        if len(targets) > 15:
+            self.console.print(f"[dim]... and {len(targets) - 15} more targets[/]")
+
+    def _render_users_table(self, users: list, verbose: bool = False) -> None:
+        """Render all users table"""
+        self.console.print(f"\n[bold blue]ALL USERS ({len(users)} total)[/]\n")
+
+        table = Table(box=box.ROUNDED, border_style="blue")
+        table.add_column("Username", style="bold white")
+        table.add_column("Display Name", style="cyan", max_width=20)
+        table.add_column("Enabled", style="dim")
+        table.add_column("Admin", style="red")
+        table.add_column("Flags", style="yellow", max_width=25)
+
+        limit = 50 if verbose else 20
+        for user in users[:limit]:
+            enabled = "[green]Y[/]" if user.get('is_enabled') else "[red]N[/]"
+            admin = "[red]Y[/]" if user.get('admin_count') else ""
+
+            # Build flags
+            flags = []
+            if user.get('is_kerberoastable'):
+                flags.append("KERB")
+            if user.get('is_asrep_roastable'):
+                flags.append("ASREP")
+            if user.get('trusted_for_delegation'):
+                flags.append("DELEG")
+            if user.get('high_value'):
+                flags.append("HV")
+
+            table.add_row(
+                user.get('name', ''),
+                (user.get('display_name', '') or '')[:20],
+                enabled,
+                admin,
+                ", ".join(flags) if flags else "-"
+            )
+
+        self.console.print(table)
+
+        if len(users) > limit:
+            self.console.print(f"[dim]... and {len(users) - limit} more users[/]")
+
+    def _render_groups_table(self, groups: list) -> None:
+        """Render groups table"""
+        if not groups:
+            return
+
+        self.console.print(f"\n[bold magenta]GROUPS ({len(groups)} total)[/]\n")
+
+        # Separate high-value groups
+        high_value = [g for g in groups if g.get('is_high_value') or g.get('admin_count')]
+
+        if high_value:
+            self.console.print("[bold yellow]High-Value Groups:[/]\n")
+            table = Table(box=box.ROUNDED, border_style="yellow")
+            table.add_column("Group", style="bold white")
+            table.add_column("Members", style="cyan")
+            table.add_column("Description", style="dim", max_width=40)
+
+            for group in high_value:
+                desc = group.get('description', '') or ''
+                if len(desc) > 40:
+                    desc = desc[:37] + "..."
+
+                table.add_row(
+                    group.get('name', ''),
+                    str(group.get('member_count', 0)),
+                    desc
+                )
+
+            self.console.print(table)
+
+        # Other groups (show count only)
+        other = [g for g in groups if g not in high_value]
+        if other:
+            self.console.print(f"\n[dim]Other groups: {len(other)}[/]")
+
+    def _render_computers_table(self, computers: list) -> None:
+        """Render computers table"""
+        if not computers:
+            return
+
+        self.console.print(f"\n[bold cyan]COMPUTERS ({len(computers)} total)[/]\n")
+
+        table = Table(box=box.ROUNDED, border_style="cyan")
+        table.add_column("Name", style="bold white")
+        table.add_column("DNS Hostname", style="cyan", max_width=35)
+        table.add_column("OS", style="dim", max_width=25)
+        table.add_column("IP", style="yellow")
+        table.add_column("DC", style="red")
+        table.add_column("Deleg", style="yellow")
+
+        for computer in computers[:20]:
+            is_dc = "[red]Y[/]" if computer.get('is_dc') else ""
+            deleg = "[yellow]Y[/]" if computer.get('trusted_for_delegation') else ""
+
+            os_info = computer.get('os', '') or ''
+            if len(os_info) > 25:
+                os_info = os_info[:22] + "..."
+
+            table.add_row(
+                computer.get('name', ''),
+                (computer.get('dns_hostname', '') or '')[:35],
+                os_info,
+                computer.get('ip', '') or '',
+                is_dc,
+                deleg
+            )
+
+        self.console.print(table)
+
+        if len(computers) > 20:
+            self.console.print(f"[dim]... and {len(computers) - 20} more computers[/]")
+
+    def _render_credentials_table(self, credentials: list) -> None:
+        """Render credentials table"""
+        if not credentials:
+            return
+
+        self.console.print(f"\n[bold green]CREDENTIALS ({len(credentials)} total)[/]\n")
+
+        table = Table(box=box.ROUNDED, border_style="green")
+        table.add_column("Username", style="bold white")
+        table.add_column("Type", style="cyan")
+        table.add_column("Value", style="yellow", max_width=45)
+        table.add_column("Source", style="dim")
+        table.add_column("HV", style="red")
+
+        for cred in credentials[:30]:
+            cred_type = cred.get('cred_type', '')
+            value = cred.get('value', '')
+
+            # Mask or truncate value
+            if cred_type in ('cleartext', 'CLEARTEXT'):
+                # Show cleartext passwords fully (they're valuable)
+                style = "bold green"
+            else:
+                # Truncate hashes
+                if len(value) > 45:
+                    value = value[:42] + "..."
+                style = "yellow"
+
+            hv = "[red]Y[/]" if cred.get('high_value') else ""
+
+            table.add_row(
+                cred.get('username', ''),
+                cred_type,
+                f"[{style}]{value}[/]",
+                cred.get('source_tool', '') or '',
+                hv
+            )
+
+        self.console.print(table)
+
+        if len(credentials) > 30:
+            self.console.print(f"[dim]... and {len(credentials) - 30} more credentials[/]")
+
+    def _render_tickets_table(self, tickets: list) -> None:
+        """Render Kerberos tickets table"""
+        if not tickets:
+            return
+
+        self.console.print(f"\n[bold magenta]KERBEROS TICKETS ({len(tickets)} total)[/]\n")
+
+        table = Table(box=box.ROUNDED, border_style="magenta")
+        table.add_column("Client", style="bold white")
+        table.add_column("Type", style="cyan")
+        table.add_column("Service", style="yellow", max_width=35)
+        table.add_column("Expires", style="dim")
+        table.add_column("Saved", style="green")
+
+        for ticket in tickets[:20]:
+            ticket_type = "TGT" if ticket.get('is_tgt') else "TGS"
+
+            service = ticket.get('service_target', '') or ticket.get('service_type', '')
+            if len(service) > 35:
+                service = service[:32] + "..."
+
+            end_time = ticket.get('end_time', '')
+            if end_time and len(end_time) > 16:
+                end_time = end_time[:16]
+
+            saved = "[green]Y[/]" if ticket.get('saved_path') else ""
+
+            table.add_row(
+                ticket.get('client_name', ''),
+                ticket_type,
+                service,
+                end_time,
+                saved
+            )
+
+        self.console.print(table)
+
+        if len(tickets) > 20:
+            self.console.print(f"[dim]... and {len(tickets) - 20} more tickets[/]")
+
+    def _render_stats_summary(self, stats: dict) -> None:
+        """Render statistics summary line"""
+        self.console.print("\n" + "─" * 70)
+
+        parts = []
+        if stats.get('total_users'):
+            parts.append(f"{stats['total_users']} users")
+        if stats.get('total_computers'):
+            parts.append(f"{stats['total_computers']} computers")
+        if stats.get('total_credentials'):
+            parts.append(f"{stats['total_credentials']} creds")
+        if stats.get('total_tickets'):
+            parts.append(f"{stats['total_tickets']} tickets")
+        if stats.get('kerberoastable'):
+            parts.append(f"[yellow]{stats['kerberoastable']} kerberoastable[/]")
+        if stats.get('asrep_roastable'):
+            parts.append(f"[red]{stats['asrep_roastable']} asrep[/]")
+        if stats.get('domain_controllers'):
+            parts.append(f"{stats['domain_controllers']} DCs")
+
+        self.console.print(f"[bold]Summary:[/] {' | '.join(parts)}")
+
+    def format_json(self, report: dict) -> str:
+        """Format report as JSON"""
+        import json
+        return json.dumps(report, indent=2, default=str)
+
+    def format_markdown(self, report: dict) -> str:
+        """Format report as Markdown"""
+        lines = [
+            f"# Domain Report: {report.get('domain', {}).get('name', 'Unknown')}",
+            "",
+            f"**DNS:** {report.get('domain', {}).get('dns_name', '')}",
+            f"**Source:** {report.get('domain', {}).get('source', '')}",
+            "",
+        ]
+
+        # Policy
+        policy = report.get('policy', {})
+        if policy:
+            lines.extend([
+                "## Password Policy",
+                "",
+                f"- **Min Length:** {policy.get('min_length', 'N/A')}",
+                f"- **Complexity:** {'Yes' if policy.get('complexity') else 'No'}",
+                f"- **Lockout:** {policy.get('lockout_threshold', 0) or 'Disabled'}",
+                "",
+            ])
+
+        # Users
+        users = report.get('users', [])
+        if users:
+            lines.extend([
+                f"## Users ({len(users)})",
+                "",
+                "| Username | Display Name | Enabled | Flags |",
+                "|----------|--------------|---------|-------|",
+            ])
+            for u in users[:30]:
+                flags = []
+                if u.get('is_kerberoastable'): flags.append("KERB")
+                if u.get('is_asrep_roastable'): flags.append("ASREP")
+                if u.get('admin_count'): flags.append("ADMIN")
+                enabled = "Y" if u.get('is_enabled') else "N"
+                lines.append(f"| {u.get('name', '')} | {u.get('display_name', '')} | {enabled} | {', '.join(flags)} |")
+            lines.append("")
+
+        # Credentials
+        creds = report.get('credentials', [])
+        if creds:
+            lines.extend([
+                f"## Credentials ({len(creds)})",
+                "",
+                "| Username | Type | Source |",
+                "|----------|------|--------|",
+            ])
+            for c in creds[:20]:
+                lines.append(f"| {c.get('username', '')} | {c.get('cred_type', '')} | {c.get('source_tool', '')} |")
+            lines.append("")
+
+        # Stats
+        stats = report.get('stats', {})
+        if stats:
+            lines.extend([
+                "## Summary",
+                "",
+                f"- **Users:** {stats.get('total_users', 0)} ({stats.get('enabled_users', 0)} enabled)",
+                f"- **Computers:** {stats.get('total_computers', 0)} ({stats.get('domain_controllers', 0)} DCs)",
+                f"- **Credentials:** {stats.get('total_credentials', 0)}",
+                f"- **Kerberoastable:** {stats.get('kerberoastable', 0)}",
+                f"- **AS-REP Roastable:** {stats.get('asrep_roastable', 0)}",
+            ])
+
+        return "\n".join(lines)
+
+
+class DomainListFormatter:
+    """Formatter for listing available domains"""
+
+    def __init__(self, console: Optional[Console] = None):
+        self.console = console or Console()
+
+    def render_domains(self, domains: list) -> None:
+        """Render available domains table"""
+        if not domains:
+            self.console.print("[yellow]No domains found in database[/]")
+            return
+
+        self.console.print("\n[bold cyan]AVAILABLE DOMAINS[/]\n")
+
+        table = Table(box=box.ROUNDED, border_style="cyan")
+        table.add_column("Domain", style="bold white")
+        table.add_column("DNS Name", style="cyan")
+        table.add_column("Users", style="yellow")
+        table.add_column("Computers", style="green")
+        table.add_column("Credentials", style="red")
+        table.add_column("Source", style="dim")
+
+        for domain in domains:
+            table.add_row(
+                domain.get('name', ''),
+                domain.get('dns_name', '') or '',
+                str(domain.get('user_count', 0)),
+                str(domain.get('computer_count', 0)),
+                str(domain.get('credential_count', 0)),
+                domain.get('source', '') or ''
+            )
+
+        self.console.print(table)
+        self.console.print(
+            "\n[dim]Usage: crack prism report --domain DOMAIN_NAME[/]"
+        )

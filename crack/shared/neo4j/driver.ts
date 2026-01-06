@@ -15,12 +15,16 @@ interface Neo4jConfig {
   connectionTimeout?: number;
 }
 
-/** Default configuration from environment */
+/** Default configuration from environment (password required) */
 function getDefaultConfig(): Neo4jConfig {
+  const password = process.env.NEO4J_PASSWORD || '';
+  if (!password) {
+    console.warn('[NEO4J] WARNING: NEO4J_PASSWORD not set. Set via: export NEO4J_PASSWORD="your_password"');
+  }
   return {
     uri: process.env.NEO4J_URI || 'bolt://127.0.0.1:7687',
     user: process.env.NEO4J_USER || 'neo4j',
-    password: process.env.NEO4J_PASSWORD || 'Neo4j123',
+    password,
     maxPoolSize: 50,
     connectionTimeout: 2000,
   };

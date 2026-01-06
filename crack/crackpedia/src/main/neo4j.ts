@@ -6,10 +6,15 @@ import * as path from 'path';
 
 debug.section('NEO4J INITIALIZATION');
 
-// Neo4j connection configuration
+// Neo4j connection configuration (password required via environment variable)
 const NEO4J_URI = process.env.NEO4J_URI || 'bolt://127.0.0.1:7687';
 const NEO4J_USER = process.env.NEO4J_USER || 'neo4j';
-const NEO4J_PASSWORD = process.env.NEO4J_PASSWORD || 'Neo4j123';
+const NEO4J_PASSWORD = process.env.NEO4J_PASSWORD || '';
+
+// Warn if password not set
+if (!NEO4J_PASSWORD) {
+  console.warn('[NEO4J] WARNING: NEO4J_PASSWORD not set. Set via: export NEO4J_PASSWORD="your_password"');
+}
 
 logNeo4j('Neo4j configuration loaded', {
   uri: NEO4J_URI,

@@ -27,7 +27,7 @@ DEFAULT_SCHEMA = NEO4J_MIGRATION / "schema" / "neo4j_schema.yaml"
 # Neo4j connection defaults
 NEO4J_URI = os.getenv("NEO4J_URI", "bolt://localhost:7687")
 NEO4J_USER = os.getenv("NEO4J_USER", "neo4j")
-NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD", "Neo4j123")
+NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD", "")
 
 
 def transform(input_dir: Path, output_dir: Path, validate: bool = True) -> bool:

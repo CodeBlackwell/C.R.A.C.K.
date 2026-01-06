@@ -11,7 +11,7 @@ def get_neo4j_config():
     return {
         'uri': os.getenv('NEO4J_URI', 'bolt://localhost:7687'),
         'user': os.getenv('NEO4J_USER', 'neo4j'),
-        'password': os.getenv('NEO4J_PASSWORD', 'Neo4j123')
+        'password': os.getenv('NEO4J_PASSWORD', '')
     }
 
 def verify_import():
@@ -137,7 +137,7 @@ def verify_import():
             print()
             print("Access Neo4j Browser: http://localhost:7474")
             print("Username: neo4j")
-            print("Password: Neo4j123")
+            print("Password: (set via NEO4J_PASSWORD env var)")
             print()
 
     finally:

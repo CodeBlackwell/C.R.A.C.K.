@@ -102,7 +102,7 @@ def main():
     if neo4j_ok:
         print("Status: NEO4J OPERATIONAL")
         print("\nNext steps:")
-        print("  1. Verify schema: cypher-shell -u neo4j -p Neo4j123 < db/neo4j-migration/scripts/create_schema.cypher")
+        print("  1. Verify schema: cypher-shell -u neo4j -p $NEO4J_PASSWORD < db/neo4j-migration/scripts/create_schema.cypher")
         print("  2. Use CLI: crack reference <query>")
         return 0
     else:
@@ -110,7 +110,7 @@ def main():
         print("\nAction required:")
         print("  1. Start Neo4j: docker compose up -d neo4j")
         print("  2. Check Neo4j logs: docker logs crack-neo4j")
-        print("  3. Verify credentials: NEO4J_AUTH=neo4j/Neo4j123")
+        print("  3. Verify credentials: NEO4J_AUTH=neo4j/$NEO4J_PASSWORD")
         return 1
 
 

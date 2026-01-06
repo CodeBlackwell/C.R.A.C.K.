@@ -1,18 +1,20 @@
 """
 Configuration for BloodHound Edge Enhancer
 
-Credentials:
-  - Neo4j:      neo4j / Neo4j123
-  - BloodHound: admin / 1PlaySmarter*
+Credentials should be set via environment variables:
+  - NEO4J_URI:      bolt://localhost:7687 (default)
+  - NEO4J_USER:     neo4j (default)
+  - NEO4J_PASSWORD: (required - set via environment variable)
 """
 
+import os
 from dataclasses import dataclass
 from typing import Dict, Set
 
-# Neo4j connection defaults
-NEO4J_URI = "bolt://localhost:7687"
-NEO4J_USER = "neo4j"
-NEO4J_PASSWORD = "Neo4j123"
+# Neo4j connection defaults (password from environment only)
+NEO4J_URI = os.environ.get("NEO4J_URI", "bolt://localhost:7687")
+NEO4J_USER = os.environ.get("NEO4J_USER", "neo4j")
+NEO4J_PASSWORD = os.environ.get("NEO4J_PASSWORD", "")
 
 # Listener defaults (for reverse shell payloads)
 # Set these to avoid passing --lhost/--lport every time
@@ -241,5 +243,14 @@ class Neo4jConfig:
     """Neo4j connection configuration"""
     uri: str = NEO4J_URI
     user: str = NEO4J_USER
-    password: str = NEO4J_PASSWORD
+    password: str = NEO4J_PASSWORD  # From environment
     batch_size: int = DEFAULT_BATCH_SIZE
+
+    def __post_init__(self):
+        """Validate configuration"""
+        if not self.password:
+            import warnings
+            warnings.warn(
+                "NEO4J_PASSWORD not set. Set via: export NEO4J_PASSWORD='your_password'",
+                UserWarning
+            )

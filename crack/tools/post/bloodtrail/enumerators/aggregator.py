@@ -39,6 +39,9 @@ class AggregatedResult:
     # Per-enumerator results for debugging
     raw_results: List[EnumerationResult] = field(default_factory=list)
 
+    # Additional metadata (guest access, etc.)
+    metadata: Dict[str, Any] = field(default_factory=dict)
+
     def to_query_records(self) -> Dict[str, List[Dict]]:
         """
         Convert aggregated results to CommandSuggester format.

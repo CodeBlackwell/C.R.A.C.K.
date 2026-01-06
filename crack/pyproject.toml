@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.8"
 license = "MIT"
 authors = [
-    {name = "OSCP Student", email = "student@oscp.local"},
+    {name = "CodeBlackwell"},
 ]
 keywords = ["security", "pentesting", "oscp", "web", "enumeration", "sqli", "reconnaissance"]
 classifiers = [
@@ -36,11 +36,18 @@ dependencies = [
     "pyfiglet>=0.8.0",
 ]
 
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-cov>=4.0.0",
+]
+
 [project.urls]
-Homepage = "https://github.com/yourusername/crack"
-Documentation = "https://github.com/yourusername/crack#readme"
-Repository = "https://github.com/yourusername/crack.git"
-Issues = "https://github.com/yourusername/crack/issues"
+Homepage = "https://github.com/CodeBlackwell/crack"
+Documentation = "https://github.com/CodeBlackwell/crack#readme"
+Repository = "https://github.com/CodeBlackwell/crack.git"
+Issues = "https://github.com/CodeBlackwell/crack/issues"
 
 [project.scripts]
 # Main command with subcommands
@@ -120,3 +127,15 @@ crack = "."
 
 [tool.setuptools.package-data]
 "*" = ["*.json", "*.md", "*.txt", "*.yaml", "*.cypher"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+markers = [
+    "asyncio: marks tests as async",
+    "slow: marks tests as slow",
+    "integration: marks tests requiring external services",
+]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+]

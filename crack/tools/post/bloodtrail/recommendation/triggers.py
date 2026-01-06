@@ -315,6 +315,63 @@ def create_test_sqlite_credential_recommendation(
     )
 
 
+def create_find_encryption_key_recommendation(
+    finding: Finding,
+    encrypted_value: str,
+    username: str,
+    target: str,
+) -> Recommendation:
+    """Recommend extracting AES key from .NET assembly for encrypted SQLite credential."""
+    return Recommendation(
+        id=f"find_key_{finding.id}",
+        priority=RecommendationPriority.CRITICAL,
+        trigger_finding_id=finding.id,
+        action_type="manual_step",
+        description=f"Find AES key to decrypt {username}'s password",
+        why=(
+            f"SQLite contains AES-encrypted password for '{username}'. "
+            "Look for .NET assemblies (.exe/.dll) in the same location. "
+            "Use 'strings -e l <file>.exe' or dnSpy to find 'Key =' and 'IV =' values."
+        ),
+        command=None,
+        metadata={
+            "encrypted_value": encrypted_value,
+            "username": username,
+            "search_hints": [
+                "strings -e l <file>.exe | grep -i key",
+                "strings -e l <file>.exe | grep -i 'iv'",
+                "dnSpy/ILSpy: Search for AesManaged, CreateEncryptor",
+            ],
+        },
+    )
+
+
+def create_smb_crawl_recommendation(
+    finding: Finding,
+    target: str,
+    username: str,
+    password: str,
+    domain: Optional[str] = None,
+) -> Recommendation:
+    """Create recommendation to deep crawl SMB shares."""
+    return Recommendation(
+        id=f"smb_crawl_{finding.id}",
+        priority=RecommendationPriority.HIGH,
+        trigger_finding_id=finding.id,
+        action_type="tool_use",
+        description=f"Deep crawl SMB shares as {username}",
+        why="Search for VNC files, SQLite databases, config files, and .NET assemblies with credentials",
+        command=None,  # Handled internally by orchestrator
+        on_success=["process_vnc_files", "process_sqlite_files", "process_config_files"],
+        metadata={
+            "tool": "smb_crawler",
+            "username": username,
+            "password": password,
+            "domain": domain,
+        },
+    )
+
+
 def create_recycle_bin_recommendation(
     finding: Finding,
     target: str,
@@ -339,6 +396,44 @@ def create_recycle_bin_recommendation(
         metadata={
             "query_type": "deleted_objects",
             "target_attribute": "cascadeLegacyPwd",
+        },
+    )
+
+
+def create_password_spray_recommendation(
+    finding: Finding,
+    target: str,
+    password: str,
+    domain: Optional[str] = None,
+    user_file: Optional[str] = None,
+    source_description: Optional[str] = None,
+) -> Recommendation:
+    """
+    Create recommendation to spray a discovered password against user list.
+
+    This is triggered when a default/shared password is found (e.g., from HR notice,
+    documentation, config files) and should be tested against all discovered users.
+    """
+    domain_flag = f"-d {domain}" if domain else ""
+    user_file = user_file or "users_real.txt"
+
+    why = source_description or f"Password extracted from {finding.target}"
+    why += " - default/shared passwords are often still in use by multiple accounts"
+
+    return Recommendation(
+        id=f"password_spray_{finding.id}",
+        priority=RecommendationPriority.CRITICAL,
+        trigger_finding_id=finding.id,
+        action_type="run_command",
+        description=f"Password spray '{password[:3]}...' against all users",
+        why=why,
+        command=f"crackmapexec smb {target} -u {user_file} -p '{password}' {domain_flag} --continue-on-success".strip(),
+        on_success=["validate_hits", "enumerate_with_creds"],
+        on_failure=["try_variations"],
+        metadata={
+            "password": password,
+            "spray_type": "discovered_default",
+            "user_file": user_file,
         },
     )
 
@@ -527,6 +622,10 @@ TRIGGER_RULES: List[TriggerRule] = [
                 "template": "bloodhound",
                 "priority": RecommendationPriority.HIGH,
             }),
+            TriggerAction("recommend", {
+                "template": "smb_crawl",
+                "priority": RecommendationPriority.HIGH,
+            }),
         ],
     ),
 
@@ -569,6 +668,50 @@ TRIGGER_RULES: List[TriggerRule] = [
             TriggerAction("recommend", {
                 "template": "search_config_creds",
                 "priority": RecommendationPriority.MEDIUM,
+            }),
+        ],
+    ),
+
+    # Encrypted SQLite credential (needs key extraction)
+    TriggerRule(
+        id="encrypted_sqlite_credential",
+        match_type=FindingType.CREDENTIAL,
+        match_tags=["encrypted"],
+        description="Encrypted credential from SQLite needs key extraction",
+        actions=[
+            TriggerAction("recommend", {
+                "template": "find_encryption_key",
+                "priority": RecommendationPriority.CRITICAL,
+            }),
+        ],
+    ),
+
+    # Discovered default/shared password (from text files, HR notices, etc.)
+    # Triggers password spray recommendation
+    TriggerRule(
+        id="discovered_default_password",
+        match_type=FindingType.CREDENTIAL,
+        match_tags=["default_password"],
+        description="Default/shared password found in documentation - spray against all users",
+        actions=[
+            TriggerAction("recommend", {
+                "template": "password_spray",
+                "priority": RecommendationPriority.CRITICAL,
+            }),
+        ],
+    ),
+
+    # Password extracted from file (generic - for SMB crawl discoveries)
+    TriggerRule(
+        id="file_extracted_password",
+        match_type=FindingType.CREDENTIAL,
+        match_tags=["from_file", "plaintext"],
+        exclude_tags=["validated"],  # Don't spray if already validated
+        description="Plaintext password extracted from file - try spraying",
+        actions=[
+            TriggerAction("recommend", {
+                "template": "password_spray",
+                "priority": RecommendationPriority.HIGH,
             }),
         ],
     ),
@@ -723,6 +866,24 @@ def _process_action(
             spn_user = finding.metadata.get("spn_user", finding.target)
             return create_kerberoast_recommendation(
                 finding, target, username, password, domain, spn_user
+            )
+        elif template == "smb_crawl" and username and password:
+            return create_smb_crawl_recommendation(
+                finding, target, username, password, domain
+            )
+        elif template == "find_encryption_key":
+            encrypted = finding.metadata.get("encrypted_value", str(finding.raw_value))
+            cred_user = finding.metadata.get("username", finding.target)
+            return create_find_encryption_key_recommendation(
+                finding, encrypted, cred_user, target
+            )
+        elif template == "password_spray":
+            # Get password from finding metadata or decoded value
+            spray_password = finding.metadata.get("password", finding.decoded_value or str(finding.raw_value))
+            source_desc = finding.metadata.get("source_description", finding.metadata.get("notes"))
+            user_file = finding.metadata.get("user_file")
+            return create_password_spray_recommendation(
+                finding, target, spray_password, domain, user_file, source_desc
             )
 
     return None

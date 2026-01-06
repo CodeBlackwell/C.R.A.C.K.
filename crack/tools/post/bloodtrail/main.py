@@ -859,7 +859,7 @@ class BHEnhancer:
     2. In BloodHound, use File > Upload Data to import your ZIP files
 
     3. Verify data loaded:
-       cypher-shell -u neo4j -p Neo4j123 "MATCH (n) RETURN count(n)"
+       cypher-shell -u neo4j -p $NEO4J_PASSWORD "MATCH (n) RETURN count(n)"
 
     4. Re-run bloodtrail:
        crack bloodtrail /path/to/bh/json/ --preset attack-paths
@@ -920,7 +920,7 @@ class BHEnhancer:
 
     📋 RECIPE:
     1. Verify BloodHound data was imported from the SAME collection:
-       cypher-shell -u neo4j -p Neo4j123 \\
+       cypher-shell -u neo4j -p $NEO4J_PASSWORD \\
          "MATCH (u:User) RETURN u.name LIMIT 5"
 
     2. Check if names match your JSON files
@@ -964,7 +964,7 @@ def quick_enhance(
     bh_dir: str,
     uri: str = "bolt://localhost:7687",
     user: str = "neo4j",
-    password: str = "Neo4j123",
+    password: str = "",
     preset: str = "attack-paths"
 ) -> ImportStats:
     """

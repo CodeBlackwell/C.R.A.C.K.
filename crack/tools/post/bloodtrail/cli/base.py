@@ -75,10 +75,11 @@ class BaseCommandGroup(ABC):
         Returns:
             Neo4jConfig instance
         """
+        import os
         return Neo4jConfig(
             uri=getattr(args, 'uri', 'bolt://localhost:7687'),
             user=getattr(args, 'user', 'neo4j'),
-            password=getattr(args, 'password', 'Neo4j123')
+            password=getattr(args, 'password', None) or os.environ.get('NEO4J_PASSWORD', '')
         )
 
     @staticmethod
@@ -184,6 +185,11 @@ class CommandRegistry:
         Returns:
             Exit code from the handling group, or -1 if no group handled
         """
+        # Handle --no-prism flag: disable persistence before any command runs
+        if getattr(args, 'no_prism', False):
+            from crack.tools.persistence.config import PersistenceConfig
+            PersistenceConfig.disable()
+
         for group_class in self._groups:
             result = group_class.handle(args)
             if result != -1:
