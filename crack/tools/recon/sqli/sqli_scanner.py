@@ -95,7 +95,7 @@ Examples:
 Educational Notes:
   This tool teaches SQL injection detection techniques.
   Always use responsibly and only on authorized targets.
-  For OSCP preparation, understand both manual and automated approaches.
+  For professional preparation, understand both manual and automated approaches.
         """
     )
 

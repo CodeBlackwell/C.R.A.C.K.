@@ -5,14 +5,14 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "crack"
 version = "1.0.0"
-description = "C.R.A.C.K. - (C)omprehensive (R)econ & (A)ttack (C)reation (K)it - Professional pentesting tools for OSCP"
+description = "C.R.A.C.K. - (C)omprehensive (R)econ & (A)ttack (C)reation (K)it - Professional penetration testing tools"
 readme = "README.md"
 requires-python = ">=3.8"
 license = "MIT"
 authors = [
     {name = "CodeBlackwell"},
 ]
-keywords = ["security", "pentesting", "oscp", "web", "enumeration", "sqli", "reconnaissance"]
+keywords = ["security", "pentesting", "web", "enumeration", "sqli", "reconnaissance", "active-directory"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Information Technology",

@@ -265,7 +265,6 @@
       "filled_example": "C:\\Windows\\Microsoft.NET\\Framework64\\v4.0.30319\\csc.exe /out:runner.exe Program.cs"
     }
   ],
-  "oscp_relevance": "Essential for custom payload delivery when msfvenom raw payloads are detected. Encryption and heuristic evasion required for modern AV bypass.",
   "attack_chain_position": "Initial Access, Post-Exploitation",
   "related_categories": [
     "payload-generation",

@@ -22,13 +22,11 @@
         "ENUMERATION",
         "LINUX",
         "MONITORING",
-        "OSCP:HIGH",
         "POST_EXPLOITATION",
         "PRIVILEGE_ESCALATION",
         "QUICK_WIN",
         "STARTER"
       ],
-      "oscp_relevance": "high",
       "success_indicators": [
         "USER",
         "PID",
@@ -54,7 +52,7 @@
         "pstree-hierarchy"
       ],
       "prerequisites": [],
-      "notes": "OSCP Tip:\nLook for (1) processes running as root from writable directories (/tmp, /var/tmp), (2) custom services that might have misconfigurations, (3) database processes (mysql, postgresql) for credential hunting.\n\nCommon manual alternative:\ncat /proc/*/cmdline (view process command lines directly from /proc filesystem).\n\nTime estimate:\n5 seconds.",
+      "notes": "certification Tip:\nLook for (1) processes running as root from writable directories (/tmp, /var/tmp), (2) custom services that might have misconfigurations, (3) database processes (mysql, postgresql) for credential hunting.\n\nCommon manual alternative:\ncat /proc/*/cmdline (view process command lines directly from /proc filesystem).\n\nTime estimate:\n5 seconds.",
       "methodology_guidance": {
         "after_success": "Look for processes running as root with writable binaries Check for unusual processes or services Identify processes listening on network ports: ps-process-to-port Search for specific processes: pgrep-pattern-search"
       }
@@ -81,10 +79,8 @@
         "ENUMERATION",
         "LINUX",
         "MONITORING",
-        "OSCP:HIGH",
         "POST_EXPLOITATION"
       ],
-      "oscp_relevance": "high",
       "success_indicators": [
         "Full command lines visible",
         "Arguments displayed completely",
@@ -97,7 +93,7 @@
       "alternatives": [
         "ps-ef-full"
       ],
-      "notes": "CRITICAL for OSCP:\nPasswords often passed as command-line arguments (mysql -u root -pPASSWORD, ssh user@host -i /path/key).\n\nThe 'ww' flag prevents truncation that would hide these.\n\nManual alternative:\nfor pid in /proc/[0-9]*; do cat $pid/cmdline 2>/dev/null | tr '\\0' ' '; echo; done.\n\nTime estimate:\n5 seconds.",
+      "notes": "CRITICAL for certification:\nPasswords often passed as command-line arguments (mysql -u root -pPASSWORD, ssh user@host -i /path/key).\n\nThe 'ww' flag prevents truncation that would hide these.\n\nManual alternative:\nfor pid in /proc/[0-9]*; do cat $pid/cmdline 2>/dev/null | tr '\\0' ' '; echo; done.\n\nTime estimate:\n5 seconds.",
       "methodology_guidance": {
         "after_success": "Search output for passwords in command arguments Look for database connection strings with credentials Check for API keys, tokens in process arguments Document sensitive information in enumeration.md"
       }
@@ -120,10 +116,8 @@
         "ENUMERATION",
         "LINUX",
         "MONITORING",
-        "OSCP:MEDIUM",
         "POST_EXPLOITATION"
       ],
-      "oscp_relevance": "medium",
       "success_indicators": [
         "UID",
         "PID",
@@ -160,11 +154,9 @@
         "ENUMERATION",
         "LINUX",
         "MONITORING",
-        "OSCP:MEDIUM",
         "POST_EXPLOITATION",
         "VISUALIZATION"
       ],
-      "oscp_relevance": "medium",
       "success_indicators": [
         "Tree structure displayed",
         "PIDs shown in (parentheses)",
@@ -179,8 +171,7 @@
       ],
       "notes": "Excellent for spotting reverse shells or unauthorized processes.\n\nFor example, www-data -> bash -> nc indicates a web shell spawned netcat.\n\nManual alternative:\nps auxf (forest mode shows hierarchy with ASCII art).\n\nTime estimate:\n5 seconds.",
       "methodology_guidance": {
-        "after_success": "Identify suspicious child processes under system services Look for reverse shells under apache/nginx/www-data Check for privilege escalation via process spawning",
-        "oscp_tips": "Examine specific branch: ps -p <PID> -o cmd="
+        "after_success": "Identify suspicious child processes under system services Look for reverse shells under apache/nginx/www-data Check for privilege escalation via process spawning"
       }
     },
     {
@@ -201,11 +192,9 @@
         "ENUMERATION",
         "LINUX",
         "MONITORING",
-        "OSCP:MEDIUM",
         "POST_EXPLOITATION",
         "RESOURCE_MONITORING"
       ],
-      "oscp_relevance": "medium",
       "success_indicators": [
         "top - 12:34:56 up",
         "Tasks:",
@@ -250,11 +239,9 @@
         "ENUMERATION",
         "LINUX",
         "MONITORING",
-        "OSCP:HIGH",
         "POST_EXPLOITATION",
         "SEARCH"
       ],
-      "oscp_relevance": "high",
       "success_indicators": [
         "PID command_line pairs",
         "Matching processes found"
@@ -268,10 +255,9 @@
         "ps-pid-details"
       ],
       "alternatives": [],
-      "notes": "Much faster than 'ps aux | grep' and doesn't show the grep process itself.\n\nUse -i for case-insensitive:\npgrep -afi <PATTERN>.\n\nTime estimate:\n1 second.\n\nOSCP tip:\nSearch for common services:\npgrep -af 'mysql|postgresql|apache|nginx|ssh|vsftpd' to identify attack vectors.",
+      "notes": "Much faster than 'ps aux | grep' and doesn't show the grep process itself.\n\nUse -i for case-insensitive:\npgrep -afi <PATTERN>.\n\nTime estimate:\n1 second.\n\ncertification tip:\nSearch for common services:\npgrep -af 'mysql|postgresql|apache|nginx|ssh|vsftpd' to identify attack vectors.",
       "methodology_guidance": {
-        "after_success": "Get detailed info on found PID: ps-pid-details Check process port bindings: lsof-process-ports Kill process if needed: kill <PID>",
-        "oscp_tips": "Examine process files: lsof -p <PID>"
+        "after_success": "Get detailed info on found PID: ps-pid-details Check process port bindings: lsof-process-ports Kill process if needed: kill <PID>"
       },
       "filled_example": "pgrep -af apache|nginx|mysql"
     },
@@ -295,11 +281,9 @@
         "DEFENSE",
         "LINUX",
         "MONITORING",
-        "OSCP:MEDIUM",
         "POST_EXPLOITATION",
         "QUICK_WIN"
       ],
-      "oscp_relevance": "medium",
       "success_indicators": [
         "One or more PIDs returned",
         "Space-separated numbers"
@@ -312,7 +296,6 @@
       "alternatives": [],
       "notes": "Returns ALL PIDs if multiple instances running.\n\nFor single PID:\npidof <NAME> | head -1.\n\nTime estimate:\n<1 second.",
       "methodology_guidance": {
-        "oscp_tips": "Examine process details: ps -p <PID> -o cmd=",
         "after_success": "Check open files: lsof -p <PID> View process environment: cat /proc/<PID>/environ | tr '\\0' '\\n'"
       },
       "filled_example": "pidof apache2"
@@ -340,11 +323,9 @@
         "ENUMERATION",
         "LINUX",
         "MONITORING",
-        "OSCP:HIGH",
         "POST_EXPLOITATION",
         "PRIVILEGE_ESCALATION"
       ],
-      "oscp_relevance": "high",
       "success_indicators": [
         "PID",
         "TTY",
@@ -362,7 +343,7 @@
       "next_steps": [
         "pspy-monitor"
       ],
-      "notes": "OSCP tip:\nCheck www-data processes for web vulnerabilities, mysql processes for database attack vectors, root processes for privilege escalation opportunities.\n\nTime estimate:\n2 seconds.",
+      "notes": "certification tip:\nCheck www-data processes for web vulnerabilities, mysql processes for database attack vectors, root processes for privilege escalation opportunities.\n\nTime estimate:\n2 seconds.",
       "methodology_guidance": {
         "after_success": "Check root processes: ps -u root Look for writable binaries: find / -user <USERNAME> -perm -w -type f 2>/dev/null Check user's cronjobs: crontab -u <USERNAME> -l"
       },
@@ -393,10 +374,8 @@
         "ENUMERATION",
         "LINUX",
         "MONITORING",
-        "OSCP:MEDIUM",
         "POST_EXPLOITATION"
       ],
-      "oscp_relevance": "medium",
       "success_indicators": [
         "Full command line displayed",
         "No header row"
@@ -427,11 +406,9 @@
         "DEFENSE",
         "ENUMERATION",
         "MONITORING",
-        "OSCP:HIGH",
         "POST_EXPLOITATION",
         "WINDOWS"
       ],
-      "oscp_relevance": "high",
       "success_indicators": [
         "Image Name",
         "PID",
@@ -451,7 +428,7 @@
         "win-wmic-process-full",
         "win-ps-get-process"
       ],
-      "notes": "Window titles often reveal sensitive information (open files, database connections).\n\nOSCP tip:\nLook for (1) processes running from unusual locations (\\Temp, \\Users\\Public), (2) processes with high privileges (SYSTEM), (3) non-standard services.\n\nTime estimate:\n5 seconds.",
+      "notes": "Window titles often reveal sensitive information (open files, database connections).\n\ncertification tip:\nLook for (1) processes running from unusual locations (\\Temp, \\Users\\Public), (2) processes with high privileges (SYSTEM), (3) non-standard services.\n\nTime estimate:\n5 seconds.",
       "methodology_guidance": {
         "after_success": "Look for unusual processes running as SYSTEM Check for processes with interesting window titles (passwords, admin tools) Map processes to services: win-tasklist-services Get detailed process info: win-wmic-process-full"
       }
@@ -471,12 +448,10 @@
         "DEFENSE",
         "ENUMERATION",
         "MONITORING",
-        "OSCP:HIGH",
         "POST_EXPLOITATION",
         "PRIVILEGE_ESCALATION",
         "WINDOWS"
       ],
-      "oscp_relevance": "high",
       "success_indicators": [
         "Image Name",
         "PID",
@@ -491,7 +466,7 @@
         "win-wmic-service-full",
         "win-ps-get-service"
       ],
-      "notes": "Critical for Windows privilege escalation.\n\nsvchost.exe hosts multiple services - this command reveals which ones.\n\nTime estimate:\n5 seconds.\n\nOSCP tip:\nCombine with service configuration checks to find writable service binaries or unquoted service paths.",
+      "notes": "Critical for Windows privilege escalation.\n\nsvchost.exe hosts multiple services - this command reveals which ones.\n\nTime estimate:\n5 seconds.\n\ncertification tip:\nCombine with service configuration checks to find writable service binaries or unquoted service paths.",
       "methodology_guidance": {
         "after_success": "Identify vulnerable services running in svchost.exe Check service permissions: win-sc-query-config Look for services with unquoted paths: win-wmic-service-path Enumerate service DLLs for hijacking opportunities"
       }
@@ -514,13 +489,11 @@
         "DETAILED",
         "ENUMERATION",
         "MONITORING",
-        "OSCP:HIGH",
         "POST_EXPLOITATION",
         "PRIVILEGE_ESCALATION",
         "WINDOWS",
         "WMIC"
       ],
-      "oscp_relevance": "high",
       "success_indicators": [
         "CommandLine",
         "ExecutablePath",
@@ -537,7 +510,7 @@
         "win-ps-get-process-detailed",
         "win-tasklist-verbose"
       ],
-      "notes": "WMIC deprecated in Windows 11+ but still present in OSCP target systems.\n\nOutput is verbose (30+ properties per process).\n\nFor specific fields:\nwmic process get ProcessId,Name,ExecutablePath,CommandLine.\n\nTime estimate:\n10 seconds.\n\nOSCP tip:\nCommandLine often contains credentials passed as arguments.",
+      "notes": "WMIC deprecated in Windows 11+ but still present in certification target systems.\n\nOutput is verbose (30+ properties per process).\n\nFor specific fields:\nwmic process get ProcessId,Name,ExecutablePath,CommandLine.\n\nTime estimate:\n10 seconds.\n\ncertification tip:\nCommandLine often contains credentials passed as arguments.",
       "methodology_guidance": {
         "after_success": "Search output for passwords in CommandLine field Check ExecutablePath for writable locations: icacls <PATH> Identify processes with weak permissions: AccessChk",
         "on_failure": "Use PowerShell alternative: win-ps-get-process-detailed"
@@ -563,12 +536,10 @@
         "DEFENSE",
         "ENUMERATION",
         "MONITORING",
-        "OSCP:HIGH",
         "POST_EXPLOITATION",
         "POWERSHELL",
         "WINDOWS"
       ],
-      "oscp_relevance": "high",
       "success_indicators": [
         "Name",
         "Id",
@@ -584,7 +555,7 @@
         "win-tasklist-verbose",
         "win-wmic-process-full"
       ],
-      "notes": "PowerShell is the modern Windows process management tool.\n\nCompany field helps identify third-party software (potential attack vectors).\n\nFor all properties:\nGet-Process | Select-Object *.\n\nTime estimate:\n5 seconds.\n\nOSCP tip:\nNon-Microsoft processes often have weak permissions or outdated versions with known exploits.",
+      "notes": "PowerShell is the modern Windows process management tool.\n\nCompany field helps identify third-party software (potential attack vectors).\n\nFor all properties:\nGet-Process | Select-Object *.\n\nTime estimate:\n5 seconds.\n\ncertification tip:\nNon-Microsoft processes often have weak permissions or outdated versions with known exploits.",
       "methodology_guidance": {
         "after_success": "Filter non-Microsoft processes: Get-Process | Where-Object {$_.Company -ne 'Microsoft Corporation'} Sort by memory: Get-Process | Sort-Object WS -Descending | Select-Object -First 10 Get process with network connections: win-ps-netstat-process Check process file permissions: icacls <PATH>"
       }
@@ -609,13 +580,11 @@
         "DETAILED",
         "ENUMERATION",
         "MONITORING",
-        "OSCP:HIGH",
         "POST_EXPLOITATION",
         "POWERSHELL",
         "WINDOWS",
         "WMI"
       ],
-      "oscp_relevance": "high",
       "success_indicators": [
         "Name",
         "ProcessId",
@@ -630,7 +599,7 @@
       "alternatives": [
         "win-wmic-process-full"
       ],
-      "notes": "CRITICAL for credential discovery.\n\nCommandLine field shows full arguments including passwords, API keys, database strings.\n\nTime estimate:\n10 seconds.\n\nOSCP tip:\nCommon patterns to grep:\n'-p ', 'password=', 'token=', 'key=', 'api_key='.\n\nModern alternative:\nGet-CimInstance win32_process (replaces Get-WmiObject in PowerShell 3.0+).",
+      "notes": "CRITICAL for credential discovery.\n\nCommandLine field shows full arguments including passwords, API keys, database strings.\n\nTime estimate:\n10 seconds.\n\ncertification tip:\nCommon patterns to grep:\n'-p ', 'password=', 'token=', 'key=', 'api_key='.\n\nModern alternative:\nGet-CimInstance win32_process (replaces Get-WmiObject in PowerShell 3.0+).",
       "methodology_guidance": {
         "after_success": "Search CommandLine for passwords: | Where-Object {$_.CommandLine -like '*password*'} Check for database connection strings Look for API keys and tokens in arguments Document findings in enumeration.md"
       }

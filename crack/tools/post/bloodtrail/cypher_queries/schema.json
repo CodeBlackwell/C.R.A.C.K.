@@ -4,7 +4,11 @@
   "description": "Schema for modular Cypher query files used with BloodHound Trail for Active Directory attack path discovery",
   "version": "1.0.0",
   "type": "object",
-  "required": ["category", "description", "queries"],
+  "required": [
+    "category",
+    "description",
+    "queries"
+  ],
   "properties": {
     "category": {
       "type": "string",
@@ -26,7 +30,13 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["id", "name", "description", "cypher", "oscp_relevance"],
+        "required": [
+          "id",
+          "name",
+          "description",
+          "cypher",
+          "oscp_relevance"
+        ],
         "properties": {
           "id": {
             "type": "string",
@@ -51,21 +61,25 @@
             "additionalProperties": {
               "type": "object",
               "properties": {
-                "description": { "type": "string" },
-                "example": { "type": "string" },
-                "required": { "type": "boolean", "default": true }
+                "description": {
+                  "type": "string"
+                },
+                "example": {
+                  "type": "string"
+                },
+                "required": {
+                  "type": "boolean",
+                  "default": true
+                }
               }
             }
           },
           "edge_types_used": {
             "type": "array",
-            "items": { "type": "string" },
+            "items": {
+              "type": "string"
+            },
             "description": "Neo4j relationship types this query depends on (imported by bloodtrail)"
-          },
-          "oscp_relevance": {
-            "type": "string",
-            "enum": ["high", "medium", "low"],
-            "description": "OSCP exam applicability"
           },
           "expected_results": {
             "type": "string",
@@ -77,7 +91,9 @@
           },
           "next_steps": {
             "type": "array",
-            "items": { "type": "string" },
+            "items": {
+              "type": "string"
+            },
             "description": "Query IDs to run after this one for attack chain progression"
           },
           "attack_technique": {
@@ -86,7 +102,9 @@
           },
           "tags": {
             "type": "array",
-            "items": { "type": "string" },
+            "items": {
+              "type": "string"
+            },
             "description": "Searchable tags (e.g., OSCP:HIGH, lateral_movement, credential_access)"
           }
         }
@@ -100,13 +118,20 @@
       "description": "Find non-privileged users with local admin rights on workstations (not DCs). KEY QUERY from DCSync capstone - discovered MIKE->CLIENT75 attack path.",
       "cypher": "MATCH (u:User)-[:AdminTo]->(c:Computer)\nWHERE NOT u.admincount = true\n  AND NOT c.name STARTS WITH 'DC'\nRETURN u.name AS User,\n       collect(c.name) AS AdminOnComputers,\n       count(c) AS ComputerCount\nORDER BY ComputerCount DESC",
       "variables": {},
-      "edge_types_used": ["AdminTo"],
-      "oscp_relevance": "high",
+      "edge_types_used": [
+        "AdminTo"
+      ],
       "expected_results": "List of non-privileged users with local admin access to workstations",
       "example_output": "MIKE@CORP.COM -> [CLIENT75.CORP.COM]",
-      "next_steps": ["lateral-sessions-on-computer"],
+      "next_steps": [
+        "lateral-sessions-on-computer"
+      ],
       "attack_technique": "T1078.002",
-      "tags": ["OSCP:HIGH", "lateral_movement", "AdminTo", "quick_win"]
+      "tags": [
+        "lateral_movement",
+        "AdminTo",
+        "quick_win"
+      ]
     }
   },
   "usage_notes": {

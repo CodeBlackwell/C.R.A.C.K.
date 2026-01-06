@@ -6,7 +6,7 @@
 
 **C.R.A.C.K.** = **(C)**omprehensive **(R)**econ & **(A)**ttack **(C)**reation **(K)**it
 
-A professional penetration testing toolkit designed for OSCP preparation and real-world engagements. Combines CLI tools, GUI applications, and an extensive knowledge base to streamline security assessments.
+A professional penetration testing toolkit for real-world engagements. Combines CLI tools, GUI applications, and an extensive knowledge base to streamline security assessments.
 
 ## Features
 
@@ -190,7 +190,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 CRACK focuses on:
 - **Manual methodology** over tool memorization
 - **Documentation** of failures (critical for learning)
-- **Time tracking** for exam planning
+- **Time tracking** for engagement planning
 - **Tool-independent** exploitation skills
 
 ---

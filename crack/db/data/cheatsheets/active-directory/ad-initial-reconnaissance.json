@@ -15,7 +15,7 @@
           "Immediately after initial access to any domain-joined Windows machine",
           "Before attempting Kerberoasting, ACL abuse, or lateral movement",
           "When credentials work but you don't know the domain structure",
-          "During OSCP exam when you compromise a Windows box (always check domain membership)"
+          "During security assessment when you compromise a Windows box (always check domain membership)"
         ]
       },
       "scenarios": [
@@ -50,7 +50,7 @@
         },
         {
           "title": "Scenario 3: PowerView Available - Comprehensive Enumeration",
-          "context": "You have a stable PowerShell session, already imported PowerView (Dev.ps1), and need to perform rapid comprehensive enumeration. Time is limited (OSCP exam scenario) and you need actionable intelligence quickly. The domain is corp.com with 200+ users and 50+ computers.",
+          "context": "You have a stable PowerShell session, already imported PowerView (Dev.ps1), and need to perform rapid comprehensive enumeration. Time is limited (security assessment scenario) and you need actionable intelligence quickly. The domain is corp.com with 200+ users and 50+ computers.",
           "approach": "Use PowerView's automated cmdlets to enumerate all critical objects in parallel. PowerView aggregates LDAP queries, resolves SIDs, and presents data in attacker-friendly format. This is the fastest enumeration method when stealth is not a concern.",
           "commands": [
             "powerview-get-netdomain",
@@ -230,7 +230,6 @@
         "ACTIVE_DIRECTORY",
         "ENUMERATION",
         "RECONNAISSANCE",
-        "OSCP:HIGH",
         "STARTER",
         "DOMAIN_RECON"
       ]

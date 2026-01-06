@@ -19,13 +19,11 @@
         "ENUMERATION",
         "LINUX",
         "MONITORING",
-        "OSCP:HIGH",
         "PERSISTENCE",
         "POST_EXPLOITATION",
         "PRIVILEGE_ESCALATION",
         "SCHEDULED_TASKS"
       ],
-      "oscp_relevance": "high",
       "success_indicators": [
         "* * * * *",
         "Cron job entries",
@@ -48,7 +46,7 @@
         "linux-systemd-timers"
       ],
       "prerequisites": [],
-      "notes": "Cron format:\nminute hour day month weekday command.\n\nOSCP tip:\nCheck if cron scripts are writable - modify to run reverse shell as cron user.\n\nTime estimate:\n<1 second.\n\nSpecial strings:\n@reboot (run at startup), @daily, @hourly, @weekly, @monthly.",
+      "notes": "Cron format:\nminute hour day month weekday command.\n\ncertification tip:\nCheck if cron scripts are writable - modify to run reverse shell as cron user.\n\nTime estimate:\n<1 second.\n\nSpecial strings:\n@reboot (run at startup), @daily, @hourly, @weekly, @monthly.",
       "methodology_guidance": {
         "after_success": "Check other users' crontabs: crontab-user-specific Check system-wide crontab: crontab-system-wide Look for writable cron scripts: find /etc/cron* -type f -writable Check cron script permissions for privesc"
       }
@@ -78,13 +76,11 @@
         "ENUMERATION",
         "LINUX",
         "MONITORING",
-        "OSCP:HIGH",
         "PERSISTENCE",
         "POST_EXPLOITATION",
         "PRIVILEGE_ESCALATION",
         "SCHEDULED_TASKS"
       ],
-      "oscp_relevance": "high",
       "success_indicators": [
         "* * * * *",
         "Cron entries",
@@ -127,13 +123,11 @@
         "ENUMERATION",
         "LINUX",
         "MONITORING",
-        "OSCP:HIGH",
         "PERSISTENCE",
         "POST_EXPLOITATION",
         "PRIVILEGE_ESCALATION",
         "SCHEDULED_TASKS"
       ],
-      "oscp_relevance": "high",
       "success_indicators": [
         "SHELL=/bin/sh",
         "PATH=",
@@ -148,10 +142,9 @@
       "alternatives": [
         "less-etc-crontab"
       ],
-      "notes": "/etc/crontab differs from user crontabs - includes username field.\n\nFormat:\nminute hour day month weekday user command.\n\nOSCP tip:\nCheck if PATH includes writable dirs like /tmp - allows command hijacking.\n\nTime estimate:\n<1 second.",
+      "notes": "/etc/crontab differs from user crontabs - includes username field.\n\nFormat:\nminute hour day month weekday user command.\n\ncertification tip:\nCheck if PATH includes writable dirs like /tmp - allows command hijacking.\n\nTime estimate:\n<1 second.",
       "methodology_guidance": {
-        "after_success": "Check cron directories: cron-directories-list Look for writable scripts called by cron Check PATH for writable directories (PATH hijacking)",
-        "oscp_tips": "Examine script permissions: ls -la <SCRIPT_PATH>"
+        "after_success": "Check cron directories: cron-directories-list Look for writable scripts called by cron Check PATH for writable directories (PATH hijacking)"
       }
     },
     {
@@ -171,13 +164,11 @@
         "ENUMERATION",
         "LINUX",
         "MONITORING",
-        "OSCP:HIGH",
         "PERSISTENCE",
         "POST_EXPLOITATION",
         "PRIVILEGE_ESCALATION",
         "SCHEDULED_TASKS"
       ],
-      "oscp_relevance": "high",
       "success_indicators": [
         "cron.hourly",
         "cron.daily",
@@ -204,8 +195,7 @@
       ],
       "notes": "Scripts in these directories run automatically:\ncron.hourly (every hour), cron.daily (daily), cron.weekly (weekly), cron.monthly (monthly).\n\nAll run as root by default.\n\nCRITICAL privesc vector if writable.\n\nTime estimate:\n2 seconds.\n\nCommand to find writable:\nfind /etc/cron* -type f -writable 2>/dev/null",
       "methodology_guidance": {
-        "after_success": "Check file permissions: find /etc/cron* -type f -perm -o+w Check for writable scripts: find /etc/cron* -writable 2>/dev/null Modify writable script to add reverse shell",
-        "oscp_tips": "Examine script contents: cat /etc/cron.daily/<SCRIPT>"
+        "after_success": "Check file permissions: find /etc/cron* -type f -perm -o+w Check for writable scripts: find /etc/cron* -writable 2>/dev/null Modify writable script to add reverse shell"
       }
     },
     {
@@ -227,11 +217,9 @@
         "ENUMERATION",
         "LINUX",
         "MONITORING",
-        "OSCP:MEDIUM",
         "POST_EXPLOITATION",
         "SCHEDULED_TASKS"
       ],
-      "oscp_relevance": "medium",
       "success_indicators": [
         "CRON",
         "CMD",
@@ -267,14 +255,12 @@
         "DETAILED",
         "ENUMERATION",
         "MONITORING",
-        "OSCP:HIGH",
         "PERSISTENCE",
         "POST_EXPLOITATION",
         "PRIVILEGE_ESCALATION",
         "SCHEDULED_TASKS",
         "WINDOWS"
       ],
-      "oscp_relevance": "high",
       "success_indicators": [
         "TaskName:",
         "Next Run Time:",
@@ -291,7 +277,7 @@
         "win-ps-scheduled-tasks",
         "get-scheduledtask"
       ],
-      "notes": "CRITICAL for Windows privesc and persistence detection.\n\nOutput is verbose (20+ properties per task).\n\nOSCP tips:\n(1) Look for tasks with writable executables, (2) Tasks running as SYSTEM with Enabled status, (3) Custom tasks (non-Microsoft) in \\Task Scheduler Library\\.\n\nTime estimate:\n10-30 seconds depending on task count.",
+      "notes": "CRITICAL for Windows privesc and persistence detection.\n\nOutput is verbose (20+ properties per task).\n\ncertification tips:\n(1) Look for tasks with writable executables, (2) Tasks running as SYSTEM with Enabled status, (3) Custom tasks (non-Microsoft) in \\Task Scheduler Library\\.\n\nTime estimate:\n10-30 seconds depending on task count.",
       "methodology_guidance": {
         "after_success": "Look for tasks running as SYSTEM Check task executable paths for writable locations Identify custom (non-Microsoft) scheduled tasks Check task XML for credentials: Get task XML definition"
       }
@@ -313,7 +299,6 @@
         "DEFENSE",
         "ENUMERATION",
         "MONITORING",
-        "OSCP:HIGH",
         "PERSISTENCE",
         "POST_EXPLOITATION",
         "POWERSHELL",
@@ -321,7 +306,6 @@
         "SCHEDULED_TASKS",
         "WINDOWS"
       ],
-      "oscp_relevance": "high",
       "success_indicators": [
         "TaskName",
         "State",
@@ -367,13 +351,11 @@
         "DETAILED",
         "ENUMERATION",
         "MONITORING",
-        "OSCP:MEDIUM",
         "POST_EXPLOITATION",
         "POWERSHELL",
         "SCHEDULED_TASKS",
         "WINDOWS"
       ],
-      "oscp_relevance": "medium",
       "success_indicators": [
         "LastRunTime",
         "LastTaskResult",
@@ -418,12 +400,10 @@
         "DETAILED",
         "ENUMERATION",
         "MONITORING",
-        "OSCP:MEDIUM",
         "POST_EXPLOITATION",
         "SCHEDULED_TASKS",
         "WINDOWS"
       ],
-      "oscp_relevance": "medium",
       "success_indicators": [
         "<?xml",
         "<Task",
@@ -459,13 +439,11 @@
         "ENUMERATION",
         "LEGACY",
         "MONITORING",
-        "OSCP:LOW",
         "POST_EXPLOITATION",
         "SCHEDULED_TASKS",
         "WINDOWS",
         "WMIC"
       ],
-      "oscp_relevance": "low",
       "success_indicators": [
         "Command",
         "JobId",
@@ -477,7 +455,7 @@
       ],
       "next_steps": [],
       "alternatives": [],
-      "notes": "AT jobs are legacy (Windows NT/2000 era), rarely used in modern systems.\n\nIncluded for completeness in older OSCP labs.\n\nTime estimate:\n1 second.",
+      "notes": "AT jobs are legacy (Windows NT/2000 era), rarely used in modern systems.\n\nIncluded for completeness in older certification labs.\n\nTime estimate:\n1 second.",
       "methodology_guidance": {
         "after_success": "Check command path permissions if jobs found Modern alternative: use schtasks or Get-ScheduledTask"
       }
@@ -496,11 +474,9 @@
         "ENUMERATION",
         "LINUX",
         "MONITORING",
-        "OSCP:LOW",
         "POST_EXPLOITATION",
         "SCHEDULED_TASKS"
       ],
-      "oscp_relevance": "low",
       "success_indicators": [
         "Job number",
         "Date",
@@ -535,13 +511,11 @@
         "ENUMERATION",
         "LINUX",
         "MONITORING",
-        "OSCP:MEDIUM",
         "PERSISTENCE",
         "POST_EXPLOITATION",
         "SCHEDULED_TASKS",
         "SYSTEMD"
       ],
-      "oscp_relevance": "medium",
       "success_indicators": [
         "NEXT",
         "LEFT",
@@ -556,7 +530,7 @@
       ],
       "next_steps": [],
       "alternatives": [],
-      "notes": "systemd timers are modern replacement for cron on systemd-based Linux.\n\nTimers trigger .service units.\n\nOSCP tip:\nCheck /etc/systemd/system/ for custom timers.\n\nTime estimate:\n2 seconds.\n\nTo see active only:\nsystemctl list-timers (no --all)",
+      "notes": "systemd timers are modern replacement for cron on systemd-based Linux.\n\nTimers trigger .service units.\n\ncertification tip:\nCheck /etc/systemd/system/ for custom timers.\n\nTime estimate:\n2 seconds.\n\nTo see active only:\nsystemctl list-timers (no --all)",
       "methodology_guidance": {
         "after_success": "View timer details: systemctl cat <TIMER_NAME>.timer Check associated service: systemctl cat <TIMER_NAME>.service Look for writable timer or service files: ls -la /etc/systemd/system/*.timer Check service executable permissions"
       }

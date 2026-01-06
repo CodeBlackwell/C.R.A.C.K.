@@ -1,14 +1,13 @@
 {
   "id": "bloodhound-custom-cypher-workflow",
   "name": "BloodHound Custom Cypher Query Workflow",
-  "description": "Advanced BloodHound enumeration using custom Cypher queries when pre-built queries return 'No paths found'.\n\nThis chain focuses specifically on the CRITICAL scenario: You've collected BloodHound data, imported it, marked your compromised user as owned, run 'Shortest Paths to Domain Admins' query, and got 'No paths found'. This does NOT mean no path exists - it means you need custom Cypher queries to discover non-obvious attack paths.\n\nWHY THIS MATTERS: Pre-built BloodHound queries are optimized for DIRECT paths (user \u2192 DA in 1-3 hops). Real-world AD environments have INDIRECT paths that require intermediate pivots: compromise user A \u2192 discover user A has AdminTo on system B \u2192 discover system B has DA service session \u2192 harvest DA credentials. These multi-stage paths are INVISIBLE to pre-built queries but DISCOVERABLE with custom Cypher.\n\nCRITICAL OSCP PATTERN: When BloodHound says 'no paths found', students often give up and pivot to different attack vectors. WRONG. The correct approach: iterate through ALL compromised users with custom Cypher queries checking AdminTo, HasSession, and MemberOf relationships. The writeup demonstrates: pete (no path) \u2192 mike (AdminTo CLIENT75) \u2192 CLIENT75 (has DA session) \u2192 domain compromise.\n\nSUCCESS RATE: Very high (70-80% of 'no paths found' scenarios CAN find paths with custom queries). The key is knowing WHICH queries to run and WHEN to run them.\n\nLESSON FROM CORP-DCSYNC WRITEUP: 'BloodHound no paths found doesn't mean no path exists - means you need to compromise intermediate accounts first. Custom Cypher queries reveal paths that pre-built queries miss.'",
+  "description": "Advanced BloodHound enumeration using custom Cypher queries when pre-built queries return 'No paths found'.\n\nThis chain focuses specifically on the CRITICAL scenario: You've collected BloodHound data, imported it, marked your compromised user as owned, run 'Shortest Paths to Domain Admins' query, and got 'No paths found'. This does NOT mean no path exists - it means you need custom Cypher queries to discover non-obvious attack paths.\n\nWHY THIS MATTERS: Pre-built BloodHound queries are optimized for DIRECT paths (user \u2192 DA in 1-3 hops). Real-world AD environments have INDIRECT paths that require intermediate pivots: compromise user A \u2192 discover user A has AdminTo on system B \u2192 discover system B has DA service session \u2192 harvest DA credentials. These multi-stage paths are INVISIBLE to pre-built queries but DISCOVERABLE with custom Cypher.\n\nCRITICAL pentest PATTERN: When BloodHound says 'no paths found', students often give up and pivot to different attack vectors. WRONG. The correct approach: iterate through ALL compromised users with custom Cypher queries checking AdminTo, HasSession, and MemberOf relationships. The writeup demonstrates: pete (no path) \u2192 mike (AdminTo CLIENT75) \u2192 CLIENT75 (has DA session) \u2192 domain compromise.\n\nSUCCESS RATE: Very high (70-80% of 'no paths found' scenarios CAN find paths with custom queries). The key is knowing WHICH queries to run and WHEN to run them.\n\nLESSON FROM CORP-DCSYNC WRITEUP: 'BloodHound no paths found doesn't mean no path exists - means you need to compromise intermediate accounts first. Custom Cypher queries reveal paths that pre-built queries miss.'",
   "version": "1.0.0",
   "metadata": {
-    "author": "CRACK Development Team - OSCP Track",
+    "author": "CRACK Development Team - pentest Track",
     "created": "2025-11-25",
     "updated": "2025-11-25",
     "tags": [
-      "OSCP:HIGH",
       "ACTIVE_DIRECTORY",
       "ENUMERATION",
       "BLOODHOUND",
@@ -26,7 +25,6 @@
   },
   "difficulty": "intermediate",
   "time_estimate": "10 minutes (5 min pre-built queries, 5 min custom queries)",
-  "oscp_relevant": true,
   "prerequisites": [
     "BloodHound data collected and imported to Neo4j",
     "At least one compromised domain user account",

@@ -16,7 +16,7 @@
           "After dumping SAM hashes from compromised machine (secretsdump, mimikatz, reg save)",
           "When SAM contains local administrator hash that might be reused across workstations (common misconfiguration)",
           "After obtaining NTLM hash from network capture, NTDS.dit dump, or DCSync attack",
-          "OSCP exam: Pass-the-hash is critical - learn to recognize hash format, use correct syntax for each tool, troubleshoot UAC restrictions"
+          "security assessment: Pass-the-hash is critical - learn to recognize hash format, use correct syntax for each tool, troubleshoot UAC restrictions"
         ]
       },
       "scenarios": [
@@ -69,14 +69,14 @@
         {
           "title": "Scenario 5: UAC Restrictions and RID-500 Bypass",
           "context": "You dumped local admin hash from Workstation01: 'admin:1001:...:fc525c9...'. Hash spray with CrackMapExec shows this hash works on 20+ other workstations (password reuse). But when you try 'impacket-psexec -hashes :fc525c9... admin@192.168.50.102', you get 'STATUS_ACCESS_DENIED' even though CrackMapExec showed (Pwn3d!). This is UAC Remote Restrictions (MS14-068 patch).",
-          "approach": "Problem: Microsoft patch KB2871997 (2014) blocks network authentication for all local admin accounts EXCEPT built-in Administrator (RID 500). RID 1001 means user-created admin account - network auth blocked. Solution 1: Use built-in Administrator account hash (RID 500) instead. Extract: secretsdump shows 'Administrator:500:...:31d6cfe0...'. Use THIS hash for pass-the-hash. Solution 2: Use domain account hash (UAC restriction only affects local accounts). Solution 3: Disable UAC restriction via registry (requires existing admin access - chicken-and-egg problem). OSCP TIP: Always prioritize RID-500 Administrator hash over other local admin hashes for lateral movement.",
+          "approach": "Problem: Microsoft patch KB2871997 (2014) blocks network authentication for all local admin accounts EXCEPT built-in Administrator (RID 500). RID 1001 means user-created admin account - network auth blocked. Solution 1: Use built-in Administrator account hash (RID 500) instead. Extract: secretsdump shows 'Administrator:500:...:31d6cfe0...'. Use THIS hash for pass-the-hash. Solution 2: Use domain account hash (UAC restriction only affects local accounts). Solution 3: Disable UAC restriction via registry (requires existing admin access - chicken-and-egg problem). pentest TIP: Always prioritize RID-500 Administrator hash over other local admin hashes for lateral movement.",
           "commands": [
             "pth-verify-hash-format",
             "secretsdump-hashes",
             "pth-impacket-psexec"
           ],
           "expected_outcome": "secretsdump output shows two local admin accounts: 'Administrator:500:...:8846f7eaee8fb117ad06bdd830b7586c:::' (RID 500 = built-in), 'admin:1001:...:8846f7eaee8fb117ad06bdd830b7586c:::' (RID 1001 = user-created). Notice SAME NTLM hash (8846f7...) for both - same password. Test RID-1001 hash: 'impacket-psexec -hashes :8846f7... admin@192.168.50.102' \u2192 STATUS_ACCESS_DENIED (UAC blocked). Test RID-500 hash: 'impacket-psexec -hashes :8846f7... Administrator@192.168.50.102' \u2192 SUCCESS! C:\\Windows\\system32> prompt. INSIGHT: Use Administrator account name (RID 500) even though hash is identical. UAC filter checks RID, not hash. Alternative: If you have domain account hash (corp\\dadmin:fc525c...), use that - UAC restriction doesn't apply to domain accounts: 'impacket-psexec -hashes :fc525c... corp/dadmin@192.168.50.102'.",
-          "why_this_works": "UAC (User Account Control) Remote Restrictions introduced in Windows Vista, strengthened in 2014 patch KB2871997. PURPOSE: Prevent lateral movement using local admin accounts (except RID-500). MECHANISM: When non-RID-500 local admin authenticates over network, Windows filters their token to remove admin rights - they get standard user privileges even though they're in Administrators group. This breaks PSExec, WMI, and other admin-required techniques. EXCEPTION: Built-in Administrator account (RID 500) is exempt from filtering - it always gets full admin token over network. OSCP IMPLICATION: When dumping SAM hashes, always check RID field. RID 500 = gold for lateral movement. RID 1000+ = might work on some machines (depending on patch level) but unreliable. Domain account hashes are NOT affected by UAC restrictions - they get full admin token if they're in local Administrators group."
+          "why_this_works": "UAC (User Account Control) Remote Restrictions introduced in Windows Vista, strengthened in 2014 patch KB2871997. PURPOSE: Prevent lateral movement using local admin accounts (except RID-500). MECHANISM: When non-RID-500 local admin authenticates over network, Windows filters their token to remove admin rights - they get standard user privileges even though they're in Administrators group. This breaks PSExec, WMI, and other admin-required techniques. EXCEPTION: Built-in Administrator account (RID 500) is exempt from filtering - it always gets full admin token over network. pentest IMPLICATION: When dumping SAM hashes, always check RID field. RID 500 = gold for lateral movement. RID 1000+ = might work on some machines (depending on patch level) but unreliable. Domain account hashes are NOT affected by UAC restrictions - they get full admin token if they're in local Administrators group."
         },
         {
           "title": "Scenario 6: Evil-WinRM Pass-the-Hash for Interactive Shell",
@@ -226,8 +226,7 @@
         "LATERAL_MOVEMENT",
         "IMPACKET",
         "EVIL-WINRM",
-        "UAC",
-        "OSCP:HIGH"
+        "UAC"
       ]
     }
   ]

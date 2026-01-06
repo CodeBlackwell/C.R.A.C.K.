@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-DNS Recursive Enumeration - OSCP Edition
+DNS Recursive Enumeration - Professional Edition
 ========================================
 
 Multi-level DNS discovery that recursively follows:
@@ -515,8 +515,8 @@ def print_console_report(enumerator: RecursiveDNSEnumerator):
         print(f"   subjack -w discovered_domains.txt -t 100")
         print()
 
-    # OSCP Tips
-    print(f"{Colors.BOLD}{Colors.YELLOW}OSCP EXAM TIPS{Colors.END}")
+    # professional Tips
+    print(f"{Colors.BOLD}{Colors.YELLOW}professional EXAM TIPS{Colors.END}")
     print(f"  • Time Management: Limit depth to 2-3 during exam")
     print(f"  • Manual Verification: Always verify with 'dig' and 'host'")
     print(f"  • Documentation: Document methodology and failures")
@@ -527,7 +527,7 @@ def print_console_report(enumerator: RecursiveDNSEnumerator):
 
 
 def generate_markdown_report(enumerator: RecursiveDNSEnumerator, output_file: Path):
-    """Generate comprehensive OSCP-style markdown report"""
+    """Generate comprehensive professional-style markdown report"""
     discovery = enumerator.discovery
     end_time = datetime.now()
     duration = (end_time - discovery.start_time).total_seconds()
@@ -585,7 +585,7 @@ def generate_markdown_report(enumerator: RecursiveDNSEnumerator, output_file: Pa
     report.append("# Manual Alternative: dig -x 1.2.3.4 +short")
     report.append("```")
     report.append("")
-    report.append("### OSCP Exam Relevance")
+    report.append("### professional Exam Relevance")
     report.append("")
     report.append("- **Time Estimate**: 5-10 minutes for basic enumeration, 15-30 minutes for full recursive discovery")
     report.append("- **Use Case**: Discover hidden subdomains, identify infrastructure relationships, map attack surface")
@@ -781,7 +781,7 @@ def generate_markdown_report(enumerator: RecursiveDNSEnumerator, output_file: Pa
         report.append(f"4. **Infrastructure Sharing**: Average {avg_domains_per_ip:.1f} domains per IP - indicates shared hosting or CDN usage")
 
     report.append("")
-    report.append("### OSCP Exam Tips")
+    report.append("### professional Exam Tips")
     report.append("")
     report.append("- **Time Management**: Limit recursive depth to 2-3 levels during exam to avoid time waste")
     report.append("- **Tool Independence**: Know how to reproduce findings with `dig` and `host` commands")
@@ -844,7 +844,7 @@ def save_json_output(discovery: DNSDiscovery, output_file: Path):
 def main():
     """CLI entry point"""
     parser = argparse.ArgumentParser(
-        description='Recursive DNS Enumeration - OSCP Edition',
+        description='Recursive DNS Enumeration - Professional Edition',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
@@ -856,7 +856,7 @@ Examples:
   crack dns-enum example.com -o /tmp/dns_output
   crack dns-enum example.com -o ./reports --json --max-depth 2
 
-Time Estimates (OSCP Exam Planning):
+Time Estimates (professional Exam Planning):
   Quick scan (depth 2):     5-10 minutes
   Medium scan (depth 5):    10-20 minutes
   Full scan (unlimited):    20-60 minutes
@@ -868,7 +868,7 @@ Methodology:
   4. Follow CNAME chains to external domains
   5. Display results on console or save as markdown/JSON reports
 
-OSCP Tips:
+professional Tips:
   - Use --max-depth 2 during exam to balance coverage and time
   - Always verify findings manually with 'dig' and 'host' commands
   - Focus on actionable discoveries (web apps, open services)
@@ -889,7 +889,7 @@ OSCP Tips:
 
     parser.add_argument(
         '--max-depth',
-        help='Maximum recursion depth (default: 10, use 2-3 for OSCP exam)',
+        help='Maximum recursion depth (default: 10, use 2-3 for professional exam)',
         type=int,
         default=10
     )

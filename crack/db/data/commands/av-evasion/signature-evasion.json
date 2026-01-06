@@ -359,7 +359,6 @@
       "filled_example": "cd 'C:\\Program Files\\ClamAV\\'\n.\\clamscan.exe C:\\Tools\\payload.exe"
     }
   ],
-  "oscp_relevance": "Critical for payload delivery. Msfvenom defaults are heavily signatured. Must understand encoding, encryption, and signature location for exam success.",
   "attack_chain_position": "Payload Generation, Initial Access",
   "related_categories": [
     "payload-generation",

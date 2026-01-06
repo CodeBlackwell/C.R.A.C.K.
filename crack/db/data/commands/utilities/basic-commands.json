@@ -1,7 +1,7 @@
 {
   "category": "utilities",
   "subcategory": "basic-commands",
-  "description": "Basic Linux commands and machine-specific utilities for OSCP tasks",
+  "description": "Basic Linux commands and machine-specific utilities for security work tasks",
   "commands": [
     {
       "id": "cat-read-file",
@@ -13,7 +13,6 @@
       "tags": [
         "FILE_OPERATIONS",
         "LINUX",
-        "OSCP:HIGH",
         "UTILITIES"
       ],
       "variables": [
@@ -43,8 +42,7 @@
         "permission_denied": "File not readable by current user. Try with sudo: sudo cat <FILE>. Or check permissions: ls -l <FILE>",
         "binary_file": "File is binary. Use strings <FILE> to extract readable text. Or hexdump -C <FILE> for hex view"
       },
-      "notes": "Basic file reading command for OSCP.\n\nCommon usage:\ncat /etc/passwd - User enumeration\ncat /etc/shadow - Password hashes (requires root)\ncat user.txt - User flag\ncat root.txt - Root flag\ncat config.php - Database credentials\n\nTime estimate: <5 seconds",
-      "oscp_relevance": "high",
+      "notes": "Basic file reading command for certification.\n\nCommon usage:\ncat /etc/passwd - User enumeration\ncat /etc/shadow - Password hashes (requires root)\ncat user.txt - User flag\ncat root.txt - Root flag\ncat config.php - Database credentials\n\nTime estimate: <5 seconds",
       "methodology_guidance": {
         "after_success": "less <FILE> more <FILE> head <FILE> tail <FILE>"
       },
@@ -60,7 +58,6 @@
       "tags": [
         "LINUX",
         "NAVIGATION",
-        "OSCP:MEDIUM",
         "UTILITIES"
       ],
       "variables": [
@@ -87,7 +84,6 @@
         "permission_denied": "No execute permission on directory. Check: ls -ld <DIRECTORY>. May need higher privileges"
       },
       "notes": "Basic navigation command.\n\nCommon usage:\ncd /home - Home directories\ncd /var/www/html - Web root\ncd /tmp - Temporary files\ncd ~ - User home\ncd - - Previous directory\n\nTime estimate: <1 second",
-      "oscp_relevance": "medium",
       "methodology_guidance": {
         "after_success": "pushd <DIRECTORY> cd - (previous directory)"
       },
@@ -103,7 +99,6 @@
       "tags": [
         "FILE_OPERATIONS",
         "LINUX",
-        "OSCP:MEDIUM",
         "UTILITIES"
       ],
       "variables": [
@@ -135,8 +130,7 @@
       "troubleshooting": {
         "target_exists": "File with new name already exists. Use -f to force: mv -f <OLD> <NEW>. Or choose different name"
       },
-      "notes": "File renaming for extension changes.\n\nCommon OSCP usage:\nmv shell.txt shell.php - Prepare webshell\nmv backup backup.zip - Correct archive extension\nmv id_rsa.txt id_rsa - Fix SSH key\n\nTime estimate: <1 second",
-      "oscp_relevance": "medium",
+      "notes": "File renaming for extension changes.\n\nCommon certification usage:\nmv shell.txt shell.php - Prepare webshell\nmv backup backup.zip - Correct archive extension\nmv id_rsa.txt id_rsa - Fix SSH key\n\nTime estimate: <1 second",
       "methodology_guidance": {
         "after_success": "cp <OLD> <NEW> && rm <OLD>"
       },
@@ -153,7 +147,6 @@
         "DNS",
         "LINUX",
         "NETWORK",
-        "OSCP:HIGH",
         "UTILITIES"
       ],
       "variables": [
@@ -193,8 +186,7 @@
         "still_not_resolving": "DNS cache issue. Flush with: sudo systemd-resolve --flush-caches. Or restart DNS: sudo systemctl restart systemd-resolved",
         "duplicate_entry": "Entry already exists. Edit /etc/hosts manually to update. Or remove old entry first"
       },
-      "notes": "CRITICAL OSCP STEP: Map target hostname for web applications.\n\nWorkflow:\n1. Add host entry (THIS COMMAND)\n   echo '10.10.11.18 usage.htb' | sudo tee -a /etc/hosts\n2. Verify resolution\n   ping usage.htb\n   \u2192 Should ping 10.10.11.18\n3. Access web application\n   http://usage.htb\n\nCommon OSCP usage:\necho '10.10.11.18 usage.htb' | sudo tee -a /etc/hosts\necho '10.10.11.50 office.htb' | sudo tee -a /etc/hosts\n\nVerification:\ncat /etc/hosts | grep htb\nping -c 1 usage.htb\n\nTime estimate: 5-10 seconds",
-      "oscp_relevance": "high",
+      "notes": "CRITICAL certification STEP: Map target hostname for web applications.\n\nWorkflow:\n1. Add host entry (THIS COMMAND)\n   echo '10.10.11.18 usage.htb' | sudo tee -a /etc/hosts\n2. Verify resolution\n   ping usage.htb\n   \u2192 Should ping 10.10.11.18\n3. Access web application\n   http://usage.htb\n\nCommon certification usage:\necho '10.10.11.18 usage.htb' | sudo tee -a /etc/hosts\necho '10.10.11.50 office.htb' | sudo tee -a /etc/hosts\n\nVerification:\ncat /etc/hosts | grep htb\nping -c 1 usage.htb\n\nTime estimate: 5-10 seconds",
       "methodology_guidance": {
         "after_success": "sudo nano /etc/hosts sudo vi /etc/hosts"
       },
@@ -209,7 +201,6 @@
       "description": "Read user flag file to obtain proof of user-level access on target machine",
       "tags": [
         "FLAG_CAPTURE",
-        "OSCP:HIGH",
         "POST_EXPLOITATION",
         "PROOF"
       ],
@@ -240,7 +231,6 @@
         "permission_denied": "Need to be that user or root. Switch user: su - <USER>. Or escalate to root first"
       },
       "notes": "USER FLAG CAPTURE: Proof of user-level access.\n\nCommon locations:\n/home/<USER>/user.txt\n/home/<USER>/Desktop/user.txt\n/root/user.txt (if root is considered 'user' flag)\n\nWorkflow:\n1. Enumerate users: ls -la /home\n2. Find flag: find /home -name user.txt 2>/dev/null\n3. Read flag (THIS COMMAND): cat /home/dash/user.txt\n4. Document in proof.txt\n\nTime estimate: 5 seconds",
-      "oscp_relevance": "high",
       "methodology_guidance": {
         "after_success": "find /home -name user.txt -exec cat {} \\; locate user.txt"
       },
@@ -255,7 +245,6 @@
       "description": "Read root flag file to obtain proof of root-level access and complete machine compromise",
       "tags": [
         "FLAG_CAPTURE",
-        "OSCP:HIGH",
         "POST_EXPLOITATION",
         "PRIVILEGE_ESCALATION",
         "PROOF"
@@ -280,7 +269,6 @@
         "file_not_found": "May be named differently: cat /root/proof.txt. Or in alternate location: find / -name '*flag*' 2>/dev/null"
       },
       "notes": "ROOT FLAG CAPTURE: Proof of complete system compromise.\n\nCommon locations:\n/root/root.txt\n/root/proof.txt\n/root/Desktop/root.txt\n\nWorkflow:\n1. Escalate to root\n2. Read flag (THIS COMMAND): cat /root/root.txt\n3. Document in proof.txt with screenshot\n4. Complete machine documentation\n\nTime estimate: 5 seconds",
-      "oscp_relevance": "high",
       "methodology_guidance": {
         "after_success": "cat /root/proof.txt find /root -name root.txt -exec cat {} \\;"
       }
@@ -296,7 +284,6 @@
         "7ZIP",
         "CVE",
         "MACHINE_SPECIFIC",
-        "OSCP:LOW",
         "RESEARCH"
       ],
       "variables": [],
@@ -315,7 +302,6 @@
         "not_installed": "7zip not installed on system. Install: sudo apt install p7zip-full. Or research online"
       },
       "notes": "Machine-specific research for HackTheBox Usage.\n\n7zip --list-file vulnerability allows reading arbitrary files when used with sudo.\n\nExploitation:\nsudo /usr/bin/7za a backup.7z -t7z -snl -mhe=on -p<PASSWORD> @<FILE_TO_READ>\n\nTime estimate: 2-5 minutes (research)",
-      "oscp_relevance": "low",
       "methodology_guidance": {
         "after_success": "man 7z 7z --help-full"
       }
@@ -330,7 +316,6 @@
       "tags": [
         "BINARY_ANALYSIS",
         "MACHINE_SPECIFIC",
-        "OSCP:LOW",
         "REVERSE_ENGINEERING"
       ],
       "variables": [
@@ -363,8 +348,7 @@
       "troubleshooting": {
         "no_useful_strings": "Binary may be stripped or obfuscated. Try dynamic analysis: ltrace ./binary, strace ./binary. Or decompile with Ghidra"
       },
-      "notes": "Basic binary analysis for OSCP.\n\nCommon usage:\nstrings binary | grep -i password\nstrings binary | grep -i user\nstrings binary | grep -i admin\n\nTime estimate: 1-5 minutes",
-      "oscp_relevance": "low",
+      "notes": "Basic binary analysis for certification.\n\nCommon usage:\nstrings binary | grep -i password\nstrings binary | grep -i user\nstrings binary | grep -i admin\n\nTime estimate: 1-5 minutes",
       "methodology_guidance": {
         "after_success": "ltrace <BINARY> strace <BINARY> gdb <BINARY>"
       },
@@ -379,7 +363,6 @@
       "description": "Execute usage_management binary with sudo privileges for HackTheBox Usage machine privilege escalation",
       "tags": [
         "MACHINE_SPECIFIC",
-        "OSCP:LOW",
         "PRIVILEGE_ESCALATION",
         "SUDO"
       ],
@@ -401,8 +384,7 @@
       "troubleshooting": {
         "not_allowed": "User not in sudoers for this binary. Check: sudo -l. May need different exploit path"
       },
-      "notes": "Machine-specific command for HackTheBox Usage.\n\nusage_management binary exploitation:\n1. Check sudo permissions: sudo -l\n2. Execute binary (THIS COMMAND)\n3. Exploit functionality for privilege escalation\n\nTime estimate: Variable",
-      "oscp_relevance": "low"
+      "notes": "Machine-specific command for HackTheBox Usage.\n\nusage_management binary exploitation:\n1. Check sudo permissions: sudo -l\n2. Execute binary (THIS COMMAND)\n3. Exploit functionality for privilege escalation\n\nTime estimate: Variable"
     }
   ]
 }

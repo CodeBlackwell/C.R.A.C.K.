@@ -10,7 +10,7 @@
     "tags": [
       "DOCKER",
       "LINUX",
-      "OSCP",
+      "pentest",
       "POST_EXPLOITATION",
       "PRIVILEGE_ESCALATION",
       "QUICK_WIN",
@@ -25,13 +25,12 @@
   },
   "difficulty": "beginner",
   "time_estimate": "5 minutes",
-  "oscp_relevant": true,
   "prerequisites": [
     "Shell access as low-privilege user",
     "User is member of docker group",
     "Docker daemon is running"
   ],
-  "notes": "Docker group membership is equivalent to root access. This is one of the fastest privilege escalation paths in OSCP labs. The mount escape technique is preferred over privileged mode as it's cleaner and more reliable. If no images are available, alpine can be pulled (5MB, fast download). Alternative techniques include socket mounting and pid namespace abuse, but direct mount escape is simplest. Always verify root access by reading /etc/shadow and /root directory after escalation.",
+  "notes": "Docker group membership is equivalent to root access. This is one of the fastest privilege escalation paths in certification labs. The mount escape technique is preferred over privileged mode as it's cleaner and more reliable. If no images are available, alpine can be pulled (5MB, fast download). Alternative techniques include socket mounting and pid namespace abuse, but direct mount escape is simplest. Always verify root access by reading /etc/shadow and /root directory after escalation.",
   "steps": [
     {
       "id": "verify-docker-group",

@@ -9,12 +9,18 @@
       "cypher": "MATCH (u:User)\nWHERE u.dontreqpreauth = true\n  AND u.enabled = true\nRETURN u.name AS User,\n       u.admincount AS IsPrivileged,\n       u.description AS Description\nORDER BY u.admincount DESC",
       "variables": {},
       "edge_types_used": [],
-      "oscp_relevance": "high",
       "expected_results": "Users vulnerable to AS-REP roasting",
       "example_output": "MIKE@CORP.COM (admincount=false), DAVE@CORP.COM (admincount=false)",
-      "next_steps": ["lateral-adminto-nonpriv"],
+      "next_steps": [
+        "lateral-adminto-nonpriv"
+      ],
       "attack_technique": "T1558.004",
-      "tags": ["OSCP:HIGH", "quick_win", "AS-REP", "kerberos", "credential_access"]
+      "tags": [
+        "quick_win",
+        "AS-REP",
+        "kerberos",
+        "credential_access"
+      ]
     },
     {
       "id": "quick-kerberoastable",
@@ -23,12 +29,19 @@
       "cypher": "MATCH (u:User)\nWHERE u.hasspn = true\n  AND u.enabled = true\n  AND NOT u.name STARTS WITH 'KRBTGT'\nRETURN u.name AS ServiceAccount,\n       u.serviceprincipalnames AS SPNs,\n       u.admincount AS IsPrivileged,\n       u.description AS Description\nORDER BY u.admincount DESC",
       "variables": {},
       "edge_types_used": [],
-      "oscp_relevance": "high",
       "expected_results": "Service accounts with SPNs for Kerberoasting",
       "example_output": "IIS_SERVICE@CORP.COM (SPN: HTTP/web01.corp.com)",
-      "next_steps": ["lateral-adminto-nonpriv", "privesc-shadow-admins"],
+      "next_steps": [
+        "lateral-adminto-nonpriv",
+        "privesc-shadow-admins"
+      ],
       "attack_technique": "T1558.003",
-      "tags": ["OSCP:HIGH", "quick_win", "Kerberoast", "SPN", "credential_access"]
+      "tags": [
+        "quick_win",
+        "Kerberoast",
+        "SPN",
+        "credential_access"
+      ]
     },
     {
       "id": "quick-kerberoastable-privileged",
@@ -37,12 +50,17 @@
       "cypher": "MATCH (u:User)\nWHERE u.hasspn = true\n  AND u.enabled = true\n  AND u.admincount = true\nRETURN u.name AS HighValueTarget,\n       u.serviceprincipalnames AS SPNs,\n       u.description AS Description",
       "variables": {},
       "edge_types_used": [],
-      "oscp_relevance": "high",
       "expected_results": "Privileged accounts with SPNs (priority Kerberoast targets)",
       "example_output": "SQL_ADMIN@CORP.COM (admincount=true, SPN: MSSQLSvc/sql01.corp.com)",
-      "next_steps": ["privesc-dcsync-rights"],
+      "next_steps": [
+        "privesc-dcsync-rights"
+      ],
       "attack_technique": "T1558.003",
-      "tags": ["OSCP:HIGH", "quick_win", "Kerberoast", "high_value"]
+      "tags": [
+        "quick_win",
+        "Kerberoast",
+        "high_value"
+      ]
     },
     {
       "id": "quick-unconstrained-delegation",
@@ -51,12 +69,17 @@
       "cypher": "MATCH (c:Computer)\nWHERE c.unconstraineddelegation = true\n  AND c.enabled = true\nRETURN c.name AS Computer,\n       c.bloodtrail_ip AS ComputerIP,\n       c.operatingsystem AS OS,\n       c.description AS Description",
       "variables": {},
       "edge_types_used": [],
-      "oscp_relevance": "high",
       "expected_results": "Computers with unconstrained delegation for TGT theft",
       "example_output": "DC1.CORP.COM (Windows Server 2019), IIS_SERVER.CORP.COM",
-      "next_steps": ["lateral-sessions-on-computer"],
+      "next_steps": [
+        "lateral-sessions-on-computer"
+      ],
       "attack_technique": "T1558.001",
-      "tags": ["OSCP:HIGH", "quick_win", "delegation", "TGT_theft"]
+      "tags": [
+        "quick_win",
+        "delegation",
+        "TGT_theft"
+      ]
     },
     {
       "id": "quick-constrained-delegation",
@@ -65,12 +88,17 @@
       "cypher": "MATCH (n)\nWHERE n.trustedtoauth = true\n  AND n.enabled = true\nRETURN labels(n) AS Type,\n       n.name AS Principal,\n       n.allowedtodelegate AS DelegationTargets",
       "variables": {},
       "edge_types_used": [],
-      "oscp_relevance": "high",
       "expected_results": "Principals with constrained delegation and their targets",
       "example_output": "IIS_SERVICE@CORP.COM -> [cifs/dc1.corp.com, http/web01.corp.com]",
-      "next_steps": ["privesc-dcsync-rights"],
+      "next_steps": [
+        "privesc-dcsync-rights"
+      ],
       "attack_technique": "T1558.001",
-      "tags": ["OSCP:HIGH", "quick_win", "delegation", "S4U2Self"]
+      "tags": [
+        "quick_win",
+        "delegation",
+        "S4U2Self"
+      ]
     },
     {
       "id": "quick-password-in-description",
@@ -79,11 +107,16 @@
       "cypher": "MATCH (u:User)\nWHERE u.description IS NOT NULL\n  AND u.description <> ''\n  AND u.description =~ '(?i).*(pass|pwd|password|cred|secret).*'\nRETURN u.name AS User,\n       u.description AS Description,\n       u.admincount AS IsPrivileged\nORDER BY u.admincount DESC",
       "variables": {},
       "edge_types_used": [],
-      "oscp_relevance": "high",
       "expected_results": "Users with password information in description",
       "example_output": "BACKUP_SVC@CORP.COM (Description: 'Backup service - temp password: Backup2024!')",
-      "next_steps": ["lateral-adminto-nonpriv"],
-      "tags": ["OSCP:HIGH", "quick_win", "password_discovery", "misconfiguration"]
+      "next_steps": [
+        "lateral-adminto-nonpriv"
+      ],
+      "tags": [
+        "quick_win",
+        "password_discovery",
+        "misconfiguration"
+      ]
     },
     {
       "id": "quick-password-never-expires",
@@ -92,11 +125,15 @@
       "cypher": "MATCH (u:User)\nWHERE u.pwdneverexpires = true\n  AND u.enabled = true\n  AND NOT u.name STARTS WITH 'KRBTGT'\nRETURN u.name AS User,\n       u.admincount AS IsPrivileged,\n       u.description AS Description\nORDER BY u.admincount DESC",
       "variables": {},
       "edge_types_used": [],
-      "oscp_relevance": "medium",
       "expected_results": "Accounts with non-expiring passwords (potential weak passwords)",
       "example_output": "SVC_BACKUP@CORP.COM (pwdneverexpires=true)",
-      "next_steps": ["quick-password-in-description"],
-      "tags": ["OSCP:MEDIUM", "quick_win", "password_policy"]
+      "next_steps": [
+        "quick-password-in-description"
+      ],
+      "tags": [
+        "quick_win",
+        "password_policy"
+      ]
     },
     {
       "id": "quick-never-logged-in",
@@ -105,11 +142,15 @@
       "cypher": "MATCH (u:User)\nWHERE u.lastlogon = 0\n  AND u.enabled = true\nRETURN u.name AS User,\n       u.description AS Description,\n       u.whencreated AS Created\nORDER BY u.whencreated DESC",
       "variables": {},
       "edge_types_used": [],
-      "oscp_relevance": "medium",
       "expected_results": "Unused accounts with potential default credentials",
       "example_output": "TEST_USER@CORP.COM (never logged in, created 2023-01-15)",
-      "next_steps": ["lateral-adminto-nonpriv"],
-      "tags": ["OSCP:MEDIUM", "quick_win", "unused_accounts"]
+      "next_steps": [
+        "lateral-adminto-nonpriv"
+      ],
+      "tags": [
+        "quick_win",
+        "unused_accounts"
+      ]
     },
     {
       "id": "quick-laps-gaps",
@@ -118,11 +159,16 @@
       "cypher": "MATCH (c:Computer)\nWHERE c.haslaps = false\n  AND c.enabled = true\n  AND NOT c.name STARTS WITH 'DC'\nRETURN c.name AS Computer,\n       c.bloodtrail_ip AS ComputerIP,\n       c.operatingsystem AS OS\nORDER BY c.name",
       "variables": {},
       "edge_types_used": [],
-      "oscp_relevance": "medium",
       "expected_results": "Computers without LAPS (potential password reuse)",
       "example_output": "CLIENT01.CORP.COM, CLIENT02.CORP.COM (no LAPS)",
-      "next_steps": ["lateral-adminto-nonpriv"],
-      "tags": ["OSCP:MEDIUM", "quick_win", "LAPS", "password_reuse"]
+      "next_steps": [
+        "lateral-adminto-nonpriv"
+      ],
+      "tags": [
+        "quick_win",
+        "LAPS",
+        "password_reuse"
+      ]
     },
     {
       "id": "quick-prewin2000-accounts",
@@ -130,12 +176,17 @@
       "description": "Find computers in Pre-Windows 2000 Compatible Access group. Legacy compatibility may expose vulnerabilities.",
       "cypher": "MATCH (g:Group)-[:MemberOf*0..]->(p:Group)\nWHERE p.name =~ '(?i).*PRE-WINDOWS 2000.*'\nMATCH (m)-[:MemberOf]->(g)\nRETURN m.name AS Member,\n       labels(m) AS Type,\n       g.name AS ViaGroup",
       "variables": {},
-      "edge_types_used": ["MemberOf"],
-      "oscp_relevance": "low",
+      "edge_types_used": [
+        "MemberOf"
+      ],
       "expected_results": "Members of Pre-Windows 2000 compatibility groups",
       "example_output": "ANONYMOUS LOGON, Authenticated Users",
       "next_steps": [],
-      "tags": ["OSCP:LOW", "quick_win", "legacy", "compatibility"]
+      "tags": [
+        "quick_win",
+        "legacy",
+        "compatibility"
+      ]
     },
     {
       "id": "quick-gmsa-password",
@@ -143,13 +194,20 @@
       "description": "Find principals who can read Group Managed Service Account passwords. Direct credential access without cracking.",
       "cypher": "MATCH (attacker)-[:ReadGMSAPassword]->(gmsa:User)\nWHERE NOT attacker.admincount = true\nRETURN attacker.name AS Attacker,\n       labels(attacker) AS AttackerType,\n       gmsa.name AS GMSAAccount,\n       gmsa.description AS Description",
       "variables": {},
-      "edge_types_used": ["ReadGMSAPassword"],
-      "oscp_relevance": "high",
+      "edge_types_used": [
+        "ReadGMSAPassword"
+      ],
       "expected_results": "Non-privileged principals who can read gMSA passwords",
       "example_output": "WEB_SERVERS@CORP.COM -[ReadGMSAPassword]-> GMSA_IIS$@CORP.COM",
-      "next_steps": ["lateral-adminto-nonpriv"],
+      "next_steps": [
+        "lateral-adminto-nonpriv"
+      ],
       "attack_technique": "T1555",
-      "tags": ["OSCP:HIGH", "quick_win", "gMSA", "credential_access"]
+      "tags": [
+        "quick_win",
+        "gMSA",
+        "credential_access"
+      ]
     },
     {
       "id": "quick-laps-readers",
@@ -157,13 +215,20 @@
       "description": "Find non-privileged principals who can read LAPS passwords. Direct local admin credential access.",
       "cypher": "MATCH (attacker)-[:ReadLAPSPassword]->(c:Computer)\nWHERE NOT attacker.admincount = true\nRETURN attacker.name AS Attacker,\n       labels(attacker) AS AttackerType,\n       collect(c.name) AS Computers,\n       collect(c.bloodtrail_ip) AS ComputerIPs,\n       count(c) AS ComputerCount\nORDER BY ComputerCount DESC",
       "variables": {},
-      "edge_types_used": ["ReadLAPSPassword"],
-      "oscp_relevance": "high",
+      "edge_types_used": [
+        "ReadLAPSPassword"
+      ],
       "expected_results": "Non-privileged principals with LAPS read access",
       "example_output": "HELPDESK@CORP.COM -> [CLIENT01, CLIENT02, CLIENT03] (3 computers)",
-      "next_steps": ["lateral-sessions-on-computer"],
+      "next_steps": [
+        "lateral-sessions-on-computer"
+      ],
       "attack_technique": "T1555",
-      "tags": ["OSCP:HIGH", "quick_win", "LAPS", "credential_access"]
+      "tags": [
+        "quick_win",
+        "LAPS",
+        "credential_access"
+      ]
     },
     {
       "id": "quick-gmsa-all",
@@ -172,11 +237,16 @@
       "cypher": "MATCH (gmsa:User)\nWHERE gmsa.gmsa = true\n   OR gmsa.name ENDS WITH '$'\nRETURN gmsa.name AS GMSAAccount,\n       gmsa.description AS Description,\n       gmsa.admincount AS IsPrivileged,\n       gmsa.enabled AS Enabled",
       "variables": {},
       "edge_types_used": [],
-      "oscp_relevance": "high",
       "expected_results": "All gMSA accounts in the domain",
       "example_output": "GMSA_SQL$@CORP.COM (admincount=false), GMSA_IIS$@CORP.COM",
-      "next_steps": ["quick-gmsa-password"],
-      "tags": ["OSCP:HIGH", "quick_win", "gMSA", "enumeration"]
+      "next_steps": [
+        "quick-gmsa-password"
+      ],
+      "tags": [
+        "quick_win",
+        "gMSA",
+        "enumeration"
+      ]
     }
   ]
 }

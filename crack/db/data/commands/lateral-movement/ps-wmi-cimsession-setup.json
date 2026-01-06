@@ -67,13 +67,11 @@
         "exam_relevance": "MEDIUM - Alternative to WinRM when port 5985/5986 unavailable. Critical for understanding multiple lateral movement paths.",
         "time_estimate": "10-20 seconds to establish session"
       },
-      "oscp_priority": "MEDIUM",
       "tags": [
         "POWERSHELL",
         "WMI",
         "CIM",
-        "LATERAL_MOVEMENT",
-        "OSCP:MEDIUM"
+        "LATERAL_MOVEMENT"
       ],
       "prerequisites": [
         "ps-winrm-credential-setup"

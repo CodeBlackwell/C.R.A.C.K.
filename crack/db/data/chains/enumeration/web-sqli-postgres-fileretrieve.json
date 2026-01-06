@@ -15,7 +15,7 @@
       "ERROR_BASED",
       "RESTRICTED_NETWORK",
       "ALTERNATIVE_EXPLOITATION",
-      "OSCP"
+      "pentest"
     ],
     "category": "enumeration",
     "platform": "linux",
@@ -26,14 +26,13 @@
   },
   "difficulty": "intermediate",
   "time_estimate": "45 minutes",
-  "oscp_relevant": true,
   "prerequisites": [
     "Web application with SQL injection vulnerability identified",
     "PostgreSQL database confirmed via error messages",
     "PostgreSQL port 5432 accessible (or tunneled)",
     "Database user has superuser privileges (verify during enumeration)"
   ],
-  "notes": "This chain demonstrates critical OSCP skills: (1) Adapting when standard shell methods fail, (2) Leveraging service-specific capabilities, (3) Understanding database privilege models. Particularly useful when: network egress/ingress filtered, web shell write permissions denied, or COPY FROM PROGRAM hangs. Key insight: Database superuser ≠ OS root, but provides powerful file system access within postgres user permissions. Real-world scenario from OSCP Capstone 3: strict firewall blocked ALL reverse/bind shells but PostgreSQL port 5432 was selectively allowed.",
+  "notes": "This chain demonstrates critical certification skills: (1) Adapting when standard shell methods fail, (2) Leveraging service-specific capabilities, (3) Understanding database privilege models. Particularly useful when: network egress/ingress filtered, web shell write permissions denied, or COPY FROM PROGRAM hangs. Key insight: Database superuser \u2260 OS root, but provides powerful file system access within postgres user permissions. Real-world scenario from certification Capstone 3: strict firewall blocked ALL reverse/bind shells but PostgreSQL port 5432 was selectively allowed.",
   "steps": [
     {
       "id": "detect-sqli",
@@ -63,7 +62,9 @@
       "objective": "Determine number of columns in SQL query for UNION attack",
       "command_ref": "sqli-column-enum-orderby",
       "description": "Use ORDER BY technique to count columns.\nIncrement ORDER BY value until error occurs, revealing column count.",
-      "dependencies": ["detect-sqli"],
+      "dependencies": [
+        "detect-sqli"
+      ],
       "evidence": [
         "Last successful ORDER BY number (e.g., ORDER BY 4 succeeds, ORDER BY 5 fails = 4 columns)"
       ],
@@ -82,7 +83,9 @@
       "objective": "Confirm UNION injection works and identify displayed columns",
       "command_ref": "sqli-union-select-basic",
       "description": "Test UNION SELECT with NULL values matching column count.\nUse test strings to identify which column positions display on page.",
-      "dependencies": ["enum-columns"],
+      "dependencies": [
+        "enum-columns"
+      ],
       "evidence": [
         "Test strings visible in page output",
         "Identified displayable column positions (e.g., columns 1 and 4)"
@@ -104,7 +107,9 @@
       "objective": "Enumerate database version, name, user, and superuser status",
       "command_ref": "sqli-union-postgresql-info",
       "description": "Use UNION SELECT to extract: version(), current_database(), current_user, usesuper status.\nVerify if database user has superuser privileges (required for file functions).",
-      "dependencies": ["test-union"],
+      "dependencies": [
+        "test-union"
+      ],
       "evidence": [
         "PostgreSQL version string",
         "Database name (e.g., glovedb, webapp_db)",
@@ -128,7 +133,9 @@
       "objective": "Read database configuration file to obtain plaintext password",
       "command_ref": "sqli-union-postgresql-info",
       "description": "Use pg_read_file() via UNION SELECT to read common config file locations: /var/www/html/dbcon.php, /var/www/html/config.php, /etc/webapp/database.conf.\nExtract username and password from file contents.",
-      "dependencies": ["extract-db-info"],
+      "dependencies": [
+        "extract-db-info"
+      ],
       "evidence": [
         "Config file contents visible",
         "Database credentials extracted (username:password)",
@@ -144,7 +151,9 @@
         "Permission denied (postgres user cannot read file)",
         "Credentials hashed/encrypted (need alternative approach)"
       ],
-      "next_steps": ["connect-postgres"]
+      "next_steps": [
+        "connect-postgres"
+      ]
     },
     {
       "id": "connect-postgres",
@@ -152,7 +161,9 @@
       "objective": "Connect to PostgreSQL database using extracted credentials",
       "command_ref": "postgres-direct-connect",
       "description": "Use psql client to connect directly to PostgreSQL server on port 5432.\nBypass web application layer entirely.\nVerify connection success and superuser privileges.",
-      "dependencies": ["extract-credentials"],
+      "dependencies": [
+        "extract-credentials"
+      ],
       "evidence": [
         "psql prompt appears (database_name=#)",
         "Connection established message",
@@ -168,7 +179,10 @@
         "Authentication failed (wrong credentials or password change)",
         "Connection timeout (firewall blocking)"
       ],
-      "next_steps": ["verify-privileges", "enum-filesystem"]
+      "next_steps": [
+        "verify-privileges",
+        "enum-filesystem"
+      ]
     },
     {
       "id": "verify-privileges",
@@ -176,7 +190,9 @@
       "objective": "Confirm superuser status and available file functions",
       "command_ref": "postgres-privilege-check",
       "description": "Verify usesuper is TRUE and test pg_ls_dir() and pg_read_file() functions are available.\nConfirm postgres user file access permissions.",
-      "dependencies": ["connect-postgres"],
+      "dependencies": [
+        "connect-postgres"
+      ],
       "evidence": [
         "usesuper = t (TRUE)",
         "pg_ls_dir() function executes",
@@ -199,7 +215,9 @@
       "objective": "Systematically search filesystem for flags, credentials, or sensitive data",
       "command_ref": "postgres-file-enum",
       "description": "Use pg_ls_dir() to list directories.\nCheck common locations: /, /home, /tmp, /var, /var/www, /opt, /root (if accessible).\nLook for flag.txt, credentials, .ssh keys, or other sensitive files.",
-      "dependencies": ["verify-privileges"],
+      "dependencies": [
+        "verify-privileges"
+      ],
       "evidence": [
         "Directory listings from multiple paths",
         "Sensitive file identified (e.g., flag.txt, id_rsa, credentials.txt)"
@@ -215,7 +233,9 @@
         "File exists but not readable by postgres user"
       ],
       "repeatable": true,
-      "next_steps": ["retrieve-file"]
+      "next_steps": [
+        "retrieve-file"
+      ]
     },
     {
       "id": "retrieve-file",
@@ -223,7 +243,9 @@
       "objective": "Read target file using pg_read_file() and extract contents",
       "command_ref": "postgres-file-read",
       "description": "Use pg_read_file('/path/to/file') to read file contents.\nFor large files, may need to read in chunks using offset/length parameters.",
-      "dependencies": ["enum-filesystem"],
+      "dependencies": [
+        "enum-filesystem"
+      ],
       "evidence": [
         "File contents displayed",
         "Flag format visible (OS{...} or local.txt/proof.txt)",

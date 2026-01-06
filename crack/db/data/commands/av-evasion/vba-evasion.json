@@ -212,7 +212,6 @@
       ]
     }
   ],
-  "oscp_relevance": "Critical for client-side attacks and phishing scenarios. Office macros common initial access vector. Must know encryption, obfuscation, and dechaining for exam success.",
   "attack_chain_position": "Initial Access, Phishing, Client-Side Exploitation",
   "related_categories": [
     "office-exploitation",

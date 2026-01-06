@@ -8,15 +8,14 @@
     "created": "2025-11-08",
     "updated": "2025-11-08",
     "tags": [
-      "OSCP",
+      "pentest",
       "WINDOWS",
       "ACTIVE_DIRECTORY",
       "LATERAL_MOVEMENT",
       "OVERPASS_THE_HASH",
       "KERBEROS",
       "MIMIKATZ",
-      "RUBEUS",
-      "OSCP:HIGH"
+      "RUBEUS"
     ],
     "category": "lateral_movement",
     "platform": "windows",
@@ -27,7 +26,6 @@
   },
   "difficulty": "advanced",
   "time_estimate": "20 minutes",
-  "oscp_relevant": true,
   "prerequisites": [
     "Compromised Windows host with mimikatz or Rubeus",
     "NTLM hash obtained",
@@ -35,7 +33,7 @@
     "Network access to domain controller",
     "Target tool requires Kerberos (e.g., Microsoft PsExec64.exe)"
   ],
-  "notes": "Overpass-the-Hash upgrades NTLM hash to Kerberos TGT for tools that only support Kerberos authentication. WHY NEEDED: Some Windows tools (Microsoft PsExec, certain COM objects) require Kerberos tickets, won't work with NTLM. HOW IT WORKS: Mimikatz injects NTLM hash into LSASS, requests TGT from KDC using hash for pre-authentication, resulting TGT can be used like normal Kerberos ticket. ADVANTAGES: Enables Kerberos-only tools with just hash, more compatible than pure pass-the-hash. DISADVANTAGES: Requires compromised Windows host (can't do from Kali), more complex than straightforward pass-the-hash. OSCP RELEVANCE: High - needed when Impacket tools fail but Microsoft tools available.",
+  "notes": "Overpass-the-Hash upgrades NTLM hash to Kerberos TGT for tools that only support Kerberos authentication. WHY NEEDED: Some Windows tools (Microsoft PsExec, certain COM objects) require Kerberos tickets, won't work with NTLM. HOW IT WORKS: Mimikatz injects NTLM hash into LSASS, requests TGT from KDC using hash for pre-authentication, resulting TGT can be used like normal Kerberos ticket. ADVANTAGES: Enables Kerberos-only tools with just hash, more compatible than pure pass-the-hash. DISADVANTAGES: Requires compromised Windows host (can't do from Kali), more complex than straightforward pass-the-hash. certification RELEVANCE: High - needed when Impacket tools fail but Microsoft tools available.",
   "steps": [
     {
       "id": "verify-hash",

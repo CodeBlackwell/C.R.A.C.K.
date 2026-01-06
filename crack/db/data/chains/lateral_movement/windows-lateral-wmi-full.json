@@ -8,13 +8,12 @@
     "created": "2025-11-08",
     "updated": "2025-11-08",
     "tags": [
-      "OSCP",
+      "pentest",
       "WINDOWS",
       "ACTIVE_DIRECTORY",
       "LATERAL_MOVEMENT",
       "WMI",
-      "IMPACKET",
-      "OSCP:HIGH"
+      "IMPACKET"
     ],
     "category": "lateral_movement",
     "platform": "windows",
@@ -25,7 +24,6 @@
   },
   "difficulty": "intermediate",
   "time_estimate": "15 minutes",
-  "oscp_relevant": true,
   "prerequisites": [
     "Valid domain credentials or NTLM hash",
     "Target IP/hostname identified",
@@ -33,7 +31,7 @@
     "Network access to target (RPC port 135 + high ports)",
     "Kali machine with Impacket installed"
   ],
-  "notes": "WMI (Windows Management Instrumentation) provides remote execution via DCOM over RPC. This chain demonstrates lateral movement from Kali using impacket-wmiexec for fileless remote code execution. ADVANTAGES: Fileless (no binary written to disk), uses legitimate Windows service, supports pass-the-hash. DISADVANTAGES: Creates WMI event logs, slower than PSExec for interactive use. OSCP RELEVANCE: High - frequently available when WinRM blocked, pass-the-hash compatible.",
+  "notes": "WMI (Windows Management Instrumentation) provides remote execution via DCOM over RPC. This chain demonstrates lateral movement from Kali using impacket-wmiexec for fileless remote code execution. ADVANTAGES: Fileless (no binary written to disk), uses legitimate Windows service, supports pass-the-hash. DISADVANTAGES: Creates WMI event logs, slower than PSExec for interactive use. certification RELEVANCE: High - frequently available when WinRM blocked, pass-the-hash compatible.",
   "steps": [
     {
       "id": "verify-admin-access",

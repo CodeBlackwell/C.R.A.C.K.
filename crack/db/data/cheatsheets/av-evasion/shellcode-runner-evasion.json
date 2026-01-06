@@ -5,7 +5,6 @@
       "name": "Shellcode Runner Evasion - Building Custom Loaders",
       "description": "Step-by-step guide for creating AV-evading shellcode runners in C#. Covers basic execution, encryption layers, sandbox detection, and compilation workflows.",
       "category": "av-evasion",
-      "oscp_relevance": "high",
       "educational_header": {
         "how_to_recognize": [
           "Msfvenom payloads immediately flagged by Windows Defender",

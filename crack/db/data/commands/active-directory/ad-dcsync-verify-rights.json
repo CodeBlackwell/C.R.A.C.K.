@@ -1,7 +1,6 @@
 {
   "metadata": {
     "file_purpose": "Active Directory DCSync Prerequisites - Commands for verifying Domain Admin rights and replication privileges required for DCSync attacks",
-    "oscp_relevance": "High-priority credential access technique. DCSync allows remote extraction of password hashes without accessing the Domain Controller directly, making it critical for post-exploitation and lateral movement. Essential prerequisite verification prevents failed attack attempts.",
     "educational_context": "DCSync leverages the Directory Replication Service (DRS) Remote Protocol to request password data from domain controllers. Unlike LSA dumps or memory scraping, DCSync doesn't require code execution on the DC itself - it's a legitimate replication request. However, it requires specific extended rights normally granted only to Domain Admins, Enterprise Admins, and domain controllers.",
     "prerequisites": [
       "Domain user credentials with elevated privileges",
@@ -77,11 +76,9 @@
         "DCSYNC",
         "ENUMERATION",
         "CREDENTIAL_ACCESS",
-        "OSCP:HIGH",
         "WINDOWS",
         "NATIVE_COMMAND"
       ],
-      "oscp_relevance": "high",
       "notes": "ALWAYS verify Domain Admin membership BEFORE attempting DCSync. This saves time and avoids failed attack attempts that may generate alerts. If your user is NOT a Domain Admin, check for explicit replication rights assignment (rare but possible). Alternative high-privilege groups: Enterprise Admins (cross-forest), Administrators (domain-wide), Domain Controllers (computer accounts). Time estimate: <5 seconds.\n\nMANUAL ALTERNATIVES:\nPowerShell:\nGet-ADGroupMember -Identity \"Domain Admins\" | Select Name, SamAccountName\nGet-ADUser <USERNAME> -Properties MemberOf | Select -ExpandProperty MemberOf\n\nVerify YOUR membership:\nwhoami /groups | findstr \"Domain Admins\"\nnet user <USERNAME> /domain | findstr \"Domain Admins\"\n\nImpacket (Linux):\nlookupsid.py <DOMAIN>/<USER>:<PASS>@<DC_IP>\n\nTIME ESTIMATE: <5 seconds"
     },
     {
@@ -127,11 +124,9 @@
         "DCSYNC",
         "ENUMERATION",
         "CREDENTIAL_ACCESS",
-        "OSCP:HIGH",
         "WINDOWS",
         "NATIVE_COMMAND"
       ],
-      "oscp_relevance": "high",
       "notes": "Fastest method to verify your OWN privileges without querying the domain controller. The security token contains all group memberships assigned at logon time. CRITICAL: Token is created at logon - if permissions changed after you logged in, whoami won't reflect new groups until you re-authenticate. For most current state, use 'net user <USERNAME> /domain' to query DC directly. Time estimate: Instant (<1 second).\n\nMANUAL ALTERNATIVES:\nCheck specific group:\nwhoami /groups | findstr /I \"Domain Admins\"\nwhoami /groups | findstr /I \"S-1-5-21-.*-512\"\n\nPowerShell:\n[Security.Principal.WindowsIdentity]::GetCurrent().Groups | ForEach-Object { $_.Translate([Security.Principal.NTAccount]) }\n\nVerify privileges (alternative indicator):\nwhoami /priv | findstr SeBackupPrivilege\nwhoami /priv | findstr SeRestorePrivilege\n\nLinux (after obtaining TGT):\nklist\nrpcclient -U <DOMAIN>/<USER>%<PASS> <DC_IP> -c 'getusername'\n\nTIME ESTIMATE: <1 second"
     },
     {
@@ -200,13 +195,11 @@
         "DCSYNC",
         "ENUMERATION",
         "CREDENTIAL_ACCESS",
-        "OSCP:MEDIUM",
         "WINDOWS",
         "POWERSHELL",
         "ADVANCED"
       ],
-      "oscp_relevance": "medium",
-      "notes": "This check is RARELY needed in OSCP - most DCSync scenarios involve compromised Domain Admin accounts. Use this only if: (1) You have domain user creds but not DA, (2) Suspicious user has DCSync capability (red team defense evasion), (3) Investigating custom permission delegation. In real penetration tests, attackers occasionally find service accounts or helpdesk accounts with these rights assigned for legitimate backup purposes. Time estimate: 5-10 seconds.\n\nMANUAL ALTERNATIVES:\nWithout PowerShell (dsacls.exe):\ndsacls \"<DOMAIN_DN>\" | findstr /I \"<USERNAME>\"\ndsacls \"<DOMAIN_DN>\" | findstr /I \"1131f6aa-9c07-11d1-f79f-00c04fc2dcd2\"\n\nQuery specific user:\nGet-ADUser <USERNAME> -Properties * | Select Name, MemberOf, msDS-AllowedToDelegateTo\n\nBloodHound (automated):\nFind users with DCSync rights: MATCH (n:User)-[:GetChanges|GetChangesAll*1..]->(d:Domain) RETURN n.name\n\nImpacket (Linux):\npython3 dacledit.py -action read -principal <USERNAME> -target \"<DOMAIN_DN>\" '<DOMAIN>/<USER>:<PASS>'\n\nTIME ESTIMATE: 10-15 seconds (including RSAT module import)",
+      "notes": "This check is RARELY needed in certification - most DCSync scenarios involve compromised Domain Admin accounts. Use this only if: (1) You have domain user creds but not DA, (2) Suspicious user has DCSync capability (red team defense evasion), (3) Investigating custom permission delegation. In real penetration tests, attackers occasionally find service accounts or helpdesk accounts with these rights assigned for legitimate backup purposes. Time estimate: 5-10 seconds.\n\nMANUAL ALTERNATIVES:\nWithout PowerShell (dsacls.exe):\ndsacls \"<DOMAIN_DN>\" | findstr /I \"<USERNAME>\"\ndsacls \"<DOMAIN_DN>\" | findstr /I \"1131f6aa-9c07-11d1-f79f-00c04fc2dcd2\"\n\nQuery specific user:\nGet-ADUser <USERNAME> -Properties * | Select Name, MemberOf, msDS-AllowedToDelegateTo\n\nBloodHound (automated):\nFind users with DCSync rights: MATCH (n:User)-[:GetChanges|GetChangesAll*1..]->(d:Domain) RETURN n.name\n\nImpacket (Linux):\npython3 dacledit.py -action read -principal <USERNAME> -target \"<DOMAIN_DN>\" '<DOMAIN>/<USER>:<PASS>'\n\nTIME ESTIMATE: 10-15 seconds (including RSAT module import)",
       "filled_example": "powershell -c \"(Get-Acl 'AD:\\DC=corp,DC=com').Access | Where-Object {$_.IdentityReference -eq 'CORP\\jeffadmin' -and ($_.ObjectType -eq '1131f6aa-9c07-11d1-f79f-00c04fc2dcd2' -or $_.ObjectType -eq '1131f6ad-9c07-11d1-f79f-00c04fc2dcd2')} | Select IdentityReference, ActiveDirectoryRights, ObjectType\""
     }
   ]

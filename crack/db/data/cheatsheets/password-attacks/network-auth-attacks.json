@@ -17,7 +17,7 @@
           "When you've identified valid usernames but no credentials (enum4linux, LDAP queries, email harvesting)",
           "After discovering password policies via error messages or brute-force testing",
           "When account lockout policies are absent or lenient (3+ failed attempts allowed)",
-          "During OSCP exam when you have IPs but no initial foothold"
+          "During security assessment when you have IPs but no initial foothold"
         ]
       },
       "scenarios": [
@@ -212,7 +212,6 @@
         "PASSWORD_ATTACKS",
         "NETWORK_AUTH",
         "HYDRA",
-        "OSCP:HIGH",
         "DICTIONARY_ATTACK",
         "PASSWORD_SPRAY"
       ]

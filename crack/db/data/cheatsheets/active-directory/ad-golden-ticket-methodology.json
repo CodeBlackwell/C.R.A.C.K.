@@ -26,7 +26,7 @@
           "When you need to access resources from a workstation without domain join",
           "After obtaining the NTDS.dit database from a Domain Controller",
           "When testing detection capabilities of security monitoring solutions",
-          "In OSCP lab scenarios involving Active Directory privilege escalation chains"
+          "in assessments lab scenarios involving Active Directory privilege escalation chains"
         ],
         "prerequisites": [
           "Domain Admin privileges OR Domain Controller system access (to obtain krbtgt hash)",
@@ -101,8 +101,7 @@
             "Assuming Golden Ticket is an initial access technique (it's post-exploitation persistence)",
             "Not understanding the difference between TGT (Golden) and TGS (Silver) tickets",
             "Forgetting that tickets must be injected into memory on the attacking workstation, not the target"
-          ],
-          "oscp_exam_relevance": "HIGH - OSCP labs frequently include Active Directory privilege escalation chains that culminate in Domain Admin access. Golden Ticket demonstrates understanding of Kerberos, post-exploitation persistence, and lateral movement. While obtaining the krbtgt hash requires prior Domain Admin access, the technique showcases complete domain compromise and is often part of full attack chain documentation in exam reports."
+          ]
         },
         {
           "title": "Scenario 2: Obtaining krbtgt Hash via DCSync (Remote Method)",
@@ -135,8 +134,7 @@
             "Copying the wrong hash - LM hash field is usually empty, NTLM hash is the important one",
             "Including spaces or 'NTLM :' prefix when saving the hash",
             "Running from a non-domain-authenticated session (use runas /netonly if needed)"
-          ],
-          "oscp_exam_relevance": "HIGH - DCSync is a core post-exploitation technique in Active Directory environments. It demonstrates understanding of domain replication, privilege abuse, and stealth techniques. OSCP labs include scenarios where DCSync is necessary to extract credentials for lateral movement or persistence. Knowing both DCSync and Golden Ticket creates a complete attack narrative for exam documentation."
+          ]
         },
         {
           "title": "Scenario 3: Obtaining krbtgt Hash via LSA Dump (Domain Controller Access Method)",
@@ -169,8 +167,7 @@
             "Confusing LM hash with NTLM hash (LM field is usually empty, NTLM is what you need)",
             "Scrolling past krbtgt entry too quickly (output is very long, easy to miss)",
             "Running with antivirus enabled (may block Mimikatz from accessing LSASS)"
-          ],
-          "oscp_exam_relevance": "MEDIUM - While DCSync is preferred in OSCP labs due to stealth and remote execution, LSA dump demonstrates understanding of Windows authentication architecture and credential extraction from memory. Useful when you've already compromised the DC and DCSync is unavailable or blocked. Shows technical depth in exam reports."
+          ]
         },
         {
           "title": "Scenario 4: Creating and Injecting Golden Ticket with Mimikatz",
@@ -205,8 +202,7 @@
             "Incorrect krbtgt hash format (spaces, wrong length) causes 'Data length error'",
             "Checking tickets in wrong session (klist shows 'no credentials' even though ticket exists in another session)",
             "Not opening new command prompt after injection (old prompts don't inherit ticket - use 'misc::cmd')"
-          ],
-          "oscp_exam_relevance": "HIGH - This is the core Golden Ticket technique. OSCP exams require demonstrating post-exploitation persistence and lateral movement in Active Directory. Creating a Golden Ticket from a low-privileged account using stolen krbtgt hash shows complete understanding of Kerberos abuse, domain compromise, and persistence mechanisms. Essential for comprehensive AD attack documentation in exam reports."
+          ]
         },
         {
           "title": "Scenario 5: Using Golden Ticket for Domain-Wide Access and Persistence",
@@ -242,8 +238,7 @@
             "Thinking ticket needs to be recreated for each target (one ticket works for entire domain)",
             "Attempting to use Golden Ticket for non-Kerberos protocols (like WinRM over HTTP)",
             "Not verifying you're on target system after PsExec (assuming success without confirmation)"
-          ],
-          "oscp_exam_relevance": "HIGH - Lateral movement and domain-wide access demonstration is critical for OSCP exam reports. Using Golden Ticket to move from workstation to Domain Controller shows complete Active Directory compromise. The technique demonstrates: Post-exploitation persistence, Kerberos protocol understanding, Lateral movement methodology, Domain privilege escalation, Comprehensive attack chain documentation. This is the type of complete attack narrative that earns full points in OSCP AD scenarios."
+          ]
         }
       ],
       "sections": [
@@ -329,7 +324,6 @@
         "RUBEUS",
         "DCSYNC",
         "TICKET_FORGERY",
-        "OSCP:HIGH",
         "POST_EXPLOITATION",
         "WINDOWS"
       ]

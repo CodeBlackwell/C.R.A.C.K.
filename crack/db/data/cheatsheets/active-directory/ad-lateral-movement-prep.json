@@ -15,7 +15,7 @@
           "After initial domain reconnaissance completes",
           "When you have credentials but need to find where to use them effectively",
           "Before attempting PsExec/WinRM/RDP lateral movement (verify admin access first)",
-          "OSCP exam: Always enumerate shares and sessions - credentials often found in SYSVOL/NETLOGON"
+          "security assessment: Always enumerate shares and sessions - credentials often found in SYSVOL/NETLOGON"
         ]
       },
       "scenarios": [
@@ -44,7 +44,7 @@
         {
           "title": "Scenario 3: Share Enumeration for Credential Harvesting",
           "context": "You're 'corp\\lowpriv' and need privilege escalation. Standard attacks (Kerberoasting, ACLs) yielded nothing. Time to search network shares for credentials. Focus on: SYSVOL (GPP passwords), NETLOGON (scripts with hardcoded creds), user home directories (SSH keys, .rdp files, KeePass databases), application shares (web.config, appsettings.json).",
-          "approach": "Use Find-DomainShare (PowerView) or manual 'net view \\\\COMPUTER' to discover all SMB shares. Prioritize readable shares (exclude ADMIN$, C$ which require admin). Search for sensitive file types: .xml (GPP), .ps1 (scripts), .config (app configs), .txt (notes), .rdp (saved RDP credentials), .kdbx (KeePass). This is tedious but OSCP-relevant - credentials often found in shares.",
+          "approach": "Use Find-DomainShare (PowerView) or manual 'net view \\\\COMPUTER' to discover all SMB shares. Prioritize readable shares (exclude ADMIN$, C$ which require admin). Search for sensitive file types: .xml (GPP), .ps1 (scripts), .config (app configs), .txt (notes), .rdp (saved RDP credentials), .kdbx (KeePass). This is tedious but pentest-relevant - credentials often found in shares.",
           "commands": [
             "powerview-find-domainshare",
             "powerview-find-domainshare-exclude"
@@ -124,7 +124,7 @@
         },
         {
           "title": "Phase 4: GPP Password Hunting",
-          "notes": "Search SYSVOL for Groups.xml, ScheduledTasks.xml, Services.xml containing 'cpassword' attribute. These files contain AES-encrypted passwords that can be decrypted with published Microsoft key. Credential hunting in SYSVOL is OSCP exam staple.",
+          "notes": "Search SYSVOL for Groups.xml, ScheduledTasks.xml, Services.xml containing 'cpassword' attribute. These files contain AES-encrypted passwords that can be decrypted with published Microsoft key. Credential hunting in SYSVOL is certification exam staple.",
           "commands": [
             {
               "id": "gpp-password-files",
@@ -156,8 +156,7 @@
         "SESSION_ENUMERATION",
         "SHARES",
         "GPP",
-        "CREDENTIAL_HARVESTING",
-        "OSCP:HIGH"
+        "CREDENTIAL_HARVESTING"
       ]
     }
   ]

@@ -44,7 +44,7 @@ def print_banner():
     """Display tool banner"""
     banner = f"""
 {Colors.BOLD}{Colors.CYAN}┌─────────────────────────────────────────────────────────┐
-│         ENUMERATION SCANNER - OSCP Edition              │
+│         ENUMERATION SCANNER - Professional Edition              │
 │  Two-Stage Port Scan → Parallel Enumeration → CVE      │
 └─────────────────────────────────────────────────────────┘{Colors.END}
     """

@@ -8,7 +8,7 @@
     "created": "2025-10-13",
     "updated": "2025-10-13",
     "tags": [
-      "OSCP",
+      "pentest",
       "LINUX",
       "PRIVILEGE_ESCALATION",
       "SUID",
@@ -24,19 +24,18 @@
   },
   "difficulty": "beginner",
   "time_estimate": "20 minutes",
-  "oscp_relevant": true,
   "prerequisites": [
     "Shell access as low-privilege user (www-data, user, etc.)",
     "Target system is Linux",
     "Quick wins check (sudo -l) completed - if NOPASSWD found, use linux-privesc-sudo chain instead"
   ],
-  "notes": "SUID binaries with setuid bit set run with owner's privileges (usually root). Misconfigured binaries like find, vim, nmap, base64 can be exploited for privilege escalation. GTFOBins provides exploitation techniques. This chain covers the most common OSCP scenario: finding SUID binary and exploiting it for root shell.\n\nOSCP Time-Saving Tip: This chain includes a prerequisite quick-wins check (Step 0) that tests for sudo access before running full SUID enumeration. If Step 0 finds NOPASSWD sudo access, consider switching to the linux-privesc-sudo chain for faster exploitation. SUID enumeration can take 2-5 minutes on large filesystems, while sudo check takes <5 seconds.",
+  "notes": "SUID binaries with setuid bit set run with owner's privileges (usually root). Misconfigured binaries like find, vim, nmap, base64 can be exploited for privilege escalation. GTFOBins provides exploitation techniques. This chain covers the most common certification scenario: finding SUID binary and exploiting it for root shell.\n\ncertification Time-Saving Tip: This chain includes a prerequisite quick-wins check (Step 0) that tests for sudo access before running full SUID enumeration. If Step 0 finds NOPASSWD sudo access, consider switching to the linux-privesc-sudo chain for faster exploitation. SUID enumeration can take 2-5 minutes on large filesystems, while sudo check takes <5 seconds.",
   "steps": [
     {
       "id": "quick-wins-check",
       "name": "Quick Wins Check (Sudo Privileges)",
       "objective": "Check for instant root via sudo before time-consuming SUID enumeration",
-      "description": "OSCP time-saving: Always check sudo first (5 seconds) before SUID enumeration (2+ minutes).\n\nIf user has NOPASSWD sudo, instant root without complex exploitation.",
+      "description": "pentest time-saving: Always check sudo first (5 seconds) before SUID enumeration (2+ minutes).\n\nIf user has NOPASSWD sudo, instant root without complex exploitation.",
       "command_ref": "check-sudo-privs",
       "dependencies": [],
       "evidence": [

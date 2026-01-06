@@ -20,8 +20,7 @@
         "chisel",
         "tunneling",
         "pivoting",
-        "server",
-        "OSCP:HIGH"
+        "server"
       ],
       "prerequisites": [],
       "alternatives": [
@@ -86,8 +85,7 @@
         "chisel",
         "tunneling",
         "pivoting",
-        "client",
-        "OSCP:HIGH"
+        "client"
       ],
       "prerequisites": [
         "chisel-server"
@@ -131,8 +129,7 @@
         "oscp",
         "chisel",
         "socks",
-        "proxy",
-        "OSCP:HIGH"
+        "proxy"
       ],
       "prerequisites": [
         "chisel-server"
@@ -194,8 +191,7 @@
         "ssh",
         "tunneling",
         "port-forwarding",
-        "local",
-        "OSCP:HIGH"
+        "local"
       ],
       "prerequisites": [
         "ssh-connect"
@@ -257,8 +253,7 @@
         "ssh",
         "tunneling",
         "port-forwarding",
-        "remote",
-        "OSCP:HIGH"
+        "remote"
       ],
       "prerequisites": [
         "ssh-connect"
@@ -313,8 +308,7 @@
         "ssh",
         "tunneling",
         "socks",
-        "dynamic",
-        "OSCP:HIGH"
+        "dynamic"
       ],
       "prerequisites": [
         "ssh-connect"
@@ -349,8 +343,7 @@
         "oscp",
         "ligolo-ng",
         "pivoting",
-        "server",
-        "OSCP:HIGH"
+        "server"
       ],
       "prerequisites": [],
       "alternatives": [
@@ -383,8 +376,7 @@
         "oscp",
         "ligolo-ng",
         "pivoting",
-        "agent",
-        "OSCP:HIGH"
+        "agent"
       ],
       "prerequisites": [
         "ligolo-server"

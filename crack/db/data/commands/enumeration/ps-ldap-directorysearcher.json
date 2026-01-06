@@ -57,9 +57,9 @@
           "Initial AD enumeration from compromised domain-joined Windows host",
           "When PowerView/SharpHound uploads trigger AV alerts",
           "Quick queries without importing tools (stealth)",
-          "OSCP exam scenarios requiring AD enumeration without tool transfers"
+          "security assessment scenarios requiring AD enumeration without tool transfers"
         ],
-        "exam_relevance": "HIGH - Built-in method works on any domain-joined Windows host without tool uploads. Critical for OSCP AD enumeration.",
+        "exam_relevance": "HIGH - Built-in method works on any domain-joined Windows host without tool uploads. Critical for security work AD enumeration.",
         "time_estimate": "5-30 seconds depending on domain size",
         "technical_notes": [
           "[adsisearcher] is PowerShell type accelerator for System.DirectoryServices.DirectorySearcher",
@@ -69,13 +69,11 @@
           "Results include .Properties (hashtable) and .Path (LDAP distinguished name)"
         ]
       },
-      "oscp_priority": "HIGH",
       "tags": [
         "POWERSHELL",
         "ACTIVE_DIRECTORY",
         "LDAP",
         "ENUMERATION",
-        "OSCP:HIGH",
         "NO_TOOLS_REQUIRED"
       ],
       "related_commands": [

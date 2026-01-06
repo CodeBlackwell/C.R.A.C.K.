@@ -35,7 +35,6 @@
       "next_steps": [
         "evil-winrm-hash"
       ],
-      "oscp_relevance": "high",
       "notes": "NTLM hash format:\nlowercase hexadecimal, 32 characters.\n\nCommon sources:\nsecretsdump.py, mimikatz, crackmapexec --sam/--lsa",
       "filled_example": "test -f hashes.txt && grep -qE '^[a-f0-9]{32}$' hashes.txt"
     },
@@ -64,7 +63,6 @@
         "Installation failed": "pipx install crackmapexec"
       },
       "next_steps": [],
-      "oscp_relevance": "high",
       "notes": "CrackMapExec may be aliased as 'cme' in some environments.\n\nCheck both variants."
     },
     {
@@ -97,7 +95,6 @@
       "next_steps": [
         "bloodhound-ingest"
       ],
-      "oscp_relevance": "medium",
       "notes": "Neo4j required for BloodHound data ingestion and Active Directory analysis.\n\nDefault ports:\n7474 (HTTP), 7687 (Bolt)."
     },
     {
@@ -145,7 +142,6 @@
       "next_steps": [
         "nikto-web-scan"
       ],
-      "oscp_relevance": "high",
       "flag_explanations": {
         "-I": "Fetch headers only (HEAD request)",
         "--connect-timeout 5": "Maximum time to establish connection",
@@ -188,7 +184,6 @@
         "get-netuser",
         "get-netgroup"
       ],
-      "oscp_relevance": "high",
       "notes": "PowerView cmdlets available after import:\nGet-NetDomain, Get-NetUser, Get-NetGroup, Get-NetComputer, Invoke-ShareFinder"
     },
     {
@@ -219,7 +214,6 @@
         "Permission denied": "Add ~/.local/bin to PATH"
       },
       "next_steps": [],
-      "oscp_relevance": "high",
       "notes": "Impacket pre-installed on Kali.\n\nCore scripts:\nsecretsdump.py, psexec.py, smbexec.py, wmiexec.py, GetNPUsers.py, GetUserSPNs.py"
     },
     {
@@ -249,7 +243,6 @@
       "next_steps": [
         "evil-winrm-hash"
       ],
-      "oscp_relevance": "high",
       "notes": "Evil-WinRM provides interactive PowerShell remote shell over WinRM (port 5985 HTTP, 5986 HTTPS)"
     },
     {
@@ -278,7 +271,6 @@
       "next_steps": [
         "nmap-vuln-scan"
       ],
-      "oscp_relevance": "high",
       "notes": "Nmap pre-installed on Kali Linux.\n\nEssential for port scanning and service enumeration."
     },
     {
@@ -314,7 +306,6 @@
         "AV detection": "Disable AV or use obfuscated version"
       },
       "next_steps": [],
-      "oscp_relevance": "high",
       "notes": "Mimikatz extracts plaintext passwords, hashes, tickets from memory.\n\nRequires SYSTEM/Admin privileges.",
       "filled_example": "test -f C:\\Tools\\Mimikatz/mimikatz.exe"
     },
@@ -355,7 +346,6 @@
         "rubeus-asreproast",
         "rubeus-kerberoast"
       ],
-      "oscp_relevance": "high",
       "notes": "Rubeus is C# toolkit for Kerberos attacks:\nASREPRoasting, Kerberoasting, overpass-the-hash, ticket manipulation",
       "filled_example": "test -f C:\\Tools\\Rubeus/Rubeus.exe"
     },
@@ -383,7 +373,6 @@
         "getcap not found": "sudo apt install libcap2-bin -y"
       },
       "next_steps": [],
-      "oscp_relevance": "medium",
       "notes": "Part of libcap2-bin package.\n\nUsed to find binaries with elevated capabilities (e.g., CAP_SETUID for privilege escalation)"
     },
     {
@@ -414,7 +403,6 @@
         "Network error": "Check internet connectivity for image pull"
       },
       "next_steps": [],
-      "oscp_relevance": "medium",
       "notes": "Docker privilege escalation requires existing images or ability to pull.\n\nAlpine is minimal (5MB) and commonly available."
     },
     {
@@ -446,7 +434,6 @@
         "nc-file-transfer"
       ],
       "next_steps": [],
-      "oscp_relevance": "high",
       "notes": "curl and wget pre-installed on most Linux.\n\nWindows 10+ includes curl.exe.\n\nUsed for downloading exploits, tools, reverse shells."
     },
     {
@@ -477,7 +464,6 @@
       "next_steps": [
         "socat-port-forward"
       ],
-      "oscp_relevance": "medium",
       "notes": "Socat is multipurpose relay tool for pivoting.\n\nCan forward TCP/UDP, create reverse shells, port redirection."
     },
     {
@@ -516,7 +502,6 @@
       "next_steps": [
         "xfreerdp-connect"
       ],
-      "oscp_relevance": "high",
       "notes": "RDP default port 3389.\n\nService name:\nTermService (Windows).\n\nRequired for graphical remote access and lateral movement.",
       "filled_example": "nmap -p 3389 -Pn 192.168.1.100 | grep -q 'open'"
     },
@@ -548,7 +533,6 @@
         "python-http-server",
         "python-reverse-shell"
       ],
-      "oscp_relevance": "high",
       "notes": "Python usually pre-installed on Linux.\n\nUsed for HTTP servers, reverse shells, exploit modifications, enumeration scripts."
     },
     {
@@ -591,7 +575,6 @@
       "next_steps": [
         "proxychains-nmap"
       ],
-      "oscp_relevance": "high",
       "notes": "SOCKS proxy created via SSH dynamic port forwarding (ssh -D).\n\nConfigure proxychains:\n/etc/proxychains4.conf",
       "filled_example": "netstat -tulnp | grep -E ':1080.*LISTEN'"
     },
@@ -645,7 +628,6 @@
         "verify-credentials"
       ],
       "next_steps": [],
-      "oscp_relevance": "high",
       "notes": "Use to validate credentials before exploitation.\n\nSMB (port 445) most reliable for Windows credential validation.",
       "filled_example": "crackmapexec smb 192.168.1.100 -u admin -p P@ssw0rd123!"
     },
@@ -680,7 +662,6 @@
         "import-powerview",
         "invoke-mimikatz-remote"
       ],
-      "oscp_relevance": "high",
       "notes": "PowerShell v2+ on Windows 7+, v5.1 on Windows 10/Server 2016+.\n\nRequired for most Windows enumeration and exploitation scripts."
     },
     {
@@ -726,7 +707,6 @@
         "DNS resolution failed": "Use IP address instead of hostname"
       },
       "next_steps": [],
-      "oscp_relevance": "high",
       "flag_explanations": {
         "-c 4": "Send 4 ICMP echo requests",
         "-z": "Zero-I/O mode (scanning)",
@@ -763,7 +743,6 @@
         "Windows UAC": "Use administrator shell or bypass UAC"
       },
       "next_steps": [],
-      "oscp_relevance": "high",
       "notes": "Many post-exploitation tools require elevated privileges.\n\nLinux:\nuid=0, Windows:\nAdministrators/SYSTEM/Domain Admins groups."
     },
     {
@@ -797,7 +776,6 @@
         "Permission denied": "Check read permissions: ls -l <FILE_PATH>"
       },
       "alternatives": [],
-      "oscp_relevance": "medium",
       "notes": "test -f checks for regular files.\n\nUse -d for directories, -e for any file type (file/dir/symlink).",
       "filled_example": "test -f /tmp/file.txt"
     },
@@ -844,7 +822,6 @@
         "nmap-port-check"
       ],
       "next_steps": [],
-      "oscp_relevance": "high",
       "flag_explanations": {
         "-z": "Zero-I/O mode (scan only, no data transfer)",
         "-v": "Verbose output showing connection status"
@@ -907,7 +884,6 @@
       "next_steps": [
         "sqli-union-mysql-info"
       ],
-      "oscp_relevance": "high",
       "flag_explanations": {
         "--batch": "Non-interactive mode (accept defaults)",
         "--dbs": "Enumerate databases if vulnerable",
@@ -956,7 +932,6 @@
       "next_steps": [
         "smbmap-enumerate-auth"
       ],
-      "oscp_relevance": "high",
       "flag_explanations": {
         "-N": "Suppress password prompt (null authentication)",
         "-L": "List available shares on target"
@@ -1002,7 +977,6 @@
         "LDAPS required": "ldapsearch -x -H ldaps://<TARGET>:636"
       },
       "next_steps": [],
-      "oscp_relevance": "high",
       "flag_explanations": {
         "-x": "Simple authentication (not SASL)",
         "-H ldap://<TARGET>": "LDAP URI to connect",

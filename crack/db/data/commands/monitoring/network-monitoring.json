@@ -23,11 +23,9 @@
         "LINUX",
         "MONITORING",
         "NETWORK",
-        "OSCP:HIGH",
         "POST_EXPLOITATION",
         "QUICK_WIN"
       ],
-      "oscp_relevance": "high",
       "success_indicators": [
         "COMMAND",
         "PID",
@@ -47,10 +45,9 @@
         "netstat-listening-tcp",
         "ss-listening-all"
       ],
-      "notes": "CRITICAL for OSCP defense monitoring and privilege escalation.\n\nShows:\n(1) What services are listening, (2) Which processes have active connections, (3) User running each service.\n\nThe -P and -n flags provide raw data without DNS/service lookups (faster and avoids network activity).\n\nTime estimate:\n2-5 seconds.\n\nManual alternative:\ncat /proc/net/tcp; cat /proc/net/udp (manual parsing required).",
+      "notes": "CRITICAL for certification defense monitoring and privilege escalation.\n\nShows:\n(1) What services are listening, (2) Which processes have active connections, (3) User running each service.\n\nThe -P and -n flags provide raw data without DNS/service lookups (faster and avoids network activity).\n\nTime estimate:\n2-5 seconds.\n\nManual alternative:\ncat /proc/net/tcp; cat /proc/net/udp (manual parsing required).",
       "methodology_guidance": {
-        "after_success": "Identify processes listening on ports: lsof-listening-ports Check specific port: lsof-port-specific Cross-reference with ps-aux-full for process details",
-        "oscp_tips": "Examine suspicious connections"
+        "after_success": "Identify processes listening on ports: lsof-listening-ports Check specific port: lsof-port-specific Cross-reference with ps-aux-full for process details"
       }
     },
     {
@@ -74,10 +71,8 @@
         "LINUX",
         "MONITORING",
         "NETWORK",
-        "OSCP:HIGH",
         "POST_EXPLOITATION"
       ],
-      "oscp_relevance": "high",
       "success_indicators": [
         "LISTEN",
         "*:port",
@@ -92,10 +87,9 @@
         "netstat-listening-tcp",
         "ss-listening-ports"
       ],
-      "notes": "Filters to only show listening ports (attack surface).\n\nOSCP tip:\nCompare internal listening ports (127.0.0.1:*) vs external (0.0.0.0:* or specific IP).\n\nInternal-only ports often have weaker authentication.\n\nFor UDP listeners:\nlsof -i -P -n -sUDP:Idle.\n\nTime estimate:\n2 seconds.",
+      "notes": "Filters to only show listening ports (attack surface).\n\ncertification tip:\nCompare internal listening ports (127.0.0.1:*) vs external (0.0.0.0:* or specific IP).\n\nInternal-only ports often have weaker authentication.\n\nFor UDP listeners:\nlsof -i -P -n -sUDP:Idle.\n\nTime estimate:\n2 seconds.",
       "methodology_guidance": {
-        "after_success": "Check if listening services are externally accessible: nmap-service-scan Test for default credentials on listening services Check file permissions of service binaries: ls -la /path/to/service",
-        "oscp_tips": "Examine service configurations for misconfigurations"
+        "after_success": "Check if listening services are externally accessible: nmap-service-scan Test for default credentials on listening services Check file permissions of service binaries: ls -la /path/to/service"
       }
     },
     {
@@ -123,11 +117,9 @@
         "LINUX",
         "MONITORING",
         "NETWORK",
-        "OSCP:HIGH",
         "POST_EXPLOITATION",
         "QUICK_WIN"
       ],
-      "oscp_relevance": "high",
       "success_indicators": [
         "COMMAND",
         "PID",
@@ -173,10 +165,8 @@
         "LINUX",
         "MONITORING",
         "NETWORK",
-        "OSCP:MEDIUM",
         "POST_EXPLOITATION"
       ],
-      "oscp_relevance": "medium",
       "success_indicators": [
         "USER",
         "PID",
@@ -218,11 +208,9 @@
         "LINUX",
         "MONITORING",
         "NETWORK",
-        "OSCP:HIGH",
         "POST_EXPLOITATION",
         "STARTER"
       ],
-      "oscp_relevance": "high",
       "success_indicators": [
         "Proto",
         "Local Address",
@@ -246,10 +234,9 @@
       "prerequisites": [
         "ps-aux-full"
       ],
-      "notes": "Classic tool but deprecated in favor of 'ss' on modern systems.\n\nStill widely used in OSCP labs.\n\nMUST run with sudo for PID information, otherwise shows '(No info)'.\n\nOSCP tip:\nFocus on:\n(1) 0.0.0.0:* (externally accessible), (2) 127.0.0.1:* (local only, often weaker auth), (3) Unusual high ports (potential backdoors).\n\nTime estimate:\n2 seconds.",
+      "notes": "Classic tool but deprecated in favor of 'ss' on modern systems.\n\nStill widely used in certification labs.\n\nMUST run with sudo for PID information, otherwise shows '(No info)'.\n\ncertification tip:\nFocus on:\n(1) 0.0.0.0:* (externally accessible), (2) 127.0.0.1:* (local only, often weaker auth), (3) Unusual high ports (potential backdoors).\n\nTime estimate:\n2 seconds.",
       "methodology_guidance": {
-        "after_success": "Identify unknown services: searchsploit <SERVICE> Check service versions: nmap-service-scan Test for default credentials",
-        "oscp_tips": "Examine service configuration files: find /etc -name <SERVICE>*"
+        "after_success": "Identify unknown services: searchsploit <SERVICE> Check service versions: nmap-service-scan Test for default credentials"
       }
     },
     {
@@ -274,10 +261,8 @@
         "LINUX",
         "MONITORING",
         "NETWORK",
-        "OSCP:HIGH",
         "POST_EXPLOITATION"
       ],
-      "oscp_relevance": "high",
       "success_indicators": [
         "Netid",
         "State",
@@ -304,10 +289,9 @@
       "prerequisites": [
         "ps-aux-full"
       ],
-      "notes": "Modern replacement for netstat - 10x faster on systems with many connections.\n\nSame syntax as netstat for easy transition.\n\nOSCP tip:\nUse with grep for specific ports:\nss -tulpn | grep :80.\n\nFor all connections (not just listening):\nss -tupn.\n\nTime estimate:\n<1 second.",
+      "notes": "Modern replacement for netstat - 10x faster on systems with many connections.\n\nSame syntax as netstat for easy transition.\n\ncertification tip:\nUse with grep for specific ports:\nss -tulpn | grep :80.\n\nFor all connections (not just listening):\nss -tupn.\n\nTime estimate:\n<1 second.",
       "methodology_guidance": {
-        "after_success": "Compare with external port scan: nmap-service-scan Test accessible ports for vulnerabilities Check firewall rules: iptables -L -n -v",
-        "oscp_tips": "Examine service configurations"
+        "after_success": "Compare with external port scan: nmap-service-scan Test accessible ports for vulnerabilities Check firewall rules: iptables -L -n -v"
       }
     },
     {
@@ -331,10 +315,8 @@
         "LINUX",
         "MONITORING",
         "NETWORK",
-        "OSCP:MEDIUM",
         "POST_EXPLOITATION"
       ],
-      "oscp_relevance": "medium",
       "success_indicators": [
         "ESTAB",
         "Process",
@@ -347,7 +329,7 @@
       ],
       "next_steps": [],
       "alternatives": [],
-      "notes": "Useful for detecting active attacks or data exfiltration.\n\nOSCP defense tip:\nUnexpected ESTABLISHED connections to external IPs may indicate compromise.\n\nTime estimate:\n<1 second.",
+      "notes": "Useful for detecting active attacks or data exfiltration.\n\ncertification defense tip:\nUnexpected ESTABLISHED connections to external IPs may indicate compromise.\n\nTime estimate:\n<1 second.",
       "methodology_guidance": {
         "after_success": "Identify suspicious outbound connections Check for reverse shells (unexpected connections to unknown IPs) Verify legitimate connections Block malicious IPs: iptables -A OUTPUT -d <IP> -j DROP"
       }
@@ -370,11 +352,9 @@
         "ENUMERATION",
         "MONITORING",
         "NETWORK",
-        "OSCP:HIGH",
         "POST_EXPLOITATION",
         "WINDOWS"
       ],
-      "oscp_relevance": "high",
       "success_indicators": [
         "Proto",
         "Local Address",
@@ -389,7 +369,7 @@
       "alternatives": [
         "win-ps-netstat-process"
       ],
-      "notes": "Essential for Windows network monitoring.\n\nCombine with tasklist to map PIDs to names:\nnetstat -ano | findstr LISTENING, then tasklist /fi \"PID eq <PID>\".\n\nOSCP tip:\nLook for (1) LISTENING on 0.0.0.0 (externally accessible), (2) ESTABLISHED to unexpected IPs (C2 traffic), (3) Unusual ports (backdoors).\n\nTime estimate:\n2 seconds.",
+      "notes": "Essential for Windows network monitoring.\n\nCombine with tasklist to map PIDs to names:\nnetstat -ano | findstr LISTENING, then tasklist /fi \"PID eq <PID>\".\n\ncertification tip:\nLook for (1) LISTENING on 0.0.0.0 (externally accessible), (2) ESTABLISHED to unexpected IPs (C2 traffic), (3) Unusual ports (backdoors).\n\nTime estimate:\n2 seconds.",
       "methodology_guidance": {
         "after_success": "Map PID to process: win-tasklist-pid Get process details: win-wmic-process-pid Check for suspicious connections to unknown IPs Identify listening services: netstat -ano | findstr LISTENING"
       }
@@ -412,12 +392,10 @@
         "ENUMERATION",
         "MONITORING",
         "NETWORK",
-        "OSCP:HIGH",
         "POST_EXPLOITATION",
         "POWERSHELL",
         "WINDOWS"
       ],
-      "oscp_relevance": "high",
       "success_indicators": [
         "LocalAddress",
         "LocalPort",
@@ -433,7 +411,7 @@
       "alternatives": [
         "win-netstat-process-mapping"
       ],
-      "notes": "Modern PowerShell alternative to netstat.\n\nEasier to parse and filter.\n\nFor UDP:\nGet-NetUDPEndpoint.\n\nTime estimate:\n3 seconds.\n\nOSCP tip:\nOne-liner to show listening ports with names:\nGet-NetTCPConnection -State Listen | Select LocalPort,@{Name='Process';Expression={(Get-Process -Id $_.OwningProcess).Name}}",
+      "notes": "Modern PowerShell alternative to netstat.\n\nEasier to parse and filter.\n\nFor UDP:\nGet-NetUDPEndpoint.\n\nTime estimate:\n3 seconds.\n\ncertification tip:\nOne-liner to show listening ports with names:\nGet-NetTCPConnection -State Listen | Select LocalPort,@{Name='Process';Expression={(Get-Process -Id $_.OwningProcess).Name}}",
       "methodology_guidance": {
         "after_success": "Get process name: Get-Process -Id <PID> Filter listening: Get-NetTCPConnection -State Listen Filter established: Get-NetTCPConnection -State Established Combine with process info: Get-NetTCPConnection | ForEach-Object {[PSCustomObject]@{LocalPort=$_.LocalPort; Process=(Get-Process -Id $_.OwningProcess).Name}}"
       }
@@ -461,11 +439,9 @@
         "DEFENSE",
         "ENUMERATION",
         "MONITORING",
-        "OSCP:MEDIUM",
         "POST_EXPLOITATION",
         "WINDOWS"
       ],
-      "oscp_relevance": "medium",
       "success_indicators": [
         "Image Name",
         "PID",
@@ -482,8 +458,7 @@
       ],
       "notes": "Quick way to map netstat PIDs to process names.\n\nCommon workflow:\nnetstat -ano | findstr :443 (get PID) \u2192 tasklist /fi \"PID eq 1234\" (get name).\n\nTime estimate:\n<1 second.",
       "methodology_guidance": {
-        "after_success": "Get full process details: win-wmic-process-pid Check process executable location: wmic process where ProcessId=<PID> get ExecutablePath",
-        "oscp_tips": "Examine process for vulnerabilities"
+        "after_success": "Get full process details: win-wmic-process-pid Check process executable location: wmic process where ProcessId=<PID> get ExecutablePath"
       },
       "filled_example": "tasklist /fi \"PID eq 1234\""
     },
@@ -513,12 +488,10 @@
         "DEFENSE",
         "ENUMERATION",
         "MONITORING",
-        "OSCP:MEDIUM",
         "POST_EXPLOITATION",
         "WINDOWS",
         "WMIC"
       ],
-      "oscp_relevance": "medium",
       "success_indicators": [
         "ProcessId",
         "Name",

@@ -2,8 +2,8 @@
   "cheatsheets": [
     {
       "id": "mimikatz-oscp-comprehensive",
-      "name": "Mimikatz Comprehensive OSCP Cheatsheet",
-      "description": "Complete mimikatz reference for OSCP exam covering credential harvesting, Kerberos attacks, and AV bypass alternatives. Includes Pass-the-Ticket, DCSync, Golden/Silver tickets, and offline parsing techniques.",
+      "name": "Mimikatz Comprehensive pentest Cheatsheet",
+      "description": "Complete mimikatz reference for security assessment covering credential harvesting, Kerberos attacks, and AV bypass alternatives. Includes Pass-the-Ticket, DCSync, Golden/Silver tickets, and offline parsing techniques.",
       "educational_header": {
         "how_to_recognize": [
           "You have local administrator access on Windows machine",
@@ -205,7 +205,6 @@
         "MIMIKATZ",
         "ACTIVE_DIRECTORY",
         "CREDENTIAL_HARVESTING",
-        "OSCP:HIGH",
         "METHODOLOGY",
         "PASS_THE_TICKET",
         "DCSYNC",

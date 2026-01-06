@@ -3,9 +3,8 @@
     {
       "id": "linux-privesc-oneliners",
       "name": "Linux Privilege Escalation One-Liners",
-      "description": "Essential Linux privesc one-liners for rapid OSCP enumeration and exploitation. All commands use standard Linux utilities - no tool uploads required.",
+      "description": "Essential Linux privesc one-liners for rapid pentest enumeration and exploitation. All commands use standard Linux utilities - no tool uploads required.",
       "category": "one-liners",
-      "oscp_relevance": "high",
       "educational_header": {
         "how_to_recognize": [
           "You have a low-privilege shell on a Linux target",
@@ -16,14 +15,14 @@
         "when_to_look_for": [
           "Immediately after obtaining initial shell access",
           "When automated enumeration scripts are blocked or unavailable",
-          "During OSCP exam when every second counts",
+          "During security assessment when every second counts",
           "When pivoting through multiple Linux systems rapidly"
         ]
       },
       "scenarios": [
         {
           "title": "Scenario: Linux Privilege Escalation from Low-Priv Shell",
-          "context": "You have obtained a low-privilege shell on a Linux target (web shell, reverse shell, SSH as low-priv user). Need to escalate to root quickly using manual techniques suitable for OSCP exam.",
+          "context": "You have obtained a low-privilege shell on a Linux target (web shell, reverse shell, SSH as low-priv user). Need to escalate to root quickly using manual techniques suitable for security assessment.",
           "approach": "Phase 1: Quick Enumeration (30 seconds)\n- Run linux-quick-privesc-enum to check SUID, SGID, capabilities\n- Note any non-standard binaries or dangerous capabilities\n\nPhase 2: Check Quick Wins (30 seconds)\n- Test writable /etc/passwd: [ -w /etc/passwd ] && echo 'VULNERABLE'\n- If vulnerable, use linux-passwd-privesc for instant root\n- Check sudo -l for NOPASSWD entries\n\nPhase 3: SUID Exploitation (1-2 minutes)\n- Use linux-gtfobins-suid-filter to identify exploitable binaries\n- Cross-reference with GTFOBins website\n- Execute exploitation technique (e.g., find -exec /bin/bash -p)\n\nPhase 4: Cron/Scheduled Tasks (1 minute)\n- Use linux-cron-enum to view scheduled jobs\n- Look for writable scripts or PATH hijacking opportunities\n\nPhase 5: Flag Capture\n- Use linux-flag-finder to locate proof.txt\n- Screenshot id output with flag content",
           "commands": [
             "linux-quick-privesc-enum",
@@ -32,14 +31,14 @@
             "linux-cron-enum",
             "linux-flag-finder"
           ],
-          "expected_outcome": "Root access within 5 minutes using manual techniques. Methodology follows standard OSCP privesc workflow with documented evidence for reporting.",
+          "expected_outcome": "Root access within 5 minutes using manual techniques. Methodology follows standard pentest privesc workflow with documented evidence for reporting.",
           "why_this_works": "Systematic approach covers most common Linux privesc vectors in order of reliability and speed. SUID and writable passwd are the most reliable quick wins, followed by sudo misconfigurations and cron job exploitation."
         }
       ],
       "sections": [
         {
           "title": "Linux Privilege Escalation - One-Liners",
-          "notes": "Essential Linux privesc one-liners for rapid OSCP enumeration and exploitation.\n\nEXECUTION ORDER (recommended):\n1. Quick enum (SUID/SGID/capabilities) - First thing after shell\n2. Check writable /etc/passwd - Instant win if vulnerable\n3. Filter for GTFOBins exploitable binaries - Focus research\n4. Enumerate cron jobs - Look for writable scripts\n5. Research remaining SUID with searchsploit\n\nOSCP EXAM RELEVANCE: HIGH\n- All techniques are manual and exam-allowed\n- No tools required beyond standard Linux utilities\n- Quick execution (most under 30 seconds)\n\nCOMMON QUICK WINS:\n- Writable /etc/passwd: Add root user instantly\n- SUID find/vim/python: GTFOBins exploitation\n- Writable cron script: Inject reverse shell\n- Dangerous capabilities: cap_setuid on any interpreter",
+          "notes": "Essential Linux privesc one-liners for rapid certification enumeration and exploitation.\n\nEXECUTION ORDER (recommended):\n1. Quick enum (SUID/SGID/capabilities) - First thing after shell\n2. Check writable /etc/passwd - Instant win if vulnerable\n3. Filter for GTFOBins exploitable binaries - Focus research\n4. Enumerate cron jobs - Look for writable scripts\n5. Research remaining SUID with searchsploit\n\ncertification EXAM RELEVANCE: HIGH\n- All techniques are manual and exam-allowed\n- No tools required beyond standard Linux utilities\n- Quick execution (most under 30 seconds)\n\nCOMMON QUICK WINS:\n- Writable /etc/passwd: Add root user instantly\n- SUID find/vim/python: GTFOBins exploitation\n- Writable cron script: Inject reverse shell\n- Dangerous capabilities: cap_setuid on any interpreter",
           "commands": [
             {
               "id": "linux-flag-finder",
@@ -101,7 +100,6 @@
       ],
       "tags": [
         "ONE_LINER",
-        "OSCP:HIGH",
         "LINUX",
         "PRIVILEGE_ESCALATION",
         "SUID",

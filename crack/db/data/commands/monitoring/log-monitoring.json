@@ -26,11 +26,9 @@
         "LINUX",
         "LOG_ANALYSIS",
         "MONITORING",
-        "OSCP:HIGH",
         "POST_EXPLOITATION",
         "REAL_TIME"
       ],
-      "oscp_relevance": "high",
       "success_indicators": [
         "Log entries appear in real-time",
         "Timestamps show current time"
@@ -45,7 +43,7 @@
         "tail-follow-multiple",
         "journalctl-follow"
       ],
-      "notes": "CRITICAL for OSCP defense monitoring and troubleshooting.\n\nPress Ctrl+C to exit.\n\nCommon logs:\n/var/log/auth.log (authentication), /var/log/syslog (system), /var/log/apache2/access.log (web).\n\nTime estimate:\nruns continuously until stopped.\n\nManual alternative:\nwhile true; do tail -n 1 <FILE>; sleep 1; done",
+      "notes": "CRITICAL for certification defense monitoring and troubleshooting.\n\nPress Ctrl+C to exit.\n\nCommon logs:\n/var/log/auth.log (authentication), /var/log/syslog (system), /var/log/apache2/access.log (web).\n\nTime estimate:\nruns continuously until stopped.\n\nManual alternative:\nwhile true; do tail -n 1 <FILE>; sleep 1; done",
       "methodology_guidance": {
         "after_success": "Watch for authentication attempts: tail -f /var/log/auth.log Monitor system messages: tail -f /var/log/syslog Watch web server logs: tail -f /var/log/apache2/access.log Filter with grep: tail-follow-filter"
       },
@@ -83,11 +81,9 @@
         "LINUX",
         "LOG_ANALYSIS",
         "MONITORING",
-        "OSCP:HIGH",
         "POST_EXPLOITATION",
         "REAL_TIME"
       ],
-      "oscp_relevance": "high",
       "success_indicators": [
         "Filtered log entries appear",
         "Only matching lines displayed"
@@ -110,7 +106,7 @@
       "prerequisites": [
         "tail-follow-log"
       ],
-      "notes": "--line-buffered is REQUIRED or grep will buffer output and display will be delayed.\n\nOSCP defense patterns:\n'Failed password' (brute force), 'Invalid user' (enumeration), 'Accepted publickey' (successful login), 'sudo.*COMMAND' (privilege usage).\n\nTime estimate:\nruns continuously.",
+      "notes": "--line-buffered is REQUIRED or grep will buffer output and display will be delayed.\n\ncertification defense patterns:\n'Failed password' (brute force), 'Invalid user' (enumeration), 'Accepted publickey' (successful login), 'sudo.*COMMAND' (privilege usage).\n\nTime estimate:\nruns continuously.",
       "methodology_guidance": {
         "after_success": "Monitor failed SSH attempts: tail -f /var/log/auth.log | grep 'Failed password' Watch for root logins: tail -f /var/log/auth.log | grep 'session opened.*root' Monitor sudo usage: tail -f /var/log/auth.log | grep 'sudo.*COMMAND' Track user activity: tail -f /var/log/auth.log | grep <USERNAME>"
       },
@@ -145,11 +141,9 @@
         "LINUX",
         "LOG_ANALYSIS",
         "MONITORING",
-        "OSCP:MEDIUM",
         "POST_EXPLOITATION",
         "REAL_TIME"
       ],
-      "oscp_relevance": "medium",
       "success_indicators": [
         "==> <FILENAME> <==",
         "File headers displayed",
@@ -183,12 +177,10 @@
         "LINUX",
         "LOG_ANALYSIS",
         "MONITORING",
-        "OSCP:HIGH",
         "POST_EXPLOITATION",
         "REAL_TIME",
         "SYSTEMD"
       ],
-      "oscp_relevance": "high",
       "success_indicators": [
         "Journal entries appear",
         "Timestamps",
@@ -202,7 +194,7 @@
       "alternatives": [
         "tail-follow-log"
       ],
-      "notes": "systemd journal is unified log system on modern Linux.\n\nCombines all system and service logs.\n\nOSCP tip:\nGreat for monitoring service failures, authentication attempts, and system events.\n\nTime estimate:\nruns continuously.\n\nFor systems without systemd:\nfall back to tail -f /var/log/syslog",
+      "notes": "systemd journal is unified log system on modern Linux.\n\nCombines all system and service logs.\n\ncertification tip:\nGreat for monitoring service failures, authentication attempts, and system events.\n\nTime estimate:\nruns continuously.\n\nFor systems without systemd:\nfall back to tail -f /var/log/syslog",
       "methodology_guidance": {
         "after_success": "Follow specific service: journalctl-service-follow Filter by priority: journalctl -f -p err (errors only) Combine filters: journalctl -f -u ssh -p warning",
         "time_estimate": "Filter by time: journalctl --since \"5 minutes ago\""
@@ -232,12 +224,10 @@
         "LINUX",
         "LOG_ANALYSIS",
         "MONITORING",
-        "OSCP:HIGH",
         "POST_EXPLOITATION",
         "REAL_TIME",
         "SYSTEMD"
       ],
-      "oscp_relevance": "high",
       "success_indicators": [
         "Service log entries",
         "Filtered to specified service"
@@ -291,11 +281,9 @@
         "LINUX",
         "LOG_ANALYSIS",
         "MONITORING",
-        "OSCP:MEDIUM",
         "POST_EXPLOITATION",
         "SYSTEMD"
       ],
-      "oscp_relevance": "medium",
       "success_indicators": [
         "Log entries at specified priority",
         "Error messages if -p err"
@@ -337,11 +325,9 @@
         "LINUX",
         "LOG_ANALYSIS",
         "MONITORING",
-        "OSCP:MEDIUM",
         "POST_EXPLOITATION",
         "SYSTEMD"
       ],
-      "oscp_relevance": "medium",
       "success_indicators": [
         "Log entries in time range",
         "Timestamps match range"
@@ -375,10 +361,8 @@
         "LINUX",
         "LOG_ANALYSIS",
         "MONITORING",
-        "OSCP:MEDIUM",
         "POST_EXPLOITATION"
       ],
-      "oscp_relevance": "medium",
       "success_indicators": [
         "Kernel messages",
         "Hardware detection",
@@ -413,11 +397,9 @@
         "LINUX",
         "LOG_ANALYSIS",
         "MONITORING",
-        "OSCP:LOW",
         "POST_EXPLOITATION",
         "REAL_TIME"
       ],
-      "oscp_relevance": "low",
       "success_indicators": [
         "Real-time kernel messages",
         "New hardware events displayed"
@@ -450,11 +432,9 @@
         "LINUX",
         "LOG_ANALYSIS",
         "MONITORING",
-        "OSCP:HIGH",
         "POST_EXPLOITATION",
         "SECURITY"
       ],
-      "oscp_relevance": "high",
       "success_indicators": [
         "Failed password",
         "Failed publickey",
@@ -468,7 +448,7 @@
       "alternatives": [
         "lastb-failed-logins"
       ],
-      "notes": "CRITICAL for OSCP defense.\n\nPatterns:\n'Failed password for <USER>' (wrong password), 'Invalid user <USER>' (enumeration), 'Failed publickey for <USER>' (SSH key failed).\n\nMultiple failures from same IP = brute force attack.\n\nTime estimate:\n1-3 seconds.\n\nLog location varies:\n/var/log/auth.log (Debian/Ubuntu), /var/log/secure (RHEL/CentOS).",
+      "notes": "CRITICAL for certification defense.\n\nPatterns:\n'Failed password for <USER>' (wrong password), 'Invalid user <USER>' (enumeration), 'Failed publickey for <USER>' (SSH key failed).\n\nMultiple failures from same IP = brute force attack.\n\nTime estimate:\n1-3 seconds.\n\nLog location varies:\n/var/log/auth.log (Debian/Ubuntu), /var/log/secure (RHEL/CentOS).",
       "methodology_guidance": {
         "after_success": "Count failed attempts: grep -c \"Failed password\" /var/log/auth.log Extract IPs: grep \"Failed password\" /var/log/auth.log | grep -oP '\\d+\\.\\d+\\.\\d+\\.\\d+' | sort | uniq -c Block attacking IPs: iptables -A INPUT -s <IP> -j DROP Check for username enumeration: grep \"Invalid user\" /var/log/auth.log"
       }
@@ -491,11 +471,9 @@
         "LINUX",
         "LOG_ANALYSIS",
         "MONITORING",
-        "OSCP:HIGH",
         "POST_EXPLOITATION",
         "PRIVILEGE_ESCALATION"
       ],
-      "oscp_relevance": "high",
       "success_indicators": [
         "COMMAND=",
         "USER=",
@@ -517,7 +495,7 @@
         "sudo-exploit-find",
         "test-sudo-without"
       ],
-      "notes": "CRITICAL for defense auditing.\n\nEach sudo execution is logged with:\ntimestamp, user, command, working directory.\n\nOSCP tip:\nLook for suspicious commands:\nbash, sh, vi, less, find, python (all can spawn shells).\n\nTime estimate:\n2-5 seconds depending on log size.",
+      "notes": "CRITICAL for defense auditing.\n\nEach sudo execution is logged with:\ntimestamp, user, command, working directory.\n\ncertification tip:\nLook for suspicious commands:\nbash, sh, vi, less, find, python (all can spawn shells).\n\nTime estimate:\n2-5 seconds depending on log size.",
       "methodology_guidance": {
         "after_success": "Identify privilege escalation attempts Track which users use sudo: grep \"sudo.*COMMAND\" /var/log/auth.log | grep -oP 'USER=\\w+' | sort | uniq -c Find specific command: grep \"sudo.*COMMAND=/usr/bin/bash\" /var/log/auth.log Check for sudo failures: grep \"sudo.*incorrect password\" /var/log/auth.log"
       }
@@ -539,11 +517,9 @@
         "LINUX",
         "LOG_ANALYSIS",
         "MONITORING",
-        "OSCP:HIGH",
         "POST_EXPLOITATION",
         "SECURITY"
       ],
-      "oscp_relevance": "high",
       "success_indicators": [
         "Username",
         "Terminal",
@@ -559,7 +535,7 @@
       "alternatives": [
         "grep-auth-failed"
       ],
-      "notes": "Reads /var/log/btmp (bad login log).\n\nMUST run as root.\n\nOSCP defense tip:\nMultiple failures = brute force.\n\nLook for:\n(1) Same IP, multiple users (enumeration), (2) Same user, many attempts (password guessing), (3) Many IPs, same user (distributed attack).\n\nTime estimate:\n1-5 seconds depending on attack history.",
+      "notes": "Reads /var/log/btmp (bad login log).\n\nMUST run as root.\n\ncertification defense tip:\nMultiple failures = brute force.\n\nLook for:\n(1) Same IP, multiple users (enumeration), (2) Same user, many attempts (password guessing), (3) Many IPs, same user (distributed attack).\n\nTime estimate:\n1-5 seconds depending on attack history.",
       "methodology_guidance": {
         "after_success": "Count attempts per IP: lastb | awk '{print $3}' | sort | uniq -c | sort -rn Block attacker IPs: iptables -A INPUT -s <IP> -j DROP Check for username patterns (enumeration) Clear btmp after review: sudo truncate -s 0 /var/log/btmp"
       }
@@ -580,12 +556,10 @@
         "LINUX",
         "LOG_ANALYSIS",
         "MONITORING",
-        "OSCP:LOW",
         "POST_EXPLOITATION",
         "SYSTEMD",
         "TROUBLESHOOTING"
       ],
-      "oscp_relevance": "low",
       "success_indicators": [
         "Kernel boot messages",
         "Service startup messages",

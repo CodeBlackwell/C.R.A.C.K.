@@ -17,7 +17,7 @@
           "File disclosure: LFI vulnerability allows reading ~/.ssh/id_rsa",
           "Backup discovery: Found .tar.gz or .zip files containing home directory backups",
           "Git enumeration: Accidentally committed keys in repository history (.git/)",
-          "OSCP exam: Need SSH access but don't have password (key provides alternative authentication)"
+          "security assessment: Need SSH access but don't have password (key provides alternative authentication)"
         ]
       },
       "scenarios": [
@@ -215,8 +215,7 @@
         "SSH",
         "PRIVATE_KEY",
         "PASSPHRASE",
-        "JOHN",
-        "OSCP:HIGH"
+        "JOHN"
       ]
     }
   ]

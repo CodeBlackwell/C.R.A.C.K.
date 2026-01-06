@@ -49,7 +49,7 @@
           "First step after gaining access to domain-joined Windows workstation",
           "Before lateral movement - identify domain controllers and PDC",
           "When you need domain context without importing PowerView",
-          "OSCP exam initial AD enumeration phase"
+          "security assessment initial AD enumeration phase"
         ],
         "exam_relevance": "HIGH - Immediate domain awareness without tool uploads. Essential first command on domain-joined hosts.",
         "time_estimate": "<5 seconds",
@@ -61,13 +61,11 @@
           "DomainControllers property returns collection of DC objects with Name/IPAddress/OSVersion"
         ]
       },
-      "oscp_priority": "HIGH",
       "tags": [
         "POWERSHELL",
         "ACTIVE_DIRECTORY",
         "ENUMERATION",
         "DOMAIN_CONTROLLERS",
-        "OSCP:HIGH",
         "NO_TOOLS_REQUIRED"
       ],
       "related_commands": [

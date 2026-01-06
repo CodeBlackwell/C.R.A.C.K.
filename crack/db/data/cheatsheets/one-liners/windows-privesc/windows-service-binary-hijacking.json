@@ -5,7 +5,6 @@
       "name": "Windows Service Binary Hijacking Privilege Escalation",
       "description": "Complete methodology for exploiting writable Windows service binaries to escalate privileges to SYSTEM. When administrators install third-party software (XAMPP, custom applications), they often grant overly permissive write access to service binaries. If a low-privilege user can replace the service binary with a malicious payload, the payload executes with the service's privileges (typically LocalSystem/SYSTEM) when the service restarts. This technique requires: (1) Finding a service with a writable binary, (2) Creating a malicious payload, (3) Replacing the binary, and (4) Triggering service restart via direct command or system reboot. PowerUp.ps1 can automate detection but has known bugs with complex service paths - always verify manually.",
       "category": "one-liners",
-      "oscp_relevance": "high",
       "educational_header": {
         "how_to_recognize": [
           "Service binary paths outside C:\\Windows\\System32 (e.g., C:\\xampp, C:\\Program Files\\CustomApp)",
@@ -104,7 +103,7 @@
             "win-service-binary-enum-running"
           ],
           "expected_outcome": "Either identify alternative restart method, find different auto-start service, or document as 'requires reboot' and pivot to other techniques.",
-          "why_this_works": "Service binary hijacking requires the service to execute the replaced binary. Without ability to restart service or reboot system, exploitation is delayed until external trigger occurs. In OSCP, always look for auto-start services first to ensure you can complete the attack chain."
+          "why_this_works": "Service binary hijacking requires the service to execute the replaced binary. Without ability to restart service or reboot system, exploitation is delayed until external trigger occurs. in assessments, always look for auto-start services first to ensure you can complete the attack chain."
         }
       ],
       "sections": [
@@ -246,7 +245,6 @@
         "PRIVILEGE_ESCALATION",
         "SERVICE_HIJACKING",
         "BINARY_HIJACKING",
-        "OSCP:HIGH",
         "POST_EXPLOITATION",
         "POWERUP",
         "MINGW",

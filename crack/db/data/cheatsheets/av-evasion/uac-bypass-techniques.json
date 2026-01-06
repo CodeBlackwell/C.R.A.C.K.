@@ -5,7 +5,6 @@
       "name": "UAC Bypass - Privilege Escalation Techniques",
       "description": "Quick reference for bypassing User Account Control on Windows 7-11. Covers FodHelper, EventVwr, and detection validation methods.",
       "category": "av-evasion",
-      "oscp_relevance": "medium",
       "educational_header": {
         "how_to_recognize": [
           "User is in local Administrators group but shell has medium integrity level",

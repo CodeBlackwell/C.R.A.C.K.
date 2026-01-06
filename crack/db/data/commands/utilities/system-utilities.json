@@ -8,8 +8,7 @@
       "description": "Create directory with parent directories if they don't exist",
       "tags": [
         "utility",
-        "filesystem",
-        "OSCP:MEDIUM"
+        "filesystem"
       ],
       "variables": [
         {
@@ -22,7 +21,6 @@
       "flag_explanations": {
         "-p": "Create parent directories as needed, no error if directory exists"
       },
-      "oscp_relevance": "medium",
       "notes": "Essential for organizing enumeration output and creating staging directories",
       "filled_example": "mkdir -p /tmp/output"
     },
@@ -35,8 +33,7 @@
       "tags": [
         "utility",
         "filesystem",
-        "permissions",
-        "OSCP:HIGH"
+        "permissions"
       ],
       "variables": [
         {
@@ -52,7 +49,6 @@
       "alternatives": [
         "chmod-numeric-permissions"
       ],
-      "oscp_relevance": "high",
       "notes": "Required for running scripts, exploits, and compiled binaries",
       "filled_example": "chmod +x exploit.sh"
     },
@@ -65,8 +61,7 @@
       "tags": [
         "utility",
         "filesystem",
-        "permissions",
-        "OSCP:MEDIUM"
+        "permissions"
       ],
       "variables": [
         {
@@ -90,7 +85,6 @@
       "alternatives": [
         "chmod-executable"
       ],
-      "oscp_relevance": "medium",
       "notes": "Common permissions:\n755 for executables, 644 for files, 700 for sensitive scripts",
       "filled_example": "chmod 755 script.sh"
     },
@@ -103,8 +97,7 @@
       "tags": [
         "utility",
         "filesystem",
-        "permissions",
-        "OSCP:MEDIUM"
+        "permissions"
       ],
       "variables": [
         {
@@ -120,7 +113,6 @@
       "alternatives": [
         "chmod-numeric-permissions"
       ],
-      "oscp_relevance": "medium",
       "filled_example": "chmod +w config.txt"
     },
     {
@@ -132,8 +124,7 @@
       "tags": [
         "utility",
         "filesystem",
-        "permissions",
-        "OSCP:MEDIUM"
+        "permissions"
       ],
       "variables": [
         {
@@ -158,7 +149,6 @@
       "flag_explanations": {
         "-R": "Recursively change ownership of directories and contents"
       },
-      "oscp_relevance": "medium",
       "notes": "Useful after uploading web shells or modifying system files",
       "filled_example": "chown www-data:www-data /var/www/shell.php"
     },
@@ -170,8 +160,7 @@
       "description": "Copy files or directories",
       "tags": [
         "utility",
-        "filesystem",
-        "OSCP:MEDIUM"
+        "filesystem"
       ],
       "variables": [
         {
@@ -195,7 +184,6 @@
       "alternatives": [
         "rsync-files"
       ],
-      "oscp_relevance": "medium",
       "filled_example": "cp /usr/share/exploits/shell.php /tmp/shell.php"
     },
     {
@@ -206,8 +194,7 @@
       "description": "Move or rename files and directories",
       "tags": [
         "utility",
-        "filesystem",
-        "OSCP:MEDIUM"
+        "filesystem"
       ],
       "variables": [
         {
@@ -227,7 +214,6 @@
         "-i": "Interactive - prompt before overwrite",
         "-v": "Verbose output"
       },
-      "oscp_relevance": "medium",
       "filled_example": "mv exploit.py exploit_backup.py"
     },
     {
@@ -238,8 +224,7 @@
       "description": "Delete files or directories",
       "tags": [
         "utility",
-        "filesystem",
-        "OSCP:MEDIUM"
+        "filesystem"
       ],
       "variables": [
         {
@@ -254,7 +239,6 @@
         "-f": "Force removal without prompts",
         "-i": "Interactive - prompt before each removal"
       },
-      "oscp_relevance": "medium",
       "notes": "Be careful with rm -rf, especially as root - can destroy systems",
       "filled_example": "rm /tmp/exploit.py"
     },
@@ -266,8 +250,7 @@
       "description": "Create empty file or update timestamp of existing file",
       "tags": [
         "utility",
-        "filesystem",
-        "OSCP:LOW"
+        "filesystem"
       ],
       "variables": [
         {
@@ -277,7 +260,6 @@
           "required": true
         }
       ],
-      "oscp_relevance": "low",
       "notes": "Useful for testing write permissions or creating placeholder files",
       "filled_example": "touch /tmp/test.txt"
     },
@@ -289,8 +271,7 @@
       "description": "Create symbolic link pointing to target file or directory",
       "tags": [
         "utility",
-        "filesystem",
-        "OSCP:MEDIUM"
+        "filesystem"
       ],
       "variables": [
         {
@@ -310,7 +291,6 @@
         "-s": "Create symbolic (soft) link instead of hard link",
         "-f": "Force - remove existing destination files"
       },
-      "oscp_relevance": "medium",
       "notes": "Useful for path traversal exploits or creating convenient shortcuts",
       "filled_example": "ln -s /usr/share/wordlists/rockyou.txt rockyou.txt"
     },
@@ -323,8 +303,7 @@
       "tags": [
         "utility",
         "filesystem",
-        "enumeration",
-        "OSCP:HIGH"
+        "enumeration"
       ],
       "variables": [
         {
@@ -350,7 +329,6 @@
         "-size": "Find files by size"
       },
       "alternatives": [],
-      "oscp_relevance": "high",
       "notes": "Essential for privilege escalation - finding SUID binaries, writable files, config files",
       "prerequisites": [],
       "next_steps": [
@@ -366,8 +344,7 @@
       "description": "Concatenate and display file contents to stdout",
       "tags": [
         "utility",
-        "filesystem",
-        "OSCP:HIGH"
+        "filesystem"
       ],
       "variables": [
         {
@@ -382,7 +359,6 @@
         "tail-file",
         "less-file"
       ],
-      "oscp_relevance": "high",
       "notes": "Most common way to read files - essential for reading flags, configs, source code",
       "filled_example": "cat /etc/passwd"
     },
@@ -395,8 +371,7 @@
       "tags": [
         "utility",
         "text-processing",
-        "enumeration",
-        "OSCP:HIGH"
+        "enumeration"
       ],
       "variables": [
         {
@@ -420,7 +395,6 @@
         "-E": "Extended regex",
         "-o": "Show only matching part of line"
       },
-      "oscp_relevance": "high",
       "notes": "Critical for finding credentials, API keys, sensitive data in files",
       "prerequisites": [],
       "alternatives": [
@@ -441,8 +415,7 @@
       "description": "Display first N lines of file",
       "tags": [
         "utility",
-        "text-processing",
-        "OSCP:MEDIUM"
+        "text-processing"
       ],
       "variables": [
         {
@@ -465,7 +438,6 @@
         "cat-file",
         "less-file"
       ],
-      "oscp_relevance": "medium",
       "filled_example": "head -n 10 log.txt"
     },
     {
@@ -476,8 +448,7 @@
       "description": "Display last N lines of file",
       "tags": [
         "utility",
-        "text-processing",
-        "OSCP:MEDIUM"
+        "text-processing"
       ],
       "variables": [
         {
@@ -501,7 +472,6 @@
         "cat-file",
         "less-file"
       ],
-      "oscp_relevance": "medium",
       "notes": "tail -f is essential for monitoring logs during exploitation",
       "filled_example": "tail -n 10 log.txt"
     },
@@ -513,8 +483,7 @@
       "description": "View file contents with scrolling and search capabilities",
       "tags": [
         "utility",
-        "text-processing",
-        "OSCP:MEDIUM"
+        "text-processing"
       ],
       "variables": [
         {
@@ -527,7 +496,6 @@
       "alternatives": [
         "cat-file"
       ],
-      "oscp_relevance": "medium",
       "notes": "Better than cat for large files - supports search with /, quit with q",
       "filled_example": "less large_file.txt"
     },
@@ -539,8 +507,7 @@
       "description": "Count lines, words, and characters in file",
       "tags": [
         "utility",
-        "text-processing",
-        "OSCP:LOW"
+        "text-processing"
       ],
       "variables": [
         {
@@ -555,7 +522,6 @@
         "-w": "Count only words",
         "-c": "Count only bytes/characters"
       },
-      "oscp_relevance": "low",
       "notes": "Useful for checking wordlist sizes or output lengths",
       "filled_example": "wc wordlist.txt"
     },
@@ -567,8 +533,7 @@
       "description": "Extract tar archive (supports .tar, .tar.gz, .tgz)",
       "tags": [
         "utility",
-        "compression",
-        "OSCP:MEDIUM"
+        "compression"
       ],
       "variables": [
         {
@@ -590,7 +555,6 @@
         "unzip-file",
         "gunzip-decompress"
       ],
-      "oscp_relevance": "medium",
       "notes": "Common for extracting exploit code or downloaded tools",
       "filled_example": "tar -xvf exploit.tar.gz"
     },
@@ -602,8 +566,7 @@
       "description": "Create compressed tar archive",
       "tags": [
         "utility",
-        "compression",
-        "OSCP:MEDIUM"
+        "compression"
       ],
       "variables": [
         {
@@ -625,7 +588,6 @@
         "-v": "Verbose output",
         "-f": "Specify filename"
       },
-      "oscp_relevance": "medium",
       "notes": "Useful for exfiltrating multiple files or creating backups",
       "filled_example": "tar -czvf backup.tar.gz /tmp/loot/*"
     },
@@ -637,8 +599,7 @@
       "description": "Extract zip archive",
       "tags": [
         "utility",
-        "compression",
-        "OSCP:MEDIUM"
+        "compression"
       ],
       "variables": [
         {
@@ -657,7 +618,6 @@
       "alternatives": [
         "tar-extract"
       ],
-      "oscp_relevance": "medium",
       "filled_example": "unzip exploit.zip"
     },
     {
@@ -668,8 +628,7 @@
       "description": "Compress file with gzip (creates .gz file)",
       "tags": [
         "utility",
-        "compression",
-        "OSCP:LOW"
+        "compression"
       ],
       "variables": [
         {
@@ -687,7 +646,6 @@
       "alternatives": [
         "tar-create"
       ],
-      "oscp_relevance": "low",
       "filled_example": "gzip large_file.txt"
     },
     {
@@ -698,8 +656,7 @@
       "description": "Decompress gzip file",
       "tags": [
         "utility",
-        "compression",
-        "OSCP:LOW"
+        "compression"
       ],
       "variables": [
         {
@@ -716,7 +673,6 @@
       "alternatives": [
         "tar-extract"
       ],
-      "oscp_relevance": "low",
       "filled_example": "gunzip file.gz"
     }
   ]

@@ -3,7 +3,7 @@
 ## Project Overview
 
 **C.R.A.C.K.** = Comprehensive Recon & Attack Creation Kit
-Professional pentesting toolkit for OSCP preparation.
+Professional penetration testing toolkit.
 
 **Architecture Doc**: See `ARCHITECTURE.md` for full inventory of tools, data persistence, and Neo4j unification plan.
 
@@ -76,7 +76,7 @@ Simplified engagement/target tracking with Neo4j persistence. No client/organiza
 ### CLI Commands (Python)
 ```bash
 # Engagement Management
-crack engagement create "OSCP Lab"
+crack engagement create "Pentest Lab"
 crack engagement list
 crack engagement activate <id>
 crack engagement status
@@ -185,7 +185,7 @@ See `breach/CLAUDE.md` for development guide.
 - Command IDs: `kebab-case`, globally unique
 - Variables: `<UPPERCASE_ANGLE_BRACKETS>`
 - Links: Use command IDs only (not text)
-- Required tag: `OSCP:HIGH|MEDIUM|LOW`
+- Tags: Category-based (LINUX, WINDOWS, WEB, AD, etc.)
 
 ### Backend Selection
 CLI auto-detects in order:
@@ -253,6 +253,6 @@ Priority items remaining:
 
 Focus on:
 - Manual methodology over tool memorization
-- Documentation of failures (critical for OSCP)
-- Time tracking for exam planning
+- Documentation of failures (critical for learning)
+- Time tracking for engagement planning
 - Tool-independent exploitation skills

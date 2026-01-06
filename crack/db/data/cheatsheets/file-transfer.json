@@ -2,7 +2,7 @@
   "cheatsheets": [
     {
       "id": "file-transfer-cheatsheet",
-      "name": "File Transfer Methods for OSCP",
+      "name": "File Transfer Methods for security work",
       "description": "Comprehensive guide to file transfer techniques for uploading tools to targets and exfiltrating data back to attack machine",
       "educational_header": {
         "how_to_recognize": [
@@ -285,7 +285,6 @@
       ],
       "tags": [
         "FILE_TRANSFER",
-        "OSCP:HIGH",
         "METHODOLOGY",
         "QUICK_WIN"
       ]

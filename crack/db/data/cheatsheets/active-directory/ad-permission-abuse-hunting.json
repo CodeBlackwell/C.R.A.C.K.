@@ -15,7 +15,7 @@
           "After Kerberoasting yields no crackable hashes",
           "When you control a low-privilege account and need path to Domain Admins",
           "In environments with multiple OUs/departments (delegated permissions common)",
-          "OSCP exam: Check ACLs on privileged groups (Domain Admins, Enterprise Admins) and service accounts"
+          "security assessment: Check ACLs on privileged groups (Domain Admins, Enterprise Admins) and service accounts"
         ]
       },
       "scenarios": [
@@ -73,7 +73,7 @@
             "powerview-get-objectacl-forcechangepassword",
             "powerview-find-interestingdomainacl"
           ],
-          "expected_outcome": "Get-ObjectAcl -Identity dbadmin | Where {$_.ObjectAceType -eq 'User-Force-Change-Password'} shows helpdesk-t2 has this right. Run: Set-DomainUserPassword -Identity dbadmin -AccountPassword (ConvertTo-SecureString 'NewPass123!' -AsPlainText -Force). Password is now reset. Authenticate as dbadmin and access database servers. This is a common finding in OSCP exams - helpdesk delegation leads to privilege escalation.",
+          "expected_outcome": "Get-ObjectAcl -Identity dbadmin | Where {$_.ObjectAceType -eq 'User-Force-Change-Password'} shows helpdesk-t2 has this right. Run: Set-DomainUserPassword -Identity dbadmin -AccountPassword (ConvertTo-SecureString 'NewPass123!' -AsPlainText -Force). Password is now reset. Authenticate as dbadmin and access database servers. This is a common finding in assessments exams - helpdesk delegation leads to privilege escalation.",
           "why_this_works": "Active Directory supports Extended Rights - specific permissions beyond standard read/write/modify. 'User-Force-Change-Password' (GUID: 00299570-246d-11d0-a768-00aa006e0529) is an extended right that allows password resets without knowing the current password. This is delegated to helpdesk teams for password reset scenarios but becomes a privilege escalation vector when over-delegated. The reset happens server-side (DC) - no client-side validation of current password."
         }
       ],
@@ -165,8 +165,7 @@
         "PRIVILEGE_ESCALATION",
         "GENERICALL",
         "WRITEDACL",
-        "WRITEOWNER",
-        "OSCP:HIGH"
+        "WRITEOWNER"
       ]
     }
   ]

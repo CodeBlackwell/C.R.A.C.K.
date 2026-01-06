@@ -29,7 +29,6 @@
         "qc": "Query configuration - displays service configuration details"
       },
       "notes": "Extracted from instruction text:\n'Manual check with:\nsc qc <servicename>'.\n\nUsed to manually verify service configuration details during privilege escalation enumeration.",
-      "oscp_relevance": "high",
       "alternatives": [
         "get-service"
       ],
@@ -54,7 +53,6 @@
         "--version": "Display version information and compilation details"
       },
       "notes": "Extracted from instruction text:\n'Check nmap version:\nnmap --version (if < 5.21, interactive works)'.\n\nNmap versions prior to 5.21 support interactive mode which can be exploited for privilege escalation via sudo.",
-      "oscp_relevance": "medium",
       "next_steps": []
     },
     {
@@ -80,7 +78,6 @@
         "strings": "Default behavior extracts sequences of 4+ printable characters"
       },
       "notes": "Extracted from instruction text:\n'Manual binary analysis:\nstrings /path/to/binary'.\n\nCommon technique for analyzing SUID binaries, identifying library dependencies, or finding embedded credentials.",
-      "oscp_relevance": "high",
       "alternatives": [],
       "next_steps": [],
       "filled_example": "strings /usr/local/bin/vulnerable_app"
@@ -114,7 +111,6 @@
         "has no capability"
       ],
       "notes": "Extracted from instruction text:\n'Check specific binary:\ngetcap /usr/bin/python3 (test known binary)'.\n\nVerifies if a known binary has capabilities that could be exploited for privilege escalation.",
-      "oscp_relevance": "high",
       "prerequisites": [],
       "alternatives": [],
       "filled_example": "getcap /usr/bin/python3"
@@ -144,7 +140,6 @@
         "OU=Domain"
       ],
       "notes": "Extracted from instruction text:\n'Manual check:\nLook for 'CN=Users' or 'CN=Groups' in DN path'.\n\nUsed to manually verify LDAP query results and identify organizational structure in Active Directory environments.",
-      "oscp_relevance": "medium",
       "alternatives": [
         "ldapsearch-ad"
       ],
@@ -168,7 +163,6 @@
         "comment"
       ],
       "notes": "Extracted from instruction text:\n'Manual attribute inspection:\n$script:AllUsers[-1].Properties | select description,info,comment'.\n\nPowerShell command to inspect specific attributes of AD user objects, often containing passwords or sensitive notes.",
-      "oscp_relevance": "high",
       "prerequisites": [
         "import-powerview"
       ],
@@ -195,7 +189,6 @@
         "Cannot find path"
       ],
       "notes": "Extracted from instruction text:\n'Check module path:\n(Get-Module PowerView).Path | Select-String -Pattern 'version''.\n\nVerifies PowerView module is correctly imported and identifies which version is active.",
-      "oscp_relevance": "medium",
       "prerequisites": [
         "import-powerview"
       ],
@@ -224,7 +217,6 @@
         "-match": "Regular expression matching operator"
       },
       "notes": "Extracted from instruction text:\n'Check for AllExtendedRights (includes ForceChangePassword):\nGet-ObjectAcl | ? {$_.ActiveDirectoryRights -match 'ExtendedRight'}'.\n\nIdentifies objects where current user has extended rights that may allow password changes or other privileged operations.",
-      "oscp_relevance": "high",
       "prerequisites": [
         "import-powerview"
       ],
@@ -263,7 +255,6 @@
         "InheritedObjectType"
       ],
       "notes": "Extracted from instruction text:\n'Manual enumeration:\nGet-ObjectAcl -Identity <TARGET> | ? {$_.SecurityIdentifier -eq <YOUR_SID>}'.\n\nManually enumerate specific ACL permissions current user has on target object to identify privilege escalation paths.",
-      "oscp_relevance": "high",
       "prerequisites": [
         "import-powerview"
       ],
@@ -299,7 +290,6 @@
         "403 Forbidden"
       ],
       "notes": "Extracted from instruction text:\n'Check robots.txt first:\ncurl http://<TARGET>/robots.txt'.\n\nFirst step in web reconnaissance to identify potentially sensitive directories and files before directory brute forcing.",
-      "oscp_relevance": "high",
       "alternatives": [
         "nikto-scan"
       ],
@@ -354,7 +344,6 @@
         "--hc": "Hide responses with specific HTTP status code"
       },
       "notes": "Extracted from instruction text:\n'Check for rate limiting:\nTest with small wordlist first'.\n\nProactive check to avoid account lockout or IP banning before attempting full password brute force attack.",
-      "oscp_relevance": "high",
       "prerequisites": [
         "check-robots-txt"
       ],

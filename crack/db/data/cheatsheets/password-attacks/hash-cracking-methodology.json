@@ -17,7 +17,7 @@
           "Post-exploitation on Linux: cat /etc/shadow reveals sha512crypt hashes ($6$)",
           "Post-exploitation on Windows: mimikatz or secretsdump.py extracts NTLM hashes",
           "During source code review: Found password hashes in configuration files, backups, or git history",
-          "OSCP exam scenarios: Need to pivot laterally using cracked domain credentials"
+          "security assessment scenarios: Need to pivot laterally using cracked domain credentials"
         ]
       },
       "scenarios": [
@@ -313,8 +313,7 @@
         "HASH_CRACKING",
         "HASHCAT",
         "JOHN",
-        "METHODOLOGY",
-        "OSCP:HIGH"
+        "METHODOLOGY"
       ]
     }
   ]

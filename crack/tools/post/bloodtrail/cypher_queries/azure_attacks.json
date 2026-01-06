@@ -9,12 +9,18 @@
       "cypher": "MATCH (u:User)\nWHERE u.name STARTS WITH 'AAD_' OR u.name STARTS WITH 'MSOL_'\nRETURN u.name AS SyncAccount,\n       u.description AS Description,\n       u.enabled AS Enabled",
       "variables": {},
       "edge_types_used": [],
-      "oscp_relevance": "high",
       "expected_results": "Azure AD sync service accounts",
       "example_output": "MSOL_abc12345@MEGABANK.LOCAL",
-      "next_steps": ["azure-adsync-admins", "azure-connect-server"],
+      "next_steps": [
+        "azure-adsync-admins",
+        "azure-connect-server"
+      ],
       "attack_technique": "T1078.002",
-      "tags": ["OSCP:HIGH", "azure", "credential_extraction", "ad_connect"]
+      "tags": [
+        "azure",
+        "credential_extraction",
+        "ad_connect"
+      ]
     },
     {
       "id": "azure-adsync-admins",
@@ -22,13 +28,20 @@
       "description": "Find members of ADSyncAdmins and related groups. These users can extract sync credentials from ADSync database.",
       "cypher": "MATCH (u:User)-[:MemberOf*1..]->(g:Group)\nWHERE g.name =~ '(?i).*(ADSYNC|AZURE).*'\nRETURN g.name AS Group,\n       collect(DISTINCT u.name) AS Members",
       "variables": {},
-      "edge_types_used": ["MemberOf"],
-      "oscp_relevance": "high",
+      "edge_types_used": [
+        "MemberOf"
+      ],
       "expected_results": "Users who can access ADSync database",
       "example_output": "ADSyncAdmins: [mhope, svc_azure]",
-      "next_steps": ["azure-sync-accounts"],
+      "next_steps": [
+        "azure-sync-accounts"
+      ],
       "attack_technique": "T1003.006",
-      "tags": ["OSCP:HIGH", "azure", "privilege_escalation", "ad_connect"]
+      "tags": [
+        "azure",
+        "privilege_escalation",
+        "ad_connect"
+      ]
     },
     {
       "id": "azure-connect-server",
@@ -36,13 +49,20 @@
       "description": "Identify the server running Azure AD Connect. Look for computers with 'AZURE' or 'SYNC' in name, or computers where sync accounts have sessions.",
       "cypher": "MATCH (c:Computer)\nWHERE c.name =~ '(?i).*(AZURE|SYNC|CONNECT).*'\n   OR EXISTS {\n       MATCH (u:User)-[:HasSession]->(c)\n       WHERE u.name STARTS WITH 'AAD_' OR u.name STARTS WITH 'MSOL_'\n   }\nRETURN c.name AS Server,\n       c.operatingsystem AS OS",
       "variables": {},
-      "edge_types_used": ["HasSession"],
-      "oscp_relevance": "medium",
+      "edge_types_used": [
+        "HasSession"
+      ],
       "expected_results": "Azure AD Connect server hostname",
       "example_output": "MONTEVERDE.MEGABANK.LOCAL (Windows Server 2019)",
-      "next_steps": ["azure-adsync-admins"],
+      "next_steps": [
+        "azure-adsync-admins"
+      ],
       "attack_technique": "T1087.002",
-      "tags": ["azure", "reconnaissance", "ad_connect"]
+      "tags": [
+        "azure",
+        "reconnaissance",
+        "ad_connect"
+      ]
     },
     {
       "id": "azure-path-to-sync",
@@ -50,13 +70,18 @@
       "description": "Find attack paths from owned principals to ADSyncAdmins group or Azure AD Connect server.",
       "cypher": "MATCH (owned {owned: true})\nMATCH (target:Group)\nWHERE target.name =~ '(?i)ADSYNCADMINS@.*'\nMATCH p=shortestPath((owned)-[*1..10]->(target))\nWHERE NONE(r IN relationships(p) WHERE type(r) IN ['Contains', 'GPLink'])\nRETURN owned.name AS Start,\n       target.name AS Target,\n       length(p) AS Hops,\n       [n in nodes(p) | n.name] AS Path",
       "variables": {},
-      "edge_types_used": ["*"],
-      "oscp_relevance": "high",
+      "edge_types_used": [
+        "*"
+      ],
       "expected_results": "Attack paths to Azure AD Connect compromise",
       "example_output": "mhope -> MONTEVERDE$ (AdminTo) -> ADSyncAdmins (MemberOf)",
       "next_steps": [],
       "attack_technique": "T1078.002",
-      "tags": ["OSCP:HIGH", "azure", "attack_path", "ad_connect"]
+      "tags": [
+        "azure",
+        "attack_path",
+        "ad_connect"
+      ]
     },
     {
       "id": "azure-dcsync-equivalent",
@@ -64,13 +89,21 @@
       "description": "Find accounts with replication rights that could be Azure sync accounts. Useful when sync accounts aren't named obviously.",
       "cypher": "MATCH (n)-[r:GetChanges]->(d:Domain)\nMATCH (n)-[r2:GetChangesAll]->(d)\nWHERE n.name =~ '(?i).*(MSOL|AAD|SYNC|AZURE).*'\n   OR n.description =~ '(?i).*(sync|azure|connect).*'\nRETURN n.name AS Account,\n       n.description AS Description,\n       labels(n) AS Type",
       "variables": {},
-      "edge_types_used": ["GetChanges", "GetChangesAll"],
-      "oscp_relevance": "high",
+      "edge_types_used": [
+        "GetChanges",
+        "GetChangesAll"
+      ],
       "expected_results": "Accounts with DCSync rights that may be Azure-related",
       "example_output": "MSOL_abc12345 (Account used by AAD Connect)",
-      "next_steps": ["azure-adsync-admins"],
+      "next_steps": [
+        "azure-adsync-admins"
+      ],
       "attack_technique": "T1003.006",
-      "tags": ["OSCP:HIGH", "azure", "dcsync", "ad_connect"]
+      "tags": [
+        "azure",
+        "dcsync",
+        "ad_connect"
+      ]
     }
   ]
 }

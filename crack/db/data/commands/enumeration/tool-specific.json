@@ -12,18 +12,16 @@
         "NESSUS",
         "VULNERABILITY_SCANNER",
         "GUI_TOOL",
-        "OSCP:LOW",
         "AUTOMATED"
       ],
       "variables": [],
-      "notes": "Nessus is a GUI-based vulnerability scanner not available in OSCP exam environment.\n\nMANUAL STEPS (Professional Version):\n1.\n\nOpen Nessus web interface (https://localhost:8834)\n2.\n\nLogin with credentials\n3.\n\nClick 'New Scan' \u2192 Select scan template:\n   - Basic Network Scan:\nStandard host discovery and port scanning\n   - Advanced Scan:\nFull vulnerability assessment with authenticated checks\n   - Web Application Tests:\nWeb-specific vulnerability detection\n4.\n\nConfigure scan:\n   - Name:\nDescriptive name (e.g., 'Target-192.168.45.100')\n   - Targets:\nIP address or range (192.168.45.100 or 192.168.45.0/24)\n   - Discovery:\nSet port range (default:\n1-65535, consider focused scans)\n5.\n\nLaunch scan and monitor progress\n6.\n\nReview results:\n   - Critical/High findings first\n   - Check for exploitable vulnerabilities\n   - Verify findings manually (false positives common)\n7.\n\nExport report (HTML/PDF) for documentation\n\nCLI ALTERNATIVE (Nessus Professional with CLI):\n/opt/nessus/bin/nessuscli scan --new --name=\"<SCAN_NAME>\" --targets=\"<TARGET>\" --template=\"basic\"\n\nOSCP EXAM NOTES:\n- Nessus NOT available in exam environment\n- GUI tools not permitted during exam\n- Use alternative CLI scanners instead\n\nRECOMMENDED OSCP ALTERNATIVES:\n- nmap with NSE scripts for vulnerability detection\n- OpenVAS (open-source alternative, also GUI)\n- Manual enumeration + searchsploit for version-specific exploits",
+      "notes": "Nessus is a GUI-based vulnerability scanner not available in certification exam environment.\n\nMANUAL STEPS (Professional Version):\n1.\n\nOpen Nessus web interface (https://localhost:8834)\n2.\n\nLogin with credentials\n3.\n\nClick 'New Scan' \u2192 Select scan template:\n   - Basic Network Scan:\nStandard host discovery and port scanning\n   - Advanced Scan:\nFull vulnerability assessment with authenticated checks\n   - Web Application Tests:\nWeb-specific vulnerability detection\n4.\n\nConfigure scan:\n   - Name:\nDescriptive name (e.g., 'Target-192.168.45.100')\n   - Targets:\nIP address or range (192.168.45.100 or 192.168.45.0/24)\n   - Discovery:\nSet port range (default:\n1-65535, consider focused scans)\n5.\n\nLaunch scan and monitor progress\n6.\n\nReview results:\n   - Critical/High findings first\n   - Check for exploitable vulnerabilities\n   - Verify findings manually (false positives common)\n7.\n\nExport report (HTML/PDF) for documentation\n\nCLI ALTERNATIVE (Nessus Professional with CLI):\n/opt/nessus/bin/nessuscli scan --new --name=\"<SCAN_NAME>\" --targets=\"<TARGET>\" --template=\"basic\"\n\ncertification EXAM NOTES:\n- Nessus NOT available in exam environment\n- GUI tools not permitted during exam\n- Use alternative CLI scanners instead\n\nRECOMMENDED certification ALTERNATIVES:\n- nmap with NSE scripts for vulnerability detection\n- OpenVAS (open-source alternative, also GUI)\n- Manual enumeration + searchsploit for version-specific exploits",
       "prerequisites": [],
       "alternatives": [
         "nmap-vuln-scan",
         "nikto-scan",
         "whatweb-enum"
-      ],
-      "oscp_relevance": "low"
+      ]
     },
     {
       "id": "burp-intruder",
@@ -37,18 +35,16 @@
         "FUZZING",
         "GUI_TOOL",
         "WEB",
-        "OSCP:LOW",
         "PARAMETER_TESTING"
       ],
       "variables": [],
-      "notes": "Burp Suite Intruder is a GUI-based fuzzing module not available in OSCP exam.\n\nMANUAL STEPS (Burp Suite Professional):\n1.\n\nIntercept request in Burp Proxy:\n   - Configure browser proxy (127.0.0.1:8080)\n   - Navigate to target page and capture request\n   - Right-click request \u2192 Send to Intruder\n\n2.\n\nConfigure attack positions:\n   - Intruder tab \u2192 Positions sub-tab\n   - Click 'Clear \u00a7' to remove auto-marked positions\n   - Select parameter value to fuzz\n   - Click 'Add \u00a7' to mark as injection point\n   - Example:\nusername=\u00a7admin\u00a7&password=\u00a7test\u00a7\n\n3.\n\nSelect attack type:\n   - Sniper:\nSingle position, one payload set (parameter discovery)\n   - Battering ram:\nMultiple positions, same payload (password in multiple fields)\n   - Pitchfork:\nMultiple positions, parallel iteration (username+password pairs)\n   - Cluster bomb:\nMultiple positions, all combinations (full brute-force)\n\n4.\n\nConfigure payloads:\n   - Payloads tab \u2192 Payload Sets\n   - Payload type:\nSimple list (wordlist), Numbers (IDOR), etc.\n   - Load wordlist or configure generation rules\n   - Example wordlists:\n     * /usr/share/seclists/Discovery/Web-Content/burp-parameter-names.txt\n     * /usr/share/wordlists/rockyou.txt (passwords)\n\n5.\n\nConfigure payload processing (optional):\n   - Add encoding (URL-encode, Base64)\n   - Add prefixes/suffixes\n   - Match/replace rules\n\n6.\n\nConfigure grep match (response analysis):\n   - Options tab \u2192 Grep - Match\n   - Add patterns to identify successful attempts:\n     * 'Welcome'\n     * 'Invalid credentials' (to identify failures)\n     * HTTP status codes\n\n7.\n\nStart attack:\n   - Click 'Start attack'\n   - Monitor response lengths, status codes, grep matches\n   - Sort by length/status to identify anomalies\n\n8.\n\nAnalyze results:\n   - Different response length = potential hit\n   - Different status code (302 vs 200)\n   - Grep match differences\n\nOSCP EXAM NOTES:\n- Burp Suite Community Edition available (Intruder heavily rate-limited)\n- Professional Edition NOT available in exam\n- GUI fuzzing tools not practical for exam time constraints\n- Use CLI alternatives for efficiency\n\nRECOMMENDED OSCP ALTERNATIVES:\n- wfuzz:\nFull-featured CLI fuzzing\n- ffuf:\nFast fuzzing with advanced filtering\n- hydra:\nAuthentication brute-forcing\n- Custom Python/Bash scripts for specific attacks",
+      "notes": "Burp Suite Intruder is a GUI-based fuzzing module not available in certification exam.\n\nMANUAL STEPS (Burp Suite Professional):\n1.\n\nIntercept request in Burp Proxy:\n   - Configure browser proxy (127.0.0.1:8080)\n   - Navigate to target page and capture request\n   - Right-click request \u2192 Send to Intruder\n\n2.\n\nConfigure attack positions:\n   - Intruder tab \u2192 Positions sub-tab\n   - Click 'Clear \u00a7' to remove auto-marked positions\n   - Select parameter value to fuzz\n   - Click 'Add \u00a7' to mark as injection point\n   - Example:\nusername=\u00a7admin\u00a7&password=\u00a7test\u00a7\n\n3.\n\nSelect attack type:\n   - Sniper:\nSingle position, one payload set (parameter discovery)\n   - Battering ram:\nMultiple positions, same payload (password in multiple fields)\n   - Pitchfork:\nMultiple positions, parallel iteration (username+password pairs)\n   - Cluster bomb:\nMultiple positions, all combinations (full brute-force)\n\n4.\n\nConfigure payloads:\n   - Payloads tab \u2192 Payload Sets\n   - Payload type:\nSimple list (wordlist), Numbers (IDOR), etc.\n   - Load wordlist or configure generation rules\n   - Example wordlists:\n     * /usr/share/seclists/Discovery/Web-Content/burp-parameter-names.txt\n     * /usr/share/wordlists/rockyou.txt (passwords)\n\n5.\n\nConfigure payload processing (optional):\n   - Add encoding (URL-encode, Base64)\n   - Add prefixes/suffixes\n   - Match/replace rules\n\n6.\n\nConfigure grep match (response analysis):\n   - Options tab \u2192 Grep - Match\n   - Add patterns to identify successful attempts:\n     * 'Welcome'\n     * 'Invalid credentials' (to identify failures)\n     * HTTP status codes\n\n7.\n\nStart attack:\n   - Click 'Start attack'\n   - Monitor response lengths, status codes, grep matches\n   - Sort by length/status to identify anomalies\n\n8.\n\nAnalyze results:\n   - Different response length = potential hit\n   - Different status code (302 vs 200)\n   - Grep match differences\n\ncertification EXAM NOTES:\n- Burp Suite Community Edition available (Intruder heavily rate-limited)\n- Professional Edition NOT available in exam\n- GUI fuzzing tools not practical for exam time constraints\n- Use CLI alternatives for efficiency\n\nRECOMMENDED certification ALTERNATIVES:\n- wfuzz:\nFull-featured CLI fuzzing\n- ffuf:\nFast fuzzing with advanced filtering\n- hydra:\nAuthentication brute-forcing\n- Custom Python/Bash scripts for specific attacks",
       "prerequisites": [],
       "alternatives": [
         "wfuzz-params",
         "ffuf-param-fuzz",
         "wfuzz-dir"
-      ],
-      "oscp_relevance": "low"
+      ]
     },
     {
       "id": "burp-scanner",
@@ -62,18 +58,16 @@
         "VULNERABILITY_SCANNER",
         "GUI_TOOL",
         "WEB",
-        "OSCP:LOW",
         "AUTOMATED"
       ],
       "variables": [],
-      "notes": "Burp Scanner is a Professional-only feature for automated vulnerability detection.\n\nMANUAL STEPS (Burp Suite Professional):\n1.\n\nPassive scanning (automatic):\n   - Browse application with Burp Proxy enabled\n   - Scanner automatically detects issues in proxied traffic\n   - Review Dashboard \u2192 Issue activity\n\n2.\n\nActive scanning:\n   - Right-click request/URL in Proxy/Target\n   - Select 'Scan' or 'Do active scan'\n   - Configure scan settings:\n     * Crawl depth and speed\n     * Audit checks (SQLi, XSS, etc.)\n     * Insertion points\n\n3.\n\nReview findings:\n   - Target tab \u2192 Site map \u2192 Issues\n   - Sort by severity (Critical, High, Medium, Low, Info)\n   - Click issue for details:\n     * Description\n     * Proof of concept request/response\n     * Remediation advice\n\n4.\n\nManual verification:\n   - Send issue to Repeater for testing\n   - Verify exploitability\n   - Document true positives\n\nCOMMON FINDINGS:\n- SQL injection\n- Cross-site scripting (XSS)\n- OS command injection\n- Path traversal\n- XML external entity (XXE)\n- Server-side request forgery (SSRF)\n\nOSCP EXAM NOTES:\n- Burp Scanner (Professional) NOT available in exam\n- Community Edition lacks active scanning\n- Manual testing required for exam\n\nRECOMMENDED OSCP ALTERNATIVES:\n- Manual testing with Burp Repeater (available in Community)\n- nikto:\nAutomated web vulnerability scanner\n- sqlmap:\nSQL injection detection and exploitation\n- Manual payload testing for XSS, LFI, RCE\n- ZAP (OWASP Zed Attack Proxy) - open-source alternative",
+      "notes": "Burp Scanner is a Professional-only feature for automated vulnerability detection.\n\nMANUAL STEPS (Burp Suite Professional):\n1.\n\nPassive scanning (automatic):\n   - Browse application with Burp Proxy enabled\n   - Scanner automatically detects issues in proxied traffic\n   - Review Dashboard \u2192 Issue activity\n\n2.\n\nActive scanning:\n   - Right-click request/URL in Proxy/Target\n   - Select 'Scan' or 'Do active scan'\n   - Configure scan settings:\n     * Crawl depth and speed\n     * Audit checks (SQLi, XSS, etc.)\n     * Insertion points\n\n3.\n\nReview findings:\n   - Target tab \u2192 Site map \u2192 Issues\n   - Sort by severity (Critical, High, Medium, Low, Info)\n   - Click issue for details:\n     * Description\n     * Proof of concept request/response\n     * Remediation advice\n\n4.\n\nManual verification:\n   - Send issue to Repeater for testing\n   - Verify exploitability\n   - Document true positives\n\nCOMMON FINDINGS:\n- SQL injection\n- Cross-site scripting (XSS)\n- OS command injection\n- Path traversal\n- XML external entity (XXE)\n- Server-side request forgery (SSRF)\n\ncertification EXAM NOTES:\n- Burp Scanner (Professional) NOT available in exam\n- Community Edition lacks active scanning\n- Manual testing required for exam\n\nRECOMMENDED certification ALTERNATIVES:\n- Manual testing with Burp Repeater (available in Community)\n- nikto:\nAutomated web vulnerability scanner\n- sqlmap:\nSQL injection detection and exploitation\n- Manual payload testing for XSS, LFI, RCE\n- ZAP (OWASP Zed Attack Proxy) - open-source alternative",
       "prerequisites": [],
       "alternatives": [
         "nikto-scan",
         "sqlmap-basic",
         "wfuzz-params"
-      ],
-      "oscp_relevance": "low"
+      ]
     },
     {
       "id": "wfuzz-z-file",
@@ -86,8 +80,7 @@
         "FUZZING",
         "WEB",
         "DIRECTORY_ENUMERATION",
-        "PARAMETER_TESTING",
-        "OSCP:HIGH"
+        "PARAMETER_TESTING"
       ],
       "variables": [
         {
@@ -134,7 +127,6 @@
         "No results found": "Try different wordlist or extensions: -z file,<WORDLIST> -u http://target/FUZZ.txt,.php,.html"
       },
       "notes": "COMMON WORDLISTS:\n- /usr/share/seclists/Discovery/Web-Content/common.txt (4,700 entries)\n- /usr/share/seclists/Discovery/Web-Content/directory-list-2.3-medium.txt (220k entries)\n- /usr/share/seclists/Discovery/Web-Content/big.txt (20k entries)\n- /usr/share/seclists/Discovery/Web-Content/burp-parameter-names.txt (parameters)\n- /usr/share/wordlists/rockyou.txt (passwords)\n\nFILTERING OPTIONS:\n--hc/--sc:\nHide/show HTTP status codes\n--hl/--sl:\nHide/show response lines\n--hw/--sw:\nHide/show response words\n--hh/--sh:\nHide/show response chars (size)\n\nEXAMPLE COMMANDS:\nDirectory fuzzing:\nwfuzz -z file,/usr/share/seclists/Discovery/Web-Content/common.txt --hc 404 -u http://target/FUZZ\n\nParameter fuzzing:\nwfuzz -z file,/usr/share/seclists/Discovery/Web-Content/burp-parameter-names.txt --hc 404 -u 'http://target/page.php?FUZZ=test'\n\nPOST login brute-force:\nwfuzz -z file,/usr/share/wordlists/rockyou.txt --hc 200 -d 'username=admin&password=FUZZ' -u http://target/login.php\n\nMultiple FUZZ points:\nwfuzz -z file,users.txt -z file,passwords.txt -u http://target/login.php -d 'user=FUZZ&pass=FUZ2Z'",
-      "oscp_relevance": "high",
       "methodology_guidance": {
         "after_success": "Filter by status code: wfuzz -z file,<WORDLIST> --hc 404 -u <URL> Filter by response size: wfuzz -z file,<WORDLIST> --hl 0 -u <URL> Add extensions: wfuzz -z file,<WORDLIST> -u http://target/FUZZ.php POST data fuzzing: wfuzz -z file,<WORDLIST> -d 'user=admin&pass=FUZZ' -u <URL> Header fuzzing: wfuzz -z file,<WORDLIST> -H 'User-Agent: FUZZ' -u <URL>"
       },
@@ -151,8 +143,7 @@
         "BRUTE_FORCE",
         "WEB",
         "AUTHENTICATION",
-        "PASSWORD_ATTACK",
-        "OSCP:HIGH"
+        "PASSWORD_ATTACK"
       ],
       "variables": [
         {
@@ -211,7 +202,6 @@
         "CSRF token required": "Wfuzz doesn't handle CSRF automatically. Use custom script or Burp Suite for token-based forms"
       },
       "notes": "WORKFLOW:\n1.\n\nCapture login POST request:\n   - Open browser dev tools \u2192 Network tab\n   - Submit login form with test credentials\n   - Right-click POST request \u2192 Copy \u2192 Copy as cURL\n   - Extract POST data field names\n\n2.\n\nIdentify failure pattern:\n   - Test with wrong password:\ncurl -X POST -d 'user=admin&pass=wrong' http://target/login.php\n   - Note status code (usually 200) and failure message ('Invalid password')\n\n3.\n\nRun wfuzz:\n   - Filter by failure string:\n--hs 'Invalid'\n   - OR filter by status if success redirects:\n--hc 200 (hide 200, show 302)\n\n4.\n\nSuccessful login characteristics:\n   - Status 302 (redirect to dashboard)\n   - Set-Cookie header (session established)\n   - Different response length\n   - Success message in body\n\nEXAMPLES:\nWordPress brute-force:\nwfuzz -z file,/usr/share/wordlists/rockyou.txt --hs 'incorrect' -d 'log=admin&pwd=FUZZ' http://target/wp-login.php\n\nCustom form with failure message:\nwfuzz -z file,passwords.txt --hs 'Login failed' -d 'username=admin&password=FUZZ&submit=Login' http://target/login.php\n\nFilter by redirect (success = 302):\nwfuzz -z file,passwords.txt --hc 200,404 -d 'user=admin&pass=FUZZ' http://target/auth.php\n\nTIPS:\n- Always test manually first to understand response patterns\n- Use small wordlist initially to verify filtering works\n- Add --delay to avoid account lockout/WAF blocking\n- Some forms require additional fields (CSRF token, remember-me checkbox)",
-      "oscp_relevance": "high",
       "methodology_guidance": {
         "after_success": "Hide by string instead: wfuzz -z file,<WORDLIST> --hs '<FAIL_STRING>' -d '<POST_DATA>' -u <URL> Add delay to avoid lockout: wfuzz -z file,<WORDLIST> --delay 2 --hc 200 -d '<POST_DATA>' -u <URL> Test found password: curl -X POST -d '<POST_DATA_WITH_PASS>' <URL> Use found credentials for further enumeration"
       },
@@ -228,17 +218,15 @@
         "DIRECTORY_ENUMERATION",
         "GUI_TOOL",
         "DEPRECATED",
-        "WEB",
-        "OSCP:LOW"
+        "WEB"
       ],
       "variables": [],
-      "notes": "DirBuster is a legacy Java GUI tool for directory brute-forcing.\n\nDEPRECATED and no longer maintained.\n\nMANUAL STEPS (if required for legacy systems):\n1.\n\nLaunch DirBuster:\n   - Command:\njava -jar /usr/share/dirbuster/DirBuster-1.0-RC1.jar\n   - Or from Kali menu:\nApplications \u2192 Web Application Analysis \u2192 dirbuster\n\n2.\n\nConfigure target:\n   - Target URL:\nhttp://192.168.45.100/\n   - Number of threads:\n10-20 (adjust based on target stability)\n\n3.\n\nSelect scan type:\n   - List based brute force (recommended):\nUses wordlist\n   - Pure brute force:\nGenerates all combinations (extremely slow)\n\n4.\n\nSelect wordlist:\n   - Browse to wordlist location\n   - Recommended:\n/usr/share/dirbuster/wordlists/directory-list-2.3-medium.txt\n   - Or use Seclists:\n/usr/share/seclists/Discovery/Web-Content/common.txt\n\n5.\n\nConfigure file extensions:\n   - Check 'File extension' box\n   - Add extensions:\nphp,txt,html,asp,aspx,jsp\n   - Based on identified technology stack\n\n6.\n\nStart scan:\n   - Click 'Start'\n   - Monitor 'Results - Tree View' tab for found directories\n   - Check 'Results - List View' for all responses\n\n7.\n\nAnalyze results:\n   - Green = 200 OK (success)\n   - Yellow = 403 Forbidden (exists but restricted)\n   - Look for interesting directories:\nadmin, backup, config, uploads\n\nOSCP EXAM NOTES:\n- DirBuster is DEPRECATED - use CLI alternatives\n- GUI tools slow and inefficient for exam\n- No longer pre-installed on modern Kali versions\n- CLI tools (gobuster, ffuf) significantly faster\n\nWHY DEPRECATED:\n- Java-based (slow, resource intensive)\n- No longer maintained by OWASP\n- Superseded by faster CLI tools\n- GUI not practical for exam time constraints\n\nRECOMMENDED OSCP ALTERNATIVES:\n- gobuster:\nFast, efficient, CLI-based (preferred)\n- ffuf:\nVery fast fuzzing with advanced filtering\n- wfuzz:\nFeature-rich web fuzzing\n- dirb:\nOlder CLI alternative (slower than gobuster)\n\nEQUIVALENT COMMANDS:\nDirBuster scan = gobuster dir -u http://target/ -w /usr/share/wordlists/dirb/common.txt -x php,txt,html\n\nMIGRATION GUIDE:\nDirBuster Setting \u2192 Gobuster Equivalent\n- Target URL \u2192 gobuster -u <URL>\n- Wordlist \u2192 gobuster -w <WORDLIST>\n- Extensions \u2192 gobuster -x <EXTENSIONS>\n- Threads \u2192 gobuster -t <THREADS>\n- Exclude status codes \u2192 gobuster -b <CODES>",
+      "notes": "DirBuster is a legacy Java GUI tool for directory brute-forcing.\n\nDEPRECATED and no longer maintained.\n\nMANUAL STEPS (if required for legacy systems):\n1.\n\nLaunch DirBuster:\n   - Command:\njava -jar /usr/share/dirbuster/DirBuster-1.0-RC1.jar\n   - Or from Kali menu:\nApplications \u2192 Web Application Analysis \u2192 dirbuster\n\n2.\n\nConfigure target:\n   - Target URL:\nhttp://192.168.45.100/\n   - Number of threads:\n10-20 (adjust based on target stability)\n\n3.\n\nSelect scan type:\n   - List based brute force (recommended):\nUses wordlist\n   - Pure brute force:\nGenerates all combinations (extremely slow)\n\n4.\n\nSelect wordlist:\n   - Browse to wordlist location\n   - Recommended:\n/usr/share/dirbuster/wordlists/directory-list-2.3-medium.txt\n   - Or use Seclists:\n/usr/share/seclists/Discovery/Web-Content/common.txt\n\n5.\n\nConfigure file extensions:\n   - Check 'File extension' box\n   - Add extensions:\nphp,txt,html,asp,aspx,jsp\n   - Based on identified technology stack\n\n6.\n\nStart scan:\n   - Click 'Start'\n   - Monitor 'Results - Tree View' tab for found directories\n   - Check 'Results - List View' for all responses\n\n7.\n\nAnalyze results:\n   - Green = 200 OK (success)\n   - Yellow = 403 Forbidden (exists but restricted)\n   - Look for interesting directories:\nadmin, backup, config, uploads\n\ncertification EXAM NOTES:\n- DirBuster is DEPRECATED - use CLI alternatives\n- GUI tools slow and inefficient for exam\n- No longer pre-installed on modern Kali versions\n- CLI tools (gobuster, ffuf) significantly faster\n\nWHY DEPRECATED:\n- Java-based (slow, resource intensive)\n- No longer maintained by OWASP\n- Superseded by faster CLI tools\n- GUI not practical for exam time constraints\n\nRECOMMENDED certification ALTERNATIVES:\n- gobuster:\nFast, efficient, CLI-based (preferred)\n- ffuf:\nVery fast fuzzing with advanced filtering\n- wfuzz:\nFeature-rich web fuzzing\n- dirb:\nOlder CLI alternative (slower than gobuster)\n\nEQUIVALENT COMMANDS:\nDirBuster scan = gobuster dir -u http://target/ -w /usr/share/wordlists/dirb/common.txt -x php,txt,html\n\nMIGRATION GUIDE:\nDirBuster Setting \u2192 Gobuster Equivalent\n- Target URL \u2192 gobuster -u <URL>\n- Wordlist \u2192 gobuster -w <WORDLIST>\n- Extensions \u2192 gobuster -x <EXTENSIONS>\n- Threads \u2192 gobuster -t <THREADS>\n- Exclude status codes \u2192 gobuster -b <CODES>",
       "prerequisites": [],
       "alternatives": [
         "gobuster-dir",
         "ffuf-dir-fuzz"
-      ],
-      "oscp_relevance": "low"
+      ]
     },
     {
       "id": "masscan-full-tcp",
@@ -251,7 +239,6 @@
         "PORT_SCAN",
         "RECONNAISSANCE",
         "FAST",
-        "OSCP:MEDIUM",
         "NETWORK"
       ],
       "variables": [
@@ -310,8 +297,7 @@
         "rate too high causes missed ports": "Reduce --rate to 500 or 1000",
         "No results found": "Verify target is reachable: ping <TARGET>"
       },
-      "notes": "SPEED VS ACCURACY:\n- Masscan prioritizes speed over accuracy\n- Very high rates (>10000) may miss ports due to packet loss\n- Use nmap for service detection after masscan identifies open ports\n- Masscan = fast port discovery, nmap = detailed enumeration\n\nCOMMON WORKFLOWS:\n1.\n\nQuick discovery:\n   sudo masscan -p1-65535 192.168.45.0/24 --rate=1000\n\n2.\n\nFocused scan:\n   sudo masscan -p80,443,8080,8443 192.168.45.100 --rate=10000\n\n3.\n\nFull scan with output:\n   sudo masscan -p1-65535 192.168.45.100 --rate=1000 -oG results.txt -e tun0 --router-ip 10.10.14.1\n\n4.\n\nScan subnet:\n   sudo masscan -p1-65535 192.168.45.0/24 --rate=5000 --exclude 192.168.45.1\n\nOUTPUT FORMATS:\n-oL:\nList format\n-oG:\nGreppable (recommended)\n-oJ:\nJSON\n-oX:\nXML (nmap compatible)\n\nRATE GUIDELINES:\n- 100:\nVery slow, extremely stealthy\n- 1000:\nSafe default for most networks\n- 10000:\nFast, may trigger IDS\n- 100000:\nVery fast, high packet loss risk\n- 1000000:\nExtreme speed, unreliable results\n\nVPN USAGE (OSCP):\n1.\n\nFind interface:\nip a | grep tun\n2.\n\nFind gateway:\nip route | grep tun0\n3.\n\nCommand:\nsudo masscan -p1-65535 <TARGET> --rate=1000 -e tun0 --router-ip 10.10.14.1\n\nVS NMAP:\n- Masscan:\nFast port discovery (minutes for all ports)\n- Nmap:\nSlow but accurate, service detection, scripting\n- Best practice:\nmasscan for discovery \u2192 nmap for enumeration",
-      "oscp_relevance": "medium",
+      "notes": "SPEED VS ACCURACY:\n- Masscan prioritizes speed over accuracy\n- Very high rates (>10000) may miss ports due to packet loss\n- Use nmap for service detection after masscan identifies open ports\n- Masscan = fast port discovery, nmap = detailed enumeration\n\nCOMMON WORKFLOWS:\n1.\n\nQuick discovery:\n   sudo masscan -p1-65535 192.168.45.0/24 --rate=1000\n\n2.\n\nFocused scan:\n   sudo masscan -p80,443,8080,8443 192.168.45.100 --rate=10000\n\n3.\n\nFull scan with output:\n   sudo masscan -p1-65535 192.168.45.100 --rate=1000 -oG results.txt -e tun0 --router-ip 10.10.14.1\n\n4.\n\nScan subnet:\n   sudo masscan -p1-65535 192.168.45.0/24 --rate=5000 --exclude 192.168.45.1\n\nOUTPUT FORMATS:\n-oL:\nList format\n-oG:\nGreppable (recommended)\n-oJ:\nJSON\n-oX:\nXML (nmap compatible)\n\nRATE GUIDELINES:\n- 100:\nVery slow, extremely stealthy\n- 1000:\nSafe default for most networks\n- 10000:\nFast, may trigger IDS\n- 100000:\nVery fast, high packet loss risk\n- 1000000:\nExtreme speed, unreliable results\n\nVPN USAGE (certification):\n1.\n\nFind interface:\nip a | grep tun\n2.\n\nFind gateway:\nip route | grep tun0\n3.\n\nCommand:\nsudo masscan -p1-65535 <TARGET> --rate=1000 -e tun0 --router-ip 10.10.14.1\n\nVS NMAP:\n- Masscan:\nFast port discovery (minutes for all ports)\n- Nmap:\nSlow but accurate, service detection, scripting\n- Best practice:\nmasscan for discovery \u2192 nmap for enumeration",
       "methodology_guidance": {
         "after_success": "Service detection on found ports: sudo nmap -sV -p <PORTS> <TARGET> Detailed enumeration: sudo nmap -A -p <PORTS> <TARGET> Save results: sudo masscan -p1-65535 <TARGET> --rate=1000 -oG masscan.txt"
       },

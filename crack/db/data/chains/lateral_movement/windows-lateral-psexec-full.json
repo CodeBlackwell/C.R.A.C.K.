@@ -1,21 +1,20 @@
 {
   "id": "windows-lateral-psexec-full",
   "name": "PSExec Lateral Movement - Full Attack Chain",
-  "description": "Complete PSExec attack from Kali: verify ADMIN$ share, authenticate with Impacket PSExec, obtain SYSTEM shell.\n\nThis is the most reliable lateral movement technique for OSCP, providing immediate SYSTEM-level access.",
+  "description": "Complete PSExec attack from Kali: verify ADMIN$ share, authenticate with Impacket PSExec, obtain SYSTEM shell.\n\nThis is the most reliable lateral movement technique for security work, providing immediate SYSTEM-level access.",
   "version": "1.0.0",
   "metadata": {
     "author": "CRACK Development Team",
     "created": "2025-11-08",
     "updated": "2025-11-08",
     "tags": [
-      "OSCP",
+      "pentest",
       "WINDOWS",
       "ACTIVE_DIRECTORY",
       "LATERAL_MOVEMENT",
       "PSEXEC",
       "IMPACKET",
-      "SMB",
-      "OSCP:HIGH"
+      "SMB"
     ],
     "category": "lateral_movement",
     "platform": "windows",
@@ -26,7 +25,6 @@
   },
   "difficulty": "beginner",
   "time_estimate": "10 minutes",
-  "oscp_relevant": true,
   "prerequisites": [
     "Valid domain credentials with local admin rights",
     "ADMIN$ share accessible on target",
@@ -34,7 +32,7 @@
     "SMB port 445 accessible",
     "Impacket installed on Kali"
   ],
-  "notes": "PSExec is the most reliable lateral movement technique for OSCP - provides SYSTEM-level access immediately. Works by uploading binary to ADMIN$ share, creating Windows service, executing payload. ADVANTAGES: Spawns SYSTEM shell, most stable, widely documented. DISADVANTAGES: Writes binary to disk (forensics), creates service (event logs), easier to detect than WMI. OSCP RELEVANCE: Very high - first technique to try when credentials available.",
+  "notes": "PSExec is the most reliable lateral movement technique for certification - provides SYSTEM-level access immediately. Works by uploading binary to ADMIN$ share, creating Windows service, executing payload. ADVANTAGES: Spawns SYSTEM shell, most stable, widely documented. DISADVANTAGES: Writes binary to disk (forensics), creates service (event logs), easier to detect than WMI. certification RELEVANCE: Very high - first technique to try when credentials available.",
   "steps": [
     {
       "id": "verify-smb-access",

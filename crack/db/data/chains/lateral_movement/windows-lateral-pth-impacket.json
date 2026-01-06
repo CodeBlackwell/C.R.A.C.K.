@@ -8,14 +8,13 @@
     "created": "2025-11-08",
     "updated": "2025-11-08",
     "tags": [
-      "OSCP",
+      "pentest",
       "WINDOWS",
       "ACTIVE_DIRECTORY",
       "LATERAL_MOVEMENT",
       "PASS_THE_HASH",
       "IMPACKET",
-      "NTLM",
-      "OSCP:HIGH"
+      "NTLM"
     ],
     "category": "lateral_movement",
     "platform": "windows",
@@ -26,7 +25,6 @@
   },
   "difficulty": "intermediate",
   "time_estimate": "15 minutes",
-  "oscp_relevant": true,
   "prerequisites": [
     "Initial foothold on Windows domain",
     "SYSTEM or Administrator access on at least one machine",
@@ -34,7 +32,7 @@
     "Network access to additional targets",
     "CrackMapExec for hash validation"
   ],
-  "notes": "Pass-the-Hash (PtH) leverages NTLM hashes for authentication without cracking passwords. Critical for OSCP lateral movement when only hashes available. NTLM authentication uses hash directly in challenge-response, making plaintext password unnecessary. ADVANTAGES: No password cracking needed (saves hours), works across network, supports multiple protocols (SMB/WMI/WinRM). DISADVANTAGES: UAC blocks non-RID-500 local admin hashes (2014 patch), creates authentication logs. OSCP RELEVANCE: Very high - frequently the only path forward when credentials unknown.",
+  "notes": "Pass-the-Hash (PtH) leverages NTLM hashes for authentication without cracking passwords. Critical for certification lateral movement when only hashes available. NTLM authentication uses hash directly in challenge-response, making plaintext password unnecessary. ADVANTAGES: No password cracking needed (saves hours), works across network, supports multiple protocols (SMB/WMI/WinRM). DISADVANTAGES: UAC blocks non-RID-500 local admin hashes (2014 patch), creates authentication logs. certification RELEVANCE: Very high - frequently the only path forward when credentials unknown.",
   "steps": [
     {
       "id": "extract-hashes",

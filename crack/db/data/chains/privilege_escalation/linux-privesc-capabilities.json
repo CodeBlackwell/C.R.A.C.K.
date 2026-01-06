@@ -28,7 +28,6 @@
   },
   "difficulty": "intermediate",
   "time_estimate": "10 minutes",
-  "oscp_relevant": true,
   "prerequisites": [
     "Low-privilege shell access on target system",
     "Read permissions to enumerate file capabilities",

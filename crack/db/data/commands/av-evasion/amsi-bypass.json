@@ -169,7 +169,6 @@
       ]
     }
   ],
-  "oscp_relevance": "Critical for modern Windows exploitation. AMSI is default-enabled on Windows 10+ and blocks most public exploits/tools. Bypassing AMSI is often the first step in post-exploitation.",
   "attack_chain_position": "Post-Exploitation, Privilege Escalation",
   "related_categories": [
     "powershell",

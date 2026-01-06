@@ -230,7 +230,6 @@
       "filled_example": "using System;\n\nint uptimeMS = Environment.TickCount;\nint uptimeMinutes = uptimeMS / 60000;\n\nif(uptimeMinutes < 10) {\n    return; // Fresh sandbox detected\n}"
     }
   ],
-  "oscp_relevance": "Essential for bypassing behavioral analysis and sandboxing. Modern AV relies heavily on heuristics - signature evasion alone is insufficient.",
   "attack_chain_position": "Payload Delivery, Evasion",
   "related_categories": [
     "shellcode-runners",

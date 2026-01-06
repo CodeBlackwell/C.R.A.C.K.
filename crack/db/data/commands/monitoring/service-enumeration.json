@@ -21,12 +21,10 @@
         "ENUMERATION",
         "LINUX",
         "MONITORING",
-        "OSCP:HIGH",
         "POST_EXPLOITATION",
         "PRIVILEGE_ESCALATION",
         "SYSTEMD"
       ],
-      "oscp_relevance": "high",
       "success_indicators": [
         "UNIT",
         "LOAD",
@@ -51,7 +49,7 @@
       "prerequisites": [
         "ps-aux-full"
       ],
-      "notes": "systemd is the init system for most modern Linux distributions (RHEL 7+, Ubuntu 16.04+, Debian 8+).\n\nOSCP tip:\nFocus on custom services (not part of base OS) - often have misconfigurations.\n\nTime estimate:\n2 seconds.\n\nTo see ALL services (including failed):\nsystemctl list-units --type=service --all",
+      "notes": "systemd is the init system for most modern Linux distributions (RHEL 7+, Ubuntu 16.04+, Debian 8+).\n\ncertification tip:\nFocus on custom services (not part of base OS) - often have misconfigurations.\n\nTime estimate:\n2 seconds.\n\nTo see ALL services (including failed):\nsystemctl list-units --type=service --all",
       "methodology_guidance": {
         "after_success": "Check service configuration: systemctl cat <SERVICE> Check service file permissions: systemctl-service-permissions Look for writable service files: find /etc/systemd -writable Identify services running as root: systemctl status <SERVICE>"
       }
@@ -74,12 +72,10 @@
         "ENUMERATION",
         "LINUX",
         "MONITORING",
-        "OSCP:MEDIUM",
         "PERSISTENCE",
         "POST_EXPLOITATION",
         "SYSTEMD"
       ],
-      "oscp_relevance": "medium",
       "success_indicators": [
         "UNIT FILE",
         "STATE",
@@ -91,10 +87,9 @@
       ],
       "next_steps": [],
       "alternatives": [],
-      "notes": "Enabled services persist across reboots - key for persistence/backdoor detection.\n\nOSCP tip:\nCustom services in /etc/systemd/system are often exploit targets.\n\nTime estimate:\n3 seconds.",
+      "notes": "Enabled services persist across reboots - key for persistence/backdoor detection.\n\ncertification tip:\nCustom services in /etc/systemd/system are often exploit targets.\n\nTime estimate:\n3 seconds.",
       "methodology_guidance": {
-        "after_success": "Check custom enabled services for persistence mechanisms Disable suspicious services: sudo systemctl disable <SERVICE> Check service executable permissions",
-        "oscp_tips": "Examine service file contents: systemctl cat <SERVICE>"
+        "after_success": "Check custom enabled services for persistence mechanisms Disable suspicious services: sudo systemctl disable <SERVICE> Check service executable permissions"
       }
     },
     {
@@ -115,12 +110,10 @@
         "ENUMERATION",
         "LINUX",
         "MONITORING",
-        "OSCP:HIGH",
         "POST_EXPLOITATION",
         "PRIVILEGE_ESCALATION",
         "SYSTEMD"
       ],
-      "oscp_relevance": "high",
       "success_indicators": [
         "-rw-r--r--",
         ".service",
@@ -143,7 +136,7 @@
         "ps-aux-full",
         "systemctl-running-services"
       ],
-      "notes": "CRITICAL for OSCP privilege escalation.\n\nWritable service files = instant root if service runs as root.\n\nAlso check /lib/systemd/system/ (system services).\n\nTime estimate:\n2 seconds.\n\nExploit pattern:\n(1) Find writable .service file, (2) Modify ExecStart=/path/to/reverse_shell, (3) sudo systemctl restart <SERVICE>.",
+      "notes": "CRITICAL for certification privilege escalation.\n\nWritable service files = instant root if service runs as root.\n\nAlso check /lib/systemd/system/ (system services).\n\nTime estimate:\n2 seconds.\n\nExploit pattern:\n(1) Find writable .service file, (2) Modify ExecStart=/path/to/reverse_shell, (3) sudo systemctl restart <SERVICE>.",
       "methodology_guidance": {
         "after_success": "If writable: Modify service to run payload as root Check ExecStart path in service file: systemctl cat <SERVICE> Check if service binary is writable: ls -la <EXEC_PATH> Restart service to trigger payload: sudo systemctl restart <SERVICE>"
       }
@@ -164,11 +157,9 @@
         "ENUMERATION",
         "LINUX",
         "MONITORING",
-        "OSCP:MEDIUM",
         "POST_EXPLOITATION",
         "SYSV"
       ],
-      "oscp_relevance": "medium",
       "success_indicators": [
         "[+]",
         "[-]",
@@ -181,10 +172,9 @@
       "alternatives": [
         "systemctl-running-services"
       ],
-      "notes": "SysV init used on older Linux (pre-systemd).\n\nStill found in OSCP labs.\n\n[+] = running, [-] = stopped, [?] = status unknown.\n\nTime estimate:\n3 seconds.\n\nService scripts in /etc/init.d/ - check permissions for privesc.",
+      "notes": "SysV init used on older Linux (pre-systemd).\n\nStill found in certification labs.\n\n[+] = running, [-] = stopped, [?] = status unknown.\n\nTime estimate:\n3 seconds.\n\nService scripts in /etc/init.d/ - check permissions for privesc.",
       "methodology_guidance": {
-        "after_success": "Check specific service: service <NAME> status Check init script permissions: ls -la /etc/init.d/<SERVICE> Look for writable init scripts for privilege escalation",
-        "oscp_tips": "Examine service init script: cat /etc/init.d/<SERVICE>"
+        "after_success": "Check specific service: service <NAME> status Check init script permissions: ls -la /etc/init.d/<SERVICE> Look for writable init scripts for privilege escalation"
       }
     },
     {
@@ -203,11 +193,9 @@
         "ENUMERATION",
         "LINUX",
         "MONITORING",
-        "OSCP:LOW",
         "POST_EXPLOITATION",
         "SYSV"
       ],
-      "oscp_relevance": "low",
       "success_indicators": [
         "0:off",
         "3:on",
@@ -238,12 +226,10 @@
         "DEFENSE",
         "ENUMERATION",
         "MONITORING",
-        "OSCP:HIGH",
         "POST_EXPLOITATION",
         "PRIVILEGE_ESCALATION",
         "WINDOWS"
       ],
-      "oscp_relevance": "high",
       "success_indicators": [
         "SERVICE_NAME:",
         "DISPLAY_NAME:",
@@ -259,7 +245,7 @@
         "win-wmic-service-full",
         "win-ps-get-service"
       ],
-      "notes": "Service Control (sc.exe) is built-in Windows service management tool.\n\nOSCP tip:\nFocus on services with STATE=RUNNING and user-created services (non-Microsoft).\n\nTime estimate:\n5 seconds.",
+      "notes": "Service Control (sc.exe) is built-in Windows service management tool.\n\ncertification tip:\nFocus on services with STATE=RUNNING and user-created services (non-Microsoft).\n\nTime estimate:\n5 seconds.",
       "methodology_guidance": {
         "after_success": "Query specific service: win-sc-query-config Check service permissions: win-accesschk-service Look for unquoted service paths: win-wmic-service-path Check service binary permissions: icacls <PATH>"
       }
@@ -281,11 +267,9 @@
         "DEFENSE",
         "ENUMERATION",
         "MONITORING",
-        "OSCP:MEDIUM",
         "POST_EXPLOITATION",
         "WINDOWS"
       ],
-      "oscp_relevance": "medium",
       "success_indicators": [
         "SERVICE_NAME:",
         "RUNNING",
@@ -327,12 +311,10 @@
         "DETAILED",
         "ENUMERATION",
         "MONITORING",
-        "OSCP:HIGH",
         "POST_EXPLOITATION",
         "PRIVILEGE_ESCALATION",
         "WINDOWS"
       ],
-      "oscp_relevance": "high",
       "success_indicators": [
         "BINARY_PATH_NAME",
         "SERVICE_START_NAME",
@@ -370,12 +352,10 @@
         "DEFENSE",
         "ENUMERATION",
         "MONITORING",
-        "OSCP:HIGH",
         "POST_EXPLOITATION",
         "WINDOWS",
         "WMIC"
       ],
-      "oscp_relevance": "high",
       "success_indicators": [
         "Name",
         "ProcessId",
@@ -392,7 +372,7 @@
         "win-sc-query-all",
         "win-ps-get-service"
       ],
-      "notes": "WMIC deprecated in Windows 11+ but still in OSCP labs.\n\nFor specific properties:\nwmic service get Name,PathName,StartMode,State.\n\nTime estimate:\n5 seconds.",
+      "notes": "WMIC deprecated in Windows 11+ but still in certification labs.\n\nFor specific properties:\nwmic service get Name,PathName,StartMode,State.\n\nTime estimate:\n5 seconds.",
       "methodology_guidance": {
         "after_success": "Get full service details: win-wmic-service-path Filter running services: wmic service where \"State='Running'\" list brief Check for non-standard services (not from Microsoft) PowerShell alternative: win-ps-get-service"
       }
@@ -417,14 +397,12 @@
         "DEFENSE",
         "ENUMERATION",
         "MONITORING",
-        "OSCP:HIGH",
         "POST_EXPLOITATION",
         "PRIVILEGE_ESCALATION",
         "UNQUOTED_PATH",
         "WINDOWS",
         "WMIC"
       ],
-      "oscp_relevance": "high",
       "success_indicators": [
         "Name",
         "PathName",
@@ -461,12 +439,10 @@
         "DEFENSE",
         "ENUMERATION",
         "MONITORING",
-        "OSCP:HIGH",
         "POST_EXPLOITATION",
         "POWERSHELL",
         "WINDOWS"
       ],
-      "oscp_relevance": "high",
       "success_indicators": [
         "Status",
         "Name",
@@ -506,14 +482,12 @@
         "DETAILED",
         "ENUMERATION",
         "MONITORING",
-        "OSCP:HIGH",
         "POST_EXPLOITATION",
         "POWERSHELL",
         "PRIVILEGE_ESCALATION",
         "WINDOWS",
         "WMI"
       ],
-      "oscp_relevance": "high",
       "success_indicators": [
         "Name",
         "State",

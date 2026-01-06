@@ -34,9 +34,9 @@
           "Before WinRM/WMI lateral movement when reverse shell needed",
           "Generating payloads for command injection or RCE exploits",
           "Creating obfuscated PowerShell commands to bypass simple string detection",
-          "OSCP exam prep - pre-generate payloads for common scenarios"
+          "security assessment prep - pre-generate payloads for common scenarios"
         ],
-        "exam_relevance": "HIGH - Save time during OSCP exam by having encoder script ready. Generate custom payloads in seconds rather than manual encoding.",
+        "exam_relevance": "HIGH - Save time during security assessment by having encoder script ready. Generate custom payloads in seconds rather than manual encoding.",
         "time_estimate": "<5 seconds to generate payload",
         "technical_notes": [
           "payload.encode('utf16') adds BOM - [2:] removes first 2 bytes (BOM)",
@@ -45,14 +45,12 @@
           "Script handles escaping automatically - no manual quote escaping needed"
         ]
       },
-      "oscp_priority": "HIGH",
       "tags": [
         "PYTHON",
         "POWERSHELL",
         "REVERSE_SHELL",
         "PAYLOAD_GENERATION",
-        "BASE64",
-        "OSCP:HIGH"
+        "BASE64"
       ],
       "prerequisites": [],
       "alternatives": [

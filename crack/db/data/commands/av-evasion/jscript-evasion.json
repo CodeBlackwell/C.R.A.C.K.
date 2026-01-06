@@ -172,7 +172,6 @@
       "filled_example": "# Execute with WScript (GUI mode, hidden)\nwscript.exe //B //Nologo payload.js\n\n# Execute with CScript (console mode)\ncscript.exe //B //Nologo payload.js\n\n# Force hidden execution (WScript)\nwscript.exe //B //Nologo payload.js\n\n# Within script, check execution mode:\nvar isConsole = (WScript.FullName.toLowerCase().indexOf(\"cscript\") != -1);"
     }
   ],
-  "oscp_relevance": "Useful for alternative execution methods when PowerShell blocked. JScript often less monitored than PowerShell. Good for VBA -> JScript -> PowerShell attack chains.",
   "attack_chain_position": "Initial Access, Execution, Evasion",
   "related_categories": [
     "vba-evasion",

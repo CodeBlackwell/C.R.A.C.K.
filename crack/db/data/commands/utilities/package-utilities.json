@@ -9,8 +9,7 @@
       "tags": [
         "utility",
         "package-manager",
-        "linux",
-        "OSCP:HIGH"
+        "linux"
       ],
       "variables": [
         {
@@ -27,7 +26,6 @@
       "prerequisites": [
         "apt-update"
       ],
-      "oscp_relevance": "high",
       "notes": "Essential for installing tools on Debian-based systems (Kali, Ubuntu, Parrot)",
       "filled_example": "sudo apt install -y nmap"
     },
@@ -40,15 +38,13 @@
       "tags": [
         "utility",
         "package-manager",
-        "linux",
-        "OSCP:MEDIUM"
+        "linux"
       ],
       "flag_explanations": {},
       "next_steps": [
         "apt-upgrade",
         "apt-install"
       ],
-      "oscp_relevance": "medium",
       "notes": "Run before apt install to ensure latest package versions"
     },
     {
@@ -60,8 +56,7 @@
       "tags": [
         "utility",
         "package-manager",
-        "linux",
-        "OSCP:LOW"
+        "linux"
       ],
       "flag_explanations": {
         "-y": "Automatic yes to prompts"
@@ -69,8 +64,7 @@
       "prerequisites": [
         "apt-update"
       ],
-      "oscp_relevance": "low",
-      "notes": "Use before OSCP exam to ensure all tools are up-to-date"
+      "notes": "Use before certification exam to ensure all tools are up-to-date"
     },
     {
       "id": "pip-install",
@@ -81,8 +75,7 @@
       "tags": [
         "utility",
         "package-manager",
-        "python",
-        "OSCP:HIGH"
+        "python"
       ],
       "variables": [
         {
@@ -100,7 +93,6 @@
       "alternatives": [
         "pip3-install"
       ],
-      "oscp_relevance": "high",
       "notes": "Many exploits require Python packages - impacket, requests, etc.",
       "filled_example": "pip install impacket"
     },
@@ -113,8 +105,7 @@
       "tags": [
         "utility",
         "package-manager",
-        "python",
-        "OSCP:HIGH"
+        "python"
       ],
       "variables": [
         {
@@ -132,7 +123,6 @@
       "alternatives": [
         "pip-install"
       ],
-      "oscp_relevance": "high",
       "notes": "Prefer pip3 over pip for modern Python tools",
       "filled_example": "pip3 install pwntools"
     },
@@ -145,8 +135,7 @@
       "tags": [
         "utility",
         "package-manager",
-        "nodejs",
-        "OSCP:LOW"
+        "nodejs"
       ],
       "variables": [
         {
@@ -161,7 +150,6 @@
         "--save": "Add to package.json dependencies",
         "--save-dev": "Add to devDependencies"
       },
-      "oscp_relevance": "low",
       "notes": "Occasionally needed for Node.js exploits or tools",
       "filled_example": "npm install express"
     },
@@ -174,8 +162,7 @@
       "tags": [
         "utility",
         "package-manager",
-        "ruby",
-        "OSCP:MEDIUM"
+        "ruby"
       ],
       "variables": [
         {
@@ -189,7 +176,6 @@
         "--user-install": "Install to user directory",
         "--no-document": "Skip documentation generation (faster)"
       },
-      "oscp_relevance": "medium",
       "notes": "Useful for evil-winrm and other Ruby-based tools",
       "filled_example": "gem install winrm"
     },
@@ -202,8 +188,7 @@
       "tags": [
         "utility",
         "package-manager",
-        "linux",
-        "OSCP:LOW"
+        "linux"
       ],
       "variables": [
         {
@@ -220,8 +205,7 @@
         "dnf-install",
         "apt-install"
       ],
-      "oscp_relevance": "low",
-      "notes": "For Red Hat-based systems (less common in OSCP)",
+      "notes": "For Red Hat-based systems (less common in certification)",
       "filled_example": "sudo yum install -y nmap"
     },
     {
@@ -233,8 +217,7 @@
       "tags": [
         "utility",
         "package-manager",
-        "linux",
-        "OSCP:LOW"
+        "linux"
       ],
       "variables": [
         {
@@ -251,7 +234,6 @@
         "yum-install",
         "apt-install"
       ],
-      "oscp_relevance": "low",
       "filled_example": "sudo dnf install -y nmap"
     },
     {
@@ -263,8 +245,7 @@
       "tags": [
         "utility",
         "package-manager",
-        "macos",
-        "OSCP:LOW"
+        "macos"
       ],
       "variables": [
         {
@@ -274,8 +255,7 @@
           "required": true
         }
       ],
-      "oscp_relevance": "low",
-      "notes": "For macOS users preparing for OSCP",
+      "notes": "For macOS users preparing for certification",
       "filled_example": "brew install nmap"
     },
     {
@@ -287,8 +267,7 @@
       "tags": [
         "utility",
         "package-manager",
-        "rust",
-        "OSCP:LOW"
+        "rust"
       ],
       "variables": [
         {
@@ -298,7 +277,6 @@
           "required": true
         }
       ],
-      "oscp_relevance": "low",
       "notes": "Useful for modern tools like feroxbuster, rustscan",
       "filled_example": "cargo install feroxbuster"
     },
@@ -311,8 +289,7 @@
       "tags": [
         "utility",
         "package-manager",
-        "golang",
-        "OSCP:LOW"
+        "golang"
       ],
       "variables": [
         {
@@ -325,7 +302,6 @@
       "alternatives": [
         "go-install"
       ],
-      "oscp_relevance": "low",
       "notes": "Deprecated - use go install instead",
       "filled_example": "go get github.com/OJ/gobuster/v3@latest"
     },
@@ -338,8 +314,7 @@
       "tags": [
         "utility",
         "package-manager",
-        "golang",
-        "OSCP:LOW"
+        "golang"
       ],
       "variables": [
         {
@@ -352,7 +327,6 @@
       "alternatives": [
         "go-get"
       ],
-      "oscp_relevance": "low",
       "notes": "Preferred over go get for tools like gobuster, ffuf",
       "filled_example": "go install github.com/OJ/gobuster/v3@latest"
     },
@@ -365,8 +339,7 @@
       "tags": [
         "utility",
         "package-manager",
-        "windows",
-        "OSCP:LOW"
+        "windows"
       ],
       "variables": [
         {
@@ -382,7 +355,6 @@
       "alternatives": [
         "winget-install"
       ],
-      "oscp_relevance": "low",
       "notes": "For setting up Windows attack box",
       "filled_example": "choco install nmap -y"
     },
@@ -395,8 +367,7 @@
       "tags": [
         "utility",
         "package-manager",
-        "windows",
-        "OSCP:LOW"
+        "windows"
       ],
       "variables": [
         {
@@ -414,7 +385,6 @@
       "alternatives": [
         "choco-install"
       ],
-      "oscp_relevance": "low",
       "notes": "Built into Windows 10/11 - no additional setup required",
       "filled_example": "winget install Nmap.Nmap"
     },
@@ -427,8 +397,7 @@
       "tags": [
         "utility",
         "package-manager",
-        "windows",
-        "OSCP:LOW"
+        "windows"
       ],
       "variables": [
         {
@@ -442,7 +411,6 @@
         "choco-install",
         "winget-install"
       ],
-      "oscp_relevance": "low",
       "notes": "User-focused package manager - no admin rights required",
       "filled_example": "scoop install nmap"
     }

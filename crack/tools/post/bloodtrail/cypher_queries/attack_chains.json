@@ -8,13 +8,20 @@
       "description": "Find complete attack paths from low-privilege owned user through pivot systems to Domain Admin. Reconstructs DCSync capstone-style attack chains.",
       "cypher": "MATCH (lowpriv:User)-[:AdminTo]->(pivot:Computer)\nWHERE NOT lowpriv.admincount = true\n  AND lowpriv.enabled = true\n  AND NOT pivot.name STARTS WITH 'DC'\nOPTIONAL MATCH (pivot)<-[:AdminTo]-(dagroup:Group)\nWHERE dagroup.name =~ '(?i).*DOMAIN ADMINS.*'\nRETURN lowpriv.name AS OwnedUser,\n       pivot.name AS PivotMachine,\n       pivot.bloodtrail_ip AS PivotMachineIP,\n       CASE WHEN dagroup IS NOT NULL\n            THEN 'DA has admin here - MIMIKATZ TARGET'\n            ELSE 'Check for sessions' END AS Note",
       "variables": {},
-      "edge_types_used": ["AdminTo"],
-      "oscp_relevance": "high",
+      "edge_types_used": [
+        "AdminTo"
+      ],
       "expected_results": "Attack paths from non-privileged users to credential harvest opportunities",
       "example_output": "MIKE@CORP.COM -> CLIENT75.CORP.COM -> 'DA has admin here - MIMIKATZ TARGET'",
-      "next_steps": ["lateral-sessions-on-computer"],
+      "next_steps": [
+        "lateral-sessions-on-computer"
+      ],
       "attack_technique": "T1078.002",
-      "tags": ["OSCP:HIGH", "attack_chain", "pivot", "credential_harvest"]
+      "tags": [
+        "attack_chain",
+        "pivot",
+        "credential_harvest"
+      ]
     },
     {
       "id": "chain-shortest-to-da",
@@ -22,12 +29,23 @@
       "description": "Find shortest privilege escalation path from any enabled user to Domain Admins group.",
       "cypher": "MATCH p=shortestPath((u:User {enabled:true})-[*1..5]->(g:Group))\nWHERE g.name =~ '(?i).*DOMAIN ADMINS.*'\n  AND NOT u.admincount = true\nRETURN u.name AS StartUser,\n       length(p) AS Hops,\n       [n IN nodes(p) | n.name] AS Path\nLIMIT 10",
       "variables": {},
-      "edge_types_used": ["AdminTo", "MemberOf", "HasSession", "GenericAll", "WriteDacl"],
-      "oscp_relevance": "high",
+      "edge_types_used": [
+        "AdminTo",
+        "MemberOf",
+        "HasSession",
+        "GenericAll",
+        "WriteDacl"
+      ],
       "expected_results": "Shortest paths from non-privileged users to DA with hop count",
       "example_output": "PETE@CORP.COM (3 hops) -> [PETE, IT_USERS, IT_ADMINS, DOMAIN ADMINS]",
-      "next_steps": ["chain-all-paths-to-da"],
-      "tags": ["OSCP:HIGH", "attack_chain", "shortest_path", "privilege_escalation"]
+      "next_steps": [
+        "chain-all-paths-to-da"
+      ],
+      "tags": [
+        "attack_chain",
+        "shortest_path",
+        "privilege_escalation"
+      ]
     },
     {
       "id": "chain-all-paths-to-da",
@@ -35,12 +53,25 @@
       "description": "Find all privilege escalation paths to Domain Admins using common attack edges. More comprehensive than shortest path.",
       "cypher": "MATCH p=allShortestPaths(\n  (u:User {enabled:true})-[r:AdminTo|HasSession|MemberOf|ForceChangePassword|\n   GenericAll|GenericWrite|WriteOwner|WriteDacl|AddMember*1..6]->(da:Group)\n)\nWHERE da.name =~ '(?i).*DOMAIN ADMINS.*'\n  AND NOT u.admincount = true\nRETURN p LIMIT 25",
       "variables": {},
-      "edge_types_used": ["AdminTo", "HasSession", "MemberOf", "ForceChangePassword", "GenericAll", "GenericWrite", "WriteOwner", "WriteDacl", "AddMember"],
-      "oscp_relevance": "high",
+      "edge_types_used": [
+        "AdminTo",
+        "HasSession",
+        "MemberOf",
+        "ForceChangePassword",
+        "GenericAll",
+        "GenericWrite",
+        "WriteOwner",
+        "WriteDacl",
+        "AddMember"
+      ],
       "expected_results": "Multiple attack paths for alternative exploitation routes",
       "example_output": "Graph showing 25 different paths to Domain Admins",
       "next_steps": [],
-      "tags": ["OSCP:HIGH", "attack_chain", "all_paths", "comprehensive"]
+      "tags": [
+        "attack_chain",
+        "all_paths",
+        "comprehensive"
+      ]
     },
     {
       "id": "chain-credential-harvest",
@@ -48,13 +79,21 @@
       "description": "Find machines where you have admin AND Domain Admin has access. Prime targets for mimikatz credential dumping.",
       "cypher": "MATCH (owned:User)-[:AdminTo]->(c:Computer)<-[:AdminTo]-(da:Group)\nWHERE NOT owned.admincount = true\n  AND da.name =~ '(?i).*DOMAIN ADMINS.*'\nRETURN owned.name AS OwnedUser,\n       c.name AS TargetMachine,\n       c.bloodtrail_ip AS TargetMachineIP,\n       'Run mimikatz - DA creds may be cached' AS Action",
       "variables": {},
-      "edge_types_used": ["AdminTo"],
-      "oscp_relevance": "high",
+      "edge_types_used": [
+        "AdminTo"
+      ],
       "expected_results": "Machines for credential harvesting where DA has access",
       "example_output": "MIKE@CORP.COM -> CLIENT75.CORP.COM -> 'Run mimikatz - DA creds may be cached'",
-      "next_steps": ["lateral-sessions-on-computer", "privesc-dcsync-rights"],
+      "next_steps": [
+        "lateral-sessions-on-computer",
+        "privesc-dcsync-rights"
+      ],
       "attack_technique": "T1003.001",
-      "tags": ["OSCP:HIGH", "attack_chain", "credential_harvest", "mimikatz"]
+      "tags": [
+        "attack_chain",
+        "credential_harvest",
+        "mimikatz"
+      ]
     },
     {
       "id": "chain-path-through-computer",
@@ -68,12 +107,21 @@
           "required": true
         }
       },
-      "edge_types_used": ["AdminTo", "HasSession", "MemberOf", "GenericAll"],
-      "oscp_relevance": "high",
+      "edge_types_used": [
+        "AdminTo",
+        "HasSession",
+        "MemberOf",
+        "GenericAll"
+      ],
       "expected_results": "Paths from owned users to specific computer",
       "example_output": "[PETE, MIKE, CLIENT75.CORP.COM] via [MemberOf, AdminTo]",
-      "next_steps": ["lateral-sessions-on-computer"],
-      "tags": ["OSCP:HIGH", "attack_chain", "targeted_path"]
+      "next_steps": [
+        "lateral-sessions-on-computer"
+      ],
+      "tags": [
+        "attack_chain",
+        "targeted_path"
+      ]
     },
     {
       "id": "chain-path-between-users",
@@ -92,12 +140,20 @@
           "required": true
         }
       },
-      "edge_types_used": ["AdminTo", "HasSession", "MemberOf", "GenericAll", "ForceChangePassword"],
-      "oscp_relevance": "high",
+      "edge_types_used": [
+        "AdminTo",
+        "HasSession",
+        "MemberOf",
+        "GenericAll",
+        "ForceChangePassword"
+      ],
       "expected_results": "Direct path between two specific users",
       "example_output": "[PETE, CLIENT75, MARIA, ADMINISTRATOR] via [AdminTo, HasSession, MemberOf]",
       "next_steps": [],
-      "tags": ["OSCP:HIGH", "attack_chain", "user_to_user"]
+      "tags": [
+        "attack_chain",
+        "user_to_user"
+      ]
     },
     {
       "id": "chain-to-high-value",
@@ -105,12 +161,21 @@
       "description": "Find paths from owned users to all high-value targets (marked in BloodHound).",
       "cypher": "MATCH p=shortestPath(\n  (u:User {owned:true})-[*1..5]->(target {highvalue:true})\n)\nRETURN u.name AS StartUser,\n       target.name AS HighValueTarget,\n       labels(target) AS TargetType,\n       length(p) AS Hops\nORDER BY Hops ASC\nLIMIT 20",
       "variables": {},
-      "edge_types_used": ["AdminTo", "HasSession", "MemberOf", "GenericAll"],
-      "oscp_relevance": "high",
+      "edge_types_used": [
+        "AdminTo",
+        "HasSession",
+        "MemberOf",
+        "GenericAll"
+      ],
       "expected_results": "Paths to BloodHound-marked high-value targets",
       "example_output": "MIKE@CORP.COM -> DC1.CORP.COM (2 hops)",
-      "next_steps": ["lateral-sessions-on-computer"],
-      "tags": ["OSCP:HIGH", "attack_chain", "high_value"]
+      "next_steps": [
+        "lateral-sessions-on-computer"
+      ],
+      "tags": [
+        "attack_chain",
+        "high_value"
+      ]
     },
     {
       "id": "chain-circular-groups",
@@ -118,12 +183,17 @@
       "description": "Find circular group membership chains. Can indicate misconfigurations or unintended privilege inheritance.",
       "cypher": "MATCH p=(g:Group)-[:MemberOf*1..5]->(g)\nRETURN [n IN nodes(p) | n.name] AS CircularChain,\n       length(p) AS ChainLength",
       "variables": {},
-      "edge_types_used": ["MemberOf"],
-      "oscp_relevance": "low",
+      "edge_types_used": [
+        "MemberOf"
+      ],
       "expected_results": "Groups with circular membership (potential misconfiguration)",
       "example_output": "[IT_ADMINS, SERVER_ADMINS, IT_ADMINS] (circular)",
       "next_steps": [],
-      "tags": ["OSCP:LOW", "attack_chain", "misconfiguration", "circular"]
+      "tags": [
+        "attack_chain",
+        "misconfiguration",
+        "circular"
+      ]
     }
   ]
 }

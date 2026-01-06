@@ -19,7 +19,6 @@
         "systemctl-start-ssh"
       ],
       "notes": "Legacy service management for older Linux distributions.\n\nOn systemd:\nuse 'systemctl start ssh' or 'systemctl start sshd'.\n\nService name varies:\nssh (Debian/Ubuntu), sshd (RedHat/CentOS).",
-      "oscp_relevance": "medium",
       "tags": [
         "PIVOTING",
         "SSH",
@@ -40,7 +39,6 @@
         "ss-listening-all"
       ],
       "notes": "Verifies ports are listening AND accessible (firewall allows).\n\nInternal verification:\nuse netstat/ss.\n\nUseful after setting up tunnels or forwarding to confirm external accessibility.",
-      "oscp_relevance": "medium",
       "tags": [
         "PIVOTING",
         "NMAP",
@@ -61,7 +59,6 @@
       },
       "alternatives": [],
       "notes": "Shows default gateway, network routes, and interfaces.\n\nEssential for identifying network segments during pivoting.\n\nModern alternative:\n'ip route' or 'route -n'.",
-      "oscp_relevance": "high",
       "tags": [
         "PIVOTING",
         "NETSTAT",
@@ -92,7 +89,6 @@
       ],
       "alternatives": [],
       "notes": "Quick connectivity test after establishing tunnel or port forward.\n\nAdd -v for verbose connection details.\n\nUse -x for testing through SOCKS proxy.",
-      "oscp_relevance": "high",
       "tags": [
         "PIVOTING",
         "CURL",
@@ -144,7 +140,6 @@
         "ssh-local-port-forward"
       ],
       "notes": "Local port forward:\nbind local port that forwards to internal target.\n\nAccess via localhost:<LOCAL_PORT>.\n\nAdd -N to disable shell, -f for background.\n\nUseful for accessing services on internal networks.",
-      "oscp_relevance": "high",
       "tags": [
         "PIVOTING",
         "SSH",
@@ -165,7 +160,6 @@
         "cme-smb-shares"
       ],
       "notes": "CrackMapExec (cme) is comprehensive toolkit for Active Directory enumeration, credential testing, and lateral movement.\n\nCommon usage:\ncme smb <target> -u <user> -p <pass>.\n\nSupports pass-the-hash, shares, command execution.",
-      "oscp_relevance": "high",
       "tags": [
         "PIVOTING",
         "LATERAL_MOVEMENT",
@@ -190,7 +184,6 @@
         "get-computerinfo"
       ],
       "notes": "WMIC deprecated in Windows 10 21H1+.\n\nModern alternative:\nGet-CimInstance Win32_OperatingSystem.\n\nCaption shows OS name, version shows build number.\n\nUseful for identifying target OS quickly.",
-      "oscp_relevance": "high",
       "tags": [
         "PIVOTING",
         "WINDOWS",
@@ -213,7 +206,6 @@
         "whoami-priv"
       ],
       "notes": "Shows username, SID, groups, privileges (enabled/disabled), and integrity level.\n\nEssential for privilege escalation assessment.\n\nLook for SeImpersonatePrivilege, SeBackupPrivilege, etc.",
-      "oscp_relevance": "high",
       "tags": [
         "PIVOTING",
         "WINDOWS",
@@ -257,7 +249,6 @@
       ],
       "prerequisites": [],
       "notes": "Workaround for old OpenSSH versions lacking -D dynamic forward.\n\nRun microsocks locally on Windows, then use plink to forward that port back to attacker.\n\nAttacker configures proxychains to use remote port.",
-      "oscp_relevance": "medium",
       "tags": [
         "PIVOTING",
         "PLINK",
@@ -283,7 +274,6 @@
         }
       ],
       "notes": "Combined check:\n'ip route' shows routing table, ping tests connectivity.\n\nEssential before setting up tunnels.\n\nIf ping fails but route exists, check firewall rules.",
-      "oscp_relevance": "high",
       "tags": [
         "PIVOTING",
         "ROUTING",
@@ -305,7 +295,6 @@
         "sshuttle-vpn"
       ],
       "notes": "Chisel uses HTTP/HTTPS for tunneling (bypasses SSH blocks).\n\nServer:\nchisel server -p <port> --reverse.\n\nClient:\nchisel client <server>:<port> R:socks or R:<local>:<remote>:<port>.\n\nSupports SOCKS and port forwarding.",
-      "oscp_relevance": "high",
       "tags": [
         "PIVOTING",
         "CHISEL",
@@ -332,7 +321,6 @@
         "-Port 22": "Test connectivity to SSH port 22"
       },
       "notes": "PowerShell cmdlet to test TCP connectivity.\n\nShows TcpTestSucceeded (true/false).\n\nUseful before attempting plink reverse tunnels.\n\nAlternative:\ncurl telnet://<host>:22",
-      "oscp_relevance": "high",
       "tags": [
         "PIVOTING",
         "WINDOWS",
@@ -379,7 +367,6 @@
         "plink-remote-forward"
       ],
       "notes": "Plink is PuTTY's CLI SSH client.\n\nUse -R for reverse tunnels (expose internal port to attacker).\n\nAdd -N to disable shell.\n\nAccept host key with -batch or echo y | plink ...",
-      "oscp_relevance": "high",
       "tags": [
         "PIVOTING",
         "PLINK",
@@ -401,7 +388,6 @@
         "proxychains-config"
       ],
       "notes": "Check [ProxyList] section at bottom:\n'socks5 127.0.0.1 1080' (or your SOCKS port).\n\nEnsure only one active proxy line.\n\nTest with:\nproxychains4 curl http://10.10.10.1",
-      "oscp_relevance": "high",
       "tags": [
         "PIVOTING",
         "PROXYCHAINS",

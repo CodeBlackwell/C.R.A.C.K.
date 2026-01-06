@@ -15,7 +15,7 @@
           "After initial domain reconnaissance - before attempting lateral movement",
           "When planning credential theft attacks (need to know where admin sessions exist)",
           "When Get-NetSession fails - understand OS version limitations",
-          "OSCP exam: Session enumeration success depends on target OS version (older = better success rate)"
+          "security assessment: Session enumeration success depends on target OS version (older = better success rate)"
         ]
       },
       "scenarios": [
@@ -195,8 +195,7 @@
         "REMOTE_REGISTRY",
         "OS_VERSION",
         "LATERAL_MOVEMENT",
-        "CREDENTIAL_THEFT",
-        "OSCP:HIGH"
+        "CREDENTIAL_THEFT"
       ]
     }
   ]

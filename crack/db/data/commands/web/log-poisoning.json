@@ -12,7 +12,6 @@
         "log-poisoning",
         "apache"
       ],
-      "oscp_relevance": "Core LFI-to-RCE technique. Apache logs User-Agent without sanitization by default. Combined with LFI, achieves remote code execution. Common in OSCP (appears in ~30% of web boxes). Fast execution (2-3 minutes total).",
       "variables": [
         {
           "name": "<TARGET>",
@@ -66,7 +65,6 @@
         "log-poisoning",
         "nginx"
       ],
-      "oscp_relevance": "Nginx becoming more common in OSCP (20-25% of web boxes). Technique identical to Apache, but different log paths and permissions. Nginx worker runs as 'nginx' or 'www-data' depending on distro. Understanding platform differences critical for exam success.",
       "variables": [
         {
           "name": "<TARGET>",
@@ -110,7 +108,6 @@
         "apache",
         "enumeration"
       ],
-      "oscp_relevance": "Two-phase usage: (1) Verify log is readable before poisoning (saves time), (2) Trigger RCE after poisoning. Exam efficiency critical - test access before wasting time on poisoning. Common mistake: Poisoning log that LFI can't access.",
       "variables": [
         {
           "name": "<TARGET>",
@@ -140,7 +137,7 @@
       "flag_explanations": {},
       "next_steps": [],
       "category": "web",
-      "notes": "Manual alternative:\nUse browser:\nNavigate to http://<TARGET>/<LFI_PARAM>?<PARAM>=../../../../var/log/apache2/access.log directly.\n\nAdvantage:\nSee formatted output with syntax highlighting extensions.\n\nDisadvantage:\nBrowser modifies User-Agent (harder to control payload injection).\n\nFor exam:\ncurl preferred (scriptable, exact control).\n\nSuccess rate:\nMedium (50-60%).\n\nMany modern setups restrict log permissions (640 root:adm).\n\nDefault Apache on older Ubuntu (<=16.04) often world-readable (644).\n\nOSCP boxes tend toward permissive configs for challenge purposes.\n\nTiming:\n30 seconds to 1 minute (quick verification step before poisoning).",
+      "notes": "Manual alternative:\nUse browser:\nNavigate to http://<TARGET>/<LFI_PARAM>?<PARAM>=../../../../var/log/apache2/access.log directly.\n\nAdvantage:\nSee formatted output with syntax highlighting extensions.\n\nDisadvantage:\nBrowser modifies User-Agent (harder to control payload injection).\n\nFor exam:\ncurl preferred (scriptable, exact control).\n\nSuccess rate:\nMedium (50-60%).\n\nMany modern setups restrict log permissions (640 root:adm).\n\nDefault Apache on older Ubuntu (<=16.04) often world-readable (644).\n\ncertification boxes tend toward permissive configs for challenge purposes.\n\nTiming:\n30 seconds to 1 minute (quick verification step before poisoning).",
       "alternatives": [],
       "success_indicators": [],
       "failure_indicators": [],
@@ -164,7 +161,6 @@
         "nginx",
         "enumeration"
       ],
-      "oscp_relevance": "Nginx-specific variant of Apache log reading. Path differences critical: /var/log/nginx/ vs /var/log/apache2/. Multi-vhost Nginx setups often use named logs (/var/log/nginx/<DOMAIN>_access.log) - requires enumeration. OSCP scenario: Default configs more common, but knowing variants saves time.",
       "variables": [
         {
           "name": "<TARGET>",
@@ -218,7 +214,6 @@
         "ssh",
         "alternative"
       ],
-      "oscp_relevance": "Critical alternative when web logs not accessible. SSH logs to /var/log/auth.log, which is often more permissive (readable by syslog group, www-data sometimes member). OSCP frequency: Medium (15-20% of LFI challenges require this when Apache/Nginx logs fail). Failed login intentional - we want payload logged, not actual authentication.",
       "variables": [
         {
           "name": "<TARGET>",
@@ -230,7 +225,7 @@
       "flag_explanations": {},
       "next_steps": [],
       "category": "web",
-      "notes": "Manual alternative:\nIf SSH client rejects PHP payload (some clients validate username format):\nUse raw TCP socket.\n\nPython one-liner:\npython3 -c \"import socket; s=socket.socket(); s.connect(('<TARGET>',22)); s.recv(1024); s.send(b'SSH-2.0-OpenSSH_8.0\\r\\n'); s.send(b'<?php system(\\$_GET[\\\"c\\\"]); ?>\\r\\n')\" (less reliable but bypasses client validation).\n\nSuccess rate:\nHigh (70-80% when SSH exposed and auth.log readable).\n\nAdvantages over web log poisoning:\n(1) auth.log often group-readable (syslog group), (2) less likely to have SELinux restrictions, (3) works even if no web server running.\n\nDisadvantages:\n(1) Requires SSH port open, (2) generates failed login alerts (stealth concern in real engagements, not OSCP).\n\nTiming:\n1-2 minutes for poisoning.\n\n30 seconds for SSH detection (nmap).\n\nTotal:\n2-3 minutes.",
+      "notes": "Manual alternative:\nIf SSH client rejects PHP payload (some clients validate username format):\nUse raw TCP socket.\n\nPython one-liner:\npython3 -c \"import socket; s=socket.socket(); s.connect(('<TARGET>',22)); s.recv(1024); s.send(b'SSH-2.0-OpenSSH_8.0\\r\\n'); s.send(b'<?php system(\\$_GET[\\\"c\\\"]); ?>\\r\\n')\" (less reliable but bypasses client validation).\n\nSuccess rate:\nHigh (70-80% when SSH exposed and auth.log readable).\n\nAdvantages over web log poisoning:\n(1) auth.log often group-readable (syslog group), (2) less likely to have SELinux restrictions, (3) works even if no web server running.\n\nDisadvantages:\n(1) Requires SSH port open, (2) generates failed login alerts (stealth concern in real engagements, not certification).\n\nTiming:\n1-2 minutes for poisoning.\n\n30 seconds for SSH detection (nmap).\n\nTotal:\n2-3 minutes.",
       "alternatives": [],
       "success_indicators": [],
       "failure_indicators": [],
@@ -253,7 +248,6 @@
         "ssh",
         "enumeration"
       ],
-      "oscp_relevance": "Pre-check before SSH log poisoning. Verifies: (1) auth.log exists, (2) readable by www-data, (3) SSH logging enabled. Common in OSCP when web logs fail. Auth.log contains: SSH logins, sudo attempts, cron jobs, user switches - useful for enumeration even without poisoning.",
       "variables": [
         {
           "name": "<TARGET>",
@@ -308,7 +302,6 @@
         "proc",
         "advanced"
       ],
-      "oscp_relevance": "Advanced technique when all log files fail. /proc/self/environ contains environment variables of current PHP process, including HTTP headers. By poisoning User-Agent (becomes HTTP_USER_AGENT env var), we inject code. Less common in OSCP (10-15%) but high-value when it works. Demonstrates deeper Linux knowledge.",
       "variables": [
         {
           "name": "<TARGET>",
@@ -364,7 +357,6 @@
         "log-poisoning",
         "exploitation"
       ],
-      "oscp_relevance": "Second phase of log poisoning attack. First phase: inject payload via curl-ua-poison-apache. Second phase: trigger execution via this command. Understanding two-phase nature critical for OSCP - many students poison successfully but fail to trigger. This command demonstrates the full attack chain.",
       "variables": [
         {
           "name": "<TARGET>",

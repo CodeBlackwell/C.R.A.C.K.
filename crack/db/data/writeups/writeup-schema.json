@@ -1,14 +1,13 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "OSCP Writeup Schema",
-  "description": "JSON Schema for OSCP machine writeups with command tracking, failed attempts, and learning documentation",
+  "title": "Writeup Schema",
+  "description": "JSON Schema for machine writeups with command tracking, failed attempts, and learning documentation",
   "type": "object",
   "required": [
     "id",
     "name",
     "source",
     "metadata",
-    "oscp_relevance",
     "synopsis",
     "skills",
     "tags",
@@ -28,16 +27,30 @@
     },
     "source": {
       "type": "object",
-      "required": ["platform", "type"],
+      "required": [
+        "platform",
+        "type"
+      ],
       "properties": {
         "platform": {
           "type": "string",
-          "enum": ["HackTheBox", "ProvingGrounds", "TryHackMe", "VulnHub", "OSCP_Labs", "Custom"],
+          "enum": [
+            "HackTheBox",
+            "TryHackMe",
+            "VulnHub",
+            "Custom"
+          ],
           "description": "Source platform"
         },
         "type": {
           "type": "string",
-          "enum": ["official", "retired", "active", "practice", "custom"],
+          "enum": [
+            "official",
+            "retired",
+            "active",
+            "practice",
+            "custom"
+          ],
           "description": "Machine status"
         },
         "release_date": {
@@ -59,16 +72,28 @@
     },
     "metadata": {
       "type": "object",
-      "required": ["difficulty", "os"],
+      "required": [
+        "difficulty",
+        "os"
+      ],
       "properties": {
         "difficulty": {
           "type": "string",
-          "enum": ["easy", "medium", "hard", "insane"],
+          "enum": [
+            "easy",
+            "medium",
+            "hard",
+            "insane"
+          ],
           "description": "Machine difficulty"
         },
         "os": {
           "type": "string",
-          "enum": ["linux", "windows", "other"],
+          "enum": [
+            "linux",
+            "windows",
+            "other"
+          ],
           "description": "Operating system"
         },
         "os_version": {
@@ -99,34 +124,6 @@
         }
       }
     },
-    "oscp_relevance": {
-      "type": "object",
-      "required": ["score", "reasoning", "exam_applicable"],
-      "properties": {
-        "score": {
-          "type": "string",
-          "enum": ["high", "medium", "low"],
-          "description": "OSCP relevance rating"
-        },
-        "reasoning": {
-          "type": "string",
-          "minLength": 50,
-          "description": "Why this machine is OSCP relevant"
-        },
-        "exam_applicable": {
-          "type": "boolean",
-          "description": "Techniques directly applicable to OSCP exam"
-        },
-        "similar_machines": {
-          "type": "object",
-          "description": "Similar machines from other platforms"
-        },
-        "time_estimate_exam": {
-          "type": "string",
-          "description": "Estimated completion time in exam context"
-        }
-      }
-    },
     "synopsis": {
       "type": "string",
       "minLength": 100,
@@ -134,17 +131,24 @@
     },
     "skills": {
       "type": "object",
-      "required": ["required", "learned"],
+      "required": [
+        "required",
+        "learned"
+      ],
       "properties": {
         "required": {
           "type": "array",
-          "items": {"type": "string"},
+          "items": {
+            "type": "string"
+          },
           "minItems": 1,
           "description": "Skills required before attempting"
         },
         "learned": {
           "type": "array",
-          "items": {"type": "string"},
+          "items": {
+            "type": "string"
+          },
           "minItems": 1,
           "description": "Skills learned from machine"
         }
@@ -152,20 +156,34 @@
     },
     "tags": {
       "type": "array",
-      "items": {"type": "string"},
+      "items": {
+        "type": "string"
+      },
       "minItems": 3,
-      "description": "Tags for categorization (must include OSCP:HIGH|MEDIUM|LOW)"
+      "description": "Tags for categorization"
     },
     "attack_phases": {
       "type": "array",
       "minItems": 1,
       "items": {
         "type": "object",
-        "required": ["phase", "duration_minutes", "description", "commands_used", "key_findings"],
+        "required": [
+          "phase",
+          "duration_minutes",
+          "description",
+          "commands_used",
+          "key_findings"
+        ],
         "properties": {
           "phase": {
             "type": "string",
-            "enum": ["enumeration", "foothold", "lateral_movement", "privilege_escalation", "post_exploitation"],
+            "enum": [
+              "enumeration",
+              "foothold",
+              "lateral_movement",
+              "privilege_escalation",
+              "post_exploitation"
+            ],
             "description": "Attack phase name"
           },
           "duration_minutes": {
@@ -182,22 +200,45 @@
             "type": "array",
             "items": {
               "type": "object",
-              "required": ["name", "type", "severity", "exploitability"],
+              "required": [
+                "name",
+                "type",
+                "severity",
+                "exploitability"
+              ],
               "properties": {
-                "name": {"type": "string"},
+                "name": {
+                  "type": "string"
+                },
                 "cve": {
-                  "type": ["string", "null"],
+                  "type": [
+                    "string",
+                    "null"
+                  ],
                   "pattern": "^CVE-\\d{4}-\\d{4,7}$"
                 },
-                "type": {"type": "string"},
-                "location": {"type": "string"},
+                "type": {
+                  "type": "string"
+                },
+                "location": {
+                  "type": "string"
+                },
                 "severity": {
                   "type": "string",
-                  "enum": ["critical", "high", "medium", "low"]
+                  "enum": [
+                    "critical",
+                    "high",
+                    "medium",
+                    "low"
+                  ]
                 },
                 "exploitability": {
                   "type": "string",
-                  "enum": ["easy", "medium", "hard"]
+                  "enum": [
+                    "easy",
+                    "medium",
+                    "hard"
+                  ]
                 }
               }
             }
@@ -207,7 +248,12 @@
             "minItems": 1,
             "items": {
               "type": "object",
-              "required": ["command_id", "context", "step_number", "success"],
+              "required": [
+                "command_id",
+                "context",
+                "step_number",
+                "success"
+              ],
               "properties": {
                 "command_id": {
                   "type": "string",
@@ -241,7 +287,9 @@
                   "description": "Screenshots associated with this command execution",
                   "items": {
                     "type": "object",
-                    "required": ["file"],
+                    "required": [
+                      "file"
+                    ],
                     "properties": {
                       "file": {
                         "type": "string",
@@ -259,7 +307,11 @@
                       },
                       "confidence": {
                         "type": "string",
-                        "enum": ["high", "medium", "low"],
+                        "enum": [
+                          "high",
+                          "medium",
+                          "low"
+                        ],
                         "description": "Confidence level of automatic image-to-command mapping"
                       },
                       "context": {
@@ -276,36 +328,62 @@
             "type": "array",
             "items": {
               "type": "object",
-              "required": ["attempt", "reason", "solution", "lesson_learned"],
+              "required": [
+                "attempt",
+                "reason",
+                "solution",
+                "lesson_learned"
+              ],
               "properties": {
-                "attempt": {"type": "string"},
-                "command_executed": {"type": "string"},
-                "expected": {"type": "string"},
-                "actual": {"type": "string"},
-                "reason": {"type": "string"},
-                "solution": {"type": "string"},
+                "attempt": {
+                  "type": "string"
+                },
+                "command_executed": {
+                  "type": "string"
+                },
+                "expected": {
+                  "type": "string"
+                },
+                "actual": {
+                  "type": "string"
+                },
+                "reason": {
+                  "type": "string"
+                },
+                "solution": {
+                  "type": "string"
+                },
                 "lesson_learned": {
                   "type": "string",
                   "minLength": 30,
                   "description": "What this failure teaches"
                 },
-                "time_wasted_minutes": {"type": "integer"},
+                "time_wasted_minutes": {
+                  "type": "integer"
+                },
                 "documentation_importance": {
                   "type": "string",
-                  "enum": ["critical", "high", "medium", "low"]
+                  "enum": [
+                    "critical",
+                    "high",
+                    "medium",
+                    "low"
+                  ]
                 }
               }
             }
           },
           "key_findings": {
             "type": "array",
-            "items": {"type": "string"},
+            "items": {
+              "type": "string"
+            },
             "minItems": 1,
             "description": "Important discoveries in this phase"
           },
-          "oscp_notes": {
+          "notes": {
             "type": "string",
-            "description": "OSCP-specific observations"
+            "description": "Additional observations"
           }
         }
       }
@@ -315,7 +393,12 @@
       "minItems": 1,
       "items": {
         "type": "object",
-        "required": ["category", "lesson", "detail", "importance"],
+        "required": [
+          "category",
+          "lesson",
+          "detail",
+          "importance"
+        ],
         "properties": {
           "category": {
             "type": "string",
@@ -333,33 +416,53 @@
           },
           "importance": {
             "type": "string",
-            "enum": ["critical", "high", "medium", "low"],
-            "description": "Learning importance for OSCP"
+            "enum": [
+              "critical",
+              "high",
+              "medium",
+              "low"
+            ],
+            "description": "Learning importance"
           }
         }
       }
     },
     "time_breakdown": {
       "type": "object",
-      "required": ["total_minutes", "flags_captured"],
+      "required": [
+        "total_minutes",
+        "flags_captured"
+      ],
       "properties": {
-        "enumeration": {"type": "integer"},
-        "foothold": {"type": "integer"},
-        "lateral_movement": {"type": "integer"},
-        "privilege_escalation": {"type": "integer"},
-        "post_exploitation": {"type": "integer"},
+        "enumeration": {
+          "type": "integer"
+        },
+        "foothold": {
+          "type": "integer"
+        },
+        "lateral_movement": {
+          "type": "integer"
+        },
+        "privilege_escalation": {
+          "type": "integer"
+        },
+        "post_exploitation": {
+          "type": "integer"
+        },
         "total_minutes": {
           "type": "integer",
           "minimum": 1
         },
-        "total_hours": {"type": "number"},
+        "total_hours": {
+          "type": "number"
+        },
         "flags_captured": {
           "type": "object",
           "description": "Flag locations"
         },
-        "oscp_time_estimate": {
+        "time_estimate": {
           "type": "string",
-          "description": "Estimated time in exam context"
+          "description": "Estimated time for similar machines"
         }
       }
     },
@@ -371,17 +474,29 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["type"],
+        "required": [
+          "type"
+        ],
         "properties": {
           "type": {
             "type": "string",
-            "enum": ["cve", "blogpost", "hacktricks", "tool", "mitre_attack", "documentation", "other"]
+            "enum": [
+              "cve",
+              "blogpost",
+              "hacktricks",
+              "tool",
+              "mitre_attack",
+              "documentation",
+              "other"
+            ]
           },
           "url": {
             "type": "string",
             "format": "uri"
           },
-          "description": {"type": "string"}
+          "description": {
+            "type": "string"
+          }
         }
       }
     },

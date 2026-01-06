@@ -21,28 +21,6 @@
     "user_owns": null,
     "system_owns": null
   },
-  "oscp_relevance": {
-    "score": "high",
-    "reasoning": "Demonstrates critical OSCP techniques: manual SQL injection discovery, automated sqlmap exploitation, file upload filter bypass, binary analysis with strings, and symlink privilege escalation via misconfigured sudo binary. Password reuse and cleartext credential discovery are also high-value OSCP skills.",
-    "exam_applicable": true,
-    "similar_machines": {
-      "proving_grounds": [
-        "Monsoon",
-        "Fail",
-        "Flimsy"
-      ],
-      "hackthebox": [
-        "Stocker",
-        "CozyHosting",
-        "Keeper"
-      ],
-      "oscp_labs": [
-        "SHENZI",
-        "MEDTECH"
-      ]
-    },
-    "time_estimate_exam": "120-150 minutes for experienced, 180-240 for learning"
-  },
   "synopsis": "Usage is an easy Linux machine that features a blog site vulnerable to SQL injection, which allows the administrator's hashed password to be dumped and cracked. This leads to access to the admin panel, where an outdated Laravel module is abused to upload a PHP web shell and obtain remote code execution. On the machine, plaintext credentials stored in a file allow SSH access as another user, who can run a custom binary as root. The tool makes an insecure call to 7zip, which is leveraged to read the root user's private SSH key and fully compromise the system.",
   "skills": {
     "required": [
@@ -77,7 +55,6 @@
     "7ZIP_EXPLOIT",
     "LISTFILE_TECHNIQUE",
     "SSH_KEY_THEFT",
-    "OSCP:HIGH",
     "NGINX",
     "UBUNTU",
     "PRIVILEGE_ESCALATION",
@@ -96,7 +73,7 @@
           "command_executed": "ports=$(nmap -p- --min-rate=1000 -T4 10.10.11.18 | grep '^[0-9]' | cut -d '/' -f 1 | tr '\\n' ',' | sed s/,$//)",
           "output_snippet": "22/tcp open\n80/tcp open",
           "success": true,
-          "notes": "Common OSCP pattern: save open ports to variable for detailed scan. The port filtering with grep/cut/tr/sed is standard methodology."
+          "notes": "Common certification pattern: save open ports to variable for detailed scan. The port filtering with grep/cut/tr/sed is standard methodology."
         },
         {
           "command_id": "nmap-service-scan",
@@ -164,8 +141,7 @@
         "Password reset functionality at /forget-password (potential injection point)",
         "Laravel framework detected (from later admin panel inspection)",
         "User registration available for initial access testing"
-      ],
-      "oscp_notes": "Standard OSCP enumeration flow: fast port scan → detailed service scan → virtual host discovery → manual web enumeration. The two-stage nmap pattern is efficient for exam time management. Virtual host enumeration is critical - always check for subdomains when redirects occur."
+      ]
     },
     {
       "phase": "foothold",
@@ -194,7 +170,7 @@
           "severity": "critical",
           "exploitability": "medium",
           "technique": "Extension filter bypass via double extension (.jpg.php)",
-          "notes": "Well-documented CVE with public PoCs available. Manual exploitation preferred for OSCP learning."
+          "notes": "Well-documented CVE with public PoCs available. Manual exploitation preferred for certification learning."
         }
       ],
       "commands_used": [
@@ -236,7 +212,7 @@
           },
           "success": false,
           "error": "WARNING: POST parameter 'email' does not seem to be injectable\nCRITICAL: all tested parameters do not appear to be injectable. Try to increase values for '--level'/'--risk'",
-          "notes": "DEFAULT LEVEL INSUFFICIENT - this is critical OSCP learning point. Sqlmap suggestion to increase --level was key to success."
+          "notes": "DEFAULT LEVEL INSUFFICIENT - this is critical certification learning point. Sqlmap suggestion to increase --level was key to success."
         },
         {
           "command_id": "sqlmap-from-request-level3",
@@ -253,7 +229,7 @@
             "title": "AND boolean-based blind - WHERE or HAVING clause (subquery - comment)",
             "payload_example": "_token=...&email=test' AND 2244=(SELECT (CASE WHEN (2244=2244) THEN 2244 ELSE (SELECT 5858 UNION SELECT 3175) END))-- cBAs"
           },
-          "notes": "Success! --level 3 enables more thorough injection tests. OSCP LESSON: Trust manual verification over tool defaults."
+          "notes": "Success! --level 3 enables more thorough injection tests. certification LESSON: Trust manual verification over tool defaults."
         },
         {
           "command_id": "sqlmap-enumerate-databases",
@@ -318,7 +294,7 @@
           "time_taken": "8 seconds",
           "password_cracked": "whatever1",
           "output_snippet": "whatever1        (?)\n1g 0:00:00:08 DONE (2024-08-07 05:56) 0.1123g/s 182.0p/s",
-          "notes": "Weak password cracked quickly. OSCP TIP: Always try rockyou first before custom wordlists."
+          "notes": "Weak password cracked quickly. certification TIP: Always try rockyou first before custom wordlists."
         },
         {
           "command_id": "web-login-admin-panel",
@@ -333,7 +309,7 @@
           "command_id": "web-version-enumeration",
           "context": "Enumerate software versions from admin dashboard",
           "step_number": 10,
-          "location": "Dashboard → Environment section",
+          "location": "Dashboard \u2192 Environment section",
           "versions_found": {
             "laravel": "10.18.0",
             "php": "8.1.2",
@@ -441,10 +417,10 @@
           "actual": "WARNING: POST parameter 'email' does not seem to be injectable",
           "reason": "Default sqlmap test level (1) insufficient for detecting boolean-based blind SQLi in this application. Required --level 3 for deeper test payloads.",
           "solution": "Increase test depth with --level 3 as suggested by sqlmap error message",
-          "lesson_learned": "CRITICAL OSCP LESSON: Automated tools have limitations. Always trust manual verification (which confirmed SQLi) over tool defaults. Sqlmap --level flag is often required for blind injections. Read tool suggestions carefully.",
+          "lesson_learned": "CRITICAL pentest LESSON: Automated tools have limitations. Always trust manual verification (which confirmed SQLi) over tool defaults. Sqlmap --level flag is often required for blind injections. Read tool suggestions carefully.",
           "time_wasted_minutes": 15,
           "documentation_importance": "high",
-          "notes": "This is a common OSCP exam scenario: blind SQLi that requires increased sqlmap sensitivity. Document this pattern for future reference."
+          "notes": "This is a common certification exam scenario: blind SQLi that requires increased sqlmap sensitivity. Document this pattern for future reference."
         },
         {
           "attempt": "Direct upload of shell.php without extension modification",
@@ -465,8 +441,7 @@
         "File upload filter bypass via double extension",
         "Webshell upload path: /uploads/images/",
         "RCE achieved as dash user (uid=1000)"
-      ],
-      "oscp_notes": "This phase demonstrates complete OSCP web exploitation workflow: manual vulnerability discovery → automated tool usage (with proper flags!) → credential extraction → hash cracking → authenticated exploitation → RCE. Key lessons: (1) sqlmap --level 3 for blind SQLi, (2) CVE research for authenticated panels, (3) file upload bypass techniques, (4) webshell stability with PTY spawning. Time management: 90 minutes is realistic for exam (30 min SQLi + 30 min hash crack + 30 min file upload)."
+      ]
     },
     {
       "phase": "lateral_movement",
@@ -522,7 +497,7 @@
           "password_tried": "3nc0d3d_pa$$w0rd",
           "success": true,
           "output": "uid=1001(xander) gid=1001(xander) groups=1001(xander)",
-          "notes": "PASSWORD REUSE SUCCESS! Classic OSCP pattern."
+          "notes": "PASSWORD REUSE SUCCESS! Classic certification pattern."
         },
         {
           "command_id": "ssh-connect-password",
@@ -551,8 +526,7 @@
         "Cleartext credentials in .monitrc configuration",
         "Password reuse vulnerability (monit password == xander system password)",
         "Two user accounts on system: dash and xander"
-      ],
-      "oscp_notes": "Classic OSCP lateral movement: config file enumeration → plaintext credential discovery → password reuse testing. ALWAYS check hidden files in home directories (.bash_history, .*, config files). Password reuse is extremely common in OSCP labs. Time estimate: 10-15 minutes for thorough home directory enumeration, 5 minutes for password testing."
+      ]
     },
     {
       "phase": "privilege_escalation",
@@ -757,22 +731,21 @@
         "7zip @listfile feature bypasses -snl symlink protection",
         "Root SSH private key successfully extracted",
         "Full root access achieved via SSH key authentication"
-      ],
-      "oscp_notes": "Advanced OSCP privilege escalation demonstrating binary analysis workflow: sudo -l → file type check → dynamic analysis (run binary) → static analysis (strings) → vulnerability research → exploitation. Key OSCP skills: (1) Binary analysis without reverse engineering tools, (2) Symlink abuse techniques, (3) Compression tool exploitation, (4) SSH key extraction and usage. Time estimate: 20-30 minutes for analysis, 15-20 minutes for research and exploitation. This is OSCP HARD mode - simpler privesc vectors usually available, but this teaches valuable methodology."
+      ]
     }
   ],
   "key_learnings": [
     {
       "category": "web_exploitation",
       "lesson": "Trust manual verification over automated tool defaults",
-      "detail": "SQL injection was confirmed manually with simple payload (test' OR 1=1;-- -), but sqlmap with default settings failed to detect it. Required --level 3 flag for successful detection. OSCP CRITICAL: Read tool error messages carefully - sqlmap explicitly suggested increasing --level.",
+      "detail": "SQL injection was confirmed manually with simple payload (test' OR 1=1;-- -), but sqlmap with default settings failed to detect it. Required --level 3 flag for successful detection. critical: Read tool error messages carefully - sqlmap explicitly suggested increasing --level.",
       "importance": "critical",
       "time_impact": "15 minutes wasted with default settings"
     },
     {
       "category": "web_exploitation",
       "lesson": "Always enumerate virtual hosts and subdomains",
-      "detail": "Primary application at usage.htb had limited attack surface. Admin panel at admin.usage.htb (discovered via redirect and link) was critical for exploitation path. OSCP TIP: Check HTTP headers for redirects, inspect page source for subdomain links, use tools like gobuster vhost.",
+      "detail": "Primary application at usage.htb had limited attack surface. Admin panel at admin.usage.htb (discovered via redirect and link) was critical for exploitation path. pentest TIP: Check HTTP headers for redirects, inspect page source for subdomain links, use tools like gobuster vhost.",
       "importance": "high"
     },
     {
@@ -784,22 +757,22 @@
     {
       "category": "web_exploitation",
       "lesson": "CVE research for authenticated web applications",
-      "detail": "After gaining admin access, checked Dependencies tab in Laravel dashboard. Found encore/laravel-admin 1.8.18. Quick Google search revealed CVE-2023-24249 with detailed exploitation writeups. OSCP TIP: Software version enumeration is critical post-authentication.",
+      "detail": "After gaining admin access, checked Dependencies tab in Laravel dashboard. Found encore/laravel-admin 1.8.18. Quick Google search revealed CVE-2023-24249 with detailed exploitation writeups. pentest TIP: Software version enumeration is critical post-authentication.",
       "importance": "high"
     },
     {
       "category": "lateral_movement",
       "lesson": "Configuration files frequently contain cleartext credentials",
-      "detail": "Hidden .monitrc file in /home/dash contained plaintext password for monit service. Password reused for xander system account. OSCP PATTERN: Always enumerate hidden files (ls -la), check .config, .ssh, .*, application configs.",
+      "detail": "Hidden .monitrc file in /home/dash contained plaintext password for monit service. Password reused for xander system account. pentest PATTERN: Always enumerate hidden files (ls -la), check .config, .ssh, .*, application configs.",
       "importance": "high",
       "time_saved": "Avoided brute force or other complex lateral movement"
     },
     {
       "category": "privilege_escalation",
-      "lesson": "Binary analysis workflow: dynamic → static → research → exploit",
-      "detail": "Sudo binary analysis: (1) Run binary to observe behavior, (2) Use strings for static analysis, (3) Research discovered commands/flags (7zip -snl), (4) Develop exploitation technique. No advanced tools required - strings command sufficient for OSCP.",
+      "lesson": "Binary analysis workflow: dynamic \u2192 static \u2192 research \u2192 exploit",
+      "detail": "Sudo binary analysis: (1) Run binary to observe behavior, (2) Use strings for static analysis, (3) Research discovered commands/flags (7zip -snl), (4) Develop exploitation technique. No advanced tools required - strings command sufficient for security work.",
       "importance": "critical",
-      "methodology": "This is standard OSCP binary exploitation methodology"
+      "methodology": "This is standard pentest binary exploitation methodology"
     },
     {
       "category": "privilege_escalation",
@@ -811,7 +784,7 @@
     {
       "category": "general",
       "lesson": "Time management: Fast path vs research path",
-      "detail": "SQLi + file upload foothold: 90 minutes (manageable). Symlink privesc: 45 minutes (with research). Total: 135 minutes realistic exam time. OSCP STRATEGY: If stuck on complex privesc >30 minutes, enumerate for simpler vectors. This machine teaches advanced techniques but simpler paths usually exist in exam.",
+      "detail": "SQLi + file upload foothold: 90 minutes (manageable). Symlink privesc: 45 minutes (with research). Total: 135 minutes realistic exam time. pentest STRATEGY: If stuck on complex privesc >30 minutes, enumerate for simpler vectors. This machine teaches advanced techniques but simpler paths usually exist in exam.",
       "importance": "critical"
     }
   ],
@@ -820,15 +793,13 @@
       {
         "method": "Automated CVE exploitation tools",
         "description": "Public PoC scripts exist for CVE-2023-24249 that automate the file upload bypass",
-        "oscp_applicable": false,
-        "reasoning": "Automated exploit scripts not available in OSCP exam. Manual exploitation required for learning."
+        "reasoning": "Automated exploit scripts not available in security assessment. Manual exploitation required for learning."
       }
     ],
     "privilege_escalation": [
       {
         "method": "Alternative 7zip targets",
         "description": "Instead of SSH key, could read /etc/shadow (crack root password) or /root/root.txt directly",
-        "oscp_applicable": true,
         "notes": "SSH key preferred for persistence and more realistic compromise"
       }
     ]
@@ -845,8 +816,7 @@
     "flags_captured": {
       "user": "/home/dash/user.txt",
       "root": "/root/root.txt"
-    },
-    "oscp_time_estimate": "120-180 minutes depending on experience level"
+    }
   },
   "references": [
     {
@@ -892,8 +862,8 @@
     }
   ],
   "files": {
-    "original_writeup": "/home/kali/Desktop/OSCP/crack/db/data/writeups/hackthebox/Usage/Usage.txt",
-    "metadata": "/home/kali/Desktop/OSCP/crack/db/data/writeups/hackthebox/Usage/Usage.json",
-    "images": "/home/kali/Desktop/OSCP/crack/db/data/writeups/hackthebox/Usage/images/"
+    "original_writeup": "/home/kali/Desktop/pentest/crack/db/data/writeups/hackthebox/Usage/Usage.txt",
+    "metadata": "/home/kali/Desktop/pentest/crack/db/data/writeups/hackthebox/Usage/Usage.json",
+    "images": "/home/kali/Desktop/pentest/crack/db/data/writeups/hackthebox/Usage/images/"
   }
 }

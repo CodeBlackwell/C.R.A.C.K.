@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Parameter Discovery Tool - Find hidden GET/POST parameters on web endpoints
-OSCP-focused tool for discovering hidden parameters through intelligent fuzzing
+security-focused tool for discovering hidden parameters through intelligent fuzzing
 """
 
 import sys
@@ -36,7 +36,7 @@ class ParameterDiscovery:
         self.discovered = []
         self.baseline = None
 
-        # Quick mode - only high-value parameters (OSCP-focused)
+        # Quick mode - only high-value parameters (security-focused)
         quick_params = [
             'id', 'page', 'action', 'debug', 'test', 'admin', 'file', 'path',
             'cmd', 'exec', 'command', 'search', 'q', 'user', 'username',

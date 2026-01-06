@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-HTML Enumeration Tool for OSCP
+HTML Enumeration Tool for penetration testing
 Minimalist but effective HTML parser for finding vulnerabilities
 """
 

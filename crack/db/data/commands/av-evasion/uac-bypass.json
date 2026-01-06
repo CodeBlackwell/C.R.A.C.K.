@@ -124,7 +124,6 @@
       ]
     }
   ],
-  "oscp_relevance": "Essential for privilege escalation when you have user credentials but need admin rights. UAC bypass avoids asking for password. Common in Active Directory environments where user is local admin.",
   "attack_chain_position": "Privilege Escalation, Post-Exploitation",
   "related_categories": [
     "privilege-escalation",

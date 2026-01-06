@@ -14,8 +14,7 @@
         "ACTIVE_DIRECTORY",
         "GPO_ABUSE",
         "PRIVILEGE_ESCALATION",
-        "SYSVOL",
-        "OSCP:HIGH"
+        "SYSVOL"
       ],
       "variables": [
         {
@@ -53,8 +52,7 @@
         "Changes not taking effect": "GPO changes require refresh. Force with: gpupdate /force. Then MUST re-login to get new token with updated group membership.",
         "Token not updated after gpupdate": "Windows tokens created at logon. Group membership changes don't affect current sessions. Exit and reconnect (evil-winrm, RDP, etc.) to receive new token."
       },
-      "notes": "GPO ABUSE CRITICAL PATH:\n1. Identify writable GPO: icacls \"\\\\DOMAIN\\SYSVOL\\DOMAIN\\Policies\\*\"\n2. Look for (F) Full Control or (W) Write on your user\n3. Default Domain Policy applies to ALL domain computers\n4. After modification: gpupdate /force on target\n5. CRITICAL: Must re-login to receive new admin token\n\nOSCP RELEVANCE: HIGH\nGPO abuse is a reliable privilege escalation in misconfigured AD environments. Check SYSVOL permissions on every AD engagement.\n\nMANUAL ALTERNATIVE:\nModify GPO directly via Group Policy Management Console (GPMC) if GUI access available, or edit GptTmpl.inf in SYSVOL directly.\n\nTIME ESTIMATE: 5-10 minutes (including GPO refresh)",
-      "oscp_relevance": "high",
+      "notes": "GPO ABUSE CRITICAL PATH:\n1. Identify writable GPO: icacls \"\\\\DOMAIN\\SYSVOL\\DOMAIN\\Policies\\*\"\n2. Look for (F) Full Control or (W) Write on your user\n3. Default Domain Policy applies to ALL domain computers\n4. After modification: gpupdate /force on target\n5. CRITICAL: Must re-login to receive new admin token\n\ncertification RELEVANCE: HIGH\nGPO abuse is a reliable privilege escalation in misconfigured AD environments. Check SYSVOL permissions on every AD engagement.\n\nMANUAL ALTERNATIVE:\nModify GPO directly via Group Policy Management Console (GPMC) if GUI access available, or edit GptTmpl.inf in SYSVOL directly.\n\nTIME ESTIMATE: 5-10 minutes (including GPO refresh)",
       "prerequisites": [
         "icacls-sysvol-check"
       ],
@@ -86,8 +84,7 @@
         "GPO_ABUSE",
         "ENUMERATION",
         "ACL",
-        "SYSVOL",
-        "OSCP:HIGH"
+        "SYSVOL"
       ],
       "variables": [
         {
@@ -119,8 +116,7 @@
         "Network path not found": "Domain name incorrect or DNS not resolving domain. Verify with: nslookup DOMAIN or ping DOMAIN. May need to specify DC IP directly.",
         "No writable GPOs found": "All GPOs properly secured. Try alternative attacks: ACL abuse on user objects, Kerberoasting, AS-REP roasting."
       },
-      "notes": "GPO PERMISSION LEGEND:\n(F) = Full Control - can modify GPO (JACKPOT)\n(W) = Write - can modify GPO\n(M) = Modify - can modify GPO\n(RX) = Read/Execute - read only\n(OI) = Object Inherit - applies to files\n(CI) = Container Inherit - applies to subfolders\n\nDEFAULT GPO GUIDs:\n{31B2F340-016D-11D2-945F-00C04FB984F9} = Default Domain Policy\n{6AC1786C-016F-11D2-945F-00C04FB984F9} = Default Domain Controllers Policy\n\nOSCP TIP: Default Domain Policy applies to ALL domain computers. Write access here = immediate path to Domain Admin.\n\nTIME ESTIMATE: 1-2 minutes",
-      "oscp_relevance": "high",
+      "notes": "GPO PERMISSION LEGEND:\n(F) = Full Control - can modify GPO (JACKPOT)\n(W) = Write - can modify GPO\n(M) = Modify - can modify GPO\n(RX) = Read/Execute - read only\n(OI) = Object Inherit - applies to files\n(CI) = Container Inherit - applies to subfolders\n\nDEFAULT GPO GUIDs:\n{31B2F340-016D-11D2-945F-00C04FB984F9} = Default Domain Policy\n{6AC1786C-016F-11D2-945F-00C04FB984F9} = Default Domain Controllers Policy\n\ncertification TIP: Default Domain Policy applies to ALL domain computers. Write access here = immediate path to Domain Admin.\n\nTIME ESTIMATE: 1-2 minutes",
       "prerequisites": [],
       "alternatives": [
         "get-netgpo",
@@ -140,8 +136,7 @@
       "tags": [
         "ACTIVE_DIRECTORY",
         "GPO",
-        "WINDOWS",
-        "OSCP:MEDIUM"
+        "WINDOWS"
       ],
       "variables": [],
       "flag_explanations": {
@@ -163,7 +158,6 @@
         "Access token not updated": "Windows creates access tokens at logon. Group membership changes from GPO don't affect running sessions. Exit current shell (evil-winrm, RDP) and reconnect."
       },
       "notes": "CRITICAL POST-GPO MODIFICATION:\n1. Run gpupdate /force to apply changes\n2. MUST START NEW SESSION for token refresh\n3. Group membership changes don't affect existing tokens\n4. whoami /groups shows OLD groups until re-login\n5. Verify with: net localgroup administrators\n\nDEFAULT GPO REFRESH CYCLE:\n- Computer policy: 90 minutes (+ random 0-30 min)\n- Domain Controllers: 5 minutes\n- /force bypasses the wait\n\nTIME ESTIMATE: 30 seconds - 2 minutes",
-      "oscp_relevance": "medium",
       "prerequisites": [],
       "alternatives": [],
       "next_steps": [
@@ -181,8 +175,7 @@
         "WINDOWS",
         "ENUMERATION",
         "PRIVILEGE_ESCALATION",
-        "VERIFICATION",
-        "OSCP:MEDIUM"
+        "VERIFICATION"
       ],
       "variables": [],
       "flag_explanations": {
@@ -201,8 +194,7 @@
         "User not in group after gpupdate": "Token not refreshed. MUST start new session (exit evil-winrm, reconnect). Current session retains old token.",
         "User shows in group but whoami /groups doesn't show Administrators": "This is expected! whoami shows YOUR current token. Group membership and token membership are different until re-login."
       },
-      "notes": "TOKEN VS GROUP MEMBERSHIP:\n- net localgroup administrators = actual group membership\n- whoami /groups = YOUR current access token\n- These can differ after GPO changes\n- Token only updates on NEW session\n\nVERIFICATION WORKFLOW:\n1. net localgroup administrators → User listed?\n2. If yes but whoami /groups missing Administrators:\n3. Exit session completely\n4. Reconnect (evil-winrm, RDP, etc.)\n5. whoami /groups now shows BUILTIN\\Administrators\n\nTIME ESTIMATE: 10 seconds",
-      "oscp_relevance": "medium",
+      "notes": "TOKEN VS GROUP MEMBERSHIP:\n- net localgroup administrators = actual group membership\n- whoami /groups = YOUR current access token\n- These can differ after GPO changes\n- Token only updates on NEW session\n\nVERIFICATION WORKFLOW:\n1. net localgroup administrators \u2192 User listed?\n2. If yes but whoami /groups missing Administrators:\n3. Exit session completely\n4. Reconnect (evil-winrm, RDP, etc.)\n5. whoami /groups now shows BUILTIN\\Administrators\n\nTIME ESTIMATE: 10 seconds",
       "prerequisites": [],
       "alternatives": [],
       "next_steps": []

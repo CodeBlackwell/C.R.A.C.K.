@@ -30,7 +30,6 @@
         "wpscan-enumerate-all"
       ],
       "notes": "RSS feed at /feed/ contains <generator> tag with WordPress version.\n\nExample:\n<generator>https://wordpress.org/?v=5.8.1</generator>.\n\nMore comprehensive:\nwpscan --url <URL> --enumerate vp,vt,u",
-      "oscp_relevance": "high",
       "tags": [
         "WEB",
         "WORDPRESS",

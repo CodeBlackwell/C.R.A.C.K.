@@ -12,7 +12,6 @@
         "NETSH",
         "WINDOWS",
         "CLEANUP",
-        "OSCP:MEDIUM",
         "ADMIN_REQUIRED"
       ],
       "variables": [
@@ -46,8 +45,7 @@
         "Element not found": "Verify exact rule: netsh interface portproxy show all, ensure listenaddress matches (e.g., 0.0.0.0 vs 192.168.x.x)",
         "Access denied": "Run as Administrator"
       },
-      "notes": "Critical for cleanup in OSCP exam - remove port forwards to avoid leaving persistent backdoors.\n\nAlso delete associated firewall rules with netsh-firewall-delete-rule.\n\nFor complete cleanup:\nnetsh interface portproxy reset (removes all rules).",
-      "oscp_relevance": "medium",
+      "notes": "Critical for cleanup in certification exam - remove port forwards to avoid leaving persistent backdoors.\n\nAlso delete associated firewall rules with netsh-firewall-delete-rule.\n\nFor complete cleanup:\nnetsh interface portproxy reset (removes all rules).",
       "filled_example": "netsh interface portproxy delete v4tov4 listenport=2222 listenaddress=0.0.0.0"
     },
     {
@@ -59,8 +57,7 @@
       "description": "Locate executable in Windows PATH - verify tool availability",
       "tags": [
         "WINDOWS",
-        "ENUMERATION",
-        "OSCP:MEDIUM"
+        "ENUMERATION"
       ],
       "variables": [
         {
@@ -81,8 +78,7 @@
       "alternatives": [],
       "prerequisites": [],
       "troubleshooting": {},
-      "notes": "Quick check for tool availability.\n\nCommon OSCP checks:\nwhere ssh (OpenSSH client), where python, where powershell, where curl.\n\nEquivalent to Linux 'which' command.",
-      "oscp_relevance": "medium",
+      "notes": "Quick check for tool availability.\n\nCommon certification checks:\nwhere ssh (OpenSSH client), where python, where powershell, where curl.\n\nEquivalent to Linux 'which' command.",
       "filled_example": "where ssh"
     },
     {
@@ -95,7 +91,6 @@
       "tags": [
         "WINDOWS",
         "ENUMERATION",
-        "OSCP:HIGH",
         "SYSTEMINFO"
       ],
       "variables": [],
@@ -119,8 +114,7 @@
         "win-kernel-exploits"
       ],
       "troubleshooting": {},
-      "notes": "Critical OSCP enumeration command.\n\nCheck:\nOS version (for exploit research), Hotfix list (missing patches = vulnerabilities), Network adapters (multi-homed = pivot candidate), System Type (32-bit vs 64-bit for exploit selection).\n\nTime estimate:\n5-10 seconds for output.",
-      "oscp_relevance": "high"
+      "notes": "Critical certification enumeration command.\n\nCheck:\nOS version (for exploit research), Hotfix list (missing patches = vulnerabilities), Network adapters (multi-homed = pivot candidate), System Type (32-bit vs 64-bit for exploit selection).\n\nTime estimate:\n5-10 seconds for output."
     },
     {
       "id": "whoami-priv",
@@ -132,8 +126,7 @@
       "tags": [
         "WINDOWS",
         "ENUMERATION",
-        "PRIVESC",
-        "OSCP:HIGH"
+        "PRIVESC"
       ],
       "variables": [],
       "flag_explanations": {
@@ -158,8 +151,7 @@
         "win-potato-exploits"
       ],
       "troubleshooting": {},
-      "notes": "Critical for privilege escalation assessment.\n\nKey privileges:\nSeImpersonatePrivilege (Potato exploits), SeDebugPrivilege (process injection), SeBackupPrivilege (backup file access), SeRestorePrivilege (file restore), SeLoadDriverPrivilege (driver loading).\n\nIf high-value privilege present, search for corresponding exploit.\n\nTime estimate:\nimmediate.",
-      "oscp_relevance": "high"
+      "notes": "Critical for privilege escalation assessment.\n\nKey privileges:\nSeImpersonatePrivilege (Potato exploits), SeDebugPrivilege (process injection), SeBackupPrivilege (backup file access), SeRestorePrivilege (file restore), SeLoadDriverPrivilege (driver loading).\n\nIf high-value privilege present, search for corresponding exploit.\n\nTime estimate:\nimmediate."
     },
     {
       "id": "ipconfig-all",
@@ -171,8 +163,7 @@
       "tags": [
         "WINDOWS",
         "ENUMERATION",
-        "NETWORKING",
-        "OSCP:HIGH"
+        "NETWORKING"
       ],
       "variables": [],
       "flag_explanations": {
@@ -197,8 +188,7 @@
         "chisel-client"
       ],
       "troubleshooting": {},
-      "notes": "Critical OSCP enumeration for pivot identification.\n\nLook for:\nMultiple network adapters (dual-homed = pivot candidate), Internal IP ranges (10.x, 172.16-31.x, 192.168.x = potential pivot targets), DNS servers (identify domain controllers).\n\nCommon pattern:\nHost has 192.168.45.x (WAN) and 172.16.50.x (internal) = perfect pivot point.\n\nTime estimate:\nimmediate.",
-      "oscp_relevance": "high"
+      "notes": "Critical certification enumeration for pivot identification.\n\nLook for:\nMultiple network adapters (dual-homed = pivot candidate), Internal IP ranges (10.x, 172.16-31.x, 192.168.x = potential pivot targets), DNS servers (identify domain controllers).\n\nCommon pattern:\nHost has 192.168.45.x (WAN) and 172.16.50.x (internal) = perfect pivot point.\n\nTime estimate:\nimmediate."
     },
     {
       "id": "netstat-windows",
@@ -210,8 +200,7 @@
       "tags": [
         "WINDOWS",
         "ENUMERATION",
-        "NETWORKING",
-        "OSCP:HIGH"
+        "NETWORKING"
       ],
       "variables": [],
       "flag_explanations": {
@@ -239,8 +228,7 @@
         "proxychains-nmap"
       ],
       "troubleshooting": {},
-      "notes": "Critical for service enumeration and port forward verification.\n\nUse cases:\nIdentify listening ports (potential services), Find established connections (active pivots), Verify port forward active (netstat -ano | findstr <PORT>), Map PID to process (tasklist | findstr <PID>).\n\nCombine with netsh-portproxy-show to see full pivot configuration.\n\nTime estimate:\nimmediate.",
-      "oscp_relevance": "high"
+      "notes": "Critical for service enumeration and port forward verification.\n\nUse cases:\nIdentify listening ports (potential services), Find established connections (active pivots), Verify port forward active (netstat -ano | findstr <PORT>), Map PID to process (tasklist | findstr <PID>).\n\nCombine with netsh-portproxy-show to see full pivot configuration.\n\nTime estimate:\nimmediate."
     }
   ]
 }

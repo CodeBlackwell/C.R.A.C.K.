@@ -4,11 +4,10 @@
   "description": "Complete Kerberoasting attack chain from SPN enumeration to credential validation.\n\nIdentifies service accounts with registered SPNs, requests TGS tickets, extracts offline-crackable TGS-REP hashes, cracks service account passwords with Hashcat, validates credentials, and checks for lateral movement opportunities.",
   "version": "1.0.0",
   "metadata": {
-    "author": "CRACK Development Team - OSCP Track",
+    "author": "CRACK Development Team - pentest Track",
     "created": "2025-11-10",
     "updated": "2025-11-10",
     "tags": [
-      "OSCP:HIGH",
       "ACTIVE_DIRECTORY",
       "KERBEROASTING",
       "KERBEROS",
@@ -29,13 +28,12 @@
   },
   "difficulty": "beginner",
   "time_estimate": "120 minutes",
-  "oscp_relevant": true,
   "prerequisites": [
     "Valid domain user credentials (ANY domain user can perform Kerberoasting - no special privileges required)",
     "Network access to domain controller (Linux: impacket-GetUserSPNs) OR RDP/WinRM access to domain-joined Windows system (Rubeus)",
     "Hashcat installed for offline hash cracking (GPU recommended for faster cracking)"
   ],
-  "notes": "OSCP HIGH-PRIORITY: Kerberoasting is one of the most successful AD attacks. SUCCESS RATE: High in corporate environments (60-80% of domains have service accounts with weak passwords). WHY IT WORKS: ANY authenticated domain user can request TGS for ANY SPN - no permission checks at TGS request time. The TGS is encrypted with service account password hash, allowing offline cracking. TARGET ACCOUNTS: Service accounts with SPNs (SQL Server, IIS, custom services). CRITICAL: Computer accounts (MACHINE$) and Managed Service Accounts (MSAs) have 120-character random passwords - UNCRACKABLE. Focus on USER accounts with SPNs (sql_service, iis_service, svc_backup, etc.). ENCRYPTION TYPES: Modern domains use AES (slower to crack). Use Rubeus /tgtdeleg flag to downgrade to RC4 (10x faster cracking). TIME ESTIMATE: SPN enum (10 sec) + TGS request (10 sec) + cracking (1 min - 2 hours depending on password strength and wordlist). NO LOCKOUT RISK: Requesting TGS doesn't trigger account lockout. STEALTH: Event ID 4769 (TGS request) - normal Kerberos traffic, difficult to distinguish from legitimate service access. COMPLEMENTARY TO AS-REP ROASTING: Different attack surface - Kerberoasting targets service accounts, AS-REP targets misconfigured user accounts.",
+  "notes": "certification HIGH-PRIORITY: Kerberoasting is one of the most successful AD attacks. SUCCESS RATE: High in corporate environments (60-80% of domains have service accounts with weak passwords). WHY IT WORKS: ANY authenticated domain user can request TGS for ANY SPN - no permission checks at TGS request time. The TGS is encrypted with service account password hash, allowing offline cracking. TARGET ACCOUNTS: Service accounts with SPNs (SQL Server, IIS, custom services). CRITICAL: Computer accounts (MACHINE$) and Managed Service Accounts (MSAs) have 120-character random passwords - UNCRACKABLE. Focus on USER accounts with SPNs (sql_service, iis_service, svc_backup, etc.). ENCRYPTION TYPES: Modern domains use AES (slower to crack). Use Rubeus /tgtdeleg flag to downgrade to RC4 (10x faster cracking). TIME ESTIMATE: SPN enum (10 sec) + TGS request (10 sec) + cracking (1 min - 2 hours depending on password strength and wordlist). NO LOCKOUT RISK: Requesting TGS doesn't trigger account lockout. STEALTH: Event ID 4769 (TGS request) - normal Kerberos traffic, difficult to distinguish from legitimate service access. COMPLEMENTARY TO AS-REP ROASTING: Different attack surface - Kerberoasting targets service accounts, AS-REP targets misconfigured user accounts.",
   "steps": [
     {
       "id": "authenticate-to-domain",
@@ -97,7 +95,7 @@
       "id": "filter-spn-accounts",
       "name": "Filter Out Computer and Managed Service Accounts",
       "objective": "Remove uncrackable accounts (computer accounts and MSAs) from target list",
-      "description": "COMPUTER ACCOUNTS: Identified by $ at end of name (e.g., WEB01$, SQL-SERVER$).\nPASSWORD POLICY: 120 characters, random, auto-rotated every 30 days by AD.\nUNCRACKABLE with current technology (120-char keyspace = infeasible).\nFILTER OUT: Do NOT request TGS for computer accounts - wastes time and generates unnecessary traffic.\n\nMANAGED SERVICE ACCOUNTS (MSA/gMSA): Identified by msDS-ManagedServiceAccount objectClass OR msDS-GroupManagedServiceAccount.\nSame 120-char random password policy.\nUNCRACKABLE.\nFILTER OUT: Exclude from Kerberoasting targets.\n\nUSER SERVICE ACCOUNTS: Regular user accounts (not ending in $, not MSA) with servicePrincipalName attribute.\nPASSWORD POLICY: Standard domain user policy (often 7-14 chars, user-chosen password).\nCRACKABLE if weak password (Password1!, ServiceAccount123!, company name + year).\nTARGET THESE: sql_service, iis_service, svc_backup, svc_admin, etc.\n\nVERIFICATION: impacket-GetUserSPNs output 'Name' column should NOT end in $ for target accounts.\n\nOSCP TIP: If all SPNs are on computer accounts (all names end in $), Kerberoasting attack surface is zero.\nDocument and proceed to alternative attacks (AS-REP roasting, password spraying).",
+      "description": "COMPUTER ACCOUNTS: Identified by $ at end of name (e.g., WEB01$, SQL-SERVER$).\nPASSWORD POLICY: 120 characters, random, auto-rotated every 30 days by AD.\nUNCRACKABLE with current technology (120-char keyspace = infeasible).\nFILTER OUT: Do NOT request TGS for computer accounts - wastes time and generates unnecessary traffic.\n\nMANAGED SERVICE ACCOUNTS (MSA/gMSA): Identified by msDS-ManagedServiceAccount objectClass OR msDS-GroupManagedServiceAccount.\nSame 120-char random password policy.\nUNCRACKABLE.\nFILTER OUT: Exclude from Kerberoasting targets.\n\nUSER SERVICE ACCOUNTS: Regular user accounts (not ending in $, not MSA) with servicePrincipalName attribute.\nPASSWORD POLICY: Standard domain user policy (often 7-14 chars, user-chosen password).\nCRACKABLE if weak password (Password1!, ServiceAccount123!, company name + year).\nTARGET THESE: sql_service, iis_service, svc_backup, svc_admin, etc.\n\nVERIFICATION: impacket-GetUserSPNs output 'Name' column should NOT end in $ for target accounts.\n\npentest TIP: If all SPNs are on computer accounts (all names end in $), Kerberoasting attack surface is zero.\nDocument and proceed to alternative attacks (AS-REP roasting, password spraying).",
       "command_ref": "concept-filter-accounts",
       "evidence": [
         "Computer accounts identified and excluded (names ending in $)",

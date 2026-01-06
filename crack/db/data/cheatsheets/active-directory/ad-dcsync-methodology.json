@@ -28,7 +28,7 @@
           "Domain Admin, Enterprise Admin, OR Administrators group membership",
           "OR explicit replication rights: DS-Replication-Get-Changes AND DS-Replication-Get-Changes-All",
           "Network connectivity to Domain Controller (TCP/UDP 135, 445, 389, 88)",
-          "Tools: Mimikatz (Windows) OR impacket-secretsdump (Linux/Kali - RECOMMENDED for OSCP)",
+          "Tools: Mimikatz (Windows) OR impacket-secretsdump (Linux/Kali - RECOMMENDED for security work)",
           "Valid domain credentials (plaintext password OR NTLM hash for Pass-the-Hash)"
         ],
         "key_differences_from_alternatives": [
@@ -84,15 +84,14 @@
             "Using local administrator credentials instead of domain credentials (DCSync requires domain authentication)",
             "Testing from non-domain-joined machine without proper authentication (use runas /netonly for domain context)",
             "Forgetting to check if account is locked or disabled (net user jeffadmin /domain shows account status)"
-          ],
-          "oscp_exam_relevance": "HIGH - Prerequisite verification saves critical exam time. In OSCP labs, you typically obtain Domain Admin through privilege escalation or lateral movement. Immediately verify rights and document DC connectivity before attempting DCSync. This prevents wasted time on failed attacks."
+          ]
         },
         {
           "title": "Scenario 2: Extracting Single User Credentials with DCSync",
           "context": "You have verified jeffadmin is a Domain Admin. During reconnaissance, you identified a user account 'dave' who appears to have access to sensitive file shares. You want to extract dave's password hash to either crack it for plaintext password or use it for Pass-the-Hash lateral movement.",
           "objective": "Extract dave's NTLM password hash using DCSync technique, then crack the hash with Hashcat or use it for Pass-the-Hash authentication.",
           "approach": [
-            "1. CHOOSE YOUR METHOD: You have two primary DCSync tools: Mimikatz (Windows) or impacket-secretsdump (Linux/Kali). For OSCP exams, impacket-secretsdump is RECOMMENDED because: (a) Runs on Kali (no AV interference), (b) Clean, parseable output, (c) No need for RDP/shell on Windows target, (d) Same command works for Pass-the-Hash.",
+            "1. CHOOSE YOUR METHOD: You have two primary DCSync tools: Mimikatz (Windows) or impacket-secretsdump (Linux/Kali). for security work exams, impacket-secretsdump is RECOMMENDED because: (a) Runs on Kali (no AV interference), (b) Clean, parseable output, (c) No need for RDP/shell on Windows target, (d) Same command works for Pass-the-Hash.",
             "2. WINDOWS METHOD (MIMIKATZ): If you're already on a compromised Windows machine with Mimikatz available, launch PowerShell or cmd.exe as jeffadmin. Navigate to Mimikatz directory: cd C:\\Tools. Launch Mimikatz: .\\mimikatz.exe. Run DCSync command: lsadump::dcsync /user:corp\\dave. Mimikatz will display extensive output including SAM username, RID, account flags, and multiple hash formats.",
             "3. LINUX METHOD (IMPACKET - RECOMMENDED): From your Kali machine, use impacket-secretsdump. The syntax is: impacket-secretsdump -just-dc-user dave 'corp.com/jeffadmin:BrouhahaTungPerorateBroom2023!@192.168.50.70'. CRITICAL: Use SINGLE QUOTES around the authentication string to prevent shell interpretation of special characters in the password (!, $, \\, etc.). The -just-dc-user flag targets only dave (faster and less noisy than full domain dump).",
             "4. PARSE THE OUTPUT: Impacket output format: dave:1103:aad3b435b51404eeaad3b435b51404ee:08d7a47a6f9f66b97b1bae4178747494:::. This is Hashcat-ready format. The hash structure: username:RID:LM_hash:NTLM_hash:::. The LM hash portion (aad3b435b51404eeaad3b435b51404ee) indicates empty/disabled LM hashing (modern Windows). The NTLM hash (08d7a47...) is what you need. Copy this entire line or just the NTLM portion.",
@@ -115,8 +114,7 @@
             "Not documenting which systems dave has admin rights on (wastes time re-testing access)",
             "Copying partial hash or including colons/spaces (hash must be exactly 32 hexadecimal characters)",
             "Using wrong Hashcat mode (mode 1000 for NTLM, mode 3000 for LM, mode 5600 for NTLMv2)"
-          ],
-          "oscp_exam_relevance": "MEDIUM-HIGH - While OSCP exam typically provides initial access as low-privileged user, lateral movement often requires credential extraction. DCSync is faster and cleaner than memory dumping (no AV interference). The Pass-the-Hash technique works even if password is complex/uncrackable. Time estimate: 2-10 seconds for DCSync, 1-60+ minutes for hash cracking (run in background)."
+          ]
         },
         {
           "title": "Scenario 3: Extracting krbtgt Hash for Golden Ticket Attack",
@@ -147,8 +145,7 @@
             "Using IP addresses instead of FQDNs when using Golden Ticket (Kerberos requires hostnames)",
             "Creating Golden Ticket with unrealistic lifetime (default 10 years is suspicious - consider 90 days)",
             "Forgetting to purge existing tickets before injecting Golden Ticket (klist purge)"
-          ],
-          "oscp_exam_relevance": "VERY HIGH - This is the ULTIMATE privilege escalation in Active Directory. Once you achieve Domain Admin, immediately DCSync krbtgt for persistence. If the exam resets or your session dies, you can recreate the Golden Ticket for instant Domain Admin re-entry. Time estimate: 2-10 seconds for krbtgt extraction, 1-2 minutes for complete Golden Ticket workflow including SID extraction and ticket creation."
+          ]
         },
         {
           "title": "Scenario 4: Hash Cracking Workflow and Pass-the-Hash Integration",
@@ -180,8 +177,7 @@
             "Forgetting to use --force flag in VMs (Hashcat requires it for virtualized GPUs)",
             "Not checking cracking status periodically (may crack hours ago without notification)",
             "Trying to RDP with hash instead of password (RDP requires plaintext, use xfreerdp with cracked password)"
-          ],
-          "oscp_exam_relevance": "HIGH - Time management is critical in OSCP. Running hash cracking in background while performing lateral movement maximizes efficiency. You may crack additional credentials hours later that open new attack paths. Pass-the-Hash works immediately even for complex 20+ character passwords that would take days to crack. Time estimate: PTH lateral movement 10-30 seconds per host, hash cracking 1 minute - 24+ hours depending on password complexity."
+          ]
         }
       ],
       "sections": [
@@ -229,7 +225,7 @@
         },
         {
           "title": "Phase 3: Credential Extraction (Linux - Impacket) [RECOMMENDED]",
-          "notes": "Linux-based DCSync from Kali using impacket-secretsdump. RECOMMENDED for OSCP - no AV interference, clean output, works with Pass-the-Hash authentication.",
+          "notes": "Linux-based DCSync from Kali using impacket-secretsdump. RECOMMENDED for certification - no AV interference, clean output, works with Pass-the-Hash authentication.",
           "commands": [
             {
               "id": "ad-dcsync-secretsdump-user",
@@ -317,7 +313,7 @@
         "KRB_AP_ERR_SKEW - Kerberos time skew error": {
           "cause": "Clock difference between Kali system and Domain Controller exceeds 5 minutes. Kerberos requires time synchronization within 5-minute window for replay attack prevention. Common when using VMs with suspended state or incorrect timezone.",
           "solution": "Sync time with DC: sudo ntpdate <DC_IP> (install ntpdate if missing: sudo apt install ntpdate). Alternative: sudo rdate -n <DC_IP>. Manual sync: sudo timedatectl set-time '<DC_TIME>'. Verify: date (show local time) and net time \\\\<DC_IP> (show DC time).",
-          "prevention": "Set NTP server to DC IP in /etc/systemd/timesyncd.conf: NTP=<DC_IP>. Or add cron job: @hourly sudo ntpdate <DC_IP>. For OSCP exam, sync time at exam start.",
+          "prevention": "Set NTP server to DC IP in /etc/systemd/timesyncd.conf: NTP=<DC_IP>. Or add cron job: @hourly sudo ntpdate <DC_IP>. For security assessment, sync time at exam start.",
           "verification": "Time difference check: echo \"Local: $(date)\" && echo \"DC: $(net time \\\\<DC_IP>)\" - should be within 5 minutes."
         },
         "Hash cracking takes too long / password not in rockyou.txt": {
@@ -328,21 +324,10 @@
         },
         "Mimikatz detected by antivirus / Windows Defender": {
           "cause": "Mimikatz has well-known signatures detected by all antivirus products. Windows Defender blocks execution with 'This app can't run on your PC' or quarantines mimikatz.exe.",
-          "solution": "OPTION A (Best for OSCP): Use impacket-secretsdump from Kali instead - no AV on attacker machine. OPTION B: Disable Windows Defender: Set-MpPreference -DisableRealtimeMonitoring $true (requires admin). OPTION C: Use obfuscated Mimikatz variant (Invoke-Mimikatz, SafetyKatz). OPTION D: Use alternative tools: Rubeus (DCSync capable), pypykatz (Python implementation).",
-          "prevention": "For OSCP, prefer Linux-based tools (Impacket) over Windows tools (Mimikatz) to avoid AV issues. If you must use Mimikatz, disable AV immediately after gaining admin access.",
+          "solution": "OPTION A (Best for security work): Use impacket-secretsdump from Kali instead - no AV on attacker machine. OPTION B: Disable Windows Defender: Set-MpPreference -DisableRealtimeMonitoring $true (requires admin). OPTION C: Use obfuscated Mimikatz variant (Invoke-Mimikatz, SafetyKatz). OPTION D: Use alternative tools: Rubeus (DCSync capable), pypykatz (Python implementation).",
+          "prevention": "for security work, prefer Linux-based tools (Impacket) over Windows tools (Mimikatz) to avoid AV issues. If you must use Mimikatz, disable AV immediately after gaining admin access.",
           "verification": "Test Mimikatz execution: .\\mimikatz.exe \"privilege::debug\" \"exit\". If runs without error, AV is bypassed or disabled."
         }
-      },
-      "time_budget_oscp": {
-        "prerequisite_verification": "1-2 minutes (whoami /groups, net group checks)",
-        "dcsync_single_user": "5-10 seconds (impacket or Mimikatz)",
-        "dcsync_krbtgt_extraction": "5-10 seconds (same as single user)",
-        "domain_sid_extraction": "30 seconds (whoami /user or lookupsid.py)",
-        "golden_ticket_creation": "1-2 minutes (including ticket injection and verification)",
-        "hash_cracking_rockyou": "1 minute - 2 hours (depends on password complexity, run in background)",
-        "pass_the_hash_lateral_movement": "10-30 seconds per target host",
-        "full_domain_dump": "30 seconds - 5 minutes (depends on domain size, rarely needed in OSCP)",
-        "total_dcsync_to_golden_ticket": "5-10 minutes (from DA access to persistent domain compromise)"
       },
       "detection_and_opsec": {
         "blue_team_indicators": [
@@ -365,20 +350,6 @@
           "Use Golden Ticket sparingly - each use generates Kerberos authentication logs"
         ]
       },
-      "oscp_exam_tips": [
-        "ALWAYS DCSync krbtgt FIRST after achieving Domain Admin - this is your insurance policy",
-        "Use single quotes around impacket auth string to handle special characters: 'domain/user:P@ss!@dc'",
-        "Start hash cracking in background immediately: hashcat -m 1000 hashes.txt rockyou.txt & disown",
-        "Use Pass-the-Hash while cracking runs - don't wait for plaintext passwords",
-        "Prefer impacket-secretsdump over Mimikatz for OSCP (no Windows AV issues, cleaner output)",
-        "Save all extracted hashes externally (text file on Kali) in case of session loss",
-        "Document DC IP, Domain FQDN, Domain SID immediately - needed for Golden Ticket",
-        "Test connectivity to DC BEFORE attempting DCSync (save time on troubleshooting)",
-        "If Mimikatz blocked by AV: Disable Windows Defender OR use impacket-secretsdump from Kali",
-        "For lateral movement: Use wmiexec instead of psexec (less noisy, no service creation)",
-        "Time estimate for DA\u2192Golden Ticket: 5-10 minutes total (DCSync krbtgt + create ticket)",
-        "Remember: NTLM hash alone is sufficient for Windows auth - password cracking is optional"
-      ],
       "related_commands": [
         "ad-dcsync-check-user-groups",
         "ad-dcsync-check-domain-admins",
@@ -391,7 +362,6 @@
         "windows-hashcat-crack-ntlm"
       ],
       "tags": [
-        "OSCP:HIGH",
         "ACTIVE_DIRECTORY",
         "DCSYNC",
         "CREDENTIAL_DUMPING",

@@ -25,7 +25,7 @@
           "required": true
         }
       ],
-      "notes": "Syntax:\nLaunch WinDbg, attach to target process WinDbg essential for understanding AMSI internals.\n\nAttach to PowerShell to analyze AmsiScanBuffer.\n\nUse sparingly in OSCP (time-consuming).\n\nGood for lab research before exam.\n\n~5 min setup time.\n\nTime estimate:\n5 minutes (first-time setup) References:\ndocs/av-evasion/debugging.md#windbg-basics, PEN-300 Chapter 7.1.1 Manual alternative:\nUse x64dbg, OllyDbg (32-bit), or Visual Studio debugger",
+      "notes": "Syntax:\nLaunch WinDbg, attach to target process WinDbg essential for understanding AMSI internals.\n\nAttach to PowerShell to analyze AmsiScanBuffer.\n\nUse sparingly in certification (time-consuming).\n\nGood for lab research before exam.\n\n~5 min setup time.\n\nTime estimate:\n5 minutes (first-time setup) References:\ndocs/av-evasion/debugging.md#windbg-basics, PEN-300 Chapter 7.1.1 Manual alternative:\nUse x64dbg, OllyDbg (32-bit), or Visual Studio debugger",
       "success_indicators": [
         "WinDbg attaches to process, breaks at entry point or continues execution. Debugger command prompt ready."
       ],
@@ -270,7 +270,6 @@
       "filled_example": "# Edit memory (DWORD)\ned 7ffa12345678 90909090\n\n# Edit memory (byte)\neb 7ffa12345678 48 0x12 0x34 ...\n\n# Example: Patch AmsiScanBuffer to return clean\n# Find function address:\nx amsi!AmsiScanBuffer\n\n# Patch with: xor rax,rax (48 31 C0); ret (C3)\neb 7ffa12345678 48 31 C0 C3"
     }
   ],
-  "oscp_relevance": "Debugging skills critical for understanding bypass techniques at low level. Essential for researching new bypasses. WinDbg and Frida both valuable but time-consuming - prioritize for lab research, not exam day.",
   "attack_chain_position": "Research, Development, Pre-Engagement Preparation",
   "related_categories": [
     "amsi-bypass",

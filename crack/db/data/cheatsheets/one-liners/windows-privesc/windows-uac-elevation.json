@@ -5,7 +5,6 @@
       "name": "Windows UAC Elevation One-Liners",
       "description": "One-liner commands for launching elevated PowerShell sessions via Start-Process -Verb RunAs. Requires GUI access (RDP/physical console).",
       "category": "one-liners",
-      "oscp_relevance": "low",
       "educational_header": {
         "how_to_recognize": [
           "You have RDP or physical console access to Windows target",
@@ -56,7 +55,7 @@
       "sections": [
         {
           "title": "Windows PowerShell - Manual UAC Elevation",
-          "notes": "One-liner commands for launching elevated PowerShell sessions via Start-Process -Verb RunAs.\n\nIMPORTANT LIMITATIONS:\n- Requires GUI access (RDP, physical console)\n- User must click UAC prompt manually\n- NOT suitable for reverse shells or automated exploitation\n- OSCP exam relevance: LOW (no GUI interaction possible)\n\nWHEN TO USE:\n- Internal penetration testing with RDP access\n- Testing UAC configuration behavior\n- Legitimate administrative tasks on controlled systems\n- Social engineering scenarios (convince user to approve)\n\nWHEN NOT TO USE (OSCP EXAM):\n- Reverse shells from web exploits\n- WinRM/SSH remote sessions (non-interactive)\n- Automated exploitation requiring no user interaction\n- Any scenario requiring stealth (UAC prompts are visible)\n\nBETTER ALTERNATIVES FOR OSCP:\n- UAC bypass techniques (fodhelper, eventvwr) - No prompt required\n- Service exploitation - Escalate without user interaction\n- Token impersonation (Potato exploits) - If SeImpersonate available\n- Credential reuse (runas /savecred) - If admin credentials cached",
+          "notes": "One-liner commands for launching elevated PowerShell sessions via Start-Process -Verb RunAs.\n\nIMPORTANT LIMITATIONS:\n- Requires GUI access (RDP, physical console)\n- User must click UAC prompt manually\n- NOT suitable for reverse shells or automated exploitation\n- certification exam relevance: LOW (no GUI interaction possible)\n\nWHEN TO USE:\n- Internal penetration testing with RDP access\n- Testing UAC configuration behavior\n- Legitimate administrative tasks on controlled systems\n- Social engineering scenarios (convince user to approve)\n\nWHEN NOT TO USE (certification EXAM):\n- Reverse shells from web exploits\n- WinRM/SSH remote sessions (non-interactive)\n- Automated exploitation requiring no user interaction\n- Any scenario requiring stealth (UAC prompts are visible)\n\nBETTER ALTERNATIVES FOR certification:\n- UAC bypass techniques (fodhelper, eventvwr) - No prompt required\n- Service exploitation - Escalate without user interaction\n- Token impersonation (Potato exploits) - If SeImpersonate available\n- Credential reuse (runas /savecred) - If admin credentials cached",
           "commands": [
             {
               "id": "powershell-runas-basic",
@@ -83,7 +82,6 @@
       ],
       "tags": [
         "ONE_LINER",
-        "OSCP:LOW",
         "WINDOWS",
         "POWERSHELL",
         "UAC",

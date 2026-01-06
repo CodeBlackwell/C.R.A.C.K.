@@ -14,12 +14,23 @@
           "required": true
         }
       },
-      "edge_types_used": ["AdminTo", "CanRDP", "CanPSRemote", "ExecuteDCOM"],
-      "oscp_relevance": "high",
+      "edge_types_used": [
+        "AdminTo",
+        "CanRDP",
+        "CanPSRemote",
+        "ExecuteDCOM"
+      ],
       "expected_results": "All computers accessible from owned user with access type",
       "example_output": "CLIENT75.CORP.COM (AdminTo), FILE01.CORP.COM (CanRDP)",
-      "next_steps": ["lateral-sessions-on-computer", "owned-first-hop"],
-      "tags": ["OSCP:HIGH", "owned_principal", "enumeration", "first_step"]
+      "next_steps": [
+        "lateral-sessions-on-computer",
+        "owned-first-hop"
+      ],
+      "tags": [
+        "owned_principal",
+        "enumeration",
+        "first_step"
+      ]
     },
     {
       "id": "owned-quick-wins-context",
@@ -33,12 +44,20 @@
           "required": true
         }
       },
-      "edge_types_used": ["AdminTo"],
-      "oscp_relevance": "high",
+      "edge_types_used": [
+        "AdminTo"
+      ],
       "expected_results": "Combined view of quick win opportunities",
       "example_output": "AdminOn: [CLIENT75], Kerberoast: [IIS_SERVICE], ASREP: [MIKE, DAVE]",
-      "next_steps": ["lateral-sessions-on-computer", "quick-kerberoastable"],
-      "tags": ["OSCP:HIGH", "owned_principal", "quick_win", "comprehensive"]
+      "next_steps": [
+        "lateral-sessions-on-computer",
+        "quick-kerberoastable"
+      ],
+      "tags": [
+        "owned_principal",
+        "quick_win",
+        "comprehensive"
+      ]
     },
     {
       "id": "owned-path-to-da",
@@ -52,12 +71,22 @@
           "required": true
         }
       },
-      "edge_types_used": ["AdminTo", "MemberOf", "HasSession", "GenericAll", "WriteDacl", "ForceChangePassword"],
-      "oscp_relevance": "high",
+      "edge_types_used": [
+        "AdminTo",
+        "MemberOf",
+        "HasSession",
+        "GenericAll",
+        "WriteDacl",
+        "ForceChangePassword"
+      ],
       "expected_results": "Direct path from owned user to Domain Admins",
       "example_output": "[PETE, IT_USERS, DOMAIN ADMINS] via [MemberOf, MemberOf] (2 hops)",
       "next_steps": [],
-      "tags": ["OSCP:HIGH", "owned_principal", "privilege_escalation", "path_to_da"]
+      "tags": [
+        "owned_principal",
+        "privilege_escalation",
+        "path_to_da"
+      ]
     },
     {
       "id": "owned-group-memberships",
@@ -71,12 +100,19 @@
           "required": true
         }
       },
-      "edge_types_used": ["MemberOf"],
-      "oscp_relevance": "high",
+      "edge_types_used": [
+        "MemberOf"
+      ],
       "expected_results": "All group memberships with nesting level",
       "example_output": "DOMAIN USERS (level 1), IT_USERS (level 1), IT_ADMINS (level 2)",
-      "next_steps": ["owned-outbound-control"],
-      "tags": ["OSCP:HIGH", "owned_principal", "enumeration", "group_membership"]
+      "next_steps": [
+        "owned-outbound-control"
+      ],
+      "tags": [
+        "owned_principal",
+        "enumeration",
+        "group_membership"
+      ]
     },
     {
       "id": "owned-outbound-control",
@@ -90,12 +126,25 @@
           "required": true
         }
       },
-      "edge_types_used": ["GenericAll", "GenericWrite", "WriteDacl", "WriteOwner", "ForceChangePassword", "Owns", "AddMember"],
-      "oscp_relevance": "high",
+      "edge_types_used": [
+        "GenericAll",
+        "GenericWrite",
+        "WriteDacl",
+        "WriteOwner",
+        "ForceChangePassword",
+        "Owns",
+        "AddMember"
+      ],
       "expected_results": "All objects the owned user controls",
       "example_output": "SQL_SERVICE (User) via GenericWrite, IT_HELPDESK (Group) via AddMember",
-      "next_steps": ["privesc-shadow-admins"],
-      "tags": ["OSCP:HIGH", "owned_principal", "ACL_abuse", "object_control"]
+      "next_steps": [
+        "privesc-shadow-admins"
+      ],
+      "tags": [
+        "owned_principal",
+        "ACL_abuse",
+        "object_control"
+      ]
     },
     {
       "id": "owned-first-hop",
@@ -109,13 +158,21 @@
           "required": true
         }
       },
-      "edge_types_used": ["AdminTo", "HasSession"],
-      "oscp_relevance": "high",
+      "edge_types_used": [
+        "AdminTo",
+        "HasSession"
+      ],
       "expected_results": "Computers with sessions accessible in one hop",
       "example_output": "CLIENT75.CORP.COM -> [MARIA@CORP.COM (admincount=true)]",
-      "next_steps": ["privesc-dcsync-rights"],
+      "next_steps": [
+        "privesc-dcsync-rights"
+      ],
       "attack_technique": "T1003.001",
-      "tags": ["OSCP:HIGH", "owned_principal", "lateral_movement", "credential_harvest"]
+      "tags": [
+        "owned_principal",
+        "lateral_movement",
+        "credential_harvest"
+      ]
     },
     {
       "id": "owned-kerberoast-context",
@@ -129,13 +186,22 @@
           "required": true
         }
       },
-      "edge_types_used": ["GenericAll", "GenericWrite", "ForceChangePassword"],
-      "oscp_relevance": "high",
+      "edge_types_used": [
+        "GenericAll",
+        "GenericWrite",
+        "ForceChangePassword"
+      ],
       "expected_results": "Kerberoastable accounts with any additional control relationships",
       "example_output": "SQL_SERVICE (SPN: MSSQLSvc/sql01) - GenericWrite (can set SPN for targeted kerberoast)",
-      "next_steps": ["quick-kerberoastable"],
+      "next_steps": [
+        "quick-kerberoastable"
+      ],
       "attack_technique": "T1558.003",
-      "tags": ["OSCP:HIGH", "owned_principal", "kerberoast", "targeted"]
+      "tags": [
+        "owned_principal",
+        "kerberoast",
+        "targeted"
+      ]
     },
     {
       "id": "owned-asrep-context",
@@ -144,12 +210,17 @@
       "cypher": "MATCH (asrep:User {dontreqpreauth:true, enabled:true})\nRETURN asrep.name AS User,\n       asrep.admincount AS IsPrivileged,\n       asrep.description AS Description\nORDER BY asrep.admincount DESC",
       "variables": {},
       "edge_types_used": [],
-      "oscp_relevance": "high",
       "expected_results": "AS-REP roastable users (no auth required)",
       "example_output": "MIKE@CORP.COM, DAVE@CORP.COM (dontreqpreauth=true)",
-      "next_steps": ["lateral-adminto-nonpriv"],
+      "next_steps": [
+        "lateral-adminto-nonpriv"
+      ],
       "attack_technique": "T1558.004",
-      "tags": ["OSCP:HIGH", "owned_principal", "AS-REP", "no_auth_required"]
+      "tags": [
+        "owned_principal",
+        "AS-REP",
+        "no_auth_required"
+      ]
     },
     {
       "id": "owned-session-opportunities",
@@ -163,13 +234,21 @@
           "required": true
         }
       },
-      "edge_types_used": ["AdminTo", "HasSession"],
-      "oscp_relevance": "high",
+      "edge_types_used": [
+        "AdminTo",
+        "HasSession"
+      ],
       "expected_results": "Computers with privileged sessions where owned user is admin",
       "example_output": "CLIENT75.CORP.COM -> [MARIA@CORP.COM, JEFFADMIN@CORP.COM]",
-      "next_steps": ["privesc-dcsync-rights"],
+      "next_steps": [
+        "privesc-dcsync-rights"
+      ],
       "attack_technique": "T1003.001",
-      "tags": ["OSCP:HIGH", "owned_principal", "credential_harvest", "HasSession"]
+      "tags": [
+        "owned_principal",
+        "credential_harvest",
+        "HasSession"
+      ]
     },
     {
       "id": "owned-chained-privesc",
@@ -183,12 +262,22 @@
           "required": true
         }
       },
-      "edge_types_used": ["AdminTo", "GenericAll", "ForceChangePassword", "HasSession"],
-      "oscp_relevance": "high",
+      "edge_types_used": [
+        "AdminTo",
+        "GenericAll",
+        "ForceChangePassword",
+        "HasSession"
+      ],
       "expected_results": "Two-hop privilege escalation chains",
       "example_output": "PETE -> CLIENT75 (AdminTo) -> MARIA (HasSession) [admincount=true]",
-      "next_steps": ["privesc-dcsync-rights"],
-      "tags": ["OSCP:HIGH", "owned_principal", "chained_attack", "multi_hop"]
+      "next_steps": [
+        "privesc-dcsync-rights"
+      ],
+      "tags": [
+        "owned_principal",
+        "chained_attack",
+        "multi_hop"
+      ]
     }
   ]
 }

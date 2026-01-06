@@ -17,7 +17,7 @@
           "When you need to use official Microsoft tools (PsExec64.exe from SysInternals) that only support Kerberos",
           "After obtaining Kerberos .kirbi ticket files from mimikatz/Rubeus dumps",
           "When time synchronization issues prevent direct Kerberos attacks (Golden/Silver tickets)",
-          "OSCP exam: Kerberos lateral movement less common than NTLM but critical when NTLM path blocked - understand ticket lifecycle and klist verification"
+          "security assessment: Kerberos lateral movement less common than NTLM but critical when NTLM path blocked - understand ticket lifecycle and klist verification"
         ]
       },
       "scenarios": [
@@ -84,15 +84,15 @@
         {
           "title": "Scenario 6: When to Use Kerberos vs. NTLM Lateral Movement",
           "context": "You have NTLM hash and multiple lateral movement options: (1) Impacket pass-the-hash (NTLM), (2) Overpass-the-hash + Microsoft PsExec (Kerberos), (3) Pass-the-ticket with exported TGT. Which technique should you use? Decision depends on: tools available, target requirements, stealth considerations, time constraints.",
-          "approach": "Decision tree: FROM KALI \u2192 Use Impacket pass-the-hash (easiest, NTLM-based, no Windows machine needed). Tools: psexec, wmiexec, smbexec, Evil-WinRM. FROM COMPROMISED WINDOWS MACHINE \u2192 Overpass-the-hash if you need Microsoft tools (PsExec64.exe, COM objects requiring Kerberos). FROM DOMAIN CONTROLLER OR HIGH-PRIVILEGE MACHINE \u2192 Export tickets with Mimikatz, pass-the-ticket for impersonation. STEALTH CONSIDERATIONS: NTLM pass-the-hash = more common, easier to detect (hash never changes). Kerberos pass-the-ticket = stealthier (tickets expire, limited time window). OSCP EXAM: Prioritize Impacket (NTLM) for speed. Use Kerberos only when NTLM fails or exam specifically requires Microsoft tools.",
+          "approach": "Decision tree: FROM KALI \u2192 Use Impacket pass-the-hash (easiest, NTLM-based, no Windows machine needed). Tools: psexec, wmiexec, smbexec, Evil-WinRM. FROM COMPROMISED WINDOWS MACHINE \u2192 Overpass-the-hash if you need Microsoft tools (PsExec64.exe, COM objects requiring Kerberos). FROM DOMAIN CONTROLLER OR HIGH-PRIVILEGE MACHINE \u2192 Export tickets with Mimikatz, pass-the-ticket for impersonation. STEALTH CONSIDERATIONS: NTLM pass-the-hash = more common, easier to detect (hash never changes). Kerberos pass-the-ticket = stealthier (tickets expire, limited time window). security assessment: Prioritize Impacket (NTLM) for speed. Use Kerberos only when NTLM fails or exam specifically requires Microsoft tools.",
           "commands": [
             "pth-impacket-psexec",
             "overpass-mimikatz-pth",
             "kerberos-rubeus-ptt",
             "lateral-movement-decision-tree"
           ],
-          "expected_outcome": "Scenario: You have hash for corp\\admin, you're on Kali, target has port 445 open. FAST PATH: 'impacket-psexec -hashes :fc525c... corp/admin@192.168.50.100' \u2192 Instant SYSTEM shell (30 seconds). SLOW PATH: Upload Mimikatz to compromised Windows machine, run overpass-the-hash, spawn PowerShell, trigger Kerberos, verify klist, download Microsoft PsExec64.exe, execute \u2192 Same result (10 minutes). OSCP TIME MANAGEMENT: Use Kerberos techniques only when: (1) Impacket blocked by network controls, (2) Target specifically requires Microsoft PsExec (rare in OSCP), (3) You already have TGT exported and want to reuse. Default to NTLM pass-the-hash for exam efficiency - save Kerberos for troubleshooting fallback.",
-          "why_this_works": "NTLM pass-the-hash advantages: (1) Works from Kali (no Windows machine needed), (2) Faster (no ticket request/verification), (3) Simpler (one command vs multi-step process), (4) Well-documented for OSCP. Kerberos advantages: (1) Works with Microsoft tools that don't support NTLM, (2) Tickets are time-limited (stealthier - stolen ticket expires), (3) Delegation support (can forward credentials), (4) Modern AD environments prefer Kerberos over NTLM. WHEN KERBEROS REQUIRED: (1) Microsoft PsExec64.exe (SysInternals version doesn't support NTLM), (2) Certain COM objects (DCOM may require Kerberos depending on configuration), (3) Constrained/unconstrained delegation scenarios. OSCP REALITY: Most exam machines accept NTLM. Kerberos techniques test depth of AD knowledge but aren't usually critical path to flags. Master NTLM first, learn Kerberos for completeness."
+          "expected_outcome": "Scenario: You have hash for corp\\admin, you're on Kali, target has port 445 open. FAST PATH: 'impacket-psexec -hashes :fc525c... corp/admin@192.168.50.100' \u2192 Instant SYSTEM shell (30 seconds). SLOW PATH: Upload Mimikatz to compromised Windows machine, run overpass-the-hash, spawn PowerShell, trigger Kerberos, verify klist, download Microsoft PsExec64.exe, execute \u2192 Same result (10 minutes). pentest TIME MANAGEMENT: Use Kerberos techniques only when: (1) Impacket blocked by network controls, (2) Target specifically requires Microsoft PsExec (rare in assessments), (3) You already have TGT exported and want to reuse. Default to NTLM pass-the-hash for exam efficiency - save Kerberos for troubleshooting fallback.",
+          "why_this_works": "NTLM pass-the-hash advantages: (1) Works from Kali (no Windows machine needed), (2) Faster (no ticket request/verification), (3) Simpler (one command vs multi-step process), (4) Well-documented for security work. Kerberos advantages: (1) Works with Microsoft tools that don't support NTLM, (2) Tickets are time-limited (stealthier - stolen ticket expires), (3) Delegation support (can forward credentials), (4) Modern AD environments prefer Kerberos over NTLM. WHEN KERBEROS REQUIRED: (1) Microsoft PsExec64.exe (SysInternals version doesn't support NTLM), (2) Certain COM objects (DCOM may require Kerberos depending on configuration), (3) Constrained/unconstrained delegation scenarios. pentest REALITY: Most exam machines accept NTLM. Kerberos techniques test depth of AD knowledge but aren't usually critical path to flags. Master NTLM first, learn Kerberos for completeness."
         }
       ],
       "sections": [
@@ -182,7 +182,7 @@
         },
         {
           "title": "Phase 5: Technique Selection (NTLM vs Kerberos)",
-          "notes": "NTLM pass-the-hash (default): Use from Kali with Impacket (psexec, wmiexec, smbexec, Evil-WinRM). Faster, simpler, well-documented for OSCP. Overpass-the-hash (when NTLM blocked): Use from compromised Windows machine when target requires Kerberos (Microsoft PsExec, COM objects). Slower, multi-step, requires Windows machine. Pass-the-ticket (opportunistic): Use when you've already dumped tickets from high-value target. Limited time window (ticket expiration). OSCP PRIORITY: Master NTLM first (80% of exam lateral movement), understand Kerberos for completeness and troubleshooting (20%).",
+          "notes": "NTLM pass-the-hash (default): Use from Kali with Impacket (psexec, wmiexec, smbexec, Evil-WinRM). Faster, simpler, well-documented for certification. Overpass-the-hash (when NTLM blocked): Use from compromised Windows machine when target requires Kerberos (Microsoft PsExec, COM objects). Slower, multi-step, requires Windows machine. Pass-the-ticket (opportunistic): Use when you've already dumped tickets from high-value target. Limited time window (ticket expiration). certification PRIORITY: Master NTLM first (80% of exam lateral movement), understand Kerberos for completeness and troubleshooting (20%).",
           "commands": [
             {
               "id": "pth-impacket-psexec",
@@ -232,8 +232,7 @@
         "LATERAL_MOVEMENT",
         "MIMIKATZ",
         "RUBEUS",
-        "TGT",
-        "OSCP:MEDIUM"
+        "TGT"
       ]
     }
   ]

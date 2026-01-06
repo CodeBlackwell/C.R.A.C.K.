@@ -4,7 +4,7 @@ Thank you for your interest in contributing to CRACK! This document provides gui
 
 ## Code of Conduct
 
-Be respectful and constructive. This is an educational security tool - contributions should focus on legitimate pentesting and OSCP preparation.
+Be respectful and constructive. This is an educational security tool - contributions should focus on legitimate pentesting and security assessments.
 
 ## Getting Started
 
@@ -55,7 +55,7 @@ Commands are the core knowledge unit. To add a new command:
      "category": "enumeration",
      "command": "tool -flag <PLACEHOLDER>",
      "description": "What this command does",
-     "tags": ["OSCP:HIGH", "LINUX"],
+     "tags": ["LINUX", "ENUMERATION"],
      "variables": [
        {"name": "PLACEHOLDER", "description": "What to put here", "example": "10.10.10.1"}
      ],
@@ -73,7 +73,7 @@ Commands are the core knowledge unit. To add a new command:
 - Include all flags with explanations
 - Provide realistic examples
 - Add troubleshooting for common errors
-- Tag with appropriate OSCP relevance
+- Tag with appropriate category tags (LINUX, WINDOWS, WEB, AD, etc.)
 
 ## Contributing Tools
 
