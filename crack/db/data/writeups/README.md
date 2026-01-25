@@ -1,4 +1,4 @@
-# OSCP Writeup System - Documentation
+# Professional Writeup System - Documentation
 
 ## Overview
 
@@ -14,7 +14,7 @@ The writeup system integrates complete machine walkthroughs into the CRACK Track
 ### 1. Validate Existing Writeup
 
 ```bash
-cd /home/kali/Desktop/OSCP/crack
+cd /home/kali/Desktop/pentest/crack
 python3 db/scripts/validate_writeups.py \
   db/data/writeups/hackthebox/Usage/Usage.json \
   --schema db/data/writeups/writeup-schema.json \
@@ -44,7 +44,7 @@ cp db/data/writeups/hackthebox/Usage/Usage.json \
 ### 3. Extract to CSV (Future Neo4j Import)
 
 ```bash
-cd /home/kali/Desktop/OSCP/crack/db/neo4j-migration/scripts
+cd /home/kali/Desktop/pentest/crack/db/neo4j-migration/scripts
 
 # Load writeups
 python3
@@ -76,9 +76,9 @@ python3
     "writeup_author": "Your Name",
     "writeup_date": "2025-01-01"
   },
-  "oscp_relevance": {
+  "relevance": {
     "score": "high",
-    "reasoning": "Demonstrates OSCP-critical SQL injection and privilege escalation",
+    "reasoning": "Demonstrates security-critical SQL injection and privilege escalation",
     "exam_applicable": true
   },
   "synopsis": "Machine involves SQL injection to dump credentials, file upload to RCE, and symlink privilege escalation.",
@@ -86,7 +86,7 @@ python3
     "required": ["Web fundamentals", "Linux basics"],
     "learned": ["SQL Injection", "File upload bypass", "Symlink abuse"]
   },
-  "tags": ["OSCP:HIGH", "SQL_INJECTION", "FILE_UPLOAD", "LINUX"],
+  "tags": ["PRIORITY:HIGH", "SQL_INJECTION", "FILE_UPLOAD", "LINUX"],
   "attack_phases": [
     {
       "phase": "enumeration",
@@ -134,11 +134,11 @@ python3
 - `hard`
 - `insane`
 
-### Valid OSCP Relevance Scores
+### Valid Relevance Scores
 
-- `high` - Techniques directly applicable to OSCP exam
+- `high` - Techniques directly applicable to professional assessment
 - `medium` - Useful concepts but not exam-critical
-- `low` - Educational but rarely seen in OSCP
+- `low` - Educational but rarely encountered in assessments
 
 ## Failed Attempts - The Most Important Section!
 
@@ -159,10 +159,10 @@ python3
   "actual": "WARNING: POST parameter 'email' does not seem to be injectable",
   "reason": "Default sqlmap test level (1) insufficient for detecting boolean-based blind SQLi in this application. Required --level 3 for more thorough test payloads.",
   "solution": "Increase test depth with --level 3 flag as suggested by sqlmap error message",
-  "lesson_learned": "CRITICAL OSCP LESSON: Automated tools have limitations. Always trust manual verification over tool defaults. Manual testing with 'test' OR 1=1;-- -' confirmed injection, but tool missed it. Read tool error messages carefully - sqlmap explicitly suggested increasing --level.",
+  "lesson_learned": "CRITICAL LESSON: Automated tools have limitations. Always trust manual verification over tool defaults. Manual testing with 'test' OR 1=1;-- -' confirmed injection, but tool missed it. Read tool error messages carefully - sqlmap explicitly suggested increasing --level.",
   "time_wasted_minutes": 15,
   "documentation_importance": "critical",
-  "notes": "This is a common OSCP exam scenario: blind SQLi that requires increased sqlmap sensitivity. Document this pattern for future reference."
+  "notes": "This is a common professional assessment scenario: blind SQLi that requires increased sqlmap sensitivity. Document this pattern for future reference."
 }
 ```
 
@@ -174,7 +174,7 @@ If validation reports `Unknown command ID`, you have two options:
 
 **Option 1: Find existing similar command**
 ```bash
-cd /home/kali/Desktop/OSCP/crack
+cd /home/kali/Desktop/pentest/crack
 grep -r "sqlmap" reference/data/commands/ --include="*.json" | grep "\"id\""
 ```
 
@@ -186,7 +186,7 @@ grep -r "sqlmap" reference/data/commands/ --include="*.json" | grep "\"id\""
   "category": "web",
   "command": "sqlmap -r <REQUEST_FILE> -p <PARAMETER> --batch --level 3",
   "description": "Automated SQL injection with increased test depth for blind SQLi",
-  "tags": ["OSCP:HIGH", "WEB", "SQLI", "SQLMAP"],
+  "tags": ["PRIORITY:HIGH", "WEB", "SQLI", "SQLMAP"],
   "notes": "Use --level 3 for blind SQL injection detection. Default level (1) often insufficient."
 }
 ```
@@ -219,7 +219,7 @@ ORDER BY fa.time_wasted_minutes DESC
 
 ```cypher
 MATCH (w1:Writeup {id: 'htb-usage'})-[:TEACHES_TECHNIQUE]->(t:Technique)<-[:TEACHES_TECHNIQUE]-(w2:Writeup)
-WHERE w1.oscp_relevance = 'high' AND w2.oscp_relevance = 'high'
+WHERE w1.relevance = 'high' AND w2.relevance = 'high'
 RETURN w2.name as similar_machine,
        w2.platform,
        w2.difficulty,
@@ -230,7 +230,7 @@ RETURN w2.name as similar_machine,
 
 ```cypher
 MATCH (easy:Writeup {difficulty: 'easy'})-[:TEACHES_SKILL]->(s:Skill)<-[:REQUIRES_SKILL]-(medium:Writeup {difficulty: 'medium'})
-WHERE easy.oscp_relevance = 'high' AND medium.oscp_relevance = 'high'
+WHERE easy.relevance = 'high' AND medium.relevance = 'high'
 RETURN easy.name as start_with,
        s.name as learn_this_skill,
        medium.name as then_try
@@ -290,9 +290,9 @@ Be honest with time estimates. This helps with exam planning:
 - Foothold: 30-90 minutes
 - Privilege Escalation: 20-60 minutes
 
-### 5. OSCP Relevance
+### 5. Professional Relevance
 Ask yourself:
-- Would this technique work in OSCP exam?
+- Would this technique work in professional assessment?
 - Can I do this without automated exploits?
 - Is this time-efficient for exam context?
 
@@ -303,7 +303,7 @@ Before considering a writeup complete:
 - [ ] All attack phases documented with duration
 - [ ] Every command has `command_id` and `context`
 - [ ] Failed attempts include `lesson_learned` (min 30 chars)
-- [ ] At least one OSCP:HIGH|MEDIUM|LOW tag
+- [ ] At least one PRIORITY:HIGH|MEDIUM|LOW tag
 - [ ] CVE format correct (CVE-YYYY-NNNNN or null)
 - [ ] Phase names valid (enumeration, foothold, etc.)
 - [ ] Time breakdown includes `total_minutes` and `flags_captured`

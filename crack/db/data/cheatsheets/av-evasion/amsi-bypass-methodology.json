@@ -65,7 +65,7 @@
       "sections": [
         {
           "title": "Phase 1: Detection & Testing",
-          "notes": "Always verify AMSI is active before attempting bypass. Baseline testing prevents wasted time on systems without AMSI enabled (Windows 7, Server 2012 R1 and older). Test with known malicious strings: 'Invoke-Mimikatz', 'amsiutils', 'AmsiScanBuffer'. If these strings echo without red errors, AMSI is not active (skip bypass, proceed directly to payload). If red 'malicious content' error appears, AMSI is active (proceed to Phase 2). Time investment: 30 seconds. certification tip: Test AMSI before downloading large payloads - saves bandwidth and time if bypass needed.",
+          "notes": "Always verify AMSI is active before attempting bypass. Baseline testing prevents wasted time on systems without AMSI enabled (Windows 7, Server 2012 R1 and older). Test with known malicious strings: 'Invoke-Mimikatz', 'amsiutils', 'AmsiScanBuffer'. If these strings echo without red errors, AMSI is not active (skip bypass, proceed directly to payload). If red 'malicious content' error appears, AMSI is active (proceed to Phase 2). Time investment: 30 seconds. practical tip: Test AMSI before downloading large payloads - saves bandwidth and time if bypass needed.",
           "commands": [
             {
               "id": "amsi-test-payload",
@@ -76,7 +76,7 @@
         },
         {
           "title": "Phase 2: Quick Bypasses (In-Memory)",
-          "notes": "Fastest methods for immediate access. These bypasses are session-specific and don't persist across reboots or new PowerShell sessions. Try in order: Context Corruption (best balance of speed/reliability) -> AmsiInitFailed (fastest but may be patched) -> Memory Patching (slowest but most reliable). All methods require active PowerShell session - can't be applied from cmd.exe to 'future' PowerShell sessions. Persistence note: Bypass must be reapplied for every new PowerShell process. Consider automating in initial access payload. certification timing: Budget 2-4 minutes for bypass in exam timeline. Practice typing these commands from memory - clipboard access may be limited in exam environment.",
+          "notes": "Fastest methods for immediate access. These bypasses are session-specific and don't persist across reboots or new PowerShell sessions. Try in order: Context Corruption (best balance of speed/reliability) -> AmsiInitFailed (fastest but may be patched) -> Memory Patching (slowest but most reliable). All methods require active PowerShell session - can't be applied from cmd.exe to 'future' PowerShell sessions. Persistence note: Bypass must be reapplied for every new PowerShell process. Consider automating in initial access payload. pentest timing: Budget 2-4 minutes for bypass in pentest timeline. Practice typing these commands from memory - clipboard access may be limited in exam environment.",
           "commands": [
             {
               "id": "amsi-context-corruption",
@@ -97,7 +97,7 @@
         },
         {
           "title": "Phase 3: Persistent/Alternative Bypasses",
-          "notes": "Use when in-memory bypasses fail or when persistence is needed across reboots/sessions. Registry-based bypasses survive reboots but may trigger EDR alerts (registry modification monitoring). Base64 staging useful for evading static signatures but less effective against modern Defender (scans decoded content). Trade-offs: Persistence = Higher detection risk, Session-only = Must reapply but lower forensic footprint. certification considerations: Registry changes persist in lab environment (may affect other students), Base64 useful for exam machines with strict execution policies. When to use: JScript/VBScript delivery (use registry method), Initial access payloads (embed Base64), Long-term persistence needed (registry method with cleanup plan). Cleanup: Always document registry keys created - required for certification report.",
+          "notes": "Use when in-memory bypasses fail or when persistence is needed across reboots/sessions. Registry-based bypasses survive reboots but may trigger EDR alerts (registry modification monitoring). Base64 staging useful for evading static signatures but less effective against modern Defender (scans decoded content). Trade-offs: Persistence = Higher detection risk, Session-only = Must reapply but lower forensic footprint. pentest considerations: Registry changes persist in lab environment (may affect other students), Base64 useful for exam machines with strict execution policies. When to use: JScript/VBScript delivery (use registry method), Initial access payloads (embed Base64), Long-term persistence needed (registry method with cleanup plan). Cleanup: Always document registry keys created - required for pentest report.",
           "commands": [
             {
               "id": "amsi-jscript-registry",
@@ -113,7 +113,7 @@
         },
         {
           "title": "Phase 4: Validation",
-          "notes": "After bypass, always re-test with known malicious payload. Confirms AMSI is truly disabled, not just returning false positives. Test with multiple strings: 'Invoke-Mimikatz' (most reliable), 'amsiutils' (alternate test), actual payload snippet (end-to-end test). If test fails after bypass: Try next bypass method in sequence, Check for EDR interference (process injection, memory protection), Verify PowerShell version (.NET 4.0+ required for reflection methods), Consider alternate execution contexts (runspaces, background jobs). Success criteria: Test string echoes without red error, No Event ID 1116 in Windows Defender logs, Actual payload executes cleanly. Time investment: 10-15 seconds per validation. certification workflow: Test -> Bypass -> Re-test -> Execute payload. Never skip re-test step - false positives waste precious exam time.",
+          "notes": "After bypass, always re-test with known malicious payload. Confirms AMSI is truly disabled, not just returning false positives. Test with multiple strings: 'Invoke-Mimikatz' (most reliable), 'amsiutils' (alternate test), actual payload snippet (end-to-end test). If test fails after bypass: Try next bypass method in sequence, Check for EDR interference (process injection, memory protection), Verify PowerShell version (.NET 4.0+ required for reflection methods), Consider alternate execution contexts (runspaces, background jobs). Success criteria: Test string echoes without red error, No Event ID 1116 in Windows Defender logs, Actual payload executes cleanly. Time investment: 10-15 seconds per validation. workflow: Test -> Bypass -> Re-test -> Execute payload. Never skip re-test step - false positives waste precious pentest time.",
           "commands": [
             {
               "id": "amsi-test-payload",
@@ -131,7 +131,7 @@
         "evasion",
         "memory-patching",
         "registry",
-        "oscp-priority",
+        "PRIORITY:HIGH",
         "post-exploitation",
         "av-evasion"
       ]

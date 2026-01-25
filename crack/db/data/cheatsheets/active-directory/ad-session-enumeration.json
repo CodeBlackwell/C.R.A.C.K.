@@ -125,12 +125,12 @@
           "commands": [
             {
               "id": "sysinternals-psloggedon",
-              "example": ".\\PsLoggedon.exe \\\\FILES04.corp.com",
+              "example": ".\\PsLoggedon.exe \\\\FILESERVER.corp.com",
               "shows": "Users logged on locally"
             },
             {
               "id": "powerview-get-netloggedon",
-              "example": "Get-NetLoggedon -ComputerName WEB04.corp.com",
+              "example": "Get-NetLoggedon -ComputerName WEBSERVER.corp.com",
               "shows": "UserName"
             },
             {

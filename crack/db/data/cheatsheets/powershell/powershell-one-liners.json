@@ -21,7 +21,7 @@
       "scenarios": [
         {
           "title": "Scenario 1: WinRM Lateral Movement with Flag Retrieval",
-          "context": "You compromised CLIENT74 as user 'jeff' and obtained credentials for domain admin 'jen' (password: Nexus123!). Target server WEB04 (192.168.117.70) has WinRM enabled. You need to move laterally and retrieve the Administrator desktop flag without establishing interactive session.",
+          "context": "You compromised WORKSTATION02 as user 'jeff' and obtained credentials for domain admin 'jen' (password: SecureP@ss123!). Target server WEBSERVER (192.168.117.70) has WinRM enabled. You need to move laterally and retrieve the Administrator desktop flag without establishing interactive session.",
           "approach": "Use Invoke-Command to execute remote PowerShell commands via WinRM. First create PSCredential object with jen's credentials, then use Invoke-Command with -ScriptBlock to read flag file directly from Administrator's desktop. This one-liner approach completes lateral movement and flag retrieval in a single command without requiring persistent session.",
           "commands": [
             "ps-winrm-credential-setup",
@@ -33,7 +33,7 @@
         },
         {
           "title": "Scenario 2: WMI Lateral Movement with Reverse Shell",
-          "context": "Target FILES04 (192.168.50.73) has WinRM disabled but RPC port 135 open. You have domain user 'jen' credentials. Need to establish reverse shell for interactive access when WinRM unavailable.",
+          "context": "Target FILESERVER (10.10.10.73) has WinRM disabled but RPC port 135 open. You have domain user 'jen' credentials. Need to establish reverse shell for interactive access when WinRM unavailable.",
           "approach": "Use WMI/CIM sessions via DCOM protocol as alternative to WinRM. Create CimSession using New-CimSessionOption with -Protocol DCOM, then use Invoke-CimMethod with Win32_Process.Create to spawn reverse shell process. Shell runs in session 0 as SYSTEM, invisible to logged-in users. Pre-generate base64-encoded PowerShell reverse shell using Python encoder script.",
           "commands": [
             "ps-reverse-shell-encoder-python",
@@ -74,7 +74,7 @@
           "commands": [
             {
               "id": "ps-winrm-credential-setup",
-              "example": "$username = 'jen'; $password = 'Nexus123!'; $secureString = ConvertTo-SecureString $password -AsPlaintext -Force; $credential = New-Object System.Management.Automation.PSCredential $username, $secureString",
+              "example": "$username = 'jen'; $password = 'SecureP@ss123!'; $secureString = ConvertTo-SecureString $password -AsPlaintext -Force; $credential = New-Object System.Management.Automation.PSCredential $username, $secureString",
               "shows": "Command executes successfully"
             }
           ]
@@ -85,7 +85,7 @@
           "commands": [
             {
               "id": "ps-winrm-invoke-command",
-              "example": "Invoke-Command -ComputerName 192.168.50.73 -Credential $credential -ScriptBlock {whoami; hostname}",
+              "example": "Invoke-Command -ComputerName 10.10.10.73 -Credential $credential -ScriptBlock {whoami; hostname}",
               "shows": "Command executes successfully"
             }
           ]
@@ -96,7 +96,7 @@
           "commands": [
             {
               "id": "ps-wmi-cimsession-setup",
-              "example": "$options = New-CimSessionOption -Protocol DCOM; $session = New-Cimsession -ComputerName 192.168.50.73 -Credential $credential -SessionOption $options",
+              "example": "$options = New-CimSessionOption -Protocol DCOM; $session = New-Cimsession -ComputerName 10.10.10.73 -Credential $credential -SessionOption $options",
               "shows": "Command executes successfully"
             },
             {
@@ -138,7 +138,7 @@
         },
         {
           "title": "Phase 6: Flag Retrieval (Quick pentest Wins)",
-          "notes": "Time-critical flag retrieval for certification exam. Start with simplest approach (known path), escalate to comprehensive searches only if needed. Save complex searches for last - they take 2-5 minutes to complete.",
+          "notes": "Time-critical flag retrieval for pentest. Start with simplest approach (known path), escalate to comprehensive searches only if needed. Save complex searches for last - they take 2-5 minutes to complete.",
           "commands": [
             {
               "id": "ps-search-desktop-flags",
@@ -161,7 +161,7 @@
         },
         {
           "title": "Phase 7: Credential Harvesting",
-          "notes": "Extract stored credentials from Windows. Check registry AutoLogon first (30% hit rate in certification labs), then search for passwords in config files. Found credentials enable lateral movement through password reuse.",
+          "notes": "Extract stored credentials from Windows. Check registry AutoLogon first (30% hit rate in labs), then search for passwords in config files. Found credentials enable lateral movement through password reuse.",
           "commands": [
             {
               "id": "ps-registry-autologon",

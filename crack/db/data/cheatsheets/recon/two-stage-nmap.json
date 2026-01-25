@@ -62,7 +62,7 @@
       "sections": [
         {
           "title": "Phase 1: Combined One-Liner (Recommended)",
-          "notes": "Single command handles discovery + enumeration. Creates nmap/ directory automatically. Best for time-constrained situations like certification exam.",
+          "notes": "Single command handles discovery + enumeration. Creates nmap/ directory automatically. Best for time-constrained situations like pentest.",
           "commands": [
             {
               "id": "nmap-two-stage-chain",

@@ -60,7 +60,11 @@ def select_from_list(
     if allow_manual:
         print(f"  [M] Enter manually")
 
-    choice = input("Choice: ").strip()
+    choice = input("Choice: ").strip().strip('\r\n')
+
+    # Enter with no input selects first item (default)
+    if not choice:
+        return items[0]
 
     if allow_manual and choice.upper() == "M":
         return input("  Enter value: ").strip()
@@ -75,7 +79,7 @@ def select_from_list(
     # If invalid, treat as manual entry
     if choice:
         return choice.upper()
-    return ""
+    return items[0]  # Fallback to first item
 
 
 def interactive_pwn(

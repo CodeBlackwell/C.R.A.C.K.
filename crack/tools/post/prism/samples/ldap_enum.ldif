@@ -1,0 +1,184 @@
+dn: DC=corp,DC=local
+objectClass: domain
+dc: corp
+distinguishedName: DC=corp,DC=local
+name: corp
+whenCreated: 20200101000000.0Z
+whenChanged: 20260107000000.0Z
+
+dn: CN=Administrator,CN=Users,DC=corp,DC=local
+objectClass: top
+objectClass: person
+objectClass: organizationalPerson
+objectClass: user
+cn: Administrator
+sAMAccountName: Administrator
+userPrincipalName: Administrator@corp.local
+userAccountControl: 66048
+adminCount: 1
+memberOf: CN=Domain Admins,CN=Users,DC=corp,DC=local
+memberOf: CN=Enterprise Admins,CN=Users,DC=corp,DC=local
+memberOf: CN=Administrators,CN=Builtin,DC=corp,DC=local
+description: Built-in account for administering the computer/domain
+whenCreated: 20200101000000.0Z
+pwdLastSet: 133500000000000000
+
+dn: CN=svc_sql,CN=Users,DC=corp,DC=local
+objectClass: top
+objectClass: person
+objectClass: organizationalPerson
+objectClass: user
+cn: svc_sql
+sAMAccountName: svc_sql
+userPrincipalName: svc_sql@corp.local
+userAccountControl: 66048
+servicePrincipalName: MSSQLSvc/sql01.corp.local:1433
+servicePrincipalName: MSSQLSvc/sql01.corp.local
+description: SQL Service Account - pw: Summer2024!
+whenCreated: 20230615000000.0Z
+pwdLastSet: 133615380000000000
+
+dn: CN=j.smith,CN=Users,DC=corp,DC=local
+objectClass: top
+objectClass: person
+objectClass: organizationalPerson
+objectClass: user
+cn: j.smith
+sAMAccountName: j.smith
+userPrincipalName: j.smith@corp.local
+userAccountControl: 4260352
+description: Temp account for contractor - disable after project
+whenCreated: 20240115000000.0Z
+pwdLastSet: 133505000000000000
+
+dn: CN=svc_backup,CN=Users,DC=corp,DC=local
+objectClass: top
+objectClass: person
+objectClass: organizationalPerson
+objectClass: user
+cn: svc_backup
+sAMAccountName: svc_backup
+userPrincipalName: svc_backup@corp.local
+userAccountControl: 66048
+servicePrincipalName: CIFS/fs01.corp.local
+memberOf: CN=Backup Operators,CN=Builtin,DC=corp,DC=local
+whenCreated: 20231101000000.0Z
+pwdLastSet: 133431600000000000
+
+dn: CN=svc_web,CN=Users,DC=corp,DC=local
+objectClass: top
+objectClass: person
+objectClass: organizationalPerson
+objectClass: user
+cn: svc_web
+sAMAccountName: svc_web
+userPrincipalName: svc_web@corp.local
+userAccountControl: 66048
+servicePrincipalName: HTTP/web01.corp.local
+servicePrincipalName: HTTP/web01
+whenCreated: 20240320000000.0Z
+pwdLastSet: 133554630000000000
+
+dn: CN=legacy_admin,CN=Users,DC=corp,DC=local
+objectClass: top
+objectClass: person
+objectClass: organizationalPerson
+objectClass: user
+cn: legacy_admin
+sAMAccountName: legacy_admin
+userPrincipalName: legacy_admin@corp.local
+userAccountControl: 66048
+adminCount: 1
+memberOf: CN=Domain Admins,CN=Users,DC=corp,DC=local
+cascadeLegacyPwd: Y2xlYXJ0ZXh0cGFzc3dvcmQ=
+description: Legacy admin - DO NOT DELETE - needed for old system
+whenCreated: 20200315000000.0Z
+pwdLastSet: 132300000000000000
+
+dn: CN=m.jones,CN=Users,DC=corp,DC=local
+objectClass: top
+objectClass: person
+objectClass: organizationalPerson
+objectClass: user
+cn: m.jones
+sAMAccountName: m.jones
+userPrincipalName: m.jones@corp.local
+userAccountControl: 66048
+memberOf: CN=IT Support,CN=Users,DC=corp,DC=local
+whenCreated: 20220801000000.0Z
+pwdLastSet: 133400000000000000
+
+dn: CN=temp_user,CN=Users,DC=corp,DC=local
+objectClass: top
+objectClass: person
+objectClass: organizationalPerson
+objectClass: user
+cn: temp_user
+sAMAccountName: temp_user
+userPrincipalName: temp_user@corp.local
+userAccountControl: 4260352
+description: Temporary account for vendor access
+whenCreated: 20251201000000.0Z
+pwdLastSet: 133780000000000000
+
+dn: CN=DC01,CN=Computers,DC=corp,DC=local
+objectClass: top
+objectClass: person
+objectClass: organizationalPerson
+objectClass: user
+objectClass: computer
+cn: DC01
+sAMAccountName: DC01$
+dNSHostName: DC01.corp.local
+operatingSystem: Windows Server 2019 Standard
+operatingSystemVersion: 10.0 (17763)
+userAccountControl: 532480
+servicePrincipalName: ldap/DC01.corp.local
+servicePrincipalName: HOST/DC01.corp.local
+whenCreated: 20200101000000.0Z
+
+dn: CN=WS01,CN=Computers,DC=corp,DC=local
+objectClass: top
+objectClass: person
+objectClass: organizationalPerson
+objectClass: user
+objectClass: computer
+cn: WS01
+sAMAccountName: WS01$
+dNSHostName: WS01.corp.local
+operatingSystem: Windows 10 Enterprise
+operatingSystemVersion: 10.0 (19045)
+userAccountControl: 4096
+whenCreated: 20230601000000.0Z
+
+dn: CN=SQL01,CN=Computers,DC=corp,DC=local
+objectClass: top
+objectClass: person
+objectClass: organizationalPerson
+objectClass: user
+objectClass: computer
+cn: SQL01
+sAMAccountName: SQL01$
+dNSHostName: SQL01.corp.local
+operatingSystem: Windows Server 2019 Standard
+operatingSystemVersion: 10.0 (17763)
+userAccountControl: 4096
+whenCreated: 20230615000000.0Z
+
+dn: CN=Domain Admins,CN=Users,DC=corp,DC=local
+objectClass: top
+objectClass: group
+cn: Domain Admins
+sAMAccountName: Domain Admins
+adminCount: 1
+member: CN=Administrator,CN=Users,DC=corp,DC=local
+member: CN=legacy_admin,CN=Users,DC=corp,DC=local
+description: Designated administrators of the domain
+
+dn: CN=Backup Operators,CN=Builtin,DC=corp,DC=local
+objectClass: top
+objectClass: group
+cn: Backup Operators
+sAMAccountName: Backup Operators
+member: CN=svc_backup,CN=Users,DC=corp,DC=local
+description: Backup Operators can override security restrictions for the sole purpose of backing up or restoring files

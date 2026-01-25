@@ -298,6 +298,7 @@ class SprayExecutor:
                 shell=True,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
+                stdin=subprocess.DEVNULL,  # Prevent stdin inheritance
                 text=True,
                 bufsize=1,  # Line buffered
             )

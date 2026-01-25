@@ -20,6 +20,7 @@ class FindingType(Enum):
     SERVICE = auto()             # Discovered service
     SHARE = auto()               # SMB share access
     POLICY = auto()              # Password policy info
+    BLOODHOUND_PATH = auto()     # Attack path from BloodHound analysis
 
 
 class CredentialType(Enum):

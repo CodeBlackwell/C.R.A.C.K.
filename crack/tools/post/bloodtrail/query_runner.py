@@ -14,6 +14,10 @@ from neo4j import GraphDatabase
 from neo4j.exceptions import ServiceUnavailable, AuthError
 
 from .config import Neo4jConfig
+from crack.core.debug import DebugLogger, Component, StepType
+
+# Module-level debug logger
+_logger = DebugLogger(component=Component.BT_QUERY)
 from .core.models import Query, QueryResult
 from .core.formatters import (
     Colors,
@@ -59,6 +63,8 @@ class QueryRunner:
 
     def connect(self) -> bool:
         """Establish Neo4j connection."""
+        _logger.verbose("Attempting Neo4j connection", StepType.CONNECTION,
+                        uri=self.config.uri, user=self.config.user)
         try:
             self.driver = GraphDatabase.driver(
                 self.config.uri,
@@ -67,14 +73,22 @@ class QueryRunner:
             # Test connection
             with self.driver.session() as session:
                 session.run("RETURN 1")
+            _logger.info("Neo4j connection established", StepType.CONNECTION,
+                         uri=self.config.uri)
             return True
         except AuthError:
+            _logger.error("Neo4j authentication failed", StepType.CONNECTION,
+                          user=self.config.user)
             print(f"[!] Neo4j authentication failed (user: {self.config.user})")
             return False
         except ServiceUnavailable:
+            _logger.error("Neo4j not available", StepType.CONNECTION,
+                          uri=self.config.uri)
             print(f"[!] Neo4j not available at {self.config.uri}")
             return False
         except Exception as e:
+            _logger.error("Neo4j connection error", StepType.CONNECTION,
+                          error=str(e))
             print(f"[!] Neo4j connection error: {e}")
             return False
 
@@ -292,8 +306,12 @@ class QueryRunner:
         Returns:
             QueryResult with records or error
         """
+        _logger.verbose("Running query", StepType.QUERYING,
+                        query_id=query_id, variables=variables, limit=limit)
+
         query = self.get_query(query_id)
         if not query:
+            _logger.warning("Query not found", StepType.QUERYING, query_id=query_id)
             return QueryResult(
                 query_id=query_id,
                 success=False,
@@ -338,6 +356,8 @@ class QueryRunner:
                 result = session.run(cypher)
                 records = [dict(record) for record in result]
 
+                _logger.info("Query completed", StepType.QUERYING,
+                             query_id=query_id, records=len(records))
                 return QueryResult(
                     query_id=query_id,
                     success=True,
@@ -347,6 +367,8 @@ class QueryRunner:
                 )
 
         except Exception as e:
+            _logger.error("Query failed", StepType.QUERYING,
+                          query_id=query_id, error=str(e))
             return QueryResult(
                 query_id=query_id,
                 success=False,

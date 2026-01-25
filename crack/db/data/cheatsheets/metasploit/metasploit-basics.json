@@ -26,7 +26,7 @@
         {
           "title": "Scenario 1: First-Time Metasploit Setup on Kali",
           "context": "Fresh Kali Linux installation. Goal: Initialize Metasploit database for persistent storage of hosts, services, credentials, and loot. Without database, no scan data persists between sessions.",
-          "approach": "Step 1: Initialize PostgreSQL database: sudo msfdb init (creates msf user, database schema). Step 2: Start msfconsole to verify: msfconsole. Step 3: Check database status: db_status (should show 'Connected to msf'). Step 4: Create first workspace: workspace -a oscp-lab-1. Step 5: Verify workspace active: workspace (asterisk shows current workspace).",
+          "approach": "Step 1: Initialize PostgreSQL database: sudo msfdb init (creates msf user, database schema). Step 2: Start msfconsole to verify: msfconsole. Step 3: Check database status: db_status (should show 'Connected to msf'). Step 4: Create first workspace: workspace -a pentest-lab-1. Step 5: Verify workspace active: workspace (asterisk shows current workspace).",
           "commands": [
             "msf-db-init",
             "msf-console-start",
@@ -34,7 +34,7 @@
             "msf-workspace-add",
             "msf-workspace-list"
           ],
-          "expected_outcome": "Database initialization shows: 'Creating database user 'msf', Creating databases 'msf' and 'msf_test', Database creation complete'. db_status confirms 'Connected to msf'. Workspace creation shows '[*] Added workspace: oscp-lab-1'. Time: 2-3 minutes for first-time setup. If db_status fails, database not initialized properly (run msfdb reinit).",
+          "expected_outcome": "Database initialization shows: 'Creating database user 'msf', Creating databases 'msf' and 'msf_test', Database creation complete'. db_status confirms 'Connected to msf'. Workspace creation shows '[*] Added workspace: pentest-lab-1'. Time: 2-3 minutes for first-time setup. If db_status fails, database not initialized properly (run msfdb reinit).",
           "why_this_works": "Metasploit uses PostgreSQL backend for persistent storage. msfdb init creates dedicated 'msf' database user with proper permissions, initializes schema for hosts/services/vulns tables. Database enables: Import/export of scan data (db_import), Host and service tracking across sessions, Credential storage (creds command), Automated reporting (db_export). Without database, Metasploit operates in memory-only mode (data lost on exit). pentest benefit: Organize multi-target engagements, track progress, generate evidence for reports. Database location: /var/lib/postgresql/. Backup command: sudo -u postgres pg_dump msf > msf_backup.sql."
         },
         {

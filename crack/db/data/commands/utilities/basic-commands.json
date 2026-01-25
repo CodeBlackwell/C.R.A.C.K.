@@ -42,7 +42,7 @@
         "permission_denied": "File not readable by current user. Try with sudo: sudo cat <FILE>. Or check permissions: ls -l <FILE>",
         "binary_file": "File is binary. Use strings <FILE> to extract readable text. Or hexdump -C <FILE> for hex view"
       },
-      "notes": "Basic file reading command for certification.\n\nCommon usage:\ncat /etc/passwd - User enumeration\ncat /etc/shadow - Password hashes (requires root)\ncat user.txt - User flag\ncat root.txt - Root flag\ncat config.php - Database credentials\n\nTime estimate: <5 seconds",
+      "notes": "Basic file reading command for pentest.\n\nCommon usage:\ncat /etc/passwd - User enumeration\ncat /etc/shadow - Password hashes (requires root)\ncat user.txt - User flag\ncat root.txt - Root flag\ncat config.php - Database credentials\n\nTime estimate: <5 seconds",
       "methodology_guidance": {
         "after_success": "less <FILE> more <FILE> head <FILE> tail <FILE>"
       },
@@ -130,7 +130,7 @@
       "troubleshooting": {
         "target_exists": "File with new name already exists. Use -f to force: mv -f <OLD> <NEW>. Or choose different name"
       },
-      "notes": "File renaming for extension changes.\n\nCommon certification usage:\nmv shell.txt shell.php - Prepare webshell\nmv backup backup.zip - Correct archive extension\nmv id_rsa.txt id_rsa - Fix SSH key\n\nTime estimate: <1 second",
+      "notes": "File renaming for extension changes.\n\nCommon practical usage:\nmv shell.txt shell.php - Prepare webshell\nmv backup backup.zip - Correct archive extension\nmv id_rsa.txt id_rsa - Fix SSH key\n\nTime estimate: <1 second",
       "methodology_guidance": {
         "after_success": "cp <OLD> <NEW> && rm <OLD>"
       },
@@ -186,7 +186,7 @@
         "still_not_resolving": "DNS cache issue. Flush with: sudo systemd-resolve --flush-caches. Or restart DNS: sudo systemctl restart systemd-resolved",
         "duplicate_entry": "Entry already exists. Edit /etc/hosts manually to update. Or remove old entry first"
       },
-      "notes": "CRITICAL certification STEP: Map target hostname for web applications.\n\nWorkflow:\n1. Add host entry (THIS COMMAND)\n   echo '10.10.11.18 usage.htb' | sudo tee -a /etc/hosts\n2. Verify resolution\n   ping usage.htb\n   \u2192 Should ping 10.10.11.18\n3. Access web application\n   http://usage.htb\n\nCommon certification usage:\necho '10.10.11.18 usage.htb' | sudo tee -a /etc/hosts\necho '10.10.11.50 office.htb' | sudo tee -a /etc/hosts\n\nVerification:\ncat /etc/hosts | grep htb\nping -c 1 usage.htb\n\nTime estimate: 5-10 seconds",
+      "notes": "CRITICAL CRITICAL STEP: Map target hostname for web applications.\n\nWorkflow:\n1. Add host entry (THIS COMMAND)\n   echo '10.10.11.18 usage.htb' | sudo tee -a /etc/hosts\n2. Verify resolution\n   ping usage.htb\n   \u2192 Should ping 10.10.11.18\n3. Access web application\n   http://usage.htb\n\nCommon practical usage:\necho '10.10.11.18 usage.htb' | sudo tee -a /etc/hosts\necho '10.10.11.50 office.htb' | sudo tee -a /etc/hosts\n\nVerification:\ncat /etc/hosts | grep htb\nping -c 1 usage.htb\n\nTime estimate: 5-10 seconds",
       "methodology_guidance": {
         "after_success": "sudo nano /etc/hosts sudo vi /etc/hosts"
       },
@@ -196,7 +196,7 @@
       "id": "capture-user-flag",
       "name": "Capture User Flag",
       "category": "utilities",
-      "subcategory": "oscp-tasks",
+      "subcategory": "practical-tasks",
       "command": "cat /home/<USER>/user.txt",
       "description": "Read user flag file to obtain proof of user-level access on target machine",
       "tags": [
@@ -240,7 +240,7 @@
       "id": "capture-root-flag",
       "name": "Capture Root Flag",
       "category": "utilities",
-      "subcategory": "oscp-tasks",
+      "subcategory": "practical-tasks",
       "command": "cat /root/root.txt",
       "description": "Read root flag file to obtain proof of root-level access and complete machine compromise",
       "tags": [
@@ -348,7 +348,7 @@
       "troubleshooting": {
         "no_useful_strings": "Binary may be stripped or obfuscated. Try dynamic analysis: ltrace ./binary, strace ./binary. Or decompile with Ghidra"
       },
-      "notes": "Basic binary analysis for certification.\n\nCommon usage:\nstrings binary | grep -i password\nstrings binary | grep -i user\nstrings binary | grep -i admin\n\nTime estimate: 1-5 minutes",
+      "notes": "Basic binary analysis for pentest.\n\nCommon usage:\nstrings binary | grep -i password\nstrings binary | grep -i user\nstrings binary | grep -i admin\n\nTime estimate: 1-5 minutes",
       "methodology_guidance": {
         "after_success": "ltrace <BINARY> strace <BINARY> gdb <BINARY>"
       },

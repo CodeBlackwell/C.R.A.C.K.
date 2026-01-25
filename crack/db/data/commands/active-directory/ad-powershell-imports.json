@@ -41,7 +41,7 @@
         "Unable to connect": "Check network connectivity or firewall. Alternative: Transfer via SMB or HTTP server",
         "TLS/SSL Error": "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12"
       },
-      "notes": "PowerView is the most widely-used PowerShell tool for Active Directory enumeration.\n\nPart of PowerSploit framework.\n\nFor certification exam environments without internet, transfer PowerView.ps1 via file-transfer techniques (SMB, HTTP, base64).\n\nAlways verify file integrity after download."
+      "notes": "PowerView is the most widely-used PowerShell tool for Active Directory enumeration.\n\nPart of PowerSploit framework.\n\nFor pentest environments without internet, transfer PowerView.ps1 via file-transfer techniques (SMB, HTTP, base64).\n\nAlways verify file integrity after download."
     },
     {
       "id": "curl-download-powerview",
@@ -118,7 +118,7 @@
         "Execution Policy": "Set-ExecutionPolicy Bypass -Scope Process -Force",
         "404 Error": "GitHub URL may have changed. Check BloodHound repository for current path or download SharpHound.exe instead"
       },
-      "notes": "SharpHound is the official data collector for BloodHound.\n\nCollects AD objects, permissions, sessions, and relationships.\n\nPowerShell version (SharpHound.ps1) is easier to transfer but more detectable.\n\nFor certification:\nSharpHound.exe (compiled) is preferred for stealth.\n\nTransfer to target via file-transfer techniques if no internet access."
+      "notes": "SharpHound is the official data collector for BloodHound.\n\nCollects AD objects, permissions, sessions, and relationships.\n\nPowerShell version (SharpHound.ps1) is easier to transfer but more detectable.\n\nFor practical:\nSharpHound.exe (compiled) is preferred for stealth.\n\nTransfer to target via file-transfer techniques if no internet access."
     },
     {
       "id": "import-sharphound",
@@ -158,7 +158,7 @@
         "Module not recognized": "Re-import after fixing execution policy",
         "AMSI Detection": "Use SharpHound.exe compiled binary instead for better AMSI evasion"
       },
-      "notes": "After importing, use Invoke-BloodHound to collect data.\n\nSharpHound generates ZIP file containing JSON data for BloodHound analysis.\n\nNoisy on network - creates many LDAP queries and SMB connections.\n\ncertification:\nSharpHound valuable for understanding AD attack paths but manual enumeration also required."
+      "notes": "After importing, use Invoke-BloodHound to collect data.\n\nSharpHound generates ZIP file containing JSON data for BloodHound analysis.\n\nNoisy on network - creates many LDAP queries and SMB connections.\n\npractical:\nSharpHound valuable for understanding AD attack paths but manual enumeration also required."
     },
     {
       "id": "download-powerup",
@@ -198,7 +198,7 @@
         "Execution Policy": "Set-ExecutionPolicy Bypass -Scope Process -Force",
         "No internet access": "Transfer PowerUp.ps1 via SMB, HTTP, or base64 encoding"
       },
-      "notes": "PowerUp automates Windows privilege escalation enumeration.\n\nChecks for service misconfigurations, unquoted service paths, modifiable service binaries, AlwaysInstallElevated, DLL hijacking, and more.\n\nEssential tool for Windows post-exploitation.\n\ncertification:\nAlways run PowerUp after gaining initial access to Windows system."
+      "notes": "PowerUp automates Windows privilege escalation enumeration.\n\nChecks for service misconfigurations, unquoted service paths, modifiable service binaries, AlwaysInstallElevated, DLL hijacking, and more.\n\nEssential tool for Windows post-exploitation.\n\npractical:\nAlways run PowerUp after gaining initial access to Windows system."
     },
     {
       "id": "set-executionpolicy-bypass",
@@ -241,7 +241,7 @@
         "Still blocked": "Launch new PowerShell with: powershell -ep bypass -nop",
         "AMSI Blocking": "Execution policy set but AMSI still blocks. Different issue - need AMSI bypass"
       },
-      "notes": "Windows execution policy is NOT a security boundary - it's a safety feature to prevent accidental script execution.\n\n-Scope Process applies only to current PowerShell window and resets when window closes.\n\nDoes not require administrator privileges.\n\ncertification:\nAlways run this first when importing PowerShell scripts.\n\nAlternative:\nLaunch PowerShell with 'powershell -ep bypass' flag instead of using Set-ExecutionPolicy."
+      "notes": "Windows execution policy is NOT a security boundary - it's a safety feature to prevent accidental script execution.\n\n-Scope Process applies only to current PowerShell window and resets when window closes.\n\nDoes not require administrator privileges.\n\npractical:\nAlways run this first when importing PowerShell scripts.\n\nAlternative:\nLaunch PowerShell with 'powershell -ep bypass' flag instead of using Set-ExecutionPolicy."
     },
     {
       "id": "powershell-ep-bypass-flag",
@@ -281,7 +281,7 @@
         "Command not recognized": "Use full path: C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe -ep bypass",
         "Still blocked": "Try Set-ExecutionPolicy Bypass -Scope Process instead from within PowerShell"
       },
-      "notes": "This method bypasses execution policy at launch rather than changing it after launch.\n\n-nop prevents profile scripts from running which can interfere with imported modules.\n\nPreferred method for clean PowerShell environment.\n\ncertification:\nUse this when launching PowerShell from command shell (cmd.exe) or after gaining code execution."
+      "notes": "This method bypasses execution policy at launch rather than changing it after launch.\n\n-nop prevents profile scripts from running which can interfere with imported modules.\n\nPreferred method for clean PowerShell environment.\n\npractical:\nUse this when launching PowerShell from command shell (cmd.exe) or after gaining code execution."
     }
   ]
 }

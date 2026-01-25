@@ -4,6 +4,206 @@
 default:
     @just --list
 
+# === Setup Recipes ===
+
+# Full setup: prerequisites check, install, Neo4j, import data, verify
+setup: check-prereqs install neo4j-start db-import verify
+    @echo ""
+    @echo "Setup complete! Run 'crack --help' to get started."
+
+# Quick install (CLI + GUIs, no Neo4j)
+install:
+    ./reinstall.sh
+
+# Check system prerequisites
+check-prereqs:
+    #!/usr/bin/env bash
+    echo "Checking prerequisites..."
+    echo ""
+    # Python
+    if command -v python3 &>/dev/null; then
+        PY_VERSION=$(python3 -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')")
+        echo "[+] Python: $PY_VERSION"
+        python3 -c "import sys; assert sys.version_info >= (3,8)" 2>/dev/null || { echo "[-] ERROR: Python 3.8+ required"; exit 1; }
+    else
+        echo "[-] ERROR: python3 not found"
+        exit 1
+    fi
+    # Node.js (optional)
+    if command -v node &>/dev/null; then
+        echo "[+] Node.js: $(node --version)"
+    else
+        echo "[!] Node.js: Not installed (optional, needed for GUIs)"
+    fi
+    # Docker (optional)
+    if command -v docker &>/dev/null; then
+        echo "[+] Docker: $(docker --version | cut -d' ' -f3 | tr -d ',')"
+    else
+        echo "[!] Docker: Not installed (optional, for Neo4j container)"
+    fi
+    # just
+    if command -v just &>/dev/null; then
+        echo "[+] just: $(just --version | head -1)"
+    else
+        echo "[!] just: Not installed"
+    fi
+    echo ""
+    echo "Prerequisites check complete."
+
+# === Neo4j Recipes ===
+
+# Start Neo4j (Docker preferred, falls back to systemd)
+neo4j-start:
+    #!/usr/bin/env bash
+    if command -v docker-compose &>/dev/null && [ -f docker-compose.yml ]; then
+        echo "[+] Starting Neo4j via Docker..."
+        docker-compose up -d
+        echo "[+] Waiting for Neo4j to be ready..."
+        sleep 5
+        for i in {1..30}; do
+            if nc -z localhost 7687 2>/dev/null; then
+                echo "[+] Neo4j is ready on bolt://localhost:7687"
+                exit 0
+            fi
+            sleep 1
+        done
+        echo "[-] Neo4j failed to start within 30 seconds"
+        exit 1
+    elif command -v systemctl &>/dev/null; then
+        echo "[+] Starting Neo4j via systemd..."
+        sudo systemctl start neo4j
+        echo "[+] Neo4j started"
+    else
+        echo "[-] Neither docker-compose nor systemctl available"
+        echo "    Please start Neo4j manually"
+        exit 1
+    fi
+
+# Stop Neo4j
+neo4j-stop:
+    @docker-compose down 2>/dev/null || sudo systemctl stop neo4j 2>/dev/null || echo "Neo4j not running"
+
+# Check Neo4j status
+neo4j-status:
+    #!/usr/bin/env bash
+    if docker-compose ps 2>/dev/null | grep -q "neo4j"; then
+        echo "[+] Neo4j: Running (Docker)"
+        docker-compose ps neo4j
+    elif systemctl is-active neo4j &>/dev/null; then
+        echo "[+] Neo4j: Running (systemd)"
+    else
+        echo "[-] Neo4j: Not running"
+    fi
+
+# === Development Recipes ===
+
+# Full dev setup with all dependencies
+dev: install
+    pip install -e ".[dev]"
+    cd crackpedia && npm install
+    cd breach && npm install
+    @echo ""
+    @echo "[+] Development environment ready"
+
+# Run Crackpedia in dev mode
+crackpedia-dev:
+    cd crackpedia && npm run dev
+
+# Run B.R.E.A.C.H. in dev mode
+breach-dev:
+    cd breach && npm run dev
+
+# === MCP Server Recipes ===
+
+# Install MCP server
+mcp-install:
+    cd mcpserver && pip install -e .
+    @echo "[+] MCP server installed"
+
+# Test MCP server can be imported
+mcp-test:
+    cd mcpserver && python -c "from server import mcp; print('[+] MCP server OK')"
+
+# Show MCP config for claude.json
+mcp-config:
+    #!/usr/bin/env bash
+    CRACK_DIR="$(pwd)"
+    echo ""
+    echo "Add this to your ~/.claude.json under 'mcpServers':"
+    echo ""
+    echo '  "crack": {'
+    echo '    "command": "python",'
+    echo '    "args": ["-m", "mcpserver.server"],'
+    echo "    \"cwd\": \"$CRACK_DIR/mcpserver\""
+    echo '  }'
+    echo ""
+
+# === Verification Recipes ===
+
+# Verify installation is working
+verify:
+    #!/usr/bin/env bash
+    echo "Verifying CRACK installation..."
+    echo ""
+    # CLI
+    if command -v crack &>/dev/null; then
+        echo "[+] CLI: $(which crack)"
+        crack --version 2>/dev/null || true
+    else
+        echo "[-] CLI: Not installed"
+    fi
+    # Crackpedia
+    if command -v crackpedia &>/dev/null; then
+        echo "[+] Crackpedia: $(which crackpedia)"
+    else
+        echo "[!] Crackpedia: Not installed (optional)"
+    fi
+    # B.R.E.A.C.H.
+    if command -v crack-breach &>/dev/null; then
+        echo "[+] B.R.E.A.C.H.: $(which crack-breach)"
+    else
+        echo "[!] B.R.E.A.C.H.: Not installed (optional)"
+    fi
+    # Neo4j
+    if nc -z localhost 7687 2>/dev/null; then
+        echo "[+] Neo4j: Connected (bolt://localhost:7687)"
+    else
+        echo "[!] Neo4j: Not running (optional)"
+    fi
+    echo ""
+
+# Show complete environment info
+info:
+    #!/usr/bin/env bash
+    echo "========================================"
+    echo "  CRACK Installation Info"
+    echo "========================================"
+    echo ""
+    # Versions
+    echo "Components:"
+    command -v crack &>/dev/null && echo "  CLI:        $(which crack)" || echo "  CLI:        Not installed"
+    command -v crackpedia &>/dev/null && echo "  Crackpedia: $(which crackpedia)" || echo "  Crackpedia: Not installed"
+    command -v crack-breach &>/dev/null && echo "  B.R.E.A.C.H.: $(which crack-breach)" || echo "  B.R.E.A.C.H.: Not installed"
+    echo ""
+    # Neo4j
+    echo "Services:"
+    if nc -z localhost 7687 2>/dev/null; then
+        echo "  Neo4j:      Running (bolt://localhost:7687)"
+    else
+        echo "  Neo4j:      Not running"
+    fi
+    echo ""
+    # Config
+    echo "Configuration:"
+    echo "  Config dir: ${CRACK_CONFIG_DIR:-~/.crack}"
+    [ -f ~/.crack/config.json ] && echo "  Config:     ~/.crack/config.json exists" || echo "  Config:     No config file"
+    echo ""
+    # Database stats
+    echo "Knowledge Base:"
+    find db/data/commands -name "*.json" 2>/dev/null | wc -l | xargs -I{} echo "  Commands:   {} files"
+    find db/data/chains -name "*.json" 2>/dev/null | wc -l | xargs -I{} echo "  Chains:     {} files"
+    echo ""
+
 # === Database Recipes ===
 
 # Full import pipeline: JSON -> CSV -> Neo4j with health check
@@ -48,9 +248,143 @@ test-cov:
 test-sessions:
     python -m pytest tests/tools/post/sessions/ -q
 
-# Run BloodTrail tests only
+# === BloodTrail Tests ===
+# Hierarchy: test-bloodtrail[-category[-subcategory]][-dry]
+
+# All bloodtrail tests (869)
 test-bloodtrail:
     python -m pytest tests/tools/post/bloodtrail/ -q
+
+test-bloodtrail-dry:
+    python -m pytest tests/tools/post/bloodtrail/ --collect-only -q
+
+# --- Wizard (72 tests) ---
+test-bloodtrail-wizard:
+    python -m pytest tests/tools/post/bloodtrail/wizard/ -v --tb=short
+
+test-bloodtrail-wizard-dry:
+    python -m pytest tests/tools/post/bloodtrail/wizard/ --collect-only -q
+
+test-bloodtrail-wizard-flow:
+    python -m pytest tests/tools/post/bloodtrail/wizard/test_flow.py -v --tb=short
+
+test-bloodtrail-wizard-state:
+    python -m pytest tests/tools/post/bloodtrail/wizard/test_state.py -v --tb=short
+
+test-bloodtrail-wizard-cli:
+    python -m pytest tests/tools/post/bloodtrail/wizard/test_cli.py -v --tb=short
+
+test-bloodtrail-wizard-steps:
+    python -m pytest tests/tools/post/bloodtrail/wizard/test_steps.py -v --tb=short
+
+test-bloodtrail-wizard-recommend:
+    python -m pytest tests/tools/post/bloodtrail/wizard/test_recommend.py -v --tb=short
+
+test-bloodtrail-wizard-analyze:
+    python -m pytest tests/tools/post/bloodtrail/wizard/test_analyze.py -v --tb=short
+
+test-bloodtrail-wizard-enumerate:
+    python -m pytest tests/tools/post/bloodtrail/wizard/test_enumerate.py -v --tb=short
+
+test-bloodtrail-wizard-parser:
+    python -m pytest tests/tools/post/bloodtrail/wizard/test_output_parser.py -v --tb=short
+
+test-bloodtrail-wizard-integration:
+    python -m pytest tests/tools/post/bloodtrail/wizard/test_integration.py -v --tb=short
+
+# --- AutoSpray (179 tests) ---
+test-bloodtrail-autospray:
+    python -m pytest tests/tools/post/bloodtrail/autospray/ -q
+
+test-bloodtrail-autospray-dry:
+    python -m pytest tests/tools/post/bloodtrail/autospray/ --collect-only -q
+
+test-bloodtrail-autospray-executor:
+    python -m pytest tests/tools/post/bloodtrail/autospray/test_executor.py -v --tb=short
+
+test-bloodtrail-autospray-credentials:
+    python -m pytest tests/tools/post/bloodtrail/autospray/test_credential_sources.py -v --tb=short
+
+test-bloodtrail-autospray-targets:
+    python -m pytest tests/tools/post/bloodtrail/autospray/test_target_sources.py -v --tb=short
+
+test-bloodtrail-autospray-generator:
+    python -m pytest tests/tools/post/bloodtrail/autospray/test_script_generator.py -v --tb=short
+
+# --- Display (100 tests) ---
+test-bloodtrail-display:
+    python -m pytest tests/tools/post/bloodtrail/display/ -q
+
+test-bloodtrail-display-dry:
+    python -m pytest tests/tools/post/bloodtrail/display/ --collect-only -q
+
+test-bloodtrail-display-paths:
+    python -m pytest tests/tools/post/bloodtrail/display/test_attack_paths.py -v --tb=short
+
+test-bloodtrail-display-spray:
+    python -m pytest tests/tools/post/bloodtrail/display/test_spray.py -v --tb=short
+
+# --- Mappings (129 tests) ---
+test-bloodtrail-mappings:
+    python -m pytest tests/tools/post/bloodtrail/mappings/ -q
+
+test-bloodtrail-mappings-dry:
+    python -m pytest tests/tools/post/bloodtrail/mappings/ --collect-only -q
+
+test-bloodtrail-mappings-lateral:
+    python -m pytest tests/tools/post/bloodtrail/mappings/test_lateral.py -v --tb=short
+
+test-bloodtrail-mappings-spray:
+    python -m pytest tests/tools/post/bloodtrail/mappings/test_spray.py -v --tb=short
+
+test-bloodtrail-mappings-access:
+    python -m pytest tests/tools/post/bloodtrail/mappings/test_access_types.py -v --tb=short
+
+# --- Core modules (389 tests) ---
+test-bloodtrail-core:
+    python -m pytest tests/tools/post/bloodtrail/test_*.py -q
+
+test-bloodtrail-core-dry:
+    python -m pytest tests/tools/post/bloodtrail/test_*.py --collect-only -q
+
+test-bloodtrail-extractors:
+    python -m pytest tests/tools/post/bloodtrail/test_extractors.py -v --tb=short
+
+test-bloodtrail-enumerators:
+    python -m pytest tests/tools/post/bloodtrail/test_enumerators.py -v --tb=short
+
+test-bloodtrail-query-runner:
+    python -m pytest tests/tools/post/bloodtrail/test_query_runner.py -v --tb=short
+
+test-bloodtrail-lockout:
+    python -m pytest tests/tools/post/bloodtrail/test_lockout_manager.py -v --tb=short
+
+test-bloodtrail-policy:
+    python -m pytest tests/tools/post/bloodtrail/test_policy_parser.py -v --tb=short
+
+test-bloodtrail-sid:
+    python -m pytest tests/tools/post/bloodtrail/test_sid_resolver.py -v --tb=short
+
+test-bloodtrail-pwned:
+    python -m pytest tests/tools/post/bloodtrail/test_pwned_models.py -v --tb=short
+
+test-bloodtrail-suggester:
+    python -m pytest tests/tools/post/bloodtrail/test_command_suggester.py -v --tb=short
+
+test-bloodtrail-edges:
+    python -m pytest tests/tools/post/bloodtrail/test_edge_extraction.py -v --tb=short
+
+test-bloodtrail-importer:
+    python -m pytest tests/tools/post/bloodtrail/test_property_importer.py -v --tb=short
+
+test-bloodtrail-datasource:
+    python -m pytest tests/tools/post/bloodtrail/test_data_source.py -v --tb=short
+
+test-bloodtrail-variables:
+    python -m pytest tests/tools/post/bloodtrail/test_variable_substitution.py -v --tb=short
+
+test-bloodtrail-result-parser:
+    python -m pytest tests/tools/post/bloodtrail/test_autospray_result_parser.py -v --tb=short
 
 # Run recon tests only
 test-recon:

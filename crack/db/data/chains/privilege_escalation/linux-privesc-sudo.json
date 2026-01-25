@@ -30,7 +30,7 @@
     "Shell access as low-privilege user (www-data, user, etc.)",
     "Target system is Linux"
   ],
-  "notes": "Sudo misconfigurations are the #1 quick win for Linux privilege escalation in certification. NOPASSWD entries allow running commands as root without password. Many binaries (find, vim, nmap, less, python) can spawn root shells when run with sudo. This chain should ALWAYS be run first before attempting SUID or other techniques.",
+  "notes": "Sudo misconfigurations are the #1 quick win for Linux privilege escalation in pentests. NOPASSWD entries allow running commands as root without password. Many binaries (find, vim, nmap, less, python) can spawn root shells when run with sudo. This chain should ALWAYS be run first before attempting SUID or other techniques.",
   "steps": [
     {
       "id": "check-sudo-privs",

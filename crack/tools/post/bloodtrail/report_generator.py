@@ -280,6 +280,14 @@ def run_all_queries(
                 })
 
     # =========================================================================
+    # PHASE 1.5: Detect dynamic attack chains from pwned users
+    # =========================================================================
+    dynamic_chains = _detect_dynamic_chains(runner, pwned_lookup, dc_ip)
+    if dynamic_chains:
+        all_sequences.extend(dynamic_chains)
+        stats["sequences_generated"] += len(dynamic_chains)
+
+    # =========================================================================
     # PHASE 2: Print ATTACK COMMANDS first (actionable items at top)
     # =========================================================================
     if all_tables or all_sequences:
@@ -727,6 +735,128 @@ def export_to_bloodhound_customqueries(
         json.dump(output, f, indent=2)
 
     return str(output_path)
+
+
+# ============================================================================
+# DYNAMIC ATTACK CHAIN DETECTION
+# ============================================================================
+
+def _chain_to_sequence(chain, state) -> 'AttackSequence':
+    """Convert AttackChain to AttackSequence for consistent display."""
+    from .command_suggester import AttackSequence, CommandSuggestion
+
+    context = {
+        "target": state.target,
+        "domain": state.domain,
+        "new_user": "bloodtrail",
+        "new_pass": "B1oodTr@il123!",
+    }
+
+    steps = []
+    for i, step in enumerate(chain.steps, 1):
+        # Fill template with available context
+        try:
+            cmd = step.command_template.format(**context)
+        except KeyError:
+            cmd = step.command_template
+
+        steps.append(CommandSuggestion(
+            command_id=f"chain_{chain.id}_{step.id}",
+            name=step.name,
+            context=step.why[:100] if step.why else "",  # Truncate for display
+            template=step.command_template,
+            ready_to_run=cmd,
+            variables_needed=step.required_vars,
+            oscp_relevance="high"
+        ))
+
+    return AttackSequence(
+        name=f"[DETECTED] {chain.name}",
+        description=chain.description,
+        path_nodes=[],
+        edge_types=chain.required_finding_tags,
+        steps=steps
+    )
+
+
+def _detect_dynamic_chains(
+    runner: 'QueryRunner',
+    pwned_lookup: Dict[str, any],
+    dc_ip: Optional[str] = None,
+) -> List:
+    """
+    Detect viable attack chains from BloodHound findings.
+
+    Analyzes pwned users against BloodHound data to detect multi-step
+    privilege escalation paths (e.g., Exchange WriteDACL → DCSync).
+
+    Args:
+        runner: QueryRunner with Neo4j connection
+        pwned_lookup: Dict of pwned users (username -> PwnedUser)
+        dc_ip: Domain Controller IP for command generation
+
+    Returns:
+        List of AttackSequence objects for display
+    """
+    try:
+        from .recommendation import (
+            BloodHoundAnalyzer,
+            ChainDetector,
+            AttackState,
+        )
+
+        if not runner.driver:
+            return []
+
+        # Get domain from BloodHound
+        domain = None
+        try:
+            with runner.driver.session() as session:
+                result = session.run("MATCH (d:Domain) RETURN d.name LIMIT 1")
+                record = result.single()
+                if record:
+                    domain = record["d.name"]
+        except Exception:
+            return []
+
+        if not domain:
+            return []
+
+        # Analyze for each pwned user
+        analyzer = BloodHoundAnalyzer()
+        all_findings = []
+
+        for username in pwned_lookup.keys():
+            # Extract sAMAccountName from UPN (e.g., "SVC-ALFRESCO@HTB.LOCAL" -> "svc-alfresco")
+            sam = username.split("@")[0] if "@" in username else username
+            findings = analyzer.analyze_attack_paths(sam, domain)
+            all_findings.extend(findings)
+
+        if not all_findings:
+            return []
+
+        # Build state and detect chains
+        state = AttackState(target=dc_ip or "<DC_IP>", domain=domain)
+        for finding in all_findings:
+            state.add_finding(finding)
+
+        # Add credentials from pwned users
+        for username, pwned in pwned_lookup.items():
+            if hasattr(pwned, 'password') and pwned.password:
+                state.add_credential(
+                    username=username,
+                    password=pwned.password,
+                    validated=True
+                )
+
+        detector = ChainDetector(state)
+        viable_chains = detector.detect_viable_chains()
+
+        # Convert to AttackSequence format for display
+        return [_chain_to_sequence(chain, state) for chain in viable_chains]
+
+    except Exception:
+        return []  # Silent fail - don't break report generation
 
 
 def export_to_bloodhound_ce(

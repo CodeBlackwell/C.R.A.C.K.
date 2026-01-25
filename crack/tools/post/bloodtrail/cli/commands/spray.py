@@ -7,6 +7,7 @@ Handles password spraying commands:
 - --auto-spray: Generate or execute spray operations
 """
 
+import os
 from argparse import Namespace
 from pathlib import Path
 from typing import List, Optional
@@ -48,7 +49,7 @@ class SprayCommands(BaseCommandGroup):
         """Handle --spray command - show password spray recommendations."""
         from ...display import print_spray_recommendations
 
-        config = Neo4jConfig(uri=args.uri, user=args.user, password=args.password)
+        config = Neo4jConfig(uri=args.uri, user=args.user, password=getattr(args, "neo4j_password", None) or os.environ.get("NEO4J_PASSWORD", ""))
         tracker = PwnedTracker(config)
 
         if not tracker.connect():
@@ -91,7 +92,7 @@ class SprayCommands(BaseCommandGroup):
         """Handle --spray-tailored command - generate tailored spray commands."""
         from ...display import print_spray_tailored
 
-        config = Neo4jConfig(uri=args.uri, user=args.user, password=args.password)
+        config = Neo4jConfig(uri=args.uri, user=args.user, password=getattr(args, "neo4j_password", None) or os.environ.get("NEO4J_PASSWORD", ""))
         tracker = PwnedTracker(config)
 
         if not tracker.connect():
@@ -153,7 +154,7 @@ class SprayCommands(BaseCommandGroup):
         )
         from ...autospray.executor import SprayTool, ToolNotFoundError
 
-        config = Neo4jConfig(uri=args.uri, user=args.user, password=args.password)
+        config = Neo4jConfig(uri=args.uri, user=args.user, password=getattr(args, "neo4j_password", None) or os.environ.get("NEO4J_PASSWORD", ""))
         tracker = PwnedTracker(config)
 
         if not tracker.connect():

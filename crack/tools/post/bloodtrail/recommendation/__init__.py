@@ -59,6 +59,20 @@ from .sqlite_integration import (
     display_sqlite_summary,
     hunt_and_display as sqlite_hunt_and_display,
 )
+from .bloodhound_analyzer import (
+    BloodHoundAnalyzer,
+    analyze_for_user as bloodhound_analyze_for_user,
+)
+from .attack_chains import (
+    AttackChain,
+    ChainStep,
+    ChainStatus,
+    ChainDetector,
+    ATTACK_CHAINS,
+    EXCHANGE_DCSYNC_CHAIN,
+    detect_and_recommend as detect_attack_chains,
+    get_chain_summary,
+)
 
 __all__ = [
     # Models
@@ -102,4 +116,16 @@ __all__ = [
     "SqliteHuntSummary",
     "display_sqlite_summary",
     "sqlite_hunt_and_display",
+    # BloodHound Analyzer
+    "BloodHoundAnalyzer",
+    "bloodhound_analyze_for_user",
+    # Attack Chains
+    "AttackChain",
+    "ChainStep",
+    "ChainStatus",
+    "ChainDetector",
+    "ATTACK_CHAINS",
+    "EXCHANGE_DCSYNC_CHAIN",
+    "detect_attack_chains",
+    "get_chain_summary",
 ]

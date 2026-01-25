@@ -16,7 +16,7 @@
         }
       ],
       "tags": [
-        "oscp",
+        "PENTEST",
         "php",
         "http-server",
         "file-transfer"
@@ -49,7 +49,7 @@
         }
       ],
       "tags": [
-        "oscp",
+        "PENTEST",
         "ruby",
         "http-server",
         "file-transfer"
@@ -97,7 +97,7 @@
         }
       ],
       "tags": [
-        "oscp",
+        "PENTEST",
         "scp",
         "file-transfer",
         "upload"
@@ -147,7 +147,7 @@
         }
       ],
       "tags": [
-        "oscp",
+        "PENTEST",
         "scp",
         "file-transfer",
         "download"
@@ -181,7 +181,7 @@
         }
       ],
       "tags": [
-        "oscp",
+        "PENTEST",
         "tftp",
         "file-transfer",
         "windows"
@@ -220,7 +220,7 @@
         }
       ],
       "tags": [
-        "oscp",
+        "PENTEST",
         "impacket",
         "smb",
         "file-transfer"
@@ -264,7 +264,7 @@
         }
       ],
       "tags": [
-        "oscp",
+        "PENTEST",
         "bitsadmin",
         "windows",
         "file-transfer",
@@ -310,7 +310,7 @@
         }
       ],
       "tags": [
-        "oscp",
+        "PENTEST",
         "powershell",
         "windows",
         "file-transfer",
@@ -353,7 +353,7 @@
         }
       ],
       "tags": [
-        "oscp",
+        "PENTEST",
         "powershell",
         "windows",
         "file-transfer",

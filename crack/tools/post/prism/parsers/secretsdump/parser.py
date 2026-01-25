@@ -148,11 +148,9 @@ class SecretsdumpParser(PrismParser):
         netntlm_creds = self._parse_netntlm(content)
         summary.credentials.extend(netntlm_creds)
 
-        # Infer source info
-        if hostname:
-            summary.source_hostname = hostname
-        else:
-            summary.source_hostname = self._infer_hostname(summary.credentials)
+        # Set both detected and user-specified hostnames
+        detected_hostname = self._infer_hostname(summary.credentials)
+        self.set_hostname(summary, detected_hostname, hostname)
 
         # Infer domain
         for cred in summary.credentials:

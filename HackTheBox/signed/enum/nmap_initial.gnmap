@@ -1,0 +1,4 @@
+# Nmap 7.95 scan initiated Sun Jan  4 06:25:29 2026 as: /usr/lib/nmap/nmap --privileged -sC -sV -oA /home/kali/Desktop/KaliBackup/OSCP/HackTheBox/signed/enum/nmap_initial 10.10.11.90
+Host: 10.10.11.90 ()	Status: Up
+Host: 10.10.11.90 ()	Ports: 1433/open/tcp//ms-sql-s//Microsoft SQL Server 2022 16.00.1000.00; RTM/	Ignored State: filtered (999)
+# Nmap done at Sun Jan  4 06:27:49 2026 -- 1 IP address (1 host up) scanned in 140.93 seconds

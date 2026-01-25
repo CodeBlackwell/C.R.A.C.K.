@@ -33,6 +33,16 @@ class CredentialType(Enum):
     NET_NTLMV2 = "net_ntlmv2"         # NetNTLMv2 (responder/relay)
     # SSH/Keys
     SSH_KEY = "ssh_key"               # SSH private key
+    # Linux
+    LINUX_HASH = "linux_hash"         # Linux shadow hash ($1$, $5$, $6$, $y$)
+    # Web authentication
+    HTPASSWD_HASH = "htpasswd"        # Apache .htpasswd (APR1, bcrypt)
+    # Cloud credentials
+    AWS_ACCESS_KEY = "aws_key"        # AWS access key pair
+    # Cracking results
+    CRACKED_PASSWORD = "cracked"      # Cracked password from potfile
+    # Config files
+    CONNECTION_STRING = "conn_string" # Database connection string credential
 
 
 # Well-known service accounts to identify

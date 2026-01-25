@@ -33,7 +33,7 @@
         "firewall",
         "enumeration",
         "iptables",
-        "oscp"
+        "PENTEST"
       ],
       "notes": "Run with sudo.\n\nUse -t <table> to specify table (filter, nat, mangle, raw)",
       "methodology_guidance": {
@@ -85,7 +85,7 @@
         "firewall",
         "manipulation",
         "iptables",
-        "oscp"
+        "PENTEST"
       ],
       "notes": "Rule is not persistent by default.\n\nUse iptables-save to persist across reboots.",
       "methodology_guidance": {
@@ -142,7 +142,7 @@
         "firewall",
         "port-forward",
         "iptables",
-        "oscp"
+        "PENTEST"
       ],
       "notes": "Useful for bypassing firewall restrictions or redirecting traffic through allowed ports",
       "methodology_guidance": {
@@ -182,7 +182,7 @@
         "linux",
         "firewall",
         "iptables",
-        "oscp"
+        "PENTEST"
       ],
       "notes": "Use --line-numbers to see rule numbers before deleting",
       "methodology_guidance": {
@@ -213,7 +213,7 @@
         "linux",
         "firewall",
         "iptables",
-        "oscp"
+        "PENTEST"
       ],
       "notes": "WARNING:\nMay lose SSH access if default policy is DROP.\n\nUse with caution.",
       "methodology_guidance": {
@@ -250,7 +250,7 @@
         "enumeration",
         "ufw",
         "ubuntu",
-        "oscp"
+        "PENTEST"
       ],
       "notes": "UFW is the default firewall on Ubuntu/Debian systems",
       "methodology_guidance": {
@@ -299,7 +299,7 @@
         "firewall",
         "ufw",
         "ubuntu",
-        "oscp"
+        "PENTEST"
       ],
       "methodology_guidance": {
         "after_success": "Reload UFW: sudo ufw reload Verify rule: sudo ufw status verbose Test connectivity: nc -lvnp <PORT>"
@@ -328,7 +328,7 @@
         "linux",
         "firewall",
         "ufw",
-        "oscp"
+        "PENTEST"
       ],
       "notes": "Rules are preserved but not enforced.\n\nUse 'sudo ufw enable' to re-enable.",
       "methodology_guidance": {
@@ -367,7 +367,7 @@
         "firewalld",
         "rhel",
         "centos",
-        "oscp"
+        "PENTEST"
       ],
       "notes": "Firewalld is default on RHEL/CentOS/Fedora systems",
       "methodology_guidance": {
@@ -414,7 +414,7 @@
         "firewall",
         "firewalld",
         "rhel",
-        "oscp"
+        "PENTEST"
       ],
       "methodology_guidance": {
         "after_success": "Reload firewall: sudo firewall-cmd --reload Verify rule: sudo firewall-cmd --list-ports Test connectivity: nc -lvnp <PORT>"
@@ -465,7 +465,7 @@
         "firewall",
         "port-forward",
         "firewalld",
-        "oscp"
+        "PENTEST"
       ],
       "methodology_guidance": {
         "after_success": "Reload: sudo firewall-cmd --reload Test: nc -lvnp <DST_PORT> Connect: nc <TARGET> <SRC_PORT>"
@@ -503,7 +503,7 @@
         "firewall",
         "enumeration",
         "netsh",
-        "oscp"
+        "PENTEST"
       ],
       "notes": "Requires Administrator privileges",
       "methodology_guidance": {
@@ -539,7 +539,7 @@
         "enumeration",
         "netsh",
         "legacy",
-        "oscp"
+        "PENTEST"
       ],
       "notes": "Deprecated but still works on older Windows versions"
     },
@@ -591,7 +591,7 @@
         "windows",
         "firewall",
         "netsh",
-        "oscp"
+        "PENTEST"
       ],
       "notes": "Requires Administrator privileges.\n\nRule persists across reboots.",
       "methodology_guidance": {
@@ -622,7 +622,7 @@
         {
           "name": "<LOCAL_IP>",
           "description": "Local IP address to bind",
-          "example": "192.168.50.64",
+          "example": "10.10.10.64",
           "required": true
         },
         {
@@ -653,13 +653,13 @@
         "firewall",
         "port-forward",
         "netsh",
-        "oscp"
+        "PENTEST"
       ],
       "notes": "This allows firewall rule.\n\nUse 'netsh interface portproxy' for actual port forwarding.",
       "methodology_guidance": {
         "after_success": "Add actual port forward: netsh interface portproxy add v4tov4 listenport=<SRC_PORT> listenaddress=<LOCAL_IP> connectport=<DST_PORT> connectaddress=<DST_IP> Verify: netsh interface portproxy show all"
       },
-      "filled_example": "netsh advfirewall firewall add rule name=\"port_forward_ssh_2222\" protocol=TCP dir=in localip=192.168.50.64 localport=2222 action=allow"
+      "filled_example": "netsh advfirewall firewall add rule name=\"port_forward_ssh_2222\" protocol=TCP dir=in localip=10.10.10.64 localport=2222 action=allow"
     },
     {
       "id": "netsh-portproxy-add",
@@ -718,7 +718,7 @@
         "port-forward",
         "netsh",
         "pivoting",
-        "oscp"
+        "PENTEST"
       ],
       "notes": "Useful for pivoting through compromised Windows hosts.\n\nFirewall rule must be added separately.",
       "methodology_guidance": {
@@ -751,7 +751,7 @@
         "firewall",
         "enumeration",
         "netsh",
-        "oscp"
+        "PENTEST"
       ],
       "methodology_guidance": {
         "after_success": "Test each forwarding rule Delete unwanted rules"
@@ -780,7 +780,7 @@
         "windows",
         "firewall",
         "netsh",
-        "oscp"
+        "PENTEST"
       ],
       "notes": "Requires Administrator privileges.\n\nVery obvious IoC - use with caution.",
       "methodology_guidance": {
@@ -819,7 +819,7 @@
         "windows",
         "firewall",
         "netsh",
-        "oscp"
+        "PENTEST"
       ],
       "notes": "Use to clean up custom rules after exploitation",
       "methodology_guidance": {

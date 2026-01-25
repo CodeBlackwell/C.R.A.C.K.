@@ -109,7 +109,7 @@
         },
         {
           "title": "Phase 2: SMB Enumeration (Windows Targets)",
-          "notes": "SMB is high-value certification target. Run version detection first, then share enumeration, then user enumeration. Check MS17-010 on all SMB hosts (easy win if vulnerable). Use smb_login for credential testing. Estimated time: 3-5 minutes per subnet.",
+          "notes": "SMB is high-value target. Run version detection first, then share enumeration, then user enumeration. Check MS17-010 on all SMB hosts (easy win if vulnerable). Use smb_login for credential testing. Estimated time: 3-5 minutes per subnet.",
           "commands": [
             {
               "id": "msf-aux-smb-version",

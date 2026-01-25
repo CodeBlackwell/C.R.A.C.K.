@@ -26,7 +26,7 @@
           "required": true
         }
       ],
-      "notes": "Syntax:\nAdd to Word/Excel VBA editor (Alt+F11), insert shellcode bytes Basic runner detected by all modern AV.\n\nAlways combine with encryption (Caesar/XOR) and obfuscation.\n\nAuto_Open triggers on document open.\n\nUse AutoOpen() for compatibility.\n\nTime estimate:\n5 minutes (with shellcode generation) References:\ndocs/av-evasion/vba-evasion.md#basic-runner, PEN-300 Chapter 6.7 Manual alternative:\nUse PowerShell download cradle from VBA, WMI process creation, or COM object execution",
+      "notes": "Syntax:\nAdd to Word/Excel VBA editor (Alt+F11), insert shellcode bytes Basic runner detected by all modern AV.\n\nAlways combine with encryption (Caesar/XOR) and obfuscation.\n\nAuto_Open triggers on document open.\n\nUse AutoOpen() for compatibility.\n\nTime estimate:\n5 minutes (with shellcode generation) References:\ndocs/av-evasion/vba-evasion.md#basic-runner Manual alternative:\nUse PowerShell download cradle from VBA, WMI process creation, or COM object execution",
       "success_indicators": [
         "Macro executes silently when document opens (Auto_Open). Shellcode runs (e.g., Meterpreter callback)."
       ],
@@ -68,7 +68,7 @@
           "required": true
         }
       ],
-      "notes": "Syntax:\nEncrypt offline, paste encrypted bytes into VBA Caesar cipher is weak but better than plaintext.\n\nKey=2 is common in examples.\n\nFor exam, consider XOR for better evasion.\n\nCombine with obfuscation and dechaining.\n\nTime estimate:\n10 minutes (encryption + integration) References:\ndocs/av-evasion/vba-evasion.md#caesar-cipher, PEN-300 Chapter 6.7.1 Manual alternative:\nUse XOR encryption (stronger), AES encryption, or base64 encoding",
+      "notes": "Syntax:\nEncrypt offline, paste encrypted bytes into VBA Caesar cipher is weak but better than plaintext.\n\nKey=2 is common in examples.\n\nFor exam, consider XOR for better evasion.\n\nCombine with obfuscation and dechaining.\n\nTime estimate:\n10 minutes (encryption + integration) References:\ndocs/av-evasion/vba-evasion.md#caesar-cipher Manual alternative:\nUse XOR encryption (stronger), AES encryption, or base64 encoding",
       "success_indicators": [
         "Encrypted shellcode decrypts and executes at runtime. Evades static signature scans."
       ],
@@ -104,7 +104,7 @@
           "required": true
         }
       ],
-      "notes": "Syntax:\nAdd to VBA macro, replace <BASE64_PAYLOAD> with encoded PowerShell WMI dechaining is powerful evasion technique.\n\nBreaks WINWORD -> powershell parent-child relationship that AV monitors.\n\nAlways encode PowerShell with base64.\n\nTest network connectivity first.\n\nTime estimate:\n5 minutes References:\ndocs/av-evasion/vba-evasion.md#wmi-dechaining, PEN-300 Chapter 6.8.2 Manual alternative:\nUse WScript.Shell.Run, CreateObject(\"WScript.Shell\").Exec, or scheduled task creation",
+      "notes": "Syntax:\nAdd to VBA macro, replace <BASE64_PAYLOAD> with encoded PowerShell WMI dechaining is powerful evasion technique.\n\nBreaks WINWORD -> powershell parent-child relationship that AV monitors.\n\nAlways encode PowerShell with base64.\n\nTest network connectivity first.\n\nTime estimate:\n5 minutes References:\ndocs/av-evasion/vba-evasion.md#wmi-dechaining Manual alternative:\nUse WScript.Shell.Run, CreateObject(\"WScript.Shell\").Exec, or scheduled task creation",
       "success_indicators": [
         "PowerShell process spawned by wmiprvse.exe (not WINWORD.exe). Breaks behavioral detection chains."
       ],
@@ -132,7 +132,7 @@
       ],
       "command": "' Method 1: String concatenation\nDim cmd As String\ncmd = \"power\" & \"shell\" & \".exe\"\n\n' Method 2: Chr() function\ncmd = Chr(112) & Chr(111) & Chr(119) & Chr(101) & Chr(114) & Chr(115) & Chr(104) & Chr(101) & Chr(108) & Chr(108)\n\n' Method 3: StrReverse()\ncmd = StrReverse(\"exe.llehsrewop\")\n\n' Method 4: Replace()\ncmd = Replace(\"pXwXrshell.exe\", \"X\", \"o\")",
       "variables": [],
-      "notes": "Syntax:\nApply to suspicious strings in VBA code String obfuscation is quick win (~10 min).\n\nAlways obfuscate 'powershell', 'cmd', 'http', 'IEX', 'msfvenom'.\n\nUse random variable names (avoid shellcode, payload, etc.).\n\nCombine all methods for best results.\n\nTime estimate:\n10 minutes References:\ndocs/av-evasion/vba-evasion.md#obfuscation, PEN-300 Chapter 6.8.3 Manual alternative:\nUse variable substitution, encoded strings, or external data sources (document properties, hidden cells)",
+      "notes": "Syntax:\nApply to suspicious strings in VBA code String obfuscation is quick win (~10 min).\n\nAlways obfuscate 'powershell', 'cmd', 'http', 'IEX', 'msfvenom'.\n\nUse random variable names (avoid shellcode, payload, etc.).\n\nCombine all methods for best results.\n\nTime estimate:\n10 minutes References:\ndocs/av-evasion/vba-evasion.md#obfuscation Manual alternative:\nUse variable substitution, encoded strings, or external data sources (document properties, hidden cells)",
       "success_indicators": [
         "Obfuscated strings bypass simple signature matching. Code executes normally."
       ],
@@ -173,7 +173,7 @@
         }
       ],
       "prerequisites": [],
-      "notes": "Syntax:\nUse EvilClippy tool or manual hex editing Advanced technique, requires EvilClippy tool.\n\nExtremely effective against static analysis and sandboxes.\n\nOnly works on .doc (not .docx).\n\nTest macro BEFORE stomping - can't debug after.\n\nSave original.\n\nPractice on lab before exam.\n\nTime estimate:\n15 minutes (with EvilClippy) References:\ndocs/av-evasion/vba-evasion.md#vba-stomping, https://github.com/outflanknl/EvilClippy, PEN-300 Chapter 6.7.2 Manual alternative:\nUse OfficeMalScanner, olevba, or manual p-code analysis/manipulation",
+      "notes": "Syntax:\nUse EvilClippy tool or manual hex editing Advanced technique, requires EvilClippy tool.\n\nExtremely effective against static analysis and sandboxes.\n\nOnly works on .doc (not .docx).\n\nTest macro BEFORE stomping - can't debug after.\n\nSave original.\n\nPractice on lab before exam.\n\nTime estimate:\n15 minutes (with EvilClippy) References:\ndocs/av-evasion/vba-evasion.md#vba-stomping, https://github.com/outflanknl/EvilClippy Manual alternative:\nUse OfficeMalScanner, olevba, or manual p-code analysis/manipulation",
       "success_indicators": [
         "Stomped document opens normally, macro executes. VBA editor shows empty/garbage code. Static analysis tools fail to extract meaningful source."
       ],

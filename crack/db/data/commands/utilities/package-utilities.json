@@ -64,7 +64,7 @@
       "prerequisites": [
         "apt-update"
       ],
-      "notes": "Use before certification exam to ensure all tools are up-to-date"
+      "notes": "Use before pentest to ensure all tools are up-to-date"
     },
     {
       "id": "pip-install",
@@ -205,7 +205,7 @@
         "dnf-install",
         "apt-install"
       ],
-      "notes": "For Red Hat-based systems (less common in certification)",
+      "notes": "For Red Hat-based systems (less common in pentests)",
       "filled_example": "sudo yum install -y nmap"
     },
     {
@@ -255,7 +255,7 @@
           "required": true
         }
       ],
-      "notes": "For macOS users preparing for certification",
+      "notes": "For macOS users preparing for pentest",
       "filled_example": "brew install nmap"
     },
     {

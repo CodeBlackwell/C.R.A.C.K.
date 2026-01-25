@@ -101,6 +101,7 @@ class Enum4linuxEnumerator(Enumerator):
         password: Optional[str] = None,
         timeout: int = 300,
         domain: Optional[str] = None,  # Accept but don't use (auto-detected from RPC)
+        verbose: int = 0,  # Control output streaming
         **kwargs,  # Accept additional kwargs for compatibility
     ) -> EnumerationResult:
         start = time.time()
@@ -118,13 +119,34 @@ class Enum4linuxEnumerator(Enumerator):
                 cmd.extend(["-u", username, "-p", password])
 
         try:
-            proc = subprocess.run(
+            # Stream output in real-time while capturing for parsing
+            proc = subprocess.Popen(
                 cmd,
-                capture_output=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                stdin=subprocess.DEVNULL,  # Prevent stdin inheritance (fixes interactive input)
                 text=True,
-                timeout=timeout
+                bufsize=1,  # Line buffered
             )
-            output = proc.stdout + proc.stderr
+
+            output_lines = []
+            try:
+                for line in proc.stdout:
+                    if verbose >= 1:
+                        print(f"       {line}", end='')  # Show progress indented
+                    output_lines.append(line)
+
+                    # Check timeout
+                    if time.time() - start > timeout:
+                        proc.kill()
+                        raise subprocess.TimeoutExpired(cmd, timeout)
+
+                proc.wait()
+            except KeyboardInterrupt:
+                proc.kill()
+                raise
+
+            output = ''.join(output_lines)
             output = strip_ansi(output)  # Remove ANSI escape codes
 
             result = self._parse_output(output, target)

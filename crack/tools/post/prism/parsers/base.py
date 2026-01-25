@@ -79,5 +79,17 @@ class PrismParser(ABC):
         except UnicodeDecodeError:
             return path.read_text(encoding='latin-1')
 
+    def set_hostname(self, summary: ParsedSummary, detected: Optional[str], specified: Optional[str]) -> None:
+        """Set both detected and specified hostnames on summary
+
+        Args:
+            summary: ParsedSummary to update
+            detected: Auto-detected hostname from parsed data
+            specified: User-provided hostname via --host flag
+        """
+        summary.source_hostname = detected or ""
+        if specified:
+            summary.specified_hostname = specified
+
     def __repr__(self) -> str:
         return f"<PrismParser name={self.name}>"

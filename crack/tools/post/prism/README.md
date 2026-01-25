@@ -2,22 +2,136 @@
 
 **Distill verbose security tool output into actionable summaries.**
 
-PRISM transforms walls of text from post-exploitation tools (mimikatz, secretsdump, etc.) into clean, colorized, deduplicated credentials with persistent Neo4j storage.
+PRISM transforms walls of text from post-exploitation tools into clean, colorized, deduplicated credentials with persistent Neo4j storage.
+
+## Features
+
+- **18 Parsers** - Mimikatz, secretsdump, hashcat, CME, responder, and more
+- **Directory Crawl** - Scan entire loot dumps, auto-detect parsable files
+- **Neo4j Integration** - Persistent credential storage with relationships
+- **Domain Reports** - Query aggregated credentials across sources
+- **Dual Hostname Tracking** - Both detected and user-specified hostnames
+
+---
 
 ## Quick Start
 
 ```bash
-# Parse mimikatz output (displays + imports to Neo4j)
+# Parse single file (displays + imports to Neo4j)
 crack prism mimikatz.txt
+
+# Parse with explicit hostname
+crack prism mimikatz.txt --host DC01.CORP.LOCAL
+
+# Crawl entire loot directory
+crack prism crawl ./loot_dump/ --host DC01.CORP.LOCAL
+
+# Query domain credentials from Neo4j
+crack prism report --domain CORP.LOCAL
+
+# Export report to files
+crack prism report --domain CORP.LOCAL  # Creates prism-CORP_LOCAL/*.md + *.json
+
+# Preview purge (dry run)
+crack prism purge --domain CORP.LOCAL --dry-run
 
 # JSON output (for piping)
 crack prism mimikatz.txt -f json
 
 # Skip Neo4j import
 crack prism mimikatz.txt --no-neo4j
+```
 
-# Save to file
-crack prism mimikatz.txt -o creds.json
+---
+
+## Supported Parsers (18)
+
+### Windows/AD
+| Parser | Description | Signatures |
+|--------|-------------|------------|
+| **mimikatz** | sekurlsa::logonpasswords, tickets | `mimikatz`, `sekurlsa` |
+| **secretsdump** | NTDS.dit, SAM hashes, Kerberos keys | `Dumping local SAM`, `:::` format |
+| **kerberoast** | TGS hashes ($krb5tgs$) | `$krb5tgs$23$` |
+| **asreproast** | AS-REP hashes ($krb5asrep$) | `$krb5asrep$23$` |
+| **ldap** | LDAP enumeration, legacy passwords | `dn:`, `userPassword:` |
+| **smbmap** | Share enumeration, high-value files | `Disk`, `READ`, `WRITE` |
+| **gpp** | Group Policy Preferences cpassword | `cpassword=` |
+| **crackmapexec** | CME spray results | `[+]`, `SMB`, `Pwn3d!` |
+| **responder** | NetNTLMv1/v2 captured hashes | `NTLMv2-SSP`, `::` format |
+| **kerbrute** | Kerbrute valid users/passwords | `VALID USERNAME`, `VALID LOGIN` |
+
+### Cross-Platform
+| Parser | Description | Signatures |
+|--------|-------------|------------|
+| **hashcat** | Cracked passwords (.potfile) | `hash:password` format |
+| **shadow** | Linux /etc/shadow | `$6$`, `$y$`, `$5$` hashes |
+| **connstring** | web.config, .env, appsettings.json | `connectionString`, `DB_PASSWORD` |
+| **script** | Hardcoded creds in PS1/SH/PY/BAT | `$password=`, `api_key=` |
+| **lazagne** | LaZagne JSON output | `"Password"`, software categories |
+| **htpasswd** | Apache htpasswd files | `user:$apr1$` format |
+| **sshkey** | Private SSH keys | `BEGIN RSA PRIVATE KEY` |
+| **aws** | AWS credentials files | `aws_access_key_id` |
+
+---
+
+## CLI Reference
+
+### Parse Single File
+```bash
+crack prism <file> [options]
+
+Options:
+  -f, --format FORMAT   Output: table (default), json, markdown
+  --host, --hostname    Source hostname to associate
+  -v, --verbose         Include service accounts
+  -o, --output FILE     Save to file
+  --no-neo4j            Skip Neo4j import
+  --no-dedup            Disable deduplication
+  --stats-only          Statistics only
+  --parser NAME         Force specific parser
+  --list-parsers        List available parsers
+```
+
+### Crawl Directory
+```bash
+crack prism crawl <directory> [options]
+
+Options:
+  --host, --hostname    Associate all files with this hostname
+  -v, --verbose         Show all files including unparsed
+  --no-neo4j            Skip Neo4j import
+
+Example:
+  crack prism crawl ./loot/ --host DC01.CORP.LOCAL
+```
+
+### Domain Report
+```bash
+crack prism report [options]
+
+Options:
+  --list-domains        Show all domains in database
+  --domain DOMAIN       Query specific domain
+  --section SECTION     Filter: users, credentials, computers, kerberos
+
+Example:
+  crack prism report --domain CORP.LOCAL
+  crack prism report --domain CORP.LOCAL --section credentials
+```
+
+### Purge Data
+```bash
+crack prism purge [options]
+
+Options:
+  --domain DOMAIN       Purge specific domain
+  --all                 Purge all PRISM data
+  --dry-run             Preview without deleting
+  --force               Skip confirmation
+
+Example:
+  crack prism purge --domain CORP.LOCAL --dry-run  # Preview first
+  crack prism purge --domain CORP.LOCAL            # Then execute
 ```
 
 ---
@@ -27,44 +141,44 @@ crack prism mimikatz.txt -o creds.json
 ```
                                    ┌─────────────────┐
                                    │   Input File    │
-                                   │ (mimikatz.txt)  │
+                                   │ (or directory)  │
                                    └────────┬────────┘
                                             │
                     ┌───────────────────────▼───────────────────────┐
                     │              Parser Registry                   │
+                    │  • 18 registered parsers                       │
                     │  • Auto-detection via can_parse()              │
                     │  • Lazy initialization                         │
-                    │  • @register decorator pattern                 │
                     └───────────────────────┬───────────────────────┘
                                             │
-           ┌────────────────────────────────┼────────────────────────────────┐
-           │                                │                                │
-┌──────────▼──────────┐          ┌──────────▼──────────┐          ┌──────────▼──────────┐
-│   MimikatzParser    │          │   SecretsDump       │          │    [Future]         │
-│   (logonpasswords   │          │   (NTDS.dit,        │          │    Parser           │
-│    + tickets)       │          │    SAM, etc.)       │          │                     │
-└──────────┬──────────┘          └─────────────────────┘          └─────────────────────┘
-           │
-           │ State Machine Parsing
-           ▼
+    ┌───────────────────┬───────────────────┼───────────────────┬───────────────────┐
+    │                   │                   │                   │                   │
+┌───▼───┐          ┌────▼────┐         ┌────▼────┐         ┌────▼────┐         ┌────▼────┐
+│Mimikatz│         │Secrets- │         │ Hashcat │         │   CME   │         │ Shadow  │
+│ Parser │         │  dump   │         │ Potfile │         │  Spray  │         │ Parser  │
+└───┬───┘          └────┬────┘         └────┬────┘         └────┬────┘         └────┬────┘
+    │                   │                   │                   │                   │
+    └───────────────────┴───────────────────┴───────────────────┴───────────────────┘
+                                            │
+                                            ▼
 ┌───────────────────────────────────────────────────────────────────────────────────────┐
 │                              ParsedSummary                                             │
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐                   │
 │  │ Credentials │  │   Tickets   │  │  Sessions   │  │  Metadata   │                   │
 │  │ • NTLM      │  │ • TGT       │  │ • Auth ID   │  │ • Hostname  │                   │
 │  │ • Cleartext │  │ • TGS       │  │ • Domain    │  │ • Domain    │                   │
-│  │ • SHA1      │  │ • Saved .kirbi│ │ • User     │  │ • Stats     │                   │
+│  │ • SHA1      │  │ • .kirbi    │  │ • User      │  │ • specified │                   │
 │  └─────────────┘  └─────────────┘  └─────────────┘  └─────────────┘                   │
 └───────────────────────────────────────────┬───────────────────────────────────────────┘
                                             │
               ┌─────────────────────────────┼─────────────────────────────┐
               │                             │                             │
    ┌──────────▼──────────┐       ┌──────────▼──────────┐       ┌──────────▼──────────┐
-   │   Rich Console      │       │     JSON/Markdown   │       │      Neo4j          │
-   │   (PrismFormatter)  │       │     (File Output)   │       │   (Credential DB)   │
+   │   Rich Console      │       │     File Export     │       │      Neo4j          │
+   │   (PrismFormatter)  │       │   (.json, .md)      │       │   (Credential DB)   │
    │                     │       │                     │       │                     │
    │  Colorized tables   │       │  Portable export    │       │  Graph storage      │
-   │  High-value emphasis│       │  For integration    │       │  Relationships      │
+   │  High-value tags    │       │  Untruncated data   │       │  Domain reports     │
    └─────────────────────┘       └─────────────────────┘       └─────────────────────┘
 ```
 
@@ -76,7 +190,7 @@ crack prism mimikatz.txt -o creds.json
 prism/
 ├── __init__.py              # Package exports
 ├── __main__.py              # python -m prism support
-├── cli.py                   # CLI (crack prism ...)
+├── cli.py                   # CLI: parse, crawl, report, purge
 │
 ├── models/                  # Data structures
 │   ├── credential.py        # Credential + CredentialType enum
@@ -84,57 +198,40 @@ prism/
 │   ├── session.py           # LogonSession (groups creds)
 │   └── summary.py           # ParsedSummary (aggregate)
 │
-├── parsers/                 # Parser framework
-│   ├── base.py              # Abstract PrismParser
+├── parsers/                 # Parser framework (18 parsers)
+│   ├── base.py              # Abstract PrismParser + set_hostname()
 │   ├── registry.py          # Auto-detection registry
-│   └── mimikatz/            # Mimikatz parser
-│       ├── parser.py        # Orchestrator
-│       ├── patterns.py      # Compiled regex
-│       ├── logonpasswords.py# sekurlsa::logonpasswords
-│       └── tickets.py       # sekurlsa::tickets
+│   ├── mimikatz/            # Windows memory dumps
+│   ├── secretsdump/         # NTDS/SAM hashes
+│   ├── kerberoast/          # TGS tickets
+│   ├── hashcat/             # Cracked passwords
+│   ├── shadow/              # Linux shadow files
+│   ├── connstring/          # Config file credentials
+│   ├── script/              # Hardcoded passwords
+│   ├── crackmapexec/        # CME spray results
+│   ├── responder/           # NetNTLM captures
+│   ├── lazagne/             # Multi-source JSON
+│   ├── kerbrute/            # Bruteforce results
+│   ├── aws/                 # AWS credentials
+│   ├── sshkey/              # Private keys
+│   ├── htpasswd/            # Apache auth files
+│   ├── gpp/                 # Group Policy Preferences
+│   ├── ldap/                # LDAP enumeration
+│   └── smbmap/              # Share enumeration
 │
 ├── display/                 # Output formatting
-│   └── formatter.py         # Rich, JSON, Markdown
+│   └── formatter.py         # Rich tables, JSON, Markdown
 │
-└── neo4j/                   # Persistence layer
-    └── adapter.py           # Neo4j credential storage
-```
-
----
-
-## Data Flow
-
-### 1. Parser Selection
-```python
-# Registry auto-detects based on file content
-parser = PrismParserRegistry.get_parser(filepath)
-# Returns MimikatzParser if "mimikatz" signatures found
-```
-
-### 2. Parsing (State Machine)
-```
-File Content → Line Iterator → State Machine → LogonSession → ParsedSummary
-                                    │
-    States: IDLE → IN_SESSION → IN_MSV/WDIGEST/KERBEROS/CREDMAN → IDLE
-                                    │
-    Each state extracts credentials based on provider context
-```
-
-### 3. Deduplication
-```python
-summary = summary.deduplicate()
-# Conservative: exact match on (username, domain, type, value)
-# Tracks occurrence count for reporting
-```
-
-### 4. Output Routing
-```
-ParsedSummary
-     │
-     ├─▶ PrismFormatter.render_summary()  → Rich tables to console
-     ├─▶ JSONFormatter.format()           → JSON string
-     ├─▶ MarkdownFormatter.format()       → Markdown tables
-     └─▶ PrismNeo4jAdapter.import_summary() → Neo4j nodes + relationships
+├── neo4j/                   # Persistence layer
+│   └── adapter.py           # Neo4j credential storage + reports
+│
+└── samples/                 # Demo data for testing
+    ├── mimikatz_logonpasswords.txt
+    ├── secretsdump_ntds.txt
+    ├── hashcat_cracked.potfile
+    ├── web.config
+    ├── shadow_dump.txt
+    └── loot_dump/           # Multi-file crawl demo
 ```
 
 ---
@@ -150,6 +247,7 @@ class Credential:
     cred_type: CredentialType    # CLEARTEXT, NTLM, SHA1, etc.
     value: str
     sid: Optional[str]
+    source: Optional[str]        # Tool that extracted it
 
     # Properties
     is_machine_account   # username ends with $
@@ -161,156 +259,43 @@ class Credential:
 ### CredentialType Enum
 ```python
 class CredentialType(Enum):
-    CLEARTEXT = "cleartext"    # Most valuable
-    NTLM = "ntlm"              # Pass-the-hash
-    SHA1 = "sha1"              # Less useful
-    MACHINE_HEX = "machine_hex"# Machine account blob
-    LM = "lm"                  # Legacy
-    AES256 = "aes256"          # Kerberos keys
-```
-
-### KerberosTicket
-```python
-@dataclass
-class KerberosTicket:
-    service_type: str      # krbtgt, cifs, ldap
-    service_target: str    # dc01.domain.local
-    client_name: str       # HOSTNAME$ or user
-    client_realm: str      # DOMAIN.LOCAL
-    end_time: datetime
-    saved_path: str        # .kirbi file if exported
-
-    # Properties
-    is_tgt                 # service_type == krbtgt
-    is_tgs                 # not TGT
-    is_expired             # end_time < now
-    time_remaining         # human-readable
+    CLEARTEXT = "cleartext"      # Most valuable
+    NTLM = "ntlm"                 # Pass-the-hash
+    NETNTLMV1 = "netntlmv1"       # Relay/crack
+    NETNTLMV2 = "netntlmv2"       # Relay/crack
+    SHA1 = "sha1"                 # Less useful
+    SHA512 = "sha512"             # Linux shadow
+    TGS_HASH = "tgs_hash"         # Kerberoast
+    ASREP_HASH = "asrep_hash"     # AS-REP roast
+    SSH_KEY = "ssh_key"           # Private keys
+    AWS_KEY = "aws_key"           # Cloud access
+    CONNECTION_STRING = "connection_string"
+    ...
 ```
 
 ### ParsedSummary
 ```python
 @dataclass
 class ParsedSummary:
+    source_file: str
+    source_tool: str
+    source_hostname: str         # Auto-detected
+    specified_hostname: str      # User-provided --host
+    source_domain: str
     credentials: List[Credential]
     tickets: List[KerberosTicket]
     sessions: List[LogonSession]
 
     # Properties
+    effective_hostname     # specified > detected > "Unknown"
+    display_hostname       # "DC01 (detected: WIN-ABC)" format
     cleartext_creds        # High value filter
     ntlm_hashes            # NTLM only
-    tgt_tickets            # TGT filter
-    tgs_tickets            # TGS filter
     high_value_creds       # Combined high-value
-    stats                  # Count dictionary
 
     # Methods
     deduplicate()          # Return deduped copy
     to_dict()              # Serialize
-```
-
----
-
-## Parser Framework
-
-### Abstract Base
-```python
-class PrismParser(ABC):
-    @property
-    @abstractmethod
-    def name(self) -> str:
-        """e.g., 'mimikatz'"""
-
-    @abstractmethod
-    def can_parse(self, filepath: str) -> bool:
-        """Return True if this parser handles this file"""
-
-    @abstractmethod
-    def parse(self, filepath: str, hostname: Optional[str]) -> ParsedSummary:
-        """Parse file, return structured summary"""
-```
-
-### Registry Pattern
-```python
-@PrismParserRegistry.register
-class MimikatzParser(PrismParser):
-    ...
-
-# Auto-detection:
-parser = PrismParserRegistry.get_parser("output.txt")
-if parser:
-    summary = parser.parse("output.txt")
-```
-
----
-
-## Adding a New Parser
-
-### 1. Create Parser Module
-```
-prism/parsers/
-└── secretsdump/
-    ├── __init__.py      # Export parser class
-    ├── parser.py        # Main parser with @register
-    └── patterns.py      # Regex patterns
-```
-
-### 2. Implement Parser Class
-```python
-# prism/parsers/secretsdump/parser.py
-
-from ..base import PrismParser
-from ..registry import PrismParserRegistry
-from ...models import ParsedSummary, Credential, CredentialType
-
-@PrismParserRegistry.register
-class SecretsDumpParser(PrismParser):
-
-    @property
-    def name(self) -> str:
-        return "secretsdump"
-
-    @property
-    def description(self) -> str:
-        return "Impacket secretsdump output parser"
-
-    def can_parse(self, filepath: str) -> bool:
-        """Detect secretsdump output"""
-        content = self.read_file(filepath)[:2048]
-        return '[*] Dumping local SAM hashes' in content or \
-               '[*] Dumping Domain Credentials' in content
-
-    def parse(self, filepath: str, hostname=None) -> ParsedSummary:
-        content = self.read_file(filepath)
-        summary = ParsedSummary(
-            source_file=filepath,
-            source_tool='secretsdump'
-        )
-
-        # Parse SAM hashes: user:rid:lm:ntlm:::
-        for line in content.splitlines():
-            if ':::' in line:
-                parts = line.split(':')
-                if len(parts) >= 4:
-                    summary.credentials.append(Credential(
-                        username=parts[0],
-                        domain=hostname or '',
-                        cred_type=CredentialType.NTLM,
-                        value=parts[3]
-                    ))
-
-        return summary.deduplicate()
-```
-
-### 3. Register in Init
-```python
-# prism/parsers/__init__.py
-from . import secretsdump  # Triggers @register decorator
-```
-
-### 4. Test Detection
-```bash
-crack prism --list-parsers
-# Should show: secretsdump - Impacket secretsdump output parser
 ```
 
 ---
@@ -323,43 +308,35 @@ crack prism --list-parsers
 (:Credential {
     id: "user@DOMAIN:ntlm",
     username: "Administrator",
-    domain: "SECURE",
+    domain: "CORP",
     cred_type: "ntlm",
     value: "a51493b0b06e5e35f855245e71af1d14",
     high_value: true,
-    is_machine: false,
+    source_tool: "mimikatz",
     first_seen: datetime(),
     occurrences: 1
 })
 
 // Relationships
-(:Credential)-[:EXTRACTED_FROM]->(:Computer {name: "SECURE"})
-(:Credential)-[:BELONGS_TO]->(:Domain {name: "SECURA"})
-
-// Tickets
-(:KerberosTicket {
-    id: "SECURE$@SECURA.YZX:krbtgt",
-    service_type: "krbtgt",
-    client_name: "SECURE$",
-    is_tgt: true
-})-[:EXTRACTED_FROM]->(:Computer)
+(:Credential)-[:EXTRACTED_FROM]->(:Computer {name: "DC01"})
+(:Credential)-[:BELONGS_TO]->(:Domain {name: "CORP.LOCAL"})
 ```
 
-### Queries
+### Useful Queries
 ```cypher
 // All cleartext passwords
 MATCH (c:Credential {cred_type: "cleartext"})
 RETURN c.username, c.domain, c.value
 
 // High-value credentials from specific host
-MATCH (c:Credential {high_value: true})-[:EXTRACTED_FROM]->(h:Computer {name: "SECURE"})
+MATCH (c:Credential {high_value: true})-[:EXTRACTED_FROM]->(h:Computer {name: "DC01"})
 RETURN c
 
 // Credential reuse across hosts
 MATCH (c1:Credential)-[:EXTRACTED_FROM]->(h1:Computer),
       (c2:Credential)-[:EXTRACTED_FROM]->(h2:Computer)
 WHERE c1.value = c2.value AND h1 <> h2
-RETURN c1.username, c1.value, collect(h1.name) as hosts
+RETURN c1.username, c1.value, collect(DISTINCT h1.name) as hosts
 ```
 
 ---
@@ -371,21 +348,21 @@ RETURN c1.username, c1.value, collect(h1.name) as hosts
 ┌──────────────────────────────────────────────────────────────┐
 │              PRISM - Mimikatz Credential Summary             │
 ├──────────────────────────────────────────────────────────────┤
-│ Source: SECURE.SECURA                                        │
+│ Source: DC01.CORP.LOCAL (detected: WIN-ABC123)               │
 │ Sessions: 5 | Unique Creds: 8 | High Value: 2                │
 └──────────────────────────────────────────────────────────────┘
 
 CLEARTEXT CREDENTIALS (HIGH VALUE)
 ┌──────────────────────────────────────────────────────────────┐
 │ Username │ Domain │ Password    │ Source   │
-│ apache   │ era... │ New2Era4.!  │ credman  │
+│ svc_sql  │ CORP   │ Summer2024! │ wdigest  │
 └──────────────────────────────────────────────────────────────┘
 
 NTLM HASHES
 ┌──────────────────────────────────────────────────────────────┐
 │ Username      │ Domain │ NTLM                             │ Type    │
-│ Administrator │ SECURE │ a51493b0b06e5e35f855245e71af1d14 │ User    │
-│ SECURE$       │ SECURA │ 983e73c648db56f78e9dfb9698066734 │ Machine │
+│ Administrator │ CORP   │ a51493b0b06e5e35f855245e71af1d14 │ User    │
+│ DC01$         │ CORP   │ 983e73c648db56f78e9dfb9698066734 │ Machine │
 └──────────────────────────────────────────────────────────────┘
 ```
 
@@ -394,42 +371,114 @@ NTLM HASHES
 |------------|--------------|----------------------------|
 | Cleartext  | Yellow       | HIGH VALUE - immediate use |
 | NTLM       | Blue         | Pass-the-hash potential    |
-| SHA1       | Magenta      | Reference only             |
-| TGT        | Magenta      | Golden ticket material     |
-| TGS        | Cyan         | Service access             |
+| NetNTLM    | Cyan         | Relay or crack             |
+| TGS Hash   | Magenta      | Kerberoast cracking        |
+| SSH Keys   | Red          | Direct access              |
 
 ---
 
-## CLI Reference
+## Adding a New Parser
 
+### 1. Create Parser Module
 ```
-crack prism <file> [options]
-
-Positional:
-  file                  File to parse
-
-Options:
-  -f, --format          Output format: table (default), json, markdown
-  --host, --hostname    Override source hostname
-  -v, --verbose         Show all creds including service accounts
-  -o, --output FILE     Save output to file (.json, .md auto-detected)
-  --no-neo4j            Skip Neo4j import (imports by default)
-  --no-dedup            Disable deduplication
-  --stats-only          Show statistics only
-  --parser NAME         Force specific parser
-  --list-parsers        List available parsers
-
-Examples:
-  crack prism dump.txt                    # Auto-detect, display, import
-  crack prism dump.txt -f json            # JSON output (pipe-friendly)
-  crack prism dump.txt -o report.json     # Also save to file
-  crack prism dump.txt --no-neo4j         # Display only
-  crack prism dump.txt -v                 # Include service accounts
+prism/parsers/
+└── myparser/
+    ├── __init__.py      # Export parser class
+    └── parser.py        # Main parser with @register
 ```
+
+### 2. Implement Parser Class
+```python
+# prism/parsers/myparser/parser.py
+
+from ..base import PrismParser
+from ..registry import PrismParserRegistry
+from ...models import ParsedSummary, Credential, CredentialType
+
+@PrismParserRegistry.register
+class MyParser(PrismParser):
+
+    @property
+    def name(self) -> str:
+        return "myparser"
+
+    @property
+    def description(self) -> str:
+        return "My custom output parser"
+
+    def can_parse(self, filepath: str) -> bool:
+        """Detect myparser output"""
+        content = self.read_file(filepath)[:2048]
+        return 'MY_SIGNATURE' in content
+
+    def parse(self, filepath: str, hostname=None) -> ParsedSummary:
+        content = self.read_file(filepath)
+        summary = ParsedSummary(
+            source_file=filepath,
+            source_tool='myparser'
+        )
+
+        # Use helper for hostname handling
+        detected_host = self._detect_hostname(content)
+        self.set_hostname(summary, detected_host, hostname)
+
+        # Parse credentials...
+        for match in MY_PATTERN.finditer(content):
+            summary.credentials.append(Credential(
+                username=match.group('user'),
+                domain=summary.effective_hostname,
+                cred_type=CredentialType.CLEARTEXT,
+                value=match.group('password')
+            ))
+
+        return summary.deduplicate()
+```
+
+### 3. Register in Init
+```python
+# prism/parsers/myparser/__init__.py
+from .parser import MyParser
+```
+
+### 4. Import in Registry
+```python
+# prism/parsers/registry.py (at bottom)
+from . import myparser
+```
+
+### 5. Test
+```bash
+crack prism --list-parsers
+# Should show: myparser - My custom output parser
+```
+
+---
+
+## Demo System
+
+A 3-terminal tmux demo is available for showcasing PRISM capabilities:
+
+```bash
+cd demonstrations/01-prism
+./demo.sh
+```
+
+Features:
+- **Terminal 1 (Main)**: Interactive menu
+- **Terminal 2 (RAW)**: Shows raw file content
+- **Terminal 3 (PRISM)**: Shows PRISM-processed output
+
+Menu options include all 18 parsers plus features like crawl, report, and purge.
 
 ---
 
 ## Design Decisions
+
+### Dual Hostname Tracking
+- `source_hostname`: Auto-detected from file content
+- `specified_hostname`: User-provided via `--host` flag
+- `effective_hostname`: Specified takes precedence
+- `display_hostname`: Shows both when different
 
 ### Conservative Deduplication
 - Exact match on `(username, domain, type, value)`
@@ -446,54 +495,11 @@ Examples:
 - Use `--no-neo4j` for one-off analysis
 - Silent skip if Neo4j unavailable
 
-### Parser Auto-Detection
-- Check file content, not extension
-- Multiple signature checks for reliability
-- Fallback to explicit `--parser` flag
-
----
-
-## Extending PRISM
-
-### Add New Credential Type
-```python
-# models/credential.py
-class CredentialType(Enum):
-    ...
-    DPAPI_KEY = "dpapi_key"
-```
-
-### Add New Ticket Field
-```python
-# models/ticket.py
-@dataclass
-class KerberosTicket:
-    ...
-    session_key: Optional[str] = None
-```
-
-### Custom Display Section
-```python
-# display/formatter.py
-def _render_dpapi_table(self, keys: list) -> None:
-    """Render DPAPI master keys"""
-    ...
-```
-
----
-
-## Performance Notes
-
-- Regex patterns compiled at module load
-- State machine minimizes backtracking
-- Lazy parser initialization (only when needed)
-- File read with encoding fallback (UTF-8 → Latin-1)
-- Neo4j uses batch MERGE for efficiency
-
 ---
 
 ## Version History
 
 | Version | Changes |
 |---------|---------|
-| 1.0.0   | Initial: mimikatz (logonpasswords, tickets), Neo4j, Rich display |
+| 2.0.0   | 11 new parsers (18 total), crawl, report, purge, dual hostname tracking, demo system |
+| 1.0.0   | Initial: mimikatz, secretsdump, kerberoast, ldap, smbmap, gpp, Neo4j, Rich display |

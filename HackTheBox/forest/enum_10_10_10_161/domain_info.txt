@@ -2,12 +2,12 @@ Domain: HTB.LOCAL
 DC IP: 10.10.10.161
 DC Hostname: FOREST
 
-Users: 18
+Users: 28
   - AS-REP Roastable: 1
   - Kerberoastable: 0
   - Service Accounts: 1
 Computers: 2
-Groups: 0
+Groups: 43
 
 Password Policy:
   Min Length: 7

@@ -13,6 +13,7 @@ Handles pwned user tracking commands:
 - --list-ip-addresses: List machines with IPs
 """
 
+import os
 from argparse import Namespace
 from typing import Optional
 
@@ -77,7 +78,7 @@ class PwnedCommands(BaseCommandGroup):
     @classmethod
     def _handle_pwn_interactive(cls, args: Namespace) -> int:
         """Handle --pwn-interactive command - interactive credential entry."""
-        config = Neo4jConfig(uri=args.uri, user=args.user, password=args.password)
+        config = Neo4jConfig(uri=args.uri, user=args.user, password=getattr(args, "neo4j_password", None) or os.environ.get("NEO4J_PASSWORD", ""))
         prefill_user = None
 
         while True:
@@ -112,7 +113,7 @@ class PwnedCommands(BaseCommandGroup):
     @classmethod
     def _handle_pwn(cls, args: Namespace) -> int:
         """Handle --pwn command - mark user as pwned."""
-        config = Neo4jConfig(uri=args.uri, user=args.user, password=args.password)
+        config = Neo4jConfig(uri=args.uri, user=args.user, password=getattr(args, "neo4j_password", None) or os.environ.get("NEO4J_PASSWORD", ""))
         tracker = PwnedTracker(config)
 
         if not tracker.connect():
@@ -161,7 +162,7 @@ class PwnedCommands(BaseCommandGroup):
     @classmethod
     def _handle_unpwn(cls, args: Namespace) -> int:
         """Handle --unpwn command - remove pwned status."""
-        config = Neo4jConfig(uri=args.uri, user=args.user, password=args.password)
+        config = Neo4jConfig(uri=args.uri, user=args.user, password=getattr(args, "neo4j_password", None) or os.environ.get("NEO4J_PASSWORD", ""))
         tracker = PwnedTracker(config)
 
         if not tracker.connect():
@@ -184,7 +185,7 @@ class PwnedCommands(BaseCommandGroup):
     @classmethod
     def _handle_list_pwned(cls, args: Namespace) -> int:
         """Handle --list-pwned command - list all pwned users."""
-        config = Neo4jConfig(uri=args.uri, user=args.user, password=args.password)
+        config = Neo4jConfig(uri=args.uri, user=args.user, password=getattr(args, "neo4j_password", None) or os.environ.get("NEO4J_PASSWORD", ""))
         tracker = PwnedTracker(config)
 
         if not tracker.connect():
@@ -207,7 +208,7 @@ class PwnedCommands(BaseCommandGroup):
     @classmethod
     def _handle_pwned_user(cls, args: Namespace) -> int:
         """Handle --pwned-user command - show details for a pwned user."""
-        config = Neo4jConfig(uri=args.uri, user=args.user, password=args.password)
+        config = Neo4jConfig(uri=args.uri, user=args.user, password=getattr(args, "neo4j_password", None) or os.environ.get("NEO4J_PASSWORD", ""))
         tracker = PwnedTracker(config)
 
         if not tracker.connect():
@@ -267,7 +268,7 @@ class PwnedCommands(BaseCommandGroup):
     @classmethod
     def _handle_cred_targets(cls, args: Namespace) -> int:
         """Handle --cred-targets command - show credential harvest targets."""
-        config = Neo4jConfig(uri=args.uri, user=args.user, password=args.password)
+        config = Neo4jConfig(uri=args.uri, user=args.user, password=getattr(args, "neo4j_password", None) or os.environ.get("NEO4J_PASSWORD", ""))
         tracker = PwnedTracker(config)
 
         if not tracker.connect():
@@ -291,7 +292,7 @@ class PwnedCommands(BaseCommandGroup):
     @classmethod
     def _handle_post_exploit(cls, args: Namespace) -> int:
         """Handle --post-exploit command - show mimikatz recommendations."""
-        config = Neo4jConfig(uri=args.uri, user=args.user, password=args.password)
+        config = Neo4jConfig(uri=args.uri, user=args.user, password=getattr(args, "neo4j_password", None) or os.environ.get("NEO4J_PASSWORD", ""))
         tracker = PwnedTracker(config)
 
         if not tracker.connect():
@@ -362,7 +363,7 @@ class PwnedCommands(BaseCommandGroup):
         from ...query_runner import QueryRunner
         from ...command_suggester import CommandSuggester
 
-        config = Neo4jConfig(uri=args.uri, user=args.user, password=args.password)
+        config = Neo4jConfig(uri=args.uri, user=args.user, password=getattr(args, "neo4j_password", None) or os.environ.get("NEO4J_PASSWORD", ""))
         tracker = PwnedTracker(config)
 
         if not tracker.connect():
@@ -442,7 +443,7 @@ class PwnedCommands(BaseCommandGroup):
     @classmethod
     def _handle_list_ip_addresses(cls, args: Namespace) -> int:
         """Handle --list-ip-addresses command - list all machines with IPs."""
-        config = Neo4jConfig(uri=args.uri, user=args.user, password=args.password)
+        config = Neo4jConfig(uri=args.uri, user=args.user, password=getattr(args, "neo4j_password", None) or os.environ.get("NEO4J_PASSWORD", ""))
         tracker = PwnedTracker(config)
 
         if not tracker.connect():

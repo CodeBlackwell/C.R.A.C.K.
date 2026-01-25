@@ -11,6 +11,7 @@ Command Groups:
 - policy: Password policy (--set-policy, --show-policy, etc.)
 - spray: Password spraying (--spray, --auto-spray, etc.)
 - creds: Credential pipeline (--creds, --use-potfile, etc.)
+- wizard: Guided wizard mode (--wizard, --wizard-resume, etc.)
 - enumerate: Live enumeration (IP address input)
 - import_data: BloodHound data import (positional path argument)
 - analyze: Attack vector detection and analysis (--detect, --analyze-svc, etc.)
@@ -22,6 +23,7 @@ from .config import ConfigCommands
 from .policy import PolicyCommands
 from .spray import SprayCommands
 from .creds import CredsCommands
+from .wizard import WizardCommands
 from .enumerate import EnumerateCommands
 from .import_data import ImportDataCommands
 from .analyze import AnalyzeCommands
@@ -36,6 +38,7 @@ COMMAND_GROUPS = [
     SprayCommands,
     CredsCommands,
     AnalyzeCommands,  # New analysis commands
+    WizardCommands,  # Wizard mode - BEFORE EnumerateCommands for priority
     EnumerateCommands,
     ImportDataCommands,
 ]
@@ -49,6 +52,7 @@ __all__ = [
     "SprayCommands",
     "CredsCommands",
     "AnalyzeCommands",
+    "WizardCommands",
     "EnumerateCommands",
     "ImportDataCommands",
     # Utilities

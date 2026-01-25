@@ -17,7 +17,7 @@
         {
           "name": "<DC_IP>",
           "description": "Domain controller IP address",
-          "example": "192.168.50.70",
+          "example": "10.10.10.70",
           "required": true
         },
         {
@@ -69,8 +69,8 @@
         "context deadline exceeded": "Network timeout. Try --safe flag for slower requests or check connectivity to port 88/UDP",
         "Network error": "Kerberos port 88/UDP may be blocked. Verify firewall rules or try from different network position"
       },
-      "notes": "FASTEST and MOST STEALTHY user enumeration method for AD.\n\nUses Kerberos pre-authentication (AS-REQ) to validate usernames.\n\nNOISE LEVEL:\nVery Low - only generates event ID 4768 (Kerberos TGT request) for valid users, which is normal traffic.\n\nInvalid usernames don't generate security logs.\n\nSPEED:\nCan test thousands of usernames per second.\n\nWHY THIS WORKS:\nWhen you request a TGT for a username, Kerberos responds differently for valid vs invalid users.\n\nValid users get 'PREAUTH_REQUIRED' error, invalid users get 'PRINCIPAL_UNKNOWN'.\n\nThis is by-design behavior, not a vulnerability.\n\nTIME ESTIMATE:\n10-60 seconds for 10k usernames.\n\nRECOMMENDED WORDLISTS:\n/usr/share/seclists/Usernames/Names/names.txt (common first names), /usr/share/seclists/Usernames/xato-net-10-million-usernames.txt (comprehensive).\n\ncertification TIP:\nRun this BEFORE password spraying to build valid username list.\n\nNo credentials needed! Save output with -o flag:\nkerbrute userenum -d <DOMAIN> --dc <DC_IP> <USERLIST> -o valid_users.txt",
-      "filled_example": "kerbrute userenum -d corp.com --dc 192.168.50.70 /usr/share/seclists/Usernames/xato-net-10-million-usernames.txt"
+      "notes": "FASTEST and MOST STEALTHY user enumeration method for AD.\n\nUses Kerberos pre-authentication (AS-REQ) to validate usernames.\n\nNOISE LEVEL:\nVery Low - only generates event ID 4768 (Kerberos TGT request) for valid users, which is normal traffic.\n\nInvalid usernames don't generate security logs.\n\nSPEED:\nCan test thousands of usernames per second.\n\nWHY THIS WORKS:\nWhen you request a TGT for a username, Kerberos responds differently for valid vs invalid users.\n\nValid users get 'PREAUTH_REQUIRED' error, invalid users get 'PRINCIPAL_UNKNOWN'.\n\nThis is by-design behavior, not a vulnerability.\n\nTIME ESTIMATE:\n10-60 seconds for 10k usernames.\n\nRECOMMENDED WORDLISTS:\n/usr/share/seclists/Usernames/Names/names.txt (common first names), /usr/share/seclists/Usernames/xato-net-10-million-usernames.txt (comprehensive).\n\nPRACTICAL TIP:\nRun this BEFORE password spraying to build valid username list.\n\nNo credentials needed! Save output with -o flag:\nkerbrute userenum -d <DOMAIN> --dc <DC_IP> <USERLIST> -o valid_users.txt",
+      "filled_example": "kerbrute userenum -d corp.com --dc 10.10.10.70 /usr/share/seclists/Usernames/xato-net-10-million-usernames.txt"
     },
     {
       "id": "crackmapexec-rid-cycling",
@@ -83,7 +83,7 @@
         {
           "name": "<TARGET>",
           "description": "Domain controller or domain member IP",
-          "example": "192.168.50.70",
+          "example": "10.10.10.70",
           "required": true
         },
         {
@@ -139,8 +139,8 @@
         "STATUS_LOGON_FAILURE": "Invalid credentials. Try guest account: crackmapexec smb <TARGET> -u 'guest' -p '' --rid-brute",
         "Connection refused": "SMB port 445 blocked. Verify: sudo nmap -p 445 -Pn -v <TARGET>"
       },
-      "notes": "TRADITIONAL user enumeration via RID cycling.\n\nRIDs (Relative Identifiers) are sequential numbers assigned to AD objects.\n\nBy querying RID 500, 501, 502...\n\nyou can enumerate users, groups, computers.\n\nREQUIRES:\nNULL session or valid credentials.\n\nNOISE LEVEL:\nHigh - SMB connections logged, many failed SID lookups generate events.\n\nWHY THIS WORKS:\nWindows exposes SID-to-name translation via MS-SAMR RPC over SMB.\n\nRIDs follow pattern:\nDomain SID + RID (e.g., S-1-5-21-[domain]-500 for Administrator).\n\nSLOWER than Kerbrute but works when Kerberos port filtered.\n\nTIME ESTIMATE:\n1-3 minutes for default range.\n\nMANUAL ALTERNATIVE:\nrpcclient -U '' -N <TARGET> then lookupsids S-1-5-21-[domain]-[RID].\n\ncertification TIP:\nPrefer kerbrute-userenum-ad when possible (faster, stealthier).\n\nUse RID cycling when SMB is accessible but Kerberos is blocked, or when you want to enumerate groups/computers too (not just users).",
-      "filled_example": "crackmapexec smb 192.168.50.70 -u guest -p '' --rid-brute"
+      "notes": "TRADITIONAL user enumeration via RID cycling.\n\nRIDs (Relative Identifiers) are sequential numbers assigned to AD objects.\n\nBy querying RID 500, 501, 502...\n\nyou can enumerate users, groups, computers.\n\nREQUIRES:\nNULL session or valid credentials.\n\nNOISE LEVEL:\nHigh - SMB connections logged, many failed SID lookups generate events.\n\nWHY THIS WORKS:\nWindows exposes SID-to-name translation via MS-SAMR RPC over SMB.\n\nRIDs follow pattern:\nDomain SID + RID (e.g., S-1-5-21-[domain]-500 for Administrator).\n\nSLOWER than Kerbrute but works when Kerberos port filtered.\n\nTIME ESTIMATE:\n1-3 minutes for default range.\n\nMANUAL ALTERNATIVE:\nrpcclient -U '' -N <TARGET> then lookupsids S-1-5-21-[domain]-[RID].\n\nPRACTICAL TIP:\nPrefer kerbrute-userenum-ad when possible (faster, stealthier).\n\nUse RID cycling when SMB is accessible but Kerberos is blocked, or when you want to enumerate groups/computers too (not just users).",
+      "filled_example": "crackmapexec smb 10.10.10.70 -u guest -p '' --rid-brute"
     },
     {
       "id": "ldapsearch-users-ad",
@@ -153,7 +153,7 @@
         {
           "name": "<TARGET>",
           "description": "Domain controller IP or hostname",
-          "example": "192.168.50.70",
+          "example": "10.10.10.70",
           "required": true
         },
         {
@@ -208,8 +208,8 @@
         "Operations error": "Anonymous queries restricted. Retry with valid credentials.",
         "Too many results": "Add grep filter: ... | grep 'sAMAccountName:' | awk '{print $2}' > users.txt"
       },
-      "notes": "COMPREHENSIVE user enumeration via LDAP.\n\nRetrieves ALL user objects from Active Directory.\n\nMay work ANONYMOUSLY if anonymous LDAP binding enabled (rare in modern domains).\n\nNOISE LEVEL:\nLow - LDAP queries often not logged.\n\nADVANTAGES:\nGets full user list in single query, can retrieve additional attributes (description, memberOf, pwdLastSet).\n\nWHY THIS WORKS:\nAD exposes user objects via LDAP, readable by authenticated users (sometimes anonymous).\n\nTIME ESTIMATE:\n5-15 seconds.\n\nOUTPUT PARSING:\nExtract usernames with grep/awk:\nldapsearch ...\n\n| grep 'sAMAccountName:' | awk '{print $2}' > users.txt.\n\nUSEFUL FILTERS:\nNon-disabled users:\n'(&(objectClass=user)(objectCategory=person)(!(userAccountControl:1.2.840.113556.1.4.803:=2)))'.\n\nUsers with no password expiry:\n'(&(objectClass=user)(userAccountControl:1.2.840.113556.1.4.803:=65536))'.\n\ncertification TIP:\nTry anonymous bind first.\n\nIf blocked, use any valid credentials.\n\nCombine with kerbrute to validate enumerated users before spraying.",
-      "filled_example": "ldapsearch -x -H ldap://192.168.50.70 -b 'DC=corp,DC=com' '(&(objectClass=user)(objectCategory=person))' sAMAccountName userPrincipalName"
+      "notes": "COMPREHENSIVE user enumeration via LDAP.\n\nRetrieves ALL user objects from Active Directory.\n\nMay work ANONYMOUSLY if anonymous LDAP binding enabled (rare in modern domains).\n\nNOISE LEVEL:\nLow - LDAP queries often not logged.\n\nADVANTAGES:\nGets full user list in single query, can retrieve additional attributes (description, memberOf, pwdLastSet).\n\nWHY THIS WORKS:\nAD exposes user objects via LDAP, readable by authenticated users (sometimes anonymous).\n\nTIME ESTIMATE:\n5-15 seconds.\n\nOUTPUT PARSING:\nExtract usernames with grep/awk:\nldapsearch ...\n\n| grep 'sAMAccountName:' | awk '{print $2}' > users.txt.\n\nUSEFUL FILTERS:\nNon-disabled users:\n'(&(objectClass=user)(objectCategory=person)(!(userAccountControl:1.2.840.113556.1.4.803:=2)))'.\n\nUsers with no password expiry:\n'(&(objectClass=user)(userAccountControl:1.2.840.113556.1.4.803:=65536))'.\n\nPRACTICAL TIP:\nTry anonymous bind first.\n\nIf blocked, use any valid credentials.\n\nCombine with kerbrute to validate enumerated users before spraying.",
+      "filled_example": "ldapsearch -x -H ldap://10.10.10.70 -b 'DC=corp,DC=com' '(&(objectClass=user)(objectCategory=person))' sAMAccountName userPrincipalName"
     },
     {
       "id": "enum4linux-users-ad",
@@ -222,7 +222,7 @@
         {
           "name": "<TARGET>",
           "description": "Domain controller or domain member IP",
-          "example": "192.168.50.70",
+          "example": "10.10.10.70",
           "required": true
         }
       ],
@@ -265,8 +265,8 @@
         "Protocol negotiation failed": "SMBv1 disabled. Use crackmapexec-rid-cycling instead (supports SMBv2/v3)",
         "Cannot connect to server": "SMB ports filtered. Verify: sudo nmap -p 139,445 -Pn -v <TARGET>"
       },
-      "notes": "CLASSIC user enumeration tool for Windows/AD environments.\n\nUses MS-SAMR RPC over SMB to enumerate users.\n\nOften works via NULL SESSION on older systems.\n\nNOISE LEVEL:\nMedium - SMB connections logged.\n\nLIMITATIONS:\nRequires SMBv1 or null sessions (both often disabled on modern domains).\n\nADVANTAGES:\nGets users, groups, shares, and password policy in one command (-a flag).\n\nWHY THIS WORKS:\nWindows exposes user enumeration via SAMR RPC for backward compatibility.\n\nTIME ESTIMATE:\n15-45 seconds.\n\nOUTPUT PARSING:\nExtract usernames:\nenum4linux -U <TARGET> | grep 'user:' | awk -F'[][]' '{print $2}'.\n\ncertification TIP:\nGreat for quick all-in-one enumeration (enum4linux -a) but less reliable on modern domains than kerbrute.\n\nUse enum4linux first for broad recon, then kerbrute for targeted username validation.",
-      "filled_example": "enum4linux -U 192.168.50.70"
+      "notes": "CLASSIC user enumeration tool for Windows/AD environments.\n\nUses MS-SAMR RPC over SMB to enumerate users.\n\nOften works via NULL SESSION on older systems.\n\nNOISE LEVEL:\nMedium - SMB connections logged.\n\nLIMITATIONS:\nRequires SMBv1 or null sessions (both often disabled on modern domains).\n\nADVANTAGES:\nGets users, groups, shares, and password policy in one command (-a flag).\n\nWHY THIS WORKS:\nWindows exposes user enumeration via SAMR RPC for backward compatibility.\n\nTIME ESTIMATE:\n15-45 seconds.\n\nOUTPUT PARSING:\nExtract usernames:\nenum4linux -U <TARGET> | grep 'user:' | awk -F'[][]' '{print $2}'.\n\nPRACTICAL TIP:\nGreat for quick all-in-one enumeration (enum4linux -a) but less reliable on modern domains than kerbrute.\n\nUse enum4linux first for broad recon, then kerbrute for targeted username validation.",
+      "filled_example": "enum4linux -U 10.10.10.70"
     }
   ]
 }

@@ -12,7 +12,7 @@
         {
           "name": "<TARGET>",
           "description": "Target hostname or IP address",
-          "example": "192.168.50.73",
+          "example": "10.10.10.73",
           "required": true
         }
       ],
@@ -40,13 +40,13 @@
       ],
       "examples": [
         {
-          "command": "$username = 'jen'; $password = 'Nexus123!'; $secureString = ConvertTo-SecureString $password -AsPlaintext -Force; $credential = New-Object System.Management.Automation.PSCredential $username, $secureString; $options = New-CimSessionOption -Protocol DCOM; $session = New-Cimsession -ComputerName 192.168.50.73 -Credential $credential -SessionOption $options",
-          "description": "Full one-liner: Create credentials and establish WMI CIM session to 192.168.50.73",
+          "command": "$username = 'jen'; $password = 'SecureP@ss123!'; $secureString = ConvertTo-SecureString $password -AsPlaintext -Force; $credential = New-Object System.Management.Automation.PSCredential $username, $secureString; $options = New-CimSessionOption -Protocol DCOM; $session = New-Cimsession -ComputerName 10.10.10.73 -Credential $credential -SessionOption $options",
+          "description": "Full one-liner: Create credentials and establish WMI CIM session to 10.10.10.73",
           "context": "Complete WMI lateral movement setup"
         },
         {
-          "command": "$options = New-CimSessionOption -Protocol DCOM; $session = New-Cimsession -ComputerName FILES04 -Credential $credential -SessionOption $options",
-          "description": "Create WMI session to FILES04 (assuming credential object already exists)",
+          "command": "$options = New-CimSessionOption -Protocol DCOM; $session = New-Cimsession -ComputerName FILESERVER -Credential $credential -SessionOption $options",
+          "description": "Create WMI session to FILESERVER (assuming credential object already exists)",
           "context": "WMI session after credential setup"
         }
       ],
@@ -87,7 +87,7 @@
         "ps-wmi-invoke-method",
         "wmic-process-create"
       ],
-      "filled_example": "$options = New-CimSessionOption -Protocol DCOM; $session = New-Cimsession -ComputerName 192.168.50.73 -Credential $credential -SessionOption $options"
+      "filled_example": "$options = New-CimSessionOption -Protocol DCOM; $session = New-Cimsession -ComputerName 10.10.10.73 -Credential $credential -SessionOption $options"
     }
   ]
 }

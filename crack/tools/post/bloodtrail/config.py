@@ -243,11 +243,15 @@ class Neo4jConfig:
     """Neo4j connection configuration"""
     uri: str = NEO4J_URI
     user: str = NEO4J_USER
-    password: str = NEO4J_PASSWORD  # From environment
+    password: str = None  # Read from environment at runtime
     batch_size: int = DEFAULT_BATCH_SIZE
 
     def __post_init__(self):
-        """Validate configuration"""
+        """Validate configuration - read password from env at runtime if not provided"""
+        # Read from environment at runtime (not import time) if password not provided
+        if self.password is None:
+            self.password = os.environ.get("NEO4J_PASSWORD", "")
+
         if not self.password:
             import warnings
             warnings.warn(

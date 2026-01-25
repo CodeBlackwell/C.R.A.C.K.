@@ -25,12 +25,28 @@ class ParsedSummary:
     credentials: List[Credential] = field(default_factory=list)
     tickets: List[KerberosTicket] = field(default_factory=list)
 
-    # Inferred metadata
-    source_hostname: str = ""
+    # Inferred metadata (auto-detected from parsed data)
+    source_hostname: str = ""  # Detected hostname from file content
     source_domain: str = ""
+
+    # User-specified context
+    specified_hostname: str = ""  # User-provided --host value
 
     # Statistics
     lines_parsed: int = 0
+
+    @property
+    def effective_hostname(self) -> str:
+        """Get the hostname to use (user-specified takes precedence)"""
+        return self.specified_hostname or self.source_hostname or "Unknown Host"
+
+    @property
+    def display_hostname(self) -> str:
+        """Get display string showing both specified and detected hosts"""
+        if self.specified_hostname and self.source_hostname:
+            if self.specified_hostname.upper() != self.source_hostname.upper():
+                return f"{self.specified_hostname} (detected: {self.source_hostname})"
+        return self.effective_hostname
 
     @property
     def cleartext_creds(self) -> List[Credential]:
@@ -49,6 +65,66 @@ class ParsedSummary:
         """Filter to SHA1 hashes only"""
         return [c for c in self.credentials
                 if c.cred_type == CredentialType.SHA1]
+
+    @property
+    def gpp_creds(self) -> List[Credential]:
+        """Filter to GPP passwords (decrypted and raw)"""
+        return [c for c in self.credentials
+                if c.cred_type in (CredentialType.GPP_PASSWORD, CredentialType.GPP_CPASSWORD)]
+
+    @property
+    def kerberoast_hashes(self) -> List[Credential]:
+        """Filter to Kerberoast TGS and AS-REP hashes"""
+        return [c for c in self.credentials
+                if c.cred_type in (CredentialType.KRB5TGS, CredentialType.KRB5ASREP)]
+
+    @property
+    def ntds_hashes(self) -> List[Credential]:
+        """Filter to NTDS/SAM hashes"""
+        return [c for c in self.credentials
+                if c.cred_type in (CredentialType.NTDS_HASH, CredentialType.SAM_HASH)]
+
+    @property
+    def netntlm_hashes(self) -> List[Credential]:
+        """Filter to NetNTLM hashes (Responder captures)"""
+        return [c for c in self.credentials
+                if c.cred_type in (CredentialType.NET_NTLMV1, CredentialType.NET_NTLMV2)]
+
+    @property
+    def linux_hashes(self) -> List[Credential]:
+        """Filter to Linux shadow hashes"""
+        return [c for c in self.credentials
+                if c.cred_type == CredentialType.LINUX_HASH]
+
+    @property
+    def cracked_passwords(self) -> List[Credential]:
+        """Filter to cracked passwords from potfiles"""
+        return [c for c in self.credentials
+                if c.cred_type == CredentialType.CRACKED_PASSWORD]
+
+    @property
+    def connection_strings(self) -> List[Credential]:
+        """Filter to database connection string credentials"""
+        return [c for c in self.credentials
+                if c.cred_type == CredentialType.CONNECTION_STRING]
+
+    @property
+    def ssh_keys(self) -> List[Credential]:
+        """Filter to SSH private keys"""
+        return [c for c in self.credentials
+                if c.cred_type == CredentialType.SSH_KEY]
+
+    @property
+    def htpasswd_hashes(self) -> List[Credential]:
+        """Filter to htpasswd hashes"""
+        return [c for c in self.credentials
+                if c.cred_type == CredentialType.HTPASSWD_HASH]
+
+    @property
+    def aws_keys(self) -> List[Credential]:
+        """Filter to AWS access keys"""
+        return [c for c in self.credentials
+                if c.cred_type == CredentialType.AWS_ACCESS_KEY]
 
     @property
     def machine_creds(self) -> List[Credential]:
@@ -107,6 +183,8 @@ class ParsedSummary:
             'cleartext': len(self.cleartext_creds),
             'ntlm': len(self.ntlm_hashes),
             'sha1': len(self.sha1_hashes),
+            'gpp': len(self.gpp_creds),
+            'kerberoast': len(self.kerberoast_hashes),
             'high_value': len(self.high_value_creds),
             'tgt_tickets': len(self.tgt_tickets),
             'tgs_tickets': len(self.tgs_tickets),
@@ -157,6 +235,7 @@ class ParsedSummary:
             tickets=unique_tickets,
             source_hostname=self.source_hostname,
             source_domain=self.source_domain,
+            specified_hostname=self.specified_hostname,
             lines_parsed=self.lines_parsed,
         )
 

@@ -32,7 +32,7 @@
     "SMB port 445 accessible",
     "Impacket installed on Kali"
   ],
-  "notes": "PSExec is the most reliable lateral movement technique for certification - provides SYSTEM-level access immediately. Works by uploading binary to ADMIN$ share, creating Windows service, executing payload. ADVANTAGES: Spawns SYSTEM shell, most stable, widely documented. DISADVANTAGES: Writes binary to disk (forensics), creates service (event logs), easier to detect than WMI. certification RELEVANCE: Very high - first technique to try when credentials available.",
+  "notes": "PSExec is the most reliable lateral movement technique for pentest - provides SYSTEM-level access immediately. Works by uploading binary to ADMIN$ share, creating Windows service, executing payload. ADVANTAGES: Spawns SYSTEM shell, most stable, widely documented. DISADVANTAGES: Writes binary to disk (forensics), creates service (event logs), easier to detect than WMI. PRACTICAL RELEVANCE: Very high - first technique to try when credentials available.",
   "steps": [
     {
       "id": "verify-smb-access",

@@ -69,6 +69,11 @@ def main() -> int:
     parser = create_parser()
     args = parser.parse_args()
 
+    # Initialize debug logging if --debug flag is passed
+    if getattr(args, 'debug', None) is not None:
+        from crack.core.debug import init_debug
+        init_debug(args.debug)
+
     # Handle --quiet flag: override verbose to 0
     if getattr(args, 'quiet', False):
         args.verbose = 0

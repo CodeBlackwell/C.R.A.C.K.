@@ -1,0 +1,9 @@
+Administrator
+Guest
+krbtgt
+CICADA-DC$
+john.smoulder
+sarah.dantelia
+michael.wrightson
+david.orelious
+emily.oscars

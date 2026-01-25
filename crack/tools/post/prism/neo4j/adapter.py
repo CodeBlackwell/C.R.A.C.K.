@@ -897,7 +897,9 @@ class PrismNeo4jAdapter:
                u.admin_count AS admin_count,
                u.trusted_for_delegation AS trusted_for_delegation,
                u.high_value AS high_value,
-               u.spns AS spns
+               u.spns AS spns,
+               u.first_seen AS first_seen,
+               u.last_seen AS last_seen
         ORDER BY u.high_value DESC, u.name
         """
         with self.driver.session(database=self.database) as session:
@@ -915,7 +917,9 @@ class PrismNeo4jAdapter:
                c.os_version AS os_version,
                c.ip AS ip,
                c.is_dc AS is_dc,
-               c.trusted_for_delegation AS trusted_for_delegation
+               c.trusted_for_delegation AS trusted_for_delegation,
+               c.first_seen AS first_seen,
+               c.last_seen AS last_seen
         ORDER BY c.is_dc DESC, c.name
         """
         with self.driver.session(database=self.database) as session:
@@ -932,7 +936,10 @@ class PrismNeo4jAdapter:
                c.value AS value,
                c.source_tool AS source_tool,
                c.high_value AS high_value,
-               c.is_machine AS is_machine
+               c.is_machine AS is_machine,
+               c.first_seen AS first_seen,
+               c.last_seen AS last_seen,
+               COALESCE(c.occurrences, 1) AS occurrences
         ORDER BY c.high_value DESC, c.username
         """
         with self.driver.session(database=self.database) as session:
@@ -1001,3 +1008,153 @@ class PrismNeo4jAdapter:
             result = session.run(query, domain=domain)
             record = result.single()
             return dict(record) if record else {}
+
+    # ============================================================
+    # PURGE OPERATIONS
+    # ============================================================
+
+    def purge_domain(self, domain: str) -> Dict[str, int]:
+        """Remove all data for a specific domain
+
+        Deletes: Domain, Users, Computers, Credentials, Groups, KerberosTickets
+
+        Args:
+            domain: Domain name (e.g., 'CORP.LOCAL')
+
+        Returns:
+            Dict with counts of deleted nodes by type
+        """
+        counts = {}
+
+        # Delete credentials linked to domain
+        query = """
+        MATCH (c:Credential)-[:BELONGS_TO]->(d:Domain)
+        WHERE d.name = $domain OR toUpper(d.dns_name) CONTAINS $domain
+        WITH c, count(c) AS cnt
+        DETACH DELETE c
+        RETURN cnt
+        """
+        with self.driver.session(database=self.database) as session:
+            result = session.run(query, domain=domain)
+            record = result.single()
+            counts['credentials'] = record['cnt'] if record else 0
+
+        # Delete users linked to domain
+        query = """
+        MATCH (u:User)-[:BELONGS_TO]->(d:Domain)
+        WHERE d.name = $domain OR toUpper(d.dns_name) CONTAINS $domain
+        WITH u, count(u) AS cnt
+        DETACH DELETE u
+        RETURN cnt
+        """
+        with self.driver.session(database=self.database) as session:
+            result = session.run(query, domain=domain)
+            record = result.single()
+            counts['users'] = record['cnt'] if record else 0
+
+        # Delete computers linked to domain
+        query = """
+        MATCH (c:Computer)-[:MEMBER_OF]->(d:Domain)
+        WHERE d.name = $domain OR toUpper(d.dns_name) CONTAINS $domain
+        WITH c, count(c) AS cnt
+        DETACH DELETE c
+        RETURN cnt
+        """
+        with self.driver.session(database=self.database) as session:
+            result = session.run(query, domain=domain)
+            record = result.single()
+            counts['computers'] = record['cnt'] if record else 0
+
+        # Delete groups for domain
+        query = """
+        MATCH (g:Group)
+        WHERE g.domain = $domain
+        WITH g, count(g) AS cnt
+        DETACH DELETE g
+        RETURN cnt
+        """
+        with self.driver.session(database=self.database) as session:
+            result = session.run(query, domain=domain)
+            record = result.single()
+            counts['groups'] = record['cnt'] if record else 0
+
+        # Delete Kerberos tickets for domain
+        query = """
+        MATCH (t:KerberosTicket)
+        WHERE toUpper(t.client_realm) CONTAINS $domain
+        WITH t, count(t) AS cnt
+        DETACH DELETE t
+        RETURN cnt
+        """
+        with self.driver.session(database=self.database) as session:
+            result = session.run(query, domain=domain)
+            record = result.single()
+            counts['tickets'] = record['cnt'] if record else 0
+
+        # Delete the domain node itself
+        query = """
+        MATCH (d:Domain)
+        WHERE d.name = $domain OR toUpper(d.dns_name) CONTAINS $domain
+        WITH d, count(d) AS cnt
+        DETACH DELETE d
+        RETURN cnt
+        """
+        with self.driver.session(database=self.database) as session:
+            result = session.run(query, domain=domain)
+            record = result.single()
+            counts['domains'] = record['cnt'] if record else 0
+
+        return counts
+
+    def purge_all(self) -> Dict[str, int]:
+        """Remove ALL PRISM data from Neo4j
+
+        WARNING: This deletes all credential-related nodes stored by PRISM.
+        Does NOT touch BloodHound data (different node types).
+
+        Returns:
+            Dict with counts of deleted nodes by type
+        """
+        counts = {}
+
+        # Node types managed by PRISM
+        prism_labels = ['Credential', 'KerberosTicket', 'Domain', 'User', 'Computer', 'Group']
+
+        for label in prism_labels:
+            query = f"""
+            MATCH (n:{label})
+            WITH n, count(n) AS cnt
+            DETACH DELETE n
+            RETURN cnt
+            """
+            with self.driver.session(database=self.database) as session:
+                result = session.run(query)
+                record = result.single()
+                counts[label.lower() + 's'] = record['cnt'] if record else 0
+
+        return counts
+
+    def get_purge_preview(self, domain: str = None) -> Dict[str, int]:
+        """Preview what would be deleted without actually deleting
+
+        Args:
+            domain: If specified, preview for domain only. Otherwise preview all.
+
+        Returns:
+            Dict with counts of nodes that would be deleted
+        """
+        if domain:
+            return self._get_domain_stats(domain)
+        else:
+            # Count all PRISM nodes
+            counts = {}
+            prism_labels = ['Credential', 'KerberosTicket', 'Domain', 'User', 'Computer', 'Group']
+
+            for label in prism_labels:
+                query = f"MATCH (n:{label}) RETURN count(n) AS cnt"
+                with self.driver.session(database=self.database) as session:
+                    result = session.run(query)
+                    record = result.single()
+                    counts[label.lower() + 's'] = record['cnt'] if record else 0
+
+            return counts

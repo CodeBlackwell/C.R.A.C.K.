@@ -52,7 +52,7 @@
         "pstree-hierarchy"
       ],
       "prerequisites": [],
-      "notes": "certification Tip:\nLook for (1) processes running as root from writable directories (/tmp, /var/tmp), (2) custom services that might have misconfigurations, (3) database processes (mysql, postgresql) for credential hunting.\n\nCommon manual alternative:\ncat /proc/*/cmdline (view process command lines directly from /proc filesystem).\n\nTime estimate:\n5 seconds.",
+      "notes": "Practical Tip:\nLook for (1) processes running as root from writable directories (/tmp, /var/tmp), (2) custom services that might have misconfigurations, (3) database processes (mysql, postgresql) for credential hunting.\n\nCommon manual alternative:\ncat /proc/*/cmdline (view process command lines directly from /proc filesystem).\n\nTime estimate:\n5 seconds.",
       "methodology_guidance": {
         "after_success": "Look for processes running as root with writable binaries Check for unusual processes or services Identify processes listening on network ports: ps-process-to-port Search for specific processes: pgrep-pattern-search"
       }
@@ -93,7 +93,7 @@
       "alternatives": [
         "ps-ef-full"
       ],
-      "notes": "CRITICAL for certification:\nPasswords often passed as command-line arguments (mysql -u root -pPASSWORD, ssh user@host -i /path/key).\n\nThe 'ww' flag prevents truncation that would hide these.\n\nManual alternative:\nfor pid in /proc/[0-9]*; do cat $pid/cmdline 2>/dev/null | tr '\\0' ' '; echo; done.\n\nTime estimate:\n5 seconds.",
+      "notes": "CRITICAL for practical:\nPasswords often passed as command-line arguments (mysql -u root -pPASSWORD, ssh user@host -i /path/key).\n\nThe 'ww' flag prevents truncation that would hide these.\n\nManual alternative:\nfor pid in /proc/[0-9]*; do cat $pid/cmdline 2>/dev/null | tr '\\0' ' '; echo; done.\n\nTime estimate:\n5 seconds.",
       "methodology_guidance": {
         "after_success": "Search output for passwords in command arguments Look for database connection strings with credentials Check for API keys, tokens in process arguments Document sensitive information in enumeration.md"
       }
@@ -255,7 +255,7 @@
         "ps-pid-details"
       ],
       "alternatives": [],
-      "notes": "Much faster than 'ps aux | grep' and doesn't show the grep process itself.\n\nUse -i for case-insensitive:\npgrep -afi <PATTERN>.\n\nTime estimate:\n1 second.\n\ncertification tip:\nSearch for common services:\npgrep -af 'mysql|postgresql|apache|nginx|ssh|vsftpd' to identify attack vectors.",
+      "notes": "Much faster than 'ps aux | grep' and doesn't show the grep process itself.\n\nUse -i for case-insensitive:\npgrep -afi <PATTERN>.\n\nTime estimate:\n1 second.\n\npractical tip:\nSearch for common services:\npgrep -af 'mysql|postgresql|apache|nginx|ssh|vsftpd' to identify attack vectors.",
       "methodology_guidance": {
         "after_success": "Get detailed info on found PID: ps-pid-details Check process port bindings: lsof-process-ports Kill process if needed: kill <PID>"
       },
@@ -343,7 +343,7 @@
       "next_steps": [
         "pspy-monitor"
       ],
-      "notes": "certification tip:\nCheck www-data processes for web vulnerabilities, mysql processes for database attack vectors, root processes for privilege escalation opportunities.\n\nTime estimate:\n2 seconds.",
+      "notes": "practical tip:\nCheck www-data processes for web vulnerabilities, mysql processes for database attack vectors, root processes for privilege escalation opportunities.\n\nTime estimate:\n2 seconds.",
       "methodology_guidance": {
         "after_success": "Check root processes: ps -u root Look for writable binaries: find / -user <USERNAME> -perm -w -type f 2>/dev/null Check user's cronjobs: crontab -u <USERNAME> -l"
       },
@@ -428,7 +428,7 @@
         "win-wmic-process-full",
         "win-ps-get-process"
       ],
-      "notes": "Window titles often reveal sensitive information (open files, database connections).\n\ncertification tip:\nLook for (1) processes running from unusual locations (\\Temp, \\Users\\Public), (2) processes with high privileges (SYSTEM), (3) non-standard services.\n\nTime estimate:\n5 seconds.",
+      "notes": "Window titles often reveal sensitive information (open files, database connections).\n\npractical tip:\nLook for (1) processes running from unusual locations (\\Temp, \\Users\\Public), (2) processes with high privileges (SYSTEM), (3) non-standard services.\n\nTime estimate:\n5 seconds.",
       "methodology_guidance": {
         "after_success": "Look for unusual processes running as SYSTEM Check for processes with interesting window titles (passwords, admin tools) Map processes to services: win-tasklist-services Get detailed process info: win-wmic-process-full"
       }
@@ -466,7 +466,7 @@
         "win-wmic-service-full",
         "win-ps-get-service"
       ],
-      "notes": "Critical for Windows privilege escalation.\n\nsvchost.exe hosts multiple services - this command reveals which ones.\n\nTime estimate:\n5 seconds.\n\ncertification tip:\nCombine with service configuration checks to find writable service binaries or unquoted service paths.",
+      "notes": "Critical for Windows privilege escalation.\n\nsvchost.exe hosts multiple services - this command reveals which ones.\n\nTime estimate:\n5 seconds.\n\npractical tip:\nCombine with service configuration checks to find writable service binaries or unquoted service paths.",
       "methodology_guidance": {
         "after_success": "Identify vulnerable services running in svchost.exe Check service permissions: win-sc-query-config Look for services with unquoted paths: win-wmic-service-path Enumerate service DLLs for hijacking opportunities"
       }
@@ -510,7 +510,7 @@
         "win-ps-get-process-detailed",
         "win-tasklist-verbose"
       ],
-      "notes": "WMIC deprecated in Windows 11+ but still present in certification target systems.\n\nOutput is verbose (30+ properties per process).\n\nFor specific fields:\nwmic process get ProcessId,Name,ExecutablePath,CommandLine.\n\nTime estimate:\n10 seconds.\n\ncertification tip:\nCommandLine often contains credentials passed as arguments.",
+      "notes": "WMIC deprecated in Windows 11+ but still present in target systems.\n\nOutput is verbose (30+ properties per process).\n\nFor specific fields:\nwmic process get ProcessId,Name,ExecutablePath,CommandLine.\n\nTime estimate:\n10 seconds.\n\npractical tip:\nCommandLine often contains credentials passed as arguments.",
       "methodology_guidance": {
         "after_success": "Search output for passwords in CommandLine field Check ExecutablePath for writable locations: icacls <PATH> Identify processes with weak permissions: AccessChk",
         "on_failure": "Use PowerShell alternative: win-ps-get-process-detailed"
@@ -555,7 +555,7 @@
         "win-tasklist-verbose",
         "win-wmic-process-full"
       ],
-      "notes": "PowerShell is the modern Windows process management tool.\n\nCompany field helps identify third-party software (potential attack vectors).\n\nFor all properties:\nGet-Process | Select-Object *.\n\nTime estimate:\n5 seconds.\n\ncertification tip:\nNon-Microsoft processes often have weak permissions or outdated versions with known exploits.",
+      "notes": "PowerShell is the modern Windows process management tool.\n\nCompany field helps identify third-party software (potential attack vectors).\n\nFor all properties:\nGet-Process | Select-Object *.\n\nTime estimate:\n5 seconds.\n\npractical tip:\nNon-Microsoft processes often have weak permissions or outdated versions with known exploits.",
       "methodology_guidance": {
         "after_success": "Filter non-Microsoft processes: Get-Process | Where-Object {$_.Company -ne 'Microsoft Corporation'} Sort by memory: Get-Process | Sort-Object WS -Descending | Select-Object -First 10 Get process with network connections: win-ps-netstat-process Check process file permissions: icacls <PATH>"
       }
@@ -599,7 +599,7 @@
       "alternatives": [
         "win-wmic-process-full"
       ],
-      "notes": "CRITICAL for credential discovery.\n\nCommandLine field shows full arguments including passwords, API keys, database strings.\n\nTime estimate:\n10 seconds.\n\ncertification tip:\nCommon patterns to grep:\n'-p ', 'password=', 'token=', 'key=', 'api_key='.\n\nModern alternative:\nGet-CimInstance win32_process (replaces Get-WmiObject in PowerShell 3.0+).",
+      "notes": "CRITICAL for credential discovery.\n\nCommandLine field shows full arguments including passwords, API keys, database strings.\n\nTime estimate:\n10 seconds.\n\npractical tip:\nCommon patterns to grep:\n'-p ', 'password=', 'token=', 'key=', 'api_key='.\n\nModern alternative:\nGet-CimInstance win32_process (replaces Get-WmiObject in PowerShell 3.0+).",
       "methodology_guidance": {
         "after_success": "Search CommandLine for passwords: | Where-Object {$_.CommandLine -like '*password*'} Check for database connection strings Look for API keys and tokens in arguments Document findings in enumeration.md"
       }

@@ -90,10 +90,9 @@ class MimikatzParser(PrismParser):
             tickets = ticket_parser.parse(lines)
             summary.tickets.extend(tickets)
 
-        # Infer hostname from output
-        if not hostname:
-            hostname = self._infer_hostname(summary)
-        summary.source_hostname = hostname or ""
+        # Set both detected and user-specified hostnames
+        detected_hostname = self._infer_hostname(summary)
+        self.set_hostname(summary, detected_hostname, hostname)
 
         # Infer domain
         summary.source_domain = self._infer_domain(summary)

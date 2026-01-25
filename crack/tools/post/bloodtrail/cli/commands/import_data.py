@@ -8,6 +8,7 @@ Handles BloodHound data import and related commands:
 - --list-edges: List supported edge types
 """
 
+import os
 from argparse import Namespace
 from pathlib import Path
 
@@ -89,7 +90,7 @@ class ImportDataCommands(BaseCommandGroup):
     @classmethod
     def _handle_resume(cls, args: Namespace) -> int:
         """Handle --resume command - work with existing Neo4j data."""
-        config = Neo4jConfig(uri=args.uri, user=args.user, password=args.password)
+        config = Neo4jConfig(uri=args.uri, user=args.user, password=getattr(args, "neo4j_password", None) or os.environ.get("NEO4J_PASSWORD", ""))
 
         # Connect and verify data exists
         runner = QueryRunner(config)
@@ -192,7 +193,7 @@ class ImportDataCommands(BaseCommandGroup):
         config = Neo4jConfig(
             uri=args.uri,
             user=args.user,
-            password=args.password,
+            password=getattr(args, "neo4j_password", None) or os.environ.get("NEO4J_PASSWORD", ""),
             batch_size=getattr(args, 'batch_size', 1000),
         )
 

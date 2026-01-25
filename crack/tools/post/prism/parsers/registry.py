@@ -62,7 +62,7 @@ class PrismParserRegistry:
             except Exception as e:
                 logger.debug(f"Parser {parser.name} failed can_parse check: {e}")
 
-        logger.warning(f"No PRISM parser found for {filepath}")
+        logger.debug(f"No PRISM parser found for {filepath}")
         return None
 
     @classmethod
@@ -113,6 +113,17 @@ class PrismParserRegistry:
             from . import secretsdump  # noqa: F401
             from . import smbmap  # noqa: F401
             from . import ldap  # noqa: F401
+            from . import lazagne  # noqa: F401
+            from . import hashcat  # noqa: F401
+            from . import shadow  # noqa: F401
+            from . import crackmapexec  # noqa: F401
+            from . import responder  # noqa: F401
+            from . import kerbrute  # noqa: F401
+            from . import connstring  # noqa: F401
+            from . import script  # noqa: F401
+            from . import sshkey  # noqa: F401
+            from . import htpasswd  # noqa: F401
+            from . import aws  # noqa: F401
         except ImportError as e:
             logger.warning(f"Some PRISM parsers failed to import: {e}")
 

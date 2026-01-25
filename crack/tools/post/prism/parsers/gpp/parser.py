@@ -190,7 +190,7 @@ class GPPParser(PrismParser):
         if not summary.source_domain:
             summary.source_domain = self._infer_domain_from_path(filepath)
 
-        summary.source_hostname = hostname or ""
+        self.set_hostname(summary, None, hostname)
 
         return summary.deduplicate()
 

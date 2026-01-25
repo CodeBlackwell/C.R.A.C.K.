@@ -1,0 +1,39 @@
+gobuster dir -u http://10.10.10.175 -w /usr/share/wordlists/dirbuster/directory-list-2.3-medium.txt -x aspx,html -t 50
+===============================================================
+Gobuster v3.8
+by OJ Reeves (@TheColonial) & Christian Mehlmauer (@firefart)
+===============================================================
+[+] Url:                     http://10.10.10.175
+[+] Method:                  GET
+[+] Threads:                 50
+[+] Wordlist:                /usr/share/wordlists/dirbuster/directory-list-2.3-medium.txt
+[+] Negative Status codes:   404
+[+] User Agent:              gobuster/3.8
+[+] Extensions:              aspx,html
+[+] Timeout:                 10s
+===============================================================
+Starting gobuster in directory enumeration mode
+===============================================================
+/images               (Status: 301) [Size: 150] [--> http://10.10.10.175/images/]
+/contact.html         (Status: 200) [Size: 15634]
+/index.html           (Status: 200) [Size: 32797]
+/about.html           (Status: 200) [Size: 30954]
+/blog.html            (Status: 200) [Size: 24695]
+/Images               (Status: 301) [Size: 150] [--> http://10.10.10.175/Images/]
+/css                  (Status: 301) [Size: 147] [--> http://10.10.10.175/css/]
+/Contact.html         (Status: 200) [Size: 15634]
+/About.html           (Status: 200) [Size: 30954]
+/Index.html           (Status: 200) [Size: 32797]
+/Blog.html            (Status: 200) [Size: 24695]
+/fonts                (Status: 301) [Size: 149] [--> http://10.10.10.175/fonts/]
+/IMAGES               (Status: 301) [Size: 150] [--> http://10.10.10.175/IMAGES/]
+/INDEX.html           (Status: 200) [Size: 32797]
+/Fonts                (Status: 301) [Size: 149] [--> http://10.10.10.175/Fonts/]
+/single.html          (Status: 200) [Size: 38059]
+/CSS                  (Status: 301) [Size: 147] [--> http://10.10.10.175/CSS/]
+/CONTACT.html         (Status: 200) [Size: 15634]
+/ABOUT.html           (Status: 200) [Size: 30954]
+Progress: 661674 / 661674 (100.00%)
+===============================================================
+Finished
+============================================================

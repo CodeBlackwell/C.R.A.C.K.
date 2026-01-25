@@ -31,7 +31,7 @@
           "required": true
         }
       ],
-      "notes": "Syntax:\nAdd to C# Main() before payload execution Simple but effective against basic sandboxes.\n\n10 seconds standard.\n\nCombine with other checks for best results.\n\nSee also:\ncsharp-sleep-timer in shellcode-runners.\n\nTime estimate:\n1 minute (integration) References:\ndocs/av-evasion/heuristic-evasion.md#sleep-timer, shellcode-runners.json#csharp-sleep-timer, PEN-300 Chapter 6.6.1 Manual alternative:\nUse GetTickCount() before/after sleep, or QueryPerformanceCounter for high-resolution timing",
+      "notes": "Syntax:\nAdd to C# Main() before payload execution Simple but effective against basic sandboxes.\n\n10 seconds standard.\n\nCombine with other checks for best results.\n\nSee also:\ncsharp-sleep-timer in shellcode-runners.\n\nTime estimate:\n1 minute (integration) References:\ndocs/av-evasion/heuristic-evasion.md#sleep-timer, shellcode-runners.json#csharp-sleep-timer Manual alternative:\nUse GetTickCount() before/after sleep, or QueryPerformanceCounter for high-resolution timing",
       "success_indicators": [
         "In sandbox: Exits immediately. On real system: Waits full duration then continues."
       ],
@@ -58,7 +58,7 @@
       ],
       "command": "using System;\nusing System.Runtime.InteropServices;\n\n[DllImport(\"kernel32.dll\", SetLastError = true, ExactSpelling = true)]\nstatic extern IntPtr VirtualAllocExNuma(IntPtr hProcess, IntPtr lpAddress, uint dwSize, UInt32 flAllocationType, UInt32 flProtect, UInt32 nndPreferred);\n\n[DllImport(\"kernel32.dll\")]\nstatic extern IntPtr GetCurrentProcess();\n\nIntPtr mem = VirtualAllocExNuma(GetCurrentProcess(), IntPtr.Zero, 0x1000, 0x3000, 0x4, 0);\nif(mem == IntPtr.Zero) {\n    return; // Sandbox detected\n}",
       "variables": [],
-      "notes": "Syntax:\nAdd to C# Main() before payload execution More sophisticated than sleep timer.\n\nBypasses time-aware sandboxes.\n\nQuick to implement.\n\nSee also:\ncsharp-non-emulated-api in shellcode-runners.\n\nTime estimate:\n2 minutes (integration) References:\ndocs/av-evasion/heuristic-evasion.md#non-emulated-apis, shellcode-runners.json#csharp-non-emulated-api, PEN-300 Chapter 6.6.2 Manual alternative:\nUse FlsAlloc, GetTickCount64, or other non-emulated APIs.\n\nCheck for debugger with IsDebuggerPresent.",
+      "notes": "Syntax:\nAdd to C# Main() before payload execution More sophisticated than sleep timer.\n\nBypasses time-aware sandboxes.\n\nQuick to implement.\n\nSee also:\ncsharp-non-emulated-api in shellcode-runners.\n\nTime estimate:\n2 minutes (integration) References:\ndocs/av-evasion/heuristic-evasion.md#non-emulated-apis, shellcode-runners.json#csharp-non-emulated-api Manual alternative:\nUse FlsAlloc, GetTickCount64, or other non-emulated APIs.\n\nCheck for debugger with IsDebuggerPresent.",
       "success_indicators": [
         "In sandbox: Returns IntPtr.Zero, exits. On real system: Returns valid memory address, continues."
       ],

@@ -32,7 +32,7 @@
     "PostgreSQL port 5432 accessible (or tunneled)",
     "Database user has superuser privileges (verify during enumeration)"
   ],
-  "notes": "This chain demonstrates critical certification skills: (1) Adapting when standard shell methods fail, (2) Leveraging service-specific capabilities, (3) Understanding database privilege models. Particularly useful when: network egress/ingress filtered, web shell write permissions denied, or COPY FROM PROGRAM hangs. Key insight: Database superuser \u2260 OS root, but provides powerful file system access within postgres user permissions. Real-world scenario from certification Capstone 3: strict firewall blocked ALL reverse/bind shells but PostgreSQL port 5432 was selectively allowed.",
+  "notes": "This chain demonstrates critical practical skills: (1) Adapting when standard shell methods fail, (2) Leveraging service-specific capabilities, (3) Understanding database privilege models. Particularly useful when: network egress/ingress filtered, web shell write permissions denied, or COPY FROM PROGRAM hangs. Key insight: Database superuser \u2260 OS root, but provides powerful file system access within postgres user permissions. Real-world scenario from lab scenario 3: strict firewall blocked ALL reverse/bind shells but PostgreSQL port 5432 was selectively allowed.",
   "steps": [
     {
       "id": "detect-sqli",

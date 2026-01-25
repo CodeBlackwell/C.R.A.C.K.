@@ -22,7 +22,7 @@
         }
       ],
       "tags": [
-        "oscp",
+        "PENTEST",
         "web",
         "fuzzing",
         "directory"
@@ -71,7 +71,7 @@
         }
       ],
       "tags": [
-        "oscp",
+        "PENTEST",
         "web",
         "vhost",
         "fuzzing"
@@ -114,7 +114,7 @@
         }
       ],
       "tags": [
-        "oscp",
+        "PENTEST",
         "web",
         "parameters",
         "fuzzing"
@@ -145,7 +145,7 @@
         }
       ],
       "tags": [
-        "oscp",
+        "PENTEST",
         "web",
         "http"
       ],
@@ -176,7 +176,7 @@
         }
       ],
       "tags": [
-        "oscp",
+        "PENTEST",
         "web",
         "http",
         "headers"
@@ -212,7 +212,7 @@
         }
       ],
       "tags": [
-        "oscp",
+        "PENTEST",
         "gobuster",
         "web",
         "directory-enumeration"
@@ -256,7 +256,7 @@
         }
       ],
       "tags": [
-        "oscp",
+        "PENTEST",
         "wfuzz",
         "web",
         "fuzzing"
@@ -299,7 +299,7 @@
         }
       ],
       "tags": [
-        "oscp",
+        "PENTEST",
         "wfuzz",
         "web",
         "parameters"
@@ -326,7 +326,7 @@
         }
       ],
       "tags": [
-        "oscp",
+        "PENTEST",
         "nikto",
         "web",
         "vulnerability-scan"
@@ -359,7 +359,7 @@
         }
       ],
       "tags": [
-        "oscp",
+        "PENTEST",
         "wpscan",
         "wordpress",
         "cms"
@@ -391,7 +391,7 @@
         }
       ],
       "tags": [
-        "oscp",
+        "PENTEST",
         "joomscan",
         "joomla",
         "cms"
@@ -428,7 +428,7 @@
         }
       ],
       "tags": [
-        "oscp",
+        "PENTEST",
         "droopescan",
         "cms",
         "drupal"
@@ -460,7 +460,7 @@
         }
       ],
       "tags": [
-        "oscp",
+        "PENTEST",
         "wget",
         "web",
         "download"
@@ -499,7 +499,7 @@
         }
       ],
       "tags": [
-        "oscp",
+        "PENTEST",
         "sqlmap",
         "sql-injection",
         "web"

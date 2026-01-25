@@ -48,7 +48,7 @@ class PolicyCommands(BaseCommandGroup):
         """Handle --set-policy command - import password policy."""
         from ...policy_parser import parse_net_accounts, format_policy_display
 
-        config = Neo4jConfig(uri=args.uri, user=args.user, password=args.password)
+        config = Neo4jConfig(uri=args.uri, user=args.user, password=getattr(args, "neo4j_password", None) or os.environ.get("NEO4J_PASSWORD", ""))
         tracker = PwnedTracker(config)
 
         if not tracker.connect():
@@ -117,7 +117,7 @@ class PolicyCommands(BaseCommandGroup):
         """Handle --show-policy command - display stored password policy."""
         from ...policy_parser import format_policy_display
 
-        config = Neo4jConfig(uri=args.uri, user=args.user, password=args.password)
+        config = Neo4jConfig(uri=args.uri, user=args.user, password=getattr(args, "neo4j_password", None) or os.environ.get("NEO4J_PASSWORD", ""))
         tracker = PwnedTracker(config)
 
         if not tracker.connect():
@@ -144,7 +144,7 @@ class PolicyCommands(BaseCommandGroup):
     @classmethod
     def _handle_clear_policy(cls, args: Namespace) -> int:
         """Handle --clear-policy command - clear stored password policy."""
-        config = Neo4jConfig(uri=args.uri, user=args.user, password=args.password)
+        config = Neo4jConfig(uri=args.uri, user=args.user, password=getattr(args, "neo4j_password", None) or os.environ.get("NEO4J_PASSWORD", ""))
         tracker = PwnedTracker(config)
 
         if not tracker.connect():

@@ -20,10 +20,10 @@
 
 ## Quick Reference
 
-| Command | Description | OSCP Relevance |
+| Command | Description | Priority |
 |---------|-------------|----------------|
 {% for command in commands %}
-| `{{ command.id }}` | {{ command.description[:50] }}{% if command.description|length > 50 %}...{% endif %} | {{ command.oscp_relevance | default('medium') | upper }} |
+| `{{ command.id }}` | {{ command.description[:50] }}{% if command.description|length > 50 %}...{% endif %} | {{ command.priority | default('medium') | upper }} |
 {% endfor %}
 
 ## See Also

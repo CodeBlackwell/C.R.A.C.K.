@@ -1,11 +1,11 @@
 # DB CLAUDE.md - Command Enrichment System
 
 ## ROLE
-Command JSON enrichment agent for OSCP reference database. Validate schema, enrich educational fields, fix violations.
+Command JSON enrichment agent for professional reference database. Validate schema, enrich educational fields, fix violations.
 
 ## PATHS
 ```
-BASE=/home/kali/Desktop/OSCP/crack
+BASE=/home/kali/Desktop/pentest/crack
 COMMANDS=$BASE/db/data/commands/
 CHEATSHEETS=$BASE/db/data/cheatsheets/
 CHAINS=$BASE/db/data/chains/
@@ -22,7 +22,7 @@ WRITEUP (real-world application narrative - TOP LEVEL)
   - Complete machine walkthrough with phases
   - Documents commands used, failed attempts, learning points
   - References commands, chains, techniques, CVEs
-  - Time tracking for OSCP exam planning
+  - Time tracking for assessment planning
 
 CHAIN (ordered sequence)
   - Numbered steps referencing commands by ID
@@ -44,20 +44,20 @@ COMMAND (atomic unit)
 COMMANDS:       {category, subcategory, description, commands: [...]}
 CHEATSHEETS:    {cheatsheets: [{id, name, educational_header, scenarios, sections}]}
 CHAINS:         {id, name, description, category, steps: [...]}
-WRITEUPS:       {id, name, source, metadata, oscp_relevance, attack_phases: [...]}
+WRITEUPS:       {id, name, source, metadata, priority, attack_phases: [...]}
 ```
 
 ### Neo4j Nodes
 ```
-Writeup:     id, name, platform, difficulty, os, oscp_relevance, total_duration_minutes
-Command:     id, name, command, category, description, notes, oscp_relevance
+Writeup:     id, name, platform, difficulty, os, priority, total_duration_minutes
+Command:     id, name, command, category, description, notes, priority
 Cheatsheet:  id, name, description, educational_header, scenarios, sections
 Chain:       id, name, description, steps
 CVE:         cve_id, name, severity, component, description
-Technique:   name, category, difficulty, oscp_applicable, steps
+Technique:   name, category, difficulty, assessment_applicable, steps
 Platform:    name (HackTheBox, ProvingGrounds, etc.), type, url
-Skill:       name, category, oscp_importance
-Tag:         name (OSCP:HIGH, ACTIVE_DIRECTORY, etc.)
+Skill:       name, category, importance
+Tag:         name (PRIORITY:HIGH, ACTIVE_DIRECTORY, etc.)
 Variable:    name (<PLACEHOLDER>), description, example, required
 Flag:        flag (-v, --output), explanation
 Indicator:   type (success|failure), pattern
@@ -76,7 +76,7 @@ WRITEUP RELATIONSHIPS:
 (Writeup)-[:FAILED_ATTEMPT {reason, lesson_learned, time_wasted}]->(Command)
 (Writeup)-[:APPLIES_CHAIN {effectiveness, modifications}]->(Chain)
 (Writeup)-[:EXPLOITS_CVE {phase, severity}]->(CVE)
-(Writeup)-[:TEACHES_TECHNIQUE {phase, oscp_applicable}]->(Technique)
+(Writeup)-[:TEACHES_TECHNIQUE {phase, assessment_applicable}]->(Technique)
 (Writeup)-[:FROM_PLATFORM {machine_type, release_date}]->(Platform)
 (Writeup)-[:REQUIRES_SKILL {importance}]->(Skill)
 (Writeup)-[:TEACHES_SKILL {proficiency_level}]->(Skill)
@@ -92,7 +92,7 @@ name:            string, human_readable
 category:        enum[enumeration|web|exploitation|post-exploit|pivoting|utilities|av-evasion|active-directory]
 command:         string, contains_<PLACEHOLDERS>
 description:     string, 1-2 sentences
-tags:            array[string], must_include OSCP:HIGH|MEDIUM|LOW
+tags:            array[string], must_include PRIORITY:HIGH|MEDIUM|LOW
 ```
 
 ### Educational Fields (Optional)
@@ -103,8 +103,8 @@ flag_explanations:    object {flag: explanation_with_WHY}
 success_indicators:   array[string], specific_output_patterns
 failure_indicators:   array[string], error_messages
 troubleshooting:      object {issue: diagnostic_steps}
-notes:                string, OSCP_methodology, manual_alternatives, time_estimates
-oscp_relevance:       enum[high|medium|low]
+notes:                string, Professional_methodology, manual_alternatives, time_estimates
+priority:       enum[high|medium|low]
 prerequisites:        array[command_ids]
 alternatives:         array[command_ids]
 next_steps:           array[command_ids]
@@ -157,7 +157,7 @@ Section commands must be objects with filled examples (not plain strings):
 ✓ All <PLACEHOLDERS> must have variables[] entry
 ✓ All variables[] must match <PLACEHOLDER> in command
 ✓ alternatives/prerequisites/next_steps = command IDs only (no text)
-✓ Exactly one OSCP priority tag (OSCP:HIGH|MEDIUM|LOW)
+✓ Exactly one priority tag (PRIORITY:HIGH|MEDIUM|LOW)
 ✓ Command IDs globally unique
 ✓ flag_explanations keys match actual flags
 ```
@@ -200,16 +200,16 @@ Variables:     <TARGET>, <LHOST>, <LPORT>, <WORDLIST>  (uppercase, <ANGLE_BRACKE
 
 Tags:          CATEGORY_TAGS: ACTIVE_DIRECTORY, WEB, LINUX, WINDOWS
                ACTION_TAGS: USER_ENUMERATION, PASSWORD_CRACKING, RCE
-               PRIORITY_TAGS: OSCP:HIGH|MEDIUM|LOW, QUICK_WIN
+               PRIORITY_TAGS: PRIORITY:HIGH|MEDIUM|LOW, QUICK_WIN
                TECH_TAGS: SMB, LDAP, KERBEROS, HTTP
 ```
 
 ### Educational Format
 ```
-flag_explanations:  "{what} - {why}. {alternatives}. {oscp_context}. {pitfalls}."
+flag_explanations:  "{what} - {why}. {alternatives}. {assessment_context}. {pitfalls}."
                     Min 100 chars, focus on WHY not just WHAT
 
-notes:              OSCP_methodology → Manual_alternative → Time_estimate → Exam_tips
+notes:              Professional_methodology → Manual_alternative → Time_estimate → Exam_tips
                     Min 200 words (grade A), 100 words (grade B)
 
 troubleshooting:    Common failures → Diagnostic steps → Fix
@@ -219,7 +219,7 @@ troubleshooting:    Common failures → Diagnostic steps → Fix
 
 ```
 Priority Order:
-1. flag_explanations (WHY each flag matters, OSCP context)
+1. flag_explanations (WHY each flag matters, assessment context)
 2. notes (methodology, manual alternatives, time estimates)
 3. troubleshooting (common failures, diagnostics)
 4. success_indicators, failure_indicators
@@ -228,7 +228,7 @@ Priority Order:
 Fixes:
 - Text in alternatives/prerequisites → Find matching command ID, replace
 - Missing variables for placeholders → Create variables[] entry
-- Insufficient flag_explanations → Add WHY context, OSCP relevance
+- Insufficient flag_explanations → Add WHY context, assessment relevance
 ```
 
 ## QUICK REFERENCE
@@ -237,7 +237,7 @@ Fixes:
 ```bash
 # COMMAND: Add to existing commands/{category}/{subcategory}.json
 # Structure: Add to "commands" array
-# Required: id, name, category, command, description, tags (with OSCP:*)
+# Required: id, name, category, command, description, tags (with PRIORITY:*)
 
 # CHEATSHEET: Create cheatsheets/{category?}/{name}.json
 # Structure: {cheatsheets: [{id, name, educational_header, scenarios, sections}]}
@@ -253,14 +253,14 @@ Fixes:
 ❌ Embed full command objects → ✓ Reference by ID only
 ❌ Text in alternatives/prerequisites → ✓ Use command IDs
 ❌ Cheatsheet in commands/ dir → ✓ Place in cheatsheets/ dir
-❌ Missing OSCP tag → ✓ Add OSCP:HIGH|MEDIUM|LOW
+❌ Missing priority tag → ✓ Add PRIORITY:HIGH|MEDIUM|LOW
 ❌ Placeholder without variable → ✓ Add to variables[] array
 ❌ Section command as string → ✓ Use object: {"id": "...", "example": "...", "shows": "..."}
 ```
 
 ### Migration Pipeline
 ```bash
-cd /home/kali/Desktop/OSCP/crack/db/neo4j-migration/scripts
+cd /home/kali/Desktop/pentest/crack/db/neo4j-migration/scripts
 python3 transform_to_neo4j.py    # JSON → CSV
 python3 import_to_neo4j.py       # CSV → Neo4j
 python3 verify_import.py         # Verify
@@ -299,7 +299,7 @@ RETURN cs.id, cmd_id
 ```
 Total commands: 795, Files: 47
 Categories: enumeration=198, web=245, exploitation=156, post-exploit=102
-OSCP distribution: high=68%, medium=24%, low=8%
+Priority distribution: high=68%, medium=24%, low=8%
 Field presence: flag_explanations=90%, notes=95%, troubleshooting=61%
 Quality average: B-
 Writeups: 1 (htb-usage)
@@ -308,7 +308,7 @@ Writeups: 1 (htb-usage)
 ## WRITEUPS
 
 ### Purpose
-Writeups sit at the **top of the data hierarchy** - they demonstrate real-world application of commands, chains, and techniques in complete machine compromises. Critical for OSCP learning because they:
+Writeups sit at the **top of the data hierarchy** - they demonstrate real-world application of commands, chains, and techniques in complete machine compromises. Critical for professional learning because they:
 - Show command usage in context (WHY not just WHAT)
 - Document failed attempts (more valuable than successes)
 - Track time for exam planning
@@ -337,10 +337,10 @@ id:                string, kebab-case (e.g., htb-usage, pg-monsoon)
 name:              string, machine name
 source:            object {platform, type, release_date, url}
 metadata:          object {difficulty, os, writeup_author, ip_address}
-oscp_relevance:    object {score: high|medium|low, reasoning, exam_applicable}
+priority:    object {score: high|medium|low, reasoning, exam_applicable}
 synopsis:          string, min 100 chars, attack summary
 skills:            object {required: [...], learned: [...]}
-tags:              array[string], must include OSCP:HIGH|MEDIUM|LOW
+tags:              array[string], must include PRIORITY:HIGH|MEDIUM|LOW
 attack_phases:     array[object], min 1 phase
   - phase:         enum[enumeration|foothold|lateral_movement|privilege_escalation|post_exploitation]
   - duration_minutes: integer
@@ -381,13 +381,13 @@ Each attack_phases entry:
       "attempt": "sqlmap with default settings",
       "reason": "Default level insufficient for blind SQLi",
       "solution": "Increase --level to 3",
-      "lesson_learned": "Trust manual verification over tool defaults. CRITICAL OSCP lesson.",
+      "lesson_learned": "Trust manual verification over tool defaults. CRITICAL lesson.",
       "time_wasted_minutes": 15,
       "importance": "critical"
     }
   ],
   "key_findings": ["Admin credentials: admin:whatever1"],
-  "oscp_notes": "Standard OSCP web exploitation workflow"
+  "assessment_notes": "Standard web exploitation workflow"
 }
 ```
 
@@ -419,7 +419,7 @@ python3 db/scripts/validate_writeups.py \
 ✓ All command_ids exist in commands database
 ✓ Phase names valid (enumeration, foothold, etc.)
 ✓ CVE format correct (CVE-YYYY-NNNNN)
-✓ OSCP relevance tag present
+✓ assessment relevance tag present
 ✓ Failed attempts have lesson_learned (min 30 chars)
 ✓ Time estimates present for each phase
 ```
@@ -451,7 +451,7 @@ writeups, errors = load_writeup_jsons('db/data/writeups')
 ```cypher
 # Find all commands used successfully in writeups
 MATCH (w:Writeup)-[d:DEMONSTRATES]->(c:Command)
-WHERE d.success = true AND w.oscp_relevance = 'high'
+WHERE d.success = true AND w.priority = 'high'
 RETURN c.name, count(w) as usage_count, collect(w.name) as machines
 ORDER BY usage_count DESC
 
@@ -463,13 +463,13 @@ ORDER BY fa.time_wasted_minutes DESC
 
 # Find similar writeups for practice
 MATCH (w:Writeup {id: 'htb-usage'})-[:TEACHES_TECHNIQUE]->(t:Technique)<-[:TEACHES_TECHNIQUE]-(similar:Writeup)
-WHERE w.oscp_relevance = 'high' AND similar.oscp_relevance = 'high'
+WHERE w.priority = 'high' AND similar.priority = 'high'
 RETURN similar.name, similar.platform, similar.difficulty,
        collect(t.name) as shared_techniques
 
 # Build learning progression (easy → medium machines)
 MATCH (easy:Writeup {difficulty: 'easy'})-[:TEACHES_SKILL]->(s:Skill)<-[:REQUIRES_SKILL]-(medium:Writeup {difficulty: 'medium'})
-WHERE easy.oscp_relevance = 'high' AND medium.oscp_relevance = 'high'
+WHERE easy.priority = 'high' AND medium.priority = 'high'
 RETURN easy.name as start_here, s.name as learn_this, medium.name as then_try
 
 # Find writeups exploiting specific CVE
@@ -480,7 +480,7 @@ RETURN w.name, w.platform, w.difficulty, e.exploitation_method
 ### Creating New Writeups
 ```bash
 # WRITEUP: Create in db/data/writeups/{platform}/{machine}/{machine}.json
-# Structure: {id, name, source, metadata, oscp_relevance, attack_phases, ...}
+# Structure: {id, name, source, metadata, priority, attack_phases, ...}
 # Reference: See db/data/writeups/hackthebox/Usage/Usage.json as template
 # Schema: db/data/writeups/writeup-schema.json
 
@@ -498,7 +498,7 @@ RETURN w.name, w.platform, w.difficulty, e.exploitation_method
 
 ### Common Mistakes
 ```
-❌ Missing OSCP tag → ✓ Add OSCP:HIGH|MEDIUM|LOW to tags array
+❌ Missing priority tag → ✓ Add PRIORITY:HIGH|MEDIUM|LOW to tags array
 ❌ Command ID doesn't exist → ✓ Create command in commands/ first or use existing ID
 ❌ Skipping failed attempts → ✓ Document ALL failures with lesson_learned
 ❌ Vague lesson_learned → ✓ Explain WHY it failed and what this teaches (min 30 chars)

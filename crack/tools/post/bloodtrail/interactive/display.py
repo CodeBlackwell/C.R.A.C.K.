@@ -225,9 +225,12 @@ def prompt_user(message: str, options: str = "ynq") -> str:
     """
     while True:
         try:
-            response = input(f"\n{message} [{'/'.join(options)}]: ").strip().lower()
+            response = input(f"\n{message} [{'/'.join(options)}]: ").strip().strip('\r\n').lower()
             if response and response[0] in options.lower():
                 return response[0]
+            # Empty input (Enter) defaults to first option
+            if not response:
+                return options[0].lower()
             print(f"{Y}Please enter one of: {'/'.join(options)}{X}")
         except (EOFError, KeyboardInterrupt):
             return 'q'

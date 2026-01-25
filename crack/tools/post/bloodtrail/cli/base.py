@@ -79,7 +79,7 @@ class BaseCommandGroup(ABC):
         return Neo4jConfig(
             uri=getattr(args, 'uri', 'bolt://localhost:7687'),
             user=getattr(args, 'user', 'neo4j'),
-            password=getattr(args, 'password', None) or os.environ.get('NEO4J_PASSWORD', '')
+            password=getattr(args, 'neo4j_password', None) or os.environ.get('NEO4J_PASSWORD', '')
         )
 
     @staticmethod

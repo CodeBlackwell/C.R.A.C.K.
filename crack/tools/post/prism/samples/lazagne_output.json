@@ -1,0 +1,22 @@
+{
+  "Software": {
+    "browsers": {
+      "chrome": [
+        {"URL": "https://mail.corp.local", "Login": "jsmith", "Password": "EmailP@ss123"},
+        {"URL": "https://vpn.corp.local", "Login": "jsmith@corp.local", "Password": "VPNaccess!"}
+      ],
+      "firefox": [
+        {"URL": "https://internal.corp.local", "Login": "admin", "Password": "InternalAdmin99"}
+      ]
+    },
+    "wifi": [
+      {"SSID": "CorpWifi", "Password": "WifiP@ssw0rd!"},
+      {"SSID": "GuestNetwork", "Password": "guest123"}
+    ],
+    "windows": {
+      "credman": [
+        {"Target": "Domain:interactive=CORP\\svc_backup", "Username": "CORP\\svc_backup", "Password": "B@ckup2024!"}
+      ]
+    }
+  }
+}

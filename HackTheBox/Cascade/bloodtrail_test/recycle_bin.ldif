@@ -1,0 +1,233 @@
+# extended LDIF
+#
+# LDAPv3
+# base <CN=Deleted Objects,DC=cascade,DC=local> with scope subtree
+# filter: (isDeleted=TRUE)
+# requesting: * 
+#
+
+# Deleted Objects, cascade.local
+dn: CN=Deleted Objects,DC=cascade,DC=local
+objectClass: top
+objectClass: container
+cn: Deleted Objects
+description: Default container for deleted objects
+distinguishedName: CN=Deleted Objects,DC=cascade,DC=local
+instanceType: 4
+whenCreated: 20200109153139.0Z
+whenChanged: 20200113012117.0Z
+uSNCreated: 5695
+isDeleted: TRUE
+uSNChanged: 65585
+showInAdvancedViewOnly: TRUE
+name: Deleted Objects
+objectGUID:: AZjeUSU2wkqmBda9cWF2gQ==
+systemFlags: -1946157056
+objectCategory: CN=Container,CN=Schema,CN=Configuration,DC=cascade,DC=local
+isCriticalSystemObject: TRUE
+dSCorePropagationData: 16010101000000.0Z
+
+# CASC-WS1
+DEL:6d97daa4-2e82-4946-a11e-f91fa18bfabe, Deleted Objects, cascade.l
+ ocal
+dn: CN=CASC-WS1\0ADEL:6d97daa4-2e82-4946-a11e-f91fa18bfabe,CN=Deleted Objects,
+ DC=cascade,DC=local
+objectClass: top
+objectClass: person
+objectClass: organizationalPerson
+objectClass: user
+objectClass: computer
+cn:: Q0FTQy1XUzEKREVMOjZkOTdkYWE0LTJlODItNDk0Ni1hMTFlLWY5MWZhMThiZmFiZQ==
+distinguishedName: CN=CASC-WS1\0ADEL:6d97daa4-2e82-4946-a11e-f91fa18bfabe,CN=D
+ eleted Objects,DC=cascade,DC=local
+instanceType: 4
+whenCreated: 20200109193019.0Z
+whenChanged: 20200128180835.0Z
+uSNCreated: 24603
+isDeleted: TRUE
+uSNChanged: 245849
+name:: Q0FTQy1XUzEKREVMOjZkOTdkYWE0LTJlODItNDk0Ni1hMTFlLWY5MWZhMThiZmFiZQ==
+objectGUID:: pNqXbYIuRkmhHvkfoYv6vg==
+userAccountControl: 4128
+badPwdCount: 0
+codePage: 0
+countryCode: 0
+badPasswordTime: 0
+lastLogoff: 0
+lastLogon: 0
+localPolicyFlags: 0
+pwdLastSet: 132230718192147073
+primaryGroupID: 515
+objectSid:: AQUAAAAAAAUVAAAAMvuhxgsd8Uf1yHJFVAQAAA==
+accountExpires: 9223372036854775807
+logonCount: 0
+sAMAccountName: CASC-WS1$
+lastKnownParent: OU=Computers,OU=UK,DC=cascade,DC=local
+isCriticalSystemObject: FALSE
+dSCorePropagationData: 20200117033736.0Z
+dSCorePropagationData: 20200117001404.0Z
+dSCorePropagationData: 20200109193019.0Z
+dSCorePropagationData: 16010101000417.0Z
+msDS-LastKnownRDN: CASC-WS1
+
+# Scheduled Tasks
+DEL:13375728-5ddb-4137-b8b8-b9041d1d3fd2, Deleted Objects, ca
+ scade.local
+dn: CN=Scheduled Tasks\0ADEL:13375728-5ddb-4137-b8b8-b9041d1d3fd2,CN=Deleted O
+ bjects,DC=cascade,DC=local
+objectClass: top
+objectClass: group
+cn:: U2NoZWR1bGVkIFRhc2tzCkRFTDoxMzM3NTcyOC01ZGRiLTQxMzctYjhiOC1iOTA0MWQxZDNmZ
+ DI=
+distinguishedName: CN=Scheduled Tasks\0ADEL:13375728-5ddb-4137-b8b8-b9041d1d3f
+ d2,CN=Deleted Objects,DC=cascade,DC=local
+instanceType: 4
+whenCreated: 20200113172153.0Z
+whenChanged: 20200128180755.0Z
+uSNCreated: 114790
+isDeleted: TRUE
+uSNChanged: 245848
+name:: U2NoZWR1bGVkIFRhc2tzCkRFTDoxMzM3NTcyOC01ZGRiLTQxMzctYjhiOC1iOTA0MWQxZDN
+ mZDI=
+objectGUID:: KFc3E9tdN0G4uLkEHR0/0g==
+objectSid:: AQUAAAAAAAUVAAAAMvuhxgsd8Uf1yHJFawQAAA==
+sAMAccountName: Scheduled Tasks
+groupType: -2147483644
+lastKnownParent: OU=Groups,OU=UK,DC=cascade,DC=local
+dSCorePropagationData: 20200117213546.0Z
+dSCorePropagationData: 20200117213257.0Z
+dSCorePropagationData: 20200117033736.0Z
+dSCorePropagationData: 20200117001404.0Z
+dSCorePropagationData: 16010714223232.0Z
+msDS-LastKnownRDN: Scheduled Tasks
+
+# {A403B701-A528-4685-A816-FDEE32BDDCBA}
+DEL:ff5c2fdc-cc11-44e3-ae4c-071aab2ccc
+ 6e, Deleted Objects, cascade.local
+dn: CN={A403B701-A528-4685-A816-FDEE32BDDCBA}\0ADEL:ff5c2fdc-cc11-44e3-ae4c-07
+ 1aab2ccc6e,CN=Deleted Objects,DC=cascade,DC=local
+objectClass: top
+objectClass: container
+objectClass: groupPolicyContainer
+cn:: e0E0MDNCNzAxLUE1MjgtNDY4NS1BODE2LUZERUUzMkJERENCQX0KREVMOmZmNWMyZmRjLWNjM
+ TEtNDRlMy1hZTRjLTA3MWFhYjJjY2M2ZQ==
+distinguishedName: CN={A403B701-A528-4685-A816-FDEE32BDDCBA}\0ADEL:ff5c2fdc-cc
+ 11-44e3-ae4c-071aab2ccc6e,CN=Deleted Objects,DC=cascade,DC=local
+instanceType: 4
+whenCreated: 20200126023430.0Z
+whenChanged: 20200126024052.0Z
+displayName: Block Potato
+uSNCreated: 196688
+isDeleted: TRUE
+uSNChanged: 196701
+showInAdvancedViewOnly: TRUE
+name:: e0E0MDNCNzAxLUE1MjgtNDY4NS1BODE2LUZERUUzMkJERENCQX0KREVMOmZmNWMyZmRjLWN
+ jMTEtNDRlMy1hZTRjLTA3MWFhYjJjY2M2ZQ==
+objectGUID:: 3C9c/xHM40SuTAcaqyzMbg==
+flags: 0
+versionNumber: 2
+lastKnownParent: CN=Policies,CN=System,DC=cascade,DC=local
+gPCFunctionalityVersion: 2
+gPCFileSysPath: \\cascade.local\SysVol\cascade.local\Policies\{A403B701-A528-4
+ 685-A816-FDEE32BDDCBA}
+gPCMachineExtensionNames: [{35378EAC-683F-11D2-A89A-00C04FBBCFA2}{53D6AB1D-248
+ 8-11D1-A28C-00C04FB94F17}][{B1BE8D72-6EAC-11D2-A4EA-00C04F79F83A}{53D6AB1D-24
+ 88-11D1-A28C-00C04FB94F17}]
+dSCorePropagationData: 16010101000000.0Z
+msDS-LastKnownRDN: {A403B701-A528-4685-A816-FDEE32BDDCBA}
+
+# Machine
+DEL:93c23674-e411-400b-bb9f-c0340bda5a34, Deleted Objects, cascade.lo
+ cal
+dn: CN=Machine\0ADEL:93c23674-e411-400b-bb9f-c0340bda5a34,CN=Deleted Objects,D
+ C=cascade,DC=local
+objectClass: top
+objectClass: container
+cn:: TWFjaGluZQpERUw6OTNjMjM2NzQtZTQxMS00MDBiLWJiOWYtYzAzNDBiZGE1YTM0
+distinguishedName: CN=Machine\0ADEL:93c23674-e411-400b-bb9f-c0340bda5a34,CN=De
+ leted Objects,DC=cascade,DC=local
+instanceType: 4
+whenCreated: 20200126023431.0Z
+whenChanged: 20200126024052.0Z
+uSNCreated: 196689
+isDeleted: TRUE
+uSNChanged: 196699
+showInAdvancedViewOnly: TRUE
+name:: TWFjaGluZQpERUw6OTNjMjM2NzQtZTQxMS00MDBiLWJiOWYtYzAzNDBiZGE1YTM0
+objectGUID:: dDbCkxHkC0C7n8A0C9paNA==
+lastKnownParent: CN={A403B701-A528-4685-A816-FDEE32BDDCBA}\0ADEL:ff5c2fdc-cc11
+ -44e3-ae4c-071aab2ccc6e,CN=Deleted Objects,DC=cascade,DC=local
+dSCorePropagationData: 16010101000000.0Z
+msDS-LastKnownRDN: Machine
+
+# User
+DEL:746385f2-e3a0-4252-b83a-5a206da0ed88, Deleted Objects, cascade.local
+dn: CN=User\0ADEL:746385f2-e3a0-4252-b83a-5a206da0ed88,CN=Deleted Objects,DC=c
+ ascade,DC=local
+objectClass: top
+objectClass: container
+cn:: VXNlcgpERUw6NzQ2Mzg1ZjItZTNhMC00MjUyLWI4M2EtNWEyMDZkYTBlZDg4
+distinguishedName: CN=User\0ADEL:746385f2-e3a0-4252-b83a-5a206da0ed88,CN=Delet
+ ed Objects,DC=cascade,DC=local
+instanceType: 4
+whenCreated: 20200126023431.0Z
+whenChanged: 20200126024052.0Z
+uSNCreated: 196690
+isDeleted: TRUE
+uSNChanged: 196700
+showInAdvancedViewOnly: TRUE
+name:: VXNlcgpERUw6NzQ2Mzg1ZjItZTNhMC00MjUyLWI4M2EtNWEyMDZkYTBlZDg4
+objectGUID:: 8oVjdKDjUkK4OlogbaDtiA==
+lastKnownParent: CN={A403B701-A528-4685-A816-FDEE32BDDCBA}\0ADEL:ff5c2fdc-cc11
+ -44e3-ae4c-071aab2ccc6e,CN=Deleted Objects,DC=cascade,DC=local
+dSCorePropagationData: 16010101000000.0Z
+msDS-LastKnownRDN: User
+
+# TempAdmin
+DEL:f0cc344d-31e0-4866-bceb-a842791ca059, Deleted Objects, cascade.
+ local
+dn: CN=TempAdmin\0ADEL:f0cc344d-31e0-4866-bceb-a842791ca059,CN=Deleted Objects
+ ,DC=cascade,DC=local
+objectClass: top
+objectClass: person
+objectClass: organizationalPerson
+objectClass: user
+cn:: VGVtcEFkbWluCkRFTDpmMGNjMzQ0ZC0zMWUwLTQ4NjYtYmNlYi1hODQyNzkxY2EwNTk=
+givenName: TempAdmin
+distinguishedName: CN=TempAdmin\0ADEL:f0cc344d-31e0-4866-bceb-a842791ca059,CN=
+ Deleted Objects,DC=cascade,DC=local
+instanceType: 4
+whenCreated: 20200127032308.0Z
+whenChanged: 20200127032434.0Z
+displayName: TempAdmin
+uSNCreated: 237695
+isDeleted: TRUE
+uSNChanged: 237705
+name:: VGVtcEFkbWluCkRFTDpmMGNjMzQ0ZC0zMWUwLTQ4NjYtYmNlYi1hODQyNzkxY2EwNTk=
+objectGUID:: TTTM8OAxZki866hCeRygWQ==
+userAccountControl: 66048
+badPwdCount: 0
+codePage: 0
+countryCode: 0
+badPasswordTime: 0
+lastLogoff: 0
+lastLogon: 0
+pwdLastSet: 132245689883479503
+primaryGroupID: 513
+objectSid:: AQUAAAAAAAUVAAAAMvuhxgsd8Uf1yHJFcAQAAA==
+accountExpires: 9223372036854775807
+logonCount: 0
+sAMAccountName: TempAdmin
+userPrincipalName: TempAdmin@cascade.local
+lastKnownParent: OU=Users,OU=UK,DC=cascade,DC=local
+dSCorePropagationData: 20200127032308.0Z
+dSCorePropagationData: 16010101000000.0Z
+msDS-LastKnownRDN: TempAdmin
+cascadeLegacyPwd: YmFDVDNyMWFOMDBkbGVz
+
+# search result
+search: 2
+result: 0 Success
+
+# numResponses: 8
+# numEntries: 7

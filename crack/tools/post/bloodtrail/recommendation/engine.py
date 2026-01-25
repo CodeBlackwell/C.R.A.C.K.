@@ -264,6 +264,13 @@ class RecommendationEngine:
             create_winrm_check_recommendation,
             create_bloodhound_recommendation,
             create_smb_crawl_recommendation,
+            create_crack_hash_recommendation,
+            create_test_cracked_credential_recommendation,
+            create_pass_the_hash_recommendation,
+            # Privilege escalation chain
+            create_user_exchange_perms_recommendation,
+            create_add_objectacl_recommendation,
+            create_dcsync_recommendation,
         )
 
         # Get credential context from source rec or metadata
@@ -288,7 +295,47 @@ class RecommendationEngine:
         )
 
         # Map template names to creation functions
-        if template_name == "enumerate_smb_shares" and username and password:
+
+        # Hash cracking templates
+        if template_name == "crack_hash":
+            hash_value = metadata.get("hash")
+            hash_type = metadata.get("hash_type", "asrep")
+            if hash_value and username:
+                return create_crack_hash_recommendation(
+                    finding=finding,
+                    hash_value=hash_value,
+                    hash_type=hash_type,
+                    username=username,
+                    target=self.state.target,
+                    domain=self.state.domain,
+                )
+
+        # Credential testing templates
+        elif template_name == "test_cracked_credential":
+            if username and password:
+                return create_test_cracked_credential_recommendation(
+                    finding=finding,
+                    username=username,
+                    password=password,
+                    target=self.state.target,
+                    domain=self.state.domain,
+                )
+
+        # Pass-the-hash templates
+        elif template_name == "pass_the_hash":
+            ntlm_hash = metadata.get("full_hash") or metadata.get("admin_hash")
+            pth_user = metadata.get("username", "Administrator")
+            if ntlm_hash:
+                return create_pass_the_hash_recommendation(
+                    finding=finding,
+                    username=pth_user,
+                    ntlm_hash=ntlm_hash,
+                    target=self.state.target,
+                    domain=self.state.domain,
+                )
+
+        # SMB enumeration
+        elif template_name == "enumerate_smb_shares" and username and password:
             return create_smb_enum_recommendation(
                 finding=finding,
                 target=self.state.target,
@@ -297,6 +344,7 @@ class RecommendationEngine:
                 domain=self.state.domain,
             )
 
+        # WinRM check
         elif template_name == "check_winrm" and username and password:
             return create_winrm_check_recommendation(
                 finding=finding,
@@ -306,6 +354,7 @@ class RecommendationEngine:
                 domain=self.state.domain,
             )
 
+        # BloodHound collection
         elif template_name == "collect_bloodhound" and username and password:
             return create_bloodhound_recommendation(
                 finding=finding,
@@ -315,6 +364,7 @@ class RecommendationEngine:
                 domain=self.state.domain,
             )
 
+        # SMB share crawling
         elif template_name == "crawl_smb_shares" and username and password:
             return create_smb_crawl_recommendation(
                 finding=finding,
@@ -322,6 +372,46 @@ class RecommendationEngine:
                 username=username,
                 password=password,
                 domain=self.state.domain,
+            )
+
+        # =====================================================================
+        # PRIVILEGE ESCALATION CHAIN (Forest-style)
+        # =====================================================================
+
+        # Account Operators → Create user → Add to Exchange Windows Permissions
+        elif template_name == "create_user_exchange_perms" and username and password:
+            return create_user_exchange_perms_recommendation(
+                finding=finding,
+                target=self.state.target,
+                username=username,
+                password=password,
+                domain=self.state.domain,
+            )
+
+        # Exchange Windows Permissions → Grant DCSync rights via Add-ObjectACL
+        elif template_name == "add_objectacl_dcsync":
+            # Get DCSync user credentials from source_rec metadata (created user)
+            dcsync_user = metadata.get("new_user") or source_rec.metadata.get("new_user", "bloodtrail")
+            dcsync_pass = metadata.get("new_password") or source_rec.metadata.get("new_password", "B1oodTr@il123!")
+            return create_add_objectacl_recommendation(
+                finding=finding,
+                target=self.state.target,
+                domain=self.state.domain,
+                dcsync_user=dcsync_user,
+                dcsync_pass=dcsync_pass,
+            )
+
+        # DCSync - Extract all domain hashes using secretsdump
+        elif template_name == "dcsync_secretsdump":
+            # Get DCSync user credentials from source_rec metadata
+            dcsync_user = metadata.get("dcsync_user") or source_rec.metadata.get("dcsync_user", "bloodtrail")
+            dcsync_pass = metadata.get("dcsync_password") or source_rec.metadata.get("dcsync_password", "B1oodTr@il123!")
+            return create_dcsync_recommendation(
+                finding=finding,
+                target=self.state.target,
+                domain=self.state.domain,
+                dcsync_user=dcsync_user,
+                dcsync_pass=dcsync_pass,
             )
 
         # Unknown template
@@ -460,6 +550,25 @@ class RecommendationEngine:
             if pattern in group_name.lower():
                 finding.add_tag("privileged_group")
                 break
+
+        # Specific group tags for privilege escalation triggers
+        group_lower = group_name.lower()
+
+        # Account Operators - can create users and add to groups
+        if "account operator" in group_lower:
+            finding.add_tag("ACCOUNT_OPERATORS")
+
+        # Exchange Windows Permissions - has WriteDACL on domain
+        if "exchange windows permissions" in group_lower:
+            finding.add_tag("EXCHANGE_WINDOWS_PERMISSIONS")
+
+        # AD Recycle Bin - can read deleted objects
+        if "recycle bin" in group_lower:
+            finding.add_tag("RECYCLE_BIN")
+
+        # Backup Operators - can backup/restore
+        if "backup operator" in group_lower:
+            finding.add_tag("BACKUP_OPERATORS")
 
         return finding
 

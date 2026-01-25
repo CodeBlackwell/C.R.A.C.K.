@@ -85,7 +85,7 @@
             },
             {
               "id": "powerview-get-netloggedon",
-              "example": "Get-NetLoggedon -ComputerName WEB04.corp.com",
+              "example": "Get-NetLoggedon -ComputerName WEBSERVER.corp.com",
               "shows": "UserName"
             },
             {
@@ -124,7 +124,7 @@
         },
         {
           "title": "Phase 4: GPP Password Hunting",
-          "notes": "Search SYSVOL for Groups.xml, ScheduledTasks.xml, Services.xml containing 'cpassword' attribute. These files contain AES-encrypted passwords that can be decrypted with published Microsoft key. Credential hunting in SYSVOL is certification exam staple.",
+          "notes": "Search SYSVOL for Groups.xml, ScheduledTasks.xml, Services.xml containing 'cpassword' attribute. These files contain AES-encrypted passwords that can be decrypted with published Microsoft key. Credential hunting in SYSVOL is pentest staple.",
           "commands": [
             {
               "id": "gpp-password-files",

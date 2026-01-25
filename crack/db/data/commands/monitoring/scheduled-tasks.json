@@ -46,7 +46,7 @@
         "linux-systemd-timers"
       ],
       "prerequisites": [],
-      "notes": "Cron format:\nminute hour day month weekday command.\n\ncertification tip:\nCheck if cron scripts are writable - modify to run reverse shell as cron user.\n\nTime estimate:\n<1 second.\n\nSpecial strings:\n@reboot (run at startup), @daily, @hourly, @weekly, @monthly.",
+      "notes": "Cron format:\nminute hour day month weekday command.\n\npractical tip:\nCheck if cron scripts are writable - modify to run reverse shell as cron user.\n\nTime estimate:\n<1 second.\n\nSpecial strings:\n@reboot (run at startup), @daily, @hourly, @weekly, @monthly.",
       "methodology_guidance": {
         "after_success": "Check other users' crontabs: crontab-user-specific Check system-wide crontab: crontab-system-wide Look for writable cron scripts: find /etc/cron* -type f -writable Check cron script permissions for privesc"
       }
@@ -142,7 +142,7 @@
       "alternatives": [
         "less-etc-crontab"
       ],
-      "notes": "/etc/crontab differs from user crontabs - includes username field.\n\nFormat:\nminute hour day month weekday user command.\n\ncertification tip:\nCheck if PATH includes writable dirs like /tmp - allows command hijacking.\n\nTime estimate:\n<1 second.",
+      "notes": "/etc/crontab differs from user crontabs - includes username field.\n\nFormat:\nminute hour day month weekday user command.\n\npractical tip:\nCheck if PATH includes writable dirs like /tmp - allows command hijacking.\n\nTime estimate:\n<1 second.",
       "methodology_guidance": {
         "after_success": "Check cron directories: cron-directories-list Look for writable scripts called by cron Check PATH for writable directories (PATH hijacking)"
       }
@@ -277,7 +277,7 @@
         "win-ps-scheduled-tasks",
         "get-scheduledtask"
       ],
-      "notes": "CRITICAL for Windows privesc and persistence detection.\n\nOutput is verbose (20+ properties per task).\n\ncertification tips:\n(1) Look for tasks with writable executables, (2) Tasks running as SYSTEM with Enabled status, (3) Custom tasks (non-Microsoft) in \\Task Scheduler Library\\.\n\nTime estimate:\n10-30 seconds depending on task count.",
+      "notes": "CRITICAL for Windows privesc and persistence detection.\n\nOutput is verbose (20+ properties per task).\n\npractical tips:\n(1) Look for tasks with writable executables, (2) Tasks running as SYSTEM with Enabled status, (3) Custom tasks (non-Microsoft) in \\Task Scheduler Library\\.\n\nTime estimate:\n10-30 seconds depending on task count.",
       "methodology_guidance": {
         "after_success": "Look for tasks running as SYSTEM Check task executable paths for writable locations Identify custom (non-Microsoft) scheduled tasks Check task XML for credentials: Get task XML definition"
       }
@@ -455,7 +455,7 @@
       ],
       "next_steps": [],
       "alternatives": [],
-      "notes": "AT jobs are legacy (Windows NT/2000 era), rarely used in modern systems.\n\nIncluded for completeness in older certification labs.\n\nTime estimate:\n1 second.",
+      "notes": "AT jobs are legacy (Windows NT/2000 era), rarely used in modern systems.\n\nIncluded for completeness in older labs.\n\nTime estimate:\n1 second.",
       "methodology_guidance": {
         "after_success": "Check command path permissions if jobs found Modern alternative: use schtasks or Get-ScheduledTask"
       }
@@ -530,7 +530,7 @@
       ],
       "next_steps": [],
       "alternatives": [],
-      "notes": "systemd timers are modern replacement for cron on systemd-based Linux.\n\nTimers trigger .service units.\n\ncertification tip:\nCheck /etc/systemd/system/ for custom timers.\n\nTime estimate:\n2 seconds.\n\nTo see active only:\nsystemctl list-timers (no --all)",
+      "notes": "systemd timers are modern replacement for cron on systemd-based Linux.\n\nTimers trigger .service units.\n\npractical tip:\nCheck /etc/systemd/system/ for custom timers.\n\nTime estimate:\n2 seconds.\n\nTo see active only:\nsystemctl list-timers (no --all)",
       "methodology_guidance": {
         "after_success": "View timer details: systemctl cat <TIMER_NAME>.timer Check associated service: systemctl cat <TIMER_NAME>.service Look for writable timer or service files: ls -la /etc/systemd/system/*.timer Check service executable permissions"
       }

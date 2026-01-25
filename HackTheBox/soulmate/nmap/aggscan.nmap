@@ -1,0 +1,94 @@
+# Nmap 7.95 scan initiated Tue Jan  6 12:14:43 2026 as: /usr/lib/nmap/nmap -A -vv -T5 -oA nmap/aggscan 10.10.11.86
+Nmap scan report for 10.10.11.86
+Host is up, received echo-reply ttl 63 (0.40s latency).
+Scanned at 2026-01-06 12:14:44 HST for 32s
+Not shown: 950 closed tcp ports (reset)
+PORT      STATE    SERVICE       REASON         VERSION
+22/tcp    open     ssh           syn-ack ttl 63 OpenSSH 8.9p1 Ubuntu 3ubuntu0.13 (Ubuntu Linux; protocol 2.0)
+| ssh-hostkey: 
+|   256 3e:ea:45:4b:c5:d1:6d:6f:e2:d4:d1:3b:0a:3d:a9:4f (ECDSA)
+| ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBJ+m7rYl1vRtnm789pH3IRhxI4CNCANVj+N5kovboNzcw9vHsBwvPX3KYA3cxGbKiA0VqbKRpOHnpsMuHEXEVJc=
+|   256 64:cc:75:de:4a:e6:a5:b4:73:eb:3f:1b:cf:b4:e3:94 (ED25519)
+|_ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOtuEdoYxTohG80Bo6YCqSzUY9+qbnAFnhsk4yAZNqhM
+30/tcp    filtered unknown       no-response
+43/tcp    filtered whois         no-response
+80/tcp    open     http          syn-ack ttl 63 nginx 1.18.0 (Ubuntu)
+| http-methods: 
+|_  Supported Methods: GET HEAD POST OPTIONS
+|_http-server-header: nginx/1.18.0 (Ubuntu)
+|_http-title: Did not follow redirect to http://soulmate.htb/
+82/tcp    filtered xfer          no-response
+264/tcp   filtered bgmp          no-response
+512/tcp   filtered exec          no-response
+543/tcp   filtered klogin        no-response
+808/tcp   filtered ccproxy-http  no-response
+1009/tcp  filtered unknown       no-response
+1010/tcp  filtered surf          no-response
+1021/tcp  filtered exp1          no-response
+1038/tcp  filtered mtqp          no-response
+1046/tcp  filtered wfremotertm   no-response
+1058/tcp  filtered nim           no-response
+1065/tcp  filtered syscomlan     no-response
+1085/tcp  filtered webobjects    no-response
+1091/tcp  filtered ff-sm         no-response
+1434/tcp  filtered ms-sql-m      no-response
+1782/tcp  filtered hp-hcip       no-response
+2038/tcp  filtered objectmanager no-response
+2381/tcp  filtered compaq-https  no-response
+2525/tcp  filtered ms-v-worlds   no-response
+2638/tcp  filtered sybase        no-response
+2909/tcp  filtered funk-dialout  no-response
+3168/tcp  filtered poweronnud    no-response
+3476/tcp  filtered nppmp         no-response
+3920/tcp  filtered exasoftport1  no-response
+5101/tcp  filtered admdog        no-response
+5298/tcp  filtered presence      no-response
+5405/tcp  filtered pcduo         no-response
+5877/tcp  filtered unknown       no-response
+5952/tcp  filtered unknown       no-response
+6001/tcp  filtered X11:1         no-response
+6009/tcp  filtered X11:9         no-response
+6510/tcp  filtered mcer-port     no-response
+6565/tcp  filtered unknown       no-response
+6666/tcp  filtered irc           no-response
+6692/tcp  filtered unknown       no-response
+8001/tcp  filtered vcom-tunnel   no-response
+9040/tcp  filtered tor-trans     no-response
+10025/tcp filtered unknown       no-response
+10616/tcp filtered unknown       no-response
+14442/tcp filtered unknown       no-response
+20000/tcp filtered dnp           no-response
+27353/tcp filtered unknown       no-response
+49159/tcp filtered unknown       no-response
+49167/tcp filtered unknown       no-response
+62078/tcp filtered iphone-sync   no-response
+64680/tcp filtered unknown       no-response
+Device type: general purpose
+Running: Linux 4.X|5.X
+OS CPE: cpe:/o:linux:linux_kernel:4 cpe:/o:linux:linux_kernel:5
+OS details: Linux 4.15 - 5.19
+TCP/IP fingerprint:
+OS:SCAN(V=7.95%E=4%D=1/6%OT=22%CT=1%CU=38236%PV=Y%DS=2%DC=T%G=N%TM=695D8974
+OS:%P=x86_64-pc-linux-gnu)SEQ(SP=100%GCD=1%ISR=10C%TI=Z%CI=Z%TS=A)OPS(O1=M5
+OS:42ST11NW7%O2=M542ST11NW7%O3=M542NNT11NW7%O4=M542ST11NW7%O5=M542ST11NW7%O
+OS:6=M542ST11)WIN(W1=FE88%W2=FE88%W3=FE88%W4=FE88%W5=FE88%W6=FE88)ECN(R=Y%D
+OS:F=Y%T=40%W=FAF0%O=M542NNSNW7%CC=Y%Q=)T1(R=Y%DF=Y%T=40%S=O%A=S+%F=AS%RD=0
+OS:%Q=)T2(R=N)T3(R=N)T4(R=Y%DF=Y%T=40%W=0%S=A%A=Z%F=R%O=%RD=0%Q=)T5(R=Y%DF=
+OS:Y%T=40%W=0%S=Z%A=S+%F=AR%O=%RD=0%Q=)T6(R=Y%DF=Y%T=40%W=0%S=A%A=Z%F=R%O=%
+OS:RD=0%Q=)T7(R=Y%DF=Y%T=40%W=0%S=Z%A=S+%F=AR%O=%RD=0%Q=)U1(R=Y%DF=N%T=40%I
+OS:PL=164%UN=0%RIPL=G%RID=G%RIPCK=G%RUCK=G%RUD=G)IE(R=Y%DFI=N%T=40%CD=S)
+
+Uptime guess: 14.381 days (since Tue Dec 23 03:06:42 2025)
+Network Distance: 2 hops
+TCP Sequence Prediction: Difficulty=256 (Good luck!)
+IP ID Sequence Generation: All zeros
+Service Info: OS: Linux; CPE: cpe:/o:linux:linux_kernel
+
+TRACEROUTE (using port 8080/tcp)
+HOP RTT       ADDRESS
+1   278.15 ms 10.10.16.1
+2   143.07 ms 10.10.11.86
+
+Read data files from: /usr/share/nmap
+OS and Service detection performed. Please report any incorrect results at https://nmap.org/submit/ .
+# Nmap done at Tue Jan  6 12:15:16 2026 -- 1 IP address (1 host up) scanned in 33.58 seconds

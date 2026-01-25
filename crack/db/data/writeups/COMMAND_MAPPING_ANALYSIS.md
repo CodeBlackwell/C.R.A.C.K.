@@ -28,7 +28,7 @@ These existing commands can be used directly (verified in database):
 
 ## ❌ NEED TO CREATE (35 Commands)
 
-### Priority 1: High OSCP Relevance (17 commands)
+### Priority 1: High Priority (17 commands)
 
 #### SQLMap Suite (5 commands) - `web/sql-injection.json`
 1. **`sqlmap-from-request`** - Run SQLMap from Burp request file

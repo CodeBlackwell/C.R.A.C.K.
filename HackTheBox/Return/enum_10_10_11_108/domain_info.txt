@@ -1,0 +1,10 @@
+Domain: RETURN.LOCAL
+DC IP: 10.10.11.108
+DC Hostname: PRINTER
+
+Users: 1
+  - AS-REP Roastable: 0
+  - Kerberoastable: 0
+  - Service Accounts: 0
+Computers: 0
+Groups: 0

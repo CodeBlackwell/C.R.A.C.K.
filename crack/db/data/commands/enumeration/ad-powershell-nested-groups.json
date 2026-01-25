@@ -52,7 +52,7 @@
         "Index operation failed": "Group not found or has no members. Verify group name with: LDAPSearch -LDAPQuery \"(objectCategory=group)\" | select -ExpandProperty Properties | select cn",
         "No results": "Group name incorrect. Try wildcard: (&(objectCategory=group)(name=*<PARTIAL>*))"
       },
-      "notes": "FOUNDATION FOR NESTED GROUP ENUMERATION:\nMEMBER ATTRIBUTE FORMAT:\nReturns Distinguished Names:\n  CN=username,CN=Users,DC=corp,DC=com\n\nEACH DN NEEDS INDIVIDUAL QUERY:\n- User (leaf node):\nStop\n- Group (nested):\nRequires recursion\n\nNESTED GROUPS IN ENTERPRISE AD:\nCommon pattern:\nGroup contains groups contains users.\n\ncertification TARGETS:\nGroups with 'Service', 'IT', 'Admin' in names.\nOften contain privileged accounts buried multiple levels deep.\n\nTime:\n5 seconds per query",
+      "notes": "FOUNDATION FOR NESTED GROUP ENUMERATION:\nMEMBER ATTRIBUTE FORMAT:\nReturns Distinguished Names:\n  CN=username,CN=Users,DC=corp,DC=com\n\nEACH DN NEEDS INDIVIDUAL QUERY:\n- User (leaf node):\nStop\n- Group (nested):\nRequires recursion\n\nNESTED GROUPS IN ENTERPRISE AD:\nCommon pattern:\nGroup contains groups contains users.\n\nTARGETS:\nGroups with 'Service', 'IT', 'Admin' in names.\nOften contain privileged accounts buried multiple levels deep.\n\nTime:\n5 seconds per query",
       "methodology_guidance": {
         "after_success": "For each member DN, query by distinguishedName to determine if it's a user or nested group Build recursive function to traverse nested groups"
       },
@@ -109,7 +109,7 @@
         "Cannot index into null array": "Query returned no results. Check DN format and domain connectivity",
         "No color output": "Run in PowerShell console (not ISE with old versions). Colors require ANSI support."
       },
-      "notes": "The objectClass attribute is hierarchical - users have ['top', 'person', 'organizationalPerson', 'user'], groups have ['top', 'group'].\n\nUsing '-contains' handles this hierarchy correctly.\n\nDistinguished Names must match exactly - even extra spaces cause query failures.\n\ncertification:\nThis logic determines whether to recurse (nested group) or record (user).\n\nIn exams, you'll often find users 2-3 levels deep:\n'Service Personnel' \u2192 'IT Support' \u2192 'Developers' \u2192 target user.\n\nOBJECTCLASS ATTRIBUTE:\nHierarchical structure - users vs groups.\nUsing '-contains' handles hierarchy correctly.\n\nDN MATCHING:\nMust match exactly - extra spaces cause failures.\n\ncertification LOGIC:\n- Nested group:\nRecurse deeper\n- User:\nRecord and stop\n\nTYPICAL EXAM:\n3 levels deep\n\nTime:\n2 seconds per member",
+      "notes": "The objectClass attribute is hierarchical - users have ['top', 'person', 'organizationalPerson', 'user'], groups have ['top', 'group'].\n\nUsing '-contains' handles this hierarchy correctly.\n\nDistinguished Names must match exactly - even extra spaces cause query failures.\n\npractical:\nThis logic determines whether to recurse (nested group) or record (user).\n\nIn exams, you'll often find users 2-3 levels deep:\n'Service Personnel' \u2192 'IT Support' \u2192 'Developers' \u2192 target user.\n\nOBJECTCLASS ATTRIBUTE:\nHierarchical structure - users vs groups.\nUsing '-contains' handles hierarchy correctly.\n\nDN MATCHING:\nMust match exactly - extra spaces cause failures.\n\nLOGIC:\n- Nested group:\nRecurse deeper\n- User:\nRecord and stop\n\nTYPICAL EXAM:\n3 levels deep\n\nTime:\n2 seconds per member",
       "methodology_guidance": {
         "after_success": "If [GROUP] appears \u2192 recursively enumerate that nested group using ps-get-group-members-basic If [USER] appears \u2192 extract user details, check for flags in description/info attributes"
       },
@@ -171,7 +171,7 @@
         "Maximum recursion depth": "Circular group membership detected. PowerShell default limit is 100 levels. Add visited group tracking to prevent loops.",
         "AllUsers array empty": "No users found. Check group name and verify group has members: LDAPSearch -LDAPQuery \"(&(objectCategory=group)(name=<GROUP>))\" | select -ExpandProperty Properties | select cn,member"
       },
-      "notes": "This function implements depth-first traversal of the group hierarchy.\n\nThe $Depth parameter creates visual tree output - easier to understand nesting levels during enumeration.\n\n$script:AllUsers uses script scope (not global) to avoid polluting global namespace while remaining accessible across recursive calls.\n\nTree output format:\nTop-level group (no indent) \u2192 Level 1 groups (2 spaces) \u2192 Level 2 groups (4 spaces) \u2192 Users (indented at their level).\n\ncertification:\nThis is the complete solution for 'unravel nested groups' lab questions.\n\nCopy-paste this entire function, then call with target group name.\n\nTypical exam scenario:\n3 levels deep, 5-10 total users.\n\nTime estimate:\n10-15 seconds for complete enumeration.",
+      "notes": "This function implements depth-first traversal of the group hierarchy.\n\nThe $Depth parameter creates visual tree output - easier to understand nesting levels during enumeration.\n\n$script:AllUsers uses script scope (not global) to avoid polluting global namespace while remaining accessible across recursive calls.\n\nTree output format:\nTop-level group (no indent) \u2192 Level 1 groups (2 spaces) \u2192 Level 2 groups (4 spaces) \u2192 Users (indented at their level).\n\npractical:\nThis is the complete solution for 'unravel nested groups' lab questions.\n\nCopy-paste this entire function, then call with target group name.\n\nTypical exam scenario:\n3 levels deep, 5-10 total users.\n\nTime estimate:\n10-15 seconds for complete enumeration.",
       "methodology_guidance": {
         "after_success": "Access collected users: $script:AllUsers | foreach { $_.Properties.samaccountname } Get last user details: $script:AllUsers[-1] Extract flags from user attributes: $script:AllUsers[-1].Properties.description"
       },
@@ -221,7 +221,7 @@
         "No users found": "Group has no user members or only contains nested groups. Check group membership manually.",
         "Index out of bounds": "$script:AllUsers is empty. Verify group enumeration completed successfully."
       },
-      "notes": "certification LAB PATTERN:\nQuestions ask:\n'enumerate nested groups and find the last user' then extract flag.\n\nCOMMON FLAG LOCATIONS:\n- description:\nMost common\n- info:\nSecondary\n- comment:\nTertiary\n- userParameters:\nRare\n\nFLAG FORMATS:\n- flag{...}\n- OS{...}\n- Plaintext hints\n- Base64 encoded\n\nLAST USER DEFINITION:\nLast DIRECT user member discovered during depth-first traversal.\nNot necessarily last alphabetically.\n\nTime:\nInstant after enumeration",
+      "notes": "LAB PATTERN:\nQuestions ask:\n'enumerate nested groups and find the last user' then extract flag.\n\nCOMMON FLAG LOCATIONS:\n- description:\nMost common\n- info:\nSecondary\n- comment:\nTertiary\n- userParameters:\nRare\n\nFLAG FORMATS:\n- flag{...}\n- OS{...}\n- Plaintext hints\n- Base64 encoded\n\nLAST USER DEFINITION:\nLast DIRECT user member discovered during depth-first traversal.\nNot necessarily last alphabetically.\n\nTime:\nInstant after enumeration",
       "methodology_guidance": {
         "after_success": "Search output for flag: Look in 'description', 'info', 'comment', 'adminDescription' fields Check for Base64 encoded flags Document findings in enumeration.md"
       }
@@ -270,7 +270,7 @@
         "Empty Created column": "User object missing whencreated attribute. Try whenChanged instead",
         "No results": "Domain Admins group empty or you lack read permissions"
       },
-      "notes": "DOMAIN ADMIN ACCOUNT AGES:\nBuilt-in accounts:\n- Administrator, krbtgt, Guest\n- Creation date matches domain creation (years old)\n\nNewly added admins:\n- Recent timestamps (days/weeks old)\n\ncertification LAB PATTERN:\nQuestion:\n'Which NEW user is part of Domain Admins?'\nAnswer:\nAccount with most recent whencreated date.\n\nEXCLUDE BUILT-INS:\nAdministrator, krbtgt, Guest\n\nALTERNATIVE:\nFilter by whencreated > recent date.\n\nTime:\n10 seconds",
+      "notes": "DOMAIN ADMIN ACCOUNT AGES:\nBuilt-in accounts:\n- Administrator, krbtgt, Guest\n- Creation date matches domain creation (years old)\n\nNewly added admins:\n- Recent timestamps (days/weeks old)\n\nLAB PATTERN:\nQuestion:\n'Which NEW user is part of Domain Admins?'\nAnswer:\nAccount with most recent whencreated date.\n\nEXCLUDE BUILT-INS:\nAdministrator, krbtgt, Guest\n\nALTERNATIVE:\nFilter by whencreated > recent date.\n\nTime:\n10 seconds",
       "methodology_guidance": {
         "after_success": "Identify the NEWEST account (bottom of sorted list) Verify it's not built-in: Built-in accounts (Administrator, krbtgt) have older creation dates Get full details: LDAPSearch -LDAPQuery \"(samAccountName=<NEW_ADMIN>)\" | select -ExpandProperty Properties"
       }
@@ -324,7 +324,7 @@
         "Parameter 'Identity' not found": "You have PowerView 2.0 (old). Use: Get-NetGroupMember -GroupName \"<GROUP>\" instead",
         "Group not found": "Verify group name: Get-DomainGroup | Select-Object name | Where-Object { $_.name -like \"*<PARTIAL>*\" }"
       },
-      "notes": "POWERVIEW 3.0+ CHANGES:\nParameter:\n-GroupName became -Identity\n\nFASTEST METHOD:\nIF PowerView available.\n\nWITHOUT -RECURSE:\nOnly direct members (one level).\n\nWITH -RECURSE:\nFlattens entire hierarchy into single list.\n\nOUTPUT:\nIncludes MemberObjectClass to distinguish users from groups.\n\ncertification BACKUP:\nPowerView may be blocked by AV.\nKnow manual .NET method:\nps-nested-group-recursive-function\n\nTime:\n3-5 seconds",
+      "notes": "POWERVIEW 3.0+ CHANGES:\nParameter:\n-GroupName became -Identity\n\nFASTEST METHOD:\nIF PowerView available.\n\nWITHOUT -RECURSE:\nOnly direct members (one level).\n\nWITH -RECURSE:\nFlattens entire hierarchy into single list.\n\nOUTPUT:\nIncludes MemberObjectClass to distinguish users from groups.\n\nBACKUP:\nPowerView may be blocked by AV.\nKnow manual .NET method:\nps-nested-group-recursive-function\n\nTime:\n3-5 seconds",
       "methodology_guidance": {
         "after_success": "Filter users only: Get-DomainGroupMember -Identity \"<GROUP_NAME>\" -Recurse | Where-Object { $_.MemberObjectClass -eq \"user\" } Get last user: ($members | Where-Object { $_.MemberObjectClass -eq \"user\" })[-1] Get user details: Get-DomainUser -Identity <USERNAME>"
       },
@@ -380,7 +380,7 @@
         "Term not recognized": "Import PowerView first",
         "User not found": "Verify username: Get-DomainUser | Select-Object samaccountname | Where-Object { $_.samaccountname -like \"*<PARTIAL>*\" }"
       },
-      "notes": "FORMAT-LIST * DISPLAYS 80+ ATTRIBUTES:\nFlag locations:\n- description:\nCommon\n- info:\nSecondary\n\nAccount info:\n- memberof:\nAll group memberships\n- whencreated:\nAccount age\n- pwdlastset:\nPassword age\n- userAccountControl:\nAccount flags\n- adminCount:\nPrivilege indicator\n- servicePrincipalName:\nKerberoasting target\n\ncertification WORKFLOW:\n1.\n\nNested group enumeration identifies target user\n\n2.\n\nUse this command for full details\n\n3.\n\nExtract flags from attributes\n\nTime:\n2 seconds",
+      "notes": "FORMAT-LIST * DISPLAYS 80+ ATTRIBUTES:\nFlag locations:\n- description:\nCommon\n- info:\nSecondary\n\nAccount info:\n- memberof:\nAll group memberships\n- whencreated:\nAccount age\n- pwdlastset:\nPassword age\n- userAccountControl:\nAccount flags\n- adminCount:\nPrivilege indicator\n- servicePrincipalName:\nKerberoasting target\n\nWORKFLOW:\n1.\n\nNested group enumeration identifies target user\n\n2.\n\nUse this command for full details\n\n3.\n\nExtract flags from attributes\n\nTime:\n2 seconds",
       "methodology_guidance": {
         "after_success": "Search output for flags in: description, info, comment, adminDescription, userParameters Check group membership: .memberof property Check password age: pwdlastset attribute"
       },
@@ -432,7 +432,7 @@
       "troubleshooting": {
         "No results": "Try broader patterns: *sql*, *admin*, *backup*, *sa* (SQL Server default admin)"
       },
-      "notes": "SERVICE ACCOUNT NAMING PATTERNS:\n- svc_*, *svc*\n- sql_*, *sql*\n- backup_*, *backup*\n- sa (SQL Server admin)\n\nCHARACTERISTICS:\n- Rarely changed passwords (pwdlastset old)\n- Often have SPNs (Kerberoastable)\n- Frequently over-privileged (Domain Admins)\n- Descriptions often contain passwords/hints\n\ncertification:\nHigh-value targets.\nWeak passwords common.\nOften reused across services.\n\nTime:\n5 seconds",
+      "notes": "SERVICE ACCOUNT NAMING PATTERNS:\n- svc_*, *svc*\n- sql_*, *sql*\n- backup_*, *backup*\n- sa (SQL Server admin)\n\nCHARACTERISTICS:\n- Rarely changed passwords (pwdlastset old)\n- Often have SPNs (Kerberoastable)\n- Frequently over-privileged (Domain Admins)\n- Descriptions often contain passwords/hints\n\npractical:\nHigh-value targets.\nWeak passwords common.\nOften reused across services.\n\nTime:\n5 seconds",
       "methodology_guidance": {
         "after_success": "Check for SPNs: Get-DomainUser -Identity <SVC_ACCOUNT> | Select-Object samaccountname,serviceprincipalname Test Kerberoasting: Get-DomainUser -SPN | Where-Object { $_.samaccountname -like \"*svc*\" } Password spray service accounts (weak passwords common)"
       },
@@ -488,7 +488,7 @@
         "All attributes empty": "Flags may be in less common attributes. Check all: $user.Properties.PropertyNames | ForEach-Object { \"$_ : $($user.Properties[$_])\" }",
         "User not found": "Verify username spelling and case sensitivity"
       },
-      "notes": "certification FLAG LOCATION FREQUENCY:\n- description:\n70%\n- info:\n15%\n- comment:\n10%\n- adminDescription:\n3%\n- userParameters:\n2%\n\nFLAG FORMATS:\n- flag{...}:\nMost common\n- OS{...}:\nOffSec format\n- Plaintext hints\n- Base64 encoded\n\nRARE LOCATIONS:\n- msDS-CloudExtensionAttribute1-10\n- extensionAttribute1-15\n- otherMailbox\n\ncertification LAB PATTERN:\n'Enumerate nested groups and extract flag from last user'\n\nTime:\n2 seconds",
+      "notes": "pentest FLAG LOCATION FREQUENCY:\n- description:\n70%\n- info:\n15%\n- comment:\n10%\n- adminDescription:\n3%\n- userParameters:\n2%\n\nFLAG FORMATS:\n- flag{...}:\nMost common\n- OS{...}:\nOffSec format\n- Plaintext hints\n- Base64 encoded\n\nRARE LOCATIONS:\n- msDS-CloudExtensionAttribute1-10\n- extensionAttribute1-15\n- otherMailbox\n\nLAB PATTERN:\n'Enumerate nested groups and extract flag from last user'\n\nTime:\n2 seconds",
       "methodology_guidance": {
         "after_success": "If flag is Base64: [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String(\"<BASE64>\")) Document in breakthrough.md Check other users in same group for additional flags"
       },
@@ -538,7 +538,7 @@
         "Function already exists": "Clear functions: Remove-Item Function:\\LDAPSearch; Remove-Item Function:\\Get-NestedGroupMember",
         "Syntax error": "Copy entire command as single block. Do not split across multiple lines in terminal."
       },
-      "notes": "ULTIMATE certification NESTED GROUP SOLUTION:\nONE-LINE EXECUTION:\nCopy entire command \u2192 replace <GROUP_NAME> \u2192 execute\n\nOUTPUT SHOWS:\n1.\n\nTree structure of group hierarchy\n2.\n\nAll users at all levels\n3.\n\nLast user details\n4.\n\nFlag attributes automatically extracted\n\nNO DEPENDENCIES:\n- No PowerView required\n- No separate function files\n- Single copy-paste execution\n\ncertification EXAM USE:\nQuestion:\n'enumerate nested groups and find flag in last user'\nSolution:\nPaste this command \u2192 done\n\nTime:\n15 seconds total",
+      "notes": "ULTIMATE pentest NESTED GROUP SOLUTION:\nONE-LINE EXECUTION:\nCopy entire command \u2192 replace <GROUP_NAME> \u2192 execute\n\nOUTPUT SHOWS:\n1.\n\nTree structure of group hierarchy\n2.\n\nAll users at all levels\n3.\n\nLast user details\n4.\n\nFlag attributes automatically extracted\n\nNO DEPENDENCIES:\n- No PowerView required\n- No separate function files\n- Single copy-paste execution\n\nPRACTICAL USE:\nQuestion:\n'enumerate nested groups and find flag in last user'\nSolution:\nPaste this command \u2192 done\n\nTime:\n15 seconds total",
       "methodology_guidance": {
         "after_success": "Copy flag value from output Document enumeration process in enumeration.md Create educational writeup for learning"
       },
@@ -579,7 +579,7 @@
         "No output": "PowerView not loaded. Import first: Import-Module .\\PowerView.ps1",
         "Command errors": "Use simpler version check: Get-Command Get-*GroupMember"
       },
-      "notes": "POWERVIEW VERSION HISTORY:\nVersion 2.0:\nSpecific parameters:\n- -GroupName\n- -UserName\n- -ComputerName\n\nVersion 3.0+:\nStandardized on -Identity for all commands.\n\nCOMMON ERROR:\n'A parameter cannot be found that matches parameter name GroupName'\n= Using v2.0 syntax on v3.0+ PowerView\n\ncertification:\n- Most modern distributions:\n3.0+\n- Older lab machines:\nMay have 2.0\n- Know both syntaxes\n\nTime:\n5 seconds",
+      "notes": "POWERVIEW VERSION HISTORY:\nVersion 2.0:\nSpecific parameters:\n- -GroupName\n- -UserName\n- -ComputerName\n\nVersion 3.0+:\nStandardized on -Identity for all commands.\n\nCOMMON ERROR:\n'A parameter cannot be found that matches parameter name GroupName'\n= Using v2.0 syntax on v3.0+ PowerView\n\npractical:\n- Most modern distributions:\n3.0+\n- Older lab machines:\nMay have 2.0\n- Know both syntaxes\n\nTime:\n5 seconds",
       "methodology_guidance": {
         "after_success": "If 'GroupName' appears \u2192 PowerView 2.0 \u2192 Use: Get-NetGroupMember -GroupName \"<GROUP>\" If 'Identity' appears \u2192 PowerView 3.0+ \u2192 Use: Get-DomainGroupMember -Identity \"<GROUP>\"",
         "manual_alternative": "No output \u2192 PowerView not loaded \u2192 Use manual .NET methods"

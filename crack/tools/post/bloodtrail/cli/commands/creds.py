@@ -7,6 +7,7 @@ Handles credential integration pipeline commands:
 - --use-potfile: Potfile-based credential integration
 """
 
+import os
 from argparse import Namespace
 
 from ..base import BaseCommandGroup
@@ -67,7 +68,7 @@ class CredsCommands(BaseCommandGroup):
         )
 
         # Neo4j config
-        config = Neo4jConfig(uri=args.uri, user=args.user, password=args.password)
+        config = Neo4jConfig(uri=args.uri, user=args.user, password=getattr(args, "neo4j_password", None) or os.environ.get("NEO4J_PASSWORD", ""))
 
         # Target IP is required (from bh_data_dir positional arg)
         target = str(args.bh_data_dir) if getattr(args, 'bh_data_dir', None) else None

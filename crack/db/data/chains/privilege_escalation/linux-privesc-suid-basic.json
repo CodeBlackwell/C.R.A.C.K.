@@ -29,7 +29,7 @@
     "Target system is Linux",
     "Quick wins check (sudo -l) completed - if NOPASSWD found, use linux-privesc-sudo chain instead"
   ],
-  "notes": "SUID binaries with setuid bit set run with owner's privileges (usually root). Misconfigured binaries like find, vim, nmap, base64 can be exploited for privilege escalation. GTFOBins provides exploitation techniques. This chain covers the most common certification scenario: finding SUID binary and exploiting it for root shell.\n\ncertification Time-Saving Tip: This chain includes a prerequisite quick-wins check (Step 0) that tests for sudo access before running full SUID enumeration. If Step 0 finds NOPASSWD sudo access, consider switching to the linux-privesc-sudo chain for faster exploitation. SUID enumeration can take 2-5 minutes on large filesystems, while sudo check takes <5 seconds.",
+  "notes": "SUID binaries with setuid bit set run with owner's privileges (usually root). Misconfigured binaries like find, vim, nmap, base64 can be exploited for privilege escalation. GTFOBins provides exploitation techniques. This chain covers the most common lab scenario: finding SUID binary and exploiting it for root shell.\n\nTime-Saving Tip: This chain includes a prerequisite quick-wins check (Step 0) that tests for sudo access before running full SUID enumeration. If Step 0 finds NOPASSWD sudo access, consider switching to the linux-privesc-sudo chain for faster exploitation. SUID enumeration can take 2-5 minutes on large filesystems, while sudo check takes <5 seconds.",
   "steps": [
     {
       "id": "quick-wins-check",

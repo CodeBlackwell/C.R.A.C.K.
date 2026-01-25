@@ -52,7 +52,7 @@
         "Changes not taking effect": "GPO changes require refresh. Force with: gpupdate /force. Then MUST re-login to get new token with updated group membership.",
         "Token not updated after gpupdate": "Windows tokens created at logon. Group membership changes don't affect current sessions. Exit and reconnect (evil-winrm, RDP, etc.) to receive new token."
       },
-      "notes": "GPO ABUSE CRITICAL PATH:\n1. Identify writable GPO: icacls \"\\\\DOMAIN\\SYSVOL\\DOMAIN\\Policies\\*\"\n2. Look for (F) Full Control or (W) Write on your user\n3. Default Domain Policy applies to ALL domain computers\n4. After modification: gpupdate /force on target\n5. CRITICAL: Must re-login to receive new admin token\n\ncertification RELEVANCE: HIGH\nGPO abuse is a reliable privilege escalation in misconfigured AD environments. Check SYSVOL permissions on every AD engagement.\n\nMANUAL ALTERNATIVE:\nModify GPO directly via Group Policy Management Console (GPMC) if GUI access available, or edit GptTmpl.inf in SYSVOL directly.\n\nTIME ESTIMATE: 5-10 minutes (including GPO refresh)",
+      "notes": "GPO ABUSE CRITICAL PATH:\n1. Identify writable GPO: icacls \"\\\\DOMAIN\\SYSVOL\\DOMAIN\\Policies\\*\"\n2. Look for (F) Full Control or (W) Write on your user\n3. Default Domain Policy applies to ALL domain computers\n4. After modification: gpupdate /force on target\n5. CRITICAL: Must re-login to receive new admin token\n\nPRACTICAL RELEVANCE: HIGH\nGPO abuse is a reliable privilege escalation in misconfigured AD environments. Check SYSVOL permissions on every AD engagement.\n\nMANUAL ALTERNATIVE:\nModify GPO directly via Group Policy Management Console (GPMC) if GUI access available, or edit GptTmpl.inf in SYSVOL directly.\n\nTIME ESTIMATE: 5-10 minutes (including GPO refresh)",
       "prerequisites": [
         "icacls-sysvol-check"
       ],
@@ -116,7 +116,7 @@
         "Network path not found": "Domain name incorrect or DNS not resolving domain. Verify with: nslookup DOMAIN or ping DOMAIN. May need to specify DC IP directly.",
         "No writable GPOs found": "All GPOs properly secured. Try alternative attacks: ACL abuse on user objects, Kerberoasting, AS-REP roasting."
       },
-      "notes": "GPO PERMISSION LEGEND:\n(F) = Full Control - can modify GPO (JACKPOT)\n(W) = Write - can modify GPO\n(M) = Modify - can modify GPO\n(RX) = Read/Execute - read only\n(OI) = Object Inherit - applies to files\n(CI) = Container Inherit - applies to subfolders\n\nDEFAULT GPO GUIDs:\n{31B2F340-016D-11D2-945F-00C04FB984F9} = Default Domain Policy\n{6AC1786C-016F-11D2-945F-00C04FB984F9} = Default Domain Controllers Policy\n\ncertification TIP: Default Domain Policy applies to ALL domain computers. Write access here = immediate path to Domain Admin.\n\nTIME ESTIMATE: 1-2 minutes",
+      "notes": "GPO PERMISSION LEGEND:\n(F) = Full Control - can modify GPO (JACKPOT)\n(W) = Write - can modify GPO\n(M) = Modify - can modify GPO\n(RX) = Read/Execute - read only\n(OI) = Object Inherit - applies to files\n(CI) = Container Inherit - applies to subfolders\n\nDEFAULT GPO GUIDs:\n{31B2F340-016D-11D2-945F-00C04FB984F9} = Default Domain Policy\n{6AC1786C-016F-11D2-945F-00C04FB984F9} = Default Domain Controllers Policy\n\nPRACTICAL TIP: Default Domain Policy applies to ALL domain computers. Write access here = immediate path to Domain Admin.\n\nTIME ESTIMATE: 1-2 minutes",
       "prerequisites": [],
       "alternatives": [
         "get-netgpo",

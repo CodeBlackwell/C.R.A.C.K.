@@ -1,0 +1,5 @@
+# Nmap 7.95 scan initiated Tue Jan  6 12:37:27 2026 as: /usr/lib/nmap/nmap -sU --top-ports 20 -vv -oA nmap/udp 10.10.11.86
+# Ports scanned: TCP(0;) UDP(20;53,67-69,123,135,137-139,161-162,445,500,514,520,631,1434,1900,4500,49152) SCTP(0;) PROTOCOLS(0;)
+Host: 10.10.11.86 (soulmate.htb)	Status: Up
+Host: 10.10.11.86 (soulmate.htb)	Ports: 53/closed/udp//domain///, 67/closed/udp//dhcps///, 68/closed/udp//dhcpc///, 69/closed/udp//tftp///, 123/closed/udp//ntp///, 135/closed/udp//msrpc///, 137/closed/udp//netbios-ns///, 138/closed/udp//netbios-dgm///, 139/closed/udp//netbios-ssn///, 161/closed/udp//snmp///, 162/closed/udp//snmptrap///, 445/closed/udp//microsoft-ds///, 500/closed/udp//isakmp///, 514/closed/udp//syslog///, 520/closed/udp//route///, 631/closed/udp//ipp///, 1434/closed/udp//ms-sql-m///, 1900/closed/udp//upnp///, 4500/closed/udp//nat-t-ike///, 49152/closed/udp/////
+# Nmap done at Tue Jan  6 12:37:49 2026 -- 1 IP address (1 host up) scanned in 21.61 seconds

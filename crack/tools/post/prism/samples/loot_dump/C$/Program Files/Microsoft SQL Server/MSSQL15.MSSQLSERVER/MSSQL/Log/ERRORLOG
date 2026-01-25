@@ -1,0 +1,37 @@
+2026-01-07 05:00:00.01 Server      Microsoft SQL Server 2019 (RTM-CU18) (KB5017593) - 15.0.4261.1 (X64)
+	Sep 12 2022 15:07:06
+	Copyright (C) 2019 Microsoft Corporation
+	Standard Edition (64-bit) on Windows Server 2019 Standard 10.0 <X64> (Build 17763: ) (Hypervisor)
+
+2026-01-07 05:00:00.03 Server      UTC adjustment: -5:00
+2026-01-07 05:00:00.03 Server      (c) Microsoft Corporation.
+2026-01-07 05:00:00.03 Server      All rights reserved.
+2026-01-07 05:00:00.03 Server      Server process ID is 4512.
+2026-01-07 05:00:00.05 Server      Logging SQL Server messages in file 'C:\Program Files\Microsoft SQL Server\MSSQL15.MSSQLSERVER\MSSQL\Log\ERRORLOG'.
+2026-01-07 05:00:00.08 Server      Registry startup parameters:
+	 -d C:\Program Files\Microsoft SQL Server\MSSQL15.MSSQLSERVER\MSSQL\DATA\master.mdf
+	 -e C:\Program Files\Microsoft SQL Server\MSSQL15.MSSQLSERVER\MSSQL\Log\ERRORLOG
+	 -l C:\Program Files\Microsoft SQL Server\MSSQL15.MSSQLSERVER\MSSQL\DATA\mastlog.ldf
+2026-01-07 05:00:00.12 Server      SQL Server detected 2 sockets with 4 cores per socket and 8 logical processors per socket, 16 total logical processors; using 16 logical processors based on SQL Server licensing.
+2026-01-07 05:00:00.15 Server      SQL Server is starting at normal priority base (=7). This is an informational message only.
+2026-01-07 05:00:00.18 Server      Detected 32682 MB of RAM. This is an informational message; no user action is required.
+2026-01-07 05:00:00.25 Server      Using locked pages for buffer pool.
+2026-01-07 05:00:00.35 Server      Buffer pool extension is not enabled.
+2026-01-07 05:00:01.45 Server      Initializing the buffer pool. This is an informational message only.
+2026-01-07 05:00:01.85 Server      Buffer Pool: Allocating 8388608 bytes for the buffer pool commit target.
+2026-01-07 05:00:02.15 Server      Successfully initialized the buffer pool.
+2026-01-07 05:00:03.25 Server      Recovery is writing a checkpoint in database 'master' (1). This is an informational message only.
+2026-01-07 05:00:04.35 spid52      Starting up database 'model'.
+2026-01-07 05:00:05.45 spid52      Starting up database 'tempdb'.
+2026-01-07 05:00:06.55 spid52      Starting up database 'msdb'.
+2026-01-07 05:00:07.65 spid52      Starting up database 'AppDB'.
+2026-01-07 05:00:08.75 Server      SQL Server is now ready for client connections. This is an informational message; no user action is required.
+2026-01-07 06:00:00.15 Logon       Error: 18456, Severity: 14, State: 8.
+2026-01-07 06:00:00.15 Logon       Login failed for user 'sa'. Reason: Password did not match that for the login provided. [CLIENT: 192.168.1.200]
+2026-01-07 06:00:05.25 Logon       Error: 18456, Severity: 14, State: 8.
+2026-01-07 06:00:05.25 Logon       Login failed for user 'sa'. Reason: Password did not match that for the login provided. [CLIENT: 192.168.1.200]
+2026-01-07 06:00:10.35 Logon       Error: 18456, Severity: 14, State: 8.
+2026-01-07 06:00:10.35 Logon       Login failed for user 'admin'. Reason: Could not find a login matching the name provided. [CLIENT: 192.168.1.200]
+2026-01-07 08:00:00.45 spid54      Configuration option 'show advanced options' changed from 0 to 1. Run the RECONFIGURE statement to install.
+2026-01-07 08:15:00.55 spid54      Backup database 'AppDB' complete. 145.5 MB processed in 12.34 seconds.
+2026-01-07 12:00:00.65 Logon       Login succeeded for user 'svc_sql'. [CLIENT: 192.168.1.10]

@@ -1,0 +1,123 @@
+# extended LDIF
+#
+# LDAPv3
+# base <DC=cascade,DC=local> with scope subtree
+# filter: (objectClass=user)
+# requesting: * 
+#
+
+# CascGuest, Users, cascade.local
+dn: CN=CascGuest,CN=Users,DC=cascade,DC=local
+objectClass: top
+objectClass: person
+objectClass: organizationalPerson
+objectClass: user
+cn: CascGuest
+description: Built-in account for guest access to the computer/domain
+distinguishedName: CN=CascGuest,CN=Users,DC=cascade,DC=local
+instanceType: 4
+whenCreated: 20200109153140.0Z
+whenChanged: 20200110160637.0Z
+uSNCreated: 8197
+memberOf: CN=Guests,CN=Builtin,DC=cascade,DC=local
+uSNChanged: 45094
+name: CascGuest
+objectGUID:: LrFX+qgBukGjmV+ZFABrZw==
+userAccountControl: 66082
+badPwdCount: 0
+codePage: 0
+countryCode: 0
+badPasswordTime: 0
+lastLogoff: 0
+lastLogon: 0
+pwdLastSet: 0
+primaryGroupID: 514
+objectSid:: AQUAAAAAAAUVAAAAMvuhxgsd8Uf1yHJF9QEAAA==
+accountExpires: 9223372036854775807
+logonCount: 0
+sAMAccountName: CascGuest
+sAMAccountType: 805306368
+userPrincipalName: CascGuest@cascade.local
+objectCategory: CN=Person,CN=Schema,CN=Configuration,DC=cascade,DC=local
+isCriticalSystemObject: TRUE
+dSCorePropagationData: 20200117033736.0Z
+dSCorePropagationData: 20200117001404.0Z
+dSCorePropagationData: 20200109175934.0Z
+dSCorePropagationData: 20200109154857.0Z
+dSCorePropagationData: 16010714223649.0Z
+lastLogonTimestamp: 132230700642958462
+
+# CASC-DC1, Domain Controllers, cascade.local
+dn: CN=CASC-DC1,OU=Domain Controllers,DC=cascade,DC=local
+objectClass: top
+objectClass: person
+objectClass: organizationalPerson
+objectClass: user
+objectClass: computer
+cn: CASC-DC1
+distinguishedName: CN=CASC-DC1,OU=Domain Controllers,DC=cascade,DC=local
+instanceType: 4
+whenCreated: 20200109153215.0Z
+whenChanged: 20260105013521.0Z
+uSNCreated: 12293
+uSNChanged: 340056
+name: CASC-DC1
+objectGUID:: YzFU46Jo90CiFCmHfZLVOQ==
+userAccountControl: 532480
+badPwdCount: 0
+codePage: 0
+countryCode: 0
+badPasswordTime: 0
+lastLogoff: 0
+lastLogon: 134120595921349353
+localPolicyFlags: 0
+pwdLastSet: 134120505170316852
+primaryGroupID: 516
+objectSid:: AQUAAAAAAAUVAAAAMvuhxgsd8Uf1yHJF6QMAAA==
+accountExpires: 9223372036854775807
+logonCount: 5953
+sAMAccountName: CASC-DC1$
+sAMAccountType: 805306369
+operatingSystem: Windows Server 2008 R2 Standard
+operatingSystemVersion: 6.1 (7601)
+operatingSystemServicePack: Service Pack 1
+serverReferenceBL: CN=CASC-DC1,CN=Servers,CN=Default-First-Site-Name,CN=Sites,
+ CN=Configuration,DC=cascade,DC=local
+dNSHostName: CASC-DC1.cascade.local
+rIDSetReferences: CN=RID Set,CN=CASC-DC1,OU=Domain Controllers,DC=cascade,DC=l
+ ocal
+servicePrincipalName: TERMSRV/CASC-DC1
+servicePrincipalName: TERMSRV/CASC-DC1.cascade.local
+servicePrincipalName: ldap/CASC-DC1.cascade.local/ForestDnsZones.cascade.local
+servicePrincipalName: ldap/CASC-DC1.cascade.local/DomainDnsZones.cascade.local
+servicePrincipalName: Dfsr-12F9A27C-BF97-4787-9364-D31B6C55EB04/CASC-DC1.casca
+ de.local
+servicePrincipalName: DNS/CASC-DC1.cascade.local
+servicePrincipalName: GC/CASC-DC1.cascade.local/cascade.local
+servicePrincipalName: RestrictedKrbHost/CASC-DC1.cascade.local
+servicePrincipalName: RestrictedKrbHost/CASC-DC1
+servicePrincipalName: HOST/CASC-DC1/CASCADE
+servicePrincipalName: HOST/CASC-DC1.cascade.local/CASCADE
+servicePrincipalName: HOST/CASC-DC1
+servicePrincipalName: HOST/CASC-DC1.cascade.local
+servicePrincipalName: HOST/CASC-DC1.cascade.local/cascade.local
+servicePrincipalName: E3514235-4B06-11D1-AB04-00C04FC2DCD2/8bfc9a6c-6edc-45bd-
+ 9e27-251f9de2d5f7/cascade.local
+servicePrincipalName: ldap/CASC-DC1/CASCADE
+servicePrincipalName: ldap/8bfc9a6c-6edc-45bd-9e27-251f9de2d5f7._msdcs.cascade
+ .local
+servicePrincipalName: ldap/CASC-DC1.cascade.local/CASCADE
+servicePrincipalName: ldap/CASC-DC1
+servicePrincipalName: ldap/CASC-DC1.cascade.local
+servicePrincipalName: ldap/CASC-DC1.cascade.local/cascade.local
+objectCategory: CN=Computer,CN=Schema,CN=Configuration,DC=cascade,DC=local
+isCriticalSystemObject: TRUE
+dSCorePropagationData: 20200117033736.0Z
+dSCorePropagationData: 20200117001404.0Z
+dSCorePropagationData: 20200109175934.0Z
+dSCorePropagationData: 20200109154857.0Z
+dSCorePropagationData: 16010714223649.0Z
+lastLogonTimestamp: 134120505215614037
+msDS-SupportedEncryptionTypes: 31
+msDFSR-ComputerReferenceBL: CN=CASC-DC1,CN=Topology,CN=Domain System Volume,CN
+ =DFSR-GlobalSettings,CN=System,DC=cascade,DC=local

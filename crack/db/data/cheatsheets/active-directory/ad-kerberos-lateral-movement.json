@@ -72,13 +72,13 @@
         {
           "title": "Scenario 5: Ticket Manipulation Troubleshooting (Time Sync, SPN Issues)",
           "context": "Your overpass-the-hash or pass-the-ticket attack fails with errors: 'KRB_AP_ERR_SKEW' (time synchronization), 'KDC_ERR_S_PRINCIPAL_UNKNOWN' (SPN not found), 'KRB_AP_ERR_TKT_EXPIRED' (ticket expired). Kerberos is time-sensitive and SPN-dependent - troubleshooting requires understanding these constraints.",
-          "approach": "Time sync error (KRB_AP_ERR_SKEW): Kerberos requires client and server clocks within 5 minutes. Check: 'net time \\\\DC01' (shows DC time), sync: 'net time \\\\DC01 /set /y' (sync to DC). SPN error (KDC_ERR_S_PRINCIPAL_UNKNOWN): You used IP address instead of hostname. Kerberos REQUIRES hostnames for SPN construction. Fix: Use 'net use \\\\DC01.CORP.COM' not 'net use \\\\192.168.50.10'. Ticket expired: Check 'klist' output for EndTime. Re-request TGT if expired. Purge old tickets: 'klist purge', then re-run overpass-the-hash. Also verify domain connectivity - Kerberos needs DNS resolution and port 88 (Kerberos) accessible to DC.",
+          "approach": "Time sync error (KRB_AP_ERR_SKEW): Kerberos requires client and server clocks within 5 minutes. Check: 'net time \\\\DC01' (shows DC time), sync: 'net time \\\\DC01 /set /y' (sync to DC). SPN error (KDC_ERR_S_PRINCIPAL_UNKNOWN): You used IP address instead of hostname. Kerberos REQUIRES hostnames for SPN construction. Fix: Use 'net use \\\\DC01.CORP.COM' not 'net use \\\\10.10.10.10'. Ticket expired: Check 'klist' output for EndTime. Re-request TGT if expired. Purge old tickets: 'klist purge', then re-run overpass-the-hash. Also verify domain connectivity - Kerberos needs DNS resolution and port 88 (Kerberos) accessible to DC.",
           "commands": [
             "kerberos-time-sync",
             "kerberos-klist-verify",
             "kerberos-purge-tickets"
           ],
-          "expected_outcome": "Time sync check: 'net time \\\\DC01' \u2192 'Current time at \\\\DC01 is 11/8/2025 2:30:45 PM'. Local time: 11/8/2025 8:30:45 AM (6 hour difference). This exceeds 5-minute Kerberos tolerance \u2192 KRB_AP_ERR_SKEW. Fix: 'net time \\\\DC01 /set /y' \u2192 'The command completed successfully'. Retry overpass-the-hash \u2192 SUCCESS. SPN troubleshooting: 'net use \\\\192.168.50.10' \u2192 'KDC_ERR_S_PRINCIPAL_UNKNOWN'. Kerberos tried SPN 'cifs/192.168.50.10' but KDC only knows 'cifs/DC01.CORP.COM'. Fix: 'net use \\\\DC01.CORP.COM' \u2192 Success. Ticket expiration: 'klist' shows 'EndTime: 11/8/2025 12:30:45 PM', current time 1:00 PM \u2192 ticket expired. 'klist purge' \u2192 'Target: All existing tickets will be deleted. Continue? (Y/N) Y, Purging all tickets'. Re-run Rubeus asktgt \u2192 fresh TGT obtained.",
+          "expected_outcome": "Time sync check: 'net time \\\\DC01' \u2192 'Current time at \\\\DC01 is 11/8/2025 2:30:45 PM'. Local time: 11/8/2025 8:30:45 AM (6 hour difference). This exceeds 5-minute Kerberos tolerance \u2192 KRB_AP_ERR_SKEW. Fix: 'net time \\\\DC01 /set /y' \u2192 'The command completed successfully'. Retry overpass-the-hash \u2192 SUCCESS. SPN troubleshooting: 'net use \\\\10.10.10.10' \u2192 'KDC_ERR_S_PRINCIPAL_UNKNOWN'. Kerberos tried SPN 'cifs/10.10.10.10' but KDC only knows 'cifs/DC01.CORP.COM'. Fix: 'net use \\\\DC01.CORP.COM' \u2192 Success. Ticket expiration: 'klist' shows 'EndTime: 11/8/2025 12:30:45 PM', current time 1:00 PM \u2192 ticket expired. 'klist purge' \u2192 'Target: All existing tickets will be deleted. Continue? (Y/N) Y, Purging all tickets'. Re-run Rubeus asktgt \u2192 fresh TGT obtained.",
           "why_this_works": "Kerberos security depends on time synchronization and SPN validation. TIME: Tickets contain timestamps to prevent replay attacks. If client clock is skewed >5 minutes from KDC, KDC rejects pre-auth (assumes replayed old request). This is SECURITY FEATURE but breaks attacks if attacker workstation clock differs from domain. Solution: Sync to DC time before Kerberos operations. SPN (Service Principal Name): Kerberos uses SPNs to identify services (format: service/hostname). When you access 'net use \\\\DC01', Windows constructs SPN 'cifs/DC01.CORP.COM' and requests TGS for that SPN. IP addresses don't have SPNs registered in AD \u2192 KDC can't issue ticket. Solution: Always use FQDN or NetBIOS name (not IP) for Kerberos operations. EXPIRATION: TGT default lifetime = 10 hours (configurable via GPO). After expiration, ticket is invalid. Client must re-authenticate to obtain new TGT. Stolen tickets stop working after expiration - this limits pass-the-ticket window."
         },
         {
@@ -91,7 +91,7 @@
             "kerberos-rubeus-ptt",
             "lateral-movement-decision-tree"
           ],
-          "expected_outcome": "Scenario: You have hash for corp\\admin, you're on Kali, target has port 445 open. FAST PATH: 'impacket-psexec -hashes :fc525c... corp/admin@192.168.50.100' \u2192 Instant SYSTEM shell (30 seconds). SLOW PATH: Upload Mimikatz to compromised Windows machine, run overpass-the-hash, spawn PowerShell, trigger Kerberos, verify klist, download Microsoft PsExec64.exe, execute \u2192 Same result (10 minutes). pentest TIME MANAGEMENT: Use Kerberos techniques only when: (1) Impacket blocked by network controls, (2) Target specifically requires Microsoft PsExec (rare in assessments), (3) You already have TGT exported and want to reuse. Default to NTLM pass-the-hash for exam efficiency - save Kerberos for troubleshooting fallback.",
+          "expected_outcome": "Scenario: You have hash for corp\\admin, you're on Kali, target has port 445 open. FAST PATH: 'impacket-psexec -hashes :fc525c... corp/admin@10.10.10.100' \u2192 Instant SYSTEM shell (30 seconds). SLOW PATH: Upload Mimikatz to compromised Windows machine, run overpass-the-hash, spawn PowerShell, trigger Kerberos, verify klist, download Microsoft PsExec64.exe, execute \u2192 Same result (10 minutes). pentest TIME MANAGEMENT: Use Kerberos techniques only when: (1) Impacket blocked by network controls, (2) Target specifically requires Microsoft PsExec (rare in assessments), (3) You already have TGT exported and want to reuse. Default to NTLM pass-the-hash for exam efficiency - save Kerberos for troubleshooting fallback.",
           "why_this_works": "NTLM pass-the-hash advantages: (1) Works from Kali (no Windows machine needed), (2) Faster (no ticket request/verification), (3) Simpler (one command vs multi-step process), (4) Well-documented for security work. Kerberos advantages: (1) Works with Microsoft tools that don't support NTLM, (2) Tickets are time-limited (stealthier - stolen ticket expires), (3) Delegation support (can forward credentials), (4) Modern AD environments prefer Kerberos over NTLM. WHEN KERBEROS REQUIRED: (1) Microsoft PsExec64.exe (SysInternals version doesn't support NTLM), (2) Certain COM objects (DCOM may require Kerberos depending on configuration), (3) Constrained/unconstrained delegation scenarios. pentest REALITY: Most exam machines accept NTLM. Kerberos techniques test depth of AD knowledge but aren't usually critical path to flags. Master NTLM first, learn Kerberos for completeness."
         }
       ],
@@ -126,7 +126,7 @@
             },
             {
               "id": "overpass-net-use-trigger",
-              "example": "net use \\\\files04",
+              "example": "net use \\\\fileserver",
               "shows": "The command completed successfully"
             },
             {
@@ -182,11 +182,11 @@
         },
         {
           "title": "Phase 5: Technique Selection (NTLM vs Kerberos)",
-          "notes": "NTLM pass-the-hash (default): Use from Kali with Impacket (psexec, wmiexec, smbexec, Evil-WinRM). Faster, simpler, well-documented for certification. Overpass-the-hash (when NTLM blocked): Use from compromised Windows machine when target requires Kerberos (Microsoft PsExec, COM objects). Slower, multi-step, requires Windows machine. Pass-the-ticket (opportunistic): Use when you've already dumped tickets from high-value target. Limited time window (ticket expiration). certification PRIORITY: Master NTLM first (80% of exam lateral movement), understand Kerberos for completeness and troubleshooting (20%).",
+          "notes": "NTLM pass-the-hash (default): Use from Kali with Impacket (psexec, wmiexec, smbexec, Evil-WinRM). Faster, simpler, well-documented for pentest. Overpass-the-hash (when NTLM blocked): Use from compromised Windows machine when target requires Kerberos (Microsoft PsExec, COM objects). Slower, multi-step, requires Windows machine. Pass-the-ticket (opportunistic): Use when you've already dumped tickets from high-value target. Limited time window (ticket expiration). PRIORITY: Master NTLM first (80% of exam lateral movement), understand Kerberos for completeness and troubleshooting (20%).",
           "commands": [
             {
               "id": "pth-impacket-psexec",
-              "example": "impacket-psexec -hashes :2892D26CDF84D7A70E2EB3B9F05C425E administrator@192.168.50.73",
+              "example": "impacket-psexec -hashes :2892D26CDF84D7A70E2EB3B9F05C425E administrator@10.10.10.73",
               "shows": "[*] Requesting shares on <TARGET>"
             },
             {

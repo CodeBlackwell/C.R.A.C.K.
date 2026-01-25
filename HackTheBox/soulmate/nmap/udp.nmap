@@ -1,0 +1,29 @@
+# Nmap 7.95 scan initiated Tue Jan  6 12:37:27 2026 as: /usr/lib/nmap/nmap -sU --top-ports 20 -vv -oA nmap/udp 10.10.11.86
+Nmap scan report for soulmate.htb (10.10.11.86)
+Host is up, received echo-reply ttl 63 (0.20s latency).
+Scanned at 2026-01-06 12:37:28 HST for 21s
+
+PORT      STATE  SERVICE      REASON
+53/udp    closed domain       port-unreach ttl 63
+67/udp    closed dhcps        port-unreach ttl 63
+68/udp    closed dhcpc        port-unreach ttl 63
+69/udp    closed tftp         port-unreach ttl 63
+123/udp   closed ntp          port-unreach ttl 63
+135/udp   closed msrpc        port-unreach ttl 63
+137/udp   closed netbios-ns   port-unreach ttl 63
+138/udp   closed netbios-dgm  port-unreach ttl 63
+139/udp   closed netbios-ssn  port-unreach ttl 63
+161/udp   closed snmp         port-unreach ttl 63
+162/udp   closed snmptrap     port-unreach ttl 63
+445/udp   closed microsoft-ds port-unreach ttl 63
+500/udp   closed isakmp       port-unreach ttl 63
+514/udp   closed syslog       port-unreach ttl 63
+520/udp   closed route        port-unreach ttl 63
+631/udp   closed ipp          port-unreach ttl 63
+1434/udp  closed ms-sql-m     port-unreach ttl 63
+1900/udp  closed upnp         port-unreach ttl 63
+4500/udp  closed nat-t-ike    port-unreach ttl 63
+49152/udp closed unknown      port-unreach ttl 63
+
+Read data files from: /usr/share/nmap
+# Nmap done at Tue Jan  6 12:37:49 2026 -- 1 IP address (1 host up) scanned in 21.61 seconds

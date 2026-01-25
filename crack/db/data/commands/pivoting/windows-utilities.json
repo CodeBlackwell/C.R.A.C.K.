@@ -45,7 +45,7 @@
         "Element not found": "Verify exact rule: netsh interface portproxy show all, ensure listenaddress matches (e.g., 0.0.0.0 vs 192.168.x.x)",
         "Access denied": "Run as Administrator"
       },
-      "notes": "Critical for cleanup in certification exam - remove port forwards to avoid leaving persistent backdoors.\n\nAlso delete associated firewall rules with netsh-firewall-delete-rule.\n\nFor complete cleanup:\nnetsh interface portproxy reset (removes all rules).",
+      "notes": "Critical for cleanup in pentest - remove port forwards to avoid leaving persistent backdoors.\n\nAlso delete associated firewall rules with netsh-firewall-delete-rule.\n\nFor complete cleanup:\nnetsh interface portproxy reset (removes all rules).",
       "filled_example": "netsh interface portproxy delete v4tov4 listenport=2222 listenaddress=0.0.0.0"
     },
     {
@@ -78,7 +78,7 @@
       "alternatives": [],
       "prerequisites": [],
       "troubleshooting": {},
-      "notes": "Quick check for tool availability.\n\nCommon certification checks:\nwhere ssh (OpenSSH client), where python, where powershell, where curl.\n\nEquivalent to Linux 'which' command.",
+      "notes": "Quick check for tool availability.\n\nCommon pentest checks:\nwhere ssh (OpenSSH client), where python, where powershell, where curl.\n\nEquivalent to Linux 'which' command.",
       "filled_example": "where ssh"
     },
     {
@@ -114,7 +114,7 @@
         "win-kernel-exploits"
       ],
       "troubleshooting": {},
-      "notes": "Critical certification enumeration command.\n\nCheck:\nOS version (for exploit research), Hotfix list (missing patches = vulnerabilities), Network adapters (multi-homed = pivot candidate), System Type (32-bit vs 64-bit for exploit selection).\n\nTime estimate:\n5-10 seconds for output."
+      "notes": "Critical enumeration command.\n\nCheck:\nOS version (for exploit research), Hotfix list (missing patches = vulnerabilities), Network adapters (multi-homed = pivot candidate), System Type (32-bit vs 64-bit for exploit selection).\n\nTime estimate:\n5-10 seconds for output."
     },
     {
       "id": "whoami-priv",
@@ -188,7 +188,7 @@
         "chisel-client"
       ],
       "troubleshooting": {},
-      "notes": "Critical certification enumeration for pivot identification.\n\nLook for:\nMultiple network adapters (dual-homed = pivot candidate), Internal IP ranges (10.x, 172.16-31.x, 192.168.x = potential pivot targets), DNS servers (identify domain controllers).\n\nCommon pattern:\nHost has 192.168.45.x (WAN) and 172.16.50.x (internal) = perfect pivot point.\n\nTime estimate:\nimmediate."
+      "notes": "Critical enumeration for pivot identification.\n\nLook for:\nMultiple network adapters (dual-homed = pivot candidate), Internal IP ranges (10.x, 172.16-31.x, 192.168.x = potential pivot targets), DNS servers (identify domain controllers).\n\nCommon pattern:\nHost has 192.168.45.x (WAN) and 172.16.50.x (internal) = perfect pivot point.\n\nTime estimate:\nimmediate."
     },
     {
       "id": "netstat-windows",

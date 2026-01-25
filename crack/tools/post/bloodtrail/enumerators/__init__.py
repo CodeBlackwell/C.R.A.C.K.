@@ -19,7 +19,6 @@ from .smb_crawler import SMBCrawler, ShareInfo, CrawlResult, create_smb_crawler
 
 # Registry: ordered by preference
 # Anonymous-capable tools first, then authenticated-only
-# Note: GetNPUsersEnumerator is run separately in Phase 2 (needs user list from Phase 1)
 # Note: RpcclientEnumerator runs before Kerbrute to provide user list for kerberos validation
 ENUMERATORS: List[Type[Enumerator]] = [
     Enum4linuxEnumerator,   # SMB/RPC - richest data (users, groups, policy)
@@ -27,6 +26,7 @@ ENUMERATORS: List[Type[Enumerator]] = [
     RpcclientEnumerator,    # RPC - fast user enum, provides list for kerbrute
     LookupsidEnumerator,    # RID cycling - finds users when LDAP/RPC blocked
     KerbruteEnumerator,     # Kerberos - validates users, detects AS-REP
+    GetNPUsersEnumerator,   # Kerberos - AS-REP hash extraction
 ]
 
 

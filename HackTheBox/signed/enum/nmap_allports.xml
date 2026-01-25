@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE nmaprun>
+<?xml-stylesheet href="file:///usr/share/nmap/nmap.xsl" type="text/xsl"?>
+<!-- Nmap 7.95 scan initiated Sun Jan  4 06:28:03 2026 as: /usr/lib/nmap/nmap -&#45;privileged -p- -&#45;min-rate=1000 -oA /home/kali/Desktop/KaliBackup/OSCP/HackTheBox/signed/enum/nmap_allports 10.10.11.90 -->
+<nmaprun scanner="nmap" args="/usr/lib/nmap/nmap -&#45;privileged -p- -&#45;min-rate=1000 -oA /home/kali/Desktop/KaliBackup/OSCP/HackTheBox/signed/enum/nmap_allports 10.10.11.90" start="1767544083" startstr="Sun Jan  4 06:28:03 2026" version="7.95" xmloutputversion="1.05">
+<scaninfo type="syn" protocol="tcp" numservices="65535" services="1-65535"/>
+<verbose level="0"/>
+<debugging level="0"/>
+<hosthint><status state="up" reason="unknown-response" reason_ttl="0"/>
+<address addr="10.10.11.90" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+</hosthint>
+<host starttime="1767544083" endtime="1767544214"><status state="up" reason="echo-reply" reason_ttl="127"/>
+<address addr="10.10.11.90" addrtype="ipv4"/>
+<hostnames>
+<hostname name="signed.htb" type="PTR"/>
+</hostnames>
+<ports><extraports state="filtered" count="65534">
+<extrareasons reason="no-response" count="65534" proto="tcp" ports="1-1432,1434-65535"/>
+</extraports>
+<port protocol="tcp" portid="1433"><state state="open" reason="syn-ack" reason_ttl="127"/><service name="ms-sql-s" method="table" conf="3"/></port>
+</ports>
+<times srtt="144535" rttvar="3852" to="159943"/>
+</host>
+<runstats><finished time="1767544214" timestr="Sun Jan  4 06:30:14 2026" summary="Nmap done at Sun Jan  4 06:30:14 2026; 1 IP address (1 host up) scanned in 131.63 seconds" elapsed="131.63" exit="success"/><hosts up="1" down="0" total="1"/>
+</runstats>
+</nmaprun>

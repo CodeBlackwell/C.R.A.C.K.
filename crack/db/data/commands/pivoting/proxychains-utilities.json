@@ -55,7 +55,7 @@
         "Configuration syntax error": "Ensure format: socks5 <IP> <PORT> (space-separated, no quotes), verify [ProxyList] section exists",
         "DNS leaks outside tunnel": "Uncomment proxy_dns in config: sudo sed -i 's/#proxy_dns/proxy_dns/' /etc/proxychains4.conf"
       },
-      "notes": "Critical configuration step for SSH dynamic forwarding.\n\nDefault config uses Tor (socks4 127.0.0.1 9050) - must replace with your SOCKS proxy.\n\nRecommended settings for certification:\ntcp_read_time_out = 1000, tcp_connect_time_out = 1000, proxy_dns enabled.\n\nChain types:\nstrict_chain (all proxies must work), dynamic_chain (skip dead proxies), random_chain (randomize order).\n\nFor exam:\nUse strict_chain with single SOCKS proxy.\n\nAlternative:\nCreate ~/.proxychains/proxychains.conf for user-specific config without sudo.",
+      "notes": "Critical configuration step for SSH dynamic forwarding.\n\nDefault config uses Tor (socks4 127.0.0.1 9050) - must replace with your SOCKS proxy.\n\nRecommended settings for practical:\ntcp_read_time_out = 1000, tcp_connect_time_out = 1000, proxy_dns enabled.\n\nChain types:\nstrict_chain (all proxies must work), dynamic_chain (skip dead proxies), random_chain (randomize order).\n\nFor exam:\nUse strict_chain with single SOCKS proxy.\n\nAlternative:\nCreate ~/.proxychains/proxychains.conf for user-specific config without sudo.",
       "methodology_guidance": {
         "after_success": "Verify SOCKS proxy running: ss -ntplu | grep <SOCKS_PORT> Edit full config: sudo nano /etc/proxychains4.conf Set timeout values: tcp_read_time_out = 1000, tcp_connect_time_out = 1000 Enable proxy_dns: Uncomment 'proxy_dns' line to prevent DNS leaks Test configuration: proxychains curl -I http://internal-ip"
       },
@@ -128,7 +128,7 @@
         "Static binary incompatible": "Proxychains uses LD_PRELOAD (dynamic linking) - recompile nmap dynamically or use sshuttle instead",
         "DNS resolution hangs": "Add -n flag to skip DNS: proxychains nmap -sT -Pn -n <TARGET>, or enable proxy_dns in proxychains4.conf"
       },
-      "notes": "Critical certification technique for internal network enumeration through pivot.\n\nLimitations:\nTCP-only (no UDP/ICMP), must use -sT (connect scan, not SYN scan), no OS detection (-O), slower than direct scanning.\n\nPerformance tuning:\nReduce proxychains timeouts to 1000ms, use --top-ports=20 instead of -p-, add -T2 or -T3 timing.\n\nFor full subnet scans, consider parallel execution:\nfor ip in {1..254}; do proxychains -q nmap -sT -Pn --top-ports=20 172.16.50.$ip & done.\n\nTime estimate:\n1-2 minutes per host with top 20 ports.",
+      "notes": "Critical common technique for internal network enumeration through pivot.\n\nLimitations:\nTCP-only (no UDP/ICMP), must use -sT (connect scan, not SYN scan), no OS detection (-O), slower than direct scanning.\n\nPerformance tuning:\nReduce proxychains timeouts to 1000ms, use --top-ports=20 instead of -p-, add -T2 or -T3 timing.\n\nFor full subnet scans, consider parallel execution:\nfor ip in {1..254}; do proxychains -q nmap -sT -Pn --top-ports=20 172.16.50.$ip & done.\n\nTime estimate:\n1-2 minutes per host with top 20 ports.",
       "methodology_guidance": {
         "after_success": "Enumerate services: proxychains nmap -sT -sV -p <OPEN_PORTS> -Pn -v <TARGET> Scan discovered subnet: proxychains nmap -sT -Pn --top-ports=20 172.16.50.0/24 Run vulnerability scan: proxychains nmap -sT -Pn --script=vuln -p <PORT> <TARGET> Access discovered services: proxychains psql -h <TARGET>, proxychains smbclient -L //<TARGET>"
       },
@@ -202,7 +202,7 @@
         "Socket error": "Check proxychains config: cat /etc/proxychains4.conf | grep socks5, verify SOCKS port matches SSH tunnel",
         "psql hangs at password prompt": "Add password to PGPASSWORD env var: PGPASSWORD=<pass> proxychains psql -h <TARGET> -U <USER> -d <DB>"
       },
-      "notes": "Common certification scenario:\nFind PostgreSQL credentials in config files (e.g., confluence.cfg.xml), access internal database through pivot.\n\nAlternative to port forwarding when you want interactive session without permanent tunnel.\n\nFor non-interactive queries, use:\necho 'SELECT * FROM users;' | proxychains psql -h <TARGET> -U <USER> -d <DB>.\n\nTime estimate:\n1-2 minutes for connection and query.",
+      "notes": "Common lab scenario:\nFind PostgreSQL credentials in config files (e.g., confluence.cfg.xml), access internal database through pivot.\n\nAlternative to port forwarding when you want interactive session without permanent tunnel.\n\nFor non-interactive queries, use:\necho 'SELECT * FROM users;' | proxychains psql -h <TARGET> -U <USER> -d <DB>.\n\nTime estimate:\n1-2 minutes for connection and query.",
       "methodology_guidance": {
         "after_success": "List databases: \\l List tables in database: \\dt Query user table: SELECT * FROM cwd_user; (for Confluence) Extract credentials: SELECT username, password_hash FROM users; Check database version: SELECT version();"
       },

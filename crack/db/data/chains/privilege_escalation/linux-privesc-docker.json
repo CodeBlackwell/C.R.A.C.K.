@@ -30,7 +30,7 @@
     "User is member of docker group",
     "Docker daemon is running"
   ],
-  "notes": "Docker group membership is equivalent to root access. This is one of the fastest privilege escalation paths in certification labs. The mount escape technique is preferred over privileged mode as it's cleaner and more reliable. If no images are available, alpine can be pulled (5MB, fast download). Alternative techniques include socket mounting and pid namespace abuse, but direct mount escape is simplest. Always verify root access by reading /etc/shadow and /root directory after escalation.",
+  "notes": "Docker group membership is equivalent to root access. This is one of the fastest privilege escalation paths in labs. The mount escape technique is preferred over privileged mode as it's cleaner and more reliable. If no images are available, alpine can be pulled (5MB, fast download). Alternative techniques include socket mounting and pid namespace abuse, but direct mount escape is simplest. Always verify root access by reading /etc/shadow and /root directory after escalation.",
   "steps": [
     {
       "id": "verify-docker-group",

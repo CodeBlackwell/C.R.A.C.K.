@@ -8,7 +8,7 @@
       "category": "privilege-escalation",
       "subcategory": "linux",
       "tags": [
-        "oscp",
+        "PENTEST",
         "suid",
         "linux",
         "privesc",
@@ -41,7 +41,7 @@
         }
       ],
       "tags": [
-        "oscp",
+        "PENTEST",
         "suid",
         "linux",
         "privesc",
@@ -62,7 +62,7 @@
       "category": "privilege-escalation",
       "subcategory": "linux",
       "tags": [
-        "oscp",
+        "PENTEST",
         "capabilities",
         "linux",
         "privesc"
@@ -92,7 +92,7 @@
         }
       ],
       "tags": [
-        "oscp",
+        "PENTEST",
         "capabilities",
         "linux",
         "privesc",
@@ -113,7 +113,7 @@
       "category": "privilege-escalation",
       "subcategory": "linux",
       "tags": [
-        "oscp",
+        "PENTEST",
         "cronjobs",
         "linux",
         "privesc",
@@ -133,7 +133,7 @@
       "category": "privilege-escalation",
       "subcategory": "linux",
       "tags": [
-        "oscp",
+        "PENTEST",
         "kernel",
         "linux",
         "privesc"
@@ -154,7 +154,7 @@
       "category": "privilege-escalation",
       "subcategory": "linux",
       "tags": [
-        "oscp",
+        "PENTEST",
         "gtfobins",
         "linux",
         "privesc",
@@ -173,7 +173,7 @@
       "category": "privilege-escalation",
       "subcategory": "windows",
       "tags": [
-        "oscp",
+        "PENTEST",
         "lolbas",
         "windows",
         "privesc",

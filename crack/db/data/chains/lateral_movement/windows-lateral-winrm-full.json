@@ -32,7 +32,7 @@
     "Network access to port 5985 (HTTP) or 5986 (HTTPS)",
     "Evil-WinRM installed on Kali (default in assessments lab)"
   ],
-  "notes": "WinRM (Windows Remote Management) is Microsoft's official remote administration protocol based on WS-Management. Evil-WinRM provides robust PowerShell remoting from Kali with file upload/download capabilities. ADVANTAGES: Interactive PowerShell, file transfer built-in, cleaner than WMI, supports pass-the-hash. DISADVANTAGES: Creates WinRM event logs, requires WinRM enabled. certification RELEVANCE: Very high - preferred method for Windows lateral movement from Kali.",
+  "notes": "WinRM (Windows Remote Management) is Microsoft's official remote administration protocol based on WS-Management. Evil-WinRM provides robust PowerShell remoting from Kali with file upload/download capabilities. ADVANTAGES: Interactive PowerShell, file transfer built-in, cleaner than WMI, supports pass-the-hash. DISADVANTAGES: Creates WinRM event logs, requires WinRM enabled. PRACTICAL RELEVANCE: Very high - preferred method for Windows lateral movement from Kali.",
   "steps": [
     {
       "id": "verify-winrm-port",

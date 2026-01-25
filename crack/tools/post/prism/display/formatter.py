@@ -13,6 +13,7 @@ from rich import box
 from ..models import ParsedSummary, Credential, CredentialType, KerberosTicket
 from ..models import NmapScanSummary, NmapHost, NmapPort
 from ..models import LdapSummary, LdapUser, LdapComputer, LdapGroup
+from ..models import SmbmapSummary, SmbShare, SmbPermission
 
 
 class PrismFormatter:
@@ -31,11 +32,31 @@ class PrismFormatter:
         # Header panel
         self._render_header(summary)
 
+        # GPP credentials (HIGH VALUE)
+        gpp = summary.gpp_creds
+        if gpp:
+            self._render_gpp_table(gpp)
+
+        # Kerberoast hashes
+        kerberoast = summary.kerberoast_hashes
+        if kerberoast:
+            self._render_kerberoast_table(kerberoast)
+
         # Cleartext credentials (HIGH VALUE)
         cleartext = [c for c in summary.cleartext_creds
                      if verbose or not c.is_service_account]
         if cleartext:
             self._render_cleartext_table(cleartext)
+
+        # Cracked passwords from potfiles (HIGH VALUE)
+        cracked = summary.cracked_passwords
+        if cracked:
+            self._render_cracked_table(cracked)
+
+        # Connection string credentials (HIGH VALUE)
+        connstrings = summary.connection_strings
+        if connstrings:
+            self._render_connstring_table(connstrings)
 
         # NTLM hashes
         ntlm = summary.ntlm_hashes
@@ -44,6 +65,36 @@ class PrismFormatter:
             ntlm = [c for c in ntlm if not c.is_service_account or c.is_machine_account]
         if ntlm:
             self._render_ntlm_table(ntlm, verbose)
+
+        # NTDS hashes (from secretsdump)
+        ntds = summary.ntds_hashes
+        if ntds:
+            self._render_ntds_table(ntds, verbose)
+
+        # NetNTLM hashes (from Responder)
+        netntlm = summary.netntlm_hashes
+        if netntlm:
+            self._render_netntlm_table(netntlm)
+
+        # Linux shadow hashes
+        linux = summary.linux_hashes
+        if linux:
+            self._render_linux_table(linux)
+
+        # SSH keys
+        ssh = summary.ssh_keys
+        if ssh:
+            self._render_ssh_table(ssh)
+
+        # htpasswd hashes
+        htpasswd = summary.htpasswd_hashes
+        if htpasswd:
+            self._render_htpasswd_table(htpasswd)
+
+        # AWS keys
+        aws = summary.aws_keys
+        if aws:
+            self._render_aws_table(aws)
 
         # SHA1 hashes (optional, usually less useful)
         if verbose and summary.sha1_hashes:
@@ -62,10 +113,11 @@ class PrismFormatter:
 
     def _render_header(self, summary: ParsedSummary) -> None:
         """Render summary header panel"""
-        hostname = summary.source_hostname or "Unknown Host"
+        hostname = summary.display_hostname
         domain = summary.source_domain or ""
 
-        if domain:
+        # Don't append domain if hostname already contains it
+        if domain and domain.upper() not in hostname.upper():
             source_str = f"[bold cyan]{hostname}[/].{domain}"
         else:
             source_str = f"[bold cyan]{hostname}[/]"
@@ -78,9 +130,20 @@ class PrismFormatter:
             f"High Value: [bold yellow]{stats['high_value']}[/]"
         )
 
+        # Dynamic title based on source tool
+        tool_titles = {
+            'mimikatz': 'Mimikatz Credential Summary',
+            'gpp': 'GPP Password Summary',
+            'kerberoast': 'Kerberoast Hash Summary',
+            'secretsdump': 'Secretsdump Hash Summary',
+            'nmap': 'Nmap Scan Summary',
+            'ldap': 'LDAP Enumeration Summary',
+        }
+        title_suffix = tool_titles.get(summary.source_tool, 'Credential Summary')
+
         panel = Panel(
             header_text,
-            title="[bold white]PRISM - Mimikatz Credential Summary[/]",
+            title=f"[bold white]PRISM - {title_suffix}[/]",
             border_style="cyan",
             box=box.ROUNDED
         )
@@ -156,6 +219,220 @@ class PrismFormatter:
             table.add_row(cred.username, cred.domain, cred.value)
 
         self.console.print(table)
+
+    def _render_gpp_table(self, creds: list) -> None:
+        """Render GPP credentials table (HIGH VALUE)"""
+        self.console.print(
+            "\n[bold yellow]GPP CREDENTIALS (HIGH VALUE)[/]\n"
+        )
+
+        table = Table(box=box.ROUNDED, border_style="yellow")
+        table.add_column("Username", style="bold white")
+        table.add_column("Domain", style="cyan")
+        table.add_column("Password", style="bold green")
+        table.add_column("Type", style="dim")
+
+        for cred in creds:
+            cred_type = "Decrypted" if cred.cred_type == CredentialType.GPP_PASSWORD else "Encrypted"
+            table.add_row(
+                cred.username,
+                cred.domain,
+                cred.value,
+                cred_type
+            )
+
+        self.console.print(table)
+
+    def _render_kerberoast_table(self, creds: list) -> None:
+        """Render Kerberoast/AS-REP hashes table"""
+        self.console.print("\n[bold magenta]KERBEROAST HASHES[/]\n")
+
+        table = Table(box=box.ROUNDED, border_style="magenta")
+        table.add_column("Username", style="bold white")
+        table.add_column("Domain", style="cyan")
+        table.add_column("Hash Type", style="yellow")
+        table.add_column("Hash (truncated)", style="dim", max_width=50)
+
+        for cred in creds:
+            hash_type = "TGS" if cred.cred_type == CredentialType.KRB5TGS else "AS-REP"
+            # Truncate long hashes for display
+            hash_display = cred.value[:47] + "..." if len(cred.value) > 50 else cred.value
+
+            table.add_row(
+                cred.username,
+                cred.domain,
+                hash_type,
+                hash_display
+            )
+
+        self.console.print(table)
+
+        self.console.print(
+            "[dim]Full hashes saved. Crack with: hashcat -m 13100 (TGS) / 18200 (AS-REP)[/]"
+        )
+
+    def _render_ntds_table(self, creds: list, verbose: bool = False) -> None:
+        """Render NTDS/SAM hashes table"""
+        self.console.print("\n[bold blue]NTDS/SAM HASHES[/]\n")
+
+        table = Table(box=box.ROUNDED, border_style="blue")
+        table.add_column("Username", style="bold white")
+        table.add_column("Domain", style="cyan")
+        table.add_column("NTLM Hash", style="yellow")
+        table.add_column("Type", style="dim")
+
+        for cred in creds:
+            if cred.is_machine_account:
+                cred_type = "Machine"
+                style = "dim"
+            elif cred.is_service_account:
+                cred_type = "Service"
+                style = "dim"
+            else:
+                cred_type = "User"
+                style = "bold"
+
+            if cred.is_service_account and not cred.is_machine_account and not verbose:
+                continue
+
+            table.add_row(
+                f"[{style}]{cred.username}[/]",
+                cred.domain,
+                cred.value,
+                cred_type
+            )
+
+        self.console.print(table)
+        self.console.print("[dim]Crack with: hashcat -m 1000[/]")
+
+    def _render_netntlm_table(self, creds: list) -> None:
+        """Render NetNTLM hashes table (Responder captures)"""
+        self.console.print("\n[bold red]NETNTLM HASHES (Relay/Crack)[/]\n")
+
+        table = Table(box=box.ROUNDED, border_style="red")
+        table.add_column("Username", style="bold white")
+        table.add_column("Domain", style="cyan")
+        table.add_column("Type", style="yellow")
+        table.add_column("Hash (truncated)", style="dim", max_width=40)
+
+        for cred in creds:
+            hash_type = "NTLMv1" if cred.cred_type == CredentialType.NET_NTLMV1 else "NTLMv2"
+            hash_display = cred.value[:37] + "..." if len(cred.value) > 40 else cred.value
+
+            table.add_row(
+                cred.username,
+                cred.domain,
+                hash_type,
+                hash_display
+            )
+
+        self.console.print(table)
+        self.console.print("[dim]Crack: hashcat -m 5500 (NTLMv1) / -m 5600 (NTLMv2)[/]")
+
+    def _render_linux_table(self, creds: list) -> None:
+        """Render Linux shadow hashes table"""
+        self.console.print("\n[bold green]LINUX SHADOW HASHES[/]\n")
+
+        table = Table(box=box.ROUNDED, border_style="green")
+        table.add_column("Username", style="bold white")
+        table.add_column("Hash Type", style="cyan")
+        table.add_column("Hash (truncated)", style="yellow", max_width=50)
+
+        for cred in creds:
+            # Detect hash type from prefix
+            if cred.value.startswith('$6$'):
+                hash_type = "SHA512"
+            elif cred.value.startswith('$5$'):
+                hash_type = "SHA256"
+            elif cred.value.startswith('$1$'):
+                hash_type = "MD5"
+            elif cred.value.startswith('$y$'):
+                hash_type = "yescrypt"
+            else:
+                hash_type = "Unknown"
+
+            hash_display = cred.value[:47] + "..." if len(cred.value) > 50 else cred.value
+            table.add_row(cred.username, hash_type, hash_display)
+
+        self.console.print(table)
+        self.console.print("[dim]Crack: hashcat -m 1800 (SHA512) / -m 500 (MD5)[/]")
+
+    def _render_cracked_table(self, creds: list) -> None:
+        """Render cracked passwords from potfile (HIGH VALUE)"""
+        self.console.print("\n[bold yellow]CRACKED PASSWORDS (HIGH VALUE)[/]\n")
+
+        table = Table(box=box.ROUNDED, border_style="yellow")
+        table.add_column("Hash", style="dim", max_width=35)
+        table.add_column("Password", style="bold green")
+
+        for cred in creds:
+            hash_display = cred.username[:32] + "..." if len(cred.username) > 35 else cred.username
+            table.add_row(hash_display, cred.value)
+
+        self.console.print(table)
+
+    def _render_connstring_table(self, creds: list) -> None:
+        """Render connection string credentials (HIGH VALUE)"""
+        self.console.print("\n[bold yellow]DATABASE CREDENTIALS (HIGH VALUE)[/]\n")
+
+        table = Table(box=box.ROUNDED, border_style="yellow")
+        table.add_column("Username", style="bold white")
+        table.add_column("Server/Database", style="cyan")
+        table.add_column("Password", style="bold green")
+
+        for cred in creds:
+            table.add_row(cred.username, cred.domain, cred.value)
+
+        self.console.print(table)
+
+    def _render_ssh_table(self, creds: list) -> None:
+        """Render SSH private keys"""
+        self.console.print("\n[bold magenta]SSH PRIVATE KEYS[/]\n")
+
+        table = Table(box=box.ROUNDED, border_style="magenta")
+        table.add_column("File/User", style="bold white")
+        table.add_column("Key Type", style="cyan")
+        table.add_column("Encrypted", style="yellow")
+
+        for cred in creds:
+            # Parse key info from value or domain
+            encrypted = "Yes" if "ENCRYPTED" in cred.value.upper() else "No"
+            key_type = "RSA" if "RSA" in cred.value.upper() else "Unknown"
+            table.add_row(cred.username, key_type, encrypted)
+
+        self.console.print(table)
+        self.console.print("[dim]Use ssh -i <key> user@target[/]")
+
+    def _render_htpasswd_table(self, creds: list) -> None:
+        """Render htpasswd hashes"""
+        self.console.print("\n[bold blue]HTPASSWD HASHES[/]\n")
+
+        table = Table(box=box.ROUNDED, border_style="blue")
+        table.add_column("Username", style="bold white")
+        table.add_column("Hash (truncated)", style="yellow", max_width=40)
+
+        for cred in creds:
+            hash_display = cred.value[:37] + "..." if len(cred.value) > 40 else cred.value
+            table.add_row(cred.username, hash_display)
+
+        self.console.print(table)
+        self.console.print("[dim]Crack: hashcat -m 1600 (APR1) / -m 3200 (bcrypt)[/]")
+
+    def _render_aws_table(self, creds: list) -> None:
+        """Render AWS access keys (HIGH VALUE)"""
+        self.console.print("\n[bold yellow]AWS ACCESS KEYS (HIGH VALUE)[/]\n")
+
+        table = Table(box=box.ROUNDED, border_style="yellow")
+        table.add_column("Access Key ID", style="bold white")
+        table.add_column("Secret Key (truncated)", style="bold green", max_width=30)
+        table.add_column("Profile", style="cyan")
+
+        for cred in creds:
+            secret_display = cred.value[:10] + "..." if len(cred.value) > 10 else cred.value
+            table.add_row(cred.username, secret_display, cred.domain or "default")
+
+        self.console.print(table)
+        self.console.print("[dim]Use: aws configure --profile <name>[/]")
 
     def _render_tgt_table(self, tickets: list) -> None:
         """Render TGT tickets table"""
@@ -235,14 +512,25 @@ class PrismFormatter:
 
         self.console.print("\n[dim]---[/]")
 
-        stats_line = (
-            f"[dim]Parsed {summary.lines_parsed} lines | "
-            f"{stats['sessions']} sessions | "
-            f"{stats['cleartext']} cleartext | "
-            f"{stats['ntlm']} NTLM | "
-            f"{stats['tgt_tickets']} TGT | "
-            f"{stats['tgs_tickets']} TGS[/]"
-        )
+        # Build dynamic stats line based on what's present
+        parts = [f"Parsed {summary.lines_parsed} lines"]
+
+        if stats['sessions']:
+            parts.append(f"{stats['sessions']} sessions")
+        if stats.get('gpp', 0):
+            parts.append(f"{stats['gpp']} GPP")
+        if stats.get('kerberoast', 0):
+            parts.append(f"{stats['kerberoast']} kerberoast")
+        if stats['cleartext']:
+            parts.append(f"{stats['cleartext']} cleartext")
+        if stats['ntlm']:
+            parts.append(f"{stats['ntlm']} NTLM")
+        if stats['tgt_tickets']:
+            parts.append(f"{stats['tgt_tickets']} TGT")
+        if stats['tgs_tickets']:
+            parts.append(f"{stats['tgs_tickets']} TGS")
+
+        stats_line = "[dim]" + " | ".join(parts) + "[/]"
         self.console.print(stats_line)
 
         if domains:
@@ -608,6 +896,303 @@ class NmapMarkdownFormatter:
             for port, count in sorted_ports:
                 lines.append(f"| {port} | {count} |")
             lines.append("")
+
+        return "\n".join(lines)
+
+
+class SmbmapFormatter:
+    """Rich library formatter for SMBMap output"""
+
+    def __init__(self, console: Optional[Console] = None):
+        self.console = console or Console()
+
+    def render_summary(self, summary: SmbmapSummary, verbose: bool = False) -> None:
+        """Render smbmap scan summary to console
+
+        Args:
+            summary: SmbmapSummary to render
+            verbose: If True, show all entries including default shares
+        """
+        # Header panel
+        self._render_header(summary)
+
+        # High-value files (CRITICAL - show first!)
+        if summary.high_value_files:
+            self._render_high_value_files(summary)
+
+        # Writable shares (attack vectors)
+        if summary.writable_shares:
+            self._render_writable_shares(summary)
+
+        # All shares table
+        self._render_shares_table(summary, verbose)
+
+        # Stats footer
+        self._render_stats(summary)
+
+    def _render_header(self, summary: SmbmapSummary) -> None:
+        """Render scan info header panel"""
+        stats = summary.stats
+
+        lines = [
+            f"[bold cyan]Source:[/] {summary.source_file}",
+        ]
+
+        if summary.target_ip:
+            lines.append(f"[dim]Target:[/] {summary.target_ip}:{summary.target_port}")
+        if summary.target_hostname:
+            lines.append(f"[dim]Hostname:[/] {summary.target_hostname}")
+        if summary.username:
+            domain = f"{summary.domain}\\" if summary.domain else ""
+            lines.append(f"[dim]Auth:[/] {domain}{summary.username} ({summary.auth_status})")
+
+        lines.append("")
+        lines.append(
+            f"Shares: [bold]{stats['total_shares']}[/] total | "
+            f"[bold green]{stats['readable_shares']}[/] readable | "
+            f"[bold yellow]{stats['writable_shares']}[/] writable"
+        )
+        lines.append(
+            f"Files: [bold]{stats['total_files']}[/] total | "
+            f"[bold red]{stats['high_value_files']}[/] high-value"
+        )
+
+        panel = Panel(
+            "\n".join(lines),
+            title="[bold white]PRISM - SMBMap Summary[/]",
+            border_style="blue",
+            box=box.ROUNDED
+        )
+        self.console.print(panel)
+
+    def _render_high_value_files(self, summary: SmbmapSummary) -> None:
+        """Render high-value files table (CRITICAL for pentesting)"""
+        self.console.print(
+            "\n[bold red]HIGH-VALUE FILES (CHECK IMMEDIATELY)[/]\n"
+        )
+
+        table = Table(box=box.ROUNDED, border_style="red")
+        table.add_column("File", style="bold white")
+        table.add_column("Path", style="cyan")
+        table.add_column("Size", style="dim", justify="right")
+        table.add_column("Why High-Value", style="yellow")
+
+        for entry in summary.high_value_files[:10]:  # Limit to 10
+            # Determine why it's high-value
+            reason = self._get_high_value_reason(entry.name)
+            size_str = self._format_size(entry.size)
+
+            table.add_row(
+                entry.name,
+                entry.path or "(root)",
+                size_str,
+                reason
+            )
+
+        self.console.print(table)
+
+        if len(summary.high_value_files) > 10:
+            self.console.print(
+                f"[dim]... and {len(summary.high_value_files) - 10} more high-value files[/]"
+            )
+
+    def _render_writable_shares(self, summary: SmbmapSummary) -> None:
+        """Render writable shares (potential attack vectors)"""
+        self.console.print(
+            "\n[bold yellow]WRITABLE SHARES (POTENTIAL ATTACK VECTORS)[/]\n"
+        )
+
+        table = Table(box=box.ROUNDED, border_style="yellow")
+        table.add_column("Share", style="bold white")
+        table.add_column("Comment", style="dim")
+        table.add_column("Files", style="cyan", justify="right")
+        table.add_column("Attack Ideas", style="green")
+
+        for share in summary.writable_shares:
+            attack_ideas = self._get_attack_ideas(share)
+            table.add_row(
+                share.name,
+                share.comment or "-",
+                str(len(share.files)),
+                attack_ideas
+            )
+
+        self.console.print(table)
+
+    def _render_shares_table(self, summary: SmbmapSummary, verbose: bool) -> None:
+        """Render all shares table"""
+        self.console.print("\n[bold]ALL SHARES[/]\n")
+
+        table = Table(box=box.ROUNDED, border_style="blue")
+        table.add_column("Share", style="bold white")
+        table.add_column("Permission", style="cyan")
+        table.add_column("Comment", style="dim")
+        table.add_column("Entries", justify="right")
+        table.add_column("Files", justify="right")
+
+        shares_to_show = summary.shares if verbose else summary.non_default_shares
+        if not shares_to_show:
+            shares_to_show = summary.shares  # Show default shares if nothing else
+
+        for share in shares_to_show:
+            # Color-code permission
+            perm = share.permission.value
+            if share.permission == SmbPermission.READ_WRITE:
+                perm_style = "bold yellow"
+            elif share.permission == SmbPermission.READ_ONLY:
+                perm_style = "green"
+            elif share.permission == SmbPermission.NO_ACCESS:
+                perm_style = "dim red"
+            else:
+                perm_style = "dim"
+
+            table.add_row(
+                share.name,
+                f"[{perm_style}]{perm}[/]",
+                share.comment or "-",
+                str(len(share.entries)),
+                str(len(share.files))
+            )
+
+        self.console.print(table)
+
+        if not verbose and len(summary.shares) > len(shares_to_show):
+            self.console.print(
+                f"[dim]({len(summary.shares) - len(shares_to_show)} default shares hidden, use --verbose to show)[/]"
+            )
+
+    def _render_stats(self, summary: SmbmapSummary) -> None:
+        """Render statistics footer"""
+        stats = summary.stats
+
+        self.console.print("\n[dim]" + "─" * 60 + "[/]")
+        self.console.print(
+            f"[dim]Parsed {summary.lines_parsed} lines | "
+            f"{stats['total_shares']} shares | "
+            f"{stats['total_files']} files | "
+            f"{stats['high_value_files']} high-value[/]"
+        )
+
+        if summary.warnings:
+            for warning in summary.warnings:
+                self.console.print(f"[yellow]Warning: {warning}[/]")
+
+    def _format_size(self, size: int) -> str:
+        """Format file size for display"""
+        if size < 1024:
+            return f"{size}B"
+        elif size < 1024 * 1024:
+            return f"{size / 1024:.1f}KB"
+        elif size < 1024 * 1024 * 1024:
+            return f"{size / (1024 * 1024):.1f}MB"
+        else:
+            return f"{size / (1024 * 1024 * 1024):.1f}GB"
+
+    def _get_high_value_reason(self, filename: str) -> str:
+        """Get reason why a file is high-value"""
+        name_lower = filename.lower()
+
+        # GPP files
+        if name_lower in ('groups.xml', 'services.xml', 'scheduledtasks.xml'):
+            return "GPP cpassword (auto-decrypt!)"
+        if name_lower in ('datasources.xml', 'printers.xml', 'drives.xml'):
+            return "GPP credentials"
+
+        # Registry backups
+        if name_lower in ('sam', 'sam.bak', 'system', 'system.bak', 'security', 'security.bak'):
+            return "Registry hive (hash extraction)"
+        if name_lower == 'ntds.dit':
+            return "AD database (all hashes!)"
+
+        # Config files
+        if name_lower in ('web.config', 'applicationhost.config'):
+            return "Connection strings"
+        if 'password' in name_lower or 'cred' in name_lower:
+            return "Potential credentials"
+
+        # Keys
+        if name_lower.startswith('id_') or name_lower.endswith('.pem'):
+            return "SSH private key"
+        if name_lower.endswith(('.pfx', '.p12', '.kdbx')):
+            return "Certificate/KeyPass"
+
+        # Flags
+        if name_lower in ('flag.txt', 'root.txt', 'user.txt'):
+            return "CTF flag!"
+
+        return "Sensitive file"
+
+    def _get_attack_ideas(self, share: SmbShare) -> str:
+        """Get attack ideas for a writable share"""
+        ideas = []
+
+        name_lower = share.name.lower()
+
+        if 'web' in name_lower or 'www' in name_lower:
+            ideas.append("Web shell")
+        if 'script' in name_lower or 'deploy' in name_lower:
+            ideas.append("Script injection")
+        if name_lower == 'sysvol':
+            ideas.append("GPO abuse")
+        if 'backup' in name_lower:
+            ideas.append("Backup poisoning")
+
+        if not ideas:
+            ideas.append("File drop")
+
+        return ", ".join(ideas)
+
+
+class SmbmapJSONFormatter:
+    """JSON output formatter for SMBMap"""
+
+    def format(self, summary: SmbmapSummary) -> str:
+        """Format smbmap summary as JSON"""
+        import json
+        return json.dumps(summary.to_dict(), indent=2, default=str)
+
+
+class SmbmapMarkdownFormatter:
+    """Markdown output formatter for SMBMap"""
+
+    def format(self, summary: SmbmapSummary) -> str:
+        """Format smbmap summary as Markdown"""
+        lines = [
+            "# SMBMap Summary",
+            "",
+            f"**Source:** {summary.source_file}",
+            f"**Target:** {summary.target_ip}:{summary.target_port}" if summary.target_ip else "",
+            f"**Hostname:** {summary.target_hostname}" if summary.target_hostname else "",
+            f"**Auth:** {summary.domain}\\{summary.username} ({summary.auth_status})" if summary.username else "",
+            "",
+            "## Statistics",
+            "",
+            f"- **Total Shares:** {summary.stats['total_shares']}",
+            f"- **Readable Shares:** {summary.stats['readable_shares']}",
+            f"- **Writable Shares:** {summary.stats['writable_shares']}",
+            f"- **Total Files:** {summary.stats['total_files']}",
+            f"- **High-Value Files:** {summary.stats['high_value_files']}",
+            "",
+        ]
+
+        # High-value files
+        if summary.high_value_files:
+            lines.append("## High-Value Files")
+            lines.append("")
+            lines.append("| File | Path | Size |")
+            lines.append("|------|------|------|")
+            for f in summary.high_value_files:
+                lines.append(f"| {f.name} | {f.path or '(root)'} | {f.size} |")
+            lines.append("")
+
+        # Shares
+        lines.append("## Shares")
+        lines.append("")
+        lines.append("| Share | Permission | Comment |")
+        lines.append("|-------|------------|---------|")
+        for share in summary.shares:
+            lines.append(f"| {share.name} | {share.permission.value} | {share.comment or '-'} |")
+        lines.append("")
 
         return "\n".join(lines)
 
@@ -1809,6 +2394,246 @@ class DomainReportFormatter:
             ])
 
         return "\n".join(lines)
+
+    def format_markdown_full(self, report: dict) -> str:
+        """Format report as full Markdown with timestamps and source tracking"""
+        from datetime import datetime
+        from collections import Counter
+
+        domain_info = report.get('domain', {})
+        lines = [
+            f"# Domain Report: {domain_info.get('name', 'Unknown')}",
+            "",
+            "## Report Metadata",
+            "",
+            f"- **Generated:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+            f"- **Domain:** {domain_info.get('name', '')}",
+            f"- **DNS:** {domain_info.get('dns_name', '')}",
+            f"- **Source:** {domain_info.get('source', '')}",
+            "",
+        ]
+
+        # Password Policy
+        policy = report.get('policy', {})
+        if policy:
+            lines.extend([
+                "## Password Policy",
+                "",
+                f"- **Min Length:** {policy.get('min_length', 'N/A')}",
+                f"- **Complexity Required:** {'Yes' if policy.get('complexity') else 'No'}",
+                f"- **Lockout Threshold:** {policy.get('lockout_threshold', 0) or 'Disabled'}",
+                f"- **Max Password Age:** {policy.get('max_pwd_age', 'N/A')}",
+                "",
+            ])
+
+        # Source Summary (credentials by tool)
+        creds = report.get('credentials', [])
+        if creds:
+            source_counts = Counter(c.get('source_tool', 'unknown') for c in creds)
+            lines.extend([
+                "## Source Summary",
+                "",
+                "| Source Tool | Credential Count |",
+                "|-------------|------------------|",
+            ])
+            for source, count in sorted(source_counts.items(), key=lambda x: -x[1]):
+                lines.append(f"| {source or 'unknown'} | {count} |")
+            lines.append("")
+
+        # Duplicates section (credentials seen multiple times)
+        duplicates = [c for c in creds if c.get('occurrences', 1) > 1]
+        if duplicates:
+            lines.extend([
+                "## Duplicate Credentials",
+                "",
+                "| Username | Type | Occurrences | First Seen | Last Seen |",
+                "|----------|------|-------------|------------|-----------|",
+            ])
+            for c in sorted(duplicates, key=lambda x: -x.get('occurrences', 1)):
+                first_seen = self._format_datetime(c.get('first_seen'))
+                last_seen = self._format_datetime(c.get('last_seen'))
+                lines.append(
+                    f"| {c.get('username', '')} | {c.get('cred_type', '')} | "
+                    f"{c.get('occurrences', 1)} | {first_seen} | {last_seen} |"
+                )
+            lines.append("")
+
+        # Full Users table (no truncation)
+        users = report.get('users', [])
+        if users:
+            lines.extend([
+                f"## Users ({len(users)})",
+                "",
+                "| Username | Display Name | Enabled | Flags | First Seen | Last Seen |",
+                "|----------|--------------|---------|-------|------------|-----------|",
+            ])
+            for u in users:  # No truncation
+                flags = []
+                if u.get('is_kerberoastable'): flags.append("KERB")
+                if u.get('is_asrep_roastable'): flags.append("ASREP")
+                if u.get('admin_count'): flags.append("ADMIN")
+                if u.get('trusted_for_delegation'): flags.append("DELEG")
+                if u.get('high_value'): flags.append("HV")
+                enabled = "Y" if u.get('is_enabled') else "N"
+                first_seen = self._format_datetime(u.get('first_seen'))
+                last_seen = self._format_datetime(u.get('last_seen'))
+                lines.append(
+                    f"| {u.get('name', '')} | {u.get('display_name', '') or '-'} | "
+                    f"{enabled} | {', '.join(flags) or '-'} | {first_seen} | {last_seen} |"
+                )
+            lines.append("")
+
+        # Full Computers table (no truncation)
+        computers = report.get('computers', [])
+        if computers:
+            lines.extend([
+                f"## Computers ({len(computers)})",
+                "",
+                "| Name | DNS Hostname | OS | DC | First Seen | Last Seen |",
+                "|------|--------------|----|----|------------|-----------|",
+            ])
+            for c in computers:  # No truncation
+                is_dc = "Yes" if c.get('is_dc') else "No"
+                os_info = c.get('os', '') or '-'
+                first_seen = self._format_datetime(c.get('first_seen'))
+                last_seen = self._format_datetime(c.get('last_seen'))
+                lines.append(
+                    f"| {c.get('name', '')} | {c.get('dns_hostname', '') or '-'} | "
+                    f"{os_info} | {is_dc} | {first_seen} | {last_seen} |"
+                )
+            lines.append("")
+
+        # Full Credentials table (no truncation)
+        if creds:
+            lines.extend([
+                f"## Credentials ({len(creds)})",
+                "",
+                "| Username | Type | Source | High Value | Occurrences | First Seen | Last Seen |",
+                "|----------|------|--------|------------|-------------|------------|-----------|",
+            ])
+            for c in creds:  # No truncation
+                hv = "Yes" if c.get('high_value') else "No"
+                first_seen = self._format_datetime(c.get('first_seen'))
+                last_seen = self._format_datetime(c.get('last_seen'))
+                lines.append(
+                    f"| {c.get('username', '')} | {c.get('cred_type', '')} | "
+                    f"{c.get('source_tool', '')} | {hv} | {c.get('occurrences', 1)} | "
+                    f"{first_seen} | {last_seen} |"
+                )
+            lines.append("")
+
+        # Groups table
+        groups = report.get('groups', [])
+        if groups:
+            lines.extend([
+                f"## Groups ({len(groups)})",
+                "",
+                "| Name | High Value | Admin Count | Members |",
+                "|------|------------|-------------|---------|",
+            ])
+            for g in groups:
+                hv = "Yes" if g.get('is_high_value') else "No"
+                lines.append(
+                    f"| {g.get('name', '')} | {hv} | "
+                    f"{g.get('admin_count', 0) or '-'} | {g.get('member_count', 0) or '-'} |"
+                )
+            lines.append("")
+
+        # Tickets table
+        tickets = report.get('tickets', [])
+        if tickets:
+            lines.extend([
+                f"## Kerberos Tickets ({len(tickets)})",
+                "",
+                "| Client | Type | Service | Expires |",
+                "|--------|------|---------|---------|",
+            ])
+            for t in tickets:
+                ticket_type = "TGT" if t.get('is_tgt') else "TGS"
+                end_time = self._format_datetime(t.get('end_time'))
+                lines.append(
+                    f"| {t.get('client_name', '')} | {ticket_type} | "
+                    f"{t.get('service_target', '') or '-'} | {end_time} |"
+                )
+            lines.append("")
+
+        # Stats Summary
+        stats = report.get('stats', {})
+        if stats:
+            lines.extend([
+                "## Summary Statistics",
+                "",
+                f"- **Total Users:** {stats.get('total_users', 0)} ({stats.get('enabled_users', 0)} enabled)",
+                f"- **Total Computers:** {stats.get('total_computers', 0)} ({stats.get('domain_controllers', 0)} DCs)",
+                f"- **Total Credentials:** {stats.get('total_credentials', 0)}",
+                f"- **Total Groups:** {stats.get('total_groups', 0)} ({stats.get('high_value_groups', 0)} high-value)",
+                f"- **Total Tickets:** {stats.get('total_tickets', 0)}",
+                "",
+                "### Attack Surface",
+                "",
+                f"- **Kerberoastable Users:** {stats.get('kerberoastable', 0)}",
+                f"- **AS-REP Roastable Users:** {stats.get('asrep_roastable', 0)}",
+                f"- **High-Value Users:** {stats.get('high_value_users', 0)}",
+            ])
+
+        return "\n".join(lines)
+
+    def _format_datetime(self, dt) -> str:
+        """Format datetime for display, handling various input types"""
+        if dt is None:
+            return "-"
+        if isinstance(dt, str):
+            return dt[:19] if len(dt) > 19 else dt
+        try:
+            return dt.strftime('%Y-%m-%d %H:%M')
+        except (AttributeError, TypeError):
+            return str(dt)[:19] if dt else "-"
+
+    def format_json_full(self, report: dict) -> str:
+        """Format report as full JSON with metadata and source grouping"""
+        import json
+        from datetime import datetime
+        from collections import defaultdict
+
+        # Add metadata
+        enhanced_report = {
+            'metadata': {
+                'generated_at': datetime.now().isoformat(),
+                'domain': report.get('domain', {}).get('name', ''),
+                'dns_name': report.get('domain', {}).get('dns_name', ''),
+            },
+            'domain': report.get('domain', {}),
+            'policy': report.get('policy', {}),
+            'stats': report.get('stats', {}),
+            'users': report.get('users', []),
+            'computers': report.get('computers', []),
+            'groups': report.get('groups', []),
+            'tickets': report.get('tickets', []),
+        }
+
+        # Group credentials by source
+        creds = report.get('credentials', [])
+        creds_by_source = defaultdict(list)
+        for c in creds:
+            source = c.get('source_tool', 'unknown') or 'unknown'
+            creds_by_source[source].append(c)
+
+        enhanced_report['credentials'] = creds
+        enhanced_report['credentials_by_source'] = dict(creds_by_source)
+
+        # Extract duplicates
+        duplicates = [
+            {
+                'username': c.get('username'),
+                'cred_type': c.get('cred_type'),
+                'occurrences': c.get('occurrences', 1),
+                'source_tool': c.get('source_tool'),
+            }
+            for c in creds if c.get('occurrences', 1) > 1
+        ]
+        enhanced_report['duplicates'] = duplicates
+
+        return json.dumps(enhanced_report, indent=2, default=str)
 
 
 class DomainListFormatter:

@@ -11,6 +11,7 @@ Handles query library commands:
 - --run-all: Run all queries and generate report
 """
 
+import os
 import json
 from argparse import Namespace
 from typing import Dict, Optional
@@ -84,7 +85,7 @@ class QueryCommands(BaseCommandGroup):
     @classmethod
     def _handle_list_queries(cls, args: Namespace) -> int:
         """Handle --list-queries command."""
-        config = Neo4jConfig(uri=args.uri, user=args.user, password=args.password)
+        config = Neo4jConfig(uri=args.uri, user=args.user, password=getattr(args, "neo4j_password", None) or os.environ.get("NEO4J_PASSWORD", ""))
         runner = QueryRunner(config)
 
         queries = runner.list_queries(category=getattr(args, 'category', None))
@@ -118,7 +119,7 @@ class QueryCommands(BaseCommandGroup):
     @classmethod
     def _handle_search_queries(cls, args: Namespace) -> int:
         """Handle --search-query command."""
-        config = Neo4jConfig(uri=args.uri, user=args.user, password=args.password)
+        config = Neo4jConfig(uri=args.uri, user=args.user, password=getattr(args, "neo4j_password", None) or os.environ.get("NEO4J_PASSWORD", ""))
         runner = QueryRunner(config)
 
         queries = runner.search_queries(args.search_query)
@@ -142,7 +143,7 @@ class QueryCommands(BaseCommandGroup):
     @classmethod
     def _handle_run_query(cls, args: Namespace) -> int:
         """Handle --run-query command."""
-        config = Neo4jConfig(uri=args.uri, user=args.user, password=args.password)
+        config = Neo4jConfig(uri=args.uri, user=args.user, password=getattr(args, "neo4j_password", None) or os.environ.get("NEO4J_PASSWORD", ""))
         runner = QueryRunner(config)
 
         query = runner.get_query(args.run_query)
@@ -192,7 +193,7 @@ class QueryCommands(BaseCommandGroup):
     @classmethod
     def _handle_export_query(cls, args: Namespace) -> int:
         """Handle --export-query command."""
-        config = Neo4jConfig(uri=args.uri, user=args.user, password=args.password)
+        config = Neo4jConfig(uri=args.uri, user=args.user, password=getattr(args, "neo4j_password", None) or os.environ.get("NEO4J_PASSWORD", ""))
         runner = QueryRunner(config)
 
         query = runner.get_query(args.export_query)
@@ -216,7 +217,7 @@ class QueryCommands(BaseCommandGroup):
     @classmethod
     def _handle_install_queries(cls, args: Namespace) -> int:
         """Handle --install-queries command."""
-        config = Neo4jConfig(uri=args.uri, user=args.user, password=args.password)
+        config = Neo4jConfig(uri=args.uri, user=args.user, password=getattr(args, "neo4j_password", None) or os.environ.get("NEO4J_PASSWORD", ""))
         runner = QueryRunner(config)
 
         # Count queries before filtering
@@ -268,7 +269,7 @@ class QueryCommands(BaseCommandGroup):
     @classmethod
     def _handle_export_ce(cls, args: Namespace) -> int:
         """Handle --export-ce and --export-ce-json commands."""
-        config = Neo4jConfig(uri=args.uri, user=args.user, password=args.password)
+        config = Neo4jConfig(uri=args.uri, user=args.user, password=getattr(args, "neo4j_password", None) or os.environ.get("NEO4J_PASSWORD", ""))
         runner = QueryRunner(config)
 
         # Count queries
@@ -313,7 +314,7 @@ class QueryCommands(BaseCommandGroup):
     @classmethod
     def _handle_run_all(cls, args: Namespace) -> int:
         """Handle --run-all command."""
-        config = Neo4jConfig(uri=args.uri, user=args.user, password=args.password)
+        config = Neo4jConfig(uri=args.uri, user=args.user, password=getattr(args, "neo4j_password", None) or os.environ.get("NEO4J_PASSWORD", ""))
         runner = QueryRunner(config)
 
         if not runner.connect():

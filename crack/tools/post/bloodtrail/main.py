@@ -14,6 +14,10 @@ from neo4j import GraphDatabase
 from neo4j.exceptions import ServiceUnavailable, AuthError
 
 from .config import Neo4jConfig, DEFAULT_BATCH_SIZE, ATTACK_PATH_EDGES
+from crack.core.debug import DebugLogger, Component, StepType
+
+# Module-level debug logger
+_logger = DebugLogger(component=Component.BT_IMPORT)
 from .sid_resolver import SIDResolver
 from .extractors import (
     EdgeExtractorRegistry,
@@ -307,6 +311,8 @@ class BHEnhancer:
 
     def connect(self) -> bool:
         """Establish Neo4j connection"""
+        _logger.verbose("Attempting Neo4j connection", StepType.CONNECTION,
+                        uri=self.config.uri, user=self.config.user)
         try:
             self.driver = GraphDatabase.driver(
                 self.config.uri,
@@ -315,14 +321,22 @@ class BHEnhancer:
             # Test connection
             with self.driver.session() as session:
                 session.run("RETURN 1")
+            _logger.info("Neo4j connection established", StepType.CONNECTION,
+                         uri=self.config.uri)
             return True
         except AuthError:
+            _logger.error("Neo4j authentication failed", StepType.CONNECTION,
+                          user=self.config.user)
             print(f"[!] Neo4j authentication failed (user: {self.config.user})")
             return False
         except ServiceUnavailable:
+            _logger.error("Neo4j not available", StepType.CONNECTION,
+                          uri=self.config.uri)
             print(f"[!] Neo4j not available at {self.config.uri}")
             return False
         except Exception as e:
+            _logger.error("Neo4j connection error", StepType.CONNECTION,
+                          error=str(e))
             print(f"[!] Neo4j connection error: {e}")
             return False
 
@@ -430,6 +444,8 @@ class BHEnhancer:
     def initialize(self) -> bool:
         """Initialize data source, resolver and registry"""
         C = Colors
+        _logger.verbose("Initializing data source", StepType.INIT,
+                        path=str(self.bh_data_dir))
         try:
             # Create data source if not already provided
             if self.data_source is None:
@@ -440,14 +456,19 @@ class BHEnhancer:
 
             print(f"{C.CYAN}[*]{C.RESET} Loading SIDs from {source_label} {C.BOLD}{self.bh_data_dir}{C.RESET}...")
             self.resolver = SIDResolver(self.data_source)
+            _logger.info("SID mappings loaded", StepType.PARSING,
+                         sid_count=len(self.resolver), source_type=source_type)
             print(f"{C.GREEN}[+]{C.RESET} Loaded {C.BOLD}{len(self.resolver)}{C.RESET} SID mappings")
 
             self.registry = EdgeExtractorRegistry(self.resolver)
+            _logger.verbose("Initialization complete", StepType.INIT)
             return True
         except FileNotFoundError as e:
+            _logger.error("Data source not found", StepType.INIT, error=str(e))
             print(f"{C.RED}[!]{C.RESET} {e}")
             return False
         except Exception as e:
+            _logger.error("Initialization error", StepType.INIT, error=str(e))
             print(f"{C.RED}[!]{C.RESET} Initialization error: {e}")
             return False
 

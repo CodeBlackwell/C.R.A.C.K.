@@ -36,7 +36,7 @@
       ],
       "next_steps": [],
       "alternatives": [],
-      "notes": "certification defense tip:\nUnexpected high-memory processes may indicate cryptominers, memory scrapers, or DoS attacks.\n\nFor top CPU:\nps aux --sort=-%cpu | head -10.\n\nTime estimate:\n2 seconds.",
+      "notes": "defense tip:\nUnexpected high-memory processes may indicate cryptominers, memory scrapers, or DoS attacks.\n\nFor top CPU:\nps aux --sort=-%cpu | head -10.\n\nTime estimate:\n2 seconds.",
       "methodology_guidance": {
         "after_success": "Investigate high-memory processes: ps-pid-details Check if process is legitimate or malicious Monitor memory over time: free-memory-human Kill memory-hogging process if needed: kill <PID>"
       }
@@ -74,7 +74,7 @@
       ],
       "next_steps": [],
       "alternatives": [],
-      "notes": "certification defense tip:\nUnexpected 100% CPU usage may indicate cryptominers, brute-force attacks, or fork bombs.\n\nTime estimate:\n2 seconds.",
+      "notes": "defense tip:\nUnexpected 100% CPU usage may indicate cryptominers, brute-force attacks, or fork bombs.\n\nTime estimate:\n2 seconds.",
       "methodology_guidance": {
         "after_success": "Investigate high-CPU process: ps-pid-details Check process legitimacy Monitor CPU over time: vmstat-cpu-monitoring Kill rogue process: kill <PID>"
       }
@@ -260,7 +260,7 @@
       ],
       "next_steps": [],
       "alternatives": [],
-      "notes": "certification tip:\nFull disk can prevent logging, break services, and stop reverse shells.\n\nCheck Use% column.\n\nFor specific directory:\ndf -h /var.\n\nTime estimate:\n1 second.",
+      "notes": "practical tip:\nFull disk can prevent logging, break services, and stop reverse shells.\n\nCheck Use% column.\n\nFor specific directory:\ndf -h /var.\n\nTime estimate:\n1 second.",
       "methodology_guidance": {
         "after_success": "If >90% used: find large files with du-directory-usage Check for log file bloat: du -sh /var/log/* Find large files: find / -type f -size +100M 2>/dev/null Clear space if needed"
       }
@@ -478,7 +478,7 @@
       ],
       "next_steps": [],
       "alternatives": [],
-      "notes": "CRITICAL for defense monitoring.\n\nShows active users, their terminal, source IP (FROM), login time, idle time, and current command.\n\ncertification tip:\nCheck FROM column for unexpected IPs, WHAT column for suspicious commands (shells, persistence scripts).\n\nTime estimate:\n<1 second.",
+      "notes": "CRITICAL for defense monitoring.\n\nShows active users, their terminal, source IP (FROM), login time, idle time, and current command.\n\npractical tip:\nCheck FROM column for unexpected IPs, WHAT column for suspicious commands (shells, persistence scripts).\n\nTime estimate:\n<1 second.",
       "methodology_guidance": {
         "after_success": "Identify unauthorized users Check suspicious commands in WHAT column View login history: last-login-history Monitor for new logins in real-time"
       }
@@ -551,7 +551,7 @@
       ],
       "next_steps": [],
       "alternatives": [],
-      "notes": "Reads /var/log/wtmp.\n\ncertification defense tip:\nLook for (1) Logins from unexpected IPs, (2) Short-lived sessions (in/out quickly = potential intrusion), (3) Logins at unusual hours.\n\nFor specific user:\nlast -a <USERNAME>.\n\nTime estimate:\n1-3 seconds.",
+      "notes": "Reads /var/log/wtmp.\n\ndefense tip:\nLook for (1) Logins from unexpected IPs, (2) Short-lived sessions (in/out quickly = potential intrusion), (3) Logins at unusual hours.\n\nFor specific user:\nlast -a <USERNAME>.\n\nTime estimate:\n1-3 seconds.",
       "methodology_guidance": {
         "after_success": "Look for logins from unexpected IPs Check login times (unusual hours = suspicious) View failed login attempts: lastb-failed-logins View last login per user: lastlog-user-last"
       }

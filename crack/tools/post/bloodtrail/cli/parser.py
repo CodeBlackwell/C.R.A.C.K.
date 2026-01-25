@@ -106,6 +106,7 @@ Supported Edge Types:
     )
 
     # Add argument groups
+    _add_wizard_options(parser)  # Add wizard mode early for discoverability
     _add_filter_options(parser)
     _add_neo4j_options(parser)
     _add_behavior_options(parser)
@@ -121,6 +122,28 @@ Supported Edge Types:
     _add_analyze_options(parser)
 
     return parser
+
+
+def _add_wizard_options(parser: argparse.ArgumentParser) -> None:
+    """Add wizard mode options."""
+    wizard_group = parser.add_argument_group("Wizard Mode (Guided Interface)")
+    wizard_group.add_argument(
+        "--wizard",
+        action="store_true",
+        help="Launch guided wizard mode for first-time users (step-by-step enumeration)",
+    )
+    wizard_group.add_argument(
+        "--wizard-resume",
+        type=str,
+        metavar="TARGET",
+        help="Resume wizard session from saved checkpoint (use target IP/hostname)",
+    )
+    wizard_group.add_argument(
+        "--wizard-target",
+        type=str,
+        metavar="TARGET",
+        help="Target IP/hostname for wizard mode (alternative to positional arg)",
+    )
 
 
 def _add_filter_options(parser: argparse.ArgumentParser) -> None:
@@ -157,7 +180,8 @@ def _add_neo4j_options(parser: argparse.ArgumentParser) -> None:
         help="Neo4j username (default: neo4j)",
     )
     parser.add_argument(
-        "--password",
+        "--neo4j-password",
+        dest="neo4j_password",
         default=None,
         help="Neo4j password (default: from NEO4J_PASSWORD env var)",
     )
@@ -166,6 +190,16 @@ def _add_neo4j_options(parser: argparse.ArgumentParser) -> None:
 def _add_behavior_options(parser: argparse.ArgumentParser) -> None:
     """Add behavior options."""
     parser.add_argument(
+        "--debug",
+        type=str,
+        nargs="?",
+        const="all",
+        default=None,
+        metavar="FILTER",
+        help="Enable debug logging. Optional filter: 'all', component (bloodtrail, bt_neo4j), "
+             "or step type (querying, connection). Comma-separate multiple filters.",
+    )
+    parser.add_argument(
         "--dry-run",
         action="store_true",
         help="Extract and validate without importing to Neo4j",
@@ -173,8 +207,8 @@ def _add_behavior_options(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--verbose", "-v",
         action="count",
-        default=2,
-        help="Increase verbosity (default: show all details)",
+        default=0,
+        help="Increase verbosity (-v: streaming output + commands, -vv: debug info)",
     )
     parser.add_argument(
         "--quiet", "-q",

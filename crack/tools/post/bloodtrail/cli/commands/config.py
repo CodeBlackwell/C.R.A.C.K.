@@ -11,6 +11,7 @@ Handles domain configuration commands:
 - --purge: Purge all data from Neo4j
 """
 
+import os
 import getpass
 from argparse import Namespace
 
@@ -67,7 +68,7 @@ class ConfigCommands(BaseCommandGroup):
     @classmethod
     def _handle_show_config(cls, args: Namespace) -> int:
         """Handle --show-config command."""
-        config = Neo4jConfig(uri=args.uri, user=args.user, password=args.password)
+        config = Neo4jConfig(uri=args.uri, user=args.user, password=getattr(args, "neo4j_password", None) or os.environ.get("NEO4J_PASSWORD", ""))
         tracker = PwnedTracker(config)
 
         if not tracker.connect():
@@ -118,7 +119,7 @@ class ConfigCommands(BaseCommandGroup):
     @classmethod
     def _handle_clear_config(cls, args: Namespace) -> int:
         """Handle --clear-config command."""
-        config = Neo4jConfig(uri=args.uri, user=args.user, password=args.password)
+        config = Neo4jConfig(uri=args.uri, user=args.user, password=getattr(args, "neo4j_password", None) or os.environ.get("NEO4J_PASSWORD", ""))
         tracker = PwnedTracker(config)
 
         if not tracker.connect():
@@ -141,7 +142,7 @@ class ConfigCommands(BaseCommandGroup):
     @classmethod
     def _handle_purge(cls, args: Namespace) -> int:
         """Handle --purge command - completely clear Neo4j database."""
-        config = Neo4jConfig(uri=args.uri, user=args.user, password=args.password)
+        config = Neo4jConfig(uri=args.uri, user=args.user, password=getattr(args, "neo4j_password", None) or os.environ.get("NEO4J_PASSWORD", ""))
 
         # Connect to Neo4j
         try:
@@ -245,7 +246,7 @@ class ConfigCommands(BaseCommandGroup):
     @classmethod
     def _handle_domain_sid(cls, args: Namespace) -> int:
         """Handle --domain-sid command."""
-        config = Neo4jConfig(uri=args.uri, user=args.user, password=args.password)
+        config = Neo4jConfig(uri=args.uri, user=args.user, password=getattr(args, "neo4j_password", None) or os.environ.get("NEO4J_PASSWORD", ""))
         tracker = PwnedTracker(config)
 
         if not tracker.connect():
@@ -276,7 +277,7 @@ class ConfigCommands(BaseCommandGroup):
     @classmethod
     def _handle_callback_config(cls, args: Namespace) -> int:
         """Handle --lhost/--lport flags - store callback configuration."""
-        config = Neo4jConfig(uri=args.uri, user=args.user, password=args.password)
+        config = Neo4jConfig(uri=args.uri, user=args.user, password=getattr(args, "neo4j_password", None) or os.environ.get("NEO4J_PASSWORD", ""))
         tracker = PwnedTracker(config)
 
         if not tracker.connect():
@@ -302,7 +303,7 @@ class ConfigCommands(BaseCommandGroup):
     @classmethod
     def _handle_discover_dc(cls, args: Namespace) -> int:
         """Handle --discover-dc command - auto-discover DC IP."""
-        config = Neo4jConfig(uri=args.uri, user=args.user, password=args.password)
+        config = Neo4jConfig(uri=args.uri, user=args.user, password=getattr(args, "neo4j_password", None) or os.environ.get("NEO4J_PASSWORD", ""))
         tracker = PwnedTracker(config)
 
         if not tracker.connect():

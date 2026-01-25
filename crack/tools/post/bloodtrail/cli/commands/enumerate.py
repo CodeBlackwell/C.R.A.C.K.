@@ -13,6 +13,10 @@ from typing import Optional
 
 from ..base import BaseCommandGroup
 from ..parser import InputMode, detect_input_mode
+from crack.core.debug import DebugLogger, Component, StepType
+
+# Module-level debug logger
+_logger = DebugLogger(component=Component.BLOODTRAIL)
 
 
 # Patterns that suggest passwords in descriptions
@@ -123,6 +127,9 @@ class EnumerateCommands(BaseCommandGroup):
         D = "\033[2m"    # Dim
         X = "\033[0m"    # Reset
 
+        _logger.info("Starting enumerate mode", StepType.ENUMERATION,
+                     target=target, username=username, domain=domain)
+
         print()
         print(f"{C}{B}{'=' * 74}{X}")
         print(f"{C}{B}  BloodTrail Enumerate Mode - Pre-Auth Attack Discovery{X}")
@@ -145,8 +152,11 @@ class EnumerateCommands(BaseCommandGroup):
 
             if domain_info.domain:
                 domain = domain_info.domain
+                _logger.info("Domain detected", StepType.ENUMERATION,
+                             domain=domain, method=domain_info.detection_method)
                 print(f"\r  {D}Domain:{X}       {B}{domain}{X} {D}(via {domain_info.detection_method}){X}")
             else:
+                _logger.warning("Domain not detected", StepType.ENUMERATION, target=target)
                 print(f"\r  {D}Domain:{X}       {Y}not detected (use --domain){X}")
         else:
             print(f"  {D}Domain:{X}       {B}{domain}{X}")
@@ -164,8 +174,8 @@ class EnumerateCommands(BaseCommandGroup):
             print(f"    Install: enum4linux-ng, ldapsearch, or kerbrute")
             return 1
 
-        # Print commands if very verbose (-vv)
-        if verbose >= 2:
+        # Print commands if verbose (-v or higher)
+        if verbose >= 1:
             print(f"[*] Commands to execute:")
             print()
 
@@ -202,17 +212,20 @@ class EnumerateCommands(BaseCommandGroup):
         results = []
         try:
             with ThreadPoolExecutor(max_workers=4) as executor:
-                futures = {
-                    executor.submit(
+                futures = {}
+                for enum in enumerators:
+                    _logger.verbose("Starting enumerator", StepType.TOOL_CALL,
+                                    tool=enum.name, target=target)
+                    future = executor.submit(
                         enum.run,
                         target=target,
                         username=username,
                         password=password,
                         timeout=300,
                         domain=domain,
-                    ): enum
-                    for enum in enumerators
-                }
+                        verbose=verbose,
+                    )
+                    futures[future] = enum
 
                 for future in as_completed(futures):
                     enum = futures[future]
@@ -221,13 +234,20 @@ class EnumerateCommands(BaseCommandGroup):
                         results.append(result)
 
                         if result.success:
+                            _logger.info("Enumerator completed", StepType.TOOL_CALL,
+                                         tool=enum.name, duration=result.duration_seconds,
+                                         users=len(result.users) if result.users else 0)
                             print(f"  {G}[OK]{X} {enum.name}: {result.duration_seconds:.1f}s")
                             if verbose >= 1 and result.users:
                                 print(f"       Found {len(result.users)} users")
                         else:
+                            _logger.warning("Enumerator failed", StepType.TOOL_CALL,
+                                            tool=enum.name, error=result.error)
                             print(f"  {R}[FAIL]{X} {enum.name}: {result.error or 'Unknown error'}")
 
                     except Exception as e:
+                        _logger.error("Enumerator exception", StepType.TOOL_CALL,
+                                      tool=enum.name, error=str(e))
                         print(f"  {R}[ERR]{X} {enum.name}: {e}")
         except KeyboardInterrupt:
             print(f"\n  {Y}[!] Interrupted - cancelling enumeration{X}")
@@ -284,8 +304,8 @@ class EnumerateCommands(BaseCommandGroup):
             if getnp.is_available():
                 print(f"[*] Phase 2: Testing {len(discovered_users)} users for AS-REP...")
 
-                # Print command if very verbose (-vv)
-                if verbose >= 2:
+                # Print command if verbose (-v or higher)
+                if verbose >= 1:
                     cmd, desc = getnp.get_command(
                         target=target,
                         domain=aggregated.domain or domain,
